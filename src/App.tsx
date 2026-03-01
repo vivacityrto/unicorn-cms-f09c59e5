@@ -27,6 +27,7 @@ import { CelebrationProvider } from "./components/ui/celebration";
  const ManageCategoriesWrapper = lazy(() => import("./pages/ManageCategoriesWrapper"));
  const ManageStagesWrapper = lazy(() => import("./pages/ManageStagesWrapper"));
  const SharePointFolderMapping = lazy(() => import("./pages/admin/SharePointFolderMapping"));
+ const GovernanceDocuments = lazy(() => import("./pages/admin/GovernanceDocuments"));
  const ManageFieldsWrapper = lazy(() => import("./pages/ManageFieldsWrapper"));
  const UserProfileWrapper = lazy(() => import("./pages/UserProfileWrapper"));
  // TenantDetailWrapper removed — consolidated into ClientDetailWrapper
@@ -337,6 +338,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <SharePointFolderMapping />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/governance-documents" 
+              element={
+                <ProtectedRoute>
+                  <GovernanceDocuments />
                 </ProtectedRoute>
               } 
             />

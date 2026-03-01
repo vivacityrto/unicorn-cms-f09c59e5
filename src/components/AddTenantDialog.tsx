@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Loader2, AlertTriangle, ShieldAlert, Merge } from 'lucide-react';
+import { Building2, Loader2, AlertTriangle, ShieldAlert, Merge, FolderOpen } from 'lucide-react';
 import { TenantMergeWizard } from '@/components/tenant/TenantMergeWizard';
 
 interface AddTenantDialogProps {
@@ -52,6 +52,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   const [rtoCode, setRtoCode] = useState('');
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [autoAssignConsultant, setAutoAssignConsultant] = useState(true);
+  const [createSharePointFolders, setCreateSharePointFolders] = useState(true);
 
   // Duplicate detection state
   const [duplicateResult, setDuplicateResult] = useState<DuplicateResult | null>(null);
@@ -234,12 +235,19 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           });
       }
 
-      // Auto-provision SharePoint folder (fire and forget)
-      if (newTenantId) {
+      // Provision SharePoint folders (opt-in, fire and forget)
+      if (createSharePointFolders && newTenantId) {
+        // Client Success Team site folder
         supabase.functions.invoke('provision-tenant-sharepoint-folder', {
           body: { tenant_id: newTenantId }
         }).then(({ error: provError }) => {
           if (provError) console.warn('[AddTenant] SharePoint provisioning failed:', provError.message);
+        });
+        // Governance site folder
+        supabase.functions.invoke('verify-compliance-folder', {
+          body: { tenant_id: newTenantId, create_category_subfolders: true }
+        }).then(({ error: govError }) => {
+          if (govError) console.warn('[AddTenant] Governance folder failed:', govError.message);
         });
       }
 
@@ -264,6 +272,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     setRtoCode('');
     setSelectedPackageId(preSelectedPackageId ? String(preSelectedPackageId) : '');
     setAutoAssignConsultant(true);
+    setCreateSharePointFolders(true);
     setDuplicateResult(null);
     setShowDuplicateWarning(false);
     setUserAcknowledgedWarning(false);
@@ -491,6 +500,23 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
                 id="auto-assign"
                 checked={autoAssignConsultant}
                 onCheckedChange={setAutoAssignConsultant}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="create-sp-folders" className="flex items-center gap-1.5">
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  Create SharePoint client folders
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Provision Client Success and Governance folders in SharePoint
+                </p>
+              </div>
+              <Switch
+                id="create-sp-folders"
+                checked={createSharePointFolders}
+                onCheckedChange={setCreateSharePointFolders}
               />
             </div>
           </div>

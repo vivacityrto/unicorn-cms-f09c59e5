@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import {
   ensureFolder,
   graphGet,
+  buildClientFolderName,
   type DriveItem,
 } from '../_shared/graph-app-client.ts';
 
@@ -57,47 +58,72 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Load tenant SharePoint settings
-    const { data: spSettings, error: spErr } = await supabase
-      .from('tenant_sharepoint_settings')
-      .select('drive_id, root_item_id, root_name, folder_path, compliance_docs_folder_item_id')
-      .eq('tenant_id', tenant_id)
-      .maybeSingle();
+    // Load tenant data (need name, rto_id, legal_name, status for folder naming + guard)
+    const { data: tenant, error: tenantErr } = await supabase
+      .from('tenants')
+      .select('id, name, rto_id, legal_name, status')
+      .eq('id', tenant_id)
+      .single();
 
-    if (!spSettings?.drive_id || !spSettings?.root_item_id) {
+    if (tenantErr || !tenant) {
+      return new Response(JSON.stringify({ error: `Tenant ${tenant_id} not found` }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Active tenant guard
+    if (tenant.status !== 'active') {
       return new Response(JSON.stringify({
-        error: 'Tenant has no mapped SharePoint folder. Run resolve-tenant-folder first.',
+        error: `Tenant is not active (status: ${tenant.status}). Governance folder creation is only allowed for active tenants.`,
       }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const driveId = spSettings.drive_id;
-    const rootItemId = spSettings.root_item_id;
+    // Look up the Governance site drive from sharepoint_sites
+    const { data: govSite } = await supabase
+      .from('sharepoint_sites')
+      .select('graph_site_id, drive_id')
+      .eq('purpose', 'governance_client_files')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
 
-    // Check if compliance docs folder already exists
-    if (spSettings.compliance_docs_folder_item_id) {
-      // Verify it still exists in SharePoint
+    if (!govSite?.drive_id) {
+      return new Response(JSON.stringify({
+        error: 'No Governance SharePoint site configured. Add a governance_client_files site to sharepoint_sites first.',
+      }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const driveId = govSite.drive_id;
+
+    // Load existing governance settings
+    const { data: spSettings } = await supabase
+      .from('tenant_sharepoint_settings')
+      .select('governance_folder_item_id, governance_drive_id')
+      .eq('tenant_id', tenant_id)
+      .maybeSingle();
+
+    // Check if governance folder already exists
+    if (spSettings?.governance_folder_item_id) {
       const check = await graphGet<DriveItem>(
-        `/drives/${driveId}/items/${spSettings.compliance_docs_folder_item_id}`
+        `/drives/${driveId}/items/${spSettings.governance_folder_item_id}`
       );
       if (check.ok && check.data.folder) {
-        // Already exists and valid
         const result: Record<string, unknown> = {
           success: true,
           already_exists: true,
-          compliance_folder: {
+          governance_folder: {
             item_id: check.data.id,
             name: check.data.name,
             web_url: check.data.webUrl,
           },
         };
 
-        // Optionally create category subfolders
         if (create_category_subfolders) {
-          const subs = await createCategorySubfolders(
-            supabase, driveId, check.data.id, check.data.name
-          );
+          const subs = await createCategorySubfolders(supabase, driveId, check.data.id);
           result.category_subfolders = subs;
         }
 
@@ -107,64 +133,71 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Create "Compliance Documents" subfolder under the tenant root
-    const complianceFolderName = 'Compliance Documents';
-    
-    // Get the root folder path for ensureFolder
-    // We need to find the root folder's path
-    const rootFolder = await graphGet<DriveItem>(`/drives/${driveId}/items/${rootItemId}`);
-    if (!rootFolder.ok) {
-      throw new Error('Could not retrieve tenant root folder');
-    }
+    // Build tenant folder name using unified convention
+    const tenantFolderName = buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name);
 
-    // Extract the path from parentReference
-    const parentRef = rootFolder.data.parentReference as { path?: string } | undefined;
-    const rootPath = parentRef?.path
-      ? `${parentRef.path.replace(/^\/drives\/[^/]+\/root:/, '')}/${rootFolder.data.name}`
-      : rootFolder.data.name;
+    // Create tenant folder under Shared Documents root
+    // The governance site structure is: Shared Documents / {tenant folder}
+    const { itemId, webUrl } = await ensureFolder(driveId, '', tenantFolderName);
 
-    const cleanPath = rootPath.replace(/^\//, '');
-
-    const { itemId, webUrl } = await ensureFolder(driveId, cleanPath, complianceFolderName);
-
-    // Update tenant_sharepoint_settings
-    await supabase
+    // Update tenant_sharepoint_settings with governance columns
+    const { data: existingSettings } = await supabase
       .from('tenant_sharepoint_settings')
-      .update({
-        compliance_docs_folder_item_id: itemId,
-        compliance_docs_folder_name: complianceFolderName,
-        updated_by: user.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('tenant_id', tenant_id);
+      .select('id')
+      .eq('tenant_id', tenant_id)
+      .maybeSingle();
+
+    const govFields = {
+      governance_site_id: govSite.graph_site_id,
+      governance_drive_id: driveId,
+      governance_folder_item_id: itemId,
+      governance_folder_url: webUrl,
+      governance_folder_name: tenantFolderName,
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (existingSettings) {
+      await supabase
+        .from('tenant_sharepoint_settings')
+        .update(govFields)
+        .eq('tenant_id', tenant_id);
+    } else {
+      await supabase
+        .from('tenant_sharepoint_settings')
+        .insert({
+          tenant_id,
+          created_by: user.id,
+          ...govFields,
+        });
+    }
 
     // Audit log
     await supabase.from('document_activity_log').insert({
       tenant_id,
-      activity_type: 'compliance_folder_created',
+      activity_type: 'governance_folder_created',
       actor_user_id: user.id,
       actor_role: 'Vivacity Staff',
       metadata: {
         folder_item_id: itemId,
-        folder_name: complianceFolderName,
+        folder_name: tenantFolderName,
         web_url: webUrl,
-        parent_folder: rootFolder.data.name,
+        site_purpose: 'governance_client_files',
       },
     });
 
     const result: Record<string, unknown> = {
       success: true,
       already_exists: false,
-      compliance_folder: {
+      governance_folder: {
         item_id: itemId,
-        name: complianceFolderName,
+        name: tenantFolderName,
         web_url: webUrl,
       },
     };
 
-    // Optionally create category subfolders
     if (create_category_subfolders) {
-      const subs = await createCategorySubfolders(supabase, driveId, itemId, complianceFolderName);
+      const subs = await createCategorySubfolders(supabase, driveId, itemId);
       result.category_subfolders = subs;
     }
 
@@ -183,14 +216,13 @@ Deno.serve(async (req: Request) => {
 });
 
 /**
- * Create subfolders within the compliance docs folder for each active document category
+ * Create subfolders within the governance folder for each active document category
  * that has a sharepoint_folder_name defined.
  */
 async function createCategorySubfolders(
   supabase: ReturnType<typeof createClient>,
   driveId: string,
   parentItemId: string,
-  parentName: string,
 ): Promise<{ created: string[]; errors: string[] }> {
   const { data: categories } = await supabase
     .from('dd_document_categories')
