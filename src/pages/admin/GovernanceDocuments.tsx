@@ -26,7 +26,7 @@ function GovernanceDocuments() {
         .select(`
           id, title, format, document_category, document_status,
           source_template_url, updated_at, current_published_version_id,
-          document_versions(id, version_number, status, created_at, published_at, checksum_sha256)
+          document_versions!document_versions_document_id_fkey(id, version_number, status, created_at, published_at, checksum_sha256)
         `)
         .or('is_team_only.is.null,is_team_only.eq.false')
         .order('title');
