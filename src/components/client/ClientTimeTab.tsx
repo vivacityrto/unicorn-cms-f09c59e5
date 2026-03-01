@@ -52,7 +52,7 @@ const PAGE_SIZE = 20;
 
 // ── Helper: resolve package names via two-step fetch ────────────────
 async function resolvePackageNames(instanceIds: number[]) {
-  if (instanceIds.length === 0) return { nameMap: {} as Record<number, string>, lifecycleMap: {} as Record<number, { start_date: string | null; end_date: string | null }> };
+  if (instanceIds.length === 0) return { nameMap: {} as Record<number, string>, fullTextMap: {} as Record<number, string>, lifecycleMap: {} as Record<number, { start_date: string | null; end_date: string | null }> };
 
   const { data: instances } = await (supabase as any)
     .from('package_instances')
@@ -60,7 +60,6 @@ async function resolvePackageNames(instanceIds: number[]) {
     .in('id', instanceIds);
 
   const resolvedInstanceIds = new Set((instances || []).map((i: any) => i.id));
-  // IDs not found in package_instances may be raw package_ids (from COALESCE fallback in views)
   const fallbackPackageIds = instanceIds.filter(id => !resolvedInstanceIds.has(id));
 
   const allPackageIds = [
@@ -71,25 +70,31 @@ async function resolvePackageNames(instanceIds: number[]) {
   ];
 
   const { data: pkgs } = allPackageIds.length > 0
-    ? await (supabase as any).from('packages').select('id, name').in('id', allPackageIds)
+    ? await (supabase as any).from('packages').select('id, name, full_text').in('id', allPackageIds)
     : { data: [] };
 
   const pkgNameMap: Record<number, string> = {};
-  (pkgs || []).forEach((p: any) => { pkgNameMap[p.id] = p.name; });
+  const pkgFullTextMap: Record<number, string> = {};
+  (pkgs || []).forEach((p: any) => {
+    pkgNameMap[p.id] = p.name;
+    pkgFullTextMap[p.id] = p.full_text || p.name;
+  });
 
   const nameMap: Record<number, string> = {};
+  const fullTextMap: Record<number, string> = {};
   const lifecycleMap: Record<number, { start_date: string | null; end_date: string | null }> = {};
   (instances || []).forEach((inst: any) => {
     nameMap[inst.id] = pkgNameMap[inst.package_id] || `Package #${inst.package_id}`;
+    fullTextMap[inst.id] = pkgFullTextMap[inst.package_id] || nameMap[inst.id];
     lifecycleMap[inst.id] = { start_date: inst.start_date, end_date: inst.end_date };
   });
-  // For fallback IDs (raw package_ids), use the package name directly
   fallbackPackageIds.forEach(id => {
     if (!nameMap[id]) nameMap[id] = pkgNameMap[id] || `Package #${id}`;
+    if (!fullTextMap[id]) fullTextMap[id] = pkgFullTextMap[id] || nameMap[id];
     if (!lifecycleMap[id]) lifecycleMap[id] = { start_date: null, end_date: null };
   });
 
-  return { nameMap, lifecycleMap };
+  return { nameMap, fullTextMap, lifecycleMap };
 }
 
 function formatLifecycle(start: string | null, end: string | null) {
@@ -113,7 +118,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
       const instanceIds = (burndownData || []).map(r => r.package_instance_id).filter(Boolean) as number[];
       if (instanceIds.length === 0) return [];
 
-      const { nameMap, lifecycleMap } = await resolvePackageNames(instanceIds);
+      const { fullTextMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
       // 2. Fetch per-month breakdown from time_entries
       const { data: monthlyRows } = await (supabase as any)
@@ -158,7 +163,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
 
       return (burndownData || []).map(row => ({
         package_instance_id: row.package_instance_id,
-        package_name: nameMap[row.package_instance_id!] || 'Unknown',
+        package_name: fullTextMap[row.package_instance_id!] || 'Unknown',
         lifecycle: lifecycleMap[row.package_instance_id!] || { start_date: null, end_date: null },
         used_minutes: row.used_minutes ?? 0,
         included_minutes: row.included_minutes ?? 0,
