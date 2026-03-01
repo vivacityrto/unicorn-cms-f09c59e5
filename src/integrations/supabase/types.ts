@@ -20517,6 +20517,194 @@ export type Database = {
           },
         ]
       }
+      governance_document_deliveries: {
+        Row: {
+          category_subfolder: string | null
+          created_at: string
+          delivered_at: string
+          delivered_by: string
+          delivered_file_name: string | null
+          document_id: number
+          document_version_id: string
+          error_message: string | null
+          id: string
+          sharepoint_item_id: string | null
+          sharepoint_web_url: string | null
+          snapshot_id: string | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          category_subfolder?: string | null
+          created_at?: string
+          delivered_at?: string
+          delivered_by: string
+          delivered_file_name?: string | null
+          document_id: number
+          document_version_id: string
+          error_message?: string | null
+          id?: string
+          sharepoint_item_id?: string | null
+          sharepoint_web_url?: string | null
+          snapshot_id?: string | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          category_subfolder?: string | null
+          created_at?: string
+          delivered_at?: string
+          delivered_by?: string
+          delivered_file_name?: string | null
+          document_id?: number
+          document_version_id?: string
+          error_message?: string | null
+          id?: string
+          sharepoint_item_id?: string | null
+          sharepoint_web_url?: string | null
+          snapshot_id?: string | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_document_deliveries_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_phase_timeline"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_document_version_id_fkey"
+            columns: ["document_version_id"]
+            isOneToOne: false
+            referencedRelation: "document_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "tga_rto_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       help_messages: {
         Row: {
           content: string
