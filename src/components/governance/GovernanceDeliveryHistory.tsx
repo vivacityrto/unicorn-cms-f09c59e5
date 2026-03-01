@@ -48,11 +48,19 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
         : { data: [] as { user_uuid: string; full_name: string }[] };
       const userMap = new Map((users || []).map((u) => [u.user_uuid, u.full_name] as const));
 
+      // Enrich with snapshot dates
+      const snapshotIds = [...new Set(data.map((d) => d.snapshot_id).filter(Boolean))] as string[];
+      const { data: snapshots } = snapshotIds.length
+        ? await supabase.from('tga_rto_snapshots').select('id, created_at').in('id', snapshotIds)
+        : { data: [] as { id: string; created_at: string }[] };
+      const snapshotMap = new Map((snapshots || []).map((s) => [s.id, s.created_at] as const));
+
       return data.map((d) => ({
         ...d,
         tenant_name: tenantMap.get(d.tenant_id) || `Tenant ${d.tenant_id}`,
         version_number: versionMap.get(d.document_version_id) ?? '?',
         delivered_by_name: d.delivered_by ? userMap.get(d.delivered_by) || '—' : '—',
+        snapshot_date: d.snapshot_id ? snapshotMap.get(d.snapshot_id) || null : null,
       }));
     },
   });
@@ -145,6 +153,7 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
               <TableHead>Issues</TableHead>
               <TableHead>Delivered By</TableHead>
               <TableHead>Delivered At</TableHead>
+              <TableHead>Snapshot</TableHead>
               <TableHead>SharePoint</TableHead>
             </TableRow>
           </TableHeader>
@@ -159,6 +168,9 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
                 <TableCell className="text-sm text-muted-foreground">{d.delivered_by_name}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {d.delivered_at ? format(new Date(d.delivered_at), 'dd MMM yyyy HH:mm') : '—'}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {d.snapshot_date ? format(new Date(d.snapshot_date), 'dd MMM yyyy') : 'N/A'}
                 </TableCell>
                 <TableCell>
                   {d.sharepoint_web_url ? (
