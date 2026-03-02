@@ -117,10 +117,6 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
 
           <div className="flex items-center gap-3 shrink-0">
             {stage.comment && <MessageSquare className="h-4 w-4 text-muted-foreground" />}
-            <Badge variant="outline" className="text-xs gap-1">
-              <ListTodo className="h-3 w-3" />
-              Tasks
-            </Badge>
             <Badge
               variant="outline"
               className={cn(
@@ -133,11 +129,15 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
               {stage.is_recurring ? 'Recurring' : 'Once'}
             </Badge>
             {stage.released_client_tasks && <Badge variant="outline" className="text-xs">Tasks Released</Badge>}
-            {stage.status_date && (
+            {statusCode === 2 && stage.completion_date ? (
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                Completed {format(new Date(stage.completion_date), 'd MMM yyyy')}
+              </span>
+            ) : stage.status_date ? (
               <span className="text-xs text-muted-foreground hidden sm:inline">
                 {format(new Date(stage.status_date), 'd MMM HH:mm')}
               </span>
-            )}
+            ) : null}
             <Select
               value={stage.status.toString()}
               onValueChange={(value) => onStatusChange(stage.id, parseInt(value))}
