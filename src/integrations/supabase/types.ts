@@ -30451,6 +30451,7 @@ export type Database = {
           graph_site_id: string | null
           id: string
           is_active: boolean
+          master_docs_url: string | null
           purpose: string
           site_name: string
           site_url: string
@@ -30462,6 +30463,7 @@ export type Database = {
           graph_site_id?: string | null
           id?: string
           is_active?: boolean
+          master_docs_url?: string | null
           purpose?: string
           site_name: string
           site_url: string
@@ -30473,6 +30475,7 @@ export type Database = {
           graph_site_id?: string | null
           id?: string
           is_active?: boolean
+          master_docs_url?: string | null
           purpose?: string
           site_name?: string
           site_url?: string

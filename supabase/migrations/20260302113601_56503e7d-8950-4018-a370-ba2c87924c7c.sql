@@ -1,0 +1,1 @@
+ALTER TABLE public.sharepoint_sites ADD COLUMN IF NOT EXISTS master_docs_url text;
