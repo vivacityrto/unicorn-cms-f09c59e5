@@ -358,6 +358,8 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
       });
 
       setStages(transformed);
+      // Auto-expand all stages on initial load
+      setExpandedStages(prev => prev.size === 0 ? new Set(transformed.map(s => s.id)) : prev);
     } catch (error: any) {
       console.error('Error fetching stage instances:', error);
       toast({ title: 'Error', description: 'Failed to load stages', variant: 'destructive' });
