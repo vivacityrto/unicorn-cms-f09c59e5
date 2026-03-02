@@ -19,6 +19,7 @@ interface StartPackageDialogProps {
 interface Package {
   id: number;
   name: string;
+  full_text: string | null;
   status: string;
 }
 
@@ -55,7 +56,7 @@ export function StartPackageDialog({
       // Fetch active packages
       const { data: packagesData } = await supabase
         .from('packages')
-        .select('id, name, status')
+        .select('id, name, full_text, status')
         .eq('status', 'active')
         .order('name');
 
@@ -127,7 +128,7 @@ export function StartPackageDialog({
                 <SelectContent>
                   {packages.map((pkg) => (
                     <SelectItem key={pkg.id} value={pkg.id.toString()}>
-                      {pkg.name}
+                      {pkg.name}{pkg.full_text ? ` — ${pkg.full_text}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
