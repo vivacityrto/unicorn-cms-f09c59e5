@@ -39,6 +39,7 @@ interface TeamUser {
   archived: boolean;
   last_sign_in_at: string | null;
   created_at: string;
+  is_csc: boolean;
   staff_teams: string[];
   isPending?: boolean;
   inviteId?: string;
@@ -94,7 +95,8 @@ export default function TeamUsers() {
           created_at,
           global_role,
           user_type,
-          staff_teams
+          staff_teams,
+          is_csc
         `)
         .or('global_role.eq.SuperAdmin,unicorn_role.eq.Super Admin,user_type.eq.Vivacity Team,user_type.eq.Vivacity')
         .order('first_name', { ascending: true });
@@ -123,6 +125,7 @@ export default function TeamUsers() {
         archived: user.archived || false,
         last_sign_in_at: user.last_sign_in_at,
         created_at: user.created_at,
+        is_csc: user.is_csc || false,
         staff_teams: user.staff_teams || [],
         isPending: false,
       }));
@@ -155,6 +158,7 @@ export default function TeamUsers() {
           archived: false,
           last_sign_in_at: null,
           created_at: invite.created_at,
+          is_csc: false,
           staff_teams: [],
           isPending: true,
           inviteId: invite.id,
@@ -424,6 +428,7 @@ export default function TeamUsers() {
                   <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Team</TableHead>
+                  <TableHead>CSC</TableHead>
                   <TableHead>Level</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Login</TableHead>
@@ -433,7 +438,7 @@ export default function TeamUsers() {
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No team users found
                     </TableCell>
                   </TableRow>
@@ -484,6 +489,13 @@ export default function TeamUsers() {
                               );
                             })}
                           </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {user.is_csc ? (
+                          <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">CSC</Badge>
                         ) : (
                           <span className="text-muted-foreground text-sm">—</span>
                         )}

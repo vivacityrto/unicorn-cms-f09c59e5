@@ -62,11 +62,11 @@ export function StartPackageDialog({
 
       setPackages(packagesData || []);
 
-      // Fetch CSC users (Super Admin and Team Members)
+      // Fetch CSC users (users flagged as is_csc)
       const usersResult = await (supabase
         .from('users' as any)
         .select('user_uuid, first_name, last_name')
-        .in('unicorn_role', ['Super Admin', 'Team Member', 'Team Leader'])
+        .eq('is_csc', true)
         .eq('disabled', false)
         .eq('archived', false)
         .order('first_name')) as { data: CscUser[] | null; error: any };
