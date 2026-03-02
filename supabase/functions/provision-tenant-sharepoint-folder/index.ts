@@ -33,7 +33,20 @@ async function resolveSiteAndDrive(
   supabaseAdmin: ReturnType<typeof createClient>,
   accessToken: string,
 ): Promise<{ siteId: string; driveId: string }> {
-  // Try from existing successful settings first
+  // 1. Try from sharepoint_sites registry (authoritative source)
+  const { data: spSite } = await supabaseAdmin
+    .from("sharepoint_sites")
+    .select("graph_site_id, drive_id")
+    .eq("purpose", "client_success_files")
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (spSite?.graph_site_id && spSite?.drive_id) {
+    return { siteId: spSite.graph_site_id, driveId: spSite.drive_id };
+  }
+
+  // 2. Try from existing successful tenant settings
   const { data: existingConfig } = await supabaseAdmin
     .from("tenant_sharepoint_settings")
     .select("site_id, drive_id")
@@ -47,13 +60,15 @@ async function resolveSiteAndDrive(
     return { siteId: existingConfig.site_id, driveId: existingConfig.drive_id };
   }
 
-  // Discover from root site
+  // 3. Discover from root site via Graph API (requires Sites.Read.All)
   const siteResp = await fetch(`${GRAPH_BASE}/sites/root`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!siteResp.ok) {
     await siteResp.text();
-    throw new Error("Could not resolve SharePoint root site. Check app permissions.");
+    throw new Error(
+      "Could not resolve SharePoint site. Ensure sharepoint_sites has a 'client_success_files' row with graph_site_id and drive_id populated, or grant Sites.Read.All to the Azure app."
+    );
   }
   const site = await siteResp.json();
 
