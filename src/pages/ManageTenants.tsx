@@ -442,7 +442,7 @@ export default function ManageTenants() {
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user) return;
-      const activeTenants = tenants.filter(t => t.lifecycle_status === "active");
+      const activeTenants = tenants.filter(t => t.status === "active");
       const connections = activeTenants.map(tenant => ({
         user_uuid: session.session.user.id,
         tenant_id: tenant.id,
@@ -584,7 +584,7 @@ export default function ManageTenants() {
 
       {/* CSC Client Distribution */}
       {(() => {
-        const activeTenantsList = tenants.filter(t => t.lifecycle_status === 'active');
+        const activeTenantsList = tenants.filter(t => t.status === 'active');
         const cscCounts: Record<string, { name: string; count: number }> = {};
         let unassigned = 0;
         activeTenantsList.forEach(t => {
