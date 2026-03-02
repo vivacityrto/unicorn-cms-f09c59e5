@@ -144,7 +144,7 @@ export function ComposeEmailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-5 w-5" />
@@ -187,7 +187,7 @@ export function ComposeEmailDialog({
               <Textarea
                 value={body}
                 onChange={e => setBody(e.target.value)}
-                className="min-h-[200px] font-mono text-sm"
+                className="min-h-[400px] font-mono text-sm"
                 placeholder="Email body (HTML or plain text supported)"
               />
               <div className="mt-2 space-y-1">
