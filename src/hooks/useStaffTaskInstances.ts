@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useTaskStatusOptions, getStatusLabel } from '@/hooks/useTaskStatusOptions';
 
 export interface StaffTaskInstance {
   id: number;
@@ -18,13 +19,6 @@ export interface StaffTaskInstance {
   order_number: number | null;
 }
 
-export const STATUS_OPTIONS = [
-  { value: 0, label: 'Not Started', key: 'not_started' },
-  { value: 1, label: 'In Progress', key: 'in_progress' },
-  { value: 2, label: 'Completed', key: 'completed' },
-  { value: 3, label: 'N/A', key: 'na' },
-] as const;
-
 interface UseStaffTaskInstancesProps {
   stageInstanceId: number;
   tenantId: number;
@@ -34,6 +28,7 @@ interface UseStaffTaskInstancesProps {
 export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: UseStaffTaskInstancesProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { statuses } = useTaskStatusOptions();
   const [tasks, setTasks] = useState<StaffTaskInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
@@ -149,11 +144,11 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
     try {
       const oldTask = tasks.find(t => t.id === taskId);
       const oldStatusId = oldTask?.status_id;
-      const statusOption = STATUS_OPTIONS.find(s => s.value === newStatusId);
+      const statusOption = statuses.find(s => s.code === newStatusId);
 
       const updateData: Record<string, any> = {
         status_id: newStatusId,
-        status: statusOption?.key || 'not_started',
+        status: statusOption?.value || 'not_started',
       };
 
       // Set completion_date if completing
@@ -184,7 +179,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
 
       toast({ 
         title: 'Task Updated', 
-        description: `Status changed to ${statusOption?.label || 'Unknown'}` 
+        description: `Status changed to ${getStatusLabel(newStatusId, statuses)}` 
       });
       
       fetchTasks();

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useTaskStatusOptions, getStatusLabel } from '@/hooks/useTaskStatusOptions';
 
 export interface ClientTaskInstance {
   id: number;
@@ -14,13 +15,6 @@ export interface ClientTaskInstance {
   order_number: number | null;
 }
 
-export const CLIENT_TASK_STATUS_OPTIONS = [
-  { value: 0, label: 'Not Started' },
-  { value: 1, label: 'In Progress' },
-  { value: 2, label: 'Completed' },
-  { value: 3, label: 'N/A' },
-] as const;
-
 interface UseClientTaskInstancesProps {
   stageInstanceId: number;
   tenantId: number;
@@ -30,6 +24,7 @@ interface UseClientTaskInstancesProps {
 export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }: UseClientTaskInstancesProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { statuses } = useTaskStatusOptions();
   const [tasks, setTasks] = useState<ClientTaskInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
@@ -131,7 +126,7 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
         details: { package_id: packageId, stage_instance_id: stageInstanceId },
       });
 
-      toast({ title: 'Task Updated', description: `Status changed to ${CLIENT_TASK_STATUS_OPTIONS.find(s => s.value === newStatusId)?.label}` });
+      toast({ title: 'Task Updated', description: `Status changed to ${getStatusLabel(newStatusId, statuses)}` });
       fetchTasks();
     } catch (error: any) {
       console.error('Error updating client task:', error);

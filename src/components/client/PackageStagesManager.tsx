@@ -30,11 +30,8 @@ import { PhaseGroupHeader } from './PhaseGroupHeader';
 import { useCheckpointPhasesEnabled } from '@/hooks/useCheckpointPhasesEnabled';
 import { usePhaseProgress } from '@/hooks/usePhaseProgress';
 import { useStageCounts } from '@/hooks/useStageCounts';
-import { 
-  CheckCircle2, 
-  Circle, 
-  AlertCircle, 
-  Clock, 
+import { useTaskStatusOptions, getStatusIcon, getStatusColor, getStatusLabel } from '@/hooks/useTaskStatusOptions';
+import {
   Loader2,
   ChevronDown,
   ChevronRight,
@@ -67,20 +64,7 @@ interface PackageStagesManagerProps {
   packageInstanceId?: number;
 }
 
-// Legacy status mapping (unicorn1 uses integers)
-const STATUS_MAP: Record<number, string> = {
-  0: 'not_started',
-  1: 'in_progress',
-  2: 'blocked',
-  3: 'complete',
-};
-
-const STATUS_OPTIONS = [
-  { value: 0, label: 'Not Started', icon: Circle, color: 'text-muted-foreground' },
-  { value: 1, label: 'In Progress', icon: Clock, color: 'text-blue-600' },
-  { value: 2, label: 'Blocked', icon: AlertCircle, color: 'text-red-600' },
-  { value: 3, label: 'Complete', icon: CheckCircle2, color: 'text-green-600' },
-];
+// STATUS_OPTIONS and STATUS_MAP removed — now driven by useTaskStatusOptions hook
 
 interface StageRowProps {
   stage: StageInstance;
@@ -96,8 +80,11 @@ interface StageRowProps {
 }
 
 function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, onUpdate, profile }: StageRowProps) {
-  const statusOption = STATUS_OPTIONS.find(s => s.value === stage.status) || STATUS_OPTIONS[0];
-  const StatusIcon = statusOption.icon;
+  const { statuses } = useTaskStatusOptions();
+  const statusCode = typeof stage.status === 'number' ? stage.status : 0;
+  const StatusIcon = getStatusIcon(statusCode);
+  const statusColor = getStatusColor(statusCode);
+  const statusLabel = statuses.find(s => s.code === statusCode)?.label || `Status ${statusCode}`;
   const { staffTasks, clientTasks, documents, emails, loading: countsLoading } = useStageCounts(stage.id);
 
   const countBadge = (count: number) =>
@@ -110,8 +97,8 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
       <div
         className={cn(
           "rounded-lg border bg-card overflow-hidden",
-          stage.status === 2 && "border-destructive/50 bg-destructive/5",
-          stage.status === 3 && "border-primary/50 bg-primary/5"
+          stage.status === 2 && "border-primary/50 bg-primary/5",
+          stage.status === 5 && "border-destructive/50 bg-destructive/5"
         )}
       >
         <div className="flex items-center justify-between gap-4 p-3">
@@ -121,7 +108,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </Button>
             </CollapsibleTrigger>
-            <StatusIcon className={cn("h-5 w-5 shrink-0", statusOption.color)} />
+            <StatusIcon className={cn("h-5 w-5 shrink-0", statusColor)} />
             <div className="min-w-0">
               <p className="font-medium truncate">{stage.stage_name}</p>
               {stage.shortname && <p className="text-xs text-muted-foreground">{stage.shortname}</p>}
@@ -160,14 +147,18 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
                 {updating === stage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue />}
               </SelectTrigger>
               <SelectContent>
-                {STATUS_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value.toString()}>
-                    <div className="flex items-center gap-2">
-                      <option.icon className={cn("h-4 w-4", option.color)} />
-                      {option.label}
-                    </div>
-                  </SelectItem>
-                ))}
+                {statuses.map((opt) => {
+                  const OptIcon = getStatusIcon(opt.code);
+                  const optColor = getStatusColor(opt.code);
+                  return (
+                    <SelectItem key={opt.code} value={opt.code.toString()}>
+                      <div className="flex items-center gap-2">
+                        <OptIcon className={cn("h-4 w-4", optColor)} />
+                        {opt.label}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
@@ -387,8 +378,8 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
         status_date: new Date().toISOString(),
       };
 
-      // Set completion_date if completing
-      if (newStatus === 3 && oldStatus !== 3) {
+      // Set completion_date if completing (code 2 = Completed)
+      if (newStatus === 2 && oldStatus !== 2) {
         updateData.completion_date = new Date().toISOString().split('T')[0];
       }
 
@@ -411,7 +402,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
         details: { package_id: packageId, stage_id: oldStage?.stage_id }
       });
 
-      toast({ title: 'Stage Updated', description: `Status changed to ${STATUS_OPTIONS.find(s => s.value === newStatus)?.label}` });
+      toast({ title: 'Stage Updated', description: `Status changed to ${getStatusLabel(newStatus, [])}` });
       fetchStages();
     } catch (error: any) {
       console.error('Error updating stage instance:', error);
