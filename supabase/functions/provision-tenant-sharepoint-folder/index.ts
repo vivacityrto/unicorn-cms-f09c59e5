@@ -43,7 +43,22 @@ async function resolveSiteAndDrive(
     .maybeSingle();
 
   if (spSite?.graph_site_id && spSite?.drive_id) {
-    return { siteId: spSite.graph_site_id, driveId: spSite.drive_id };
+    // If drive_id is stored as a Graph API URL, resolve the actual drive ID
+    let driveId = spSite.drive_id;
+    if (driveId.startsWith('http')) {
+      console.log('[provision-sp] drive_id is a URL, resolving actual drive ID...');
+      const driveResp = await fetch(driveId, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!driveResp.ok) {
+        const errText = await driveResp.text();
+        throw new Error(`Failed to resolve drive from URL: ${driveResp.status} ${errText}`);
+      }
+      const driveData = await driveResp.json();
+      driveId = driveData.id;
+      console.log('[provision-sp] Resolved drive ID:', driveId);
+    }
+    return { siteId: spSite.graph_site_id, driveId };
   }
 
   // 2. Try from existing successful tenant settings
