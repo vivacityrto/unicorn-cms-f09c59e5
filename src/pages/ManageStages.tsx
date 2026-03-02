@@ -87,7 +87,7 @@ export default function ManageStages() {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('documents_stages')
+        .from('stages' as any)
         .select(`
           *,
           creator:created_by (
@@ -96,16 +96,24 @@ export default function ManageStages() {
             avatar_url
           )
         `)
-        .order('title', { ascending: true });
+        .order('name', { ascending: true }) as any;
 
       if (error) throw error;
       
       // Map the data to include creator_name and avatar
-      const stagesWithCreator = (data || []).map((stage: any) => ({
-        ...stage,
-        creator_name: stage.creator ? `${stage.creator.first_name} ${stage.creator.last_name}` : 'Unknown',
-        creator_avatar: stage.creator?.avatar_url || null,
-        creator: undefined // Remove the nested object
+      const stagesWithCreator = (data || []).map((stageRaw: any) => ({
+        id: stageRaw.id,
+        title: stageRaw.name,
+        short_name: stageRaw.shortname,
+        description: stageRaw.description,
+        video_url: stageRaw.videourl,
+        created_at: stageRaw.dateimported || stageRaw.updated_at || '',
+        updated_at: stageRaw.updated_at || '',
+        created_by: stageRaw.created_by,
+        is_certified: stageRaw.is_certified,
+        certified_notes: stageRaw.certified_notes,
+        creator_name: stageRaw.creator ? `${stageRaw.creator.first_name} ${stageRaw.creator.last_name}` : 'Unknown',
+        creator_avatar: stageRaw.creator?.avatar_url || null,
       }));
       
       setStages(stagesWithCreator);
@@ -122,14 +130,14 @@ export default function ManageStages() {
 
   const handleCreate = async () => {
     try {
-      const { error } = await supabase
-        .from('documents_stages')
+      const { error } = await (supabase
+        .from('stages')
         .insert([{
-          title: formData.title,
-          short_name: formData.short_name || null,
+          name: formData.title,
+          shortname: formData.short_name || null,
           description: formData.description || null,
-          video_url: formData.video_url || null,
-        } as any]);
+          videourl: formData.video_url || null,
+        } as any]) as any);
 
       if (error) throw error;
 
@@ -154,15 +162,15 @@ export default function ManageStages() {
     if (!selectedStage) return;
 
     try {
-      const { error } = await supabase
-        .from('documents_stages')
+      const { error } = await (supabase
+        .from('stages')
         .update({
-          title: formData.title,
-          short_name: formData.short_name || null,
+          name: formData.title,
+          shortname: formData.short_name || null,
           description: formData.description || null,
-          video_url: formData.video_url || null,
+          videourl: formData.video_url || null,
         } as any)
-        .eq('id', selectedStage.id);
+        .eq('id', selectedStage.id) as any);
 
       if (error) throw error;
 
@@ -188,10 +196,10 @@ export default function ManageStages() {
     if (!selectedStage) return;
 
     try {
-      const { error } = await supabase
-        .from('documents_stages')
+      const { error } = await (supabase
+        .from('stages')
         .delete()
-        .eq('id', selectedStage.id);
+        .eq('id', selectedStage.id) as any);
 
       if (error) throw error;
 

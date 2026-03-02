@@ -231,11 +231,18 @@ export default function AdminStageDetail() {
     
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('documents_stages')
+      const { data: rawData, error } = await supabase
+        .from('stages')
         .select('*')
         .eq('id', stageIdNum)
         .single();
+      const data = rawData ? {
+        ...rawData,
+        title: rawData.name,
+        short_name: rawData.shortname,
+        video_url: rawData.videourl,
+        created_at: rawData.dateimported || rawData.updated_at || '',
+      } : null;
 
       if (error) throw error;
       setStage(data as Stage);
@@ -276,13 +283,19 @@ export default function AdminStageDetail() {
       }
       
       // Fetch all stages for replacement dropdown
-      const { data: allStagesData } = await supabase
-        .from('documents_stages')
+      const { data: allStagesRaw } = await supabase
+        .from('stages')
         .select('*')
         .eq('is_archived', false)
-        .order('title', { ascending: true });
+        .order('name', { ascending: true });
       
-      setAllStages((allStagesData || []) as Stage[]);
+      setAllStages((allStagesRaw || []).map((s: any) => ({
+        ...s,
+        title: s.name,
+        short_name: s.shortname,
+        video_url: s.videourl,
+        created_at: s.dateimported || s.updated_at || '',
+      })) as Stage[]);
     } catch (error) {
       console.error('Failed to fetch usage data:', error);
     }
@@ -346,10 +359,10 @@ export default function AdminStageDetail() {
     const newLabel = version_label.trim() || null;
     
     try {
-      const { error } = await supabase
-        .from('documents_stages')
-        .update({ version_label: newLabel })
-        .eq('id', stage.id);
+      const { error } = await (supabase
+        .from('stages')
+        .update({ version_label: newLabel } as any)
+        .eq('id', stage.id) as any);
       
       if (error) throw error;
       

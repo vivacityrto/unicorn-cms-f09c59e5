@@ -137,7 +137,7 @@ export function usePackageBuilder() {
     try {
       // Get stages with usage count
       const [stagesResult, usageCounts] = await Promise.all([
-        supabase.from('documents_stages').select('*').order('title', { ascending: true }),
+        supabase.from('stages').select('*').order('name', { ascending: true }),
         supabase.from('package_stages' as any).select('stage_id') as any
       ]);
 
@@ -148,10 +148,25 @@ export function usePackageBuilder() {
         countMap.set(ps.stage_id, (countMap.get(ps.stage_id) || 0) + 1);
       });
 
-      const stagesWithCounts = (stagesResult.data || []).map(stage => ({
-        ...stage,
-        is_reusable: stage.is_reusable ?? true,
-        usage_count: countMap.get(stage.id) || 0
+      const stagesWithCounts: Stage[] = (stagesResult.data || []).map((s: any) => ({
+        id: s.id,
+        title: s.name,
+        short_name: s.shortname,
+        description: s.description,
+        video_url: s.videourl,
+        stage_type: s.stage_type || 'delivery',
+        is_reusable: s.is_reusable ?? true,
+        ai_hint: s.ai_hint,
+        dashboard_visible: s.dashboard_visible ?? true,
+        created_at: s.dateimported || new Date().toISOString(),
+        is_certified: s.is_certified ?? false,
+        certified_notes: s.certified_notes,
+        stage_key: s.stage_key || `stage-${s.id}`,
+        version_label: s.version_label,
+        requires_stage_keys: s.requires_stage_keys,
+        frameworks: s.frameworks,
+        covers_standards: s.covers_standards,
+        usage_count: countMap.get(s.id) || 0
       }));
 
       setStages(stagesWithCounts);
@@ -337,13 +352,13 @@ export function usePackageBuilder() {
       .replace(/[^a-zA-Z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '') + '-' + Date.now();
     
-    const { data: newStage, error } = await supabase
-      .from('documents_stages')
+    const { data: newStage, error } = await (supabase
+      .from('stages')
       .insert({
-        title: data.title,
-        short_name: data.short_name,
+        name: data.title,
+        shortname: data.short_name,
         description: data.description,
-        video_url: data.video_url,
+        videourl: data.video_url,
         stage_type: data.stage_type || 'delivery',
         is_reusable: data.is_reusable ?? true,
         ai_hint: data.ai_hint,
@@ -351,9 +366,9 @@ export function usePackageBuilder() {
         is_certified: data.is_certified ?? false,
         certified_notes: data.is_certified ? data.certified_notes : null,
         stage_key: stageKey
-      })
+      } as any)
       .select()
-      .single();
+      .single());
 
     if (error) throw error;
     await fetchStages();
@@ -366,10 +381,18 @@ export function usePackageBuilder() {
     if (updateData.is_certified === false) {
       updateData.certified_notes = null;
     }
-    const { error } = await supabase
-      .from('documents_stages')
-      .update(updateData)
-      .eq('id', id);
+    // Remap field names for stages table
+    const remapped: any = {};
+    for (const [key, val] of Object.entries(updateData)) {
+      if (key === 'title') remapped.name = val;
+      else if (key === 'short_name') remapped.shortname = val;
+      else if (key === 'video_url') remapped.videourl = val;
+      else remapped[key] = val;
+    }
+    const { error } = await (supabase
+      .from('stages')
+      .update(remapped)
+      .eq('id', id) as any);
 
     if (error) throw error;
     await fetchStages();
@@ -436,58 +459,29 @@ export function usePackageDetail(packageId: number | null) {
       const stageIds = (psData || []).map((ps: any) => ps.stage_id);
       
       if (stageIds.length > 0) {
-        // Fetch from both stages table (primary) and documents_stages (fallback)
-        const [stagesResult, docStagesResult] = await Promise.all([
-          supabase.from('stages' as any).select('*').in('id', stageIds) as any,
-          supabase.from('documents_stages').select('*').in('id', stageIds)
-        ]);
+        // Fetch from stages table (single source of truth now)
+        const { data: stagesData } = await supabase.from('stages').select('*').in('id', stageIds);
 
-        // Build a combined map - stages table takes priority, documents_stages as fallback
         const stageMap = new Map<number, Stage>();
-        
-        // Add documents_stages first (fallback)
-        (docStagesResult.data || []).forEach((s: any) => {
+        (stagesData || []).forEach((s: any) => {
           stageMap.set(s.id, {
             id: s.id,
-            title: s.title,
-            short_name: s.short_name,
+            title: s.name,
+            short_name: s.shortname,
             description: s.description,
-            video_url: s.video_url,
+            video_url: s.videourl,
             stage_type: s.stage_type || 'delivery',
             is_reusable: s.is_reusable ?? true,
             ai_hint: s.ai_hint,
             dashboard_visible: s.dashboard_visible ?? true,
-            created_at: s.created_at,
-            is_certified: s.is_certified,
+            created_at: s.dateimported || new Date().toISOString(),
+            is_certified: s.is_certified ?? false,
             certified_notes: s.certified_notes,
-            stage_key: s.stage_key,
+            stage_key: s.stage_key || `stage-${s.id}`,
             version_label: s.version_label,
             requires_stage_keys: s.requires_stage_keys,
             frameworks: s.frameworks,
             covers_standards: s.covers_standards
-          });
-        });
-        
-        // Add stages table entries (primary - overwrites any duplicates)
-        (stagesResult.data || []).forEach((s: any) => {
-          stageMap.set(s.id, {
-            id: s.id,
-            title: s.name, // 'stages' table uses 'name' instead of 'title'
-            short_name: s.shortname,
-            description: s.description,
-            video_url: s.videourl,
-            stage_type: 'delivery', // Default for stages table
-            is_reusable: true,
-            ai_hint: null,
-            dashboard_visible: true,
-            created_at: s.dateimported || new Date().toISOString(),
-            is_certified: false,
-            certified_notes: null,
-            stage_key: `stage-${s.id}`,
-            version_label: null,
-            requires_stage_keys: null,
-            frameworks: null,
-            covers_standards: null
           });
         });
         

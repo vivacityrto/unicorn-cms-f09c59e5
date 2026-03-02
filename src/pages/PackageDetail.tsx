@@ -485,10 +485,10 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
   };
   const handleDeleteStage = async (stageId: number) => {
     try {
-      const { error } = await supabase
-        .from("documents_stages")
+      const { error } = await (supabase
+        .from("stages")
         .delete()
-        .eq("id", stageId);
+        .eq("id", stageId) as any);
       if (error) throw error;
       toast({
         title: "Success",
@@ -642,21 +642,21 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
           const stageIds = tenantData?.stage_ids || [];
           
           if (stageIds.length > 0) {
-            // Fetch stages from documents_stages where id is in stage_ids
-            const { data: stagesData, error: stagesError } = await supabase
-              .from("documents_stages")
+            // Fetch stages from stages table where id is in stage_ids
+            const { data: stagesData, error: stagesError } = await (supabase
+              .from("stages")
               .select("*")
               .in("id", stageIds)
-              .order("id");
+              .order("id") as any);
             
             if (!stagesError) {
               const mappedStages = (stagesData || []).map((stage: any, index: number) => ({
                 id: stage.id,
                 package_id: Number(id),
-                stage_name: stage.title,
-                short_name: stage.short_name,
+                stage_name: stage.name,
+                short_name: stage.shortname,
                 stage_description: stage.description,
-                video_url: stage.video_url,
+                video_url: stage.videourl,
                 order_number: index + 1,
                 is_active: true,
                 created_at: stage.created_at,

@@ -131,7 +131,7 @@ export async function updateStageFrameworks(
     const newValue = frameworks.length === 0 ? null : frameworks;
     
     const { error } = await supabase
-      .from('documents_stages')
+      .from('stages')
       .update({ frameworks: newValue })
       .eq('id', stageId);
     

@@ -172,11 +172,11 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
       let stagesMap = new Map();
 
       if (stageIds.length > 0) {
-        const { data: stages } = await supabase
-          .from('documents_stages')
-          .select('id, title')
+        const { data: stagesData } = await supabase
+          .from('stages')
+          .select('id, name')
           .in('id', stageIds);
-        stagesMap = new Map(stages?.map(s => [s.id, { id: s.id, name: s.title }]) || []);
+        stagesMap = new Map(stagesData?.map(s => [s.id, { id: s.id, name: s.name }]) || []);
       }
 
       const itemsWithRelations: WorkboardItem[] = (data || []).map(item => ({

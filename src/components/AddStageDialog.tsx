@@ -94,19 +94,19 @@ export function AddStageDialog({
       setIsLoading(true);
       
       if (stageData) {
-        // Update existing stage in documents_stages
-        const { error } = await supabase
-          .from('documents_stages')
+        // Update existing stage in stages table
+        const { error } = await (supabase
+          .from('stages')
           .update({
-            title: formData.stage_name,
-            short_name: formData.short_name || null,
+            name: formData.stage_name,
+            shortname: formData.short_name || null,
             description: formData.stage_description || null,
-            video_url: formData.video_url || null,
+            videourl: formData.video_url || null,
             status: formData.status,
             is_certified: formData.is_certified,
             certified_notes: formData.is_certified ? formData.certified_notes || null : null,
-          })
-          .eq('id', stageData.id);
+          } as any)
+          .eq('id', stageData.id) as any);
         
         if (error) throw error;
         toast({
@@ -114,26 +114,25 @@ export function AddStageDialog({
           description: "Stage updated successfully"
         });
       } else {
-        // Create new stage in documents_stages
-        // Generate a stage_key from the title
+        // Create new stage in stages table
         const stageKey = formData.stage_name.toLowerCase()
           .replace(/[^a-zA-Z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '') + '-' + Date.now();
         
-        const { data: newStage, error: stageError } = await supabase
-          .from('documents_stages')
+        const { data: newStage, error: stageError } = await (supabase
+          .from('stages')
           .insert({
-            title: formData.stage_name,
-            short_name: formData.short_name || null,
+            name: formData.stage_name,
+            shortname: formData.short_name || null,
             description: formData.stage_description || null,
-            video_url: formData.video_url || null,
+            videourl: formData.video_url || null,
             status: formData.status,
             is_certified: formData.is_certified,
             certified_notes: formData.is_certified ? formData.certified_notes || null : null,
             stage_key: stageKey,
-          })
+          } as any)
           .select('id')
-          .single();
+          .single() as any);
         
         if (stageError) throw stageError;
 

@@ -33,11 +33,11 @@ export function GovernancePackageAssignments({ documentId }: Props) {
 
       const [pkgRes, stageRes] = await Promise.all([
         supabase.from('packages').select('id, name').in('id', pkgIds),
-        supabase.from('documents_stages').select('id, title').in('id', stageIds),
+        supabase.from('stages').select('id, name').in('id', stageIds),
       ]);
 
       const pkgMap = new Map((pkgRes.data || []).map((p: any) => [p.id, p.name]));
-      const stageMap = new Map((stageRes.data || []).map((s: any) => [s.id, s.title]));
+      const stageMap = new Map((stageRes.data || []).map((s: any) => [s.id, s.name]));
 
       return data.map((row) => ({
         package_id: row.package_id,

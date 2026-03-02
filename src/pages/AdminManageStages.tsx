@@ -192,9 +192,9 @@ export default function AdminManageStages() {
 
       // Fetch all stages
       const { data: stagesData, error: stagesError } = await supabase
-        .from('documents_stages')
+        .from('stages')
         .select('*')
-        .order('title', { ascending: true });
+        .order('name', { ascending: true });
 
       if (stagesError) throw stagesError;
 
@@ -229,10 +229,10 @@ export default function AdminManageStages() {
       // Merge data
       const stagesWithUsage: StageWithUsage[] = (stagesData || []).map((stage: any) => ({
         id: stage.id,
-        title: stage.title,
-        short_name: stage.short_name,
+        title: stage.name,
+        short_name: stage.shortname,
         description: stage.description,
-        video_url: stage.video_url,
+        video_url: stage.videourl,
         stage_type: stage.stage_type || 'other',
         stage_key: stage.stage_key || '',
         is_certified: stage.is_certified || false,
@@ -241,7 +241,7 @@ export default function AdminManageStages() {
         version_label: stage.version_label || null,
         frameworks: stage.frameworks || null,
         covers_standards: stage.covers_standards || null,
-        created_at: stage.created_at,
+        created_at: stage.dateimported || stage.updated_at || '',
         updated_at: stage.updated_at,
         usage_count: usageCountMap[stage.id] || 0,
         active_client_count: activeClientCountMap[stage.id] || 0,
@@ -417,10 +417,10 @@ export default function AdminManageStages() {
   const toggleArchive = async (stage: StageWithUsage) => {
     try {
       const newArchived = !stage.is_archived;
-      const { error } = await supabase
-        .from('documents_stages')
-        .update({ is_archived: newArchived })
-        .eq('id', stage.id);
+      const { error } = await (supabase
+        .from('stages')
+        .update({ is_archived: newArchived } as any)
+        .eq('id', stage.id) as any);
 
       if (error) throw error;
 

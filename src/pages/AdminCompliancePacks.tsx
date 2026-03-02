@@ -61,14 +61,14 @@ export default function AdminCompliancePacks() {
     const fetchReleases = async () => {
       setLoadingReleases(true);
       const { data } = await supabase
-        .from('stage_releases')
+        .from('stage_releases' as any)
         .select(`
           id, stage_id, status, created_at, released_at,
-          stage:documents_stages(title)
+          stage:stages(name)
         `)
         .eq('tenant_id', parseInt(selectedTenant))
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(50) as any;
       
       setReleases((data || []) as unknown as StageRelease[]);
       setLoadingReleases(false);

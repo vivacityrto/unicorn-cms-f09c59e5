@@ -250,10 +250,11 @@ export function useClientPackageInstances() {
       const stageIds = [...new Set(stageRows.map(s => s.stage_id))] as number[];
       const stageInstanceIds = stageRows.map(s => s.id) as number[];
 
-      // Fetch stage metadata from documents_stages
-      const { data: stageMeta } = stageIds.length > 0
-        ? await supabase.from('documents_stages').select('id, title, short_name, description').in('id', stageIds)
+      // Fetch stage metadata from stages
+      const { data: stageMetaRaw } = stageIds.length > 0
+        ? await supabase.from('stages').select('id, name, shortname, description').in('id', stageIds)
         : { data: [] };
+      const stageMeta = (stageMetaRaw || []).map((s: any) => ({ id: s.id, title: s.name, short_name: s.shortname, description: s.description }));
 
       const stageMetaMap = new Map((stageMeta || []).map(s => [s.id, s]));
 

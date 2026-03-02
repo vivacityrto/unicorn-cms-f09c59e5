@@ -255,25 +255,22 @@ export default function CalendarTimeCapture() {
   };
 
   const fetchStagesForPackage = async (packageId: number) => {
-    // Load stages via package_stages -> stages (by name) -> documents_stages
-    // calendar_time_drafts.stage_id references documents_stages, not stages
-    const { data: psData } = await supabase
+    // Load stages via package_stages
+    const { data: psData } = await (supabase
       .from('package_stages')
-      .select('stage:stages(id, name)')
-      .eq('package_id', packageId);
+      .select('stage_id')
+      .eq('package_id', packageId) as any);
     
     if (psData && psData.length > 0) {
-      const stageNames = psData
-        .map(s => (s.stage as { id: number; name: string })?.name)
-        .filter(Boolean);
+      const stageIds = psData.map((ps: any) => ps.stage_id);
       
-      if (stageNames.length > 0) {
+      if (stageIds.length > 0) {
         const { data: dsData } = await supabase
-          .from('documents_stages')
-          .select('id, title')
-          .in('title', stageNames);
+          .from('stages')
+          .select('id, name')
+          .in('id', stageIds);
         
-        setStages((dsData || []).map(ds => ({ id: ds.id, name: ds.title })));
+        setStages((dsData || []).map((ds: any) => ({ id: ds.id, name: ds.name })));
       } else {
         setStages([]);
       }

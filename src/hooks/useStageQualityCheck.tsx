@@ -48,11 +48,12 @@ export function useStageQualityCheck({
 
     try {
       // Fetch stage data
-      const { data: stage, error: stageError } = await supabase
-        .from('documents_stages')
-        .select('id, title, stage_type, is_certified, is_archived, certified_notes')
+      const { data: stageRaw, error: stageError } = await supabase
+        .from('stages')
+        .select('id, name, stage_type, is_certified, is_archived, certified_notes')
         .eq('id', stageId)
         .single();
+      const stage = stageRaw ? { ...stageRaw, title: stageRaw.name } : null;
 
       if (stageError || !stage) {
         throw new Error('Stage not found');
@@ -427,11 +428,12 @@ export async function computeStageQuality(
 
   try {
     // Fetch stage data
-    const { data: stage, error: stageError } = await supabase
-      .from('documents_stages')
-      .select('id, title, stage_type, is_certified, is_archived, certified_notes')
+    const { data: stageRaw, error: stageError } = await supabase
+      .from('stages')
+      .select('id, name, stage_type, is_certified, is_archived, certified_notes')
       .eq('id', stageId)
       .single();
+    const stage = stageRaw ? { ...stageRaw, title: stageRaw.name } : null;
 
     if (stageError || !stage) {
       return null;

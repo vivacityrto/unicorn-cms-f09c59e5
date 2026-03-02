@@ -619,15 +619,15 @@ export function useClientPackages(tenantId: number | null) {
 
       const stageInstances = (stageInstancesResult as any).data || [];
 
-      // Fetch stage names from documents_stages for current stage display
+      // Fetch stage names from stages for current stage display
       const stageIdSet = new Set<number>();
       stageInstances.forEach((s: any) => stageIdSet.add(Number(s.stage_id)));
       const stageIds = Array.from(stageIdSet);
       const stageNamesResult = stageIds.length > 0
-        ? await (supabase.from('documents_stages').select('id, title') as any).in('id', stageIds)
+        ? await (supabase.from('stages').select('id, name') as any).in('id', stageIds)
         : { data: [] };
       const stageNamesMap = ((stageNamesResult as any).data || []).reduce((acc: Record<number, string>, s: any) => {
-        acc[s.id] = s.title;
+        acc[s.id] = s.name;
         return acc;
       }, {} as Record<number, string>);
 

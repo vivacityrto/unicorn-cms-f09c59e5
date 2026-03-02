@@ -97,11 +97,11 @@ export function ClientWorkboardTab({ tenantId, clientId }: ClientWorkboardTabPro
 
     // Fetch stages
     const { data: stageData } = await supabase
-      .from('documents_stages')
-      .select('id, title')
-      .order('title')
+      .from('stages')
+      .select('id, name')
+      .order('name')
       .limit(100);
-    setStages((stageData || []).map(s => ({ id: s.id, name: s.title })));
+    setStages((stageData || []).map(s => ({ id: s.id, name: s.name })));
   };
 
   // Apply search filter
