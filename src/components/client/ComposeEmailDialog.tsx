@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -182,13 +182,11 @@ export function ComposeEmailDialog({
               <Label className="text-right text-sm font-semibold">Subject:</Label>
               <Input value={subject} onChange={e => setSubject(e.target.value)} />
             </div>
-            <div>
+            <div className="flex-1 min-h-0">
               <Label className="text-sm font-semibold mb-1 block">Body:</Label>
-              <Textarea
+              <RichTextEditor
                 value={body}
-                onChange={e => setBody(e.target.value)}
-                className="min-h-[600px] font-mono text-sm"
-                placeholder="Email body (HTML or plain text supported)"
+                onChange={setBody}
               />
               <div className="mt-2 space-y-1">
                 <p className="text-xs text-muted-foreground">
