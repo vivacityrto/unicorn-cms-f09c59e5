@@ -1,4 +1,5 @@
 import { useClientTaskInstances, CLIENT_TASK_STATUS_OPTIONS } from '@/hooks/useClientTaskInstances';
+import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -86,12 +87,15 @@ export function StageClientTasks({ stageInstanceId, tenantId, packageId }: Stage
               <StatusIcon className={cn("h-4 w-4 shrink-0", statusColor)} />
               
               <div className="flex-1 min-w-0">
-                <p className={cn(
-                  "text-sm truncate",
-                  task.status_id === 2 && "line-through text-muted-foreground"
-                )}>
-                  {task.task_name}
-                </p>
+                <div className="flex items-center gap-1">
+                  <p className={cn(
+                    "text-sm truncate",
+                    task.status_id === 2 && "line-through text-muted-foreground"
+                  )}>
+                    {task.task_name}
+                  </p>
+                  <TaskDescriptionButton taskName={task.task_name} description={task.task_description} />
+                </div>
                 {task.due_date && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                     <Calendar className="h-3 w-3" />
