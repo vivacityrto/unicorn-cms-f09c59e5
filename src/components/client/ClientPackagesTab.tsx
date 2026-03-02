@@ -237,10 +237,10 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           <p className="text-sm text-muted-foreground mb-4">
             This client doesn't have any packages yet.
           </p>
-          {onAddPackage && isSuperAdmin() && (
-            <Button onClick={onAddPackage}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Package
+          {isSuperAdmin() && (
+            <Button onClick={() => setStartPackageOpen(true)}>
+              <Rocket className="h-4 w-4 mr-2" />
+              Start Package
             </Button>
           )}
         </CardContent>
@@ -281,12 +281,6 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
             <Button onClick={() => setStartPackageOpen(true)}>
               <Rocket className="h-4 w-4 mr-2" />
               Start Package
-            </Button>
-          )}
-          {onAddPackage && viewMode === 'active' && isSuperAdmin() && (
-            <Button variant="outline" onClick={onAddPackage}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Package
             </Button>
           )}
           {isSuperAdmin() && (
