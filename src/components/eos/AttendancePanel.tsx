@@ -406,7 +406,7 @@ export const AttendancePanel = ({
                           </Button>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 mt-1 pl-10">
+                      <div className="flex items-center justify-between mt-1 pl-10">
                         <span className="text-xs text-muted-foreground">
                           {roleLabels[attendee.role_in_meeting] || attendee.role_in_meeting}
                           {attendee.notes && ` • ${attendee.notes}`}
