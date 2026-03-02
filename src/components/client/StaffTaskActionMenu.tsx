@@ -171,7 +171,8 @@ export function StaffTaskActionMenu({
     if (actionKey === 'send_internal_csc') {
       const email = matchedEmail;
       const greeting = cscFirstName ? `<p>Hi ${cscFirstName},</p>` : '';
-      const clientLine = `<p style="padding-left:2em;"><strong>Client:</strong> ${clientName || 'N/A'}</p>`;
+      const clientLink = `https://unicorn-cms.lovable.app/tenant/${tenantId}`;
+      const clientLine = `<p style="padding-left:2em;"><strong>Client:</strong> <a href="${clientLink}">${clientName || 'N/A'}</a></p>`;
       const packageLine = packageName ? `<p style="padding-left:2em;"><strong>Package:</strong> ${packageName}${packageFullText ? ` — ${packageFullText}` : ''}</p>` : '';
       const emailContent = email?.content ? `<br/>${email.content}` : '';
       const bodyParts = [greeting, '<br/>', clientLine, packageLine, emailContent].filter(Boolean).join('');
