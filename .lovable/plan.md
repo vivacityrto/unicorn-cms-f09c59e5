@@ -1,64 +1,87 @@
 
 
-## Centralise Task/Stage Statuses from dd_status and Add Codes 4 + 5
+## Add `is_core` Flag to Staff Task Instances with "Core Complete" Auto-Flagging
 
-### Problem
+### Concept
 
-Status values are hardcoded across 6+ files, each with slightly different mappings. Some even contradict the database (e.g., `PackageStagesManager` maps code 2 to "Blocked" while `dd_status` has code 2 as "Completed"). None of them query `dd_status`.
+Instead of pre-defining which tasks are core at the template level, the `is_core` flag lives on **both** `staff_tasks` (template default) and `staff_task_instances` (runtime override). When a stage is set to **"Core Complete" (status 4)**, all **incomplete** staff task instances in that stage are automatically marked `is_core = false`. This lets the workflow itself define what's core vs non-core.
 
-### What Changes
+### Database Changes
 
-**1. Database: Insert two new rows into dd_status**
+**Migration 1: Add `is_core` to `staff_tasks` (template)**
 
-| code | value | description |
-|------|-------|-------------|
-| 4 | core_complete | Core Complete |
-| 5 | blocked | Blocked |
-
-No schema migration needed -- these are data inserts into the existing table.
-
-**2. New shared hook: `src/hooks/useTaskStatusOptions.ts`**
-
-- Fetches from `dd_status` WHERE `code < 100`, ordered by `code`
-- Returns `{ statuses, loading, getLabel(code), getIcon(code), getColor(code) }`
-- Icon and colour mapping lives in this one file (a lookup by code), since `dd_status` doesn't store UI metadata:
-
-```text
-0 (Not Started)    -> Circle,       text-muted-foreground
-1 (In Progress)    -> Clock,        text-blue-600
-2 (Completed)      -> CheckCircle2, text-green-600
-3 (N/A)            -> Ban,          text-muted-foreground
-4 (Core Complete)  -> ShieldCheck,  text-emerald-500
-5 (Blocked)        -> AlertCircle,  text-red-600
-6-10 (future)      -> Circle,       text-muted-foreground
+```sql
+ALTER TABLE public.staff_tasks
+  ADD COLUMN IF NOT EXISTS is_core boolean NOT NULL DEFAULT true;
 ```
 
-- Caches the query result so multiple components sharing it don't re-fetch
+All existing template tasks default to core (safe compliance default).
 
-**3. Remove hardcoded STATUS arrays from these files:**
+**Migration 2: Add `is_core` to `staff_task_instances`**
 
-| File | What's removed/replaced |
-|------|------------------------|
-| `useStaffTaskInstances.ts` | Remove exported `STATUS_OPTIONS` constant; import shared hook for label lookups in toast messages |
-| `useClientTaskInstances.ts` | Remove `CLIENT_TASK_STATUS_OPTIONS`; import shared hook |
-| `useClientPackageInstances.tsx` | Remove `CLIENT_TASK_STATUS_OPTIONS`, `STAGE_STATUS_MAP`, `STAFF_TASK_STATUS_MAP`; import shared hook |
-| `PackageStagesManager.tsx` | Remove local `STATUS_MAP` and `STATUS_OPTIONS` (lines 71-83); use shared hook for stage status dropdown and icons |
-| `StageStaffTasks.tsx` | Remove local `STATUS_ICONS` and `STATUS_COLORS` (lines 24-36); use shared hook helpers |
-| `StageClientTasks.tsx` | Remove local `STATUS_ICONS` and `STATUS_COLORS` (lines 23-35); use shared hook helpers |
+```sql
+ALTER TABLE public.staff_task_instances
+  ADD COLUMN IF NOT EXISTS is_core boolean NOT NULL DEFAULT true;
+```
 
-**4. Fix the PackageStagesManager mismatch**
+All existing instances default to core. New instances seeded by the `start_client_package` RPC will also default to `true`.
 
-Currently code 2 is mapped to "Blocked" and code 3 to "Complete" in `PackageStagesManager` -- the opposite of what `dd_status` says. After this change, all mappings will be consistent with the database: 2 = Completed, 5 = Blocked.
+**Migration 3: Update `start_client_package` RPC** (if it currently seeds `staff_task_instances`)
 
-Stage status dropdowns will show: Not Started (0), In Progress (1), Completed (2), N/A (3), Core Complete (4), Blocked (5).
+The RPC inserts staff task instances from the `staff_tasks` template. It should copy the `is_core` value from `staff_tasks` into the new instance so that any template-level defaults carry forward.
 
-**5. StageStatusControl.tsx -- left as-is**
+### Code Changes
 
-This component uses text-based lifecycle statuses ('not_started', 'in_progress', 'blocked', 'waiting', 'complete', 'skipped') via an RPC. This is a different status domain and stays unchanged.
+**1. `PackageStagesManager.tsx` -- Stage status update handler**
 
-### Technical Notes
+When `newStatus === 4` (Core Complete):
+- After updating `stage_instances.status`, run a second query to set `is_core = false` on all `staff_task_instances` in that stage where `status_id != 2` (not completed).
+- Log this bulk change to `client_audit_log`.
 
-- The shared hook fetches once and caches. The `dd_status` table is tiny (under 20 rows) so performance is not a concern.
-- Any future status additions only need: (1) insert into `dd_status`, (2) add one icon/colour entry in the shared hook.
-- Components rendering status dropdowns will filter which codes to show based on context (e.g., stages might not show "N/A").
+```text
+// Pseudocode within handleStageStatusUpdate
+if (newStatus === 4) {
+  await supabase
+    .from('staff_task_instances')
+    .update({ is_core: false })
+    .eq('stageinstance_id', stageInstanceId)
+    .neq('status_id', 2);  // only incomplete tasks
+}
+```
+
+**2. `useStaffTaskInstances.ts` -- Fetch and expose `is_core`**
+
+- Add `is_core` to the select query on `staff_task_instances`
+- Add `is_core` to the `StaffTaskInstance` interface
+- Map it in the transform
+
+**3. `StageStaffTasks.tsx` -- Display non-core indicator**
+
+- Tasks where `is_core === false` get a subtle visual indicator (e.g., a muted "Non-core" badge or italic styling)
+- Core tasks show no extra badge (they are the default)
+
+### Workflow Summary
+
+1. Package starts -- all staff task instances seeded with `is_core = true` (copied from template)
+2. Team works through tasks, completing some
+3. Stage is marked **"Core Complete"** (status 4)
+4. System automatically flags all remaining incomplete tasks as `is_core = false`
+5. UI updates to show these tasks as "Non-core"
+6. All changes are audit-logged
+
+### Files to Change
+
+| File | Change |
+|------|--------|
+| Database migration | Add `is_core` column to `staff_tasks` and `staff_task_instances` |
+| `start_client_package` RPC | Copy `is_core` from template to instance during seeding |
+| `src/components/client/PackageStagesManager.tsx` | Add auto-flag logic when status set to 4 (Core Complete) |
+| `src/hooks/useStaffTaskInstances.ts` | Fetch and expose `is_core` field |
+| `src/components/client/StageStaffTasks.tsx` | Show non-core visual indicator |
+
+### Edge Cases
+
+- **Reversing Core Complete**: If a stage is changed back from status 4 to another status, the non-core flags remain as-is (they were set intentionally). Users can manually manage if needed.
+- **Already completed tasks**: Only incomplete tasks get flagged. Completed tasks retain `is_core = true`.
+- **Audit trail**: The bulk `is_core` update is logged so there is a record of when and why tasks were flagged non-core.
 
