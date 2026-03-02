@@ -777,7 +777,7 @@ export const LiveMeetingView = () => {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Agenda Sidebar */}
-        <div className="w-80 border-r bg-muted/20 overflow-y-auto flex-shrink-0">
+        <div className="w-96 border-r bg-muted/20 overflow-y-auto flex-shrink-0">
           <div className="p-4 space-y-4">
             {/* Attendance Panel */}
             <AttendancePanel 
