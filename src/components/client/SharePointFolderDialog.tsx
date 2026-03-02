@@ -64,7 +64,7 @@ export function SharePointFolderDialog({ open, onOpenChange, tenantId }: SharePo
   const handleProvision = async () => {
     setProvisioning(true);
     try {
-      const { data, error } = await supabase.functions.invoke('provision-sharepoint-folder', {
+      const { data, error } = await supabase.functions.invoke('provision-tenant-sharepoint-folder', {
         body: { tenant_id: tenantId },
       });
       if (error) throw new Error(error.message);
