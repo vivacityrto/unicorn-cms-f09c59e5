@@ -4,7 +4,7 @@ import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Calendar } from 'lucide-react';
+import { Loader2, Calendar, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -78,12 +78,21 @@ export function StageClientTasks({ stageInstanceId, tenantId, packageId }: Stage
                   </p>
                   <TaskDescriptionButton taskName={task.task_name} description={task.task_description} />
                 </div>
-                {task.due_date && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                    <Calendar className="h-3 w-3" />
-                    <span>{format(new Date(task.due_date), 'dd MMM yyyy')}</span>
-                  </div>
-                )}
+                {/* Status metadata line */}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                  {task.status_id === 2 && task.completion_date && (
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Completed {format(new Date(task.completion_date), 'dd MMM yyyy')}
+                    </span>
+                  )}
+                  {task.due_date && task.status_id !== 2 && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Due {format(new Date(task.due_date), 'dd MMM yyyy')}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <Select

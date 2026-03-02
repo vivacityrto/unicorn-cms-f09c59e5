@@ -17,6 +17,8 @@ export interface StaffTaskInstance {
   assignee_name: string | null;
   assignee_avatar: string | null;
   order_number: number | null;
+  notes: string | null;
+  updated_at: string | null;
 }
 
 interface UseStaffTaskInstancesProps {
@@ -41,9 +43,9 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
       // Fetch staff_task_instances for this stage_instance
       const taskResult = await (supabase
         .from('staff_task_instances' as any)
-        .select('id, stafftask_id, status, status_id, due_date, completion_date, assignee_id')
+        .select('id, stafftask_id, status, status_id, due_date, completion_date, assignee_id, notes, updated_at')
         .eq('stageinstance_id', stageInstanceId)
-        .order('id')) as { data: Array<{ id: number; stafftask_id: number | null; status: string | null; status_id: number | null; due_date: string | null; completion_date: string | null; assignee_id: string | null }> | null; error: any };
+        .order('id')) as { data: Array<{ id: number; stafftask_id: number | null; status: string | null; status_id: number | null; due_date: string | null; completion_date: string | null; assignee_id: string | null; notes: string | null; updated_at: string | null }> | null; error: any };
       
       const instanceData = taskResult.data;
       const instanceError = taskResult.error;
@@ -112,6 +114,8 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
           assignee_name: assignee ? `${assignee.first_name || ''} ${assignee.last_name || ''}`.trim() : null,
           assignee_avatar: assignee?.avatar_url || null,
           order_number: taskMeta?.order_number ?? null,
+          notes: row.notes || null,
+          updated_at: row.updated_at || null,
         };
       });
 
