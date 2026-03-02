@@ -201,7 +201,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
               <StageClientTasks stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} />
             </TabsContent>
             <TabsContent value="emails" className="mt-0">
-              <StageEmailsSection stageInstanceId={stage.id} />
+              <StageEmailsSection stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} />
             </TabsContent>
             <TabsContent value="documents" className="mt-0">
               <StageDocumentsSection
