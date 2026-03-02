@@ -40,6 +40,7 @@ export function CreateActionDialog({
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
+  const [notifyNotes, setNotifyNotes] = useState('');
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -68,7 +69,7 @@ export function CreateActionDialog({
         action: 'ops_action_created_from_task',
         entity_type: 'ops_work_items',
         entity_id: title.trim(),
-        details: { source_task_id: taskId, package_id: packageId },
+        details: { source_task_id: taskId, package_id: packageId, notify_notes: notifyNotes.trim() || undefined },
       });
 
       toast({ title: 'Action created', description: `"${title.trim()}" added to operations tracker.` });
@@ -83,7 +84,7 @@ export function CreateActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Create Action</DialogTitle>
         </DialogHeader>
@@ -94,7 +95,7 @@ export function CreateActionDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="action-desc">Description</Label>
-            <Textarea id="action-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            <Textarea id="action-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={6} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -113,6 +114,16 @@ export function CreateActionDialog({
               <Label htmlFor="action-due">Due Date</Label>
               <Input id="action-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
+          </div>
+          <div className="space-y-2 rounded-md border p-3 bg-muted/30">
+            <Label htmlFor="action-notify" className="text-sm font-medium">Notify / Notes</Label>
+            <Textarea
+              id="action-notify"
+              value={notifyNotes}
+              onChange={(e) => setNotifyNotes(e.target.value)}
+              rows={3}
+              placeholder="Add any notes or instructions for the team regarding this action..."
+            />
           </div>
         </div>
         <DialogFooter>
