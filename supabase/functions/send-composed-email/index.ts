@@ -31,8 +31,12 @@ serve(async (req) => {
     const supabase = createServiceClient();
     const mailgunApiKey = Deno.env.get("MAILGUN_API_KEY");
     const mailgunDomain = Deno.env.get("MAILGUN_DOMAIN");
+    const mailgunRegion = Deno.env.get("MAILGUN_REGION") || "us"; // "us" or "eu"
     const mailgunFromEmail = Deno.env.get("MAILGUN_FROM_EMAIL") || "noreply@vivacity.com.au";
     const mailgunFromName = Deno.env.get("MAILGUN_FROM_NAME") || "Vivacity";
+    const mailgunBaseUrl = mailgunRegion.toLowerCase() === "eu"
+      ? "https://api.eu.mailgun.net/v3"
+      : "https://api.mailgun.net/v3";
 
     // Auth
     const callerToken = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
@@ -191,7 +195,7 @@ serve(async (req) => {
     if (renderedCc) formData.append("cc", renderedCc);
     if (renderedBcc) formData.append("bcc", renderedBcc);
 
-    const mgRes = await fetch(`https://api.mailgun.net/v3/${mailgunDomain}/messages`, {
+    const mgRes = await fetch(`${mailgunBaseUrl}/${mailgunDomain}/messages`, {
       method: "POST",
       headers: { Authorization: `Basic ${btoa(`api:${mailgunApiKey}`)}` },
       body: formData,
