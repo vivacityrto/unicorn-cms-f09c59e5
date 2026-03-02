@@ -81,6 +81,11 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
                     {task.task_name}
                   </p>
                   <TaskDescriptionButton taskName={task.task_name} description={task.task_description} />
+                  {!task.is_core && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-muted-foreground border-muted-foreground/30">
+                      Non-core
+                    </Badge>
+                  )}
                 </div>
                 {/* Status metadata line */}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">

@@ -11,6 +11,7 @@ export interface StaffTaskInstance {
   task_description: string | null;
   status: string;
   status_id: number;
+  is_core: boolean;
   due_date: string | null;
   completion_date: string | null;
   assignee_id: string | null;
@@ -43,9 +44,9 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
       // Fetch staff_task_instances for this stage_instance
       const taskResult = await (supabase
         .from('staff_task_instances' as any)
-        .select('id, stafftask_id, status, status_id, due_date, completion_date, assignee_id, notes, updated_at')
+        .select('id, stafftask_id, status, status_id, is_core, due_date, completion_date, assignee_id, notes, updated_at')
         .eq('stageinstance_id', stageInstanceId)
-        .order('id')) as { data: Array<{ id: number; stafftask_id: number | null; status: string | null; status_id: number | null; due_date: string | null; completion_date: string | null; assignee_id: string | null; notes: string | null; updated_at: string | null }> | null; error: any };
+        .order('id')) as { data: Array<{ id: number; stafftask_id: number | null; status: string | null; status_id: number | null; is_core: boolean | null; due_date: string | null; completion_date: string | null; assignee_id: string | null; notes: string | null; updated_at: string | null }> | null; error: any };
       
       const instanceData = taskResult.data;
       const instanceError = taskResult.error;
@@ -108,6 +109,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
           task_description: taskMeta?.description || null,
           status: row.status || 'not_started',
           status_id: row.status_id ?? 0,
+          is_core: row.is_core ?? true,
           due_date: row.due_date,
           completion_date: row.completion_date,
           assignee_id: row.assignee_id,
