@@ -34,6 +34,10 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const STAGE_STATUS_COLORS: Record<string, string> = {
+  'Not Started': 'bg-gray-500/10 text-gray-600 border-gray-500',
+  'In Progress': 'bg-blue-500/10 text-blue-600 border-blue-500',
+  'Completed': 'bg-green-500/10 text-green-600 border-green-500',
+  'N/A': 'bg-amber-500/10 text-amber-600 border-amber-500',
   not_started: 'bg-gray-500/10 text-gray-600 border-gray-500',
   in_progress: 'bg-blue-500/10 text-blue-600 border-blue-500',
   complete: 'bg-green-500/10 text-green-600 border-green-500',
@@ -41,11 +45,29 @@ const STAGE_STATUS_COLORS: Record<string, string> = {
 };
 
 const TASK_STATUS_COLORS: Record<string, string> = {
+  'Not Started': 'bg-gray-500/10 text-gray-600',
+  'In Progress': 'bg-blue-500/10 text-blue-600',
+  'Completed': 'bg-green-500/10 text-green-600',
+  'N/A': 'bg-red-500/10 text-red-600',
   open: 'bg-gray-500/10 text-gray-600',
   in_progress: 'bg-blue-500/10 text-blue-600',
   done: 'bg-green-500/10 text-green-600',
   blocked: 'bg-red-500/10 text-red-600',
-  submitted: 'bg-amber-500/10 text-amber-600'
+};
+
+// Map legacy status_id to UI status keys for select controls
+const STAGE_STATUS_ID_TO_KEY: Record<number, string> = {
+  0: 'not_started',
+  1: 'in_progress',
+  2: 'complete',
+  3: 'skipped',
+};
+
+const TASK_STATUS_ID_TO_KEY: Record<number, string> = {
+  0: 'open',
+  1: 'in_progress',
+  2: 'done',
+  3: 'blocked',
 };
 
 export default function ClientPackageDetail() {
@@ -62,7 +84,7 @@ export default function ClientPackageDetail() {
   const [packageData, setPackageData] = useState<ClientPackageInstance | null>(null);
   const [stages, setStages] = useState<ClientPackageStage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
+  const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState('stages');
 
   useEffect(() => {
@@ -85,7 +107,7 @@ export default function ClientPackageDetail() {
     setLoading(false);
   };
 
-  const toggleStage = (stageId: string) => {
+  const toggleStage = (stageId: number) => {
     const newExpanded = new Set(expandedStages);
     if (newExpanded.has(stageId)) {
       newExpanded.delete(stageId);
@@ -95,15 +117,15 @@ export default function ClientPackageDetail() {
     setExpandedStages(newExpanded);
   };
 
-  const handleStageStatusChange = async (stageId: string, status: string) => {
-    const success = await updateStageStatus(stageId, status as any);
+  const handleStageStatusChange = async (stageId: number, status: string) => {
+    const success = await updateStageStatus(String(stageId), status as any);
     if (success) {
       loadData();
     }
   };
 
-  const handleTeamTaskStatusChange = async (taskId: string, status: string) => {
-    const success = await updateTeamTaskStatus(taskId, status as any);
+  const handleTeamTaskStatusChange = async (taskId: number, status: string) => {
+    const success = await updateTeamTaskStatus(String(taskId), status as any);
     if (success) {
       loadData();
     }
@@ -137,14 +159,14 @@ export default function ClientPackageDetail() {
     );
   }
 
-  const completedStages = stages.filter(s => s.status === 'complete').length;
+  const completedStages = stages.filter(s => s.status_id === 2).length;
   const progressPercent = stages.length > 0 ? (completedStages / stages.length) * 100 : 0;
 
   const totalTeamTasks = stages.reduce((sum, s) => sum + (s.team_tasks?.length || 0), 0);
-  const openTeamTasks = stages.reduce((sum, s) => sum + (s.team_tasks?.filter(t => t.status === 'open').length || 0), 0);
+  const openTeamTasks = stages.reduce((sum, s) => sum + (s.team_tasks?.filter(t => t.status_id < 2).length || 0), 0);
   const totalClientTasks = stages.reduce((sum, s) => sum + (s.client_tasks?.length || 0), 0);
   const openClientTasks = stages.reduce((sum, s) => sum + (s.client_tasks?.filter(t => t.status === 0).length || 0), 0);
-  const queuedEmails = stages.reduce((sum, s) => sum + (s.emails?.filter(e => e.status === 'queued').length || 0), 0);
+  const pendingEmails = stages.reduce((sum, s) => sum + (s.emails?.filter(e => !e.is_sent).length || 0), 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,8 +216,8 @@ export default function ClientPackageDetail() {
                 <p className="text-xs text-muted-foreground">Client Tasks</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold">{queuedEmails}</p>
-                <p className="text-xs text-muted-foreground">Emails Queued</p>
+                <p className="text-2xl font-bold">{pendingEmails}</p>
+                <p className="text-xs text-muted-foreground">Emails Pending</p>
               </div>
             </div>
           </div>
@@ -252,7 +274,7 @@ export default function ClientPackageDetail() {
               className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
             >
               <Mail className="h-4 w-4 mr-2" />
-              Emails ({queuedEmails} queued)
+              Emails ({pendingEmails} pending)
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -264,7 +286,8 @@ export default function ClientPackageDetail() {
           <TabsContent value="stages" className="mt-0 space-y-4">
             {stages.map((stage, index) => {
               const isExpanded = expandedStages.has(stage.id);
-              const openTeam = stage.team_tasks?.filter(t => t.status !== 'done').length || 0;
+              const stageStatusKey = STAGE_STATUS_ID_TO_KEY[stage.status_id] || 'not_started';
+              const openTeam = stage.team_tasks?.filter(t => t.status_id < 2).length || 0;
               const openClient = stage.client_tasks?.filter(t => t.status !== 2).length || 0;
 
               return (
@@ -282,8 +305,8 @@ export default function ClientPackageDetail() {
                               <p className="text-sm text-muted-foreground">{stage.stage.short_name}</p>
                             )}
                           </div>
-                          <Badge variant="outline" className={STAGE_STATUS_COLORS[stage.status]}>
-                            {stage.status.replace('_', ' ')}
+                          <Badge variant="outline" className={STAGE_STATUS_COLORS[stage.status] || STAGE_STATUS_COLORS.not_started}>
+                            {stage.status}
                           </Badge>
                         </div>
 
@@ -303,7 +326,7 @@ export default function ClientPackageDetail() {
                             </span>
                           </div>
 
-                          <Select value={stage.status} onValueChange={(v) => handleStageStatusChange(stage.id, v)}>
+                          <Select value={stageStatusKey} onValueChange={(v) => handleStageStatusChange(stage.id, v)}>
                             <SelectTrigger className="w-[140px]">
                               <SelectValue />
                             </SelectTrigger>
@@ -334,30 +357,30 @@ export default function ClientPackageDetail() {
                               Team Tasks
                             </h4>
                             <div className="space-y-2">
-                              {stage.team_tasks.map((task) => (
-                                <div key={task.id} className="flex items-center justify-between bg-background p-3 rounded-lg">
-                                  <div className="flex items-center gap-3">
-                                    <Circle className={`h-4 w-4 ${task.status === 'done' ? 'fill-green-500 text-green-500' : 'text-muted-foreground'}`} />
-                                    <div>
-                                      <p className="text-sm font-medium">{task.name}</p>
-                                      {task.owner_role && (
-                                        <p className="text-xs text-muted-foreground">{task.owner_role}</p>
-                                      )}
+                              {stage.team_tasks.map((task) => {
+                                const taskStatusKey = TASK_STATUS_ID_TO_KEY[task.status_id] || 'open';
+                                return (
+                                  <div key={task.id} className="flex items-center justify-between bg-background p-3 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                      <Circle className={`h-4 w-4 ${task.status_id === 2 ? 'fill-green-500 text-green-500' : 'text-muted-foreground'}`} />
+                                      <div>
+                                        <p className="text-sm font-medium">{task.name}</p>
+                                      </div>
                                     </div>
+                                    <Select value={taskStatusKey} onValueChange={(v) => handleTeamTaskStatusChange(task.id, v)}>
+                                      <SelectTrigger className="w-[120px]">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="open">Open</SelectItem>
+                                        <SelectItem value="in_progress">In Progress</SelectItem>
+                                        <SelectItem value="done">Done</SelectItem>
+                                        <SelectItem value="blocked">Blocked</SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                   </div>
-                                  <Select value={task.status} onValueChange={(v) => handleTeamTaskStatusChange(task.id, v)}>
-                                    <SelectTrigger className="w-[120px]">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="open">Open</SelectItem>
-                                      <SelectItem value="in_progress">In Progress</SelectItem>
-                                      <SelectItem value="done">Done</SelectItem>
-                                      <SelectItem value="blocked">Blocked</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}
@@ -416,7 +439,7 @@ export default function ClientPackageDetail() {
                                     <div>
                                       <p className="text-sm font-medium">{doc.document?.title}</p>
                                       <p className="text-xs text-muted-foreground">
-                                        {doc.visibility} • {doc.delivery_type}
+                                        {doc.status || 'pending'} {doc.isgenerated ? '• Generated' : ''}
                                       </p>
                                     </div>
                                   </div>
@@ -444,32 +467,35 @@ export default function ClientPackageDetail() {
               <CardContent>
                 <div className="space-y-2">
                   {stages.flatMap(stage => 
-                    (stage.team_tasks || []).map(task => (
-                      <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className={TASK_STATUS_COLORS[task.status]}>
-                            {task.status}
-                          </Badge>
-                          <div>
-                            <p className="font-medium">{task.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {stage.stage?.title} {task.owner_role && `• ${task.owner_role}`}
-                            </p>
+                    (stage.team_tasks || []).map(task => {
+                      const taskStatusKey = TASK_STATUS_ID_TO_KEY[task.status_id] || 'open';
+                      return (
+                        <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className={TASK_STATUS_COLORS[task.status] || TASK_STATUS_COLORS.open}>
+                              {task.status}
+                            </Badge>
+                            <div>
+                              <p className="font-medium">{task.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {stage.stage?.title}
+                              </p>
+                            </div>
                           </div>
+                          <Select value={taskStatusKey} onValueChange={(v) => handleTeamTaskStatusChange(task.id, v)}>
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="open">Open</SelectItem>
+                              <SelectItem value="in_progress">In Progress</SelectItem>
+                              <SelectItem value="done">Done</SelectItem>
+                              <SelectItem value="blocked">Blocked</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
-                        <Select value={task.status} onValueChange={(v) => handleTeamTaskStatusChange(task.id, v)}>
-                          <SelectTrigger className="w-[120px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="open">Open</SelectItem>
-                            <SelectItem value="in_progress">In Progress</SelectItem>
-                            <SelectItem value="done">Done</SelectItem>
-                            <SelectItem value="blocked">Blocked</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                   {totalTeamTasks === 0 && (
                     <p className="text-center text-muted-foreground py-8">No team tasks</p>
@@ -493,8 +519,8 @@ export default function ClientPackageDetail() {
                     (stage.client_tasks || []).map(task => (
                       <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-3">
-                          <Badge variant="outline" className={TASK_STATUS_COLORS[task.status]}>
-                            {task.status}
+                          <Badge variant="outline" className={TASK_STATUS_COLORS[task.status_label] || TASK_STATUS_COLORS.open}>
+                            {task.status_label}
                           </Badge>
                           <div>
                             <p className="font-medium">{task.name}</p>
@@ -541,28 +567,24 @@ export default function ClientPackageDetail() {
                       <div key={email.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center gap-3">
                           <Badge variant="outline" className={
-                            email.status === 'queued' ? 'bg-amber-500/10 text-amber-600' :
-                            email.status === 'sent' ? 'bg-green-500/10 text-green-600' :
-                            'bg-gray-500/10 text-gray-600'
+                            !email.is_sent ? 'bg-amber-500/10 text-amber-600' :
+                            'bg-green-500/10 text-green-600'
                           }>
-                            {email.status}
+                            {email.is_sent ? 'Sent' : 'Pending'}
                           </Badge>
                           <div>
-                            <p className="font-medium">{stage.stage?.title}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {email.trigger_type} • {email.recipient_type}
-                            </p>
+                            <p className="font-medium">{email.subject || stage.stage?.title}</p>
                           </div>
                         </div>
-                        {email.sent_at && (
+                        {email.sent_date && (
                           <p className="text-sm text-muted-foreground">
-                            Sent {new Date(email.sent_at).toLocaleString()}
+                            Sent {new Date(email.sent_date).toLocaleString()}
                           </p>
                         )}
                       </div>
                     ))
                   )}
-                  {queuedEmails === 0 && stages.every(s => !s.emails?.length) && (
+                  {pendingEmails === 0 && stages.every(s => !s.emails?.length) && (
                     <p className="text-center text-muted-foreground py-8">No emails in queue</p>
                   )}
                 </div>
