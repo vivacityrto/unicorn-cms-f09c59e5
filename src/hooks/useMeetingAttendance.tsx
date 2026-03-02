@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-export type AttendanceStatus = 'invited' | 'accepted' | 'declined' | 'attended' | 'late' | 'left_early' | 'no_show';
+export type AttendanceStatus = string;
 export type MeetingRole = 'owner' | 'attendee' | 'guest' | 'visionary' | 'integrator' | 'core_team';
 
 export interface MeetingAttendee {

@@ -12396,6 +12396,39 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_meeting_attendance_status: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       dd_note_status: {
         Row: {
           code: string
@@ -16432,7 +16465,7 @@ export type Database = {
       }
       eos_meeting_attendees: {
         Row: {
-          attendance_status: Database["public"]["Enums"]["meeting_attendance_status"]
+          attendance_status: string
           created_at: string
           id: string
           joined_at: string | null
@@ -16446,7 +16479,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          attendance_status?: Database["public"]["Enums"]["meeting_attendance_status"]
+          attendance_status?: string
           created_at?: string
           id?: string
           joined_at?: string | null
@@ -16460,7 +16493,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          attendance_status?: Database["public"]["Enums"]["meeting_attendance_status"]
+          attendance_status?: string
           created_at?: string
           id?: string
           joined_at?: string | null
@@ -16613,6 +16646,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "fk_attendance_status_dd"
+            columns: ["attendance_status"]
+            isOneToOne: false
+            referencedRelation: "dd_meeting_attendance_status"
+            referencedColumns: ["value"]
           },
         ]
       }
@@ -48054,7 +48094,7 @@ export type Database = {
         Args: {
           p_meeting_id: string
           p_notes?: string
-          p_status: Database["public"]["Enums"]["meeting_attendance_status"]
+          p_status: string
           p_user_id: string
         }
         Returns: Json
@@ -48268,14 +48308,6 @@ export type Database = {
         | "other"
       feature_flag: "eos_qc"
       invite_status: "INVITED" | "ACCEPTED" | "REVOKED" | "EXPIRED"
-      meeting_attendance_status:
-        | "invited"
-        | "accepted"
-        | "declined"
-        | "attended"
-        | "late"
-        | "left_early"
-        | "no_show"
       meeting_role:
         | "owner"
         | "attendee"
@@ -48563,15 +48595,6 @@ export const Constants = {
       ],
       feature_flag: ["eos_qc"],
       invite_status: ["INVITED", "ACCEPTED", "REVOKED", "EXPIRED"],
-      meeting_attendance_status: [
-        "invited",
-        "accepted",
-        "declined",
-        "attended",
-        "late",
-        "left_early",
-        "no_show",
-      ],
       meeting_role: [
         "owner",
         "attendee",
