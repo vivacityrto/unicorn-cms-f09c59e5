@@ -78,7 +78,7 @@ export function useStageExportImport() {
     try {
       // Fetch stage
       const { data: stage, error: stageError } = await supabase
-        .from('documents_stages')
+        .from('stages')
         .select('*')
         .eq('id', stageId)
         .single();
@@ -142,11 +142,11 @@ export function useStageExportImport() {
         exported_at: new Date().toISOString(),
         package_context: packageContext,
         stage: {
-          title: stage.title,
-          short_name: stage.short_name,
+          title: (stage as any).name,
+          short_name: (stage as any).shortname,
           description: stage.description,
           stage_type: stage.stage_type,
-          video_url: stage.video_url,
+          video_url: (stage as any).videourl,
           ai_hint: stage.ai_hint,
           is_reusable: stage.is_reusable ?? true,
           dashboard_visible: stage.dashboard_visible ?? true,
@@ -260,15 +260,15 @@ export function useStageExportImport() {
 
       // Check for name collision and generate unique name
       const { data: existingStages } = await supabase
-        .from('documents_stages')
-        .select('title')
-        .ilike('title', `${data.stage.title}%`);
+        .from('stages')
+        .select('name')
+        .ilike('name', `${data.stage.title}%`);
 
       let newTitle = data.stage.title;
-      if (existingStages?.some(s => s.title === newTitle)) {
+      if (existingStages?.some(s => (s as any).name === newTitle)) {
         newTitle = `${data.stage.title} (Imported)`;
         // Check again and add timestamp if still collision
-        if (existingStages?.some(s => s.title === newTitle)) {
+        if (existingStages?.some(s => (s as any).name === newTitle)) {
           newTitle = `${data.stage.title} (Imported ${Date.now()})`;
         }
       }
@@ -278,18 +278,18 @@ export function useStageExportImport() {
       const newStageKey = `${baseKey}-${Date.now()}`;
 
       // Create new stage (always non-certified for safety)
-      const { data: newStage, error: createError } = await supabase
-        .from('documents_stages')
+      const { data: newStage, error: createError } = await (supabase as any)
+        .from('stages')
         .insert({
-          title: newTitle,
-          short_name: data.stage.short_name,
+          name: newTitle,
+          shortname: data.stage.short_name,
           description: data.stage.description,
           stage_type: data.stage.stage_type || 'other',
-          video_url: data.stage.video_url,
+          videourl: data.stage.video_url,
           ai_hint: data.stage.ai_hint,
           is_reusable: data.stage.is_reusable ?? true,
           dashboard_visible: data.stage.dashboard_visible ?? true,
-          is_certified: false, // Always false for imports
+          is_certified: false,
           certified_notes: null,
           is_archived: false,
           stage_key: newStageKey,

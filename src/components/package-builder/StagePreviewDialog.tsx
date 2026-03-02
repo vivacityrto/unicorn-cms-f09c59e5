@@ -253,7 +253,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
                     {dependencyResult.resolved_dependencies.map((dep) => (
                       <li key={dep.stage_key} className="text-sm flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        {dep.title}
+                        {dep.name}
                         {dep.version_label && (
                           <span className="text-muted-foreground">({dep.version_label})</span>
                         )}

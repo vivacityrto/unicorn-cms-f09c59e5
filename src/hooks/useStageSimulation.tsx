@@ -373,14 +373,14 @@ export function useStageSimulation() {
     try {
       // Fetch stage data
       const { data: stageData, error: stageError } = await supabase
-        .from('documents_stages')
+        .from('stages')
         .select('*')
         .eq('id', stageId)
         .single();
 
       if (stageError || !stageData) throw new Error('Stage not found');
 
-      const stage = stageData as Stage;
+      const stage = stageData as unknown as Stage;
 
       // Build merge data
       const { mergeData, source: mergeDataSource } = await buildMergeData(
@@ -462,7 +462,7 @@ export function useStageSimulation() {
       const dependencyCheck: DependencyCheckResult = {
         has_dependencies: (stageData as any).requires_stage_keys?.length > 0,
         all_met: depResult.satisfied,
-        missing_stages: depResult.missing.map((m) => ({ stage_key: m.stage_key, title: m.title })),
+        missing_stages: depResult.missing.map((m) => ({ stage_key: m.stage_key, title: m.name })),
       };
 
       // Compute quality

@@ -43,7 +43,7 @@ export function StageDependencyIndicator({ stageId }: StageDependencyIndicatorPr
             {result.resolved_dependencies.map((dep) => (
               <li key={dep.stage_key} className="flex items-center gap-1">
                 <span className="w-1 h-1 rounded-full bg-current shrink-0" />
-                {dep.title}
+                {dep.name}
                 {dep.version_label && (
                   <span className="text-muted-foreground">({dep.version_label})</span>
                 )}

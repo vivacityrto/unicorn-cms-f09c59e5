@@ -31380,30 +31380,84 @@ export type Database = {
       }
       stages: {
         Row: {
+          ai_hint: string | null
+          certified_notes: string | null
+          covers_standards: string[] | null
+          created_by: string | null
+          dashboard_visible: boolean | null
           dateimported: string
+          deprecated_at: string | null
           description: string | null
+          effective_date: string | null
+          frameworks: string[] | null
           id: number
+          is_archived: boolean
+          is_certified: boolean
           is_recurring: boolean
+          is_reusable: boolean | null
           name: string
+          registry_code: string | null
+          requires_stage_keys: string[] | null
           shortname: string | null
+          stage_key: string | null
+          stage_type: string | null
+          status: string | null
+          updated_at: string | null
+          version_label: string | null
           videourl: string | null
         }
         Insert: {
+          ai_hint?: string | null
+          certified_notes?: string | null
+          covers_standards?: string[] | null
+          created_by?: string | null
+          dashboard_visible?: boolean | null
           dateimported?: string
+          deprecated_at?: string | null
           description?: string | null
+          effective_date?: string | null
+          frameworks?: string[] | null
           id: number
+          is_archived?: boolean
+          is_certified?: boolean
           is_recurring?: boolean
+          is_reusable?: boolean | null
           name: string
+          registry_code?: string | null
+          requires_stage_keys?: string[] | null
           shortname?: string | null
+          stage_key?: string | null
+          stage_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          version_label?: string | null
           videourl?: string | null
         }
         Update: {
+          ai_hint?: string | null
+          certified_notes?: string | null
+          covers_standards?: string[] | null
+          created_by?: string | null
+          dashboard_visible?: boolean | null
           dateimported?: string
+          deprecated_at?: string | null
           description?: string | null
+          effective_date?: string | null
+          frameworks?: string[] | null
           id?: number
+          is_archived?: boolean
+          is_certified?: boolean
           is_recurring?: boolean
+          is_reusable?: boolean | null
           name?: string
+          registry_code?: string | null
+          requires_stage_keys?: string[] | null
           shortname?: string | null
+          stage_key?: string | null
+          stage_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          version_label?: string | null
           videourl?: string | null
         }
         Relationships: []

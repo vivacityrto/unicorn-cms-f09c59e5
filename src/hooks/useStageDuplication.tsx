@@ -28,7 +28,7 @@ export function useStageDuplication() {
     try {
       // 1. Fetch source stage
       const { data: sourceStage, error: stageError } = await supabase
-        .from('documents_stages')
+        .from('stages')
         .select('*')
         .eq('id', sourceStageId)
         .single();
@@ -38,7 +38,7 @@ export function useStageDuplication() {
       }
 
       // 2. Generate new stage_key
-      const baseName = sourceStage.title.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-');
+      const baseName = (sourceStage as any).name.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-');
       const newStageKey = `${baseName}-copy-${Date.now()}`;
 
       // 3. Create new stage (without certification)
@@ -47,19 +47,19 @@ export function useStageDuplication() {
         ? `${sourceStage.version_label} (copy)` 
         : null;
 
-      const { data: newStage, error: createError } = await supabase
-        .from('documents_stages')
+      const { data: newStage, error: createError } = await (supabase as any)
+        .from('stages')
         .insert({
-          title: `${sourceStage.title} (Copy)`,
-          short_name: sourceStage.short_name,
+          name: `${(sourceStage as any).name} (Copy)`,
+          shortname: (sourceStage as any).shortname,
           description: sourceStage.description,
-          video_url: sourceStage.video_url,
+          videourl: (sourceStage as any).videourl,
           stage_type: sourceStage.stage_type,
           stage_key: newStageKey,
           ai_hint: sourceStage.ai_hint,
           is_reusable: sourceStage.is_reusable,
           dashboard_visible: sourceStage.dashboard_visible,
-          is_certified: false, // Always false for copies
+          is_certified: false,
           certified_notes: null,
           is_archived: false,
           version_label: newVersionLabel,
