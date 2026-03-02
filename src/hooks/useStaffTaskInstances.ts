@@ -233,6 +233,42 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
     }
   };
 
+  const updateTaskCore = async (taskId: number, isCore: boolean) => {
+    setUpdating(taskId);
+    
+    try {
+      const oldTask = tasks.find(t => t.id === taskId);
+      const oldIsCore = oldTask?.is_core;
+
+      const { error } = await supabase
+        .from('staff_task_instances')
+        .update({ is_core: isCore })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      // Log to audit
+      await supabase.from('client_audit_log').insert({
+        tenant_id: tenantId,
+        actor_user_id: profile?.user_uuid,
+        action: 'staff_task_core_changed',
+        entity_type: 'staff_task_instances',
+        entity_id: taskId.toString(),
+        before_data: { is_core: oldIsCore },
+        after_data: { is_core: isCore },
+        details: { package_id: packageId, stage_instance_id: stageInstanceId },
+      });
+
+      toast({ title: 'Task Updated', description: `Task marked as ${isCore ? 'core' : 'non-core'}` });
+      fetchTasks();
+    } catch (error: any) {
+      console.error('Error updating staff task core status:', error);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const completedCount = tasks.filter(t => t.status_id === 2).length;
   const totalCount = tasks.length;
 
@@ -242,6 +278,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
     updating,
     updateTaskStatus,
     updateTaskAssignee,
+    updateTaskCore,
     refetch: fetchTasks,
     completedCount,
     totalCount,
