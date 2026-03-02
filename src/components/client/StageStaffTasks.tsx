@@ -165,6 +165,7 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
                 tenantId={tenantId}
                 packageId={packageId}
                 stageInstanceId={stageInstanceId}
+                statusId={task.status_id}
                 stageEmails={stageEmails}
                 onMarkComplete={() => updateTaskStatus(task.id, 2)}
               />
