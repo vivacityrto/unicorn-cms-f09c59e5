@@ -380,7 +380,7 @@ export const AttendancePanel = ({
                   return (
                     <div
                       key={attendee.id}
-                      className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50"
+                      className="py-2 px-3 rounded-lg bg-muted/50 space-y-1.5"
                     >
                       <div className="flex items-center gap-3">
                         <div className="relative">
@@ -393,34 +393,33 @@ export const AttendancePanel = ({
                             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full border-2 border-background" />
                           )}
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">{getName(attendee)}</p>
-                          <p className="text-xs text-muted-foreground">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{getName(attendee)}</p>
+                          <p className="text-xs text-muted-foreground truncate">
                             {roleLabels[attendee.role_in_meeting] || attendee.role_in_meeting}
                             {attendee.notes && ` • ${attendee.notes}`}
                           </p>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
                         {isScheduled && canEdit && (
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handleRemoveAttendee(attendee.user_id)}
                             disabled={removeAttendee.isPending}
-                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         )}
-                        
+                      </div>
+                      
+                      <div className="pl-11">
                         {isLive && canEdit ? (
                           <Select
                             value={attendee.attendance_status}
                             onValueChange={(value: string) => handleStatusChange(attendee, value)}
                           >
-                            <SelectTrigger className="w-[130px] h-8">
+                            <SelectTrigger className="w-full h-8">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
