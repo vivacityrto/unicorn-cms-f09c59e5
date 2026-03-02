@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { StageStaffTasks } from './StageStaffTasks';
+import { StageClientTasks } from './StageClientTasks';
 import { StageDetailSection } from './StageDetailSection';
 import { StageDocumentsSection } from './StageDocumentsSection';
 import { StageEmailsSection } from './StageEmailsSection';
@@ -394,6 +395,17 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Staff Tasks</span>
                 </div>
                 <StageStaffTasks 
+                  stageInstanceId={stage.id}
+                  tenantId={tenantId}
+                  packageId={packageId}
+                />
+              </div>
+              <div>
+                <div className="px-4 py-2 bg-muted/40 flex items-center gap-2">
+                  <ListTodo className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Client Tasks</span>
+                </div>
+                <StageClientTasks 
                   stageInstanceId={stage.id}
                   tenantId={tenantId}
                   packageId={packageId}
