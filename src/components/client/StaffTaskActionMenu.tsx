@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MoreHorizontal, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +13,7 @@ import { toast } from '@/hooks/use-toast';
 import { parseTaskType, getActionsForType, getTaskTypeBadgeLabel } from '@/utils/staffTaskType';
 import { ComposeEmailDialog } from './ComposeEmailDialog';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import type { StageEmail } from '@/hooks/useStageEmails';
 
 interface StaffTaskActionMenuProps {
@@ -21,6 +22,7 @@ interface StaffTaskActionMenuProps {
   tenantId: number;
   packageId?: number;
   stageInstanceId?: number;
+  statusId?: number;
   stageEmails?: StageEmail[];
   onMarkComplete?: () => void;
 }
@@ -31,6 +33,7 @@ export function StaffTaskActionMenu({
   tenantId,
   packageId,
   stageInstanceId,
+  statusId,
   stageEmails = [],
   onMarkComplete,
 }: StaffTaskActionMenuProps) {
@@ -47,19 +50,98 @@ export function StaffTaskActionMenu({
     emailName?: string;
   } | null>(null);
 
+  // Cache CSC and primary contact info for this tenant
+  const [cscEmail, setCscEmail] = useState<string>('');
+  const [cscFirstName, setCscFirstName] = useState<string>('');
+  const [primaryEmail, setPrimaryEmail] = useState<string>('');
+  const [primaryFirstName, setPrimaryFirstName] = useState<string>('');
+
+  useEffect(() => {
+    if (type !== 'email' || !tenantId) return;
+
+    // Fetch CSC user for this tenant
+    const fetchContacts = async () => {
+      // CSC: from tenant_csc_assignments → users
+      const { data: cscAssign } = await supabase
+        .from('tenant_csc_assignments')
+        .select('csc_user_id')
+        .eq('tenant_id', tenantId)
+        .eq('is_primary', true)
+        .maybeSingle();
+
+      if (cscAssign?.csc_user_id) {
+        const { data: cscUser } = await supabase
+          .from('users')
+          .select('email, first_name')
+          .eq('user_uuid', cscAssign.csc_user_id)
+          .maybeSingle();
+        if (cscUser) {
+          setCscEmail(cscUser.email || '');
+          setCscFirstName(cscUser.first_name || '');
+        }
+      }
+
+      // Primary contact: from tenant_users where primary_contact = true → users
+      const { data: primaryUser } = await supabase
+        .from('tenant_users')
+        .select('user_id')
+        .eq('tenant_id', tenantId)
+        .eq('primary_contact', true)
+        .maybeSingle();
+
+      if (primaryUser?.user_id) {
+        const { data: pUser } = await supabase
+          .from('users')
+          .select('email, first_name')
+          .eq('user_uuid', primaryUser.user_id)
+          .maybeSingle();
+        if (pUser) {
+          setPrimaryEmail(pUser.email || '');
+          setPrimaryFirstName(pUser.first_name || '');
+        }
+      }
+    };
+
+    fetchContacts();
+  }, [tenantId, type]);
+
   // Try to auto-match a stage email by comparing the clean task name to email subjects
   const matchedEmail = type === 'email' && cleanName
     ? stageEmails.find(e => e.subject.toLowerCase().includes(cleanName.toLowerCase()) || cleanName.toLowerCase().includes(e.subject.toLowerCase()))
     : null;
 
+  // If status is N/A (code 3), don't render the action menu
+  if (statusId === 3) {
+    return (
+      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" disabled>
+        <MoreHorizontal className="h-4 w-4" />
+        <span className="sr-only">Task actions</span>
+      </Button>
+    );
+  }
+
   const handleAction = (actionKey: string) => {
-    if (actionKey === 'send_internal_csc' || actionKey === 'send_external_primary') {
-      // For now, open compose with the matched email or a blank compose
+    if (actionKey === 'send_internal_csc') {
       const email = matchedEmail;
+      const greeting = cscFirstName ? `<p>Hi ${cscFirstName},</p><br/>` : '';
       setComposeDefaults({
-        to: email?.to || '',
+        to: cscEmail,
         subject: email?.subject || cleanName,
-        body: email?.content || '',
+        body: greeting + (email?.content || ''),
+        emailInstanceId: email?.id,
+        emailName: email?.subject,
+      });
+      setComposeOpen(true);
+      return;
+    }
+
+    if (actionKey === 'send_external_primary') {
+      const email = matchedEmail;
+      const greeting = primaryFirstName ? `<p>Hi ${primaryFirstName},</p><br/>` : '';
+      setComposeDefaults({
+        to: primaryEmail,
+        subject: email?.subject || cleanName,
+        body: greeting + (email?.content || ''),
         emailInstanceId: email?.id,
         emailName: email?.subject,
       });
