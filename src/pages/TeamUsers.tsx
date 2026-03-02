@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -26,6 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Users, Search, Shield, UserCheck, UserX, UserPlus, Clock, MoreHorizontal, RefreshCw, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
 interface TeamUser {
   user_uuid: string;
@@ -270,6 +271,33 @@ export default function TeamUsers() {
     }
   };
 
+  const handleToggleCSC = useCallback(async (user: TeamUser, checked: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ is_csc: checked } as any)
+        .eq('user_uuid', user.user_uuid);
+
+      if (error) throw error;
+
+      // Update local state immediately
+      setUsers(prev => prev.map(u =>
+        u.user_uuid === user.user_uuid ? { ...u, is_csc: checked } : u
+      ));
+
+      toast({
+        title: checked ? 'CSC Enabled' : 'CSC Disabled',
+        description: `${user.first_name} ${user.last_name} ${checked ? 'is now' : 'is no longer'} a CSC.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'U';
   };
@@ -493,11 +521,13 @@ export default function TeamUsers() {
                           <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {user.is_csc ? (
-                          <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">CSC</Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
+                      <TableCell className="text-center">
+                        {!user.isPending && (
+                          <Checkbox
+                            checked={user.is_csc}
+                            onCheckedChange={(checked) => handleToggleCSC(user, !!checked)}
+                            aria-label={`Toggle CSC for ${user.first_name} ${user.last_name}`}
+                          />
                         )}
                       </TableCell>
                       <TableCell>{getLevelBadge(user.superadmin_level)}</TableCell>
