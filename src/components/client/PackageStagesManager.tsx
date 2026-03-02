@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -227,7 +227,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
   const [updating, setUpdating] = useState<number | null>(null);
   const [packageInstanceId, setPackageInstanceId] = useState<number | null>(null);
   const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set());
-  const initialExpandDone = useRef(false);
+  
   const [recurringConfirm, setRecurringConfirm] = useState<StageInstance | null>(null);
 
   const { enabled: phasesEnabled } = useCheckpointPhasesEnabled();
@@ -356,11 +356,6 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       });
 
       setStages(transformed);
-      // Auto-expand all stages on initial load
-      if (!initialExpandDone.current) {
-        setExpandedStages(new Set(transformed.map(s => s.id)));
-        initialExpandDone.current = true;
-      }
     } catch (error: any) {
       console.error('Error fetching stage instances:', error);
       toast({ title: 'Error', description: 'Failed to load stages', variant: 'destructive' });
