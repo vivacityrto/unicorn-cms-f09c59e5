@@ -752,7 +752,9 @@ export default function AdminStageDetail() {
     }
 
     try {
-      await addEmail(emailForm.email_template_id, emailForm.trigger_type, emailForm.recipient_type);
+      // Find the template name for the email record
+      const template = emailTemplates.find(t => t.id === emailForm.email_template_id);
+      await addEmail(template?.internal_name || 'Email', template?.subject || '', '');
       toast({ title: 'Email Added' });
       setEmailForm({ email_template_id: '', trigger_type: 'manual', recipient_type: 'tenant' });
       setIsAddingEmail(false);
@@ -771,11 +773,11 @@ export default function AdminStageDetail() {
   };
 
   // Document handlers - now using stage template content
-  const handleAddDocument = async (documentId: number, visibility: string, deliveryType: string) => {
+  const handleAddDocument = async (documentId: number) => {
     if (!stageIdNum) return;
     
     try {
-      await addDocument(documentId, visibility, deliveryType);
+      await addDocument(documentId);
     } catch (error: any) {
       throw error;
     }
@@ -791,7 +793,7 @@ export default function AdminStageDetail() {
     }
   };
 
-  const handleUpdateDocument = async (id: number, data: { visibility?: string; delivery_type?: string }) => {
+  const handleUpdateDocument = async (id: number, data: Record<string, any>) => {
     try {
       await updateDocument(id, data);
     } catch (error: any) {
@@ -1406,21 +1408,17 @@ export default function AdminStageDetail() {
                     ) : (
                       <div className="space-y-2">
                         {stageEmails.map((email) => {
-                          const template = email.email_template || emailTemplates.find(t => t.id === email.email_template_id);
                           return (
                             <div key={email.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                               <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
                               <div className="flex-1 min-w-0">
-                                <span className="font-medium block">{template?.internal_name || 'Unknown Template'}</span>
+                                <span className="font-medium block">{email.name || email.subject || 'Untitled Email'}</span>
+                                {email.subject && (
+                                  <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{email.subject}</p>
+                                )}
                                 <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="outline" className="text-xs capitalize">
-                                    {email.trigger_type.replace(/_/g, ' ')}
-                                  </Badge>
-                                  <Badge variant="secondary" className="text-xs capitalize">
-                                    {email.recipient_type}
-                                  </Badge>
-                                  {!email.is_active && (
-                                    <Badge variant="destructive" className="text-xs">Inactive</Badge>
+                                  {email.automation_enabled && (
+                                    <Badge variant="outline" className="text-xs">Auto</Badge>
                                   )}
                                 </div>
                               </div>
@@ -1447,7 +1445,7 @@ export default function AdminStageDetail() {
               loading={loadingTemplateContent}
               onRefresh={refetchTemplateContent}
               onDelete={deleteDocument}
-              onUpdate={updateDocument}
+              onUpdate={updateDocument as any}
               isCertified={stage?.is_certified ?? false}
               wrapCertifiedAction={wrapCertifiedAction}
             />
