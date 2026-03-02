@@ -309,6 +309,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
         onOpenChange={setStartPackageOpen}
         tenantId={tenantId}
         tenantName={tenantName || 'Client'}
+        onSuccess={() => onAddPackage?.()}
       />
 
       {/* Package Cards */}
