@@ -394,46 +394,46 @@ export const AttendancePanel = ({
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{getName(attendee)}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-xs text-muted-foreground truncate">
-                            {roleLabels[attendee.role_in_meeting] || attendee.role_in_meeting}
-                            {attendee.notes && ` • ${attendee.notes}`}
-                          </span>
-                          {isLive && canEdit ? (
-                            <Select
-                              value={attendee.attendance_status}
-                              onValueChange={(value: string) => handleStatusChange(attendee, value)}
-                            >
-                              <SelectTrigger className="h-6 w-[100px] text-xs px-2 flex-shrink-0">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {statusOptions.map((opt) => (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Badge className={`${statusDisplay.color} text-xs flex-shrink-0`}>
-                              {statusDisplay.icon}
-                              <span className="ml-1">{statusDisplay.label}</span>
-                            </Badge>
-                          )}
-                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {roleLabels[attendee.role_in_meeting] || attendee.role_in_meeting}
+                          {attendee.notes && ` • ${attendee.notes}`}
+                        </p>
                       </div>
-                      {isScheduled && canEdit && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleRemoveAttendee(attendee.user_id)}
-                          disabled={removeAttendee.isPending}
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {isLive && canEdit ? (
+                          <Select
+                            value={attendee.attendance_status}
+                            onValueChange={(value: string) => handleStatusChange(attendee, value)}
+                          >
+                            <SelectTrigger className="h-7 w-[110px] text-xs px-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {statusOptions.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge className={`${statusDisplay.color} text-xs`}>
+                            {statusDisplay.icon}
+                            <span className="ml-1">{statusDisplay.label}</span>
+                          </Badge>
+                        )}
+                        {isScheduled && canEdit && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveAttendee(attendee.user_id)}
+                            disabled={removeAttendee.isPending}
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   );
                 })
