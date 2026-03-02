@@ -41,6 +41,7 @@ interface PackageInstanceRow {
   is_active: boolean;
   is_complete: boolean;
   membership_state: string | null;
+  included_minutes: number;
 }
 
 interface RowEdits {
@@ -48,6 +49,7 @@ interface RowEdits {
   end_date?: string | null;
   is_active?: boolean;
   is_complete?: boolean;
+  included_minutes?: number;
 }
 
 export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, onSuccess }: PackageDataManagerProps) {
@@ -64,7 +66,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
     const [instancesRes, packagesRes] = await Promise.all([
       supabase
         .from('package_instances')
-        .select('id, package_id, start_date, end_date, is_active, is_complete, membership_state')
+        .select('id, package_id, start_date, end_date, is_active, is_complete, membership_state, included_minutes')
         .eq('tenant_id', tenantId)
         .order('start_date', { ascending: true, nullsFirst: false }),
       supabase
@@ -87,6 +89,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
         is_active: d.is_active ?? false,
         is_complete: d.is_complete ?? false,
         membership_state: d.membership_state,
+        included_minutes: d.included_minutes ?? 0,
       }));
       setRows(mapped);
     }
@@ -106,6 +109,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
       end_date: e.end_date !== undefined ? e.end_date : row.end_date,
       is_active: e.is_active !== undefined ? e.is_active : row.is_active,
       is_complete: e.is_complete !== undefined ? e.is_complete : row.is_complete,
+      included_minutes: e.included_minutes !== undefined ? e.included_minutes : row.included_minutes,
     };
   };
 
@@ -132,6 +136,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
     if (e.start_date !== undefined) updateData.start_date = e.start_date;
     if (e.end_date !== undefined) updateData.end_date = e.end_date;
     if (e.is_active !== undefined) updateData.is_active = e.is_active;
+    if (e.included_minutes !== undefined) updateData.included_minutes = e.included_minutes;
     if (e.is_complete !== undefined) {
       updateData.is_complete = e.is_complete;
       if (e.is_complete) {
@@ -251,6 +256,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
                   </button>
                 </TableHead>
                 <TableHead>End Date</TableHead>
+                <TableHead className="text-right">Included Hrs</TableHead>
                 <TableHead className="text-center">Active</TableHead>
                 <TableHead className="text-center">Complete</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
@@ -259,13 +265,13 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     Loading…
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No package instances found.
                   </TableCell>
                 </TableRow>
@@ -298,6 +304,19 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
                             }));
                           }}
                           clearable
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          className="w-[70px] text-right text-xs border rounded px-1.5 py-1 bg-background"
+                          value={Math.round((eff.included_minutes / 60) * 100) / 100}
+                          onChange={(e) => {
+                            const hrs = parseFloat(e.target.value) || 0;
+                            setEdit(row.id, 'included_minutes', Math.round(hrs * 60));
+                          }}
                         />
                       </TableCell>
                       <TableCell className="text-center">
