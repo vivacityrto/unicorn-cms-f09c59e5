@@ -37,7 +37,7 @@ async function resolveSiteAndDrive(
   const { data: spSite } = await supabaseAdmin
     .from("sharepoint_sites")
     .select("graph_site_id, drive_id")
-    .eq("purpose", "client_success_files")
+    .eq("purpose", "client_files")
     .eq("is_active", true)
     .limit(1)
     .maybeSingle();
@@ -67,7 +67,7 @@ async function resolveSiteAndDrive(
   if (!siteResp.ok) {
     await siteResp.text();
     throw new Error(
-      "Could not resolve SharePoint site. Ensure sharepoint_sites has a 'client_success_files' row with graph_site_id and drive_id populated, or grant Sites.Read.All to the Azure app."
+      "Could not resolve SharePoint site. Ensure sharepoint_sites has a 'client_files' row with graph_site_id and drive_id populated, or grant Sites.Read.All to the Azure app."
     );
   }
   const site = await siteResp.json();
