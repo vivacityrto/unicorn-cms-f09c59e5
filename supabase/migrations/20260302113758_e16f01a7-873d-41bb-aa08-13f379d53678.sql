@@ -1,0 +1,1 @@
+UPDATE public.sharepoint_sites SET master_docs_url = 'https://vivacityrtocoaching.sharepoint.com/:f:/r/sites/Clients938/Shared%20Documents/Governance?csf=1&web=1&e=YR3YPZ' WHERE id = '2b54bb18-aa6c-4eca-abb2-8daecc48a3f8';
