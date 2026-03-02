@@ -70,6 +70,14 @@ export function getActionsForType(type: StaffTaskType): TaskAction[] {
     ];
   }
 
+  if (type === 'admin') {
+    return [
+      { label: 'Procedure', icon: Settings, key: 'procedure' },
+      { label: 'SharePoint', icon: Settings, key: 'sharepoint' },
+      { label: 'Action', icon: Settings, key: 'action' },
+    ];
+  }
+
   // All other types (including unknown prefixes) just get Mark Complete
   return [
     { label: 'Mark Complete', icon: CircleDot, key: 'mark_complete' },

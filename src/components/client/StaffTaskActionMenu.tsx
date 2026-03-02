@@ -118,7 +118,7 @@ export function StaffTaskActionMenu({
             <span className="sr-only">Task actions</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuContent align="end" className="w-64">
           {typeLabel && (
             <>
               <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
