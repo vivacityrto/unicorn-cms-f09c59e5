@@ -51,29 +51,20 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
         return;
       }
 
-      // Look up client task metadata from package_client_tasks
+      // Look up client task metadata from client_tasks table
       const clientTaskIds = [...new Set(taskResult.data.map(t => t.clienttask_id).filter(Boolean))] as number[];
 
       const metaResult = clientTaskIds.length > 0
         ? await supabase
-            .from('package_client_tasks')
-            .select('id, name, description, order_number')
-            .in('source_stage_task_id', clientTaskIds)
-        : { data: [], error: null };
-
-      // Also try stage_client_tasks as fallback
-      const stageMetaResult = clientTaskIds.length > 0
-        ? await (supabase
-            .from('stage_client_tasks' as any)
-            .select('id, name, description, order_number')
-            .in('id', clientTaskIds)) as { data: any[] | null; error: any }
+            .from('client_tasks')
+            .select('id, name, description, sort_order, is_mandatory')
+            .in('id', clientTaskIds)
         : { data: [], error: null };
 
       const taskMap = new Map<number, { name: string; description: string | null; order_number: number | null }>();
       
-      // Populate from stage_client_tasks first
-      (stageMetaResult.data || []).forEach((t: any) => {
-        taskMap.set(t.id, { name: t.name, description: t.description, order_number: t.order_number });
+      (metaResult.data || []).forEach((t: any) => {
+        taskMap.set(t.id, { name: t.name, description: t.description, order_number: t.sort_order ?? null });
       });
 
       const transformed: ClientTaskInstance[] = taskResult.data.map((row: any) => {
