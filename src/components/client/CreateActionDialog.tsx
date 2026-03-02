@@ -11,10 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 
 interface CreateActionDialogProps {
   open: boolean;
@@ -35,12 +37,13 @@ export function CreateActionDialog({
 }: CreateActionDialogProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const { data: teamUsers = [] } = useVivacityTeamUsers();
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState(taskName);
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
-  const [notifyNotes, setNotifyNotes] = useState('');
+  const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -69,7 +72,7 @@ export function CreateActionDialog({
         action: 'ops_action_created_from_task',
         entity_type: 'ops_work_items',
         entity_id: title.trim(),
-        details: { source_task_id: taskId, package_id: packageId, notify_notes: notifyNotes.trim() || undefined },
+        details: { source_task_id: taskId, package_id: packageId, notify_user_ids: notifyUserIds.length > 0 ? notifyUserIds : undefined },
       });
 
       toast({ title: 'Action created', description: `"${title.trim()}" added to operations tracker.` });
@@ -116,14 +119,24 @@ export function CreateActionDialog({
             </div>
           </div>
           <div className="space-y-2 rounded-md border p-3 bg-muted/30">
-            <Label htmlFor="action-notify" className="text-sm font-medium">Notify / Notes</Label>
-            <Textarea
-              id="action-notify"
-              value={notifyNotes}
-              onChange={(e) => setNotifyNotes(e.target.value)}
-              rows={3}
-              placeholder="Add any notes or instructions for the team regarding this action..."
-            />
+            <Label className="text-sm font-medium">Notify / Team Members</Label>
+            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pt-1">
+              {teamUsers.map((user) => (
+                <label key={user.user_uuid} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
+                  <Checkbox
+                    checked={notifyUserIds.includes(user.user_uuid)}
+                    onCheckedChange={(checked) => {
+                      setNotifyUserIds(prev =>
+                        checked
+                          ? [...prev, user.user_uuid]
+                          : prev.filter(id => id !== user.user_uuid)
+                      );
+                    }}
+                  />
+                  <span>{user.first_name} {user.last_name}</span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
         <DialogFooter>
