@@ -17,6 +17,7 @@ interface StageDetailSectionProps {
   stageId: number;
   completionDate: string | null;
   comment: string | null;
+  stageStatus: number;
   onUpdate: () => void;
 }
 
@@ -30,6 +31,7 @@ export function StageDetailSection({
   stageId,
   completionDate,
   comment,
+  stageStatus,
   onUpdate
 }: StageDetailSectionProps) {
   const { toast } = useToast();
@@ -39,7 +41,7 @@ export function StageDetailSection({
   const normalizedDate = completionDate === LEGACY_NULL_DATE ? null : completionDate;
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    normalizedDate ? new Date(normalizedDate) : undefined
+    normalizedDate ? new Date(normalizedDate) : (stageStatus === 3 ? new Date() : undefined)
   );
   const [commentText, setCommentText] = useState(comment || '');
   const [saving, setSaving] = useState(false);
@@ -86,6 +88,9 @@ export function StageDetailSection({
       setSaving(false);
     }
   };
+
+  // Only show completion details when stage is marked Complete (status 3)
+  if (stageStatus !== 3) return null;
 
   return (
     <div className="space-y-4 p-4 bg-muted/30 border-t">

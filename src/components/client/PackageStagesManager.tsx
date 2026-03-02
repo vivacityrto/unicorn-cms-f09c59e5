@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
@@ -386,36 +387,43 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
               stageId={stage.stage_id}
               completionDate={stage.completion_date}
               comment={stage.comment}
+              stageStatus={typeof stage.status === 'number' ? stage.status : 0}
               onUpdate={fetchStages}
             />
-            <div className="divide-y border-t">
-              <div>
-                <div className="px-4 py-2 bg-muted/40 flex items-center gap-2">
-                  <ListTodo className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Staff Tasks</span>
-                </div>
+            <Tabs defaultValue="staff-tasks" className="border-t">
+              <TabsList className="w-full justify-start rounded-none border-b bg-muted/30 h-auto p-0">
+                <TabsTrigger value="staff-tasks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
+                  <ListTodo className="h-3.5 w-3.5" />
+                  Staff Tasks
+                </TabsTrigger>
+                <TabsTrigger value="client-tasks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
+                  <ListTodo className="h-3.5 w-3.5" />
+                  Client Tasks
+                </TabsTrigger>
+                <TabsTrigger value="documents" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
+                  <FileText className="h-3.5 w-3.5" />
+                  Documents
+                </TabsTrigger>
+                <TabsTrigger value="emails" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
+                  <Mail className="h-3.5 w-3.5" />
+                  Emails
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="staff-tasks" className="mt-0">
                 <StageStaffTasks 
                   stageInstanceId={stage.id}
                   tenantId={tenantId}
                   packageId={packageId}
                 />
-              </div>
-              <div>
-                <div className="px-4 py-2 bg-muted/40 flex items-center gap-2">
-                  <ListTodo className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Client Tasks</span>
-                </div>
+              </TabsContent>
+              <TabsContent value="client-tasks" className="mt-0">
                 <StageClientTasks 
                   stageInstanceId={stage.id}
                   tenantId={tenantId}
                   packageId={packageId}
                 />
-              </div>
-              <div>
-                <div className="px-4 py-2 bg-muted/40 flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Documents</span>
-                </div>
+              </TabsContent>
+              <TabsContent value="documents" className="mt-0">
                 <StageDocumentsSection
                   stageInstanceId={stage.id}
                   tenantId={tenantId}
@@ -423,17 +431,13 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
                   debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
                   isVivacityStaff={profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member'}
                 />
-              </div>
-              <div>
-                <div className="px-4 py-2 bg-muted/40 flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Emails</span>
-                </div>
+              </TabsContent>
+              <TabsContent value="emails" className="mt-0">
                 <StageEmailsSection
                   stageInstanceId={stage.id}
                 />
-              </div>
-            </div>
+              </TabsContent>
+            </Tabs>
           </CollapsibleContent>
         </div>
       </Collapsible>
