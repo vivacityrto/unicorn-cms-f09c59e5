@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MoreHorizontal, Mail, ShieldCheck } from 'lucide-react';
+import { SharePointFolderDialog } from './SharePointFolderDialog';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -48,6 +49,7 @@ export function StaffTaskActionMenu({
 
   const [composeOpen, setComposeOpen] = useState(false);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [sharepointDialogOpen, setSharepointDialogOpen] = useState(false);
   const [composeDefaults, setComposeDefaults] = useState<{
     to: string;
     subject: string;
@@ -217,6 +219,11 @@ export function StaffTaskActionMenu({
       return;
     }
 
+    if (actionKey === 'sharepoint') {
+      setSharepointDialogOpen(true);
+      return;
+    }
+
     toast({
       title: `Action: ${actionKey}`,
       description: `"${actionKey}" triggered for task #${taskId}. This will be wired up in a future update.`,
@@ -258,18 +265,12 @@ export function StaffTaskActionMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" disabled={isStageComplete}>
             <MoreHorizontal className="h-4 w-4" />
             <span className="sr-only">Task actions</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
-          {isStageComplete ? (
-            <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              <span>Stage {stageStatusId === 4 ? '(Core)' : ''} Complete — no further actions available.</span>
-            </div>
-          ) : (
             <>
               {typeLabel && (
                 <>
@@ -310,10 +311,9 @@ export function StaffTaskActionMenu({
                       <span className="truncate">{email.subject}</span>
                     </DropdownMenuItem>
                   ))}
-                </>
+              </>
               )}
             </>
-          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -345,6 +345,12 @@ export function StaffTaskActionMenu({
         packageId={packageId}
         taskName={cleanName}
         taskId={taskId}
+      />
+
+      <SharePointFolderDialog
+        open={sharepointDialogOpen}
+        onOpenChange={setSharepointDialogOpen}
+        tenantId={tenantId}
       />
     </>
   );
