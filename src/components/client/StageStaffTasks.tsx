@@ -1,12 +1,15 @@
 import { useStaffTaskInstances } from '@/hooks/useStaffTaskInstances';
 import { useTaskStatusOptions, getStatusIcon, getStatusColor } from '@/hooks/useTaskStatusOptions';
+import { useStageEmails } from '@/hooks/useStageEmails';
 import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { TaskNotesPopover } from './TaskNotesPopover';
 import { StaffTaskActionMenu } from './StaffTaskActionMenu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Loader2, Calendar, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -24,12 +27,14 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
     loading, 
     updating, 
     updateTaskStatus,
+    updateTaskCore,
     refetch,
     completedCount,
     totalCount 
   } = useStaffTaskInstances({ stageInstanceId, tenantId, packageId });
 
   const { statuses } = useTaskStatusOptions();
+  const { emails: stageEmails } = useStageEmails({ stageInstanceId });
 
   if (loading) {
     return (
@@ -76,6 +81,22 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
               )}
             >
               <StatusIcon className={cn("h-4 w-4 shrink-0", statusColor)} />
+
+              {/* Core Task Toggle */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <Checkbox
+                      checked={task.is_core}
+                      onCheckedChange={(checked) => updateTaskCore(task.id, !!checked)}
+                      className="h-4 w-4 rounded-full shrink-0"
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Core Task
+                </TooltipContent>
+              </Tooltip>
               
               {typeBadgeLabel && (
                 <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-4 shrink-0 font-semibold", typeBadgeClasses)}>
@@ -92,11 +113,6 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
                     {cleanName}
                   </p>
                   <TaskDescriptionButton taskName={cleanName} description={task.task_description} />
-                  {!task.is_core && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-muted-foreground border-muted-foreground/30">
-                      Non-core
-                    </Badge>
-                  )}
                 </div>
                 {/* Status metadata line */}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
@@ -147,6 +163,10 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
                 taskName={task.task_name}
                 taskId={task.id}
                 tenantId={tenantId}
+                packageId={packageId}
+                stageInstanceId={stageInstanceId}
+                stageEmails={stageEmails}
+                onMarkComplete={() => updateTaskStatus(task.id, 2)}
               />
 
               <Select

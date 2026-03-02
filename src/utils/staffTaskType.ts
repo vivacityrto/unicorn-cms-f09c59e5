@@ -1,6 +1,6 @@
-import { Mail, Settings, Briefcase, CircleDot, type LucideIcon } from 'lucide-react';
+import { Mail, Settings, Briefcase, CircleDot, Send, Users, type LucideIcon } from 'lucide-react';
 
-export type StaffTaskType = 'email' | 'admin' | 'om' | 'general';
+export type StaffTaskType = string;
 
 export interface ParsedTaskType {
   type: StaffTaskType;
@@ -13,20 +13,17 @@ export interface TaskAction {
   key: string;
 }
 
-const PREFIX_MAP: Record<string, StaffTaskType> = {
-  'EMAIL:': 'email',
-  'ADMIN:': 'admin',
-  'OM:': 'om',
-};
-
+/**
+ * Detects any UPPERCASE: prefix at the start of a task name.
+ * Returns the lowercase type and the clean name without the prefix.
+ */
 export function parseTaskType(name: string): ParsedTaskType {
-  for (const [prefix, type] of Object.entries(PREFIX_MAP)) {
-    if (name.toUpperCase().startsWith(prefix)) {
-      return {
-        type,
-        cleanName: name.slice(prefix.length).trim(),
-      };
-    }
+  const match = name.match(/^([A-Z]+):\s*/);
+  if (match) {
+    return {
+      type: match[1].toLowerCase(),
+      cleanName: name.slice(match[0].length).trim(),
+    };
   }
   return { type: 'general', cleanName: name };
 }
@@ -36,17 +33,15 @@ export function getTaskTypeIcon(type: StaffTaskType): LucideIcon {
     case 'email': return Mail;
     case 'admin': return Settings;
     case 'om': return Briefcase;
+    case 'csc': return Users;
+    case 'post': return Send;
     default: return CircleDot;
   }
 }
 
 export function getTaskTypeBadgeLabel(type: StaffTaskType): string | null {
-  switch (type) {
-    case 'email': return 'EMAIL';
-    case 'admin': return 'ADMIN';
-    case 'om': return 'OM';
-    default: return null;
-  }
+  if (type === 'general') return null;
+  return type.toUpperCase();
 }
 
 export function getTaskTypeBadgeClasses(type: StaffTaskType): string {
@@ -57,39 +52,26 @@ export function getTaskTypeBadgeClasses(type: StaffTaskType): string {
       return 'border-brand-aqua-500/40 bg-brand-aqua-50 text-brand-aqua-800';
     case 'om':
       return 'border-brand-macaron-600/40 bg-brand-macaron-50 text-brand-macaron-800';
+    case 'csc':
+      return 'border-emerald-500/40 bg-emerald-50 text-emerald-800';
+    case 'post':
+      return 'border-orange-500/40 bg-orange-50 text-orange-800';
     default:
-      return '';
+      // Unknown prefix — neutral grey badge
+      return 'border-muted-foreground/30 bg-muted text-muted-foreground';
   }
 }
 
 export function getActionsForType(type: StaffTaskType): TaskAction[] {
-  const common: TaskAction[] = [
+  if (type === 'email') {
+    return [
+      { label: 'Send Internal CSC', icon: Users, key: 'send_internal_csc' },
+      { label: 'Send External Primary', icon: Send, key: 'send_external_primary' },
+    ];
+  }
+
+  // All other types (including unknown prefixes) just get Mark Complete
+  return [
     { label: 'Mark Complete', icon: CircleDot, key: 'mark_complete' },
   ];
-
-  switch (type) {
-    case 'email':
-      return [
-        { label: 'Send Email', icon: Mail, key: 'send_email' },
-        { label: 'Preview Email', icon: Mail, key: 'preview_email' },
-        { label: 'Mark as Sent', icon: Mail, key: 'mark_sent' },
-        ...common,
-      ];
-    case 'admin':
-      return [
-        { label: 'Open Procedure', icon: Settings, key: 'open_procedure' },
-        { label: 'Create Folder', icon: Settings, key: 'create_folder' },
-        { label: 'Mark Done', icon: Settings, key: 'mark_done' },
-        ...common,
-      ];
-    case 'om':
-      return [
-        { label: 'Notify CEO', icon: Briefcase, key: 'notify_ceo' },
-        { label: 'Assign CSC', icon: Briefcase, key: 'assign_csc' },
-        { label: 'Mark Done', icon: Briefcase, key: 'mark_done' },
-        ...common,
-      ];
-    default:
-      return common;
-  }
 }
