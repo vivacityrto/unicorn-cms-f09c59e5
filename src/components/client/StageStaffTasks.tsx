@@ -2,6 +2,7 @@ import { useStaffTaskInstances } from '@/hooks/useStaffTaskInstances';
 import { useTaskStatusOptions, getStatusIcon, getStatusColor } from '@/hooks/useTaskStatusOptions';
 import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { TaskNotesPopover } from './TaskNotesPopover';
+import { StaffTaskActionMenu } from './StaffTaskActionMenu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Calendar, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { parseTaskType, getTaskTypeBadgeLabel, getTaskTypeBadgeClasses } from '@/utils/staffTaskType';
 
 interface StageStaffTasksProps {
   stageInstanceId: number;
@@ -60,6 +62,9 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
           const StatusIcon = getStatusIcon(task.status_id);
           const statusColor = getStatusColor(task.status_id);
           const isUpdating = updating === task.id;
+          const { type: taskType, cleanName } = parseTaskType(task.task_name);
+          const typeBadgeLabel = getTaskTypeBadgeLabel(taskType);
+          const typeBadgeClasses = getTaskTypeBadgeClasses(taskType);
 
           return (
             <div 
@@ -72,15 +77,21 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
             >
               <StatusIcon className={cn("h-4 w-4 shrink-0", statusColor)} />
               
+              {typeBadgeLabel && (
+                <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-4 shrink-0 font-semibold", typeBadgeClasses)}>
+                  {typeBadgeLabel}
+                </Badge>
+              )}
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
                   <p className={cn(
                     "text-sm truncate",
                     task.status_id === 2 && "line-through text-muted-foreground"
                   )}>
-                    {task.task_name}
+                    {cleanName}
                   </p>
-                  <TaskDescriptionButton taskName={task.task_name} description={task.task_description} />
+                  <TaskDescriptionButton taskName={cleanName} description={task.task_description} />
                   {!task.is_core && (
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-muted-foreground border-muted-foreground/30">
                       Non-core
@@ -130,6 +141,12 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
                 packageId={packageId}
                 stageInstanceId={stageInstanceId}
                 onSaved={refetch}
+              />
+
+              <StaffTaskActionMenu
+                taskName={task.task_name}
+                taskId={task.id}
+                tenantId={tenantId}
               />
 
               <Select
