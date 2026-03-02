@@ -58,7 +58,7 @@ export function StaffTaskActionMenu({
   const [stageName, setStageName] = useState<string>('');
   const [clientName, setClientName] = useState<string>('');
   const [packageName, setPackageName] = useState<string>('');
-
+  const [packageFullText, setPackageFullText] = useState<string>('');
   useEffect(() => {
     if (type !== 'email' || !tenantId) return;
 
@@ -138,10 +138,13 @@ export function StaffTaskActionMenu({
         if (cp?.package_id) {
           const { data: pkg } = await supabase
             .from('packages')
-            .select('name')
+            .select('name, full_text')
             .eq('id', cp.package_id)
             .maybeSingle();
-          if (pkg) setPackageName(pkg.name || '');
+          if (pkg) {
+            setPackageName(pkg.name || '');
+            setPackageFullText(pkg.full_text || '');
+          }
         }
       }
     };
@@ -168,9 +171,10 @@ export function StaffTaskActionMenu({
     if (actionKey === 'send_internal_csc') {
       const email = matchedEmail;
       const greeting = cscFirstName ? `<p>Hi ${cscFirstName},</p>` : '';
-      const contextLine = `<p><strong>Client:</strong> ${clientName || 'N/A'}${packageName ? ` | <strong>Package:</strong> ${packageName}` : ''}</p>`;
-      const emailContent = email?.content || '';
-      const bodyParts = [greeting, contextLine, emailContent].filter(Boolean).join('');
+      const clientLine = `<p style="padding-left:2em;"><strong>Client:</strong> ${clientName || 'N/A'}</p>`;
+      const packageLine = packageName ? `<p style="padding-left:2em;"><strong>Package:</strong> ${packageName}${packageFullText ? ` — ${packageFullText}` : ''}</p>` : '';
+      const emailContent = email?.content ? `<br/>${email.content}` : '';
+      const bodyParts = [greeting, '<br/>', clientLine, packageLine, emailContent].filter(Boolean).join('');
       setComposeDefaults({
         to: cscEmail,
         subject: stageName || email?.subject || cleanName,
