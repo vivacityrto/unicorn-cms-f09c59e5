@@ -111,13 +111,14 @@ export function StaffTaskActionMenu({
         .maybeSingle();
       if (tenant) setClientName(tenant.name || '');
 
-      // Stage name via stage_instances → documents_stages
+      // Stage name + package name via stage_instances → package_instances → packages
       if (stageInstanceId) {
         const { data: si } = await (supabase
           .from('stage_instances' as any)
-          .select('stage_id')
+          .select('stage_id, packageinstance_id')
           .eq('id', stageInstanceId)
-          .maybeSingle()) as { data: { stage_id: number } | null; error: any };
+          .maybeSingle()) as { data: { stage_id: number | null; packageinstance_id: number | null } | null; error: any };
+
         if (si?.stage_id) {
           const { data: stage } = await supabase
             .from('documents_stages')
@@ -126,24 +127,23 @@ export function StaffTaskActionMenu({
             .maybeSingle();
           if (stage) setStageName(stage.title || '');
         }
-      }
 
-      // Package name via client_packages → packages
-      if (packageId) {
-        const { data: pi } = await (supabase
-          .from('package_instances' as any)
-          .select('package_id')
-          .eq('id', packageId)
-          .maybeSingle()) as { data: { package_id: number } | null; error: any };
-        if (pi?.package_id) {
-          const { data: pkg } = await supabase
-            .from('packages')
-            .select('name, full_text')
-            .eq('id', pi.package_id)
-            .maybeSingle();
-          if (pkg) {
-            setPackageName(pkg.name || '');
-            setPackageFullText(pkg.full_text || '');
+        if (si?.packageinstance_id) {
+          const { data: pi } = await (supabase
+            .from('package_instances' as any)
+            .select('package_id')
+            .eq('id', si.packageinstance_id)
+            .maybeSingle()) as { data: { package_id: number } | null; error: any };
+          if (pi?.package_id) {
+            const { data: pkg } = await supabase
+              .from('packages')
+              .select('name, full_text')
+              .eq('id', pi.package_id)
+              .maybeSingle();
+            if (pkg) {
+              setPackageName(pkg.name || '');
+              setPackageFullText(pkg.full_text || '');
+            }
           }
         }
       }
