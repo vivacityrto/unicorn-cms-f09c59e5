@@ -252,10 +252,10 @@ export default function StageBuilder() {
       const stageKey = `${baseKey}-${Date.now()}`;
 
       // 1. Create the stage
-      const { data: newStage, error: stageError } = await supabase
-        .from('documents_stages')
+      const { data: newStage, error: stageError } = await (supabase
+        .from('stages')
         .insert({
-          title: state.stageName,
+          name: state.stageName,
           description: state.description,
           stage_type: state.stageType,
           stage_key: stageKey,
@@ -263,9 +263,9 @@ export default function StageBuilder() {
           is_reusable: true,
           dashboard_visible: true,
           is_archived: false,
-        })
+        } as any)
         .select()
-        .single();
+        .single() as any);
 
       if (stageError || !newStage) throw new Error(stageError?.message || 'Failed to create stage');
 

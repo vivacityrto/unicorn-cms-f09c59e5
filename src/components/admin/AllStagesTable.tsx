@@ -80,15 +80,24 @@ export function AllStagesTable() {
     try {
       setLoading(true);
 
-      // Fetch all stages from documents_stages (master table)
+      // Fetch all stages from stages table
       const {
-        data: stagesData,
+        data: rawStagesData,
         error: stagesError
-      } = await supabase.from('documents_stages').select('id, title, short_name, description, video_url, created_at, created_by').order('created_at', {
+      } = await supabase.from('stages').select('id, name, shortname, description, videourl, dateimported, created_by').order('dateimported', {
         ascending: false
       });
       if (stagesError) throw stagesError;
-      setStages(stagesData || []);
+      const stagesData = (rawStagesData || []).map((s: any) => ({
+        id: s.id,
+        title: s.name,
+        short_name: s.shortname,
+        description: s.description,
+        video_url: s.videourl,
+        created_at: s.dateimported,
+        created_by: s.created_by,
+      }));
+      setStages(stagesData);
 
       // Fetch user info for created_by UUIDs
       const userIds = [...new Set((stagesData || []).filter(s => s.created_by).map(s => s.created_by as string))];
@@ -153,7 +162,7 @@ export function AllStagesTable() {
     if (!stageToDelete) return;
     try {
       setIsDeleting(true);
-      const { error } = await supabase.from('documents_stages').delete().eq('id', stageToDelete.id);
+      const { error } = await (supabase.from('stages').delete().eq('id', stageToDelete.id) as any);
       if (error) throw error;
         toast({
           title: "Success",
@@ -187,12 +196,12 @@ export function AllStagesTable() {
         // Update existing stage
         const {
           error
-        } = await supabase.from('documents_stages').update({
-          title: formData.title,
-          short_name: formData.short_name || null,
+        } = await (supabase.from('stages').update({
+          name: formData.title,
+          shortname: formData.short_name || null,
           description: formData.description || null,
-          video_url: formData.video_url || null
-        }).eq('id', selectedStage.id);
+          videourl: formData.video_url || null
+        } as any).eq('id', selectedStage.id) as any);
         if (error) throw error;
         toast({
           title: "Success",
@@ -206,13 +215,13 @@ export function AllStagesTable() {
         
         const {
           error
-        } = await supabase.from('documents_stages').insert({
-          title: formData.title,
-          short_name: formData.short_name || null,
+        } = await (supabase.from('stages').insert({
+          name: formData.title,
+          shortname: formData.short_name || null,
           description: formData.description || null,
-          video_url: formData.video_url || null,
+          videourl: formData.video_url || null,
           stage_key: stageKey
-        });
+        } as any) as any);
         if (error) throw error;
         toast({
           title: "Success",

@@ -121,11 +121,11 @@ export function StaffTaskActionMenu({
 
         if (si?.stage_id) {
           const { data: stage } = await supabase
-            .from('documents_stages')
-            .select('title')
+            .from('stages')
+            .select('name')
             .eq('id', si.stage_id)
             .maybeSingle();
-          if (stage) setStageName(stage.title || '');
+          if (stage) setStageName(stage.name || '');
         }
 
         if (si?.packageinstance_id) {

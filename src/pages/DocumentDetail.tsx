@@ -130,9 +130,9 @@ export default function DocumentDetail() {
   const fetchStages = async () => {
     try {
       const { data, error } = await supabase
-        .from('documents_stages')
-        .select('id, title')
-        .order('title', { ascending: true });
+        .from('stages')
+        .select('id, name')
+        .order('name', { ascending: true });
 
       if (error) throw error;
       setStages((data as any) || []);

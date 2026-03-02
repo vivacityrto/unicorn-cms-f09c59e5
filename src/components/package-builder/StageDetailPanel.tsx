@@ -230,7 +230,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       });
         toast({
           title: 'Stage Duplicated',
-          description: `Created "${newStage.title}" in the library.`
+          description: `Created "${(newStage as any).name || (newStage as any).title}" in the library.`
         });
     } catch (error: any) {
       toast({

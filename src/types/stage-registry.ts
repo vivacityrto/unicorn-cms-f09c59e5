@@ -11,19 +11,19 @@ import { Database } from "@/integrations/supabase/types";
  * Individual workflow steps. The new "Phase" concept (Checkpoint Phases)
  * is a grouping layer above Stages, introduced separately.
  */
-export type StageRegistry = Database["public"]["Tables"]["documents_stages"]["Row"];
+export type StageRegistry = Database["public"]["Tables"]["stages"]["Row"];
 
 /**
  * Stage Registry Insert Type
  * Used when creating new stages
  */
-export type StageRegistryInsert = Database["public"]["Tables"]["documents_stages"]["Insert"];
+export type StageRegistryInsert = Database["public"]["Tables"]["stages"]["Insert"];
 
 /**
  * Stage Registry Update Type
  * Used when updating existing stages
  */
-export type StageRegistryUpdate = Database["public"]["Tables"]["documents_stages"]["Update"];
+export type StageRegistryUpdate = Database["public"]["Tables"]["stages"]["Update"];
 
 /**
  * Stage Classification

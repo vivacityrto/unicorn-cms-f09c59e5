@@ -239,10 +239,11 @@ export default function AdminManagePackages() {
 
   const fetchDocumentStages = async () => {
     try {
-      const { data, error } = await supabase
-        .from("documents_stages")
-        .select("id, title")
-        .order("title", { ascending: true });
+      const { data: rawData, error } = await supabase
+        .from("stages")
+        .select("id, name")
+        .order("name", { ascending: true });
+      const data = (rawData || []).map((s: any) => ({ id: s.id, title: s.name }));
       if (error) throw error;
       setDocumentStages(data || []);
     } catch (error: any) {

@@ -100,18 +100,19 @@ export default function TenantProgressTable({
         return;
       }
       
-      // Fetch stages from documents_stages table
-      const { data, error } = await supabase
-        .from('documents_stages')
-        .select('id, title, short_name, description, video_url, status')
+      // Fetch stages from stages table
+      const { data: rawData, error } = await supabase
+        .from('stages')
+        .select('id, name, shortname, description, videourl, status')
         .in('id', stageIdsFromDocs)
         .order('id', { ascending: true });
       
       if (error) throw error;
       
+      const data = rawData;
       const mappedStages: Stage[] = (data || []).map((stage: any, index: number) => ({
         id: index + 1,
-        name: stage.title || 'Unnamed Stage',
+        name: stage.name || 'Unnamed Stage',
         status: (stage.status as Stage["status"]) || "Not Started",
         paymentStatus: "N/A" as const,
         order_number: index + 1,
