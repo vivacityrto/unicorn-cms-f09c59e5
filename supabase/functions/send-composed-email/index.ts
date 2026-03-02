@@ -197,7 +197,13 @@ serve(async (req) => {
       body: formData,
     });
 
-    const mgResult = await mgRes.json();
+    const mgText = await mgRes.text();
+    let mgResult: any;
+    try {
+      mgResult = JSON.parse(mgText);
+    } catch {
+      mgResult = { message: mgText };
+    }
     const emailStatus = mgRes.ok ? "sent" : "failed";
     console.log("Mailgun response:", mgRes.status, mgResult);
 
