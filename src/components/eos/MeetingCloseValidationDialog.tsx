@@ -199,7 +199,7 @@ export function MeetingCloseValidationDialog({
       const result = await closeMeeting.mutateAsync(force);
       if (result.success) {
         onOpenChange(false);
-        navigate(`/eos/meetings/${meetingId}/summary`);
+        navigate('/eos/meetings');
       } else {
         const errors = result.validation_errors || result.unmet_requirements || [];
         if (errors.length > 0) {
