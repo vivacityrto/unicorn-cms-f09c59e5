@@ -7,7 +7,7 @@ import { StaffTaskActionMenu } from './StaffTaskActionMenu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Loader2, Calendar, CheckCircle2 } from 'lucide-react';
@@ -19,9 +19,10 @@ interface StageStaffTasksProps {
   stageInstanceId: number;
   tenantId: number;
   packageId: number;
+  stageStatusId?: number;
 }
 
-export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageStaffTasksProps) {
+export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageStatusId }: StageStaffTasksProps) {
   const { 
     tasks, 
     loading, 
@@ -82,15 +83,13 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
             >
               <StatusIcon className={cn("h-4 w-4 shrink-0", statusColor)} />
 
-              {/* Core Task Toggle */}
+              {/* Core Task Radio */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div>
-                    <Checkbox
-                      checked={task.is_core}
-                      onCheckedChange={(checked) => updateTaskCore(task.id, !!checked)}
-                      className="h-4 w-4 rounded-full shrink-0"
-                    />
+                  <div onClick={() => updateTaskCore(task.id, !task.is_core)} className="cursor-pointer">
+                    <RadioGroup value={task.is_core ? 'core' : 'not-core'}>
+                      <RadioGroupItem value="core" className="h-4 w-4 shrink-0" />
+                    </RadioGroup>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">
@@ -166,6 +165,7 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
                 packageId={packageId}
                 stageInstanceId={stageInstanceId}
                 statusId={task.status_id}
+                stageStatusId={stageStatusId}
                 stageEmails={stageEmails}
                 onMarkComplete={() => updateTaskStatus(task.id, 2)}
               />
