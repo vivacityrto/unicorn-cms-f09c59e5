@@ -41,7 +41,7 @@ export function TaskDescriptionButton({ taskName, description, className }: Task
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className={cn(
           "max-h-[80vh] overflow-y-auto",
-          description.length > 500 ? "max-w-4xl" : "max-w-2xl"
+          description.length > 300 ? "max-w-4xl" : "max-w-2xl"
         )}>
           <DialogHeader>
             <DialogTitle className="text-base">{taskName}</DialogTitle>
