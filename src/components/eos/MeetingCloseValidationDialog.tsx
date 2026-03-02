@@ -146,6 +146,7 @@ export function MeetingCloseValidationDialog({
   const [justifications, setJustifications] = useState<Record<OutcomeType, string>>({} as Record<OutcomeType, string>);
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [showForceCloseConfirm, setShowForceCloseConfirm] = useState(false);
 
   const outcomes = getOutcomesForMeetingType(meetingType);
   const userRating = profile?.user_uuid ? getUserRating(profile.user_uuid) : undefined;
