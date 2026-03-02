@@ -400,10 +400,6 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
             <StageEmailsSection
               stageInstanceId={stage.id}
             />
-            <StageNotesSection
-              tenantId={tenantId}
-              packageId={packageId}
-            />
           </CollapsibleContent>
         </div>
       </Collapsible>
