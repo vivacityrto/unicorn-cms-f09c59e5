@@ -10,6 +10,20 @@ export const CLIENT_TASK_STATUS_OPTIONS = [
   { value: 3, label: 'N/A', key: 'na' },
 ] as const;
 
+export const STAGE_STATUS_MAP: Record<string, { status_id: number; status: string }> = {
+  not_started: { status_id: 0, status: 'Not Started' },
+  in_progress: { status_id: 1, status: 'In Progress' },
+  complete: { status_id: 2, status: 'Completed' },
+  skipped: { status_id: 3, status: 'N/A' },
+};
+
+export const STAFF_TASK_STATUS_MAP: Record<string, { status_id: number; status: string }> = {
+  open: { status_id: 0, status: 'Not Started' },
+  in_progress: { status_id: 1, status: 'In Progress' },
+  done: { status_id: 2, status: 'Completed' },
+  blocked: { status_id: 3, status: 'N/A' },
+};
+
 export interface ClientPackageInstance {
   id: string;
   tenant_id: number;
@@ -36,14 +50,13 @@ export interface ClientPackageInstance {
 }
 
 export interface ClientPackageStage {
-  id: string;
-  client_package_id: string;
+  id: number;
+  packageinstance_id: number;
   stage_id: number;
   sort_order: number;
-  status: 'not_started' | 'in_progress' | 'complete' | 'skipped';
-  started_at: string | null;
-  completed_at: string | null;
-  created_at: string;
+  status: string;
+  status_id: number;
+  is_recurring: boolean;
   stage?: {
     id: number;
     title: string;
@@ -57,17 +70,13 @@ export interface ClientPackageStage {
 }
 
 export interface ClientTeamTask {
-  id: string;
-  client_package_stage_id: string;
-  template_task_id: string | null;
+  id: number;
+  stafftask_id: number | null;
+  stageinstance_id: number;
+  status_id: number;
+  status: string;
   name: string;
-  instructions: string | null;
-  owner_role: string | null;
-  estimated_hours: number | null;
-  is_mandatory: boolean;
-  sort_order: number;
-  status: 'open' | 'in_progress' | 'done' | 'blocked';
-  created_at: string;
+  description: string | null;
 }
 
 export interface ClientTask {
@@ -86,25 +95,22 @@ export interface ClientTask {
 }
 
 export interface ClientEmailQueue {
-  id: string;
-  client_package_stage_id: string;
-  email_template_id: string;
-  trigger_type: string;
-  recipient_type: string;
-  status: 'queued' | 'sent' | 'skipped';
-  scheduled_at: string | null;
-  sent_at: string | null;
-  created_at: string;
+  id: number;
+  email_id: number | null;
+  stageinstance_id: number;
+  subject: string | null;
+  content: string | null;
+  is_sent: boolean;
+  sent_date: string | null;
 }
 
 export interface ClientStageDocument {
-  id: string;
-  client_package_stage_id: string;
-  document_id: number;
-  visibility: string;
-  delivery_type: string;
-  sort_order: number;
-  created_at: string;
+  id: number;
+  document_id: number | null;
+  stageinstance_id: number;
+  tenant_id: number | null;
+  status: string | null;
+  isgenerated: boolean;
   document?: {
     id: number;
     title: string;
@@ -121,7 +127,7 @@ export function useClientPackageInstances() {
     tenantId: number,
     packageId: number,
     assignedCscUserId?: string
-  ): Promise<string | null> => {
+  ): Promise<number | null> => {
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc('start_client_package', {
@@ -137,7 +143,7 @@ export function useClientPackageInstances() {
         description: 'Client package instance created successfully',
       });
 
-      return data as string;
+      return data as number;
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -152,7 +158,6 @@ export function useClientPackageInstances() {
 
   const fetchClientPackages = useCallback(async (tenantId?: number): Promise<ClientPackageInstance[]> => {
     try {
-      // Use package_instances as source of truth
       let query = supabase
         .from('package_instances')
         .select('*')
@@ -165,10 +170,8 @@ export function useClientPackageInstances() {
 
       const { data: instances, error } = await query;
       if (error) throw error;
-
       if (!instances || instances.length === 0) return [];
 
-      // Fetch packages and tenants in parallel
       const packageIds = [...new Set(instances.map(i => i.package_id))];
       const tenantIds = [...new Set(instances.map(i => i.tenant_id))];
 
@@ -180,12 +183,11 @@ export function useClientPackageInstances() {
       const packageMap = new Map((packagesRes.data || []).map(p => [p.id, p]));
       const tenantMap = new Map((tenantsRes.data || []).map(t => [t.id, t]));
 
-      // Map to ClientPackageInstance format
-      const mapped: ClientPackageInstance[] = instances.map(inst => ({
+      return instances.map(inst => ({
         id: inst.id.toString(),
         tenant_id: inst.tenant_id,
         package_id: inst.package_id,
-        status: inst.is_complete ? 'closed' : 'active',
+        status: inst.is_complete ? 'closed' as const : 'active' as const,
         start_date: inst.start_date || '',
         end_date: inst.end_date,
         assigned_csc_user_id: inst.manager_id,
@@ -194,8 +196,6 @@ export function useClientPackageInstances() {
         package: packageMap.get(inst.package_id) || { id: inst.package_id, name: 'Unknown', slug: null },
         tenant: tenantMap.get(inst.tenant_id) || { id: inst.tenant_id, name: 'Unknown' }
       }));
-
-      return mapped;
     } catch (error: any) {
       console.error('Error fetching client packages:', error);
       return [];
@@ -204,7 +204,6 @@ export function useClientPackageInstances() {
 
   const fetchPackageDetail = useCallback(async (clientPackageId: string): Promise<ClientPackageInstance | null> => {
     try {
-      // Fetch from package_instances
       const { data: inst, error } = await supabase
         .from('package_instances')
         .select('*')
@@ -214,7 +213,6 @@ export function useClientPackageInstances() {
       if (error) throw error;
       if (!inst) return null;
 
-      // Fetch package and tenant details in parallel
       const [packageRes, tenantRes] = await Promise.all([
         supabase.from('packages').select('id, name, slug').eq('id', inst.package_id).single(),
         supabase.from('tenants').select('id, name').eq('id', inst.tenant_id).single()
@@ -241,92 +239,173 @@ export function useClientPackageInstances() {
 
   const fetchPackageStages = useCallback(async (clientPackageId: string): Promise<ClientPackageStage[]> => {
     try {
-      const { data: stages, error } = await supabase
-        .from('client_package_stages')
-        .select(`
-          *,
-          stage:documents_stages(id, title, short_name, description)
-        `)
-        .eq('client_package_id', clientPackageId)
-        .order('sort_order');
+      const packageInstanceId = parseInt(clientPackageId);
 
-      if (error) throw error;
+      // Fetch stage_instances for this package instance
+      const { data: stageRows, error: stageError } = await (supabase
+        .from('stage_instances' as any)
+        .select('id, stage_id, packageinstance_id, stage_sortorder, status_id, status, is_recurring')
+        .eq('packageinstance_id', packageInstanceId)
+        .order('stage_sortorder')) as { data: any[] | null; error: any };
 
-      // Fetch related data for each stage
-      const stagesWithDetails = await Promise.all((stages || []).map(async (stage) => {
-        const [teamTasks, clientTasks, documents, emails] = await Promise.all([
-          supabase
-            .from('client_team_tasks')
-            .select('*')
-            .eq('client_package_stage_id', stage.id)
-            .order('sort_order'),
-          supabase
-            .from('client_task_instances')
-            .select('id, clienttask_id, stageinstance_id, status, due_date, completion_date, created_at')
-            .eq('stageinstance_id', parseInt(stage.id)),
-          supabase
-            .from('client_stage_documents')
-            .select(`
-              *,
-              document:documents(id, title, category, format)
-            `)
-            .eq('client_package_stage_id', stage.id)
-            .order('sort_order'),
-          supabase
-            .from('client_email_queue')
-            .select('*')
-            .eq('client_package_stage_id', stage.id)
-        ]);
+      if (stageError) throw stageError;
+      if (!stageRows || stageRows.length === 0) return [];
 
-        // Get unique client_task_ids for template lookup
-        const clientTaskIds = [...new Set(
-          (clientTasks.data || [])
-            .map(t => t.clienttask_id)
-            .filter(Boolean)
-        )] as number[];
+      // Get unique stage_ids for metadata lookup
+      const stageIds = [...new Set(stageRows.map(s => s.stage_id))] as number[];
+      const stageInstanceIds = stageRows.map(s => s.id) as number[];
 
-        // Batch fetch template metadata
-        const { data: clientTaskTemplates } = clientTaskIds.length > 0
-          ? await supabase
-              .from('client_tasks')
-              .select('id, name, description, instructions, sort_order')
-              .in('id', clientTaskIds)
-          : { data: [] };
+      // Fetch stage metadata from documents_stages
+      const { data: stageMeta } = stageIds.length > 0
+        ? await supabase.from('documents_stages').select('id, title, short_name, description').in('id', stageIds)
+        : { data: [] };
 
-        // Build lookup map and transform
-        const templateMap = new Map(
-          (clientTaskTemplates || []).map(t => [t.id, t])
-        );
+      const stageMetaMap = new Map((stageMeta || []).map(s => [s.id, s]));
 
-        const transformedClientTasks: ClientTask[] = (clientTasks.data || []).map(inst => {
-          const template = inst.clienttask_id ? templateMap.get(inst.clienttask_id) : null;
+      // Fetch all related data in parallel
+      const [staffTasksRes, clientTasksRes, docsRes, emailsRes] = await Promise.all([
+        supabase
+          .from('staff_task_instances' as any)
+          .select('id, stafftask_id, stageinstance_id, status_id, status')
+          .in('stageinstance_id', stageInstanceIds),
+        supabase
+          .from('client_task_instances')
+          .select('id, clienttask_id, stageinstance_id, status, due_date, completion_date, created_at')
+          .in('stageinstance_id', stageInstanceIds),
+        supabase
+          .from('document_instances' as any)
+          .select('id, document_id, stageinstance_id, tenant_id, status, isgenerated')
+          .in('stageinstance_id', stageInstanceIds),
+        supabase
+          .from('email_instances' as any)
+          .select('id, email_id, stageinstance_id, subject, content, is_sent, sent_date')
+          .in('stageinstance_id', stageInstanceIds),
+      ]) as [any, any, any, any];
+
+      // Fetch staff_tasks and client_tasks templates for names
+      const staffTaskIds = [...new Set((staffTasksRes.data || []).map((t: any) => t.stafftask_id).filter(Boolean))] as number[];
+      const clientTaskIds = [...new Set((clientTasksRes.data || []).map((t: any) => t.clienttask_id).filter(Boolean))] as number[];
+      const documentIds = [...new Set((docsRes.data || []).map((d: any) => d.document_id).filter(Boolean))] as number[];
+
+      const [staffTaskMeta, clientTaskMeta, docMeta] = await Promise.all([
+        staffTaskIds.length > 0
+          ? supabase.from('staff_tasks').select('id, name, description').in('id', staffTaskIds)
+          : Promise.resolve({ data: [] }),
+        clientTaskIds.length > 0
+          ? supabase.from('client_tasks').select('id, name, description, instructions, sort_order').in('id', clientTaskIds)
+          : Promise.resolve({ data: [] }),
+        documentIds.length > 0
+          ? supabase.from('documents').select('id, title, category, format').in('id', documentIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const staffTaskMap = new Map((staffTaskMeta.data || []).map((t: any) => [t.id, t]));
+      const clientTaskMap = new Map((clientTaskMeta.data || []).map((t: any) => [t.id, t]));
+      const docMap = new Map((docMeta.data || []).map((d: any) => [d.id, d]));
+
+      // Group by stageinstance_id
+      const staffTasksByStage = new Map<number, any[]>();
+      for (const t of (staffTasksRes.data || [])) {
+        const arr = staffTasksByStage.get(t.stageinstance_id) || [];
+        arr.push(t);
+        staffTasksByStage.set(t.stageinstance_id, arr);
+      }
+
+      const clientTasksByStage = new Map<number, any[]>();
+      for (const t of (clientTasksRes.data || [])) {
+        const arr = clientTasksByStage.get(t.stageinstance_id) || [];
+        arr.push(t);
+        clientTasksByStage.set(t.stageinstance_id, arr);
+      }
+
+      const docsByStage = new Map<number, any[]>();
+      for (const d of (docsRes.data || [])) {
+        const arr = docsByStage.get(d.stageinstance_id) || [];
+        arr.push(d);
+        docsByStage.set(d.stageinstance_id, arr);
+      }
+
+      const emailsByStage = new Map<number, any[]>();
+      for (const e of (emailsRes.data || [])) {
+        const arr = emailsByStage.get(e.stageinstance_id) || [];
+        arr.push(e);
+        emailsByStage.set(e.stageinstance_id, arr);
+      }
+
+      // Transform
+      return stageRows.map((stage: any) => {
+        const meta = stageMetaMap.get(stage.stage_id);
+
+        const teamTasks: ClientTeamTask[] = (staffTasksByStage.get(stage.id) || []).map((t: any) => {
+          const tmpl = t.stafftask_id ? staffTaskMap.get(t.stafftask_id) : null;
+          return {
+            id: t.id,
+            stafftask_id: t.stafftask_id,
+            stageinstance_id: t.stageinstance_id,
+            status_id: t.status_id ?? 0,
+            status: t.status || 'Not Started',
+            name: tmpl?.name || `Task ${t.id}`,
+            description: tmpl?.description || null,
+          };
+        });
+
+        const clientTasks: ClientTask[] = (clientTasksByStage.get(stage.id) || []).map((inst: any) => {
+          const tmpl = inst.clienttask_id ? clientTaskMap.get(inst.clienttask_id) : null;
           const statusOption = CLIENT_TASK_STATUS_OPTIONS.find(s => s.value === inst.status);
           return {
             id: inst.id,
             client_task_id: inst.clienttask_id,
             stage_instance_id: inst.stageinstance_id,
-            name: template?.name || `Task ${inst.id}`,
-            description: template?.description || null,
-            instructions: template?.instructions || null,
+            name: tmpl?.name || `Task ${inst.id}`,
+            description: tmpl?.description || null,
+            instructions: tmpl?.instructions || null,
             due_date: inst.due_date,
             completion_date: inst.completion_date,
-            sort_order: template?.sort_order ?? 0,
+            sort_order: tmpl?.sort_order ?? 0,
             status: inst.status ?? 0,
             status_label: statusOption?.label || 'Unknown',
             created_at: inst.created_at,
           };
-        }).sort((a, b) => a.sort_order - b.sort_order);
+        }).sort((a: ClientTask, b: ClientTask) => a.sort_order - b.sort_order);
+
+        const documents: ClientStageDocument[] = (docsByStage.get(stage.id) || []).map((d: any) => {
+          const dm = d.document_id ? docMap.get(d.document_id) : null;
+          return {
+            id: d.id,
+            document_id: d.document_id,
+            stageinstance_id: d.stageinstance_id,
+            tenant_id: d.tenant_id,
+            status: d.status,
+            isgenerated: d.isgenerated,
+            document: dm ? { id: dm.id, title: dm.title, category: dm.category, format: dm.format } : undefined,
+          };
+        });
+
+        const emails: ClientEmailQueue[] = (emailsByStage.get(stage.id) || []).map((e: any) => ({
+          id: e.id,
+          email_id: e.email_id,
+          stageinstance_id: e.stageinstance_id,
+          subject: e.subject,
+          content: e.content,
+          is_sent: e.is_sent,
+          sent_date: e.sent_date,
+        }));
 
         return {
-          ...stage,
-          team_tasks: teamTasks.data || [],
-          client_tasks: transformedClientTasks,
-          documents: documents.data || [],
-          emails: emails.data || []
-        };
-      }));
-
-      return stagesWithDetails as ClientPackageStage[];
+          id: stage.id,
+          packageinstance_id: stage.packageinstance_id,
+          stage_id: stage.stage_id,
+          sort_order: stage.stage_sortorder ?? 0,
+          status: stage.status || 'Not Started',
+          status_id: stage.status_id ?? 0,
+          is_recurring: stage.is_recurring ?? false,
+          stage: meta ? { id: meta.id, title: meta.title, short_name: meta.short_name, description: meta.description } : undefined,
+          team_tasks: teamTasks,
+          client_tasks: clientTasks,
+          documents,
+          emails,
+        } as ClientPackageStage;
+      });
     } catch (error: any) {
       console.error('Error fetching package stages:', error);
       return [];
@@ -338,18 +417,12 @@ export function useClientPackageInstances() {
     status: 'not_started' | 'in_progress' | 'complete' | 'skipped'
   ) => {
     try {
-      const updates: any = { status };
-      if (status === 'in_progress' && !updates.started_at) {
-        updates.started_at = new Date().toISOString();
-      }
-      if (status === 'complete') {
-        updates.completed_at = new Date().toISOString();
-      }
+      const mapped = STAGE_STATUS_MAP[status] || STAGE_STATUS_MAP.not_started;
 
       const { error } = await supabase
-        .from('client_package_stages')
-        .update(updates)
-        .eq('id', stageId);
+        .from('stage_instances' as any)
+        .update({ status_id: mapped.status_id, status: mapped.status })
+        .eq('id', parseInt(stageId));
 
       if (error) throw error;
       return true;
@@ -368,10 +441,12 @@ export function useClientPackageInstances() {
     status: 'open' | 'in_progress' | 'done' | 'blocked'
   ) => {
     try {
+      const mapped = STAFF_TASK_STATUS_MAP[status] || STAFF_TASK_STATUS_MAP.open;
+
       const { error } = await supabase
-        .from('client_team_tasks')
-        .update({ status })
-        .eq('id', taskId);
+        .from('staff_task_instances' as any)
+        .update({ status_id: mapped.status_id, status: mapped.status })
+        .eq('id', parseInt(taskId));
 
       if (error) throw error;
       return true;
@@ -391,8 +466,6 @@ export function useClientPackageInstances() {
   ) => {
     try {
       const updateData: Record<string, any> = { status: newStatus };
-      
-      // Set completion_date if completing (status 2)
       if (newStatus === 2) {
         updateData.completion_date = new Date().toISOString();
       } else {

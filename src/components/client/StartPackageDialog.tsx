@@ -79,16 +79,17 @@ export function StartPackageDialog({
   const handleStart = async () => {
     if (!selectedPackageId) return;
 
-    const clientPackageId = await startPackage(
+    const packageInstanceId = await startPackage(
       tenantId,
       parseInt(selectedPackageId),
       selectedCscId || undefined
     );
 
-    if (clientPackageId) {
+    if (packageInstanceId) {
       onOpenChange(false);
       onSuccess?.();
-      navigate(`/admin/client-packages/${clientPackageId}`);
+      // Navigate to tenant detail with the new package instance
+      navigate(`/tenant/${tenantId}`);
     }
   };
 

@@ -30601,7 +30601,7 @@ export type Database = {
           completion_date?: string | null
           created_at?: string | null
           due_date?: string | null
-          id: number
+          id?: number
           notes?: string | null
           stafftask_id: number
           stageinstance_id: number
@@ -47956,7 +47956,7 @@ export type Database = {
           p_package_id: number
           p_tenant_id: number
         }
-        Returns: string
+        Returns: number
       }
       start_meeting_instance: {
         Args: { p_meeting_id: string }
