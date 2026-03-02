@@ -90,15 +90,14 @@ export function StageEmailsSection({ stageInstanceId, tenantId, packageId }: Sta
                   <p className="text-sm truncate">{email.subject}</p>
                   <TaskDescriptionButton taskName={email.subject} description={email.description} />
                 </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  To: {email.to || 'Not set'}
-                </p>
+                {email.is_sent ? (
+                  <p className="text-xs text-muted-foreground truncate">
+                    To: {email.to || 'N/A'}
+                    {email.sender_name && <> · Sent by {email.sender_name}</>}
+                    {email.sent_date && <> · {format(new Date(email.sent_date), 'dd MMM yyyy')}</>}
+                  </p>
+                ) : null}
               </div>
-              {email.sent_date && (
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {format(new Date(email.sent_date), 'dd MMM yyyy')}
-                </span>
-              )}
               <Badge variant={email.is_sent ? 'default' : 'secondary'} className="text-xs">
                 {email.is_sent ? 'Sent' : 'Draft'}
               </Badge>
