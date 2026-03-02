@@ -130,16 +130,16 @@ export function StaffTaskActionMenu({
 
       // Package name via client_packages → packages
       if (packageId) {
-        const { data: cp } = await (supabase
-          .from('client_packages' as any)
+        const { data: pi } = await (supabase
+          .from('package_instances' as any)
           .select('package_id')
           .eq('id', packageId)
           .maybeSingle()) as { data: { package_id: number } | null; error: any };
-        if (cp?.package_id) {
+        if (pi?.package_id) {
           const { data: pkg } = await supabase
             .from('packages')
             .select('name, full_text')
-            .eq('id', cp.package_id)
+            .eq('id', pi.package_id)
             .maybeSingle();
           if (pkg) {
             setPackageName(pkg.name || '');
