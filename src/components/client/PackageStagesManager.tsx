@@ -390,6 +390,31 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
 
       if (error) throw error;
 
+      // Core Complete auto-flag: mark incomplete staff tasks as non-core
+      if (newStatus === 4) {
+        const { error: coreError } = await supabase
+          .from('staff_task_instances')
+          .update({ is_core: false })
+          .eq('stageinstance_id', stageInstanceId)
+          .neq('status_id', 2);
+
+        if (coreError) {
+          console.error('Error flagging non-core tasks:', coreError);
+        } else {
+          // Audit the bulk non-core flag
+          await supabase.from('client_audit_log').insert({
+            tenant_id: tenantId,
+            actor_user_id: profile?.user_uuid,
+            action: 'staff_tasks_flagged_non_core',
+            entity_type: 'staff_task_instances',
+            entity_id: stageInstanceId.toString(),
+            before_data: { is_core: true },
+            after_data: { is_core: false },
+            details: { package_id: packageId, stage_instance_id: stageInstanceId, reason: 'core_complete_status' }
+          });
+        }
+      }
+
       // Log to audit
       await supabase.from('client_audit_log').insert({
         tenant_id: tenantId,
