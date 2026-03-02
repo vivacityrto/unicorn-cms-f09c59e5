@@ -510,6 +510,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                           tenantId={tenantId} 
                           packageId={pkg.package_id} 
                           packageName={pkg.package_name}
+                          packageInstanceId={Number(pkg.id)}
                         />
                       </div>
                     </TabsContent>

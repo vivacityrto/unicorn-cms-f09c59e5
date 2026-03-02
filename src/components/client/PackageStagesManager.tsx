@@ -64,6 +64,7 @@ interface PackageStagesManagerProps {
   tenantId: number;
   packageId: number;
   packageName: string;
+  packageInstanceId?: number;
 }
 
 // Legacy status mapping (unicorn1 uses integers)
@@ -227,7 +228,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
   );
 }
 
-export function PackageStagesManager({ tenantId, packageId, packageName }: PackageStagesManagerProps) {
+export function PackageStagesManager({ tenantId, packageId, packageName, packageInstanceId: propInstanceId }: PackageStagesManagerProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
   const [stages, setStages] = useState<StageInstance[]>([]);
@@ -289,31 +290,36 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
   const fetchStages = async () => {
     setLoading(true);
     try {
-      // First, find the package_instance for this tenant + package
-      const { data: instanceData, error: instanceError } = await supabase
-        .from('package_instances')
-        .select('id')
-        .eq('tenant_id', tenantId)
-        .eq('package_id', packageId)
-        .eq('is_complete', false)
-        .limit(1)
-        .maybeSingle();
+      let resolvedInstanceId = propInstanceId ?? null;
 
-      if (instanceError) throw instanceError;
+      if (!resolvedInstanceId) {
+        // Fallback: find the package_instance for this tenant + package
+        const { data: instanceData, error: instanceError } = await supabase
+          .from('package_instances')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('package_id', packageId)
+          .eq('is_complete', false)
+          .limit(1)
+          .maybeSingle();
 
-      if (!instanceData) {
-        setStages([]);
-        setLoading(false);
-        return;
+        if (instanceError) throw instanceError;
+
+        if (!instanceData) {
+          setStages([]);
+          setLoading(false);
+          return;
+        }
+        resolvedInstanceId = instanceData.id;
       }
 
-      setPackageInstanceId(instanceData.id);
+      setPackageInstanceId(resolvedInstanceId);
 
       // Fetch stage_instances for this package_instance
       const stageResult = await (supabase
         .from('stage_instances' as any)
         .select('id, stage_id, status, status_date, completion_date, comment, paid, released_client_tasks, is_recurring')
-        .eq('packageinstance_id', instanceData.id)
+        .eq('packageinstance_id', resolvedInstanceId)
         .order('stage_sortorder')) as { data: Array<{ id: number; stage_id: number; status: string | null; completion_date: string | null; paid: boolean | null; released_client_tasks: boolean | null }> | null; error: any };
       
       const stageData = stageResult.data;
