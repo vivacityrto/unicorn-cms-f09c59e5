@@ -190,9 +190,15 @@ export function ComposeEmailDialog({
                 className="min-h-[200px] font-mono text-sm"
                 placeholder="Email body (HTML or plain text supported)"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Merge fields: {'{{ClientName}}'}, {'{{FirstName}}'}, {'{{CSCName}}'}, {'{{PackageName}}'}, etc.
-              </p>
+              <div className="mt-2 space-y-1">
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium">Tenant fields:</span> {'{{ClientName}}'}, {'{{FirstName}}'}, {'{{ABN}}'}, {'{{TradingName}}'}, etc.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium">Contextual fields:</span>{' '}
+                  {'<<CSCName>>'}, {'<<CSCEmail>>'}, {'<<PackageName>>'}, {'<<PackageCode>>'}, {'<<SenderName>>'}, {'<<SenderEmail>>'}, {'<<SenderRole>>'}
+                </p>
+              </div>
             </div>
           </TabsContent>
 

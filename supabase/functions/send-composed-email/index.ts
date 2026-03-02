@@ -138,11 +138,30 @@ serve(async (req) => {
       }
     }
 
-    // Render merge fields
-    const render = (text: string): string =>
-      text.replace(/\{\{(\w+)\}\}/g, (match, field) =>
-        mergeData[field] !== undefined && mergeData[field] !== "" ? mergeData[field] : match
+    // Split merge data into tenant fields ({{...}}) and contextual fields (<<...>>)
+    // Contextual fields: CSC, Package, Sender info resolved at send time
+    const contextualKeys = new Set([
+      "CSCName", "CSCEmail",
+      "PackageName", "PackageCode",
+      "SenderName", "SenderEmail", "SenderRole",
+    ]);
+
+    // Render merge fields: {{TenantField}} and <<ContextualField>>
+    const render = (text: string): string => {
+      // Resolve <<ContextualField>> markers
+      let result = text.replace(/<<(\w+)>>/g, (match, field) =>
+        contextualKeys.has(field) && mergeData[field] !== undefined && mergeData[field] !== ""
+          ? mergeData[field]
+          : match
       );
+      // Resolve {{TenantField}} markers (backward compatible)
+      result = result.replace(/\{\{(\w+)\}\}/g, (match, field) =>
+        mergeData[field] !== undefined && mergeData[field] !== ""
+          ? mergeData[field]
+          : match
+      );
+      return result;
+    };
 
     const renderedSubject = render(subject);
     const renderedBody = render(body_html);
