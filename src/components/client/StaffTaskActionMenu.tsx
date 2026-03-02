@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MoreHorizontal, Mail } from 'lucide-react';
+import { MoreHorizontal, Mail, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { parseTaskType, getActionsForType, getTaskTypeBadgeLabel } from '@/utils/staffTaskType';
 import { ComposeEmailDialog } from './ComposeEmailDialog';
+import { CreateActionDialog } from './CreateActionDialog';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import type { StageEmail } from '@/hooks/useStageEmails';
@@ -23,6 +24,7 @@ interface StaffTaskActionMenuProps {
   packageId?: number;
   stageInstanceId?: number;
   statusId?: number;
+  stageStatusId?: number;
   stageEmails?: StageEmail[];
   onMarkComplete?: () => void;
 }
@@ -34,6 +36,7 @@ export function StaffTaskActionMenu({
   packageId,
   stageInstanceId,
   statusId,
+  stageStatusId,
   stageEmails = [],
   onMarkComplete,
 }: StaffTaskActionMenuProps) {
@@ -41,7 +44,10 @@ export function StaffTaskActionMenu({
   const actions = getActionsForType(type);
   const typeLabel = getTaskTypeBadgeLabel(type);
 
+  const isStageComplete = stageStatusId === 2 || stageStatusId === 4;
+
   const [composeOpen, setComposeOpen] = useState(false);
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [composeDefaults, setComposeDefaults] = useState<{
     to: string;
     subject: string;
@@ -206,6 +212,11 @@ export function StaffTaskActionMenu({
       return;
     }
 
+    if (actionKey === 'action') {
+      setActionDialogOpen(true);
+      return;
+    }
+
     toast({
       title: `Action: ${actionKey}`,
       description: `"${actionKey}" triggered for task #${taskId}. This will be wired up in a future update.`,
@@ -253,45 +264,54 @@ export function StaffTaskActionMenu({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
-          {typeLabel && (
+          {isStageComplete ? (
+            <div className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <span>Stage {stageStatusId === 4 ? '(Core)' : ''} Complete — no further actions available.</span>
+            </div>
+          ) : (
             <>
-              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                {typeLabel} Actions
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-            </>
-          )}
-          {actions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <DropdownMenuItem
-                key={action.key}
-                onClick={() => handleAction(action.key)}
-                className="gap-2 cursor-pointer"
-              >
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                <span>{action.label}</span>
-              </DropdownMenuItem>
-            );
-          })}
+              {typeLabel && (
+                <>
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    {typeLabel} Actions
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              {actions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <DropdownMenuItem
+                    key={action.key}
+                    onClick={() => handleAction(action.key)}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    <span>{action.label}</span>
+                  </DropdownMenuItem>
+                );
+              })}
 
-          {/* Stage emails sub-section for EMAIL tasks */}
-          {emailsForMenu.length > 0 && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                Stage Emails
-              </DropdownMenuLabel>
-              {emailsForMenu.map((email) => (
-                <DropdownMenuItem
-                  key={email.id}
-                  onClick={() => handleOpenStageEmail(email)}
-                  className="gap-2 cursor-pointer"
-                >
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate">{email.subject}</span>
-                </DropdownMenuItem>
-              ))}
+              {/* Stage emails sub-section for EMAIL tasks */}
+              {emailsForMenu.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    Stage Emails
+                  </DropdownMenuLabel>
+                  {emailsForMenu.map((email) => (
+                    <DropdownMenuItem
+                      key={email.id}
+                      onClick={() => handleOpenStageEmail(email)}
+                      className="gap-2 cursor-pointer"
+                    >
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="truncate">{email.subject}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
             </>
           )}
         </DropdownMenuContent>
@@ -317,6 +337,15 @@ export function StaffTaskActionMenu({
           onSent={handleEmailSent}
         />
       )}
+
+      <CreateActionDialog
+        open={actionDialogOpen}
+        onOpenChange={setActionDialogOpen}
+        tenantId={tenantId}
+        packageId={packageId}
+        taskName={cleanName}
+        taskId={taskId}
+      />
     </>
   );
 }

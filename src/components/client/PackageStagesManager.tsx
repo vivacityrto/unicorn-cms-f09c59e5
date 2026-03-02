@@ -195,7 +195,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
               </TabsTrigger>
             </TabsList>
             <TabsContent value="staff-tasks" className="mt-0">
-              <StageStaffTasks stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} />
+              <StageStaffTasks stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} stageStatusId={statusCode} />
             </TabsContent>
             <TabsContent value="client-tasks" className="mt-0">
               <StageClientTasks stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} />
