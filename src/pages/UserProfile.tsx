@@ -216,6 +216,12 @@ export default function UserProfile() {
 
   return (
     <div className="container mx-auto p-6 max-w-7xl space-y-6 animate-fade-in">
+      {/* Back Button */}
+      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2 -ml-2">
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </Button>
+
       {/* Profile Header Card */}
       <Card className="animate-scale-in">
         <CardContent className="pt-6">
