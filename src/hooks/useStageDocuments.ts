@@ -5,6 +5,7 @@ export interface StageDocument {
   id: number;
   document_id: number;
   title: string;
+  description: string | null;
   status: string;
   isgenerated: boolean;
   created_at: string;
@@ -58,19 +59,23 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
       const docIds = [...new Set(instances.map(i => i.document_id))];
       const { data: docs } = await supabase
         .from('documents')
-        .select('id, title')
+        .select('id, title, description')
         .in('id', docIds);
 
-      const docMap = new Map(docs?.map(d => [d.id, d.title]) || []);
+      const docMap = new Map(docs?.map(d => [d.id, { title: d.title, description: d.description }]) || []);
 
-      const result: StageDocument[] = instances.slice(0, 10).map(inst => ({
-        id: inst.id,
-        document_id: inst.document_id,
-        title: docMap.get(inst.document_id) || `Document #${inst.document_id}`,
-        status: inst.status || 'pending',
-        isgenerated: inst.isgenerated ?? false,
-        created_at: inst.created_at || '',
-      }));
+      const result: StageDocument[] = instances.slice(0, 10).map(inst => {
+        const meta = docMap.get(inst.document_id);
+        return {
+          id: inst.id,
+          document_id: inst.document_id,
+          title: meta?.title || `Document #${inst.document_id}`,
+          description: meta?.description || null,
+          status: inst.status || 'pending',
+          isgenerated: inst.isgenerated ?? false,
+          created_at: inst.created_at || '',
+        };
+      });
 
       setDocuments(result);
     } catch (err) {
