@@ -2,14 +2,9 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-// Status options matching dd_status table
-export const CLIENT_TASK_STATUS_OPTIONS = [
-  { value: 0, label: 'Not Started', key: 'not_started' },
-  { value: 1, label: 'In Progress', key: 'in_progress' },
-  { value: 2, label: 'Completed', key: 'completed' },
-  { value: 3, label: 'N/A', key: 'na' },
-] as const;
+import { getStatusLabel } from '@/hooks/useTaskStatusOptions';
 
+// Maps used by updateStageStatus / updateTeamTaskStatus RPCs
 export const STAGE_STATUS_MAP: Record<string, { status_id: number; status: string }> = {
   not_started: { status_id: 0, status: 'Not Started' },
   in_progress: { status_id: 1, status: 'In Progress' },
@@ -351,7 +346,7 @@ export function useClientPackageInstances() {
 
         const clientTasks: ClientTask[] = (clientTasksByStage.get(stage.id) || []).map((inst: any) => {
           const tmpl = inst.clienttask_id ? clientTaskMap.get(inst.clienttask_id) : null;
-          const statusOption = CLIENT_TASK_STATUS_OPTIONS.find(s => s.value === inst.status);
+          const statusLabel = getStatusLabel(inst.status ?? 0);
           return {
             id: inst.id,
             client_task_id: inst.clienttask_id,
@@ -363,7 +358,7 @@ export function useClientPackageInstances() {
             completion_date: inst.completion_date,
             sort_order: tmpl?.sort_order ?? 0,
             status: inst.status ?? 0,
-            status_label: statusOption?.label || 'Unknown',
+            status_label: statusLabel,
             created_at: inst.created_at,
           };
         }).sort((a: ClientTask, b: ClientTask) => a.sort_order - b.sort_order);

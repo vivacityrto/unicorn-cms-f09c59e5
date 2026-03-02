@@ -1,16 +1,10 @@
-import { useClientTaskInstances, CLIENT_TASK_STATUS_OPTIONS } from '@/hooks/useClientTaskInstances';
+import { useClientTaskInstances } from '@/hooks/useClientTaskInstances';
+import { useTaskStatusOptions, getStatusIcon, getStatusColor } from '@/hooks/useTaskStatusOptions';
 import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  CheckCircle2, 
-  Circle, 
-  Clock, 
-  Ban,
-  Loader2,
-  Calendar
-} from 'lucide-react';
+import { Loader2, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -19,20 +13,6 @@ interface StageClientTasksProps {
   tenantId: number;
   packageId: number;
 }
-
-const STATUS_ICONS = {
-  0: Circle,
-  1: Clock,
-  2: CheckCircle2,
-  3: Ban,
-} as const;
-
-const STATUS_COLORS = {
-  0: 'text-muted-foreground',
-  1: 'text-blue-600',
-  2: 'text-green-600',
-  3: 'text-muted-foreground',
-} as const;
 
 export function StageClientTasks({ stageInstanceId, tenantId, packageId }: StageClientTasksProps) {
   const { 
@@ -43,6 +23,8 @@ export function StageClientTasks({ stageInstanceId, tenantId, packageId }: Stage
     completedCount,
     totalCount 
   } = useClientTaskInstances({ stageInstanceId, tenantId, packageId });
+
+  const { statuses } = useTaskStatusOptions();
 
   if (loading) {
     return (
@@ -71,8 +53,8 @@ export function StageClientTasks({ stageInstanceId, tenantId, packageId }: Stage
       </div>
       <div className="divide-y">
         {tasks.map((task) => {
-          const StatusIcon = STATUS_ICONS[task.status_id as keyof typeof STATUS_ICONS] || Circle;
-          const statusColor = STATUS_COLORS[task.status_id as keyof typeof STATUS_COLORS] || 'text-muted-foreground';
+          const StatusIcon = getStatusIcon(task.status_id);
+          const statusColor = getStatusColor(task.status_id);
           const isUpdating = updating === task.id;
 
           return (
@@ -117,11 +99,11 @@ export function StageClientTasks({ stageInstanceId, tenantId, packageId }: Stage
                   )}
                 </SelectTrigger>
                 <SelectContent>
-                  {CLIENT_TASK_STATUS_OPTIONS.map((option) => {
-                    const Icon = STATUS_ICONS[option.value as keyof typeof STATUS_ICONS] || Circle;
-                    const color = STATUS_COLORS[option.value as keyof typeof STATUS_COLORS] || 'text-muted-foreground';
+                  {statuses.map((option) => {
+                    const Icon = getStatusIcon(option.code);
+                    const color = getStatusColor(option.code);
                     return (
-                      <SelectItem key={option.value} value={option.value.toString()}>
+                      <SelectItem key={option.code} value={option.code.toString()}>
                         <div className="flex items-center gap-2">
                           <Icon className={cn("h-3 w-3", color)} />
                           <span>{option.label}</span>
