@@ -39,10 +39,10 @@ export function TaskDescriptionButton({ taskName, description, className }: Task
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className={cn(
-          "max-h-[80vh] overflow-y-auto",
-          description.length > 300 ? "max-w-4xl" : "max-w-2xl"
-        )}>
+        <DialogContent
+          size={description.length > 300 ? "full" : "lg"}
+          className="max-h-[80vh] overflow-y-auto"
+        >
           <DialogHeader>
             <DialogTitle className="text-base">{taskName}</DialogTitle>
           </DialogHeader>
