@@ -29,6 +29,7 @@ import { LegacyDataDiagnostics } from './LegacyDataDiagnostics';
 import { PhaseGroupHeader } from './PhaseGroupHeader';
 import { useCheckpointPhasesEnabled } from '@/hooks/useCheckpointPhasesEnabled';
 import { usePhaseProgress } from '@/hooks/usePhaseProgress';
+import { useStageCounts } from '@/hooks/useStageCounts';
 import { 
   CheckCircle2, 
   Circle, 
@@ -79,6 +80,152 @@ const STATUS_OPTIONS = [
   { value: 2, label: 'Blocked', icon: AlertCircle, color: 'text-red-600' },
   { value: 3, label: 'Complete', icon: CheckCircle2, color: 'text-green-600' },
 ];
+
+interface StageRowProps {
+  stage: StageInstance;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  updating: number | null;
+  onStatusChange: (stageId: number, newStatus: number) => void;
+  onRecurringClick: (stage: StageInstance) => void;
+  tenantId: number;
+  packageId: number;
+  onUpdate: () => void;
+  profile: any;
+}
+
+function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, onUpdate, profile }: StageRowProps) {
+  const statusOption = STATUS_OPTIONS.find(s => s.value === stage.status) || STATUS_OPTIONS[0];
+  const StatusIcon = statusOption.icon;
+  const { staffTasks, clientTasks, documents, emails, loading: countsLoading } = useStageCounts(stage.id);
+
+  const countBadge = (count: number) =>
+    !countsLoading ? (
+      <span className="ml-1 text-muted-foreground">({count})</span>
+    ) : null;
+
+  return (
+    <Collapsible open={isExpanded} onOpenChange={onToggleExpand}>
+      <div
+        className={cn(
+          "rounded-lg border bg-card overflow-hidden",
+          stage.status === 2 && "border-destructive/50 bg-destructive/5",
+          stage.status === 3 && "border-primary/50 bg-primary/5"
+        )}
+      >
+        <div className="flex items-center justify-between gap-4 p-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <StatusIcon className={cn("h-5 w-5 shrink-0", statusOption.color)} />
+            <div className="min-w-0">
+              <p className="font-medium truncate">{stage.stage_name}</p>
+              {stage.shortname && <p className="text-xs text-muted-foreground">{stage.shortname}</p>}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            {stage.comment && <MessageSquare className="h-4 w-4 text-muted-foreground" />}
+            <Badge variant="outline" className="text-xs gap-1">
+              <ListTodo className="h-3 w-3" />
+              Tasks
+            </Badge>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-xs gap-1 cursor-pointer hover:bg-accent transition-colors",
+                stage.is_recurring ? "text-primary border-primary/30" : "text-muted-foreground border-border"
+              )}
+              onClick={(e) => { e.stopPropagation(); onRecurringClick(stage); }}
+            >
+              <RefreshCw className="h-3 w-3" />
+              {stage.is_recurring ? 'Recurring' : 'Once'}
+            </Badge>
+            {stage.released_client_tasks && <Badge variant="outline" className="text-xs">Tasks Released</Badge>}
+            {stage.status_date && (
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                {format(new Date(stage.status_date), 'd MMM HH:mm')}
+              </span>
+            )}
+            <Select
+              value={stage.status.toString()}
+              onValueChange={(value) => onStatusChange(stage.id, parseInt(value))}
+              disabled={updating === stage.id}
+            >
+              <SelectTrigger className="w-[140px]">
+                {updating === stage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <SelectValue />}
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value.toString()}>
+                    <div className="flex items-center gap-2">
+                      <option.icon className={cn("h-4 w-4", option.color)} />
+                      {option.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <CollapsibleContent>
+          <StageDetailSection
+            stageInstanceId={stage.id}
+            tenantId={tenantId}
+            packageId={packageId}
+            stageId={stage.stage_id}
+            completionDate={stage.completion_date}
+            comment={stage.comment}
+            stageStatus={typeof stage.status === 'number' ? stage.status : 0}
+            onUpdate={onUpdate}
+          />
+          <Tabs defaultValue="staff-tasks" className="border-t">
+            <TabsList className="w-full justify-start rounded-none border-b bg-muted/30 h-auto p-0">
+              <TabsTrigger value="staff-tasks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
+                <ListTodo className="h-3.5 w-3.5" />
+                Staff Tasks{countBadge(staffTasks)}
+              </TabsTrigger>
+              <TabsTrigger value="client-tasks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
+                <ListTodo className="h-3.5 w-3.5" />
+                Client Tasks{countBadge(clientTasks)}
+              </TabsTrigger>
+              <TabsTrigger value="documents" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
+                <FileText className="h-3.5 w-3.5" />
+                Documents{countBadge(documents)}
+              </TabsTrigger>
+              <TabsTrigger value="emails" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
+                <Mail className="h-3.5 w-3.5" />
+                Emails{countBadge(emails)}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="staff-tasks" className="mt-0">
+              <StageStaffTasks stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} />
+            </TabsContent>
+            <TabsContent value="client-tasks" className="mt-0">
+              <StageClientTasks stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} />
+            </TabsContent>
+            <TabsContent value="documents" className="mt-0">
+              <StageDocumentsSection
+                stageInstanceId={stage.id}
+                tenantId={tenantId}
+                packageId={packageId}
+                debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
+                isVivacityStaff={profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member'}
+              />
+            </TabsContent>
+            <TabsContent value="emails" className="mt-0">
+              <StageEmailsSection stageInstanceId={stage.id} />
+            </TabsContent>
+          </Tabs>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
 
 export function PackageStagesManager({ tenantId, packageId, packageName }: PackageStagesManagerProps) {
   const { toast } = useToast();
@@ -285,164 +432,21 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
     );
   }
 
-  const renderStageRow = (stage: StageInstance) => {
-    const statusOption = STATUS_OPTIONS.find(s => s.value === stage.status) || STATUS_OPTIONS[0];
-    const StatusIcon = statusOption.icon;
-    const isExpanded = expandedStages.has(stage.id);
-
-    return (
-      <Collapsible
-        key={stage.id}
-        open={isExpanded}
-        onOpenChange={() => toggleStageExpanded(stage.id)}
-      >
-        <div 
-          className={cn(
-            "rounded-lg border bg-card overflow-hidden",
-            stage.status === 2 && "border-destructive/50 bg-destructive/5",
-            stage.status === 3 && "border-primary/50 bg-primary/5"
-          )}
-        >
-          <div className="flex items-center justify-between gap-4 p-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
-                </Button>
-              </CollapsibleTrigger>
-              <StatusIcon className={cn("h-5 w-5 shrink-0", statusOption.color)} />
-              <div className="min-w-0">
-                <p className="font-medium truncate">{stage.stage_name}</p>
-                {stage.shortname && (
-                  <p className="text-xs text-muted-foreground">{stage.shortname}</p>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 shrink-0">
-              {stage.comment && (
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              )}
-              <Badge variant="outline" className="text-xs gap-1">
-                <ListTodo className="h-3 w-3" />
-                Tasks
-              </Badge>
-              <Badge 
-                variant="outline" 
-                className={cn(
-                  "text-xs gap-1 cursor-pointer hover:bg-accent transition-colors",
-                  stage.is_recurring 
-                    ? "text-primary border-primary/30" 
-                    : "text-muted-foreground border-border"
-                )}
-                onClick={(e) => { e.stopPropagation(); setRecurringConfirm(stage); }}
-              >
-                <RefreshCw className="h-3 w-3" />
-                {stage.is_recurring ? 'Recurring' : 'Once'}
-              </Badge>
-              {stage.released_client_tasks && (
-                <Badge variant="outline" className="text-xs">Tasks Released</Badge>
-              )}
-              {stage.status_date && (
-                <span className="text-xs text-muted-foreground hidden sm:inline">
-                  {format(new Date(stage.status_date), 'd MMM HH:mm')}
-                </span>
-              )}
-              
-              <Select
-                value={stage.status.toString()}
-                onValueChange={(value) => updateStageStatus(stage.id, parseInt(value))}
-                disabled={updating === stage.id}
-              >
-                <SelectTrigger className="w-[140px]">
-                  {updating === stage.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <SelectValue />
-                  )}
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value.toString()}>
-                      <div className="flex items-center gap-2">
-                        <option.icon className={cn("h-4 w-4", option.color)} />
-                        {option.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <CollapsibleContent>
-            <StageDetailSection
-              stageInstanceId={stage.id}
-              tenantId={tenantId}
-              packageId={packageId}
-              stageId={stage.stage_id}
-              completionDate={stage.completion_date}
-              comment={stage.comment}
-              stageStatus={typeof stage.status === 'number' ? stage.status : 0}
-              onUpdate={fetchStages}
-            />
-            <Tabs defaultValue="staff-tasks" className="border-t">
-              <TabsList className="w-full justify-start rounded-none border-b bg-muted/30 h-auto p-0">
-                <TabsTrigger value="staff-tasks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
-                  <ListTodo className="h-3.5 w-3.5" />
-                  Staff Tasks
-                </TabsTrigger>
-                <TabsTrigger value="client-tasks" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
-                  <ListTodo className="h-3.5 w-3.5" />
-                  Client Tasks
-                </TabsTrigger>
-                <TabsTrigger value="documents" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
-                  <FileText className="h-3.5 w-3.5" />
-                  Documents
-                </TabsTrigger>
-                <TabsTrigger value="emails" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent text-xs gap-1.5 px-4 py-2">
-                  <Mail className="h-3.5 w-3.5" />
-                  Emails
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="staff-tasks" className="mt-0">
-                <StageStaffTasks 
-                  stageInstanceId={stage.id}
-                  tenantId={tenantId}
-                  packageId={packageId}
-                />
-              </TabsContent>
-              <TabsContent value="client-tasks" className="mt-0">
-                <StageClientTasks 
-                  stageInstanceId={stage.id}
-                  tenantId={tenantId}
-                  packageId={packageId}
-                />
-              </TabsContent>
-              <TabsContent value="documents" className="mt-0">
-                <StageDocumentsSection
-                  stageInstanceId={stage.id}
-                  tenantId={tenantId}
-                  packageId={packageId}
-                  debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
-                  isVivacityStaff={profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member'}
-                />
-              </TabsContent>
-              <TabsContent value="emails" className="mt-0">
-                <StageEmailsSection
-                  stageInstanceId={stage.id}
-                />
-              </TabsContent>
-            </Tabs>
-          </CollapsibleContent>
-        </div>
-      </Collapsible>
-    );
-  };
+  const renderStageRow = (stage: StageInstance) => (
+    <StageRow
+      key={stage.id}
+      stage={stage}
+      isExpanded={expandedStages.has(stage.id)}
+      onToggleExpand={() => toggleStageExpanded(stage.id)}
+      updating={updating}
+      onStatusChange={updateStageStatus}
+      onRecurringClick={(s) => setRecurringConfirm(s)}
+      tenantId={tenantId}
+      packageId={packageId}
+      onUpdate={fetchStages}
+      profile={profile}
+    />
+  );
 
   // Determine if we should show phase grouping
   const hasPhases = phasesEnabled && phaseProgress.length > 0;
