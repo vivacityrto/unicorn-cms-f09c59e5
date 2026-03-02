@@ -82,20 +82,6 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
               )}
             >
               <StatusIcon className={cn("h-4 w-4 shrink-0", statusColor)} />
-
-              {/* Core Task Radio */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div onClick={() => updateTaskCore(task.id, !task.is_core)} className="cursor-pointer">
-                    <RadioGroup value={task.is_core ? 'core' : 'not-core'}>
-                      <RadioGroupItem value="core" className="h-4 w-4 shrink-0" />
-                    </RadioGroup>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  Core Task
-                </TooltipContent>
-              </Tooltip>
               
               {typeBadgeLabel && (
                 <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 h-4 shrink-0 font-semibold", typeBadgeClasses)}>
@@ -197,6 +183,20 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
                   })}
                 </SelectContent>
               </Select>
+
+              {/* Core Task Radio - right of status */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div onClick={() => updateTaskCore(task.id, !task.is_core)} className="cursor-pointer">
+                    <RadioGroup value={task.is_core ? 'core' : 'not-core'}>
+                      <RadioGroupItem value="core" className="h-4 w-4 shrink-0" />
+                    </RadioGroup>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Core Task
+                </TooltipContent>
+              </Tooltip>
             </div>
           );
         })}
