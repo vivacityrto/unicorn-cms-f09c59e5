@@ -1,75 +1,120 @@
 
 
-## Staff Task Refinements: Email Actions, Core Toggle, and Dynamic Prefixes
+## Migrate Stage Registry to `stages` Table (No Column Renames)
 
-### Overview
-Three sets of changes to staff task rows: (1) refined email actions with stage email selection, (2) is_core toggle, and (3) dynamic prefix badge system for any `TAG:` pattern in task names.
+### Context
+The `stages` table is the active table used by the tenant-package-task system with columns: `name`, `shortname`, `videourl`, `dateimported`, `description`, `is_recurring`. The deprecated `documents_stages` table has 24+ columns with different naming conventions (`title`, `short_name`, `video_url`). We need to add the missing metadata columns to `stages` and switch all 27 `documents_stages` code references, remapping column names where they differ.
 
----
+### Column Name Mapping
+The code currently referencing `documents_stages` uses these column names. When switching to `stages`, every reference must be remapped:
 
-### 1. Email Task Actions -- "Internal CSC" and "External Primary" with Email Selection
+| `documents_stages` (current code) | `stages` (actual column) |
+|---|---|
+| `title` | `name` |
+| `short_name` | `shortname` |
+| `video_url` | `videourl` |
+| `created_at` | `dateimported` |
 
-**How it works:**
-- EMAIL-type tasks get two actions in the dropdown: **"Send Internal CSC"** (sends to the assigned CSC) and **"Send External Primary"** (sends to the tenant's primary contact).
-- The action menu also lists the stage's email instances (fetched via `useStageEmails`) as selectable items under a "Stage Emails" sub-section. Clicking one opens the `ComposeEmailDialog` pre-filled with that email's subject, body, and recipient.
-- If the EMAIL task name includes the email subject after the prefix (e.g., `EMAIL: New Client Assigned`), the system tries to auto-match it to a stage email by subject. If matched, a "Preview & Send" action appears directly.
-- After a successful send (via `ComposeEmailDialog`'s `onSent` callback), a confirmation toast asks "Mark task as completed?" with a "Yes" action button. Clicking it calls `updateTaskStatus(taskId, 2)`.
-- **No "Mark as Sent" or "Mark Complete"** in EMAIL actions -- completion is prompted only after sending.
+All other new columns will be added with matching names so no additional mapping is needed for those.
 
-**Technical changes:**
+### Step 1: Database Migration -- Add Columns to `stages`
 
-- **`src/utils/staffTaskType.ts`**: Update `getActionsForType('email')` to return `send_internal_csc` and `send_external_primary` (remove mark_sent, mark_complete).
-- **`src/components/client/StaffTaskActionMenu.tsx`**:
-  - Accept new props: `stageInstanceId`, `onMarkComplete`, `stageEmails` (array of stage emails).
-  - For EMAIL tasks, render a sub-section listing available stage emails by subject.
-  - Clicking "Send Internal CSC" or "Send External Primary" opens `ComposeEmailDialog` with the appropriate recipient (CSC email or primary contact).
-  - Clicking a stage email opens `ComposeEmailDialog` pre-filled with that email's content.
-  - On successful send, show toast with "Mark as completed?" action button.
-- **`src/components/client/StageStaffTasks.tsx`**:
-  - Fetch stage emails via `useStageEmails({ stageInstanceId })` once and pass them to each `StaffTaskActionMenu`.
-  - Pass `onMarkComplete` callback that calls `updateTaskStatus(task.id, 2)`.
+Add these columns to the existing `stages` table (no renames, no drops):
 
----
+```text
+ALTER TABLE public.stages
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now(),
+  ADD COLUMN IF NOT EXISTS created_by uuid,
+  ADD COLUMN IF NOT EXISTS stage_key text UNIQUE,
+  ADD COLUMN IF NOT EXISTS stage_type text DEFAULT 'delivery',
+  ADD COLUMN IF NOT EXISTS status text DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS is_certified boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS certified_notes text,
+  ADD COLUMN IF NOT EXISTS is_archived boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS version_label text,
+  ADD COLUMN IF NOT EXISTS requires_stage_keys text[],
+  ADD COLUMN IF NOT EXISTS frameworks text[],
+  ADD COLUMN IF NOT EXISTS covers_standards text[],
+  ADD COLUMN IF NOT EXISTS registry_code text,
+  ADD COLUMN IF NOT EXISTS effective_date date,
+  ADD COLUMN IF NOT EXISTS deprecated_at timestamptz,
+  ADD COLUMN IF NOT EXISTS dashboard_visible boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS is_reusable boolean DEFAULT true,
+  ADD COLUMN IF NOT EXISTS ai_hint text;
+```
 
-### 2. Core Task Toggle (is_core)
+### Step 2: Update Supabase Types
+The auto-generated types file will reflect the new schema after migration. The `StageRegistry` type alias in `src/types/stage-registry.ts` will be updated to point to `stages` instead of `documents_stages`.
 
-- Add a small circular checkbox/toggle on each staff task row.
-- On hover, a tooltip displays "Core Task".
-- Toggling it updates `staff_task_instances.is_core` in Supabase and logs to `client_audit_log`.
+### Step 3: Global Code Refactor (27 files)
 
-**Technical changes:**
+For each file currently using `.from('documents_stages')`, two changes are needed:
 
-- **`src/components/client/StageStaffTasks.tsx`**: Add a `Checkbox` (styled as circle) with a `Tooltip` wrapping it. On change, call `updateTaskCore`.
-- **`src/hooks/useStaffTaskInstances.ts`**: Add `updateTaskCore(taskId: number, isCore: boolean)` function that updates the `is_core` column and logs the audit entry.
+**A. Switch table reference:** `.from('documents_stages')` becomes `.from('stages')`
 
----
+**B. Remap column names in all queries and field access:**
+- `.select('...title...')` becomes `.select('...name...')`  
+- `.select('...short_name...')` becomes `.select('...shortname...')`  
+- `.select('...video_url...')` becomes `.select('...videourl...')`  
+- `.select('...created_at...')` becomes `.select('...dateimported...')`  
+- `.order('title')` becomes `.order('name')`  
+- `.ilike('title', ...)` becomes `.ilike('name', ...)`  
+- `.insert({ title: ... })` becomes `.insert({ name: ... })`  
+- `.update({ title: ... })` becomes `.update({ name: ... })`  
+- All property access like `stage.title` becomes `stage.name`, `stage.short_name` becomes `stage.shortname`, etc.
 
-### 3. Dynamic Prefix Badge System
+**C. Remove mapping shims:** The existing mapping code in `usePackageBuilder.tsx` (lines 472-491) that translates `stages` column names to `documents_stages` column names can be simplified since both paths will now use `stages` directly.
 
-Currently only `EMAIL:`, `ADMIN:`, `OM:` are hardcoded. The system will now detect **any** `UPPERCASE_WORD:` prefix at the start of a task name.
+### Files to Update
 
-- Known prefixes (`EMAIL`, `ADMIN`, `OM`) keep their specific colours and actions.
-- New known prefixes: `CSC:` (green badge), `POST:` (orange badge).
-- Any unknown `TAG:` prefix gets a neutral grey badge with just "Mark Complete" as its action.
-- If a prefix appears in the task description (not just the name), it also generates a badge.
+**Hooks:**
+- `src/hooks/usePackageBuilder.tsx` -- stage queries, inserts, updates, and the mapping shim
+- `src/hooks/useStageDependencies.tsx` -- dependency queries and updates
+- `src/hooks/useStageVersions.tsx` -- version management
+- `src/hooks/useStageDuplication.tsx` -- stage duplication
+- `src/hooks/useStageReplacement.tsx` -- stage replacement
+- `src/hooks/useStageStandards.tsx` -- standards updates
+- `src/hooks/useStageTemplateContent.tsx` -- template content queries
+- `src/hooks/useStageExportImport.tsx` -- export/import (title->name in inserts/selects)
+- `src/hooks/useStageCertification.tsx` -- certification RPC
+- `src/hooks/useStageQualityCheck.tsx` -- quality checks
+- `src/hooks/useStageAuditLog.tsx` -- audit queries
+- `src/hooks/useStageActiveUsage.tsx` -- active usage tracking
+- `src/hooks/useClientWorkboard.tsx` -- workboard stage queries
+- `src/hooks/useClientPackageInstances.tsx` -- stage metadata fetch
+- `src/hooks/useOperationsDashboard.tsx` -- if referencing documents_stages
 
-**Technical changes:**
+**Pages:**
+- `src/pages/ManageStages.tsx` -- stage list, create, update, delete
+- `src/pages/AdminStageDetail.tsx` -- stage detail view
+- `src/pages/AdminManageStages.tsx` -- admin stage list
+- `src/pages/StageBuilder.tsx` -- stage creation
+- `src/pages/DocumentDetail.tsx` -- stage selector
+- `src/pages/CalendarTimeCapture.tsx` -- stage name lookup
 
-- **`src/utils/staffTaskType.ts`**:
-  - Change `parseTaskType` to use regex `/^([A-Z]+):\s*/` to detect any prefix.
-  - Expand colour/style mappings for known prefixes, default to neutral grey for unknown.
-  - `getActionsForType`: Only `email` gets custom actions. All others default to `[{ label: 'Mark Complete', key: 'mark_complete' }]`.
+**Components:**
+- `src/components/AddStageDialog.tsx` -- create/update stages
+- `src/components/stage/StageFrameworkSelector.tsx` -- framework updates
+- `src/components/stage/StageQualityIndicator.tsx` -- quality checks
+- `src/components/tenant/TenantProgressTable.tsx` -- progress display (already maps title/short_name)
+- `src/components/workboard/ClientWorkboardTab.tsx` -- stage queries
+- `src/components/package-builder/AddRecommendedStagesDialog.tsx` -- recommended stages
 
----
+**Edge Functions:**
+- `supabase/functions/vector-index-update/index.ts`
+- `supabase/functions/export-compliance-pack/index.ts`
+- `supabase/functions/_shared/ask-viv-fact-builder/record-links.ts`
 
-### Files to Create/Modify
+### Step 4: Update Type Definitions
+Update `src/types/stage-registry.ts` to reference `stages` table and adjust property names to match actual column names (`name` instead of `title`, etc.).
 
-| File | Action | What Changes |
-|------|--------|-------------|
-| `src/utils/staffTaskType.ts` | Modify | Regex-based prefix detection, updated email actions, new prefix colours |
-| `src/components/client/StaffTaskActionMenu.tsx` | Modify | Email selection from stage emails, ComposeEmailDialog integration, post-send completion prompt |
-| `src/components/client/StageStaffTasks.tsx` | Modify | Fetch stage emails, pass to action menu, add is_core toggle with tooltip |
-| `src/hooks/useStaffTaskInstances.ts` | Modify | Add `updateTaskCore` function |
+### Step 5: Update Documentation
+Update `docs/stage-registry.md` to reference the `stages` table with correct column names.
 
-No database changes required.
+### Important Notes
+- Existing `stages` columns (`name`, `shortname`, `videourl`, `dateimported`, `is_recurring`) are **not touched**
+- The `stage_instances` table already references `stages.id` -- no FK changes needed
+- `documents_stages` table remains untouched and can be dropped later at your discretion
+- After migration, `stage_key` values should be populated for existing stages (can be done via SQL update)
+- The `TenantProgressTable` component already fetches `title` and `short_name` from `documents_stages` -- this will switch to `name` and `shortname` from `stages`
 
