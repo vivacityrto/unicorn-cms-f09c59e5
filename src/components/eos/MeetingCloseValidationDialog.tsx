@@ -20,6 +20,7 @@ import {
   ListTodo, Target, FileText, AlertTriangle, Sparkles
 } from 'lucide-react';
 import { useMeetingOutcomes, type OutcomeType, type ValidationResult } from '@/hooks/useMeetingOutcomes';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import type { MeetingType } from '@/types/eos';
 
@@ -193,14 +194,28 @@ export function MeetingCloseValidationDialog({
   };
 
   const handleCloseMeeting = async () => {
-    const result = await closeMeeting.mutateAsync();
-    if (result.success) {
-      onOpenChange(false);
-      navigate(`/eos/meetings/${meetingId}/summary`);
-    } else {
-      // Refresh validation to show new errors
-      const validationResult = await validateClose.mutateAsync();
-      setValidation(validationResult);
+    try {
+      const result = await closeMeeting.mutateAsync();
+      if (result.success) {
+        onOpenChange(false);
+        navigate(`/eos/meetings/${meetingId}/summary`);
+      } else {
+        // Show validation errors from the RPC response
+        const errors = result.validation_errors || result.unmet_requirements || [];
+        if (errors.length > 0) {
+          // Map RPC validation_errors into the validation state for display
+          setValidation(prev => ({
+            ...prev,
+            is_valid: false,
+            unmet_requirements: errors,
+          }));
+        }
+        if (result.error) {
+          toast.error(result.error);
+        }
+      }
+    } catch (error) {
+      // Error toast already handled by mutation onError
     }
   };
 
