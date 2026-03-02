@@ -1,82 +1,93 @@
 
 
-## Replace `meeting_attendance_status` Enum with `dd_meeting_attendance_status` Lookup Table
+## Plan: Fix Instance Seeding and Data Resolution
 
-### Why
-PostgreSQL enums are rigid -- adding/removing values requires migrations and can't be managed through the existing Code Tables admin UI. Moving to a `dd_` lookup table makes attendance statuses manageable like all other dropdown values in the system.
+### Problem Summary
 
-### What Changes
+Three issues need fixing:
 
-#### 1. Database Migration (single migration)
+1. **Documents**: The `start_client_package` RPC seeds `document_instances` from the `stage_documents` table (only 24 rows, mostly stale). The actual source of truth is `documents.stage` (direct 1:1 relationship to `stages.id`). The `stage_documents` intermediary was never used in the legacy system.
 
-**a) Create the `dd_meeting_attendance_status` table**
+2. **Emails**: The RPC filters emails by `e.package_id = p_package_id`, but all emails have `package_id = NULL`. This means zero `email_instances` are ever created. Emails are linked to stages via `emails.stage_id` only.
 
-Standard `dd_` structure matching other code tables:
-- `id` (serial PK)
-- `label` (text) -- display name e.g. "Invited", "Present", "Absent"
-- `value` (text, unique) -- stored value e.g. "invited", "attended", "absent"
-- `description` (text, nullable)
-- `sort_order` (integer)
-- `is_active` (boolean, default true)
-- `created_at` / `updated_at` timestamps
+3. **Client Tasks**: The `useClientTaskInstances` hook incorrectly looks up task metadata from `package_client_tasks` and `stage_client_tasks` (which may not exist or have no data). The correct join is `client_task_instances.clienttask_id` -> `client_tasks.id`.
 
-Seed with all current values plus `absent`:
-`invited`, `accepted`, `declined`, `attended`, `late`, `left_early`, `no_show`, `absent`
+---
 
-**b) Alter `eos_meeting_attendees.attendance_status` column**
+### Changes
 
-- Change from `meeting_attendance_status` enum to `TEXT`
-- Keep default `'invited'`
-- Add a foreign key or check constraint referencing `dd_meeting_attendance_status.value`
+#### 1. Update `start_client_package` RPC (Database Migration)
 
-**c) Recreate all 6 affected RPCs** removing `::meeting_attendance_status` casts, using plain text strings instead:
+Replace the document and email seeding logic:
 
-- `update_meeting_attendance` -- also fix the `p_user_id::TEXT` audit bug (entity_id is UUID)
-- `add_meeting_attendee`
-- `add_meeting_guest`
-- `mark_all_present`
-- `seed_meeting_attendees_from_roles`
-- `calculate_quorum` and `start_meeting_with_quorum_check` (these compare string values -- no cast changes needed, but parameter types may reference the enum)
+**Documents** -- change from `stage_documents` to `documents` table:
+```sql
+-- OLD: FROM stage_documents sd WHERE sd.stage_id = v_stage.stage_id
+-- NEW: FROM documents d WHERE d.stage = v_stage.stage_id
+INSERT INTO document_instances (document_id, stageinstance_id, tenant_id, status, isgenerated)
+SELECT d.id, v_stage_instance_id, p_tenant_id, 'pending', false
+  FROM documents d
+ WHERE d.stage = v_stage.stage_id::integer;
+```
 
-**d) Drop the old enum type** after column and functions are migrated.
+**Emails** -- remove the `package_id` filter since emails use `stage_id` only:
+```sql
+-- OLD: WHERE e.stage_id = ... AND e.package_id = p_package_id
+-- NEW: WHERE e.stage_id = ...
+INSERT INTO email_instances (email_id, stageinstance_id, subject, content, is_sent, user_attachments)
+SELECT e.id, v_stage_instance_id, e.subject, e.content, false, ''
+  FROM emails e
+ WHERE e.stage_id = v_stage.stage_id::integer;
+```
 
-**e) Add RLS policies** on `dd_meeting_attendance_status` -- SELECT for authenticated users (read-only for UI), full CRUD for Vivacity team (via Code Tables admin).
+#### 2. Fix `useClientTaskInstances` Hook
 
-#### 2. Frontend: `src/hooks/useMeetingAttendance.tsx`
+Replace the metadata lookup logic. Instead of querying `package_client_tasks` and `stage_client_tasks`, directly query the `client_tasks` table:
 
-- Change `AttendanceStatus` from a hardcoded union type to `string`
-- The hook otherwise stays the same -- it passes the status string to RPCs
+```typescript
+// Join clienttask_id -> client_tasks.id
+const metaResult = await supabase
+  .from('client_tasks')
+  .select('id, name, description, sort_order, is_mandatory')
+  .in('id', clientTaskIds);
+```
 
-#### 3. Frontend: `src/components/eos/AttendancePanel.tsx`
+Map `sort_order` to `order_number` for display ordering.
 
-- Fetch status options from `dd_meeting_attendance_status` table instead of hardcoding `statusConfig`
-- Build `statusConfig` dynamically from the fetched rows
-- Add `absent` to icon/color mapping
-- The `<Select>` dropdown items are rendered from the fetched options
+#### 3. Backfill Existing Package Instances (Data Fix)
 
-#### 4. Frontend: Other files with string comparisons
+For already-started packages (like tenant 6346's CHC), emails were never seeded. A one-time backfill SQL will populate `email_instances` for existing `stage_instances` that currently have zero emails:
 
-These files compare `attendance_status` to string literals like `'attended'`, `'late'`, `'invited'` -- these continue to work unchanged since the column becomes TEXT and the values remain the same:
-- `src/hooks/useNextMeeting.tsx`
-- `src/hooks/useLeadershipDashboard.tsx`
-- `src/components/eos/LiveMeetingView.tsx`
-- `src/components/eos/OnlineUsersIndicator.tsx`
+```sql
+INSERT INTO email_instances (email_id, stageinstance_id, subject, content, is_sent, user_attachments)
+SELECT e.id, si.id, e.subject, e.content, false, ''
+FROM stage_instances si
+JOIN emails e ON e.stage_id = si.stage_id
+LEFT JOIN email_instances ei ON ei.email_id = e.id AND ei.stageinstance_id = si.id
+WHERE ei.id IS NULL;
+```
 
-No changes needed in these files.
+Similarly for documents, backfill any missing `document_instances` from the `documents` table (where the RPC previously used `stage_documents`):
 
-#### 5. Update `docs/eos-meetings-attendance.md`
+```sql
+INSERT INTO document_instances (document_id, stageinstance_id, tenant_id, status, isgenerated)
+SELECT d.id, si.id, pi.tenant_id, 'pending', false
+FROM stage_instances si
+JOIN package_instances pi ON pi.id = si.packageinstance_id
+JOIN documents d ON d.stage = si.stage_id
+LEFT JOIN document_instances di ON di.document_id = d.id AND di.stageinstance_id = si.id
+WHERE di.id IS NULL;
+```
 
-Update the `attendance_status` column documentation to note it's now a TEXT column referencing `dd_meeting_attendance_status`, and add `absent` to the list of values.
+---
 
-### Files Modified
+### Technical Summary
 
-- New SQL migration file
-- `src/hooks/useMeetingAttendance.tsx`
-- `src/components/eos/AttendancePanel.tsx`
-- `docs/eos-meetings-attendance.md`
-
-### Not Changed
-
-- `src/integrations/supabase/types.ts` -- auto-generated, will update on next type generation
-- RPCs that only compare string values without enum casts (no functional change needed)
+| Item | What Changes | File/Location |
+|------|-------------|---------------|
+| RPC document seeding | `stage_documents` -> `documents.stage` | DB migration (replace RPC) |
+| RPC email seeding | Remove `package_id` filter | DB migration (replace RPC) |
+| Client task metadata | Query `client_tasks` instead of `stage_client_tasks` | `src/hooks/useClientTaskInstances.ts` |
+| Backfill emails | Seed missing `email_instances` for existing stages | DB data insert |
+| Backfill documents | Seed missing `document_instances` for existing stages | DB data insert |
 
