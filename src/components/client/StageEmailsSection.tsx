@@ -61,10 +61,8 @@ export function StageEmailsSection({ stageInstanceId, tenantId, packageId }: Sta
     );
   }
 
-  const resolveDefaultTo = (email: typeof emails[0]) => {
-    if (email.to === 'client' || email.to === 'tenant') return primaryContactEmail;
-    if (email.to === 'internal') return '';
-    return email.to || primaryContactEmail;
+  const resolveDefaultTo = () => {
+    return primaryContactEmail;
   };
 
   return (
@@ -130,7 +128,7 @@ export function StageEmailsSection({ stageInstanceId, tenantId, packageId }: Sta
           packageId={packageId}
           stageInstanceId={stageInstanceId}
           emailInstanceId={composeEmail.id}
-          defaultTo={resolveDefaultTo(composeEmail)}
+          defaultTo={resolveDefaultTo()}
           defaultSubject={composeEmail.subject}
           defaultBody={composeEmail.content || ''}
           emailName={composeEmail.subject}
