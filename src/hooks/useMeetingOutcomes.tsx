@@ -47,6 +47,7 @@ export interface CloseResult {
   error?: string;
   message?: string;
   unmet_requirements?: string[];
+  validation_errors?: string[];
   validation?: ValidationResult;
 }
 
