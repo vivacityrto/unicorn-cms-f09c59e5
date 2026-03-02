@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Send, Eye, Loader2, Pencil } from 'lucide-react';
 import DOMPurify from 'dompurify';
@@ -38,6 +39,7 @@ export function ComposeEmailDialog({
   emailName,
   onSent,
 }: ComposeEmailDialogProps) {
+  const { profile } = useAuth();
   const { toast } = useToast();
   const [to, setTo] = useState(defaultTo);
   const [cc, setCc] = useState('');
@@ -51,15 +53,28 @@ export function ComposeEmailDialog({
 
   useEffect(() => {
     if (open) {
+      // Build signature from current user profile
+      const senderName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ');
+      const senderRole = profile?.unicorn_role || '';
+      const senderEmail = profile?.email || '';
+      const signatureLines = [
+        '',
+        '<br/><br/>Regards,<br/>',
+        senderName ? `<strong>${senderName}</strong><br/>` : '',
+        senderRole ? `${senderRole}<br/>` : '',
+        senderEmail ? `${senderEmail}` : '',
+      ].join('');
+
+      const bodyWithSig = defaultBody + signatureLines;
       setTo(defaultTo);
       setSubject(defaultSubject);
-      setBody(defaultBody);
+      setBody(bodyWithSig);
       setCc('');
       setBcc('');
       setPreview(null);
       setActiveTab('compose');
     }
-  }, [open, defaultTo, defaultSubject, defaultBody]);
+  }, [open, defaultTo, defaultSubject, defaultBody, profile]);
 
   const callEdgeFunction = async (dryRun: boolean) => {
     const { data: session } = await supabase.auth.getSession();

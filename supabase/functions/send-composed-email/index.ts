@@ -119,6 +119,12 @@ serve(async (req) => {
     if (!mergeData["CSCName"]) mergeData["CSCName"] = "Your Consultant";
     if (!mergeData["CSCEmail"]) mergeData["CSCEmail"] = "support@vivacity.com.au";
 
+    // Sender signature merge fields from caller profile
+    const senderName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
+    mergeData["SenderName"] = senderName || "Vivacity Team";
+    mergeData["SenderEmail"] = profile.email || "";
+    mergeData["SenderRole"] = profile.unicorn_role || "";
+
     // Package info
     if (package_id) {
       const { data: pkg } = await supabase.from("packages").select("name, package_code").eq("id", package_id).single();
