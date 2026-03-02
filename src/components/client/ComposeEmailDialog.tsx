@@ -55,7 +55,7 @@ export function ComposeEmailDialog({
     if (open) {
       // Build signature from current user profile
       const senderName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ');
-      const senderRole = profile?.unicorn_role || '';
+      const senderRole = profile?.job_title || '';
       const senderEmail = profile?.email || '';
       const signatureLines = [
         '',

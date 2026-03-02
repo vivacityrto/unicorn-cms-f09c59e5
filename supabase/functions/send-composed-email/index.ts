@@ -43,7 +43,7 @@ serve(async (req) => {
 
     const { data: profile } = await supabase
       .from("users")
-      .select("unicorn_role, email, first_name, last_name, global_role")
+      .select("unicorn_role, email, first_name, last_name, global_role, job_title")
       .eq("user_uuid", user.id)
       .single();
 
@@ -123,7 +123,7 @@ serve(async (req) => {
     const senderName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
     mergeData["SenderName"] = senderName || "Vivacity Team";
     mergeData["SenderEmail"] = profile.email || "";
-    mergeData["SenderRole"] = profile.unicorn_role || "";
+    mergeData["SenderRole"] = profile.job_title || profile.unicorn_role || "";
 
     // Package info
     if (package_id) {
