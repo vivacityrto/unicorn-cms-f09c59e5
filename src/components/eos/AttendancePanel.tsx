@@ -380,63 +380,60 @@ export const AttendancePanel = ({
                   return (
                     <div
                       key={attendee.id}
-                      className="py-2 px-3 rounded-lg bg-muted/50 space-y-1.5"
+                      className="flex items-center gap-2 py-2 px-3 rounded-lg bg-muted/50"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                              {getInitials(attendee)}
-                            </AvatarFallback>
-                          </Avatar>
-                          {isUserOnline(attendee.user_id) && (
-                            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full border-2 border-background" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{getName(attendee)}</p>
-                          <p className="text-xs text-muted-foreground truncate">
+                      <div className="relative flex-shrink-0">
+                        <Avatar className="w-8 h-8">
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {getInitials(attendee)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {isUserOnline(attendee.user_id) && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full border-2 border-background" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{getName(attendee)}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-xs text-muted-foreground truncate">
                             {roleLabels[attendee.role_in_meeting] || attendee.role_in_meeting}
                             {attendee.notes && ` • ${attendee.notes}`}
-                          </p>
+                          </span>
+                          {isLive && canEdit ? (
+                            <Select
+                              value={attendee.attendance_status}
+                              onValueChange={(value: string) => handleStatusChange(attendee, value)}
+                            >
+                              <SelectTrigger className="h-6 w-[100px] text-xs px-2 flex-shrink-0">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {statusOptions.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge className={`${statusDisplay.color} text-xs flex-shrink-0`}>
+                              {statusDisplay.icon}
+                              <span className="ml-1">{statusDisplay.label}</span>
+                            </Badge>
+                          )}
                         </div>
-                        {isScheduled && canEdit && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleRemoveAttendee(attendee.user_id)}
-                            disabled={removeAttendee.isPending}
-                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
                       </div>
-                      
-                      <div className="pl-11">
-                        {isLive && canEdit ? (
-                          <Select
-                            value={attendee.attendance_status}
-                            onValueChange={(value: string) => handleStatusChange(attendee, value)}
-                          >
-                            <SelectTrigger className="w-full h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {statusOptions.map((opt) => (
-                                <SelectItem key={opt.value} value={opt.value}>
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Badge className={statusDisplay.color}>
-                            {statusDisplay.icon}
-                            <span className="ml-1">{statusDisplay.label}</span>
-                          </Badge>
-                        )}
-                      </div>
+                      {isScheduled && canEdit && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveAttendee(attendee.user_id)}
+                          disabled={removeAttendee.isPending}
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   );
                 })
