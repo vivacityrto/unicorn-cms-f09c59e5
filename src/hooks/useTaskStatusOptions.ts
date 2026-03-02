@@ -50,9 +50,10 @@ async function loadStatuses(): Promise<TaskStatusOption[]> {
   fetchPromise = (async () => {
     const { data, error } = await supabase
       .from('dd_status')
-      .select('code, value, description')
+      .select('code, value, description, seq')
       .lt('code', 100)
-      .order('code');
+      .order('seq')
+      .order('value');
 
     if (error) {
       console.error('Failed to load dd_status:', error);
