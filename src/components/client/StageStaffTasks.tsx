@@ -1,11 +1,12 @@
 import { useStaffTaskInstances } from '@/hooks/useStaffTaskInstances';
 import { useTaskStatusOptions, getStatusIcon, getStatusColor } from '@/hooks/useTaskStatusOptions';
 import { TaskDescriptionButton } from './TaskDescriptionDialog';
+import { TaskNotesPopover } from './TaskNotesPopover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Calendar } from 'lucide-react';
+import { Loader2, Calendar, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -21,6 +22,7 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
     loading, 
     updating, 
     updateTaskStatus,
+    refetch,
     completedCount,
     totalCount 
   } = useStaffTaskInstances({ stageInstanceId, tenantId, packageId });
@@ -80,12 +82,31 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
                   </p>
                   <TaskDescriptionButton taskName={task.task_name} description={task.task_description} />
                 </div>
-                {task.due_date && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                    <Calendar className="h-3 w-3" />
-                    <span>{format(new Date(task.due_date), 'dd MMM yyyy')}</span>
-                  </div>
-                )}
+                {/* Status metadata line */}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                  {task.status_id === 2 && task.completion_date && (
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Completed {format(new Date(task.completion_date), 'dd MMM yyyy')}
+                    </span>
+                  )}
+                  {task.due_date && task.status_id !== 2 && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Due {format(new Date(task.due_date), 'dd MMM yyyy')}
+                    </span>
+                  )}
+                  {task.updated_at && task.assignee_name && (
+                    <span>
+                      Updated {format(new Date(task.updated_at), 'dd MMM yyyy')} by {task.assignee_name}
+                    </span>
+                  )}
+                  {task.updated_at && !task.assignee_name && (
+                    <span>
+                      Updated {format(new Date(task.updated_at), 'dd MMM yyyy')}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {task.assignee_id && (
@@ -96,6 +117,15 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
                   </AvatarFallback>
                 </Avatar>
               )}
+
+              <TaskNotesPopover
+                taskId={task.id}
+                notes={task.notes}
+                tenantId={tenantId}
+                packageId={packageId}
+                stageInstanceId={stageInstanceId}
+                onSaved={refetch}
+              />
 
               <Select
                 value={task.status_id.toString()}
