@@ -55,11 +55,13 @@ export function StaffTaskActionMenu({
   const [cscFirstName, setCscFirstName] = useState<string>('');
   const [primaryEmail, setPrimaryEmail] = useState<string>('');
   const [primaryFirstName, setPrimaryFirstName] = useState<string>('');
+  const [stageName, setStageName] = useState<string>('');
+  const [clientName, setClientName] = useState<string>('');
+  const [packageName, setPackageName] = useState<string>('');
 
   useEffect(() => {
     if (type !== 'email' || !tenantId) return;
 
-    // Fetch CSC user for this tenant
     const fetchContacts = async () => {
       // CSC: from tenant_csc_assignments → users
       const { data: cscAssign } = await supabase
@@ -100,10 +102,52 @@ export function StaffTaskActionMenu({
           setPrimaryFirstName(pUser.first_name || '');
         }
       }
+
+      // Client name
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('name')
+        .eq('id', tenantId)
+        .maybeSingle();
+      if (tenant) setClientName(tenant.name || '');
+
+      // Stage name via stage_instances → documents_stages
+      if (stageInstanceId) {
+        const { data: si } = await (supabase
+          .from('stage_instances' as any)
+          .select('stage_id')
+          .eq('id', stageInstanceId)
+          .maybeSingle()) as { data: { stage_id: number } | null; error: any };
+        if (si?.stage_id) {
+          const { data: stage } = await supabase
+            .from('documents_stages')
+            .select('title')
+            .eq('id', si.stage_id)
+            .maybeSingle();
+          if (stage) setStageName(stage.title || '');
+        }
+      }
+
+      // Package name via client_packages → packages
+      if (packageId) {
+        const { data: cp } = await (supabase
+          .from('client_packages' as any)
+          .select('package_id')
+          .eq('id', packageId)
+          .maybeSingle()) as { data: { package_id: number } | null; error: any };
+        if (cp?.package_id) {
+          const { data: pkg } = await supabase
+            .from('packages')
+            .select('name')
+            .eq('id', cp.package_id)
+            .maybeSingle();
+          if (pkg) setPackageName(pkg.name || '');
+        }
+      }
     };
 
     fetchContacts();
-  }, [tenantId, type]);
+  }, [tenantId, type, stageInstanceId, packageId]);
 
   // Try to auto-match a stage email by comparing the clean task name to email subjects
   const matchedEmail = type === 'email' && cleanName
@@ -123,11 +167,14 @@ export function StaffTaskActionMenu({
   const handleAction = (actionKey: string) => {
     if (actionKey === 'send_internal_csc') {
       const email = matchedEmail;
-      const greeting = cscFirstName ? `<p>Hi ${cscFirstName},</p><br/>` : '';
+      const greeting = cscFirstName ? `<p>Hi ${cscFirstName},</p>` : '';
+      const contextLine = `<p><strong>Client:</strong> ${clientName || 'N/A'}${packageName ? ` | <strong>Package:</strong> ${packageName}` : ''}</p>`;
+      const emailContent = email?.content || '';
+      const bodyParts = [greeting, contextLine, emailContent].filter(Boolean).join('');
       setComposeDefaults({
         to: cscEmail,
-        subject: email?.subject || cleanName,
-        body: greeting + (email?.content || ''),
+        subject: stageName || email?.subject || cleanName,
+        body: bodyParts,
         emailInstanceId: email?.id,
         emailName: email?.subject,
       });
