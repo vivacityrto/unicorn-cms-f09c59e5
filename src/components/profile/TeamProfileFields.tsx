@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Save, 
@@ -267,6 +268,32 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* CSC Flag - SuperAdmin only */}
+        {isCurrentUserSuperAdmin && canEdit && (
+          <div className="flex items-center gap-3 p-3 rounded-md border bg-background">
+            <Checkbox
+              id="is_csc"
+              checked={user.is_csc || false}
+              onCheckedChange={async (checked) => {
+                try {
+                  const { error } = await supabase
+                    .from('users')
+                    .update({ is_csc: !!checked } as any)
+                    .eq('user_uuid', user.user_uuid);
+                  if (error) throw error;
+                  toast({ title: checked ? 'CSC Enabled' : 'CSC Disabled', description: `User ${checked ? 'is now' : 'is no longer'} a Client Success Champion.` });
+                  onSave();
+                } catch (err: any) {
+                  toast({ title: 'Error', description: err.message, variant: 'destructive' });
+                }
+              }}
+            />
+            <Label htmlFor="is_csc" className="cursor-pointer font-medium">
+              Client Success Champion (CSC)
+            </Label>
+          </div>
+        )}
+
         {/* Leave Status Banner */}
         {hasLeaveActive && (
           <Alert className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
