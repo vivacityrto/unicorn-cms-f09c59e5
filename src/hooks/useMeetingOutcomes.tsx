@@ -114,9 +114,10 @@ export const useMeetingOutcomes = (meetingId: string | undefined) => {
 
   // Close meeting with validation
   const closeMeeting = useMutation({
-    mutationFn: async (): Promise<CloseResult> => {
+    mutationFn: async (force: boolean = false): Promise<CloseResult> => {
       const { data, error } = await supabase.rpc('close_meeting_with_validation', {
         p_meeting_id: meetingId,
+        p_force: force,
       });
       
       if (error) throw error;

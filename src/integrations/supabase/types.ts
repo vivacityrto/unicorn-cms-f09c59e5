@@ -46635,10 +46635,9 @@ export type Database = {
         Returns: Json
       }
       client_tga_link_verify: { Args: { p_tenant_id: number }; Returns: Json }
-      close_meeting_with_validation: {
-        Args: { p_meeting_id: string }
-        Returns: Json
-      }
+      close_meeting_with_validation:
+        | { Args: { p_meeting_id: string }; Returns: Json }
+        | { Args: { p_force?: boolean; p_meeting_id: string }; Returns: Json }
       code_table_operation: {
         Args: {
           p_data?: Json
