@@ -34,7 +34,7 @@ export function StageDependencySelector({
       if (stage.stage_key === currentStageKey) return false;
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
-      return stage.title.toLowerCase().includes(query) || 
+      return stage.name.toLowerCase().includes(query) || 
              stage.stage_key.toLowerCase().includes(query);
     });
   }, [stages, currentStageKey, searchQuery]);
@@ -120,7 +120,7 @@ export function StageDependencySelector({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium truncate">{stage.title}</span>
+                          <span className="font-medium truncate">{stage.name}</span>
                           {stage.is_certified && (
                             <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                           )}
@@ -152,7 +152,7 @@ export function StageDependencySelector({
               {stage.is_certified && (
                 <ShieldCheck className="h-3 w-3 text-emerald-600" />
               )}
-              <span>{stage.title}</span>
+              <span>{stage.name}</span>
               {stage.version_label && (
                 <span className="text-muted-foreground">({stage.version_label})</span>
               )}

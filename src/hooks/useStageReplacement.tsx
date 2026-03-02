@@ -37,8 +37,8 @@ export function useStageReplacement() {
     try {
       // Check if target stage is archived
       const { data: targetStage } = await supabase
-        .from('documents_stages')
-        .select('is_archived, title')
+        .from('stages')
+        .select('is_archived, name')
         .eq('id', newStageId)
         .single();
 

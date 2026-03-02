@@ -51,7 +51,7 @@ export function useStageReviews() {
           reviewer:users!stage_release_reviews_reviewer_user_id_fkey(first_name, last_name, email),
           stage_release:stage_releases(
             id, status, tenant_id, stage_id,
-            stage:documents_stages(title),
+            stage:stages(name),
             tenant:tenants(name)
           )
         `)

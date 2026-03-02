@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface StageDependencyInfo {
   stage_key: string;
-  title: string;
+  name: string;
   is_certified: boolean;
   version_label: string | null;
 }
@@ -23,10 +23,10 @@ export function useAllStagesForDependencies() {
   useEffect(() => {
     const fetchStages = async () => {
       const { data, error } = await supabase
-        .from('documents_stages')
-        .select('stage_key, title, is_certified, version_label')
+        .from('stages')
+        .select('stage_key, name, is_certified, version_label')
         .eq('is_archived', false)
-        .order('title');
+        .order('name');
       
       if (!error && data) {
         setStages(data as StageDependencyInfo[]);
@@ -44,8 +44,8 @@ export async function resolveStageKeys(stageKeys: string[]): Promise<StageDepend
   if (!stageKeys?.length) return [];
   
   const { data, error } = await supabase
-    .from('documents_stages')
-    .select('stage_key, title, is_certified, version_label')
+    .from('stages')
+    .select('stage_key, name, is_certified, version_label')
     .in('stage_key', stageKeys);
   
   if (error || !data) return [];
@@ -70,7 +70,7 @@ export function useStageDependencyCheck(stageId: number | null): {
 
     try {
       const { data: stage, error } = await supabase
-        .from('documents_stages')
+        .from('stages')
         .select('requires_stage_keys')
         .eq('id', stageId)
         .single();
@@ -122,7 +122,7 @@ export async function checkDependenciesInPackage(
 ): Promise<{ satisfied: boolean; missing: StageDependencyInfo[] }> {
   // Get stage's required stage_keys
   const { data: stage, error: stageError } = await supabase
-    .from('documents_stages')
+    .from('stages')
     .select('requires_stage_keys')
     .eq('id', stageId)
     .single();
@@ -139,7 +139,7 @@ export async function checkDependenciesInPackage(
   // Get all stage_keys in the package
   const { data: packageStages, error: psError } = await (supabase as any)
     .from('package_stages')
-    .select('stage_id, documents_stages!inner(stage_key)')
+    .select('stage_id, stages!inner(stage_key)')
     .eq('package_id', packageId);
 
   if (psError || !packageStages) {
@@ -147,7 +147,7 @@ export async function checkDependenciesInPackage(
   }
 
   const packageStageKeys = new Set(
-    packageStages.map((ps: any) => ps.documents_stages?.stage_key).filter(Boolean)
+    packageStages.map((ps: any) => ps.stages?.stage_key).filter(Boolean)
   );
 
   // Find missing
@@ -175,7 +175,7 @@ export async function checkPackageDependencies(packageId: number): Promise<{
   // Get all stages in package with their dependencies
   const { data: packageStages, error } = await (supabase as any)
     .from('package_stages')
-    .select('stage_id, documents_stages!inner(title, stage_key, requires_stage_keys)')
+    .select('stage_id, stages!inner(name, stage_key, requires_stage_keys)')
     .eq('package_id', packageId);
 
   if (error || !packageStages?.length) {
@@ -184,7 +184,7 @@ export async function checkPackageDependencies(packageId: number): Promise<{
 
   // Build set of stage_keys in package
   const packageStageKeys = new Set(
-    packageStages.map((ps: any) => ps.documents_stages?.stage_key).filter(Boolean)
+    packageStages.map((ps: any) => ps.stages?.stage_key).filter(Boolean)
   );
 
   const unmetDependencies: Array<{
@@ -197,14 +197,14 @@ export async function checkPackageDependencies(packageId: number): Promise<{
   const allMissingKeys: string[] = [];
 
   for (const ps of packageStages) {
-    const stage = (ps as any).documents_stages;
+    const stage = (ps as any).stages;
     const requires = stage?.requires_stage_keys || [];
     const missingKeys = requires.filter((key: string) => !packageStageKeys.has(key));
     
     if (missingKeys.length > 0) {
       allMissingKeys.push(...missingKeys);
       unmetDependencies.push({
-        stage_title: stage?.title || 'Unknown Stage',
+        stage_title: stage?.name || 'Unknown Stage',
         missing_stage_keys: missingKeys,
         missing_stage_titles: [] // Will be resolved
       });
@@ -215,7 +215,7 @@ export async function checkPackageDependencies(packageId: number): Promise<{
   if (allMissingKeys.length > 0) {
     const uniqueKeys = [...new Set(allMissingKeys)];
     const resolved = await resolveStageKeys(uniqueKeys);
-    const keyToTitle = new Map(resolved.map(s => [s.stage_key, s.title]));
+    const keyToTitle = new Map(resolved.map(s => [s.stage_key, s.name]));
 
     for (const dep of unmetDependencies) {
       dep.missing_stage_titles = dep.missing_stage_keys.map(
@@ -238,7 +238,7 @@ export async function updateStageDependencies(
 ): Promise<boolean> {
   // Get old value for audit
   const { data: oldStage } = await supabase
-    .from('documents_stages')
+    .from('stages')
     .select('requires_stage_keys')
     .eq('id', stageId)
     .single();
@@ -246,7 +246,7 @@ export async function updateStageDependencies(
   const oldKeys = (oldStage as any)?.requires_stage_keys || [];
 
   const { error } = await supabase
-    .from('documents_stages')
+    .from('stages')
     .update({ requires_stage_keys: stageKeys.length > 0 ? stageKeys : null })
     .eq('id', stageId);
 
@@ -282,15 +282,15 @@ export async function checkDependencyCertification(stageKeys: string[]): Promise
   }
 
   const { data, error } = await supabase
-    .from('documents_stages')
-    .select('title, stage_key, is_certified')
+    .from('stages')
+    .select('name, stage_key, is_certified')
     .in('stage_key', stageKeys);
 
   if (error || !data) {
     return { allCertified: true, uncertified: [] };
   }
 
-  const uncertified = data.filter(s => !s.is_certified).map(s => s.title);
+  const uncertified = data.filter(s => !s.is_certified).map(s => (s as any).name);
   
   return {
     allCertified: uncertified.length === 0,

@@ -71,7 +71,7 @@ export async function updateStageStandards(
   userId: string | null
 ): Promise<boolean> {
   const { error } = await supabase
-    .from('documents_stages')
+    .from('stages')
     .update({ covers_standards: newStandards })
     .eq('id', stageId);
 
