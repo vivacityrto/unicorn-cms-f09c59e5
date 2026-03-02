@@ -592,7 +592,7 @@ export function useClientPackages(tenantId: number | null) {
       // Fetch ALL package instances (active + completed) for history support
       const { data: instances, error } = await supabase
         .from('package_instances')
-        .select('id, tenant_id, package_id, start_date, is_complete, hours_included, hours_used, hours_added, membership_state, end_date, next_renewal_date')
+        .select('id, tenant_id, package_id, start_date, is_complete, included_minutes, hours_included, hours_used, hours_added, membership_state, end_date, next_renewal_date')
         .eq('tenant_id', tenantId)
         .order('start_date', { ascending: false }) as { data: any[] | null; error: any };
 
@@ -642,8 +642,9 @@ export function useClientPackages(tenantId: number | null) {
           s.status !== 'completed' && s.status !== '3' && s.status !== 'na' && s.status !== 'not_started'
         ) || pkgStages.find((s: any) => s.status === 'not_started');
 
-        // Total hours = included + any added hours
-        const totalHours = (inst.hours_included || 0) + (inst.hours_added || 0);
+        // Total hours = included_minutes (canonical) fallback to hours_included (deprecated) + added
+        const baseMinutes = inst.included_minutes ?? (inst.hours_included ? inst.hours_included * 60 : 0);
+        const totalHours = (baseMinutes / 60) + (inst.hours_added || 0);
 
         return {
           id: inst.id,
