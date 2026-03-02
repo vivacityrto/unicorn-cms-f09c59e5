@@ -8,6 +8,7 @@
 |---|---|
 | `eos_meeting_attendees` | Persisted attendance roster per meeting. Source of truth for "present". |
 | `eos_meeting_participants` | Legacy/supplementary participant data (role assignments). |
+| `dd_meeting_attendance_status` | Lookup table for attendance status values (managed via Code Tables admin). |
 
 ### Key Columns on `eos_meeting_attendees`
 
@@ -16,13 +17,26 @@
 | `meeting_id` | uuid FK | References `eos_meetings.id` |
 | `user_id` | uuid FK | References `users.user_uuid` |
 | `role_in_meeting` | enum | `owner`, `attendee`, `guest`, `visionary`, `integrator`, `core_team` |
-| `attendance_status` | enum | `invited`, `accepted`, `declined`, `attended`, `late`, `left_early`, `no_show` |
+| `attendance_status` | text FK | References `dd_meeting_attendance_status.value`. Values: `invited`, `accepted`, `declined`, `attended`, `late`, `left_early`, `no_show`, `absent` |
 | `joined_at` | timestamptz | Set when status changes to `attended` or `late` |
 | `left_at` | timestamptz | Set when status changes to `left_early` |
 | `marked_by` | uuid | Who changed the status |
 | `seat_id` | uuid | Optional link to accountability seat |
 
 **Unique constraint**: `(meeting_id, user_id)` — one record per user per meeting.
+
+### `dd_meeting_attendance_status` Lookup Table
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | serial PK | Auto-increment |
+| `label` | text | Display name (e.g. "Present", "Absent") |
+| `value` | text, unique | Stored value (e.g. "attended", "absent") |
+| `description` | text | Optional description |
+| `sort_order` | integer | Display order |
+| `is_active` | boolean | Soft-delete flag |
+
+Managed via the **Code Tables admin** by SuperAdmins. New statuses can be added without migrations.
 
 ## Presence Channel (Online Detection)
 
@@ -105,7 +119,12 @@ All on `eos_meeting_attendees`:
 | `vivacity_update_attendees` | UPDATE | `is_vivacity_team_safe(auth.uid())` |
 | `vivacity_delete_attendees` | DELETE | `is_vivacity_team_safe(auth.uid())` |
 
-Only Vivacity team members (Super Admin, Team Leader, Team Member) can access attendance data.
+On `dd_meeting_attendance_status`:
+
+| Policy | Operation | Condition |
+|---|---|---|
+| Authenticated read | SELECT | `auth.role() = 'authenticated'` |
+| Vivacity team manage | ALL | `is_vivacity_team_safe(auth.uid())` |
 
 ## RPC Functions
 
@@ -113,7 +132,7 @@ Only Vivacity team members (Super Admin, Team Leader, Team Member) can access at
 |---|---|
 | `calculate_quorum(meeting_id)` | Returns quorum status with issues array |
 | `start_meeting_with_quorum_check(meeting_id, override_reason)` | Starts meeting, records quorum state |
-| `update_meeting_attendance(meeting_id, user_id, status, notes)` | Upsert attendance status |
+| `update_meeting_attendance(meeting_id, user_id, status, notes)` | Upsert attendance status (status is TEXT) |
 | `mark_all_present(meeting_id)` | Batch-mark all invited as attended |
 | `add_meeting_guest(meeting_id, user_id, notes)` | Add guest during live meeting |
 | `add_meeting_attendee(meeting_id, user_id, role)` | Add attendee (works during scheduled AND in_progress) |
