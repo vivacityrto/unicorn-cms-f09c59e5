@@ -67,7 +67,8 @@ export function StartPackageDialog({
         .from('users' as any)
         .select('user_uuid, first_name, last_name')
         .in('unicorn_role', ['Super Admin', 'Team Member', 'Team Leader'])
-        .eq('is_active', true)
+        .eq('disabled', false)
+        .eq('archived', false)
         .order('first_name')) as { data: CscUser[] | null; error: any };
       const usersData = usersResult.data;
 
