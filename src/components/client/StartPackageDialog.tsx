@@ -63,11 +63,13 @@ export function StartPackageDialog({
       setPackages(packagesData || []);
 
       // Fetch CSC users (Super Admin and Team Members)
-      const { data: usersData } = await supabase
-        .from('users')
+      const usersResult = await (supabase
+        .from('users' as any)
         .select('user_uuid, first_name, last_name')
         .in('unicorn_role', ['Super Admin', 'Team Member', 'Team Leader'])
-        .order('first_name');
+        .eq('is_active', true)
+        .order('first_name')) as { data: CscUser[] | null; error: any };
+      const usersData = usersResult.data;
 
       setCscUsers(usersData || []);
     } catch (error) {
