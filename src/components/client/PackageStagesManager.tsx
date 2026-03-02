@@ -37,7 +37,9 @@ import {
   ChevronRight,
   ListTodo,
   MessageSquare,
-  RefreshCw
+  RefreshCw,
+  FileText,
+  Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -385,21 +387,41 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
               comment={stage.comment}
               onUpdate={fetchStages}
             />
-            <StageStaffTasks 
-              stageInstanceId={stage.id}
-              tenantId={tenantId}
-              packageId={packageId}
-            />
-            <StageDocumentsSection
-              stageInstanceId={stage.id}
-              tenantId={tenantId}
-              packageId={packageId}
-              debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
-              isVivacityStaff={profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member'}
-            />
-            <StageEmailsSection
-              stageInstanceId={stage.id}
-            />
+            <div className="divide-y border-t">
+              <div>
+                <div className="px-4 py-2 bg-muted/40 flex items-center gap-2">
+                  <ListTodo className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Staff Tasks</span>
+                </div>
+                <StageStaffTasks 
+                  stageInstanceId={stage.id}
+                  tenantId={tenantId}
+                  packageId={packageId}
+                />
+              </div>
+              <div>
+                <div className="px-4 py-2 bg-muted/40 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Documents</span>
+                </div>
+                <StageDocumentsSection
+                  stageInstanceId={stage.id}
+                  tenantId={tenantId}
+                  packageId={packageId}
+                  debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
+                  isVivacityStaff={profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member'}
+                />
+              </div>
+              <div>
+                <div className="px-4 py-2 bg-muted/40 flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Emails</span>
+                </div>
+                <StageEmailsSection
+                  stageInstanceId={stage.id}
+                />
+              </div>
+            </div>
           </CollapsibleContent>
         </div>
       </Collapsible>
