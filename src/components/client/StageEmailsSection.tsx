@@ -1,4 +1,5 @@
 import { useStageEmails } from '@/hooks/useStageEmails';
+import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Mail, Send, Clock } from 'lucide-react';
@@ -47,7 +48,10 @@ export function StageEmailsSection({ stageInstanceId }: StageEmailsSectionProps)
               <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm truncate">{email.subject}</p>
+              <div className="flex items-center gap-1">
+                <p className="text-sm truncate">{email.subject}</p>
+                <TaskDescriptionButton taskName={email.subject} description={email.description} />
+              </div>
               <p className="text-xs text-muted-foreground truncate">
                 To: {email.to || 'Not set'}
               </p>

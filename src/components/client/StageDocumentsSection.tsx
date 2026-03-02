@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStageDocuments } from '@/hooks/useStageDocuments';
+import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { useBulkGeneration } from '@/hooks/useBulkGeneration';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -139,7 +140,10 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
               <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm truncate">{doc.title}</p>
+              <div className="flex items-center gap-1">
+                <p className="text-sm truncate">{doc.title}</p>
+                <TaskDescriptionButton taskName={doc.title} description={doc.description} />
+              </div>
               {doc.created_at && (
                 <p className="text-xs text-muted-foreground">
                   {format(new Date(doc.created_at), 'dd MMM yyyy')}

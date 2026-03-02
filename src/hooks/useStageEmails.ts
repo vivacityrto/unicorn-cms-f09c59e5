@@ -5,6 +5,7 @@ export interface StageEmail {
   id: number;
   email_id: number;
   subject: string;
+  description: string | null;
   to: string;
   is_sent: boolean;
   sent_date: string | null;
@@ -34,11 +35,19 @@ export function useStageEmails({ stageInstanceId }: UseStageEmailsOptions) {
 
       if (error) throw error;
 
+      // Fetch descriptions from emails table
+      const emailIds = [...new Set((data || []).map(e => e.email_id).filter(Boolean))] as number[];
+      const { data: emailMeta } = emailIds.length > 0
+        ? await supabase.from('emails').select('id, description').in('id', emailIds)
+        : { data: [] };
+      const descMap = new Map((emailMeta || []).map((e: any) => [e.id, e.description]));
+
       setTotalCount(data?.length || 0);
       const result: StageEmail[] = (data || []).slice(0, 10).map(e => ({
         id: e.id,
         email_id: e.email_id,
         subject: e.subject || 'No subject',
+        description: descMap.get(e.email_id) || null,
         to: e.to || '',
         is_sent: e.is_sent ?? false,
         sent_date: e.sent_date,
