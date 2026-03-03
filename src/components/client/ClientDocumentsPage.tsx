@@ -8,6 +8,7 @@ import {
   useDownloadPortalDocument,
   type PortalDocument,
 } from "@/hooks/usePortalDocuments";
+import { useDocumentAcknowledgements } from "@/hooks/useDocumentAcknowledgements";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Download, Eye, FileText, Loader2, MessageCircle, Inbox, ClipboardList, ShieldCheck } from "lucide-react";
+import { Upload, Download, Eye, FileText, Loader2, MessageCircle, Inbox, ClipboardList, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ClientDocumentRequests } from "./ClientDocumentRequests";
@@ -46,10 +47,18 @@ function DocumentTable({
   docs,
   tenantId,
   onView,
+  isAcknowledged,
+  onAcknowledge,
+  isAcknowledging,
+  showAcknowledge,
 }: {
   docs: PortalDocument[];
   tenantId: number;
   onView: (doc: PortalDocument) => void;
+  isAcknowledged?: (docId: number) => boolean;
+  onAcknowledge?: (params: { documentId: number; tenantId: number }) => void;
+  isAcknowledging?: boolean;
+  showAcknowledge?: boolean;
 }) {
   const downloadMutation = useDownloadPortalDocument();
 
@@ -62,12 +71,15 @@ function DocumentTable({
             <TableHead className="hidden sm:table-cell">Type</TableHead>
             <TableHead className="hidden md:table-cell">Uploaded by</TableHead>
             <TableHead className="hidden sm:table-cell">Date</TableHead>
+            {showAcknowledge && <TableHead className="hidden sm:table-cell">Status</TableHead>}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {docs.map((doc) => {
             const isVivacity = doc.direction === "vivacity_to_client";
+            const docIdNum = Number(doc.id);
+            const acked = isAcknowledged ? isAcknowledged(docIdNum) : false;
             return (
               <TableRow key={doc.id}>
                 <TableCell className="font-medium">
@@ -94,6 +106,25 @@ function DocumentTable({
                 <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
                   {format(new Date(doc.created_at), "dd MMM yyyy")}
                 </TableCell>
+                {showAcknowledge && (
+                  <TableCell className="hidden sm:table-cell">
+                    {acked ? (
+                      <Badge variant="default" className="text-xs gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Acknowledged
+                      </Badge>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        disabled={isAcknowledging}
+                        onClick={() => onAcknowledge?.({ documentId: docIdNum, tenantId })}
+                      >
+                        Acknowledge
+                      </Button>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onView(doc)}>
@@ -136,6 +167,7 @@ export function ClientDocumentsPage() {
   const shared = usePortalDocuments(activeTenantId, "vivacity_to_client");
   const uploaded = usePortalDocuments(activeTenantId, "client_to_vivacity");
   const uploadMutation = useUploadPortalDocument();
+  const { isAcknowledged, acknowledge, isAcknowledging } = useDocumentAcknowledgements(activeTenantId);
 
   // Filter shared tab to only client-visible docs
   const sharedDocs = (shared.data ?? []).filter((d) => d.is_client_visible);
@@ -321,7 +353,15 @@ export function ClientDocumentsPage() {
           ) : !sharedDocs.length ? (
             <EmptyState message="No documents shared yet." />
           ) : (
-            <DocumentTable docs={sharedDocs} tenantId={activeTenantId} onView={handleView} />
+            <DocumentTable
+              docs={sharedDocs}
+              tenantId={activeTenantId}
+              onView={handleView}
+              showAcknowledge
+              isAcknowledged={isAcknowledged}
+              onAcknowledge={acknowledge}
+              isAcknowledging={isAcknowledging}
+            />
           )}
         </TabsContent>
 

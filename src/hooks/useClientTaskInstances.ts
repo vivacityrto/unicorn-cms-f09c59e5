@@ -115,6 +115,18 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
 
       if (error) throw error;
 
+      // Compute structured AI signals
+      const aiSignals: Record<string, any> = {
+        package_id: packageId,
+        stage_instance_id: stageInstanceId,
+      };
+      if (newStatusId === 2 && oldTask?.due_date) {
+        const completionDate = new Date();
+        const dueDate = new Date(oldTask.due_date);
+        aiSignals.completion_latency_days = Math.round((completionDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        aiSignals.completed_on_time = completionDate <= dueDate;
+      }
+
       await supabase.from('client_audit_log').insert({
         tenant_id: tenantId,
         actor_user_id: profile?.user_uuid,
@@ -123,7 +135,7 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
         entity_id: taskId.toString(),
         before_data: { status: oldTask?.status_id },
         after_data: { status: newStatusId },
-        details: { package_id: packageId, stage_instance_id: stageInstanceId },
+        details: aiSignals,
       });
 
       toast({ title: 'Task Updated', description: `Status changed to ${getStatusLabel(newStatusId, statuses)}` });
