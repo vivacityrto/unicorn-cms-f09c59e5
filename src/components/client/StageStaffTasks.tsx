@@ -72,7 +72,7 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium">Staff Tasks</span>
           <Select value={filter} onValueChange={(v) => setFilter(v as TaskFilter)}>
-            <SelectTrigger className="w-[120px] h-7 text-xs">
+            <SelectTrigger className="w-[150px] h-7 text-xs px-1.5">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
