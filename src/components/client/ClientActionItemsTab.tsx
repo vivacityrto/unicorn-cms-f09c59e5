@@ -424,7 +424,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {selectedItem ? 'Edit Action Item' : 'Add Action Item'}
@@ -474,7 +474,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                   : description}
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Details..."
-                rows={3}
+                rows={6}
                 className={speech.isRecording ? 'border-destructive' : ''}
               />
             </div>
@@ -558,12 +558,12 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
             </div>
 
             {/* Notify team members */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5" />
-                Notify (optional)
+            <div className="space-y-1.5 rounded-md border p-2.5 bg-muted/30">
+              <Label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <Mail className="h-3 w-3" />
+                Notify (Optional)
               </Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {vivacityTeam.map((user) => (
                   <Button
                     key={user.user_uuid}
@@ -575,11 +575,11 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                         ? prev.filter(id => id !== user.user_uuid)
                         : [...prev, user.user_uuid]
                     )}
-                    className="gap-1.5"
+                    className="gap-1 h-7 text-[11px] px-2"
                   >
-                    <Avatar className="h-5 w-5">
+                    <Avatar className="h-4 w-4">
                       {user.avatar_url && <AvatarImage src={user.avatar_url} />}
-                      <AvatarFallback className="text-[9px]">
+                      <AvatarFallback className="text-[8px]">
                         {user.first_name?.[0]}{user.last_name?.[0]}
                       </AvatarFallback>
                     </Avatar>
