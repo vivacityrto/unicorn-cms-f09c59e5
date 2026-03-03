@@ -281,8 +281,8 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
     }
   };
 
-  const completedCount = tasks.filter(t => t.status_id === 2).length;
-  const totalCount = tasks.length;
+  const completedCount = tasks.filter(t => t.status_id === 2 || t.status_id === 4).length;
+  const totalCount = tasks.filter(t => t.status_id !== 3).length;
 
   return {
     tasks,
