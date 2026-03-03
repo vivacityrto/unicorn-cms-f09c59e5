@@ -32,6 +32,7 @@ export function useVivacityTeamUsers() {
         .select('user_uuid, first_name, last_name, email, avatar_url, unicorn_role, job_title')
         .in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
         .eq('archived', false)
+        .eq('disabled', false)
         .order('first_name', { ascending: true });
 
       if (error) throw error;
