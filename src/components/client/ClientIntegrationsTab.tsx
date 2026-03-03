@@ -499,6 +499,7 @@ export function ClientIntegrationsTab({
           created_by: user.id,
           updated_by: user.id,
           transfer_date: now,
+          inactive: false,
         });
       }
 
@@ -522,6 +523,7 @@ export function ClientIntegrationsTab({
           created_by: user.id,
           updated_by: user.id,
           transfer_date: now,
+          inactive: false,
         });
       }
 

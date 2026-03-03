@@ -364,7 +364,7 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="sm:max-w-[700px]">
+        <DialogContent className="sm:max-w-[900px] md:max-w-[1100px]">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Address' : 'Add Address'}</DialogTitle>
           </DialogHeader>
