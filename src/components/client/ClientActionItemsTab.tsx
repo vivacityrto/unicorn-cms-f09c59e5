@@ -581,7 +581,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                             {member.first_name?.[0]}{member.last_name?.[0]}
                           </AvatarFallback>
                         </Avatar>
-                        {member.first_name} {member.last_name}
+                        {member.first_name}
                       </span>
                     </SelectItem>
                   ))}
@@ -591,10 +591,13 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
 
             {/* Notify team members */}
             <div className="space-y-1.5 rounded-md border p-2.5 bg-muted/30">
-              <Label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                <Mail className="h-3 w-3" />
-                Notify (Optional)
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  <Mail className="h-3 w-3" />
+                  Notify (Optional)
+                </Label>
+                <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} />
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {vivacityTeam.map((user) => (
                   <Button
@@ -615,14 +618,13 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                         {user.first_name?.[0]}{user.last_name?.[0]}
                       </AvatarFallback>
                     </Avatar>
-                    {user.first_name} {user.last_name}
+                    {user.first_name}
                   </Button>
                 ))}
                 {vivacityTeam.length === 0 && (
                   <span className="text-xs text-muted-foreground">No team members available</span>
                 )}
               </div>
-              <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} className="mt-1" />
             </div>
           </div>
           

@@ -138,7 +138,10 @@ export function CreateActionDialog({
             </div>
           </div>
           <div className="space-y-1.5 rounded-md border p-2.5 bg-muted/30">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Notify (Optional)</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Notify (Optional)</Label>
+              <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} />
+            </div>
             <div className="grid grid-cols-2 gap-1 max-h-36 overflow-y-auto pt-0.5">
               {teamUsers.map((user) => (
                 <label key={user.user_uuid} className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
@@ -153,11 +156,10 @@ export function CreateActionDialog({
                       );
                     }}
                   />
-                  <span>{user.first_name} {user.last_name}</span>
+                  <span>{user.first_name}</span>
                 </label>
               ))}
             </div>
-            <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} className="mt-1" />
           </div>
         </div>
         <DialogFooter>
