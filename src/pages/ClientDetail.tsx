@@ -408,8 +408,10 @@ export default function ClientDetail() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="overview" className="mt-0 space-y-6">
             {/* Time Summary & Users Preview */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ClientTimeSummaryCard clientId={tenantIdNum!} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <ClientTimeSummaryCard clientId={tenantIdNum!} />
+              </div>
               <TenantUsersPreviewCard tenantId={tenantIdNum!} onViewAll={() => setActiveTab('users')} />
             </div>
 
