@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
+import { NotifyClientCheckbox } from './NotifyClientCheckbox';
+import { notifyClientPrimaryContact } from '@/lib/notifyClient';
 import { SelectSeparator } from '@/components/ui/select';
 import { formatDistanceToNow, format, fromUnixTime, isValid, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -149,6 +151,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [extractingTitle, setExtractingTitle] = useState(false);
   const titleExtractTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
+  const [notifyClient, setNotifyClient] = useState(false);
   const { data: vivacityTeam = [] } = useVivacityTeamUsers();
 
   // Auto-extract title from content using AI
@@ -423,6 +426,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setSelectedNote(null);
     setTitleManuallyEdited(false);
     setNotifyUserIds([]);
+    setNotifyClient(false);
   };
 
   const handleOpenAdd = () => {
@@ -561,7 +565,34 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             }
           } catch (notifyErr) {
             console.error('Failed to send notify notifications:', notifyErr);
+        }
+
+        // Send client notification email if requested
+        if (noteId && notifyClient) {
+          try {
+            const { data: userData2 } = await supabase.auth.getUser();
+            const currentUser2 = userData2.user?.id;
+            const { data: authorUser2 } = currentUser2 ? await supabase
+              .from('users')
+              .select('first_name, last_name')
+              .eq('user_uuid', currentUser2)
+              .single() : { data: null };
+            const authorName2 = authorUser2
+              ? `${authorUser2.first_name || ''} ${authorUser2.last_name || ''}`.trim()
+              : undefined;
+
+            notifyClientPrimaryContact({
+              tenantId,
+              context: 'Note Added',
+              title: title || content.substring(0, 60),
+              description: content.substring(0, 300) || undefined,
+              priority: priority || undefined,
+              createdByName: authorName2 || undefined,
+            });
+          } catch (e) {
+            console.error('Client notify error:', e);
           }
+        }
         }
       }
       setIsAddDialogOpen(false);
@@ -1501,6 +1532,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   <span className="text-xs text-muted-foreground">No team members available</span>
                 )}
               </div>
+              <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} className="mt-1" />
             </div>
             )}
 

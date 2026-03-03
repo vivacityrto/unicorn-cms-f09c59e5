@@ -25,6 +25,8 @@ import {
 import { format, formatDistanceToNow, isPast, isToday } from 'date-fns';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
+import { NotifyClientCheckbox } from './NotifyClientCheckbox';
+import { notifyClientPrimaryContact } from '@/lib/notifyClient';
 
 interface ClientActionItemsTabProps {
   tenantId: number;
@@ -65,6 +67,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [ownerUserId, setOwnerUserId] = useState<string | undefined>();
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
+  const [notifyClient, setNotifyClient] = useState(false);
   
   // Status options from dd_status
   const [statusOptions, setStatusOptions] = useState<{ value: string; description: string }[]>([]);
@@ -110,6 +113,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setOwnerUserId(undefined);
     setSelectedItem(null);
     setNotifyUserIds([]);
+    setNotifyClient(false);
   };
 
   const handleOpenAdd = () => {
@@ -184,6 +188,34 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
             }
           } catch (notifyErr) {
             console.error('Failed to send notify notifications:', notifyErr);
+          }
+        }
+
+        // Send client notification email if requested
+        if (notifyClient) {
+          try {
+            const { data: userData } = await supabase.auth.getUser();
+            const currentUserId = userData.user?.id;
+            const { data: authorUser } = currentUserId ? await supabase
+              .from('users')
+              .select('first_name, last_name')
+              .eq('user_uuid', currentUserId)
+              .single() : { data: null };
+            const authorName = authorUser
+              ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim()
+              : undefined;
+
+            notifyClientPrimaryContact({
+              tenantId,
+              context: 'Action Created',
+              title,
+              description: description || undefined,
+              priority,
+              dueDate: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
+              createdByName: authorName || undefined,
+            });
+          } catch (e) {
+            console.error('Client notify error:', e);
           }
         }
       }
@@ -590,6 +622,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                   <span className="text-xs text-muted-foreground">No team members available</span>
                 )}
               </div>
+              <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} className="mt-1" />
             </div>
           </div>
           

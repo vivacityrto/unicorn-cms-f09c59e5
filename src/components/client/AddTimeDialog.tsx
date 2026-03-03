@@ -25,6 +25,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Bell, UserMinus, Mic, MicOff } from 'lucide-react';
+import { NotifyClientCheckbox } from './NotifyClientCheckbox';
+import { notifyClientPrimaryContact } from '@/lib/notifyClient';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import type { ScopeTag } from '@/hooks/useTenantMemberships';
 
@@ -86,6 +88,7 @@ export function AddTimeDialog({
   const [workTypes, setWorkTypes] = useState<WorkTypeOption[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [notifyUserId, setNotifyUserId] = useState<string>('');
+  const [notifyClient, setNotifyClient] = useState(false);
 
   // Fetch work types from dd_work_types lookup
   useEffect(() => {
@@ -238,6 +241,18 @@ export function AddTimeDialog({
         });
       }
 
+      // Send client notification email if requested
+      if (notifyClient) {
+        const workLabel = workTypes.find(w => w.code === workType)?.label || workType;
+        const durationStr = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+        notifyClientPrimaryContact({
+          tenantId,
+          context: 'Time Logged',
+          title: `${durationStr} — ${workLabel}`,
+          description: notes || undefined,
+        });
+      }
+
       toast({
         title: 'Time added',
         description: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m logged${notifyUserId ? ' — notification sent' : ''}`,
@@ -262,6 +277,7 @@ export function AddTimeDialog({
     setScopeTag(defaultScopeTag);
     setSelectedInstanceId(null);
     setNotifyUserId('');
+    setNotifyClient(false);
   };
 
   return (
@@ -444,6 +460,7 @@ export function AddTimeDialog({
               </SelectContent>
             </Select>
           </div>
+          <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} className="mt-1" />
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
