@@ -1,166 +1,310 @@
 
-# Bulk Communications System - Implementation Plan
 
-## Overview
+# Phase 2: Unified Inbox for Communications + Tasks
 
-Build a broadcast messaging system allowing Vivacity staff to send bulk in-app messages to targeted audiences. Messages appear in the Client Portal Communications tab as "Announcement" threads, replies route to the assigned CSC, and all sends are fully auditable.
+## Problem Statement
 
----
+Clients currently navigate between separate "Tasks" and "Communications" pages. Vivacity staff have no consolidated inbox. This phase merges both into a single Inbox view per portal, powered by a database view that normalises all sources.
 
-## 1. Database Migration
+## Architecture Decision: View-Based Unification (Not a New Table)
 
-### A. New Tables
+The platform has 5 distinct task source tables that are deeply integrated into the package-stage-task ecosystem:
 
-**`broadcast_campaigns`**
-- `id uuid PK default gen_random_uuid()`
-- `title text NOT NULL`
-- `body text NOT NULL`
-- `target_mode text NOT NULL` -- 'everyone', 'members', 'package_type'
-- `package_type text NULL` -- required when target_mode = 'package_type'
-- `include_roles text[] DEFAULT ARRAY['parent']` -- maps to tenant_users.role ('parent' = Admin, 'child' = User)
-- `status text NOT NULL DEFAULT 'draft'` -- draft, queued, sending, sent, cancelled
-- `scheduled_for timestamptz NULL`
-- `created_by uuid NOT NULL`
-- `created_at timestamptz DEFAULT now()`
-- `sent_at timestamptz NULL`
-- `total_recipients integer DEFAULT 0`
-- `total_sent integer DEFAULT 0`
-- `total_failed integer DEFAULT 0`
+- `client_task_instances` (bigint IDs, package-driven)
+- `staff_task_instances` (bigint IDs, package-driven)
+- `ops_work_items` (UUID IDs, operational)
+- `client_action_items` (UUID IDs, meeting/ad-hoc)
+- `compliance_task_instances` (UUID IDs, standards-driven)
 
-RLS: Vivacity staff can SELECT/INSERT/UPDATE. Clients cannot access.
+The existing `tasks` table is a legacy ClickUp import (empty) and will not be repurposed.
 
-**`broadcast_recipients`**
-- `id uuid PK default gen_random_uuid()`
-- `campaign_id uuid NOT NULL REFERENCES broadcast_campaigns(id)`
-- `tenant_id bigint NOT NULL`
-- `user_id uuid NOT NULL`
-- `conversation_id uuid NULL` -- linked conversation after send
-- `delivery_status text DEFAULT 'queued'` -- queued, sent, failed, skipped
-- `sent_at timestamptz NULL`
-- `failure_reason text NULL`
+**Decision**: We will NOT create a new canonical `tasks` table. Instead, we create `v_inbox_items` -- a read-only view that normalises all sources into a consistent schema. Writes go through existing table-specific mutations and new RPC functions.
 
-Index on `campaign_id`. RLS: Staff only.
-
-### B. SQL Functions
-
-**`fn_preview_broadcast_recipients(p_target_mode text, p_package_type text, p_include_roles text[])`**
-Returns `TABLE(tenant_id bigint, user_id uuid, tenant_name text)`.
-
-Logic:
-- `everyone`: All non-system, non-archived tenants -> active, non-disabled, non-archived users filtered by role
-- `members`: Tenants with an active `package_instances` row where the linked package has `package_type = 'membership'`
-- `package_type`: Tenants with active `package_instances` where linked package matches the specified `package_type`
-- Deduplicates by `user_id`
-- Excludes system tenant (id = 6372)
-
-**`fn_queue_broadcast_campaign(p_campaign_id uuid)`**
-- Validates campaign status = 'draft'
-- Calls preview function to generate recipients
-- Inserts into `broadcast_recipients`
-- Updates campaign status to 'queued', sets `total_recipients`
-
-### C. Audit
-
-Insert into `audit_events` on campaign creation, queuing, and completion with campaign details.
+This preserves the entire package-stage-task ecosystem, avoids data migration, and keeps all existing pages working.
 
 ---
 
-## 2. Edge Function: `process-broadcast`
+## Sprint 1: Database -- v_inbox_items View + Helper RPCs
 
-Processes a queued broadcast campaign in batches.
+### A. Create `v_inbox_items` View
 
-For each recipient (batch of 50):
-1. Find or create a `tenant_conversations` row for the tenant with `type = 'broadcast'`, `related_entity = 'broadcast_campaign'`, `related_entity_id = campaign_id`
-2. Add recipient as conversation participant (role = 'client') if not already present
-3. Add tenant's primary CSC as participant (role = 'csc') if not already present
-4. Insert message into `messages` table (sender = campaign creator)
-5. The existing `trg_notify_conversation_participants` trigger auto-creates `user_notifications`
-6. Update `broadcast_recipients.delivery_status = 'sent'`
+A `security_invoker = true` view that UNIONs:
 
-On completion: update campaign status to 'sent', set `sent_at`, `total_sent`, `total_failed`.
+**1. Messages (from tenant_conversations + messages + conversation_participants)**
+```text
+inbox_id:        'msg:' || message.id
+tenant_id:       conversation.tenant_id
+user_id:         participant.user_id
+item_type:       CASE conversation.type
+                   WHEN 'broadcast' THEN 'announcement'
+                   WHEN 'rock' THEN 'rock'
+                   ELSE 'message'
+item_source:     'tenant_conversations'
+source_id:       message.id
+title:           conversation.subject OR conversation.topic
+preview:         message.body (truncated 120 chars)
+status:          conversation.status
+due_at:          NULL
+priority:        NULL
+unread:          message.created_at > participant.last_read_at
+action_required: unread
+related_entity:  conversation.related_entity
+related_entity_id: conversation.related_entity_id
+created_at:      message.created_at
+```
 
-All operations use service role client. Campaign creator's user_uuid is logged.
+**2. Client Task Instances**
+```text
+inbox_id:        'cti:' || client_task_instances.id
+tenant_id:       derived from stage_instance -> package_instance -> tenant_id
+user_id:         NULL (tenant-scoped, not user-assigned)
+item_type:       'task'
+item_source:     'client_task_instances'
+source_id:       client_task_instances.id (cast to text)
+title:           client_tasks.name
+preview:         stage.name || ' > ' || package.name
+status:          mapped from integer status to text
+due_at:          client_task_instances.due_date
+priority:        client_tasks.priority
+unread:          status IN (0) AND updated recently
+action_required: overdue OR due_soon OR status = 0
+```
+
+**3. Client Action Items**
+```text
+inbox_id:        'cai:' || client_action_items.id
+tenant_id:       client_action_items.tenant_id
+user_id:         client_action_items.owner_user_id
+item_type:       'task'
+item_source:     'client_action_items'
+...similar pattern
+```
+
+**4. Staff Task Instances (Team Inbox only)**
+```text
+inbox_id:        'sti:' || staff_task_instances.id
+item_type:       'task'
+item_source:     'staff_task_instances'
+user_id:         staff_task_instances.assignee_id
+```
+
+**5. Ops Work Items (Team Inbox only)**
+```text
+inbox_id:        'owi:' || ops_work_items.id
+item_type:       'task'
+item_source:     'ops_work_items'
+user_id:         ops_work_items.owner_user_uuid
+```
+
+The view uses `security_invoker = true` so RLS on the underlying tables controls visibility automatically.
+
+### B. Helper RPC: `rpc_get_inbox_items`
+
+A function wrapping the view with filters:
+
+```text
+rpc_get_inbox_items(
+  p_user_id uuid,
+  p_tenant_id bigint DEFAULT NULL,
+  p_item_type text DEFAULT NULL,      -- 'message','task','announcement','rock'
+  p_action_required boolean DEFAULT NULL,
+  p_limit int DEFAULT 50,
+  p_offset int DEFAULT 0
+)
+```
+
+Returns rows from `v_inbox_items` filtered for the calling user, sorted by: action_required DESC, unread DESC, created_at DESC.
+
+### C. Helper RPC: `rpc_get_or_create_conversation`
+
+```text
+rpc_get_or_create_conversation(
+  p_tenant_id bigint,
+  p_type text,
+  p_related_entity text,
+  p_related_entity_id text
+) RETURNS uuid
+```
+
+Finds existing conversation or creates new one + adds participants.
+
+### D. Extend `v_user_notification_summary`
+
+Add announcement count:
+
+```text
+COUNT(*) FILTER (WHERE type = 'broadcast' AND NOT is_read) AS unread_announcements
+```
 
 ---
 
-## 3. Frontend: Broadcast Management Page
+## Sprint 2: Client Portal Inbox
 
-### Route & Navigation
-- New lazy import `BroadcastCampaignsWrapper` at `/communications/broadcast`
-- Add "Broadcast" sub-item under existing "Communications" sidebar entry (Clients section)
+### A. New Route: `/client/inbox`
 
-### Broadcast List Page (`BroadcastCampaignsPage.tsx`)
-- Table with columns: Title, Target, Status, Recipients (sent/total), Created by, Created at
-- Status badges: draft (grey), queued (blue), sending (amber), sent (green), cancelled (red)
-- "Create Campaign" button opens form dialog
+New files:
+- `src/pages/client/ClientInboxWrapper.tsx`
+- `src/pages/ClientInboxPage.tsx`
+- `src/hooks/useClientInbox.ts`
 
-### Create Campaign Dialog
-- Title (required)
-- Message body (required, multiline Textarea)
-- Target audience: Radio group (Everyone, All Members, By Package Type)
-  - If "By Package Type": dropdown of package_type values (audit, membership, project, regulatory_submission)
-- Recipient roles: Checkbox group (Admins only [default], All tenant users)
-- Preview panel (fetched via `fn_preview_broadcast_recipients`):
-  - Tenant count, User count
-  - First 20 tenant names listed
-  - Excluded count if applicable
-- Send button disabled if preview count = 0
-- On submit: insert campaign -> call `fn_queue_broadcast_campaign` -> invoke edge function
+### B. `useClientInbox` Hook
 
-### Campaign Detail View
-- Shows campaign metadata + recipient table with delivery status per user
-- Read-only after sent
+- Calls `rpc_get_inbox_items` with the client's tenant_id
+- Accepts filter params (item_type, action_required)
+- Returns typed `InboxItem[]` with loading/error states
+- Provides `markRead` mutation (for messages -- updates `conversation_participants.last_read_at`)
 
----
+### C. `ClientInboxPage` UI
 
-## 4. Client Portal Integration
+**Layout**: Single-column feed (not split-pane)
 
-Broadcast messages automatically appear in the Communications tab because they create standard `tenant_conversations` + `messages` rows. The conversation `type = 'broadcast'` renders with an "Announcement" badge.
+**Top bar**: Filter chips -- All | Messages | Tasks | Announcements
+**Sort**: Action required first, then newest
 
-Changes to `ClientCommunicationsPage.tsx`:
-- Add `broadcast: "bg-amber-100 text-amber-800"` to `TYPE_COLORS`
+**Each row (InboxItemRow component)**:
+- Type badge (Message, Task, Announcement) with colour coding
+- Title
+- Preview text (message body or task context: "Package > Stage")
+- Status badge (for tasks)
+- Due date (for tasks, with overdue/due-soon highlighting)
+- Unread dot
+- Action required indicator
 
-Changes to `TeamCommunicationsPage.tsx`:
-- Add `broadcast` to `TYPE_COLORS`
+**Row click behaviour**:
+- Message/Announcement: Navigate to `/client/communications` with `?thread={conversation_id}` to open that thread
+- Task: Navigate to `/client/tasks` with `?task={task_id}` to highlight/scroll to that task
 
-Replies by clients go through normal messaging flow and route to the CSC already added as a participant.
+### D. Sidebar Update
 
----
+In `ClientSidebar.tsx`:
+- Add "Inbox" as the first item (above Home) with `Inbox` icon
+- Keep Tasks and Communications as separate links (they remain as filtered views)
+- Add unread badge count on Inbox item using `v_user_notification_summary`
 
-## 5. Hook: `useBroadcastCampaigns.ts`
+### E. Notification Bell Enhancement
 
-New hook providing:
-- `campaigns` query (list all campaigns)
-- `previewRecipients` query (calls `fn_preview_broadcast_recipients`)
-- `createCampaign` mutation
-- `queueCampaign` mutation (calls `fn_queue_broadcast_campaign`)
-- `sendCampaign` mutation (invokes `process-broadcast` edge function)
+In `ClientTopbar.tsx`:
+- Bell turns red (destructive variant) when `total_unread > 0`
+- Dropdown groups by type with counts: Messages (N), Tasks (N), Announcements (N)
+- Click on group navigates to `/client/inbox?type={type}`
 
 ---
 
-## 6. Files Created / Modified
+## Sprint 3: Team Portal Inbox
 
-| File | Action |
-|------|--------|
-| SQL Migration | `broadcast_campaigns`, `broadcast_recipients`, `fn_preview_broadcast_recipients`, `fn_queue_broadcast_campaign`, RLS policies |
-| `supabase/functions/process-broadcast/index.ts` | New edge function |
-| `supabase/config.toml` | Add `[functions.process-broadcast]` with `verify_jwt = false` |
-| `src/hooks/useBroadcastCampaigns.ts` | New hook |
-| `src/pages/BroadcastCampaignsPage.tsx` | New page with list + create dialog |
-| `src/pages/BroadcastCampaignsWrapper.tsx` | DashboardLayout wrapper |
-| `src/App.tsx` | Add route `/communications/broadcast` |
-| `src/components/DashboardLayout.tsx` | Add Broadcast sub-link under Communications |
-| `src/pages/ClientCommunicationsPage.tsx` | Add `broadcast` type color |
-| `src/pages/TeamCommunicationsPage.tsx` | Add `broadcast` type color |
+### A. New Route: `/inbox` (under Work section)
+
+New files:
+- `src/pages/TeamInboxWrapper.tsx`
+- `src/pages/TeamInboxPage.tsx`
+- `src/hooks/useTeamInbox.ts`
+
+### B. `useTeamInbox` Hook
+
+- Calls `rpc_get_inbox_items` with staff user_id
+- Supports tenant filter, item_type filter, "my tenants" (CSC filter)
+- Returns same `InboxItem[]` type
+
+### C. `TeamInboxPage` UI
+
+**Layout**: Two-panel (list left, detail right)
+
+**Left panel**:
+- Tenant filter dropdown
+- "My Clients" toggle (filters to tenants where user is assigned CSC)
+- Type filter chips: All | Messages | Tasks | Announcements
+- Status filter: Action Required | All
+- Inbox item rows (same InboxItemRow component as client)
+
+**Right panel** (on row click):
+- For messages: Thread view with composer (reuse from TeamCommunicationsPage)
+- For tasks: Task detail card showing title, description, due date, status, context links
+
+**Quick actions toolbar**:
+- Reply (messages)
+- Mark Complete (tasks -- calls existing status update RPCs)
+- Reassign (future -- placeholder)
+
+### D. Sidebar Update
+
+In `DashboardLayout.tsx`:
+- Add "Inbox" to Work section (below Dashboard, above My Work)
+- With unread badge
 
 ---
+
+## Sprint 4: Shared Components + Polish
+
+### A. Shared `InboxItemRow` Component
+
+`src/components/inbox/InboxItemRow.tsx`
+
+Renders one inbox item consistently across both portals:
+- Type badge with icon (MessageSquare, CheckSquare, Megaphone, Target)
+- Title + preview
+- Status + due date
+- Unread dot + action indicator
+
+### B. Shared `InboxFilters` Component
+
+`src/components/inbox/InboxFilters.tsx`
+
+Filter chip bar reusable in both Client and Team inbox pages.
+
+### C. Type Definitions
+
+`src/types/inbox.ts`
+
+```text
+interface InboxItem {
+  inbox_id: string
+  tenant_id: number
+  user_id: string | null
+  item_type: 'message' | 'task' | 'announcement' | 'rock'
+  item_source: string
+  source_id: string
+  title: string
+  preview: string | null
+  status: string | null
+  due_at: string | null
+  priority: number | null
+  unread: boolean
+  action_required: boolean
+  related_entity: string | null
+  related_entity_id: string | null
+  created_at: string
+}
+```
+
+---
+
+## Files Summary
+
+| Sprint | File | Action |
+|--------|------|--------|
+| 1 | SQL Migration | `v_inbox_items` view, `rpc_get_inbox_items`, `rpc_get_or_create_conversation`, update `v_user_notification_summary` |
+| 2 | `src/types/inbox.ts` | New shared types |
+| 2 | `src/hooks/useClientInbox.ts` | New hook |
+| 2 | `src/pages/ClientInboxPage.tsx` | New page |
+| 2 | `src/pages/client/ClientInboxWrapper.tsx` | New wrapper |
+| 2 | `src/components/client/ClientSidebar.tsx` | Add Inbox nav item |
+| 2 | `src/components/client/ClientTopbar.tsx` | Enhanced bell |
+| 2 | `src/App.tsx` | Add `/client/inbox` route |
+| 3 | `src/hooks/useTeamInbox.ts` | New hook |
+| 3 | `src/pages/TeamInboxPage.tsx` | New page |
+| 3 | `src/pages/TeamInboxWrapper.tsx` | New wrapper |
+| 3 | `src/components/DashboardLayout.tsx` | Add Inbox to Work section |
+| 3 | `src/App.tsx` | Add `/inbox` route |
+| 4 | `src/components/inbox/InboxItemRow.tsx` | Shared component |
+| 4 | `src/components/inbox/InboxFilters.tsx` | Shared component |
 
 ## Technical Notes
 
-- `tenant_users.role` values are 'parent' (Admin) and 'child' (User) -- the campaign `include_roles` maps to these values
-- `tenants.id` is `bigint`, used throughout as tenant_id
-- `package_instances.tenant_id` + `packages.package_type` used for membership/package_type filtering
-- One conversation per tenant per campaign (deduped by `related_entity_id = campaign_id` + `tenant_id`)
-- Edge function uses service role to bypass RLS for bulk inserts
-- Existing message triggers handle notification creation automatically
-- No external emails sent -- in-app only
+- `tenants.id` is `bigint` -- all tenant_id references use bigint
+- `client_task_instances.id` is `bigint` -- cast to text for `source_id`
+- The view uses `security_invoker = true` so existing RLS on each source table governs access
+- No new RLS policies needed on the view itself
+- The existing `tasks` table (ClickUp import) is left untouched
+- Client task status integers map: 0=Not Started, 1=In Progress, 2=Complete, 3=N/A
+- All writes use existing mutations (no new write paths through the view)
+- `broadcast` type conversations already flow through `tenant_conversations` from Phase 1
