@@ -11,6 +11,9 @@ import { ClientProgressSummary } from "./ClientProgressSummary";
 import { ProgressAnchors } from "@/components/compliance/ProgressAnchors";
 import { MomentumBanner } from "@/components/dashboard/MomentumBanner";
 import { useMomentumState } from "@/hooks/useMomentumState";
+import { AttentionPanel } from "./AttentionPanel";
+import { AuditReadinessCard } from "./AuditReadinessCard";
+import { ActivityTimeline } from "./ActivityTimeline";
 
 export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
@@ -101,36 +104,14 @@ export function ClientHomePage() {
         </Card>
       </div>
 
-      {/* Row 2: Your next items */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-5">
-            <h3 className="font-semibold text-foreground mb-3">Upcoming reminders</h3>
-            <p className="text-sm text-muted-foreground py-6 text-center">
-              No upcoming reminders in the next 14 days.
-            </p>
-            <Button variant="outline" size="sm" asChild className="w-full">
-              <Link to="/client/calendar">
-                Open calendar <ArrowRight className="h-3.5 w-3.5 ml-1" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      {/* What Needs Attention */}
+      <AttentionPanel />
 
-        <Card>
-          <CardContent className="p-5">
-            <h3 className="font-semibold text-foreground mb-3">Unread notifications</h3>
-            <p className="text-sm text-muted-foreground py-6 text-center">
-              You're all caught up.
-            </p>
-            <Button variant="outline" size="sm" asChild className="w-full">
-              <Link to="/client/notifications">
-                View all notifications <ArrowRight className="h-3.5 w-3.5 ml-1" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Audit Readiness */}
+      <AuditReadinessCard />
+
+      {/* Recent Activity Timeline */}
+      <ActivityTimeline />
 
       {/* Row 3: Quick links */}
       <div>

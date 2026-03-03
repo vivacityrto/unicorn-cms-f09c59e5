@@ -10,6 +10,8 @@ export interface ClientAllTask {
   dueDate: string | null;
   completionDate: string | null;
   status: number;
+  priority: number;
+  attachmentRequired: boolean;
   isOverdue: boolean;
   isDueSoon: boolean;
 }
@@ -54,7 +56,7 @@ export function useClientAllTasks() {
           .in("stageinstance_id", stageInstanceIds),
         supabase
           .from("client_tasks")
-          .select("id, name"),
+          .select("id, name, priority, attachment_required"),
         supabase
           .from("packages")
           .select("id, name")
@@ -69,7 +71,7 @@ export function useClientAllTasks() {
       if (!taskRes.data?.length) return [];
 
       // Build lookup maps
-      const taskNameMap = new Map((clientTaskRes.data || []).map((t: any) => [t.id, t.name]));
+      const taskMetaMap = new Map((clientTaskRes.data || []).map((t: any) => [t.id, { name: t.name, priority: t.priority, attachmentRequired: !!t.attachment_required }]));
       const packageMap = new Map((packageRes.data || []).map((p: any) => [p.id, p.name]));
       const stageMap = new Map((stageRes.data || []).map((s: any) => [s.id, s.name]));
 
@@ -88,17 +90,20 @@ export function useClientAllTasks() {
 
       return (taskRes.data as any[]).map((row) => {
         const context = stageInstanceMap.get(row.stageinstance_id);
+        const meta = taskMetaMap.get(row.clienttask_id);
         const dueDate = row.due_date ? new Date(row.due_date) : null;
         const isCompleted = row.status === 2;
 
         return {
           id: row.id,
-          taskName: taskNameMap.get(row.clienttask_id) || `Task ${row.id}`,
+          taskName: meta?.name || `Task ${row.id}`,
           packageName: context?.packageName || "Unknown",
           stageName: context?.stageName || "Unknown",
           dueDate: row.due_date,
           completionDate: row.completion_date,
           status: row.status ?? 0,
+          priority: meta?.priority ?? 3,
+          attachmentRequired: meta?.attachmentRequired ?? false,
           isOverdue: !isCompleted && !!dueDate && dueDate < now,
           isDueSoon: !isCompleted && !!dueDate && dueDate >= now && dueDate <= sevenDaysFromNow,
         };
