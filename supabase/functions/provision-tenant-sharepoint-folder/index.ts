@@ -46,16 +46,12 @@ async function resolveSiteAndDrive(
     // If drive_id is stored as a Graph API URL, resolve the actual drive ID
     let driveId = spSite.drive_id;
     if (driveId.startsWith('http')) {
-      console.log('[provision-sp] drive_id is a URL, resolving actual drive ID...');
-      const driveResp = await fetch(driveId, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      console.log('[provision-sp] drive_id is a URL, resolving actual drive ID via graphGet...');
+      const driveResp = await graphGet<{ id: string }>(driveId);
       if (!driveResp.ok) {
-        const errText = await driveResp.text();
-        throw new Error(`Failed to resolve drive from URL: ${driveResp.status} ${errText}`);
+        throw new Error(`Failed to resolve drive from URL: ${driveResp.status} ${JSON.stringify(driveResp.data)}`);
       }
-      const driveData = await driveResp.json();
-      driveId = driveData.id;
+      driveId = driveResp.data.id;
       console.log('[provision-sp] Resolved drive ID:', driveId);
     }
     return { siteId: spSite.graph_site_id, driveId };
