@@ -244,6 +244,19 @@ export function TimelineEventCard({
 
         {/* --- Context chips --- */}
         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+          {event.creator && (
+            <div className="flex items-center gap-1">
+              <Avatar className="h-4 w-4">
+                {event.creator.avatar_url && <AvatarImage src={event.creator.avatar_url} />}
+                <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
+                  {(event.creator.first_name?.[0] ?? '')}{(event.creator.last_name?.[0] ?? '')}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-[10px] text-muted-foreground">
+                {event.creator.first_name} {event.creator.last_name?.[0]}.
+              </span>
+            </div>
+          )}
           {moduleChip && (
             <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">{moduleChip}</Badge>
           )}
