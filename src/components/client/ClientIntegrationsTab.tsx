@@ -285,14 +285,6 @@ function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
         </div>
       </div>
       <SummaryField 
-        label="Website" 
-        value={summary.web_address} 
-        fieldKey="WebAddress" 
-        fieldPresence={fieldPresence}
-        parseFailed={parseFailed}
-        isLink
-      />
-      <SummaryField 
         label="Initial Registration" 
         value={summary.initial_registration_date} 
         fieldKey="InitialRegistrationDate" 
@@ -315,6 +307,14 @@ function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
         fieldPresence={fieldPresence}
         parseFailed={parseFailed}
         isDate
+      />
+      <SummaryField 
+        label="Website" 
+        value={summary.web_address} 
+        fieldKey="WebAddress" 
+        fieldPresence={fieldPresence}
+        parseFailed={parseFailed}
+        isLink
       />
       {summary.fetched_at && (
         <div className="space-y-1 col-span-2 md:col-span-3 pt-2 border-t">
