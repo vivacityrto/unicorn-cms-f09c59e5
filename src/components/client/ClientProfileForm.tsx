@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ExternalLink } from 'lucide-react';
@@ -24,6 +25,7 @@ interface LookupOption {
 
 function useLookupTable(tableName: string) {
   const [options, setOptions] = useState<LookupOption[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
     const fetch = async () => {
       const { data } = await supabase
@@ -34,8 +36,9 @@ function useLookupTable(tableName: string) {
       if (data) setOptions((data as any[]).map(d => ({ value: d.value, label: d.label })));
     };
     fetch();
-  }, [tableName]);
-  return options;
+  }, [tableName, refreshKey]);
+  const refresh = useCallback(() => setRefreshKey(k => k + 1), []);
+  return { options, refresh };
 }
 
 // Fields that are synced from TGA when linked
@@ -64,10 +67,10 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   
-  const ORG_TYPES = useLookupTable('dd_org_type');
-  const SMS_OPTIONS = useLookupTable('dd_sms');
-  const LMS_OPTIONS = useLookupTable('dd_lms');
-  const ACCOUNTING_OPTIONS = useLookupTable('dd_accounting_system');
+  const { options: ORG_TYPES } = useLookupTable('dd_org_type');
+  const { options: SMS_OPTIONS, refresh: refreshSms } = useLookupTable('dd_sms');
+  const { options: LMS_OPTIONS, refresh: refreshLms } = useLookupTable('dd_lms');
+  const { options: ACCOUNTING_OPTIONS, refresh: refreshAccounting } = useLookupTable('dd_accounting_system');
 
   const handleSave = async () => {
     setSaving(true);
@@ -269,62 +272,41 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
           {/* Row 4: SMS, LMS, Accounting System */}
           <div className="space-y-2">
             <Label htmlFor="sms">Student Management System</Label>
-            <Select
+            <CreatableSelect
+              tableName="dd_sms"
+              options={SMS_OPTIONS}
               value={formData.sms || ''}
               onValueChange={(value) => handleChange('sms', value)}
+              onOptionCreated={refreshSms}
+              placeholder="Select SMS..."
               disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select SMS..." />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                {SMS_OPTIONS.filter(o => o.value).map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="lms">Learning Management System</Label>
-            <Select
+            <CreatableSelect
+              tableName="dd_lms"
+              options={LMS_OPTIONS}
               value={formData.lms || ''}
               onValueChange={(value) => handleChange('lms', value)}
+              onOptionCreated={refreshLms}
+              placeholder="Select LMS..."
               disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select LMS..." />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                {LMS_OPTIONS.filter(o => o.value).map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="accounting_system">Accounting System</Label>
-            <Select
+            <CreatableSelect
+              tableName="dd_accounting_system"
+              options={ACCOUNTING_OPTIONS}
               value={formData.accounting_system || ''}
               onValueChange={(value) => handleChange('accounting_system', value)}
+              onOptionCreated={refreshAccounting}
+              placeholder="Select system..."
               disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select system..." />
-              </SelectTrigger>
-              <SelectContent className="bg-background">
-                {ACCOUNTING_OPTIONS.filter(o => o.value).map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
         </CardContent>
       </Card>
