@@ -5,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine, ChevronDown } from 'lucide-react';
 import { useTimeTrackingQuery, formatDuration } from '@/hooks/useTimeTrackingQuery';
 import { usePackageUsageQuery, formatHours, formatForecast } from '@/hooks/usePackageUsageQuery';
+import { useMembershipUsage } from '@/hooks/useCapacityEngine';
 import { useState } from 'react';
 import { TimeLogDrawer } from './TimeLogDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,6 +27,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
     dismissAlert, 
     loading: usageLoading 
   } = usePackageUsageQuery(clientId);
+  const { data: membershipUsage } = useMembershipUsage(clientId);
   const [logOpen, setLogOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'calendar' | 'timer' | 'manual'>('all');
 
@@ -132,6 +134,15 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                 <span className="text-muted-foreground">{formatDuration(totalNonBillable)}</span>
               </div>
             </div>
+
+            {/* Membership year */}
+            {membershipUsage?.membership_year_start && membershipUsage?.membership_year_end && (
+              <div className="mt-4 pt-3 border-t">
+                <p className="text-xs text-muted-foreground">
+                  Membership year: {new Date(membershipUsage.membership_year_start).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} — {new Date(membershipUsage.membership_year_end).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

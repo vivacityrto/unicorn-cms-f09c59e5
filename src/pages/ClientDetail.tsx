@@ -51,7 +51,7 @@ import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard
 import { RiskLevelBadge } from '@/components/client/RiskLevelBadge';
 import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector';
 import { TenantUsersPreviewCard } from '@/components/client/TenantUsersPreviewCard';
-import { MembershipUsageCard } from '@/components/capacity/MembershipUsageCard';
+
 import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
 import { ClientQuickNav } from '@/components/client/ClientQuickNav';
 import { AssignPackageDialog } from '@/components/client/AssignPackageDialog';
@@ -413,8 +413,7 @@ export default function ClientDetail() {
               <TenantUsersPreviewCard tenantId={tenantIdNum!} onViewAll={() => setActiveTab('users')} />
             </div>
 
-            {/* Membership Usage */}
-            <MembershipUsageCard tenantId={tenantIdNum!} />
+            
             
             {/* Profile Form */}
             {canEdit ? (
