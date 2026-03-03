@@ -178,6 +178,7 @@ const ClientTgaDetailsWrapperNew = lazy(() => import("./pages/client/ClientTgaDe
 const ClientFilesWrapperNew = lazy(() => import("./pages/client/ClientFilesWrapper"));
 const ClientTasksWrapperNew = lazy(() => import("./pages/client/ClientTasksWrapper"));
 const ClientCommunicationsWrapperNew = lazy(() => import("./pages/client/ClientCommunicationsWrapper"));
+const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackagesWrapper"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -994,6 +995,7 @@ const App = () => (
             {/* Client Portal Routes (isolated ClientLayout) */}
             <Route path="/client/home" element={<ProtectedRoute><ClientHomeWrapperNew /></ProtectedRoute>} />
             <Route path="/client/tasks" element={<ProtectedRoute><ClientTasksWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/packages" element={<ProtectedRoute><ClientPackagesWrapperNew /></ProtectedRoute>} />
             <Route path="/client/communications" element={<ProtectedRoute><ClientCommunicationsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/documents" element={<ProtectedRoute><ClientDocumentsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/resource-hub" element={<ProtectedRoute><ClientResourceHubWrapperNew /></ProtectedRoute>} />
