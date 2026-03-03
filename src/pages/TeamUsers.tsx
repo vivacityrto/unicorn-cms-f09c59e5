@@ -51,6 +51,7 @@ const SUPERADMIN_LEVELS = [
   { value: 'all', label: 'All Levels' },
   { value: 'Administrator', label: 'Administrator' },
   { value: 'Team Leader', label: 'Team Leader' },
+  { value: 'Assistant', label: 'Assistant' },
   { value: 'General', label: 'General' },
 ];
 
@@ -317,6 +318,8 @@ export default function TeamUsers() {
         return <Badge className="bg-purple-600 hover:bg-purple-700 text-white">Administrator</Badge>;
       case 'Team Leader':
         return <Badge className="bg-cyan-500 hover:bg-cyan-600 text-white">Team Leader</Badge>;
+      case 'Assistant':
+        return <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Assistant</Badge>;
       case 'General':
         return <Badge variant="outline" className="border-muted-foreground/50">General</Badge>;
       default:
