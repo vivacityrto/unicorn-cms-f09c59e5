@@ -199,6 +199,45 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
         title: 'Task Updated', 
         description: `Status changed to ${getStatusLabel(newStatusId, statuses)}` 
       });
+
+      // Auto-complete stage if all active (non-N/A) tasks are now done
+      // Build updated task list with the change applied
+      const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, status_id: newStatusId } : t);
+      const activeTasks = updatedTasks.filter(t => t.status_id !== 3); // exclude N/A
+      const hasNaTasks = updatedTasks.some(t => t.status_id === 3);
+      const allActiveDone = activeTasks.length > 0 && activeTasks.every(t => t.status_id === 2 || t.status_id === 4);
+
+      if (allActiveDone) {
+        const newStageStatus = hasNaTasks ? 4 : 2; // Core Complete if N/A exists, else Completed
+        const stageStatusOption = statuses.find(s => s.code === newStageStatus);
+        const stageUpdateData: Record<string, any> = {
+          status_id: newStageStatus,
+          status: stageStatusOption?.value || 'completed',
+        };
+        if (newStageStatus === 2 || newStageStatus === 4) {
+          stageUpdateData.completion_date = new Date().toISOString().split('T')[0];
+        }
+
+        await supabase
+          .from('stage_instances')
+          .update(stageUpdateData)
+          .eq('id', stageInstanceId);
+
+        await supabase.from('client_audit_log').insert({
+          tenant_id: tenantId,
+          actor_user_id: profile?.user_uuid,
+          action: 'stage_auto_completed',
+          entity_type: 'stage_instances',
+          entity_id: stageInstanceId.toString(),
+          after_data: { status_id: newStageStatus },
+          details: { package_id: packageId, reason: hasNaTasks ? 'all_active_done_with_na' : 'all_tasks_completed' },
+        });
+
+        toast({
+          title: 'Stage Auto-Completed',
+          description: `Stage marked as ${getStatusLabel(newStageStatus, statuses)}`,
+        });
+      }
       
       fetchTasks();
     } catch (error: any) {
