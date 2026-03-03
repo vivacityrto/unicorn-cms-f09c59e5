@@ -87,7 +87,7 @@ export function CreateActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Create Action</DialogTitle>
         </DialogHeader>
@@ -98,7 +98,7 @@ export function CreateActionDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="action-desc">Description</Label>
-            <Textarea id="action-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={6} />
+            <Textarea id="action-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={8} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -118,12 +118,13 @@ export function CreateActionDialog({
               <Input id="action-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
           </div>
-          <div className="space-y-2 rounded-md border p-3 bg-muted/30">
-            <Label className="text-sm font-medium">Notify / Team Members</Label>
-            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pt-1">
+          <div className="space-y-1.5 rounded-md border p-2.5 bg-muted/30">
+            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Notify (Optional)</Label>
+            <div className="grid grid-cols-2 gap-1 max-h-36 overflow-y-auto pt-0.5">
               {teamUsers.map((user) => (
-                <label key={user.user_uuid} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
+                <label key={user.user_uuid} className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
                   <Checkbox
+                    className="h-3.5 w-3.5"
                     checked={notifyUserIds.includes(user.user_uuid)}
                     onCheckedChange={(checked) => {
                       setNotifyUserIds(prev =>
