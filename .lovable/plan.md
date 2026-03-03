@@ -1,19 +1,30 @@
 
 
-## Plan: Show Asterisk on TGA-Transferred Addresses
+## Plan: Email Note Type — Send Now or Already Sent Prompt
 
-### What
-Add a `*` indicator after each address that was transferred from TGA (i.e., has a non-null `transfer_date`).
+### What Happens Today
+When a user selects "Email" as the note type, the form behaves identically to any other note type — just a text note is created.
 
-### Changes
+### What Changes
 
-**`src/components/client/ClientAddressSection.tsx`**
+**`src/components/client/ClientStructuredNotesTab.tsx`**
 
-1. Add `transfer_date: string | null` to the `TenantAddress` interface (line 14-25). The query already fetches `*` so the data is returned, it's just not typed.
+1. **New state variables**: `emailMode` (`'prompt' | 'send_now' | 'already_sent' | null`), `composeEmailOpen` (boolean), and `primaryContactEmail` (string).
 
-2. In the address list rendering (around line 331-339), append ` *` after the formatted address line when `address.transfer_date` is truthy.
+2. **Intercept `handleNoteTypeChange`**: When user selects `email`, instead of just setting the type, show an inline prompt (small card/alert inside the dialog) asking:
+   - **"Send Now"** — closes the note dialog and opens `ComposeEmailDialog` pre-filled with the primary contact as recipient, empty subject/body.
+   - **"Already Sent"** — dismisses the prompt and keeps the normal note form so the user can log details of the email that was already sent.
 
-### Transfer Verification
+3. **Resolve primary contact email on mount**: Fetch the primary contact's email for the tenant (same pattern as `notifyClient.ts`) so it's ready when "Send Now" is clicked.
 
-The transfer logic in `ClientIntegrationsTab.tsx` already correctly sets `transfer_date: now` on every inserted row during the "Transfer to Tenant" operation (lines 499-501 and 523-525). No changes needed there.
+4. **Render `ComposeEmailDialog`**: Add it at the bottom of the component JSX, controlled by `composeEmailOpen`. After sending, create an "email" note automatically recording that an email was sent (subject as title, body as content).
+
+5. **Visual flow inside the Add Note dialog**:
+   - User picks Type → Email
+   - A small prompt appears below the Type row: two buttons — "Send Now" / "Already Sent"
+   - "Already Sent" hides the prompt, form stays as-is with type=email
+   - "Send Now" closes the note dialog, opens ComposeEmailDialog
+
+### Files Changed
+- `src/components/client/ClientStructuredNotesTab.tsx` — all changes in this one file
 
