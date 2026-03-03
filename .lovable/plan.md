@@ -1,44 +1,36 @@
 
 
-## Full Plan: TGA Address Transfer with Last Transfer Date
+## Plan: Improve Add Note Dialog Layout and Functionality
 
-### 1. Database Migration — Add `transfer_date` column
+### Changes Required
 
-Add a nullable `timestamp with time zone` column to `tenant_addresses`:
+**1. Insert Link capability in Notes content**
+- Replace the plain `<Textarea>` for note content with the existing `<RichTextEditor>` component (`src/components/ui/rich-text-editor.tsx`), which already supports link insertion via its toolbar.
+- Reduce the editor's `min-h` from `500px` to something more compact (e.g., `200px`) to fit the dialog context.
 
-```sql
-ALTER TABLE public.tenant_addresses
-ADD COLUMN transfer_date timestamptz;
-```
+**2. Reduce Notify section size and compact layout**
+- Shrink the Notify user buttons: use `size="xs"` styling with smaller text (`text-xs`), smaller avatars (`h-4 w-4`), and tighter padding.
+- Reduce the section label font size.
 
-### 2. Changes to `src/components/client/ClientIntegrationsTab.tsx`
+**3. Active users only in Notify**
+- Already filtering `archived = false` in `useVivacityTeamUsers`. Add `.eq('disabled', false)` to the query to also exclude disabled users.
 
-**Heading row layout** (line 767): Replace the plain `<h4>` with a flex row containing:
-- Left: "Registered Addresses" heading
-- Center-right: "Last transferred: 3 Mar 2026" text (muted, small) — fetched from `tenant_addresses` where `tenant_id` matches and `address_type = 'HO'`, reading the `transfer_date` field
-- Far right: "Transfer to Tenant" button
+**4. Move action buttons to same line as "Pin this note"**
+- Restructure the bottom section: put the Pin switch and the Cancel/Save buttons on the same row using `flex justify-between`.
+- Remove the separate `DialogFooter` and consolidate into a single bottom bar.
 
-**On component load / when tenant changes**: Query `tenant_addresses` for the HO record's `transfer_date` to display next to the button. Store in local state.
+### Files to Modify
 
-**Transfer function** (`handleTransferAddresses`):
-1. Confirmation dialog (destructive variant, warns existing addresses will be replaced)
-2. Delete all `tenant_addresses` for the tenant
-3. Build and insert address rows with:
-   - Address type mapping (first headOffice→HO, first postal→PO, delivery→DS, extras→OT)
-   - `suburb` and `state` uppercased
-   - `notes`: "Imported from TGA on 3 Mar 2026"
-   - `created_by` / `updated_by`: current user ID
-   - `transfer_date`: `new Date().toISOString()` on every row
-4. Update the displayed last transfer date
-5. Toast success/failure
+| File | Change |
+|------|--------|
+| `src/components/client/ClientStructuredNotesTab.tsx` | Replace Textarea with RichTextEditor, compact Notify tiles, merge Pin + buttons into one row |
+| `src/hooks/useVivacityTeamUsers.tsx` | Add `.eq('disabled', false)` filter |
+| `src/components/ui/rich-text-editor.tsx` | Add optional `minHeight` prop to allow smaller editor in dialogs |
 
-**Display format** for last transfer date:
-```
-Last transferred: 3 Mar 2026
-```
-Using `toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })`. If no HO record exists, hide the label.
+### Technical Details
 
-### Files modified
-- **Migration**: new `transfer_date` column on `tenant_addresses`
-- **`src/components/client/ClientIntegrationsTab.tsx`**: transfer button, confirm dialog, transfer logic, last transfer date display
+- The `RichTextEditor` already has link insertion built in (via TipTap's Link extension).
+- Content will be stored as HTML (already supported by the notes system -- `note_details` accepts HTML and rendering uses `DOMPurify`).
+- The Notify buttons will use inline classes: `text-[11px] h-7 px-2 gap-1` with `h-4 w-4` avatars.
+- Pin switch + footer buttons will be combined into a single `flex items-center justify-between` row at the bottom of the dialog.
 
