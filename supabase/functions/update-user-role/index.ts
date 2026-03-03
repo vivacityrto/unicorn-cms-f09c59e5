@@ -11,7 +11,8 @@ interface UpdateUserRoleRequest {
   user_type?: 'Vivacity' | 'Vivacity Team' | 'Client' | 'Client Parent' | 'Client Child' | 'Member';
   tenant_id?: number | null;
   staff_team?: 'none' | 'business_growth' | 'client_success' | 'client_experience' | 'software_development' | 'leadership' | null;
-  staff_teams?: string[];  // New array field for multiple team assignments
+  staff_teams?: string[];
+  superadmin_level?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -60,7 +61,7 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body: UpdateUserRoleRequest = await req.json();
-    const { user_uuid, unicorn_role, user_type, tenant_id, staff_team, staff_teams } = body;
+    const { user_uuid, unicorn_role, user_type, tenant_id, staff_team, staff_teams, superadmin_level } = body;
 
     if (!user_uuid) {
       return new Response(
@@ -110,15 +111,20 @@ Deno.serve(async (req) => {
     if (staff_team !== undefined) updates.staff_team = staff_team;
     if (staff_teams !== undefined) updates.staff_teams = staff_teams;
 
-    // Set superadmin_level based on role
-    if (unicorn_role === 'Super Admin' && user_type === 'Vivacity') {
-      updates.superadmin_level = 'Administrator';
-    } else if (unicorn_role === 'Super Admin' && user_type === 'Vivacity Team') {
-      updates.superadmin_level = 'Team Leader';
-    } else if (unicorn_role === 'Team Member' && ['Vivacity', 'Vivacity Team'].includes(user_type || '')) {
-      updates.superadmin_level = 'General';
-    } else {
-      updates.superadmin_level = null; // Tenant users don't have superadmin level
+    // Set superadmin_level: use explicit value if provided, otherwise derive from role/type
+    if (superadmin_level !== undefined) {
+      updates.superadmin_level = superadmin_level;
+    } else if (unicorn_role !== undefined || user_type !== undefined) {
+      // Auto-derive only when role/type is being changed and no explicit level given
+      if (unicorn_role === 'Super Admin' && user_type === 'Vivacity') {
+        updates.superadmin_level = 'Administrator';
+      } else if (unicorn_role === 'Super Admin' && user_type === 'Vivacity Team') {
+        updates.superadmin_level = 'Team Leader';
+      } else if (unicorn_role === 'Team Member' && ['Vivacity', 'Vivacity Team'].includes(user_type || '')) {
+        updates.superadmin_level = 'General';
+      } else {
+        updates.superadmin_level = null;
+      }
     }
 
     // Update user
