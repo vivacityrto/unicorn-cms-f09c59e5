@@ -461,7 +461,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                           </DropdownMenu>
                           {pkg.next_renewal_date && (
                             <div className="text-xs text-muted-foreground mt-1">
-                              Renewal {format(parseISO(pkg.next_renewal_date), 'dd/MM/yyyy')}
+                              Anniversary {format(parseISO(pkg.next_renewal_date), 'dd/MM/yyyy')}
                             </div>
                           )}
                         </div>
