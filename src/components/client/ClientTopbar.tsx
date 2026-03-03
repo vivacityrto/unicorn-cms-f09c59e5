@@ -38,7 +38,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const { profile, signOut } = useAuth();
   const { openHelpCenter } = useHelpCenter();
-  const { unreadCount, notifications } = useClientNotifications();
+  const { unreadCount, unreadByType, notifications, markAllAsRead } = useClientNotifications();
   const { activeTenantId, logoUrl } = useClientTenant();
   const { actingUser, isLoading: actingUserLoading } = useClientActingUser();
 
@@ -126,11 +126,26 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
             </Button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-80 p-0">
-            <div className="p-3 border-b" style={{ borderColor: "hsl(270 20% 88%)" }}>
-              <h3 className="text-sm font-semibold" style={{ color: "hsl(270 55% 41%)" }}>
+            <div className="p-3 border-b border-border flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">
                 Notifications
               </h3>
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => markAllAsRead()}>
+                  Mark all read
+                </Button>
+              )}
             </div>
+            {/* Grouped counts */}
+            {unreadCount > 0 && (
+              <div className="px-3 py-2 border-b border-border flex gap-2 flex-wrap">
+                {Object.entries(unreadByType).map(([type, count]) => (
+                  <span key={type} className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">
+                    {type}: {count}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="max-h-64 overflow-y-auto">
               {notifications.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-4 text-center">
@@ -138,14 +153,19 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
                 </p>
               ) : (
                 notifications.slice(0, 5).map((n: any) => (
-                  <div key={n.id} className="px-3 py-2 border-b last:border-0 hover:bg-muted/50 transition-colors" style={{ borderColor: "hsl(270 20% 88%)" }}>
-                    <p className="text-sm" style={{ color: "hsl(270 47% 26%)" }}>{n.title}</p>
+                  <div key={n.id} className="px-3 py-2 border-b last:border-0 hover:bg-muted/50 transition-colors border-border">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm text-foreground">{n.title}</p>
+                      {!n.is_read && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-destructive flex-shrink-0" />
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{n.message?.slice(0, 60)}</p>
                   </div>
                 ))
               )}
             </div>
-            <div className="p-2 border-t" style={{ borderColor: "hsl(270 20% 88%)" }}>
+            <div className="p-2 border-t border-border">
               <Button variant="ghost" size="sm" className="w-full text-xs" asChild>
                 <Link to="/client/notifications">View all notifications</Link>
               </Button>

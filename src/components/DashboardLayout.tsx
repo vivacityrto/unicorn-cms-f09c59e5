@@ -37,6 +37,7 @@ const clientsMenuItems = [
   { icon: Building2, label: "Clients", path: "/manage-tenants" },
   { icon: Package2, label: "Packages", path: "/manage-packages" },
   { icon: FileText, label: "Documents", path: "/manage-documents" },
+  { icon: Mail, label: "Communications", path: "/communications" },
   { icon: Lightbulb, label: "RTO Tips", path: "/rto-tips" },
 ];
 

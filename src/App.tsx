@@ -146,7 +146,8 @@ const KnowledgeExplorer = lazy(() => import("./pages/KnowledgeExplorer"));
  const RiskCommandCentre = lazy(() => import("./pages/RiskCommandCentre"));
  const StrategicOrchestrationDashboard = lazy(() => import("./pages/StrategicOrchestrationDashboard"));
  const CodeTablesAdmin = lazy(() => import("./pages/CodeTablesAdmin"));
- const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
+const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
+const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
@@ -510,6 +511,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <RtoTipsWrapper />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/communications" 
+              element={
+                <ProtectedRoute>
+                  <TeamCommunicationsWrapper />
                 </ProtectedRoute>
               } 
             />
