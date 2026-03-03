@@ -180,7 +180,8 @@ const ClientFilesWrapperNew = lazy(() => import("./pages/client/ClientFilesWrapp
 const ClientTasksWrapperNew = lazy(() => import("./pages/client/ClientTasksWrapper"));
 const ClientCommunicationsWrapperNew = lazy(() => import("./pages/client/ClientCommunicationsWrapper"));
 const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackagesWrapper"));
-
+const ClientInboxWrapperNew = lazy(() => import("./pages/client/ClientInboxWrapper"));
+const TeamInboxWrapper = lazy(() => import("./pages/TeamInboxWrapper"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -482,6 +483,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route path="/inbox" element={<ProtectedRoute><TeamInboxWrapper /></ProtectedRoute>} />
             <Route 
               path="/my-work" 
               element={
@@ -1003,6 +1005,7 @@ const App = () => (
             <Route path="/client-preview/academy" element={<ProtectedRoute><ClientPreviewAcademy /></ProtectedRoute>} />
             {/* Client Portal Routes (isolated ClientLayout) */}
             <Route path="/client/home" element={<ProtectedRoute><ClientHomeWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/inbox" element={<ProtectedRoute><ClientInboxWrapperNew /></ProtectedRoute>} />
             <Route path="/client/tasks" element={<ProtectedRoute><ClientTasksWrapperNew /></ProtectedRoute>} />
             <Route path="/client/packages" element={<ProtectedRoute><ClientPackagesWrapperNew /></ProtectedRoute>} />
             <Route path="/client/communications" element={<ProtectedRoute><ClientCommunicationsWrapperNew /></ProtectedRoute>} />

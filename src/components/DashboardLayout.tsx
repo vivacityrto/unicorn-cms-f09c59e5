@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 const workMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: BarChart3, label: "Executive Dashboard", path: "/executive", leadershipOnly: true },
+  { icon: Inbox, label: "Inbox", path: "/inbox" },
   { icon: Briefcase, label: "My Work", path: "/my-work" },
   { icon: ListTodo, label: "Tasks", path: "/tasks" },
   { icon: Inbox, label: "Time Inbox", path: "/time-inbox" },

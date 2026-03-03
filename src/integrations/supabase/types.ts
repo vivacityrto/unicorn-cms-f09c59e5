@@ -46642,6 +46642,7 @@ export type Database = {
       v_user_notification_summary: {
         Row: {
           total_unread: number | null
+          unread_announcements: number | null
           unread_documents: number | null
           unread_messages: number | null
           unread_tasks: number | null
