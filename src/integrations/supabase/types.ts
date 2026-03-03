@@ -24818,6 +24818,7 @@ export type Database = {
           billing_category: string | null
           billing_type: string
           clo_id: number
+          created_at: string | null
           duration: number | null
           end_date: string | null
           hours_added: number | null
@@ -24843,6 +24844,7 @@ export type Database = {
           billing_category?: string | null
           billing_type?: string
           clo_id: number
+          created_at?: string | null
           duration?: number | null
           end_date?: string | null
           hours_added?: number | null
@@ -24868,6 +24870,7 @@ export type Database = {
           billing_category?: string | null
           billing_type?: string
           clo_id?: number
+          created_at?: string | null
           duration?: number | null
           end_date?: string | null
           hours_added?: number | null
