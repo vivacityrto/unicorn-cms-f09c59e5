@@ -118,6 +118,7 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
       .select('*')
       .eq('tenant_id', tenantId)
       .eq('inactive', false)
+      .order('seq', { ascending: true, nullsFirst: false })
       .order('address_type');
 
     if (error) {
