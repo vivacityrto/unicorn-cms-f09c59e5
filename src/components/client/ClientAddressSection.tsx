@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Pencil, Trash2, Plus, X, Check, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatAddressLine } from '@/utils/addressParser';
@@ -83,6 +84,7 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
   const [formData, setFormData] = useState<AddressFormData>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const getAddressTypeLabel = (code: string) => {
     return addressTypes.find(t => t.code === code)?.label || code;
@@ -190,6 +192,7 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
   const resetForm = () => {
     setFormData(emptyForm);
     setEditingId(null);
+    setDialogOpen(false);
   };
 
   const handleEdit = (address: TenantAddress) => {
@@ -202,6 +205,7 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
       postcode: address.postcode || ''
     });
     setEditingId(address.id);
+    setDialogOpen(true);
   };
 
   const handleSave = async () => {
@@ -298,189 +302,196 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-lg text-primary">Addresses</CardTitle>
+        <Button
+          size="sm"
+          onClick={() => { resetForm(); setDialogOpen(true); }}
+          className="bg-primary hover:bg-primary/90"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Address
+        </Button>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Add/Edit Form */}
-        <div className="border rounded-lg p-4 space-y-4">
-          {/* Row 1: Type (narrow), Address Line 1 & 2 (wider) */}
-          <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_1fr] gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="address_type" className="flex items-center h-5">
-                Type <span className="text-destructive ml-1">*</span>
-              </Label>
-              <Select
-                value={formData.address_type}
-                onValueChange={(value) => handleFormChange('address_type', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {addressTypes.map((type) => (
-                    <SelectItem key={type.code} value={type.code}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <CardContent className="space-y-2">
+        {/* Address List */}
+        {addresses.length === 0 ? (
+          <p className="text-muted-foreground text-sm py-4 text-center">
+            No addresses added yet
+          </p>
+        ) : (
+          addresses.map((address) => (
+            <div
+              key={address.id}
+              className="flex items-center justify-between border rounded-lg p-4"
+            >
+              <div className="flex items-center gap-3">
+                <Badge className={`${getAddressTypeBadgeColor(address.address_type)} shrink-0`}>
+                  {getAddressTypeLabel(address.address_type)}
+                </Badge>
+                <span className="text-sm">
+                  {formatAddressLine({
+                    address1: address.address1,
+                    address2: address.address2,
+                    suburb: address.suburb,
+                    state: address.state,
+                    postcode: address.postcode
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleEdit(address)}
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDelete(address.id)}
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </CardContent>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>{editingId ? 'Edit Address' : 'Add Address'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {/* Row 1: Type, Address Line 1 & 2 */}
+            <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_1fr] gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="address_type" className="flex items-center h-5">
+                  Type <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Select
+                  value={formData.address_type}
+                  onValueChange={(value) => handleFormChange('address_type', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {addressTypes.map((type) => (
+                      <SelectItem key={type.code} value={type.code}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address1" className="flex items-center h-5">
+                  Address Line 1 <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Input
+                  id="address1"
+                  value={formData.address1}
+                  onChange={(e) => handleFormChange('address1', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address2" className="flex items-center h-5">Address Line 2</Label>
+                <Input
+                  id="address2"
+                  value={formData.address2}
+                  onChange={(e) => handleFormChange('address2', e.target.value)}
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="address1" className="flex items-center h-5">
-                Address Line 1 <span className="text-destructive ml-1">*</span>
-              </Label>
-              <Input
-                id="address1"
-                value={formData.address1}
-                onChange={(e) => handleFormChange('address1', e.target.value)}
-                placeholder=""
-              />
-            </div>
+            {/* Row 2: Suburb, State, Postcode, Save Button */}
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_100px_100px_auto] gap-4 items-end">
+              <div className="space-y-2">
+                <Label htmlFor="suburb" className="flex items-center h-5">
+                  Suburb <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Input
+                  id="suburb"
+                  value={formData.suburb}
+                  onChange={(e) => handleFormChange('suburb', e.target.value)}
+                  placeholder="Suburb"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="address2" className="flex items-center h-5">Address Line 2</Label>
-              <Input
-                id="address2"
-                value={formData.address2}
-                onChange={(e) => handleFormChange('address2', e.target.value)}
-                placeholder=""
-              />
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="state" className="flex items-center h-5">
+                  State <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Select
+                  value={formData.state}
+                  onValueChange={(value) => handleFormChange('state', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="State" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AUSTRALIAN_STATES.map((state) => (
+                      <SelectItem key={state.value} value={state.value}>
+                        {state.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Row 2: Suburb (wider), State (narrow), Postcode (narrow), Add Button */}
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_100px_100px_auto] gap-4 items-end">
-            <div className="space-y-2">
-              <Label htmlFor="suburb" className="flex items-center h-5">
-                Suburb <span className="text-destructive ml-1">*</span>
-              </Label>
-              <Input
-                id="suburb"
-                value={formData.suburb}
-                onChange={(e) => handleFormChange('suburb', e.target.value)}
-                placeholder="Suburb"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="postcode" className="flex items-center h-5">
+                  Postcode <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Input
+                  id="postcode"
+                  value={formData.postcode}
+                  onChange={(e) => handleFormChange('postcode', e.target.value)}
+                  placeholder="Postcode"
+                  maxLength={4}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="state" className="flex items-center h-5">
-                State <span className="text-destructive ml-1">*</span>
-              </Label>
-              <Select
-                value={formData.state}
-                onValueChange={(value) => handleFormChange('state', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="State" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AUSTRALIAN_STATES.map((state) => (
-                    <SelectItem key={state.value} value={state.value}>
-                      {state.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="postcode" className="flex items-center h-5">
-                Postcode <span className="text-destructive ml-1">*</span>
-              </Label>
-              <Input
-                id="postcode"
-                value={formData.postcode}
-                onChange={(e) => handleFormChange('postcode', e.target.value)}
-                placeholder="Postcode"
-                maxLength={4}
-              />
-            </div>
-
-            <div className="flex gap-2">
-              {editingId && (
+              <div className="flex gap-2">
                 <Button
                   variant="outline"
                   onClick={resetForm}
-                  className="flex-1"
                 >
-                  <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
-              )}
-              <Button
-                onClick={handleSave}
-                disabled={!isFormValid || saving}
-                className="bg-primary hover:bg-primary/90 min-w-[130px]"
-              >
-                {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : editingId ? (
-                  <>
-                    <Check className="h-4 w-4 mr-2" />
-                    Update
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Address
-                  </>
-                )}
-              </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={!isFormValid || saving}
+                  className="bg-primary hover:bg-primary/90 min-w-[130px]"
+                >
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : editingId ? (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Update
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Address
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Address List */}
-        <div className="space-y-2">
-          {addresses.length === 0 ? (
-            <p className="text-muted-foreground text-sm py-4 text-center">
-              No addresses added yet
-            </p>
-          ) : (
-            addresses.map((address) => (
-              <div
-                key={address.id}
-                className="flex items-center justify-between border rounded-lg p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <Badge className={`${getAddressTypeBadgeColor(address.address_type)} shrink-0`}>
-                    {getAddressTypeLabel(address.address_type)}
-                  </Badge>
-                  <span className="text-sm">
-                    {formatAddressLine({
-                      address1: address.address1,
-                      address2: address.address2,
-                      suburb: address.suburb,
-                      state: address.state,
-                      postcode: address.postcode
-                    })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(address)}
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(address.id)}
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </CardContent>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
