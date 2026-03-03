@@ -233,6 +233,67 @@ async function fetchAllScopeUnfiltered(rtoId: string): Promise<{ items: any[]; u
   return { items, urls };
 }
 
+// Scrape current qualifications from TGA website HTML (API v1.0 doesn't return them)
+async function scrapeCurrentQualifications(rtoId: string): Promise<any[]> {
+  const url = `https://training.gov.au/Organisation/Details/${encodeURIComponent(rtoId)}`;
+  log('info', 'Scraping TGA website for current qualifications', { url });
+  try {
+    const response = await fetchWithRetry(url);
+    if (!response.ok) {
+      log('warn', 'TGA website scrape failed', { status: response.status });
+      return [];
+    }
+    const html = await response.text();
+
+    // Find qualifications section — it sits between "Qualifications" heading and "Skill sets" heading
+    const qualIdx = html.indexOf('Qualifications');
+    const skillIdx = html.indexOf('Skill sets', qualIdx > 0 ? qualIdx + 50 : 0);
+    if (qualIdx < 0) {
+      log('info', 'No Qualifications section found in HTML');
+      return [];
+    }
+    const section = html.substring(qualIdx, skillIdx > qualIdx ? skillIdx : qualIdx + 30000);
+
+    // Extract qualification codes from links like /training/details/BSB30120
+    const quals: any[] = [];
+    const seen = new Set<string>();
+    const codeRegex = /training\/details\/([A-Z]{2,6}\d{4,6})/g;
+    let m;
+    while ((m = codeRegex.exec(section)) !== null) {
+      const code = m[1];
+      if (seen.has(code)) continue;
+      seen.add(code);
+
+      // Extract nearby context for title (look for text after the link closing tag)
+      const afterLink = section.substring(m.index, m.index + 500);
+      const titleMatch = afterLink.match(/>[^<]*<[\s\S]{0,200}?(?:Title|title)[^>]*>\s*([^<]+)/i);
+      const title = titleMatch?.[1]?.trim() || '';
+
+      quals.push({
+        code,
+        title,
+        componentType: 'qualification',
+        componentTypeLabel: 'Qualification',
+        status: 'current',
+        statusLabel: 'Current',
+        extent: '01',
+        extentLabel: 'Deliver and assess',
+        isImplicit: false,
+        endDate: null,
+        startDate: null,
+        _source: 'website_scrape',
+      });
+    }
+
+    log('info', `Scraped ${quals.length} qualifications from TGA website`, { codes: quals.map(q => q.code) });
+    return quals;
+  } catch (err) {
+    log('warn', 'Failed to scrape TGA website for qualifications', { error: String(err) });
+    return [];
+  }
+}
+
+
 // Categorise raw scope items by componentType
 function categoriseScope(items: any[]): Record<string, any[]> {
   const result: Record<string, any[]> = { qualification: [], unit: [], skillSet: [], accreditedCourse: [], trainingPackage: [] };
@@ -436,6 +497,25 @@ serve(async (req) => {
     if (scopeResult.error) {
       scopeErrors['all'] = scopeResult.error;
       log('error', 'Scope fetch failed entirely', { error: scopeResult.error });
+    }
+
+    // 4b. Supplement with website-scraped qualifications (API v1.0 omits current quals)
+    const existingQualCodes = new Set(
+      scopeResult.items
+        .filter((i: any) => (i.componentType || '').toLowerCase() === 'qualification')
+        .map((i: any) => i.code)
+    );
+    const scrapedQuals = await scrapeCurrentQualifications(rtoId);
+    let supplementedCount = 0;
+    for (const q of scrapedQuals) {
+      if (!existingQualCodes.has(q.code)) {
+        scopeResult.items.push(q);
+        existingQualCodes.add(q.code);
+        supplementedCount++;
+      }
+    }
+    if (supplementedCount > 0) {
+      log('info', `Supplemented ${supplementedCount} current qualifications from website scrape`);
     }
 
     // Log sample item for debugging
