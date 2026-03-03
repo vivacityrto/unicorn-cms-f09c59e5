@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -1456,13 +1457,12 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   </Button>
                 )}
               </div>
-              <Textarea 
+              <RichTextEditor
                 value={speech.isRecording && speech.interimTranscript 
                   ? (content ? `${content} ${speech.interimTranscript}` : speech.interimTranscript)
                   : content}
-                onChange={e => setContent(e.target.value)}
-                placeholder="Write your note..."
-                rows={20}
+                onChange={setContent}
+                minHeight="200px"
                 className={speech.isRecording ? 'border-destructive' : ''}
               />
             </div>
@@ -1470,28 +1470,27 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             
             {/* Notify team members - only show when adding, not editing */}
             {!selectedNote && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5" />
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5 text-xs">
+                <Mail className="h-3 w-3" />
                 Notify (optional)
               </Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {vivacityTeam.map((user) => (
                   <Button
                     key={user.user_uuid}
                     type="button"
                     variant={notifyUserIds.includes(user.user_uuid) ? "default" : "outline"}
-                    size="sm"
                     onClick={() => setNotifyUserIds(prev => 
                       prev.includes(user.user_uuid) 
                         ? prev.filter(id => id !== user.user_uuid)
                         : [...prev, user.user_uuid]
                     )}
-                    className="gap-1.5"
+                    className="h-7 px-2 gap-1 text-[11px]"
                   >
-                    <Avatar className="h-5 w-5">
+                    <Avatar className="h-4 w-4">
                       {user.avatar_url && <AvatarImage src={user.avatar_url} />}
-                      <AvatarFallback className="text-[9px]">
+                      <AvatarFallback className="text-[8px]">
                         {user.first_name?.[0]}{user.last_name?.[0]}
                       </AvatarFallback>
                     </Avatar>
@@ -1505,44 +1504,44 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             </div>
             )}
 
-            <div className="flex items-center gap-2">
-              <Switch 
-                id="pinned"
-                checked={isPinned}
-                onCheckedChange={setIsPinned}
-              />
-              <Label htmlFor="pinned" className="cursor-pointer">Pin this note</Label>
+            {/* Pin + action buttons on same row */}
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-2">
+                <Switch 
+                  id="pinned"
+                  checked={isPinned}
+                  onCheckedChange={setIsPinned}
+                />
+                <Label htmlFor="pinned" className="cursor-pointer text-sm">Pin this note</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedNote?.parent_type === 'package_instance' && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    className="text-xs h-8"
+                    onClick={() => {
+                      console.log('Send note to client:', selectedNote);
+                    }}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                    Email note
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button size="sm" className="text-xs h-8" onClick={handleSave} disabled={!content.trim() || saving}>
+                  {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                  {selectedNote ? 'Save Changes' : 'Create Note'}
+                </Button>
+              </div>
             </div>
             
           </div>
           
-          <DialogFooter className="!flex !flex-row !justify-between w-full gap-2 sm:justify-between">
-            <div className="flex-shrink-0">
-              {selectedNote?.parent_type === 'package_instance' && (
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    // TODO: Implement email sending functionality
-                    console.log('Send note to client:', selectedNote);
-                  }}
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Email note
-                </Button>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={!content.trim() || saving}>
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {selectedNote ? 'Save Changes' : 'Create Note'}
-              </Button>
-            </div>
-          </DialogFooter>
+          
         </DialogContent>
       </Dialog>
 
