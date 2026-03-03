@@ -8,6 +8,7 @@ import { ClientChatbotLauncher } from "@/components/client/ClientChatbotLauncher
 import { ClientRouteGuard } from "@/components/client/ClientRouteGuard";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { DocumentRequestModal } from "@/components/client/DocumentRequestModal";
+import { CompliancePulseBanner } from "@/components/client/CompliancePulseBanner";
 import { useClientRequestActions } from "@/hooks/useClientRequestActions";
 import type { DocumentRequestPrefill } from "@/components/client/DocumentRequestModal";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,11 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         <ClientTopbar isPreview={isPreview} />
 
         <ClientRequestContext.Provider value={openDocumentRequest}>
+          {/* Compliance Pulse Banner */}
+          <div className="px-4 md:px-6 pt-3">
+            <CompliancePulseBanner />
+          </div>
+
           {/* Page Content */}
           <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">
             {children}

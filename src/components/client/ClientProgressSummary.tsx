@@ -90,8 +90,22 @@ export function ClientProgressSummary({ tenantId, className }: ClientProgressSum
 
   if (!progressList || progressList.length === 0) return null;
 
+  // Check for action_required risk
+  const hasActionRequired = progressList.some((p) => p.risk_state === "action_required");
+
   return (
     <div className={className}>
+      {hasActionRequired && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 mb-3">
+          <ShieldAlert className="h-5 w-5 text-destructive flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-destructive">Submission Blocked</p>
+            <p className="text-xs text-destructive/80">
+              One or more packages require action before submission is possible.
+            </p>
+          </div>
+        </div>
+      )}
       <h2 className="text-lg font-semibold text-foreground mb-3">Your Progress</h2>
       <div className="grid grid-cols-1 gap-4">
         {progressList.map((p) => (

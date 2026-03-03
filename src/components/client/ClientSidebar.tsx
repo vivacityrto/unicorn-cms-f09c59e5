@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   CheckSquare,
   MessageSquare,
+  Package2,
 } from "lucide-react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useHelpCenter } from "@/components/help-center";
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 const clientMenuItems = [
   { icon: LayoutDashboard, label: "Home", path: "/client/home" },
   { icon: CheckSquare, label: "Tasks", path: "/client/tasks" },
+  { icon: Package2, label: "Packages", path: "/client/packages" },
   { icon: FileText, label: "Documents", path: "/client/documents" },
   { icon: FolderOpen, label: "Files", path: "/client/files" },
   { icon: Library, label: "Resource Hub", path: "/client/resource-hub" },
