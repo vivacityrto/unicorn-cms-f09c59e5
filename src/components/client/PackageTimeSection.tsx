@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { useTimeTracking, formatDuration, formatElapsedTime, TimeEntry } from '@/hooks/useTimeTracking';
+import { useOwnerProfiles } from '@/hooks/useOwnerProfiles';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -83,6 +86,10 @@ export function PackageTimeSection({
     
     return filtered;
   }, [entries, packageInstanceId, workTypeFilter, billableFilter]);
+
+  // Resolve user profiles for avatar display
+  const userIds = useMemo(() => entries.filter(e => Number(e.package_id) === packageInstanceId).map(e => e.user_id), [entries, packageInstanceId]);
+  const { data: ownerProfiles = {} } = useOwnerProfiles(userIds);
 
   // Calculate package-specific summary
   const packageSummary = useMemo(() => {
@@ -287,7 +294,24 @@ export function PackageTimeSection({
                       {entry.notes || '—'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Avatar className="h-6 w-6">
+                                {ownerProfiles[entry.user_id]?.avatar_url && (
+                                  <AvatarImage src={ownerProfiles[entry.user_id].avatar_url!} />
+                                )}
+                                <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                                  {ownerProfiles[entry.user_id]?.first_name?.[0] ?? '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              <p>{ownerProfiles[entry.user_id]?.first_name ?? 'Unknown'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <Button
                           variant="ghost"
                           size="sm"
