@@ -5148,6 +5148,141 @@ export type Database = {
           },
         ]
       }
+      broadcast_campaigns: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string
+          id: string
+          include_roles: string[]
+          package_type: string | null
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string
+          target_mode: string
+          title: string
+          total_failed: number
+          total_recipients: number
+          total_sent: number
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by: string
+          id?: string
+          include_roles?: string[]
+          package_type?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          target_mode: string
+          title: string
+          total_failed?: number
+          total_recipients?: number
+          total_sent?: number
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          include_roles?: string[]
+          package_type?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          target_mode?: string
+          title?: string
+          total_failed?: number
+          total_recipients?: number
+          total_sent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_campaigns_created_by_fk"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "broadcast_campaigns_created_by_fk"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "broadcast_campaigns_created_by_fk"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "broadcast_campaigns_created_by_fk"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "broadcast_campaigns_created_by_fk"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "broadcast_campaigns_created_by_fk"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
+      broadcast_recipients: {
+        Row: {
+          campaign_id: string
+          conversation_id: string | null
+          delivery_status: string
+          failure_reason: string | null
+          id: string
+          sent_at: string | null
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          conversation_id?: string | null
+          delivery_status?: string
+          failure_reason?: string | null
+          id?: string
+          sent_at?: string | null
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          conversation_id?: string | null
+          delivery_status?: string
+          failure_reason?: string | null
+          id?: string
+          sent_at?: string | null
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcast_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "broadcast_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_entries: {
         Row: {
           created_at: string
@@ -47204,6 +47339,22 @@ export type Database = {
           confidence: number
           reason: string
         }[]
+      }
+      fn_preview_broadcast_recipients: {
+        Args: {
+          p_include_roles?: string[]
+          p_package_type?: string
+          p_target_mode: string
+        }
+        Returns: {
+          tenant_id: number
+          tenant_name: string
+          user_id: string
+        }[]
+      }
+      fn_queue_broadcast_campaign: {
+        Args: { p_campaign_id: string }
+        Returns: undefined
       }
       format_code_label: { Args: { input_label: string }; Returns: string }
       generate_findings: {
