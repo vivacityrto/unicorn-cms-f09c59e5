@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { parseTaskType, getTaskTypeBadgeLabel, getTaskTypeBadgeClasses } from '@/utils/staffTaskType';
 
-type TaskFilter = 'active' | 'incomplete' | 'all';
+type TaskFilter = 'active' | 'incomplete' | 'incomplete_core' | 'all';
 
 interface StageStaffTasksProps {
   stageInstanceId: number;
@@ -44,6 +44,7 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
   const filteredTasks = tasks.filter((task) => {
     if (filter === 'active') return task.status_id !== 3; // exclude N/A
     if (filter === 'incomplete') return task.status_id !== 3 && task.status_id !== 2 && task.status_id !== 4; // exclude N/A, Completed, Core Complete
+    if (filter === 'incomplete_core') return task.status_id !== 3 && task.status_id !== 2 && task.status_id !== 4 && task.is_core; // incomplete core tasks only
     return true; // 'all'
   });
 
@@ -77,6 +78,7 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="incomplete">Incomplete</SelectItem>
+              <SelectItem value="incomplete_core">Incomplete Core</SelectItem>
               <SelectItem value="all">All</SelectItem>
             </SelectContent>
           </Select>
