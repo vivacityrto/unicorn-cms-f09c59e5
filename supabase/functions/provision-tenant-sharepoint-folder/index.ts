@@ -36,25 +36,51 @@ async function resolveSiteAndDrive(
   // 1. Try from sharepoint_sites registry (authoritative source)
   const { data: spSite } = await supabaseAdmin
     .from("sharepoint_sites")
-    .select("graph_site_id, drive_id")
+    .select("graph_site_id, drive_id, site_url")
     .eq("purpose", "client_files")
     .eq("is_active", true)
     .limit(1)
     .maybeSingle();
 
-  if (spSite?.graph_site_id && spSite?.drive_id) {
-    // If drive_id is stored as a Graph API URL, resolve the actual drive ID
-    let driveId = spSite.drive_id;
+  if (spSite?.graph_site_id) {
+    let siteId = spSite.graph_site_id;
+    let driveId = spSite.drive_id || '';
+
     if (driveId.startsWith('http')) {
-      console.log('[provision-sp] drive_id is a URL, resolving actual drive ID via graphGet...');
-      const driveResp = await graphGet<{ id: string }>(driveId);
+      // drive_id is a Graph URL — resolve site first, then drive from site
+      // Extract the site path from the URL, e.g. ".../sites/host:/sites/name:/drive" → resolve site then drive
+      console.log('[provision-sp] drive_id is a URL, resolving via two-step site→drive...');
+      
+      // Strip "/drive" suffix to get site URL
+      const siteUrl = driveId.replace(/\/drive\/?$/, '');
+      const siteResp = await graphGet<{ id: string }>(siteUrl);
+      if (!siteResp.ok) {
+        console.error('[provision-sp] Site resolution failed:', siteResp.status, JSON.stringify(siteResp.data));
+        // Fall back to resolving drive directly from stored graph_site_id
+        console.log('[provision-sp] Falling back to graph_site_id for drive resolution...');
+      } else {
+        siteId = siteResp.data.id;
+        console.log('[provision-sp] Resolved site ID:', siteId);
+      }
+
+      // Now resolve the drive from the resolved site ID
+      const driveResp = await graphGet<{ id: string }>(`/sites/${siteId}/drive`);
       if (!driveResp.ok) {
-        throw new Error(`Failed to resolve drive from URL: ${driveResp.status} ${JSON.stringify(driveResp.data)}`);
+        throw new Error(`Failed to resolve drive for site ${siteId}: ${driveResp.status} ${JSON.stringify(driveResp.data)}`);
       }
       driveId = driveResp.data.id;
       console.log('[provision-sp] Resolved drive ID:', driveId);
+
+      // Cache the resolved IDs back to the DB to avoid future URL resolution
+      await supabaseAdmin
+        .from("sharepoint_sites")
+        .update({ graph_site_id: siteId, drive_id: driveId })
+        .eq("id", spSite.id || '')
+        .eq("purpose", "client_files");
+      console.log('[provision-sp] Cached resolved site/drive IDs to sharepoint_sites');
     }
-    return { siteId: spSite.graph_site_id, driveId };
+
+    return { siteId, driveId };
   }
 
   // 2. Try from existing successful tenant settings
