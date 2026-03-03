@@ -46504,6 +46504,16 @@ export type Database = {
         }
         Relationships: []
       }
+      v_user_notification_summary: {
+        Row: {
+          total_unread: number | null
+          unread_documents: number | null
+          unread_messages: number | null
+          unread_tasks: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       v_workflow_efficiency_trends: {
         Row: {
           signal_count: number | null

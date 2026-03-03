@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ChevronRight, ChevronDown, User, Phone, Mail, MapPin, Calendar, Users, FileText, TrendingUp, LogIn, Package as PackageIcon, CheckCircle2, Clock, AlertCircle, Globe, ExternalLink, Facebook, Instagram, Linkedin, ArrowLeft, Timer, Building2, XCircle, Eye, EyeOff } from "lucide-react";
+import { Plus, ChevronRight, ChevronDown, User, Phone, Mail, MapPin, Calendar, Users, FileText, TrendingUp, LogIn, Package as PackageIcon, CheckCircle2, Clock, AlertCircle, Globe, ExternalLink, Facebook, Instagram, Linkedin, ArrowLeft, Timer, Building2, XCircle, Eye, EyeOff, MessageSquare } from "lucide-react";
 import { ReviewModePanel } from "@/components/tenant/ReviewModePanel";
 import { useReviewMode } from "@/hooks/useReviewMode";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -598,6 +598,18 @@ export default function TenantDetail() {
                     />
                   )}
                   {tenantId && <ClientQuickNav currentTenantId={parseInt(tenantId)} />}
+                  {/* Message Client */}
+                  {tenantId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      onClick={() => navigate(`/communications?tenant=${tenantId}`)}
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      Message
+                    </Button>
+                  )}
                   <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#1877F2]/30 cursor-not-allowed" title="Facebook" onClick={e => e.preventDefault()}>
                     <Facebook className="h-4 w-4 text-[#1877F2] group-hover:scale-110 transition-transform" />
                   </a>

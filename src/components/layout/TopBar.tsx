@@ -43,6 +43,7 @@ const routeTitles: Record<string, string> = {
   "/manage-tenants": "Clients",
   "/manage-packages": "Packages",
   "/manage-documents": "Documents",
+  "/communications": "Communications",
   "/rto-tips": "RTO Tips",
   "/eos": "EOS Overview",
   "/eos/leadership": "Leadership Dashboard",
