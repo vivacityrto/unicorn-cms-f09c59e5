@@ -303,7 +303,10 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg text-primary">Addresses</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-lg text-primary">Addresses</CardTitle>
+          <span className="text-xs text-muted-foreground font-normal">TGA addresses marked *</span>
+        </div>
         <Button
           size="sm"
           onClick={() => { resetForm(); setDialogOpen(true); }}
