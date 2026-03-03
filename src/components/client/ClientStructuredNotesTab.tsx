@@ -1295,7 +1295,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
 
       {/* Add/Edit Note Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="w-[90vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[90vw] max-w-[1400px] max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedNote ? 'Edit Note' : 'Add Note'}
@@ -1462,7 +1462,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   ? (content ? `${content} ${speech.interimTranscript}` : speech.interimTranscript)
                   : content}
                 onChange={setContent}
-                minHeight="200px"
+                minHeight="280px"
                 className={speech.isRecording ? 'border-destructive' : ''}
               />
             </div>
@@ -1512,7 +1512,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   checked={isPinned}
                   onCheckedChange={setIsPinned}
                 />
-                <Label htmlFor="pinned" className="cursor-pointer text-sm">Pin this note</Label>
+                <Label htmlFor="pinned" className="cursor-pointer text-xs">Pin this note</Label>
               </div>
               <div className="flex items-center gap-2">
                 {selectedNote?.parent_type === 'package_instance' && (
