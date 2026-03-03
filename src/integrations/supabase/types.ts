@@ -12261,18 +12261,21 @@ export type Database = {
           description: string | null
           id: number
           label: string
+          seq: number | null
         }
         Insert: {
           code: string
           description?: string | null
           id?: number
           label: string
+          seq?: number | null
         }
         Update: {
           code?: string
           description?: string | null
           id?: number
           label?: string
+          seq?: number | null
         }
         Relationships: []
       }
