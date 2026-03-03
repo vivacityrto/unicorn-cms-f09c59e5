@@ -153,7 +153,8 @@ export function useTimeInbox() {
       });
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to update draft', variant: 'destructive' });
+        console.error('[useTimeInbox] Update draft error:', error.message, error.details, error.hint);
+        toast({ title: 'Error', description: error.message || 'Failed to update draft', variant: 'destructive' });
         return false;
       }
 
