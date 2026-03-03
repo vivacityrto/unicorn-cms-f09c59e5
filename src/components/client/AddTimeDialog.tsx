@@ -453,14 +453,16 @@ export function AddTimeDialog({
                           {member.first_name?.[0]}{member.last_name?.[0]}
                         </AvatarFallback>
                       </Avatar>
-                      {member.first_name} {member.last_name}
+                      {member.first_name}
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} className="mt-1" />
+          <div className="flex items-center justify-end">
+            <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} />
+          </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
