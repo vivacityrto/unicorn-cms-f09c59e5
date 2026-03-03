@@ -33321,6 +33321,7 @@ export type Database = {
           tenant_id: number | null
           tenant_uuid: string | null
           tga_site_name: string | null
+          transfer_date: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -33347,6 +33348,7 @@ export type Database = {
           tenant_id?: number | null
           tenant_uuid?: string | null
           tga_site_name?: string | null
+          transfer_date?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -33373,6 +33375,7 @@ export type Database = {
           tenant_id?: number | null
           tenant_uuid?: string | null
           tga_site_name?: string | null
+          transfer_date?: string | null
           updated_at?: string
           updated_by?: string | null
         }

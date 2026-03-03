@@ -1,0 +1,1 @@
+ALTER TABLE public.tenant_addresses ADD COLUMN transfer_date timestamptz;
