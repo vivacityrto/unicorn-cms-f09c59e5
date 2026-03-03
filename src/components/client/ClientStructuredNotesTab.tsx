@@ -31,6 +31,7 @@ import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { NotifyClientCheckbox } from './NotifyClientCheckbox';
 import { notifyClientPrimaryContact } from '@/lib/notifyClient';
+import { ComposeEmailDialog } from './ComposeEmailDialog';
 import { SelectSeparator } from '@/components/ui/select';
 import { formatDistanceToNow, format, fromUnixTime, isValid, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -153,6 +154,33 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
   const [notifyClient, setNotifyClient] = useState(false);
   const { data: vivacityTeam = [] } = useVivacityTeamUsers();
+  
+  // Email note type state
+  const [emailMode, setEmailMode] = useState<'prompt' | 'send_now' | 'already_sent' | null>(null);
+  const [composeEmailOpen, setComposeEmailOpen] = useState(false);
+  const [primaryContactEmail, setPrimaryContactEmail] = useState('');
+
+  // Fetch primary contact email for tenant
+  useEffect(() => {
+    const fetchPrimaryContactEmail = async () => {
+      const { data: primaryTu } = await supabase
+        .from('tenant_users')
+        .select('user_id')
+        .eq('tenant_id', tenantId)
+        .eq('primary_contact', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (!primaryTu?.user_id) return;
+      const { data: contactUser } = await supabase
+        .from('users')
+        .select('email')
+        .eq('user_uuid', primaryTu.user_id)
+        .single();
+      if (contactUser?.email) setPrimaryContactEmail(contactUser.email);
+    };
+    fetchPrimaryContactEmail();
+  }, [tenantId]);
 
   // Auto-extract title from content using AI
   const extractTitle = useCallback(async (text: string) => {
@@ -411,6 +439,12 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     if (!selectedNote) {
       setNoteStatus(getDefaultStatus(type));
     }
+    // Show email prompt when selecting email type (add mode only)
+    if (type === 'email' && !selectedNote) {
+      setEmailMode('prompt');
+    } else {
+      setEmailMode(null);
+    }
   };
 
   const resetForm = () => {
@@ -427,6 +461,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setTitleManuallyEdited(false);
     setNotifyUserIds([]);
     setNotifyClient(false);
+    setEmailMode(null);
   };
 
   const handleOpenAdd = () => {
@@ -1425,6 +1460,38 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               </div>
             </div>
 
+            {/* Email mode prompt */}
+            {noteType === 'email' && emailMode === 'prompt' && !selectedNote && (
+              <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium">How would you like to proceed?</p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEmailMode('send_now');
+                      setIsAddDialogOpen(false);
+                      setComposeEmailOpen(true);
+                    }}
+                  >
+                    <Mail className="h-3.5 w-3.5 mr-1.5" />
+                    Send Now
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEmailMode('already_sent')}
+                  >
+                    Already Sent (Log only)
+                  </Button>
+                </div>
+                {primaryContactEmail && (
+                  <p className="text-xs text-muted-foreground">
+                    Recipient: {primaryContactEmail}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Optional Duration row */}
             {showsDuration && (
               <div className="grid gap-4 grid-cols-1 max-w-xs">
@@ -1669,7 +1736,34 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+       </AlertDialog>
+
+      {/* Compose Email Dialog for "Send Now" email notes */}
+      <ComposeEmailDialog
+        open={composeEmailOpen}
+        onOpenChange={(open) => {
+          setComposeEmailOpen(open);
+          if (!open) setEmailMode(null);
+        }}
+        tenantId={tenantId}
+        defaultTo={primaryContactEmail}
+        defaultSubject=""
+        defaultBody=""
+        onSent={async () => {
+          setComposeEmailOpen(false);
+          setEmailMode(null);
+          // Auto-create an email note recording the sent email
+          await createNote({
+            note_type: 'email',
+            title: 'Email sent to primary contact',
+            note_details: `Email sent to ${primaryContactEmail}`,
+            status: 'completed',
+            parent_type_override: undefined,
+            parent_id_override: undefined,
+          });
+          toast({ title: 'Email sent', description: 'An email note has been logged automatically.' });
+        }}
+      />
     </>
   );
 }
