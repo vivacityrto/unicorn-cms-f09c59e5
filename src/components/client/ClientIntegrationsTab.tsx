@@ -29,13 +29,16 @@ import {
   BookOpen,
   Award,
   Bug,
-  Package
+  Package,
+  ArrowRightLeft
 } from 'lucide-react';
 import { ClientProfile, RegistryLink } from '@/hooks/useClientManagement';
 import { useTgaRtoData } from '@/hooks/useTgaRtoData';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { formatDate, formatDateTime, formatDateLong } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { toast } from 'sonner';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -346,7 +349,10 @@ export function ClientIntegrationsTab({
   } | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [syncCounter, setSyncCounter] = useState(0); // Track sync completions to refresh debug panel
-  const { isSuperAdmin } = useAuth();
+  const [showTransferConfirm, setShowTransferConfirm] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [lastTransferDate, setLastTransferDate] = useState<string | null>(null);
+  const { isSuperAdmin, user } = useAuth();
 
   const hasRtoNumber = !!profile?.rto_number;
   const currentStatus = registryLink?.link_status || 'not_linked';
@@ -431,6 +437,111 @@ export function ClientIntegrationsTab({
     isLinked ? profile?.rto_number ?? null : null,
     undefined // clientId not available in this context
   );
+
+  // Fetch last transfer date from tenant_addresses
+  useEffect(() => {
+    if (!profile?.tenant_id) return;
+    const fetchLastTransferDate = async () => {
+      const { data } = await supabase
+        .from('tenant_addresses')
+        .select('transfer_date')
+        .eq('tenant_id', profile.tenant_id)
+        .eq('address_type', 'HO')
+        .maybeSingle();
+      setLastTransferDate((data as any)?.transfer_date ?? null);
+    };
+    fetchLastTransferDate();
+  }, [profile?.tenant_id]);
+
+  // Handle TGA address transfer to tenant_addresses
+  const handleTransferAddresses = async () => {
+    if (!profile?.tenant_id || !user?.id) return;
+    setIsTransferring(true);
+    try {
+      const tenantId = profile.tenant_id;
+      const now = new Date().toISOString();
+      const dateLabel = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+
+      // 1. Delete existing tenant_addresses
+      const { error: deleteError } = await supabase
+        .from('tenant_addresses')
+        .delete()
+        .eq('tenant_id', tenantId);
+      if (deleteError) throw deleteError;
+
+      // 2. Build address rows from TGA data
+      let hoAssigned = false;
+      let poAssigned = false;
+      const rows: any[] = [];
+
+      // Registered addresses
+      for (const addr of tgaData.addresses) {
+        let addressType = 'OT';
+        if (addr.address_type === 'headOffice' && !hoAssigned) {
+          addressType = 'HO'; hoAssigned = true;
+        } else if (addr.address_type === 'postal' && !poAssigned) {
+          addressType = 'PO'; poAssigned = true;
+        }
+        const suburb = addr.suburb?.toUpperCase() || '';
+        const state = addr.state?.toUpperCase() || '';
+        rows.push({
+          tenant_id: tenantId,
+          address_type: addressType,
+          address1: addr.address_line_1 || '',
+          address2: addr.address_line_2 || null,
+          suburb,
+          state,
+          postcode: addr.postcode || null,
+          country: 'Australia',
+          country_code: 'AU',
+          full_address: [addr.address_line_1, addr.address_line_2, suburb, state, addr.postcode].filter(Boolean).join(', '),
+          notes: `Imported from TGA on ${dateLabel}`,
+          created_by: user.id,
+          updated_by: user.id,
+          transfer_date: now,
+        });
+      }
+
+      // Delivery locations
+      for (const loc of tgaData.deliveryLocations) {
+        const suburb = loc.suburb?.toUpperCase() || '';
+        const state = loc.state?.toUpperCase() || '';
+        rows.push({
+          tenant_id: tenantId,
+          address_type: 'DS',
+          address1: loc.address_line_1 || '',
+          address2: loc.address_line_2 || null,
+          suburb,
+          state,
+          postcode: loc.postcode || null,
+          country: 'Australia',
+          country_code: 'AU',
+          full_address: [loc.address_line_1, loc.address_line_2, suburb, state, loc.postcode].filter(Boolean).join(', '),
+          tga_site_name: loc.location_name || null,
+          notes: `Imported from TGA on ${dateLabel}`,
+          created_by: user.id,
+          updated_by: user.id,
+          transfer_date: now,
+        });
+      }
+
+      if (rows.length > 0) {
+        const { error: insertError } = await supabase
+          .from('tenant_addresses')
+          .insert(rows as any);
+        if (insertError) throw insertError;
+      }
+
+      setLastTransferDate(now);
+      toast.success(`${rows.length} address(es) transferred to tenant successfully.`);
+    } catch (err: any) {
+      console.error('Transfer addresses error:', err);
+      toast.error('Failed to transfer addresses: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsTransferring(false);
+      setShowTransferConfirm(false);
+    }
+  };
 
   const handleLinkToTGA = async () => {
     if (!profile?.rto_number) return;
@@ -764,7 +875,25 @@ export function ClientIntegrationsTab({
                   <div className="space-y-4">
                     {tgaData.addresses.length > 0 && (
                       <div>
-                        <h4 className="font-medium mb-2">Registered Addresses</h4>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-medium">Registered Addresses</h4>
+                          <div className="flex items-center gap-3">
+                            {lastTransferDate && (
+                              <span className="text-xs text-muted-foreground">
+                                Last transferred: {formatDateLong(lastTransferDate)}
+                              </span>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowTransferConfirm(true)}
+                              disabled={isTransferring}
+                            >
+                              <ArrowRightLeft className="h-4 w-4 mr-1" />
+                              Transfer to Tenant
+                            </Button>
+                          </div>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {tgaData.addresses.map((address) => (
                             <div key={address.id} className="p-3 border rounded-lg">
@@ -774,7 +903,7 @@ export function ClientIntegrationsTab({
                                   <p>
                                     {address.address_line_1}
                                     {address.address_line_2 && <>, {address.address_line_2}</>}
-                                    {', '}{address.suburb}, {address.state} {address.postcode}
+                                    {', '}{address.suburb?.toUpperCase()}, {address.state?.toUpperCase()} {address.postcode}
                                   </p>
                                   {(address.phone || address.email) && (
                                     <p className="text-muted-foreground mt-1">
@@ -1451,6 +1580,18 @@ export function ClientIntegrationsTab({
           </p>
         </CardContent>
       </Card>
+
+      {/* TGA Address Transfer Confirmation */}
+      <ConfirmDialog
+        open={showTransferConfirm}
+        onOpenChange={setShowTransferConfirm}
+        title="Transfer TGA Addresses"
+        description="This will replace all existing tenant addresses with the current TGA registered addresses and delivery sites. This action cannot be undone."
+        onConfirm={handleTransferAddresses}
+        confirmText="Transfer"
+        isLoading={isTransferring}
+        variant="destructive"
+      />
     </div>
   );
 }
