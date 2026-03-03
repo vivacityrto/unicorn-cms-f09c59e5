@@ -765,16 +765,18 @@ export function ClientIntegrationsTab({
                     {tgaData.addresses.length > 0 && (
                       <div>
                         <h4 className="font-medium mb-2">Registered Addresses</h4>
-                        {tgaData.addresses.map((address) => (
-                          <div key={address.id} className="p-3 border rounded-lg mb-2">
-                            <Badge variant="outline" className="mb-2">{address.address_type}</Badge>
-                            <p>{address.address_line_1}</p>
-                            {address.address_line_2 && <p>{address.address_line_2}</p>}
-                            <p>{address.suburb}, {address.state} {address.postcode}</p>
-                            {address.phone && <p className="text-sm text-muted-foreground mt-1">Phone: {address.phone}</p>}
-                            {address.email && <p className="text-sm text-muted-foreground">Email: {address.email}</p>}
-                          </div>
-                        ))}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {tgaData.addresses.map((address) => (
+                            <div key={address.id} className="p-3 border rounded-lg">
+                              <Badge variant="outline" className="mb-2">{address.address_type}</Badge>
+                              <p>{address.address_line_1}</p>
+                              {address.address_line_2 && <p>{address.address_line_2}</p>}
+                              <p>{address.suburb}, {address.state} {address.postcode}</p>
+                              {address.phone && <p className="text-sm text-muted-foreground mt-1">Phone: {address.phone}</p>}
+                              {address.email && <p className="text-sm text-muted-foreground">Email: {address.email}</p>}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {tgaData.deliveryLocations.length > 0 && (

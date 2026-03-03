@@ -4602,84 +4602,6 @@ export type Database = {
         }
         Relationships: []
       }
-      backup_tenant_addresses: {
-        Row: {
-          address_type: string | null
-          address1: string | null
-          address2: string | null
-          address3: string | null
-          country: string | null
-          country_code: string | null
-          created_at: string | null
-          created_by: string | null
-          full_address: string | null
-          geohash: string | null
-          id: string | null
-          inactive: boolean | null
-          latitude: number | null
-          legacy_userid: number | null
-          longitude: number | null
-          notes: string | null
-          postcode: string | null
-          state: string | null
-          suburb: string | null
-          tenant_id: number | null
-          tenant_uuid: string | null
-          updated_at: string | null
-          updated_by: string | null
-        }
-        Insert: {
-          address_type?: string | null
-          address1?: string | null
-          address2?: string | null
-          address3?: string | null
-          country?: string | null
-          country_code?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          full_address?: string | null
-          geohash?: string | null
-          id?: string | null
-          inactive?: boolean | null
-          latitude?: number | null
-          legacy_userid?: number | null
-          longitude?: number | null
-          notes?: string | null
-          postcode?: string | null
-          state?: string | null
-          suburb?: string | null
-          tenant_id?: number | null
-          tenant_uuid?: string | null
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Update: {
-          address_type?: string | null
-          address1?: string | null
-          address2?: string | null
-          address3?: string | null
-          country?: string | null
-          country_code?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          full_address?: string | null
-          geohash?: string | null
-          id?: string | null
-          inactive?: boolean | null
-          latitude?: number | null
-          legacy_userid?: number | null
-          longitude?: number | null
-          notes?: string | null
-          postcode?: string | null
-          state?: string | null
-          suburb?: string | null
-          tenant_id?: number | null
-          tenant_uuid?: string | null
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
       backup_tenants: {
         Row: {
           abn: string | null
@@ -33398,6 +33320,7 @@ export type Database = {
           suburb: string | null
           tenant_id: number | null
           tenant_uuid: string | null
+          tga_site_name: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -33423,6 +33346,7 @@ export type Database = {
           suburb?: string | null
           tenant_id?: number | null
           tenant_uuid?: string | null
+          tga_site_name?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -33448,6 +33372,7 @@ export type Database = {
           suburb?: string | null
           tenant_id?: number | null
           tenant_uuid?: string | null
+          tga_site_name?: string | null
           updated_at?: string
           updated_by?: string | null
         }
