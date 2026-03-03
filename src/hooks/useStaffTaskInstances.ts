@@ -171,6 +171,18 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
 
       if (error) throw error;
 
+      // Compute structured AI signals
+      const aiSignals: Record<string, any> = {
+        package_id: packageId,
+        stage_instance_id: stageInstanceId,
+      };
+      if (newStatusId === 2 && oldTask?.due_date) {
+        const completionDate = new Date();
+        const dueDate = new Date(oldTask.due_date);
+        aiSignals.completion_latency_days = Math.round((completionDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        aiSignals.completed_on_time = completionDate <= dueDate;
+      }
+
       // Log to audit
       await supabase.from('client_audit_log').insert({
         tenant_id: tenantId,
@@ -180,7 +192,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
         entity_id: taskId.toString(),
         before_data: { status_id: oldStatusId },
         after_data: { status_id: newStatusId },
-        details: { package_id: packageId, stage_instance_id: stageInstanceId },
+        details: aiSignals,
       });
 
       toast({ 

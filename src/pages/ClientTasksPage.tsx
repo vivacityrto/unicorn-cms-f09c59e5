@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useClientAllTasks, type ClientAllTask } from "@/hooks/useClientAllTasks";
 import { useTaskStatusOptions, getStatusLabel } from "@/hooks/useTaskStatusOptions";
+import { useAuth } from "@/hooks/useAuth";
+import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +23,9 @@ function priorityLabel(p: number | null | undefined) {
 export default function ClientTasksPage() {
   const { data: tasks = [], isLoading } = useClientAllTasks();
   const { statuses } = useTaskStatusOptions();
+  const { getTenantRole } = useAuth();
+  const { activeTenantId } = useClientTenant();
+  const isAdmin = activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false;
   const [filter, setFilter] = useState<FilterType>("all");
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
@@ -89,8 +94,8 @@ export default function ClientTasksPage() {
         ))}
       </div>
 
-      {/* Bulk action bar */}
-      {selected.size > 0 && (
+      {/* Bulk action bar — Admin only */}
+      {isAdmin && selected.size > 0 && (
         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/60 border border-border">
           <span className="text-sm font-medium text-foreground">
             {selected.size} selected
@@ -119,12 +124,14 @@ export default function ClientTasksPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50 border-border">
-                  <th className="px-4 py-3 w-10">
-                    <Checkbox
-                      checked={selected.size === filtered.length && filtered.length > 0}
-                      onCheckedChange={toggleAll}
-                    />
-                  </th>
+                  {isAdmin && (
+                    <th className="px-4 py-3 w-10">
+                      <Checkbox
+                        checked={selected.size === filtered.length && filtered.length > 0}
+                        onCheckedChange={toggleAll}
+                      />
+                    </th>
+                  )}
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Task</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Package</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Stage</th>
@@ -141,6 +148,7 @@ export default function ClientTasksPage() {
                     statuses={statuses}
                     isSelected={selected.has(task.id)}
                     onToggle={() => toggleSelect(task.id)}
+                    showCheckbox={isAdmin}
                   />
                 ))}
               </tbody>
@@ -157,17 +165,21 @@ function TaskRow({
   statuses,
   isSelected,
   onToggle,
+  showCheckbox = true,
 }: {
   task: ClientAllTask;
   statuses: any[];
   isSelected: boolean;
   onToggle: () => void;
+  showCheckbox?: boolean;
 }) {
   return (
     <tr className="border-b last:border-0 hover:bg-muted/30 transition-colors border-border">
-      <td className="px-4 py-3">
-        <Checkbox checked={isSelected} onCheckedChange={onToggle} />
-      </td>
+      {showCheckbox && (
+        <td className="px-4 py-3">
+          <Checkbox checked={isSelected} onCheckedChange={onToggle} />
+        </td>
+      )}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           {task.isOverdue && (

@@ -19,6 +19,7 @@ import {
   Package2,
 } from "lucide-react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useHelpCenter } from "@/components/help-center";
 import { cn } from "@/lib/utils";
 
@@ -33,9 +34,9 @@ const clientMenuItems = [
   { icon: Bell, label: "Notifications", path: "/client/notifications" },
   { icon: MessageSquare, label: "Communications", path: "/client/communications" },
   { icon: BarChart3, label: "Reports", path: "/client/reports" },
-  { icon: Users, label: "Team", path: "/client/team" },
+  { icon: Users, label: "Team", path: "/client/team", adminOnly: true },
   { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },
-];
+] as const;
 
 interface ClientSidebarProps {
   sidebarOpen: boolean;
@@ -45,8 +46,14 @@ interface ClientSidebarProps {
 
 export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentRequest }: ClientSidebarProps) {
   const location = useLocation();
-  const { tenantName, isPreview } = useClientTenant();
+  const { tenantName, isPreview, activeTenantId } = useClientTenant();
+  const { getTenantRole, isSuperAdmin } = useAuth();
   const { openHelpCenter } = useHelpCenter();
+  const isAdmin = isSuperAdmin() || (activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false);
+
+  const visibleMenuItems = clientMenuItems.filter(
+    (item) => !("adminOnly" in item && item.adminOnly) || isAdmin
+  );
 
   return (
     <>
@@ -114,7 +121,7 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentReque
 
         {/* Nav Items */}
         <nav className="flex-1 py-4 overflow-y-auto scrollbar-hide">
-          {clientMenuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
