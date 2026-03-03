@@ -37997,6 +37997,7 @@ export type Database = {
           state: string | null
           suburb: string | null
           tenant_id: number
+          transfer_date: string | null
           website: string | null
         }
         Insert: {
@@ -38016,6 +38017,7 @@ export type Database = {
           state?: string | null
           suburb?: string | null
           tenant_id: number
+          transfer_date?: string | null
           website?: string | null
         }
         Update: {
@@ -38035,6 +38037,7 @@ export type Database = {
           state?: string | null
           suburb?: string | null
           tenant_id?: number
+          transfer_date?: string | null
           website?: string | null
         }
         Relationships: []
