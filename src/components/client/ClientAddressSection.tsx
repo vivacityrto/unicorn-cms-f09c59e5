@@ -117,11 +117,10 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
     setLoading(true);
     const { data, error } = await supabase
       .from('tenant_addresses')
-      .select('*')
+      .select('*, dd_address_type(seq)')
       .eq('tenant_id', tenantId)
       .eq('inactive', false)
-      .order('address_type')
-      .order('address_type');
+      .order('seq', { referencedTable: 'dd_address_type', ascending: true });
 
     if (error) {
       console.error('Error fetching addresses:', error);
@@ -364,7 +363,7 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="max-w-[95vw] w-[1400px]">
+        <DialogContent size="full" className="w-[min(96vw,1400px)]">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Address' : 'Add Address'}</DialogTitle>
           </DialogHeader>
