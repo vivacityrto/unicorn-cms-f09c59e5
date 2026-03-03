@@ -14,6 +14,8 @@ import {
   Headphones,
   Bot,
   ShieldCheck,
+  CheckSquare,
+  MessageSquare,
 } from "lucide-react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useHelpCenter } from "@/components/help-center";
@@ -21,11 +23,13 @@ import { cn } from "@/lib/utils";
 
 const clientMenuItems = [
   { icon: LayoutDashboard, label: "Home", path: "/client/home" },
+  { icon: CheckSquare, label: "Tasks", path: "/client/tasks" },
   { icon: FileText, label: "Documents", path: "/client/documents" },
   { icon: FolderOpen, label: "Files", path: "/client/files" },
   { icon: Library, label: "Resource Hub", path: "/client/resource-hub" },
   { icon: Calendar, label: "Calendar", path: "/client/calendar" },
   { icon: Bell, label: "Notifications", path: "/client/notifications" },
+  { icon: MessageSquare, label: "Communications", path: "/client/communications" },
   { icon: BarChart3, label: "Reports", path: "/client/reports" },
   { icon: Users, label: "Team", path: "/client/team" },
   { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },

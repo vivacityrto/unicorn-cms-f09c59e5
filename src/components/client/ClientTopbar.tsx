@@ -24,7 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAuth } from "@/hooks/useAuth";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useClientNotifications } from "@/hooks/useClientNotifications";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
 import { useHelpCenter } from "@/components/help-center";
@@ -38,7 +38,8 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const { profile, signOut } = useAuth();
   const { openHelpCenter } = useHelpCenter();
-  const { unreadCount, notifications } = useNotifications();
+  const { unreadCount, notifications } = useClientNotifications();
+  const { activeTenantId, logoUrl } = useClientTenant();
   const { actingUser, isLoading: actingUserLoading } = useClientActingUser();
 
   // In preview/impersonation mode, always show the parent account — never fall back to the SuperAdmin profile
@@ -107,12 +108,20 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
                 style={unreadCount > 0 ? { color: "hsl(330 86% 51%)" } : undefined}
               />
               {unreadCount > 0 && (
-                <span
-                  className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center text-white animate-pulse"
-                  style={{ backgroundColor: "hsl(330 86% 51%)" }}
-                >
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
+                <>
+                  {/* Red action dot */}
+                  <span
+                    className="absolute top-0 right-0 h-2 w-2 rounded-full"
+                    style={{ backgroundColor: "hsl(0 72% 51%)" }}
+                  />
+                  {/* Count badge */}
+                  <span
+                    className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center text-white animate-pulse"
+                    style={{ backgroundColor: "hsl(330 86% 51%)" }}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                </>
               )}
             </Button>
           </PopoverTrigger>
@@ -143,6 +152,15 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
             </div>
           </PopoverContent>
         </Popover>
+
+        {/* Tenant Logo */}
+        {logoUrl && (
+          <img
+            src={logoUrl}
+            alt="Tenant logo"
+            className="h-8 w-auto rounded object-contain"
+          />
+        )}
 
         {/* Profile dropdown */}
         <DropdownMenu>
