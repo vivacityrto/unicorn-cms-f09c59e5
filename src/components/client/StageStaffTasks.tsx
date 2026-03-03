@@ -162,14 +162,6 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
                 </div>
               </div>
 
-              {task.assignee_id && (
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={task.assignee_avatar || undefined} />
-                  <AvatarFallback className="text-xs">
-                    {task.assignee_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
-                  </AvatarFallback>
-                </Avatar>
-              )}
 
               <TaskNotesPopover
                 taskId={task.id}
