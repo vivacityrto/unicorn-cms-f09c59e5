@@ -12008,14 +12008,20 @@ export type Database = {
       conversation_participants: {
         Row: {
           conversation_id: string
+          last_read_at: string | null
+          role: string
           user_id: string
         }
         Insert: {
           conversation_id: string
+          last_read_at?: string | null
+          role?: string
           user_id: string
         }
         Update: {
           conversation_id?: string
+          last_read_at?: string | null
+          role?: string
           user_id?: string
         }
         Relationships: [
@@ -12023,40 +12029,10 @@ export type Database = {
             foreignKeyName: "conversation_participants_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
-            referencedRelation: "conversations"
+            referencedRelation: "tenant_conversations"
             referencedColumns: ["id"]
           },
         ]
-      }
-      conversations: {
-        Row: {
-          created_at: string | null
-          id: string
-          last_message: string | null
-          last_message_time: string | null
-          tenant_id: number | null
-          title: string
-          unread_count: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          last_message?: string | null
-          last_message_time?: string | null
-          tenant_id?: number | null
-          title: string
-          unread_count?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          last_message?: string | null
-          last_message_time?: string | null
-          tenant_id?: number | null
-          title?: string
-          unread_count?: number | null
-        }
-        Relationships: []
       }
       copilot_messages: {
         Row: {
@@ -23216,6 +23192,7 @@ export type Database = {
       }
       messages: {
         Row: {
+          attachments: Json | null
           body: string
           conversation_id: string
           created_at: string | null
@@ -23227,6 +23204,7 @@ export type Database = {
           tenant_id: number | null
         }
         Insert: {
+          attachments?: Json | null
           body: string
           conversation_id: string
           created_at?: string | null
@@ -23238,6 +23216,7 @@ export type Database = {
           tenant_id?: number | null
         }
         Update: {
+          attachments?: Json | null
           body?: string
           conversation_id?: string
           created_at?: string | null
@@ -23249,6 +23228,13 @@ export type Database = {
           tenant_id?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -33757,9 +33743,15 @@ export type Database = {
           created_at: string
           created_by_user_uuid: string
           id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          related_entity: string | null
+          related_entity_id: string | null
           status: string
+          subject: string | null
           tenant_id: number
           topic: string
+          type: string
           updated_at: string
         }
         Insert: {
@@ -33767,9 +33759,15 @@ export type Database = {
           created_at?: string
           created_by_user_uuid: string
           id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          related_entity?: string | null
+          related_entity_id?: string | null
           status?: string
+          subject?: string | null
           tenant_id: number
           topic: string
+          type?: string
           updated_at?: string
         }
         Update: {
@@ -33777,9 +33775,15 @@ export type Database = {
           created_at?: string
           created_by_user_uuid?: string
           id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          related_entity?: string | null
+          related_entity_id?: string | null
           status?: string
+          subject?: string | null
           tenant_id?: number
           topic?: string
+          type?: string
           updated_at?: string
         }
         Relationships: [
