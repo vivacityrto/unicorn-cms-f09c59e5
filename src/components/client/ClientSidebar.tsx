@@ -17,6 +17,7 @@ import {
   CheckSquare,
   MessageSquare,
   Package2,
+  Inbox,
 } from "lucide-react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,6 +25,7 @@ import { useHelpCenter } from "@/components/help-center";
 import { cn } from "@/lib/utils";
 
 const clientMenuItems = [
+  { icon: Inbox, label: "Inbox", path: "/client/inbox" },
   { icon: LayoutDashboard, label: "Home", path: "/client/home" },
   { icon: CheckSquare, label: "Tasks", path: "/client/tasks" },
   { icon: Package2, label: "Packages", path: "/client/packages" },

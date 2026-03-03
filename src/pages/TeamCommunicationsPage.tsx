@@ -47,6 +47,7 @@ const TYPE_COLORS: Record<string, string> = {
   package: "bg-primary/10 text-primary",
   task: "bg-accent/60 text-accent-foreground",
   rock: "bg-secondary text-secondary-foreground",
+  broadcast: "bg-accent text-accent-foreground",
 };
 
 export default function TeamCommunicationsPage() {
