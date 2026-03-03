@@ -768,12 +768,23 @@ export function ClientIntegrationsTab({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           {tgaData.addresses.map((address) => (
                             <div key={address.id} className="p-3 border rounded-lg">
-                              <Badge variant="outline" className="mb-2">{address.address_type}</Badge>
-                              <p>{address.address_line_1}</p>
-                              {address.address_line_2 && <p>{address.address_line_2}</p>}
-                              <p>{address.suburb}, {address.state} {address.postcode}</p>
-                              {address.phone && <p className="text-sm text-muted-foreground mt-1">Phone: {address.phone}</p>}
-                              {address.email && <p className="text-sm text-muted-foreground">Email: {address.email}</p>}
+                              <div className="flex items-start gap-3">
+                                <Badge variant="outline" className="shrink-0 mt-0.5">{address.address_type}</Badge>
+                                <div className="text-sm">
+                                  <p>
+                                    {address.address_line_1}
+                                    {address.address_line_2 && <>, {address.address_line_2}</>}
+                                    {', '}{address.suburb}, {address.state} {address.postcode}
+                                  </p>
+                                  {(address.phone || address.email) && (
+                                    <p className="text-muted-foreground mt-1">
+                                      {address.phone && <>Phone: {address.phone}</>}
+                                      {address.phone && address.email && ' · '}
+                                      {address.email && <>Email: {address.email}</>}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>
