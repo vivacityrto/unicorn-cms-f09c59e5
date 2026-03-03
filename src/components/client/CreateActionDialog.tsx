@@ -17,6 +17,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
+import { NotifyClientCheckbox } from './NotifyClientCheckbox';
+import { notifyClientPrimaryContact } from '@/lib/notifyClient';
 
 interface CreateActionDialogProps {
   open: boolean;
@@ -44,6 +46,7 @@ export function CreateActionDialog({
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
+  const [notifyClient, setNotifyClient] = useState(false);
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -76,6 +79,22 @@ export function CreateActionDialog({
       });
 
       toast({ title: 'Action created', description: `"${title.trim()}" added to operations tracker.` });
+
+      // Send client notification email if requested
+      if (notifyClient) {
+        const creatorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : undefined;
+        notifyClientPrimaryContact({
+          tenantId,
+          context: 'Action Created',
+          title: title.trim(),
+          description: description.trim() || undefined,
+          priority,
+          dueDate: dueDate || undefined,
+          createdByName: creatorName || undefined,
+          packageId: packageId,
+        });
+      }
+
       onOpenChange(false);
     } catch (err: any) {
       console.error('Error creating action:', err);
@@ -138,6 +157,7 @@ export function CreateActionDialog({
                 </label>
               ))}
             </div>
+            <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} className="mt-1" />
           </div>
         </div>
         <DialogFooter>

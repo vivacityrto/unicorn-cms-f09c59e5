@@ -27,6 +27,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { Bell, UserMinus, Mic, MicOff } from 'lucide-react';
+import { NotifyClientCheckbox } from './NotifyClientCheckbox';
+import { notifyClientPrimaryContact } from '@/lib/notifyClient';
 import type { TimeEntry } from '@/hooks/useTimeTracking';
 import type { ScopeTag } from '@/hooks/useTenantMemberships';
 
@@ -74,6 +76,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [notifyUserId, setNotifyUserId] = useState<string>('');
+  const [notifyClient, setNotifyClient] = useState(false);
   const [vivacityStaff, setVivacityStaff] = useState<TeamMember[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
 
@@ -258,6 +261,18 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           notifyUserId,
           notifyName: notifyMember ? `${notifyMember.first_name} ${notifyMember.last_name}` : 'unknown',
           summary: `${durationStr} (${workLabel})`,
+        });
+      }
+
+      // Send client notification email if requested
+      if (notifyClient && entry) {
+        const workLabel = workTypes.find(w => w.code === workType)?.label || workType;
+        const durationStr = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+        notifyClientPrimaryContact({
+          tenantId: entry.tenant_id,
+          context: 'Time Updated',
+          title: `${durationStr} — ${workLabel}`,
+          description: notes || undefined,
         });
       }
 
@@ -482,6 +497,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
               </SelectContent>
             </Select>
           </div>
+          <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} className="mt-1" />
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
