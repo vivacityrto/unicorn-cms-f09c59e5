@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useStaffTaskInstances } from '@/hooks/useStaffTaskInstances';
 import { useTaskStatusOptions, getStatusIcon, getStatusColor } from '@/hooks/useTaskStatusOptions';
 import { useStageEmails } from '@/hooks/useStageEmails';
@@ -10,10 +11,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, Calendar, CheckCircle2 } from 'lucide-react';
+import { Loader2, Calendar, CheckCircle2, StickyNote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { parseTaskType, getTaskTypeBadgeLabel, getTaskTypeBadgeClasses } from '@/utils/staffTaskType';
+
+type TaskFilter = 'active' | 'incomplete' | 'all';
 
 interface StageStaffTasksProps {
   stageInstanceId: number;
@@ -23,6 +26,7 @@ interface StageStaffTasksProps {
 }
 
 export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageStatusId }: StageStaffTasksProps) {
+  const [filter, setFilter] = useState<TaskFilter>('active');
   const { 
     tasks, 
     loading, 
@@ -36,6 +40,12 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
 
   const { statuses } = useTaskStatusOptions();
   const { emails: stageEmails } = useStageEmails({ stageInstanceId });
+
+  const filteredTasks = tasks.filter((task) => {
+    if (filter === 'active') return task.status_id !== 3; // exclude N/A
+    if (filter === 'incomplete') return task.status_id !== 3 && task.status_id !== 2 && task.status_id !== 4; // exclude N/A, Completed, Core Complete
+    return true; // 'all'
+  });
 
   if (loading) {
     return (
@@ -58,13 +68,29 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
   return (
     <div className="border-t bg-muted/30">
       <div className="px-4 py-2 border-b bg-muted/50 flex items-center justify-between">
-        <span className="text-sm font-medium">Staff Tasks</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium">Staff Tasks</span>
+          <Select value={filter} onValueChange={(v) => setFilter(v as TaskFilter)}>
+            <SelectTrigger className="w-[120px] h-7 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="incomplete">Incomplete</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Badge variant="outline" className="text-xs">
           {completedCount}/{totalCount} complete
         </Badge>
       </div>
       <div className="divide-y">
-        {tasks.map((task) => {
+        {filteredTasks.length === 0 ? (
+          <div className="p-4 text-center text-muted-foreground text-sm">
+            No tasks match the current filter.
+          </div>
+        ) : filteredTasks.map((task) => {
           const StatusIcon = getStatusIcon(task.status_id);
           const statusColor = getStatusColor(task.status_id);
           const isUpdating = updating === task.id;
@@ -98,6 +124,14 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
                     {cleanName}
                   </p>
                   <TaskDescriptionButton taskName={cleanName} description={task.task_description} />
+                  {task.notes && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <StickyNote className="h-3 w-3 text-primary shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">Has notes</TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
                 {/* Status metadata line */}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">

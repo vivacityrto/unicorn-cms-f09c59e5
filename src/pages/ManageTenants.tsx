@@ -673,7 +673,7 @@ export default function ManageTenants() {
 
         <Combobox
           options={[
-            { value: "all", label: "All Renewals", icon: Calendar, iconColor: "text-muted-foreground" },
+            { value: "all", label: "All Anniversaries", icon: Calendar, iconColor: "text-muted-foreground" },
             { value: "1", label: "Due within 1 month", icon: Calendar, iconColor: "text-red-600" },
             { value: "2", label: "Due within 2 months", icon: Calendar, iconColor: "text-amber-600" },
             { value: "3", label: "Due within 3 months", icon: Calendar, iconColor: "text-yellow-600" },
@@ -682,7 +682,7 @@ export default function ManageTenants() {
           ]}
           value={renewalFilter}
           onValueChange={setRenewalFilter}
-          placeholder="Filter by renewal..."
+          placeholder="Filter by anniversary..."
           searchPlaceholder="Search..."
           emptyText="No options."
           className="w-full md:w-[220px] h-[48px]"
@@ -744,7 +744,7 @@ export default function ManageTenants() {
                     className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 cursor-pointer hover:bg-muted/50 select-none"
                     onClick={() => setSortField(sortField === "renewal" ? "status" : "renewal")}
                   >
-                    Renewal {sortField === "renewal" && "▲"}
+                    Anniversary {sortField === "renewal" && "▲"}
                   </TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
                 </TableRow>
