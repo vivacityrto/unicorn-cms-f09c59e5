@@ -22,6 +22,7 @@ interface TenantAddress {
   postcode: string | null;
   country: string;
   full_address: string | null;
+  transfer_date: string | null;
 }
 
 interface AddressType {
@@ -336,6 +337,7 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
                     state: address.state,
                     postcode: address.postcode
                   })}
+                  {address.transfer_date && ' *'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
