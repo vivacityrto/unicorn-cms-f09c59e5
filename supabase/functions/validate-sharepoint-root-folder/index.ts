@@ -210,12 +210,11 @@ Deno.serve(async (req: Request) => {
 
     console.log('[validate-sp] URL:', root_folder_url);
 
-    // ── Strategy: always resolve site+drive with APP-ONLY token ──
-    // The /shares/ API requires delegated tokens, so for sharing links we
-    // extract the site name and resolve site/drive directly with app token.
-    // This works because Sites.Selected grants app access to registered sites.
+    // ── Strategy: resolve site+drive from sharepoint_sites table first ──
+    // This matches the working pattern from provision-tenant-sharepoint-folder.
+    // Only fall back to URL-based Graph resolution if table lookup fails.
 
-    // Step 1: Extract site info from any URL type
+    // Step 1: Extract site info from URL for context
     const siteInfo = extractSiteInfo(root_folder_url);
     if (!siteInfo) {
       const errorMessage = 'Could not parse this SharePoint URL. Navigate to the folder in SharePoint and copy the URL from the browser address bar.';
@@ -231,58 +230,105 @@ Deno.serve(async (req: Request) => {
 
     console.log('[validate-sp] Extracted site:', siteInfo.host, siteInfo.siteName);
 
-    // Step 2: Resolve site with app-only token
-    const siteRes = await graphGet<{ id: string; displayName: string; webUrl: string }>(
-      `/sites/${siteInfo.host}:/sites/${siteInfo.siteName}`,
-    );
+    // Step 2: Try to get site+drive from sharepoint_sites table (authoritative)
+    // Determine which purpose to look up based on the site name in the URL
+    let lookupPurpose: string | null = null;
+    const siteNameLower = siteInfo.siteName.toLowerCase();
+    if (siteNameLower === 'vivacityteam') lookupPurpose = 'client_files';
+    else if (siteNameLower === 'clients938') lookupPurpose = 'governance_client_files';
+    else if (siteNameLower === 'masterdocuments') lookupPurpose = 'master_documents';
 
-    if (!siteRes.ok) {
-      let errorMessage: string;
-      if (siteRes.status === 401) {
-        errorMessage = `App token was rejected accessing site "${siteInfo.siteName}". Check that MICROSOFT_CLIENT_SECRET is valid and Sites.Selected permission is granted for this site.`;
-      } else if (siteRes.status === 403) {
-        errorMessage = `The app does not have Sites.Selected permission for site "${siteInfo.siteName}". Grant write access via POST /sites/{id}/permissions in Graph Explorer.`;
-      } else if (siteRes.status === 404) {
-        errorMessage = `Site "${siteInfo.siteName}" not found. Verify the URL is correct.`;
-      } else {
-        errorMessage = `Could not access site "${siteInfo.siteName}" (status ${siteRes.status}).`;
+    let siteId: string | null = null;
+    let driveId: string | null = null;
+
+    if (lookupPurpose) {
+      const { data: spSite } = await supabaseAdmin
+        .from('sharepoint_sites')
+        .select('graph_site_id, drive_id')
+        .eq('purpose', lookupPurpose)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (spSite?.graph_site_id) {
+        siteId = spSite.graph_site_id;
+        console.log('[validate-sp] Found site in sharepoint_sites:', siteId);
+
+        // Resolve drive_id if it's stored as a Graph URL
+        if (spSite.drive_id?.startsWith('http')) {
+          console.log('[validate-sp] drive_id is a URL, resolving via site→drive...');
+          const driveResp = await graphGet<{ id: string }>(`/sites/${siteId}/drive`);
+          if (driveResp.ok) {
+            driveId = driveResp.data.id;
+            console.log('[validate-sp] Resolved drive ID from site:', driveId);
+            // Cache resolved drive ID back
+            await supabaseAdmin
+              .from('sharepoint_sites')
+              .update({ drive_id: driveId })
+              .eq('purpose', lookupPurpose)
+              .eq('is_active', true);
+          } else {
+            console.warn('[validate-sp] Drive resolution from site failed:', driveResp.status);
+          }
+        } else if (spSite.drive_id) {
+          driveId = spSite.drive_id;
+          console.log('[validate-sp] Using cached drive ID:', driveId);
+        }
       }
-      console.error('[validate-sp] Site resolution failed:', siteRes.status, JSON.stringify(siteRes.data));
-      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-        validation_status: 'invalid',
-        validation_error: errorMessage,
-      });
-      return new Response(
-        JSON.stringify({ success: false, error: errorMessage }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
-    const siteId = siteRes.data.id;
-    console.log('[validate-sp] Resolved site:', siteId, siteRes.data.displayName);
-
-    // Step 3: Get drives with app-only token
-    const drivesRes = await graphGet<{
-      value: Array<{ id: string; name: string; driveType: string }>;
-    }>(`/sites/${siteId}/drives`);
-
-    if (!drivesRes.ok || !drivesRes.data.value?.length) {
-      const errorMessage = 'Could not list document libraries for this site.';
-      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-        validation_status: 'invalid',
-        validation_error: errorMessage,
-      });
-      return new Response(
-        JSON.stringify({ success: false, error: errorMessage }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    // Step 3: Fall back to Graph URL-based resolution only if table lookup failed
+    if (!siteId || !driveId) {
+      console.log('[validate-sp] Table lookup failed, trying Graph API resolution...');
+      const siteRes = await graphGet<{ id: string; displayName: string; webUrl: string }>(
+        `/sites/${siteInfo.host}:/sites/${siteInfo.siteName}`,
       );
+
+      if (!siteRes.ok) {
+        let errorMessage: string;
+        if (siteRes.status === 401 || siteRes.status === 403) {
+          errorMessage = `Cannot access site "${siteInfo.siteName}". Ensure the sharepoint_sites table has a row for this site with a valid graph_site_id, or grant Sites.Selected permission.`;
+        } else if (siteRes.status === 404) {
+          errorMessage = `Site "${siteInfo.siteName}" not found. Verify the URL is correct.`;
+        } else {
+          errorMessage = `Could not access site "${siteInfo.siteName}" (status ${siteRes.status}).`;
+        }
+        console.error('[validate-sp] Site resolution failed:', siteRes.status, JSON.stringify(siteRes.data));
+        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+          validation_status: 'invalid',
+          validation_error: errorMessage,
+        });
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      siteId = siteRes.data.id;
+
+      const drivesRes = await graphGet<{
+        value: Array<{ id: string; name: string; driveType: string }>;
+      }>(`/sites/${siteId}/drives`);
+
+      if (!drivesRes.ok || !drivesRes.data.value?.length) {
+        const errorMessage = 'Could not list document libraries for this site.';
+        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+          validation_status: 'invalid',
+          validation_error: errorMessage,
+        });
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const drive =
+        drivesRes.data.value.find((d) => d.driveType === 'documentLibrary') ||
+        drivesRes.data.value[0];
+      driveId = drive.id;
     }
 
-    const drive =
-      drivesRes.data.value.find((d) => d.driveType === 'documentLibrary') ||
-      drivesRes.data.value[0];
-    const driveId = drive.id;
-    console.log('[validate-sp] Using drive:', driveId, drive.name);
+    console.log('[validate-sp] Using site:', siteId, 'drive:', driveId);
 
     // Step 4: Resolve folder
     let driveItem: DriveItem;
