@@ -310,6 +310,16 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
                 Root folder link
                 <ExternalLink className="h-3 w-3" />
               </a>
+            ) : globalSiteUrl ? (
+              <a
+                href={globalSiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 hover:text-primary hover:underline underline-offset-4 transition-colors"
+              >
+                Browse Client Folder root
+                <ExternalLink className="h-3 w-3" />
+              </a>
             ) : (
               'Root folder link'
             )}

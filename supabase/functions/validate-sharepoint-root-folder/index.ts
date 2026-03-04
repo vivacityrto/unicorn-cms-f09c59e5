@@ -8,24 +8,70 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 /**
  * Detect if a URL is a SharePoint sharing link (/:f:/s/ or /:x:/s/ format).
- * These use an encoded item ID rather than a folder path.
  */
 function isSharingLink(url: string): boolean {
   return /\/:[a-z]:\/s\//i.test(url);
 }
 
 /**
- * Resolve a sharing link via the Graph /shares/ API using app-level token.
+ * Extract host and site name from a sharing link URL.
+ * e.g. https://org.sharepoint.com/:f:/s/sitename/TOKEN → { host, siteName }
  */
-async function resolveViaSharingApi(url: string): Promise<{
-  driveId: string;
-  driveItem: DriveItem;
+function parseSharingLinkSite(url: string): { host: string; siteName: string } | null {
+  try {
+    const parsed = new URL(url.trim());
+    const host = parsed.hostname;
+    // Pathname like /:f:/s/vivacityteam/TOKEN
+    const match = parsed.pathname.match(/\/:[a-z]:\/s\/([^/]+)/i);
+    if (!match) return null;
+    return { host, siteName: match[1] };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve a sharing link by extracting the site, getting drives,
+ * then using the /shares/ API with user-delegated approach OR
+ * falling back to listing root children to find the folder.
+ * Since Sites.Selected doesn't support /shares/, we resolve the site
+ * directly and prompt the user to use the direct browser URL.
+ */
+async function resolveSharingLink(url: string): Promise<{
+  host: string;
+  sitePath: string;
+  relativePath: string | null;
 } | { error: string }> {
+  const siteInfo = parseSharingLinkSite(url);
+  if (!siteInfo) {
+    return { error: 'Could not extract site information from this sharing link.' };
+  }
+
+  console.log('[validate-sp] Sharing link detected — extracted site:', siteInfo.siteName);
+
+  // Try to resolve the site via our Sites.Selected permission
+  const siteRes = await graphGet<{ id: string; displayName: string; webUrl: string }>(
+    `/sites/${siteInfo.host}:/sites/${siteInfo.siteName}`
+  );
+
+  if (!siteRes.ok) {
+    if (siteRes.status === 403) {
+      return {
+        error: `The app does not have Sites.Selected permission for site "${siteInfo.siteName}". Navigate to the folder in SharePoint and copy the URL from the browser address bar instead.`,
+      };
+    }
+    return {
+      error: `Could not access site "${siteInfo.siteName}" (status ${siteRes.status}). Try copying the URL from the browser address bar instead.`,
+    };
+  }
+
+  const siteId = siteRes.data.id;
+  console.log('[validate-sp] Resolved site from sharing link:', siteId, siteRes.data.displayName);
+
+  // Now try the /shares/ API with our app token — it may work if the org allows it
   const base64 = btoa(url);
   const urlSafe = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const shareId = `u!${urlSafe}`;
-
-  console.log('[validate-sp] Resolving sharing link via /shares/ API');
 
   const token = await getAppToken();
   const resp = await fetch(
@@ -33,30 +79,26 @@ async function resolveViaSharingApi(url: string): Promise<{
     { headers: { Authorization: `Bearer ${token}` } }
   );
 
-  if (!resp.ok) {
-    const errBody = await resp.text();
-    console.error('[validate-sp] /shares/ resolution failed:', resp.status, errBody);
-
-    if (resp.status === 403) {
-      return {
-        error: 'The app does not have permission to resolve this sharing link. Try using the direct folder URL from the browser address bar instead (navigate to the folder in SharePoint and copy the URL).',
+  if (resp.ok) {
+    const driveItem = await resp.json();
+    const parentRef = driveItem.parentReference;
+    if (parentRef?.driveId) {
+      console.log('[validate-sp] /shares/ resolved successfully');
+      // Return as a direct URL parse result using the webUrl
+      return parseDirectUrl(driveItem.webUrl) || {
+        error: 'Resolved sharing link but could not parse the resulting URL.',
       };
     }
-    if (resp.status === 404) {
-      return { error: 'Could not find the shared resource. The link may have expired or been revoked.' };
-    }
-    return { error: `Microsoft returned status ${resp.status} when resolving sharing link.` };
+  } else {
+    const errBody = await resp.text();
+    console.warn('[validate-sp] /shares/ API unavailable (expected with Sites.Selected):', resp.status, errBody);
   }
 
-  const driveItem = (await resp.json()) as DriveItem;
-  const parentRef = driveItem.parentReference as Record<string, string> | undefined;
-  const driveId = parentRef?.driveId;
-
-  if (!driveId) {
-    return { error: 'Could not determine the drive ID from the sharing link.' };
-  }
-
-  return { driveId, driveItem };
+  // /shares/ didn't work — construct a helpful error directing to the direct URL
+  const siteWebUrl = siteRes.data.webUrl;
+  return {
+    error: `Sharing links cannot be resolved with the current permissions. Please navigate to the folder in SharePoint and copy the URL from the browser address bar.\n\nYour site root: ${siteWebUrl}`,
+  };
 }
 
 /**
@@ -179,125 +221,127 @@ Deno.serve(async (req: Request) => {
     let driveId: string;
     let driveItem: DriveItem;
 
-    // ── Strategy 1: Sharing link → resolve via /shares/ API ──
+    // ── Resolve URL to parsed components ──
+    let parsed: { host: string; sitePath: string; relativePath: string | null } | null = null;
+
     if (isSharingLink(root_folder_url)) {
-      const result = await resolveViaSharingApi(root_folder_url);
-      if ('error' in result) {
+      // Strategy 1: Sharing link → extract site, try /shares/, fallback to error with guidance
+      const sharingResult = await resolveSharingLink(root_folder_url);
+      if ('error' in sharingResult) {
         await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
           validation_status: 'invalid',
-          validation_error: result.error,
+          validation_error: sharingResult.error,
         });
         return new Response(
-          JSON.stringify({ success: false, error: result.error }),
+          JSON.stringify({ success: false, error: sharingResult.error }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      driveId = result.driveId;
-      driveItem = result.driveItem;
+      parsed = sharingResult;
+    } else {
+      // Strategy 2: Direct URL
+      parsed = parseDirectUrl(root_folder_url);
     }
-    // ── Strategy 2: Direct URL → parse and resolve via site/drive/path ──
-    else {
-      const parsed = parseDirectUrl(root_folder_url);
-      if (!parsed) {
-        const errorMessage =
-          'Could not parse this SharePoint URL. Provide a direct link to a folder or use "Copy link" from SharePoint.';
-        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-          validation_status: 'invalid',
-          validation_error: errorMessage,
-        });
-        return new Response(
-          JSON.stringify({ success: false, error: errorMessage }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
 
-      // Resolve site
-      const siteRes = await graphGet<{ id: string; displayName: string; webUrl: string }>(
-        `/sites/${parsed.host}:${parsed.sitePath}`
+    if (!parsed) {
+      const errorMessage =
+        'Could not parse this SharePoint URL. Navigate to the folder in SharePoint and copy the URL from the browser address bar.';
+      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+        validation_status: 'invalid',
+        validation_error: errorMessage,
+      });
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
 
-      if (!siteRes.ok) {
-        let errorMessage = 'Could not access this SharePoint site. ';
-        if (siteRes.status === 403) {
-          errorMessage +=
-            'The app does not have permission. Ensure Sites.Selected is granted for this site.';
-        } else if (siteRes.status === 404) {
-          errorMessage += 'Site not found.';
-        } else {
-          errorMessage += `Microsoft returned status ${siteRes.status}.`;
-        }
-        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-          validation_status: 'invalid',
-          validation_error: errorMessage,
-        });
-        return new Response(
-          JSON.stringify({ success: false, error: errorMessage }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // ── Resolve site ──
+    const siteRes = await graphGet<{ id: string; displayName: string; webUrl: string }>(
+      `/sites/${parsed.host}:${parsed.sitePath}`
+    );
 
-      const siteId = siteRes.data.id;
-      console.log('[validate-sp] Resolved site:', siteId, siteRes.data.displayName);
-
-      // Get drives
-      const drivesRes = await graphGet<{
-        value: Array<{ id: string; name: string; driveType: string }>;
-      }>(`/sites/${siteId}/drives`);
-
-      if (!drivesRes.ok || !drivesRes.data.value?.length) {
-        const errorMessage = 'Could not list document libraries for this site.';
-        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-          validation_status: 'invalid',
-          validation_error: errorMessage,
-        });
-        return new Response(
-          JSON.stringify({ success: false, error: errorMessage }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const drive =
-        drivesRes.data.value.find((d) => d.driveType === 'documentLibrary') ||
-        drivesRes.data.value[0];
-      driveId = drive.id;
-      console.log('[validate-sp] Using drive:', driveId, drive.name);
-
-      // Resolve folder
-      if (parsed.relativePath) {
-        const folderRes = await graphGet<DriveItem>(
-          `/drives/${driveId}/root:/${encodeURIComponent(parsed.relativePath).replace(/%2F/g, '/')}`
-        );
-        if (!folderRes.ok) {
-          let errorMessage = `Could not find folder "${parsed.relativePath}". `;
-          errorMessage +=
-            folderRes.status === 404
-              ? 'Check the folder path is correct.'
-              : `Microsoft returned status ${folderRes.status}.`;
-          await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-            validation_status: 'invalid',
-            validation_error: errorMessage,
-          });
-          return new Response(
-            JSON.stringify({ success: false, error: errorMessage }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        driveItem = folderRes.data;
+    if (!siteRes.ok) {
+      let errorMessage = 'Could not access this SharePoint site. ';
+      if (siteRes.status === 403) {
+        errorMessage +=
+          'The app does not have permission. Ensure Sites.Selected is granted for this site.';
+      } else if (siteRes.status === 404) {
+        errorMessage += 'Site not found.';
       } else {
-        const rootRes = await graphGet<DriveItem>(`/drives/${driveId}/root`);
-        if (!rootRes.ok) {
-          const errorMessage = 'Could not access the document library root.';
-          await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-            validation_status: 'invalid',
-            validation_error: errorMessage,
-          });
-          return new Response(
-            JSON.stringify({ success: false, error: errorMessage }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        driveItem = rootRes.data;
+        errorMessage += `Microsoft returned status ${siteRes.status}.`;
       }
+      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+        validation_status: 'invalid',
+        validation_error: errorMessage,
+      });
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const siteId = siteRes.data.id;
+    console.log('[validate-sp] Resolved site:', siteId, siteRes.data.displayName);
+
+    // ── Get drives ──
+    const drivesRes = await graphGet<{
+      value: Array<{ id: string; name: string; driveType: string }>;
+    }>(`/sites/${siteId}/drives`);
+
+    if (!drivesRes.ok || !drivesRes.data.value?.length) {
+      const errorMessage = 'Could not list document libraries for this site.';
+      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+        validation_status: 'invalid',
+        validation_error: errorMessage,
+      });
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const drive =
+      drivesRes.data.value.find((d) => d.driveType === 'documentLibrary') ||
+      drivesRes.data.value[0];
+    driveId = drive.id;
+    console.log('[validate-sp] Using drive:', driveId, drive.name);
+
+    // ── Resolve folder ──
+    if (parsed.relativePath) {
+      const folderRes = await graphGet<DriveItem>(
+        `/drives/${driveId}/root:/${encodeURIComponent(parsed.relativePath).replace(/%2F/g, '/')}`
+      );
+      if (!folderRes.ok) {
+        let errorMessage = `Could not find folder "${parsed.relativePath}". `;
+        errorMessage +=
+          folderRes.status === 404
+            ? 'Check the folder path is correct.'
+            : `Microsoft returned status ${folderRes.status}.`;
+        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+          validation_status: 'invalid',
+          validation_error: errorMessage,
+        });
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      driveItem = folderRes.data;
+    } else {
+      const rootRes = await graphGet<DriveItem>(`/drives/${driveId}/root`);
+      if (!rootRes.ok) {
+        const errorMessage = 'Could not access the document library root.';
+        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+          validation_status: 'invalid',
+          validation_error: errorMessage,
+        });
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      driveItem = rootRes.data;
     }
 
     // Verify it's a folder
