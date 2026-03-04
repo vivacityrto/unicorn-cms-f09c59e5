@@ -129,7 +129,7 @@ export function AppSettingsForm({ table, data, loading, onSave, saving }: AppSet
                       <code className="text-[11px] text-muted-foreground font-mono w-48 shrink-0 truncate">
                         {col.column_name}
                       </code>
-                      <div className="ml-auto flex justify-end">
+                      <div className="flex-1 flex justify-end">
                         {isBool ? (
                           <Switch
                             checked={!!value}
@@ -147,7 +147,7 @@ export function AppSettingsForm({ table, data, loading, onSave, saving }: AppSet
                             type="text"
                             value={value ?? ""}
                             onChange={(e) => handleChange(col.column_name, e.target.value || null)}
-                            className="min-w-80 max-w-lg h-8 text-sm"
+                            className="w-full h-8 text-sm"
                             placeholder="Not set"
                           />
                         )}
