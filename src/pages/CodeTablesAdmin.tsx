@@ -3,6 +3,7 @@ import { useCodeTables, useTableData } from "@/hooks/useCodeTables";
 import { CodeTableSidebar } from "@/components/admin/CodeTableSidebar";
 import { CodeTableDataGrid } from "@/components/admin/CodeTableDataGrid";
 import { CodeRowDialog } from "@/components/admin/CodeRowDialog";
+import { AppSettingsForm } from "@/components/admin/AppSettingsForm";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import type { CodeTableRow } from "@/services/codeTablesService";
 import {
@@ -65,6 +66,8 @@ export default function CodeTablesAdmin() {
     });
   }
 
+  const isAppSettings = selectedTable === "app_settings";
+
   return (
     <DashboardLayout>
       <div className="flex h-[calc(100vh-10rem)] bg-background rounded-lg border overflow-hidden">
@@ -74,15 +77,28 @@ export default function CodeTablesAdmin() {
           onSelect={setSelectedTable}
           loading={tablesLoading}
         />
-        <CodeTableDataGrid
-          table={selectedMeta}
-          data={data}
-          loading={dataLoading}
-          onAdd={() => openDialog("create")}
-          onEdit={(row) => openDialog("edit", row)}
-          onDuplicate={(row) => openDialog("duplicate", row)}
-          onDelete={(row) => setDeleteTarget(row)}
-        />
+
+        {isAppSettings ? (
+          <AppSettingsForm
+            table={selectedMeta!}
+            data={data}
+            loading={dataLoading}
+            onSave={(whereClause, rowData) =>
+              updateRow.mutate({ whereClause, data: rowData })
+            }
+            saving={updateRow.isPending}
+          />
+        ) : (
+          <CodeTableDataGrid
+            table={selectedMeta}
+            data={data}
+            loading={dataLoading}
+            onAdd={() => openDialog("create")}
+            onEdit={(row) => openDialog("edit", row)}
+            onDuplicate={(row) => openDialog("duplicate", row)}
+            onDelete={(row) => setDeleteTarget(row)}
+          />
+        )}
 
         {/* Create/Edit/Duplicate Dialog */}
         <CodeRowDialog
