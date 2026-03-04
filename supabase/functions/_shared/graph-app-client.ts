@@ -10,8 +10,8 @@
  *   MICROSOFT_TENANT_ID
  *
  * Azure AD app permissions (application, not delegated):
- *   Sites.ReadWrite.All
- *   Files.ReadWrite.All
+ *   Sites.Selected (with write role granted per-site via Graph permissions API)
+ *   Registered sites: vivacityteam, Clients938, MasterDocuments
  */
 
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";

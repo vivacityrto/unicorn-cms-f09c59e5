@@ -1,79 +1,70 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { corsHeaders } from '../_shared/cors.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { graphGet, type DriveItem } from '../_shared/graph-app-client.ts';
+import { emitTimelineEvent } from '../_shared/emit-timeline-event.ts';
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-const MICROSOFT_CLIENT_ID = Deno.env.get("MICROSOFT_CLIENT_ID")!;
-const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET")!;
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 /**
- * Encode a sharing URL into the Graph API shareId format.
- * See: https://learn.microsoft.com/en-us/graph/api/shares-get
+ * Parse a SharePoint URL into its components for Graph API resolution.
+ * Supports URLs like:
+ *   https://tenant.sharepoint.com/sites/SiteName/Shared%20Documents/Folder/SubFolder
+ *   https://tenant.sharepoint.com/:f:/r/sites/SiteName/Shared%20Documents/Folder
  */
-function encodeShareUrl(url: string): string {
-  const base64 = btoa(url);
-  // URL-safe base64: replace + → -, / → _, trim trailing =
-  const urlSafe = base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  return `u!${urlSafe}`;
-}
+function parseSharePointUrl(url: string): {
+  host: string;
+  sitePath: string;
+  relativePath: string | null;
+} | null {
+  try {
+    // Clean up encoded sharing URLs (e.g. /:f:/r/sites/...)
+    let cleanUrl = url.trim();
+    // Remove sharing format markers like /:f:/r or /:x:/r etc.
+    cleanUrl = cleanUrl.replace(/\/:[a-z]:\/[rs]\//i, '/');
+    // Remove query params and hash
+    cleanUrl = cleanUrl.split('?')[0].split('#')[0];
 
-async function refreshToken(
-  supabaseAdmin: ReturnType<typeof createClient>,
-  userId: string,
-  token: { access_token: string; refresh_token: string; expires_at: string; scope?: string }
-): Promise<string> {
-  const expiresAt = new Date(token.expires_at);
-  if (expiresAt.getTime() - Date.now() > 5 * 60 * 1000) {
-    return token.access_token;
-  }
+    const parsed = new URL(cleanUrl);
+    const host = parsed.hostname;
+    const pathParts = decodeURIComponent(parsed.pathname).split('/').filter(Boolean);
 
-  const tokenResponse = await fetch(
-    "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: MICROSOFT_CLIENT_ID,
-        client_secret: MICROSOFT_CLIENT_SECRET,
-        refresh_token: token.refresh_token,
-        grant_type: "refresh_token",
-        scope: token.scope || "openid profile email offline_access Files.Read.All",
-      }),
+    // Find "sites" segment
+    const sitesIdx = pathParts.findIndex(p => p.toLowerCase() === 'sites');
+    if (sitesIdx === -1 || sitesIdx + 1 >= pathParts.length) {
+      return null;
     }
-  );
 
-  if (!tokenResponse.ok) {
-    const errorText = await tokenResponse.text();
-    console.error("[validate-sp] Token refresh failed:", errorText);
-    throw new Error("Failed to refresh Microsoft token — user may need to reconnect");
+    const siteName = pathParts[sitesIdx + 1];
+    const sitePath = `/sites/${siteName}`;
+
+    // Everything after "Shared Documents" (or "Shared%20Documents") is the folder path
+    const remaining = pathParts.slice(sitesIdx + 2);
+    const sharedDocsIdx = remaining.findIndex(
+      p => p.toLowerCase() === 'shared documents' || p.toLowerCase() === 'shared%20documents'
+    );
+
+    let relativePath: string | null = null;
+    if (sharedDocsIdx !== -1) {
+      const folderParts = remaining.slice(sharedDocsIdx + 1);
+      // Filter out SharePoint view artifacts
+      const filtered = folderParts.filter(p =>
+        p.toLowerCase() !== 'forms' &&
+        p.toLowerCase() !== 'allitems.aspx'
+      );
+      if (filtered.length > 0) {
+        relativePath = filtered.join('/');
+      }
+    }
+
+    return { host, sitePath, relativePath };
+  } catch {
+    return null;
   }
-
-  const tokens = await tokenResponse.json();
-  const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-
-  await supabaseAdmin
-    .from("oauth_tokens")
-    .update({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token || token.refresh_token,
-      expires_at: newExpiresAt.toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("user_id", userId)
-    .eq("provider", "microsoft");
-
-  return tokens.access_token;
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -86,158 +77,175 @@ serve(async (req) => {
 
     if (!tenant_id || !root_folder_url) {
       return new Response(
-        JSON.stringify({ error: "tenant_id and root_folder_url are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: 'tenant_id and root_folder_url are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Auth
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseAdmin.auth.getUser(authHeader.replace("Bearer ", ""));
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
       return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verify caller is Vivacity team
+    // Verify caller is Vivacity staff
     const { data: callerUser } = await supabaseAdmin
-      .from("users")
-      .select("unicorn_role, is_vivacity_internal")
-      .eq("user_uuid", user.id)
+      .from('users')
+      .select('is_vivacity_internal')
+      .eq('user_uuid', user.id)
       .single();
 
     if (!callerUser?.is_vivacity_internal) {
       return new Response(
-        JSON.stringify({ error: "Forbidden — Vivacity staff only" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: 'Forbidden — Vivacity staff only' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get caller's Microsoft token
-    const { data: tokenData, error: tokenError } = await supabaseAdmin
-      .from("oauth_tokens")
-      .select("access_token, refresh_token, expires_at, scope")
-      .eq("user_id", user.id)
-      .eq("provider", "microsoft")
-      .single();
-
-    if (tokenError || !tokenData) {
-      // Store failure
+    // Parse the SharePoint URL
+    const parsed = parseSharePointUrl(root_folder_url);
+    if (!parsed) {
+      const errorMessage = 'Could not parse this SharePoint URL. Please provide a direct link to a SharePoint folder.';
       await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-        validation_status: "invalid",
-        validation_error: "No Microsoft account connected. Please connect your Microsoft account first.",
-      });
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "No Microsoft account connected. Please connect your Microsoft account first.",
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Refresh token if needed
-    let accessToken: string;
-    try {
-      accessToken = await refreshToken(supabaseAdmin, user.id, tokenData);
-    } catch (e) {
-      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-        validation_status: "invalid",
-        validation_error: "Microsoft token expired. Please reconnect your Microsoft account.",
-      });
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Microsoft token expired. Please reconnect your Microsoft account.",
-        }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Resolve the URL to a driveItem via Graph sharing API
-    const shareId = encodeShareUrl(root_folder_url.trim());
-    console.log("[validate-sp] Resolving shareId:", shareId.substring(0, 30) + "...");
-
-    const graphUrl = `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem?$select=id,name,folder,file,parentReference,webUrl`;
-    const graphRes = await fetch(graphUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!graphRes.ok) {
-      const errorBody = await graphRes.text();
-      console.error("[validate-sp] Graph resolution failed:", graphRes.status, errorBody);
-
-      let errorMessage = "Could not resolve this URL. ";
-      if (graphRes.status === 404) {
-        errorMessage += 'Make sure the URL is a valid SharePoint sharing link. Use "Copy link" from SharePoint.';
-      } else if (graphRes.status === 403) {
-        errorMessage += "You do not have access to this resource. Check your Microsoft permissions.";
-      } else {
-        errorMessage += `Microsoft returned status ${graphRes.status}.`;
-      }
-
-      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-        validation_status: "invalid",
+        validation_status: 'invalid',
         validation_error: errorMessage,
       });
-
       return new Response(
         JSON.stringify({ success: false, error: errorMessage }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const driveItem = await graphRes.json();
+    console.log('[validate-sp] Parsed URL:', parsed);
 
-    // Must be a folder
-    if (!driveItem.folder) {
+    // Step 1: Resolve the site using app-level credentials
+    const siteRes = await graphGet<{ id: string; displayName: string; webUrl: string }>(
+      `/sites/${parsed.host}:${parsed.sitePath}`
+    );
+
+    if (!siteRes.ok) {
+      let errorMessage = 'Could not access this SharePoint site. ';
+      if (siteRes.status === 403) {
+        errorMessage += 'The app does not have permission to this site. Ensure Sites.Selected permission is granted for this site.';
+      } else if (siteRes.status === 404) {
+        errorMessage += 'Site not found. Check the URL is correct.';
+      } else {
+        errorMessage += `Microsoft returned status ${siteRes.status}.`;
+      }
+      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+        validation_status: 'invalid',
+        validation_error: errorMessage,
+      });
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const siteId = siteRes.data.id;
+    console.log('[validate-sp] Resolved site:', siteId, siteRes.data.displayName);
+
+    // Step 2: Get the default document library drive
+    const drivesRes = await graphGet<{ value: Array<{ id: string; name: string; driveType: string; webUrl: string }> }>(
+      `/sites/${siteId}/drives`
+    );
+
+    if (!drivesRes.ok || !drivesRes.data.value?.length) {
+      const errorMessage = 'Could not list document libraries for this site.';
+      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+        validation_status: 'invalid',
+        validation_error: errorMessage,
+      });
+      return new Response(
+        JSON.stringify({ success: false, error: errorMessage }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Use the first documentLibrary drive (typically "Shared Documents" / "Documents")
+    const drive = drivesRes.data.value.find(d => d.driveType === 'documentLibrary') || drivesRes.data.value[0];
+    const driveId = drive.id;
+    console.log('[validate-sp] Using drive:', driveId, drive.name);
+
+    // Step 3: Resolve the folder within the drive
+    let driveItem: DriveItem;
+
+    if (parsed.relativePath) {
+      // Navigate to the specific subfolder
+      const folderRes = await graphGet<DriveItem>(
+        `/drives/${driveId}/root:/${encodeURIComponent(parsed.relativePath).replace(/%2F/g, '/')}`
+      );
+
+      if (!folderRes.ok) {
+        let errorMessage = `Could not find folder "${parsed.relativePath}" in this drive. `;
+        if (folderRes.status === 404) {
+          errorMessage += 'Check that the folder path in the URL is correct.';
+        } else {
+          errorMessage += `Microsoft returned status ${folderRes.status}.`;
+        }
+        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+          validation_status: 'invalid',
+          validation_error: errorMessage,
+        });
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      driveItem = folderRes.data;
+    } else {
+      // Use the drive root
+      const rootRes = await graphGet<DriveItem>(`/drives/${driveId}/root`);
+      if (!rootRes.ok) {
+        const errorMessage = 'Could not access the document library root.';
+        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+          validation_status: 'invalid',
+          validation_error: errorMessage,
+        });
+        return new Response(
+          JSON.stringify({ success: false, error: errorMessage }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      driveItem = rootRes.data;
+    }
+
+    // Verify it's a folder
+    if (driveItem.file) {
       const errorMessage = `"${driveItem.name}" is a file, not a folder. Please provide a folder link.`;
       await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-        validation_status: "invalid",
+        validation_status: 'invalid',
         validation_error: errorMessage,
       });
       return new Response(
         JSON.stringify({ success: false, error: errorMessage, is_folder: false }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const driveId = driveItem.parentReference?.driveId;
     const rootItemId = driveItem.id;
     const rootName = driveItem.name;
     const webUrl = driveItem.webUrl;
 
-    if (!driveId) {
-      const errorMessage = "Could not determine the drive ID for this folder.";
-      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-        validation_status: "invalid",
-        validation_error: errorMessage,
-      });
-      return new Response(
-        JSON.stringify({ success: false, error: errorMessage }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("[validate-sp] Resolved:", { driveId, rootItemId, rootName, webUrl });
+    console.log('[validate-sp] Resolved folder:', { driveId, rootItemId, rootName, webUrl });
 
     // Upsert settings — valid
     await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-      validation_status: "valid",
+      validation_status: 'valid',
       drive_id: driveId,
       root_item_id: rootItemId,
       root_name: rootName,
@@ -245,15 +253,15 @@ serve(async (req) => {
       last_validated_at: new Date().toISOString(),
     });
 
-    // Emit timeline event: sharepoint_root_configured
+    // Emit timeline event
     await emitTimelineEvent(supabaseAdmin, {
-      tenant_id: tenant_id,
+      tenant_id,
       client_id: String(tenant_id),
-      event_type: "sharepoint_root_configured",
+      event_type: 'sharepoint_root_configured',
       title: `SharePoint root folder configured: ${rootName}`,
-      source: "microsoft",
-      visibility: "internal",
-      entity_type: "tenant_sharepoint_settings",
+      source: 'microsoft',
+      visibility: 'internal',
+      entity_type: 'tenant_sharepoint_settings',
       metadata: {
         root_name: rootName,
         drive_id: driveId,
@@ -272,13 +280,13 @@ serve(async (req) => {
         web_url: webUrl,
         is_folder: true,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error("[validate-sp] Unhandled error:", error);
+    console.error('[validate-sp] Unhandled error:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
@@ -290,26 +298,25 @@ async function upsertSettings(
   userId: string,
   fields: Record<string, unknown>
 ) {
-  // Check if row exists
   const { data: existing } = await supabaseAdmin
-    .from("tenant_sharepoint_settings")
-    .select("id")
-    .eq("tenant_id", tenantId)
+    .from('tenant_sharepoint_settings')
+    .select('id')
+    .eq('tenant_id', tenantId)
     .maybeSingle();
 
   if (existing) {
     await supabaseAdmin
-      .from("tenant_sharepoint_settings")
+      .from('tenant_sharepoint_settings')
       .update({
         root_folder_url: rootFolderUrl,
         updated_by: userId,
         updated_at: new Date().toISOString(),
         ...fields,
       })
-      .eq("tenant_id", tenantId);
+      .eq('tenant_id', tenantId);
   } else {
     await supabaseAdmin
-      .from("tenant_sharepoint_settings")
+      .from('tenant_sharepoint_settings')
       .insert({
         tenant_id: tenantId,
         root_folder_url: rootFolderUrl,
