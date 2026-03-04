@@ -55,12 +55,15 @@ export function AppSettingsForm({ table, data, loading, onSave, saving }: AppSet
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [dirty, setDirty] = useState(false);
 
+  // Stringify to get a stable dependency — data is a new array ref each render
+  const dataJson = JSON.stringify(data[0] ?? null);
   useEffect(() => {
-    if (data.length > 0) {
-      setFormData({ ...data[0] });
+    const parsed = JSON.parse(dataJson);
+    if (parsed) {
+      setFormData(parsed);
       setDirty(false);
     }
-  }, [data]);
+  }, [dataJson]);
 
   function handleChange(col: string, value: any) {
     setFormData((prev) => ({ ...prev, [col]: value }));
@@ -123,10 +126,10 @@ export function AppSettingsForm({ table, data, loading, onSave, saving }: AppSet
                       <Label className="text-sm font-medium normal-case tracking-normal w-56 shrink-0">
                         {formatLabel(col.column_name)}
                       </Label>
-                      <code className="text-[11px] text-muted-foreground font-mono w-52 shrink-0 truncate">
+                      <code className="text-[11px] text-muted-foreground font-mono w-48 shrink-0 truncate">
                         {col.column_name}
                       </code>
-                      <div className="ml-auto flex items-center">
+                      <div className={isBool ? "ml-auto" : "flex-1 ml-4"}>
                         {isBool ? (
                           <Switch
                             checked={!!value}
@@ -144,7 +147,7 @@ export function AppSettingsForm({ table, data, loading, onSave, saving }: AppSet
                             type="text"
                             value={value ?? ""}
                             onChange={(e) => handleChange(col.column_name, e.target.value || null)}
-                            className="w-80 h-8 text-sm"
+                            className="w-full h-8 text-sm"
                             placeholder="Not set"
                           />
                         )}
