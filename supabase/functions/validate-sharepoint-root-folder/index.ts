@@ -10,116 +10,34 @@ const MICROSOFT_CLIENT_SECRET = Deno.env.get('MICROSOFT_CLIENT_SECRET')!;
 
 const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
 
-// ── Token helpers ───────────────────────────────────────────────────────────
-
-/**
- * Get the calling user's delegated Microsoft token from oauth_tokens,
- * refreshing if needed. Returns null if user has no connected account.
- */
-async function getUserDelegatedToken(
-  supabaseAdmin: ReturnType<typeof createClient>,
-  userId: string,
-): Promise<string | null> {
-  const { data: tokenData } = await supabaseAdmin
-    .from('oauth_tokens')
-    .select('access_token, refresh_token, expires_at, scope')
-    .eq('user_id', userId)
-    .eq('provider', 'microsoft')
-    .maybeSingle();
-
-  if (!tokenData) {
-    console.log('[validate-sp] No delegated Microsoft token found for user');
-    return null;
-  }
-
-  // Check if token needs refresh
-  const expiresAt = new Date(tokenData.expires_at);
-  if (expiresAt.getTime() - Date.now() > 5 * 60 * 1000) {
-    return tokenData.access_token;
-  }
-
-  console.log('[validate-sp] Refreshing delegated token...');
-  try {
-    const tokenResponse = await fetch(
-      'https://login.microsoftonline.com/common/oauth2/v2.0/token',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: MICROSOFT_CLIENT_ID,
-          client_secret: MICROSOFT_CLIENT_SECRET,
-          refresh_token: tokenData.refresh_token,
-          grant_type: 'refresh_token',
-          scope: tokenData.scope || 'openid profile email offline_access Files.Read.All',
-        }),
-      },
-    );
-
-    if (!tokenResponse.ok) {
-      const errText = await tokenResponse.text();
-      console.error('[validate-sp] Delegated token refresh failed:', errText);
-      return null;
-    }
-
-    const tokens = await tokenResponse.json();
-    const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-
-    await supabaseAdmin
-      .from('oauth_tokens')
-      .update({
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token || tokenData.refresh_token,
-        expires_at: newExpiresAt.toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
-      .eq('provider', 'microsoft');
-
-    return tokens.access_token;
-  } catch (err) {
-    console.error('[validate-sp] Token refresh error:', err);
-    return null;
-  }
-}
-
-/**
- * Make a Graph GET request using a specific token.
- */
-async function graphGetWithToken<T>(token: string, path: string): Promise<{ ok: boolean; status: number; data: T }> {
-  const url = path.startsWith('http') ? path : `${GRAPH_BASE_URL}${path}`;
-  const resp = await fetch(url, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  let data: T;
-  const ct = resp.headers.get('content-type') || '';
-  if (ct.includes('application/json')) {
-    data = await resp.json();
-  } else {
-    await resp.arrayBuffer().catch(() => {});
-    data = {} as T;
-  }
-
-  if (!resp.ok) {
-    console.warn(`[validate-sp] Graph ${resp.status} on ${path}:`, JSON.stringify(data));
-  }
-
-  return { ok: resp.ok, status: resp.status, data };
-}
-
 // ── URL parsing ─────────────────────────────────────────────────────────────
 
 function isSharingLink(url: string): boolean {
   return /\/:[a-z]:\/s\//i.test(url);
 }
 
-function parseSharingLinkSite(url: string): { host: string; siteName: string } | null {
+/**
+ * Extract site hostname and site name from ANY SharePoint URL (sharing or direct).
+ */
+function extractSiteInfo(url: string): { host: string; siteName: string } | null {
   try {
     const parsed = new URL(url.trim());
     const host = parsed.hostname;
-    const match = parsed.pathname.match(/\/:[a-z]:\/s\/([^/]+)/i);
-    if (!match) return null;
-    return { host, siteName: match[1] };
+
+    // Sharing link: /:f:/s/{siteName}/...
+    const sharingMatch = parsed.pathname.match(/\/:[a-z]:\/s\/([^/]+)/i);
+    if (sharingMatch) return { host, siteName: sharingMatch[1] };
+
+    // Direct link with /sites/{siteName}
+    const idParam = parsed.searchParams.get('id');
+    const effectivePath = idParam ? decodeURIComponent(idParam) : decodeURIComponent(parsed.pathname);
+    const parts = effectivePath.split('/').filter(Boolean);
+    const sitesIdx = parts.findIndex((p) => p.toLowerCase() === 'sites');
+    if (sitesIdx !== -1 && sitesIdx + 1 < parts.length) {
+      return { host, siteName: parts[sitesIdx + 1] };
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -139,7 +57,6 @@ function parseDirectUrl(url: string): {
 
     if (idParam) {
       effectivePath = decodeURIComponent(idParam);
-      console.log('[validate-sp] Using id param path:', effectivePath);
     } else {
       let pathname = parsed.pathname;
       pathname = pathname.replace(/\/:[a-z]:\/r\//i, '/');
@@ -148,10 +65,7 @@ function parseDirectUrl(url: string): {
 
     const pathParts = effectivePath.split('/').filter(Boolean);
     const sitesIdx = pathParts.findIndex((p) => p.toLowerCase() === 'sites');
-    if (sitesIdx === -1 || sitesIdx + 1 >= pathParts.length) {
-      console.log('[validate-sp] No /sites/ segment in:', pathParts);
-      return null;
-    }
+    if (sitesIdx === -1 || sitesIdx + 1 >= pathParts.length) return null;
 
     const siteName = pathParts[sitesIdx + 1];
     const sitePath = `/sites/${siteName}`;
@@ -174,80 +88,70 @@ function parseDirectUrl(url: string): {
       }
     }
 
-    console.log('[validate-sp] Parsed direct URL:', { host, sitePath, relativePath });
     return { host, sitePath, relativePath };
   } catch {
     return null;
   }
 }
 
-// ── Resolution logic ────────────────────────────────────────────────────────
+// ── Delegated token helper (optional, for /shares/ API) ─────────────────────
 
-/**
- * Resolve a sharing link using the /shares/ API with a delegated token.
- * The /shares/ API does NOT support app-only tokens — delegated auth required.
- */
-async function resolveSharingLinkWithDelegatedToken(
-  url: string,
-  accessToken: string,
-): Promise<{ host: string; sitePath: string; relativePath: string | null } | { error: string }> {
-  const siteInfo = parseSharingLinkSite(url);
-  if (!siteInfo) {
-    return { error: 'Could not extract site information from this sharing link.' };
+async function getUserDelegatedToken(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<string | null> {
+  const { data: tokenData } = await supabaseAdmin
+    .from('oauth_tokens')
+    .select('access_token, refresh_token, expires_at, scope')
+    .eq('user_id', userId)
+    .eq('provider', 'microsoft')
+    .maybeSingle();
+
+  if (!tokenData) return null;
+
+  const expiresAt = new Date(tokenData.expires_at);
+  if (expiresAt.getTime() - Date.now() > 5 * 60 * 1000) {
+    return tokenData.access_token;
   }
 
-  console.log('[validate-sp] Resolving sharing link with delegated token for site:', siteInfo.siteName);
+  if (!tokenData.refresh_token) return null;
 
-  // Encode sharing URL for /shares/ API
-  const base64 = btoa(url);
-  const urlSafe = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  const shareId = `u!${urlSafe}`;
+  try {
+    const tokenResponse = await fetch(
+      'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: MICROSOFT_CLIENT_ID,
+          client_secret: MICROSOFT_CLIENT_SECRET,
+          refresh_token: tokenData.refresh_token,
+          grant_type: 'refresh_token',
+          scope: tokenData.scope || 'openid profile email offline_access Files.Read.All',
+        }),
+      },
+    );
 
-  // Try /shares/ API with delegated token
-  const sharesResp = await graphGetWithToken<{
-    id: string;
-    name: string;
-    webUrl: string;
-    folder?: unknown;
-    file?: unknown;
-    parentReference?: { driveId?: string; siteId?: string };
-  }>(accessToken, `/shares/${shareId}/driveItem?$select=id,name,folder,file,parentReference,webUrl`);
+    if (!tokenResponse.ok) return null;
 
-  if (sharesResp.ok) {
-    console.log('[validate-sp] /shares/ resolved successfully:', sharesResp.data.name, sharesResp.data.webUrl);
-    const parentRef = sharesResp.data.parentReference;
+    const tokens = await tokenResponse.json();
+    const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    if (sharesResp.data.webUrl) {
-      const directParsed = parseDirectUrl(sharesResp.data.webUrl);
-      if (directParsed) return directParsed;
-    }
+    await supabaseAdmin
+      .from('oauth_tokens')
+      .update({
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token || tokenData.refresh_token,
+        expires_at: newExpiresAt.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('provider', 'microsoft');
 
-    if (parentRef?.siteId) {
-      return {
-        host: siteInfo.host,
-        sitePath: `/sites/${siteInfo.siteName}`,
-        relativePath: null,
-      };
-    }
-  } else {
-    console.warn('[validate-sp] /shares/ API failed:', sharesResp.status);
+    return tokens.access_token;
+  } catch {
+    return null;
   }
-
-  // Fall back to resolving site directly with delegated token
-  const siteRes = await graphGetWithToken<{ id: string; displayName: string; webUrl: string }>(
-    accessToken,
-    `/sites/${siteInfo.host}:/sites/${siteInfo.siteName}`,
-  );
-
-  if (siteRes.ok) {
-    return {
-      error: `Sharing links cannot be resolved to a specific folder. Please navigate to the folder in SharePoint and copy the URL from the browser address bar.\n\nYour site root: ${siteRes.data.webUrl}`,
-    };
-  }
-
-  return {
-    error: `Could not access site "${siteInfo.siteName}" (status ${siteRes.status}). Try copying the URL from the browser address bar instead.`,
-  };
 }
 
 // ── Main handler ────────────────────────────────────────────────────────────
@@ -306,11 +210,15 @@ Deno.serve(async (req: Request) => {
 
     console.log('[validate-sp] URL:', root_folder_url);
 
-    // ── Get user's delegated Microsoft token (preferred) ──
-    const delegatedToken = await getUserDelegatedToken(supabaseAdmin, user.id);
-    
-    if (!delegatedToken) {
-      const errorMessage = 'Your Microsoft account is not connected. Please connect your Microsoft 365 account first (Settings → Microsoft 365), then try again.';
+    // ── Strategy: always resolve site+drive with APP-ONLY token ──
+    // The /shares/ API requires delegated tokens, so for sharing links we
+    // extract the site name and resolve site/drive directly with app token.
+    // This works because Sites.Selected grants app access to registered sites.
+
+    // Step 1: Extract site info from any URL type
+    const siteInfo = extractSiteInfo(root_folder_url);
+    if (!siteInfo) {
+      const errorMessage = 'Could not parse this SharePoint URL. Navigate to the folder in SharePoint and copy the URL from the browser address bar.';
       await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
         validation_status: 'invalid',
         validation_error: errorMessage,
@@ -321,61 +229,25 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log('[validate-sp] Using delegated token for Graph API calls');
+    console.log('[validate-sp] Extracted site:', siteInfo.host, siteInfo.siteName);
 
-    let driveId: string;
-    let driveItem: DriveItem;
-
-    // ── Resolve URL to parsed components ──
-    let parsed: { host: string; sitePath: string; relativePath: string | null } | null = null;
-
-    if (isSharingLink(root_folder_url)) {
-      const sharingResult = await resolveSharingLinkWithDelegatedToken(root_folder_url, delegatedToken);
-      if ('error' in sharingResult) {
-        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-          validation_status: 'invalid',
-          validation_error: sharingResult.error,
-        });
-        return new Response(
-          JSON.stringify({ success: false, error: sharingResult.error }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      parsed = sharingResult;
-    } else {
-      parsed = parseDirectUrl(root_folder_url);
-    }
-
-    if (!parsed) {
-      const errorMessage =
-        'Could not parse this SharePoint URL. Navigate to the folder in SharePoint and copy the URL from the browser address bar.';
-      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-        validation_status: 'invalid',
-        validation_error: errorMessage,
-      });
-      return new Response(
-        JSON.stringify({ success: false, error: errorMessage }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // ── Resolve site using delegated token ──
-    const siteRes = await graphGetWithToken<{ id: string; displayName: string; webUrl: string }>(
-      delegatedToken,
-      `/sites/${parsed.host}:${parsed.sitePath}`,
+    // Step 2: Resolve site with app-only token
+    const siteRes = await graphGet<{ id: string; displayName: string; webUrl: string }>(
+      `/sites/${siteInfo.host}:/sites/${siteInfo.siteName}`,
     );
 
     if (!siteRes.ok) {
-      let errorMessage = 'Could not access this SharePoint site. ';
-      if (siteRes.status === 403) {
-        errorMessage += 'You do not have permission to access this site.';
+      let errorMessage: string;
+      if (siteRes.status === 401) {
+        errorMessage = `App token was rejected accessing site "${siteInfo.siteName}". Check that MICROSOFT_CLIENT_SECRET is valid and Sites.Selected permission is granted for this site.`;
+      } else if (siteRes.status === 403) {
+        errorMessage = `The app does not have Sites.Selected permission for site "${siteInfo.siteName}". Grant write access via POST /sites/{id}/permissions in Graph Explorer.`;
       } else if (siteRes.status === 404) {
-        errorMessage += 'Site not found.';
-      } else if (siteRes.status === 401) {
-        errorMessage += 'Your Microsoft token may have expired. Please reconnect your Microsoft 365 account and try again.';
+        errorMessage = `Site "${siteInfo.siteName}" not found. Verify the URL is correct.`;
       } else {
-        errorMessage += `Microsoft returned status ${siteRes.status}.`;
+        errorMessage = `Could not access site "${siteInfo.siteName}" (status ${siteRes.status}).`;
       }
+      console.error('[validate-sp] Site resolution failed:', siteRes.status, JSON.stringify(siteRes.data));
       await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
         validation_status: 'invalid',
         validation_error: errorMessage,
@@ -389,10 +261,10 @@ Deno.serve(async (req: Request) => {
     const siteId = siteRes.data.id;
     console.log('[validate-sp] Resolved site:', siteId, siteRes.data.displayName);
 
-    // ── Get drives ──
-    const drivesRes = await graphGetWithToken<{
+    // Step 3: Get drives with app-only token
+    const drivesRes = await graphGet<{
       value: Array<{ id: string; name: string; driveType: string }>;
-    }>(delegatedToken, `/sites/${siteId}/drives`);
+    }>(`/sites/${siteId}/drives`);
 
     if (!drivesRes.ok || !drivesRes.data.value?.length) {
       const errorMessage = 'Could not list document libraries for this site.';
@@ -409,50 +281,125 @@ Deno.serve(async (req: Request) => {
     const drive =
       drivesRes.data.value.find((d) => d.driveType === 'documentLibrary') ||
       drivesRes.data.value[0];
-    driveId = drive.id;
+    const driveId = drive.id;
     console.log('[validate-sp] Using drive:', driveId, drive.name);
 
-    // ── Resolve folder ──
-    if (parsed.relativePath) {
-      const folderRes = await graphGetWithToken<DriveItem>(
-        delegatedToken,
-        `/drives/${driveId}/root:/${encodeURIComponent(parsed.relativePath).replace(/%2F/g, '/')}`,
-      );
-      if (!folderRes.ok) {
-        let errorMessage = `Could not find folder "${parsed.relativePath}". `;
-        errorMessage +=
-          folderRes.status === 404
-            ? 'Check the folder path is correct.'
-            : `Microsoft returned status ${folderRes.status}.`;
-        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-          validation_status: 'invalid',
-          validation_error: errorMessage,
+    // Step 4: Resolve folder
+    let driveItem: DriveItem;
+
+    // For sharing links, try /shares/ with delegated token if available
+    if (isSharingLink(root_folder_url)) {
+      let resolvedFromShares = false;
+
+      const delegatedToken = await getUserDelegatedToken(supabaseAdmin, user.id);
+      if (delegatedToken) {
+        console.log('[validate-sp] Trying /shares/ API with delegated token');
+        const base64 = btoa(root_folder_url);
+        const urlSafe = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        const shareId = `u!${urlSafe}`;
+
+        const resp = await fetch(`${GRAPH_BASE_URL}/shares/${shareId}/driveItem?$select=id,name,folder,file,parentReference,webUrl`, {
+          headers: { Authorization: `Bearer ${delegatedToken}` },
         });
-        return new Response(
-          JSON.stringify({ success: false, error: errorMessage }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+
+        if (resp.ok) {
+          const item = await resp.json();
+          console.log('[validate-sp] /shares/ resolved:', item.name);
+          driveItem = item as DriveItem;
+          resolvedFromShares = true;
+        } else {
+          const errBody = await resp.text();
+          console.warn('[validate-sp] /shares/ failed:', resp.status, errBody);
+        }
+      } else {
+        console.log('[validate-sp] No delegated token — skipping /shares/ API');
       }
-      driveItem = folderRes.data;
+
+      if (!resolvedFromShares) {
+        // Fallback: try to parse a relative path from the direct URL parse
+        const directParsed = parseDirectUrl(root_folder_url);
+        if (directParsed?.relativePath) {
+          const folderRes = await graphGet<DriveItem>(
+            `/drives/${driveId}/root:/${encodeURIComponent(directParsed.relativePath).replace(/%2F/g, '/')}`,
+          );
+          if (folderRes.ok) {
+            driveItem = folderRes.data;
+          } else {
+            // Default to drive root
+            console.log('[validate-sp] Folder path not found, defaulting to drive root');
+            const rootRes = await graphGet<DriveItem>(`/drives/${driveId}/root`);
+            if (!rootRes.ok) {
+              const errorMessage = 'Could not access the document library root.';
+              await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+                validation_status: 'invalid',
+                validation_error: errorMessage,
+              });
+              return new Response(
+                JSON.stringify({ success: false, error: errorMessage }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+            driveItem = rootRes.data;
+          }
+        } else {
+          // No relative path extractable from sharing link — use drive root
+          console.log('[validate-sp] Sharing link with no extractable path — using drive root');
+          const rootRes = await graphGet<DriveItem>(`/drives/${driveId}/root`);
+          if (!rootRes.ok) {
+            const errorMessage = 'Could not access the document library root.';
+            await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+              validation_status: 'invalid',
+              validation_error: errorMessage,
+            });
+            return new Response(
+              JSON.stringify({ success: false, error: errorMessage }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          driveItem = rootRes.data;
+        }
+      }
     } else {
-      const rootRes = await graphGetWithToken<DriveItem>(delegatedToken, `/drives/${driveId}/root`);
-      if (!rootRes.ok) {
-        const errorMessage = 'Could not access the document library root.';
-        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-          validation_status: 'invalid',
-          validation_error: errorMessage,
-        });
-        return new Response(
-          JSON.stringify({ success: false, error: errorMessage }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      // Direct URL — parse and resolve folder path
+      const directParsed = parseDirectUrl(root_folder_url);
+      if (directParsed?.relativePath) {
+        const folderRes = await graphGet<DriveItem>(
+          `/drives/${driveId}/root:/${encodeURIComponent(directParsed.relativePath).replace(/%2F/g, '/')}`,
         );
+        if (!folderRes.ok) {
+          const errorMessage = `Could not find folder "${directParsed.relativePath}". ${
+            folderRes.status === 404 ? 'Check the folder path is correct.' : `Microsoft returned status ${folderRes.status}.`
+          }`;
+          await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+            validation_status: 'invalid',
+            validation_error: errorMessage,
+          });
+          return new Response(
+            JSON.stringify({ success: false, error: errorMessage }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        driveItem = folderRes.data;
+      } else {
+        const rootRes = await graphGet<DriveItem>(`/drives/${driveId}/root`);
+        if (!rootRes.ok) {
+          const errorMessage = 'Could not access the document library root.';
+          await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+            validation_status: 'invalid',
+            validation_error: errorMessage,
+          });
+          return new Response(
+            JSON.stringify({ success: false, error: errorMessage }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        driveItem = rootRes.data;
       }
-      driveItem = rootRes.data;
     }
 
     // Verify it's a folder
-    if (driveItem.file) {
-      const errorMessage = `"${driveItem.name}" is a file, not a folder. Please provide a folder link.`;
+    if (driveItem!.file) {
+      const errorMessage = `"${driveItem!.name}" is a file, not a folder. Please provide a folder link.`;
       await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
         validation_status: 'invalid',
         validation_error: errorMessage,
@@ -463,9 +410,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const rootItemId = driveItem.id;
-    const rootName = driveItem.name;
-    const webUrl = driveItem.webUrl;
+    const rootItemId = driveItem!.id;
+    const rootName = driveItem!.name;
+    const webUrl = driveItem!.webUrl;
 
     console.log('[validate-sp] Resolved folder:', { driveId, rootItemId, rootName, webUrl });
 
