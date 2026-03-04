@@ -16,7 +16,7 @@ export const BASE_SCOPES = [
 ] as const;
 
 /** Outlook Mail surface — read-only by default */
-export const MAIL_SCOPES = ['Mail.Read'] as const;
+export const MAIL_SCOPES = ['Mail.Read', 'Mail.Send'] as const;
 
 /** Meetings & Calendar surface — read-only by default */
 export const CALENDAR_SCOPES = ['Calendars.Read'] as const;
