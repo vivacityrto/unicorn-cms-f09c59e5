@@ -20,6 +20,12 @@ const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 let _cachedToken: string | null = null;
 let _tokenExpiry = 0;
 
+/** Force-clear the cached token (useful after 401 retries). */
+export function _clearTokenCache(): void {
+  _cachedToken = null;
+  _tokenExpiry = 0;
+}
+
 /**
  * Acquire an app-level access token via the client_credentials OAuth grant.
  * Tokens are cached in-memory until 60 s before expiry.

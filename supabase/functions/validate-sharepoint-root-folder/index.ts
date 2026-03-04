@@ -1,6 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
-import { graphGet, getAppToken, type DriveItem } from '../_shared/graph-app-client.ts';
+import { graphGet, getAppToken, _clearTokenCache, type DriveItem } from '../_shared/graph-app-client.ts';
 import { emitTimelineEvent } from '../_shared/emit-timeline-event.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -49,55 +49,82 @@ async function resolveSharingLink(url: string): Promise<{
 
   console.log('[validate-sp] Sharing link detected — extracted site:', siteInfo.siteName);
 
-  // Try to resolve the site via our Sites.Selected permission
-  const siteRes = await graphGet<{ id: string; displayName: string; webUrl: string }>(
-    `/sites/${siteInfo.host}:/sites/${siteInfo.siteName}`
-  );
-
-  if (!siteRes.ok) {
-    if (siteRes.status === 403) {
-      return {
-        error: `The app does not have Sites.Selected permission for site "${siteInfo.siteName}". Navigate to the folder in SharePoint and copy the URL from the browser address bar instead.`,
-      };
-    }
-    return {
-      error: `Could not access site "${siteInfo.siteName}" (status ${siteRes.status}). Try copying the URL from the browser address bar instead.`,
-    };
-  }
-
-  const siteId = siteRes.data.id;
-  console.log('[validate-sp] Resolved site from sharing link:', siteId, siteRes.data.displayName);
-
-  // Now try the /shares/ API with our app token — it may work if the org allows it
+  // Strategy 1: Try /shares/ API first — this is the direct approach for sharing links
   const base64 = btoa(url);
   const urlSafe = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const shareId = `u!${urlSafe}`;
 
-  const token = await getAppToken();
-  const resp = await fetch(
-    `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem?$select=id,name,folder,file,parentReference,webUrl`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  try {
+    const token = await getAppToken();
+    const resp = await fetch(
+      `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem?$select=id,name,folder,file,parentReference,webUrl`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-  if (resp.ok) {
-    const driveItem = await resp.json();
-    const parentRef = driveItem.parentReference;
-    if (parentRef?.driveId) {
-      console.log('[validate-sp] /shares/ resolved successfully');
-      // Return as a direct URL parse result using the webUrl
-      return parseDirectUrl(driveItem.webUrl) || {
-        error: 'Resolved sharing link but could not parse the resulting URL.',
-      };
+    if (resp.ok) {
+      const driveItem = await resp.json();
+      console.log('[validate-sp] /shares/ resolved successfully:', driveItem.name, driveItem.webUrl);
+      const parentRef = driveItem.parentReference;
+      if (parentRef?.driveId && driveItem.webUrl) {
+        const directParsed = parseDirectUrl(driveItem.webUrl);
+        if (directParsed) return directParsed;
+      }
+      // If webUrl parse fails, try to construct from what we have
+      if (parentRef?.siteId) {
+        return {
+          host: siteInfo.host,
+          sitePath: `/sites/${siteInfo.siteName}`,
+          relativePath: null,
+        };
+      }
+    } else {
+      const errBody = await resp.text();
+      console.warn('[validate-sp] /shares/ API returned', resp.status, errBody);
     }
-  } else {
-    const errBody = await resp.text();
-    console.warn('[validate-sp] /shares/ API unavailable (expected with Sites.Selected):', resp.status, errBody);
+  } catch (sharesErr) {
+    console.warn('[validate-sp] /shares/ API error:', sharesErr);
   }
 
-  // /shares/ didn't work — construct a helpful error directing to the direct URL
-  const siteWebUrl = siteRes.data.webUrl;
+  // Strategy 2: Fall back to resolving the site directly
+  const siteRes = await graphGet<{ id: string; displayName: string; webUrl: string }>(
+    `/sites/${siteInfo.host}:/sites/${siteInfo.siteName}`
+  );
+
+  if (siteRes.ok) {
+    const siteWebUrl = siteRes.data.webUrl;
+    console.log('[validate-sp] Site resolved, but sharing link cannot be mapped to a specific folder.');
+    return {
+      error: `Sharing links cannot be resolved to a specific folder. Please navigate to the folder in SharePoint and copy the URL from the browser address bar.\n\nYour site root: ${siteWebUrl}`,
+    };
+  }
+
+  // If site resolution also fails, provide guidance based on status
+  if (siteRes.status === 403) {
+    return {
+      error: `The app does not have Sites.Selected permission for site "${siteInfo.siteName}". Navigate to the folder in SharePoint and copy the URL from the browser address bar instead.`,
+    };
+  }
+
+  // 401 likely means token issue — retry token acquisition
+  if (siteRes.status === 401) {
+    console.warn('[validate-sp] Got 401 from Graph — possible stale token, retrying...');
+    // Force token refresh by clearing cache
+    _clearTokenCache();
+    const retryRes = await graphGet<{ id: string; displayName: string; webUrl: string }>(
+      `/sites/${siteInfo.host}:/sites/${siteInfo.siteName}`
+    );
+    if (retryRes.ok) {
+      return {
+        error: `Sharing links cannot be resolved to a specific folder. Please navigate to the folder in SharePoint and copy the URL from the browser address bar.\n\nYour site root: ${retryRes.data.webUrl}`,
+      };
+    }
+    return {
+      error: `Authentication failed when accessing Microsoft Graph (status 401). This may be a temporary issue — please try again. If the problem persists, contact your administrator to verify the Microsoft app registration credentials.`,
+    };
+  }
+
   return {
-    error: `Sharing links cannot be resolved with the current permissions. Please navigate to the folder in SharePoint and copy the URL from the browser address bar.\n\nYour site root: ${siteWebUrl}`,
+    error: `Could not access site "${siteInfo.siteName}" (status ${siteRes.status}). Try copying the URL from the browser address bar instead.`,
   };
 }
 
