@@ -30,9 +30,16 @@ export function _clearTokenCache(): void {
  * Acquire an app-level access token via the client_credentials OAuth grant.
  * Tokens are cached in-memory until 60 s before expiry.
  */
-export async function getAppToken(): Promise<string> {
+export async function getAppToken(forceRefresh = false): Promise<string> {
   const now = Date.now();
-  if (_cachedToken && now < _tokenExpiry) return _cachedToken;
+  if (!forceRefresh && _cachedToken && now < _tokenExpiry) return _cachedToken;
+
+  // Clear cache when forcing refresh
+  if (forceRefresh) {
+    _cachedToken = null;
+    _tokenExpiry = 0;
+    console.log("[graph-app-client] Forcing token refresh");
+  }
 
   const clientId = Deno.env.get("MICROSOFT_CLIENT_ID");
   const clientSecret = Deno.env.get("MICROSOFT_CLIENT_SECRET");
@@ -43,6 +50,8 @@ export async function getAppToken(): Promise<string> {
       "Missing Microsoft credentials: MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_TENANT_ID",
     );
   }
+
+  console.log(`[graph-app-client] Requesting token for tenant ${tenantId}, client ${clientId.slice(0,8)}...`);
 
   const resp = await fetch(
     `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
@@ -61,13 +70,14 @@ export async function getAppToken(): Promise<string> {
   if (!resp.ok) {
     const errText = await resp.text();
     console.error("[graph-app-client] Token request failed:", resp.status, errText);
-    throw new Error(`Failed to obtain app token: ${resp.status}`);
+    throw new Error(`Failed to obtain app token: ${resp.status} — ${errText}`);
   }
 
   const json = await resp.json();
   _cachedToken = json.access_token as string;
   // Cache until 60 s before expiry (tokens are typically 3600 s)
   _tokenExpiry = now + (json.expires_in as number) * 1000 - 60_000;
+  console.log(`[graph-app-client] Token acquired, expires in ${json.expires_in}s`);
   return _cachedToken;
 }
 
@@ -104,43 +114,58 @@ async function graphRequest<T = unknown>(
   body?: unknown,
   extraHeaders?: Record<string, string>,
 ): Promise<GraphResponse<T>> {
-  const token = await getAppToken();
   const url = path.startsWith("http") ? path : `${GRAPH_BASE}${path}`;
 
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${token}`,
-    ...extraHeaders,
-  };
-  if (body && typeof body !== "string" && !(body instanceof ArrayBuffer) && !(body instanceof Uint8Array)) {
-    headers["Content-Type"] = "application/json";
+  // Attempt with current token, retry once with fresh token on 401
+  for (let tokenAttempt = 0; tokenAttempt < 2; tokenAttempt++) {
+    const token = await getAppToken(tokenAttempt > 0);
+
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      ...extraHeaders,
+    };
+    if (body && typeof body !== "string" && !(body instanceof ArrayBuffer) && !(body instanceof Uint8Array)) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    const init: RequestInit = { method, headers };
+    if (body) {
+      init.body =
+        typeof body === "string" || body instanceof ArrayBuffer || body instanceof Uint8Array
+          ? body
+          : JSON.stringify(body);
+    }
+
+    let resp: Response;
+    for (let attempt = 0; ; attempt++) {
+      resp = await fetch(url, init);
+      if (!RETRYABLE_STATUSES.has(resp.status) || attempt >= MAX_RETRIES) break;
+      await resp.arrayBuffer().catch(() => {}); // consume body before retry
+      await retryDelay(resp, attempt);
+    }
+
+    // On 401, clear token cache and retry with a fresh token
+    if (resp!.status === 401 && tokenAttempt === 0) {
+      console.warn(`[graph-app-client] 401 on ${method} ${path} — refreshing token and retrying`);
+      await resp!.arrayBuffer().catch(() => {}); // consume body
+      _clearTokenCache();
+      continue;
+    }
+
+    let data: T;
+    const ct = resp!.headers.get("content-type") || "";
+    if (ct.includes("application/json")) {
+      data = await resp!.json();
+    } else {
+      await resp!.arrayBuffer().catch(() => {});
+      data = {} as T;
+    }
+
+    return { ok: resp!.ok, status: resp!.status, data, raw: resp! };
   }
 
-  const init: RequestInit = { method, headers };
-  if (body) {
-    init.body =
-      typeof body === "string" || body instanceof ArrayBuffer || body instanceof Uint8Array
-        ? body
-        : JSON.stringify(body);
-  }
-
-  let resp: Response;
-  for (let attempt = 0; ; attempt++) {
-    resp = await fetch(url, init);
-    if (!RETRYABLE_STATUSES.has(resp.status) || attempt >= MAX_RETRIES) break;
-    await resp.arrayBuffer().catch(() => {}); // consume body before retry
-    await retryDelay(resp, attempt);
-  }
-
-  let data: T;
-  const ct = resp!.headers.get("content-type") || "";
-  if (ct.includes("application/json")) {
-    data = await resp!.json();
-  } else {
-    await resp!.arrayBuffer().catch(() => {});
-    data = {} as T;
-  }
-
-  return { ok: resp!.ok, status: resp!.status, data, raw: resp! };
+  // Should never reach here, but TypeScript needs it
+  throw new Error(`graphRequest: exhausted retries for ${method} ${path}`);
 }
 
 /** GET helper */
