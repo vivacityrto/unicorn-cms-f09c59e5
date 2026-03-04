@@ -1922,7 +1922,7 @@ export type Database = {
           minutes_copilot_auto_fetch_fallback_to_paste: boolean
           minutes_store_raw_copilot_input: boolean
           review_required_before_release: boolean
-          sharepoint_clientfoldess: string | null
+          sharepoint_client_folders: string | null
           sharepoint_site_url: string | null
           updated_at: string
         }
@@ -1949,7 +1949,7 @@ export type Database = {
           minutes_copilot_auto_fetch_fallback_to_paste?: boolean
           minutes_store_raw_copilot_input?: boolean
           review_required_before_release?: boolean
-          sharepoint_clientfoldess?: string | null
+          sharepoint_client_folders?: string | null
           sharepoint_site_url?: string | null
           updated_at?: string
         }
@@ -1976,7 +1976,7 @@ export type Database = {
           minutes_copilot_auto_fetch_fallback_to_paste?: boolean
           minutes_store_raw_copilot_input?: boolean
           review_required_before_release?: boolean
-          sharepoint_clientfoldess?: string | null
+          sharepoint_client_folders?: string | null
           sharepoint_site_url?: string | null
           updated_at?: string
         }
