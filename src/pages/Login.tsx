@@ -233,6 +233,51 @@ const Login = () => {
                   </Button>
                 </form>
 
+                {/* Microsoft 365 Login */}
+                <div className="relative my-5">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border/50" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">or</span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11 rounded-lg font-semibold gap-2"
+                  disabled={isLoading}
+                  onClick={async () => {
+                    setIsLoading(true);
+                    try {
+                      const { error } = await supabase.auth.signInWithOAuth({
+                        provider: 'azure',
+                        options: {
+                          scopes: 'openid profile email',
+                          redirectTo: `${window.location.origin}/dashboard`,
+                        },
+                      });
+                      if (error) throw error;
+                    } catch (err: any) {
+                      toast({
+                        title: 'Microsoft login failed',
+                        description: err.message || 'Unable to sign in with Microsoft',
+                        variant: 'destructive',
+                      });
+                      setIsLoading(false);
+                    }
+                  }}
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 21 21" fill="none">
+                    <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+                    <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+                    <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+                    <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+                  </svg>
+                  Sign in with Microsoft 365
+                </Button>
+
                 {/* Alternative Login Options */}
                 <div className="mt-4 flex gap-2">
                   <Button
@@ -252,8 +297,6 @@ const Login = () => {
                     Send Magic Link
                   </Button>
                 </div>
-
-
               </>
             ) : showForgotPassword ? (
               <div className="space-y-6">

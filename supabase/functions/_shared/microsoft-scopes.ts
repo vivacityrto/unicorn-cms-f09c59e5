@@ -11,7 +11,7 @@ export const BASE_SCOPES = [
   'User.Read',
 ];
 
-export const MAIL_SCOPES = ['Mail.Read'];
+export const MAIL_SCOPES = ['Mail.Read', 'Mail.Send'];
 export const CALENDAR_SCOPES = ['Calendars.Read'];
 export const DOCUMENT_SCOPES = ['Files.Read.All'];
 

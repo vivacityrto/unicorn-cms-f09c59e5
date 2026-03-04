@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useOutlookConnectionStatus } from '@/hooks/useOutlookConnectionStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { Send, Eye, Loader2, Pencil } from 'lucide-react';
 import DOMPurify from 'dompurify';
@@ -41,6 +42,7 @@ export function ComposeEmailDialog({
 }: ComposeEmailDialogProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const { isConnected: hasM365Connection, connectionStatus } = useOutlookConnectionStatus();
   const [to, setTo] = useState(defaultTo);
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
@@ -78,8 +80,13 @@ export function ComposeEmailDialog({
 
   const callEdgeFunction = async (dryRun: boolean) => {
     const { data: session } = await supabase.auth.getSession();
+    // Always use send-composed-email for preview (dry_run) to resolve merge fields
+    // For actual sends, route to Graph if M365 is connected
+    const functionName = dryRun || !hasM365Connection
+      ? 'send-composed-email'
+      : 'send-email-graph';
     const res = await fetch(
-      `https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/send-composed-email`,
+      `https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/${functionName}`,
       {
         method: 'POST',
         headers: {
@@ -227,6 +234,11 @@ export function ComposeEmailDialog({
         </Tabs>
 
         <DialogFooter className="flex items-center gap-2 pt-3 border-t">
+          <div className="flex-1 text-xs text-muted-foreground">
+            {hasM365Connection
+              ? `Sending as ${connectionStatus?.account_email || profile?.email || 'you'} via M365`
+              : 'Sending via system relay'}
+          </div>
           <Button variant="outline" onClick={handlePreview} disabled={previewing || sending}>
             {previewing ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Eye className="h-4 w-4 mr-1.5" />}
             Preview
