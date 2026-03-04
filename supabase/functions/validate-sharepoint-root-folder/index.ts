@@ -18,27 +18,40 @@ function parseSharePointUrl(url: string): {
   relativePath: string | null;
 } | null {
   try {
-    // Clean up encoded sharing URLs (e.g. /:f:/r/sites/...)
-    let cleanUrl = url.trim();
-    // Remove sharing format markers like /:f:/r or /:x:/r etc.
-    cleanUrl = cleanUrl.replace(/\/:[a-z]:\/[rs]\//i, '/');
-    // Remove query params and hash
-    cleanUrl = cleanUrl.split('?')[0].split('#')[0];
+    const cleanUrl = url.trim();
+    console.log('[validate-sp] Raw URL:', cleanUrl);
 
     const parsed = new URL(cleanUrl);
     const host = parsed.hostname;
-    const pathParts = decodeURIComponent(parsed.pathname).split('/').filter(Boolean);
+
+    // Check for ?id= query parameter (common SharePoint URL format)
+    // e.g. ?id=%2Fsites%2Fvivacityteam%2FShared%20Documents%2FClient%20Folder
+    const idParam = parsed.searchParams.get('id');
+    let effectivePath: string;
+
+    if (idParam) {
+      effectivePath = decodeURIComponent(idParam);
+      console.log('[validate-sp] Using id param path:', effectivePath);
+    } else {
+      // Remove sharing format markers like /:f:/r or /:x:/r etc.
+      let pathname = parsed.pathname;
+      pathname = pathname.replace(/\/:[a-z]:\/[rs]\//i, '/');
+      effectivePath = decodeURIComponent(pathname);
+    }
+
+    const pathParts = effectivePath.split('/').filter(Boolean);
 
     // Find "sites" segment
     const sitesIdx = pathParts.findIndex(p => p.toLowerCase() === 'sites');
     if (sitesIdx === -1 || sitesIdx + 1 >= pathParts.length) {
+      console.log('[validate-sp] No /sites/ segment found in path parts:', pathParts);
       return null;
     }
 
     const siteName = pathParts[sitesIdx + 1];
     const sitePath = `/sites/${siteName}`;
 
-    // Everything after "Shared Documents" (or "Shared%20Documents") is the folder path
+    // Everything after "Shared Documents" is the folder path
     const remaining = pathParts.slice(sitesIdx + 2);
     const sharedDocsIdx = remaining.findIndex(
       p => p.toLowerCase() === 'shared documents' || p.toLowerCase() === 'shared%20documents'
@@ -47,7 +60,6 @@ function parseSharePointUrl(url: string): {
     let relativePath: string | null = null;
     if (sharedDocsIdx !== -1) {
       const folderParts = remaining.slice(sharedDocsIdx + 1);
-      // Filter out SharePoint view artifacts
       const filtered = folderParts.filter(p =>
         p.toLowerCase() !== 'forms' &&
         p.toLowerCase() !== 'allitems.aspx'
@@ -57,6 +69,7 @@ function parseSharePointUrl(url: string): {
       }
     }
 
+    console.log('[validate-sp] Parsed:', { host, sitePath, relativePath });
     return { host, sitePath, relativePath };
   } catch {
     return null;
