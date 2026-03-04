@@ -103,13 +103,13 @@ export function AppSettingsForm({ table, data, loading, onSave, saving }: AppSet
 
       {/* Form */}
       <ScrollArea className="flex-1">
-        <div className="p-6 space-y-8 max-w-2xl">
+        <div className="p-4 space-y-6">
           {groups.map((group) => (
             <div key={group.label}>
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 {group.label}
               </h3>
-              <div className="space-y-4">
+              <div className="divide-y rounded-lg border bg-card overflow-hidden">
                 {group.columns.map((col) => {
                   const value = formData[col.column_name];
                   const isBool = col.data_type === "boolean";
@@ -118,41 +118,41 @@ export function AppSettingsForm({ table, data, loading, onSave, saving }: AppSet
                   return (
                     <div
                       key={col.column_name}
-                      className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4"
+                      className="flex items-center gap-4 px-4 py-2.5"
                     >
-                      <div className="space-y-0.5">
-                        <Label className="text-sm font-medium normal-case tracking-normal">
-                          {formatLabel(col.column_name)}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">{col.column_name}</p>
+                      <Label className="text-sm font-medium normal-case tracking-normal w-56 shrink-0">
+                        {formatLabel(col.column_name)}
+                      </Label>
+                      <code className="text-[11px] text-muted-foreground font-mono w-52 shrink-0 truncate">
+                        {col.column_name}
+                      </code>
+                      <div className="ml-auto flex items-center">
+                        {isBool ? (
+                          <Switch
+                            checked={!!value}
+                            onCheckedChange={(v) => handleChange(col.column_name, v)}
+                          />
+                        ) : isNum ? (
+                          <Input
+                            type="number"
+                            value={value ?? ""}
+                            onChange={(e) => handleChange(col.column_name, parseInt(e.target.value) || null)}
+                            className="w-28 h-8 text-right text-sm"
+                          />
+                        ) : (
+                          <Input
+                            type="text"
+                            value={value ?? ""}
+                            onChange={(e) => handleChange(col.column_name, e.target.value || null)}
+                            className="w-80 h-8 text-sm"
+                            placeholder="Not set"
+                          />
+                        )}
                       </div>
-
-                      {isBool ? (
-                        <Switch
-                          checked={!!value}
-                          onCheckedChange={(v) => handleChange(col.column_name, v)}
-                        />
-                      ) : isNum ? (
-                        <Input
-                          type="number"
-                          value={value ?? ""}
-                          onChange={(e) => handleChange(col.column_name, parseInt(e.target.value) || null)}
-                          className="w-32 text-right"
-                        />
-                      ) : (
-                        <Input
-                          type="text"
-                          value={value ?? ""}
-                          onChange={(e) => handleChange(col.column_name, e.target.value || null)}
-                          className="w-80"
-                          placeholder="Not set"
-                        />
-                      )}
                     </div>
                   );
                 })}
               </div>
-              <Separator className="mt-6" />
             </div>
           ))}
         </div>
