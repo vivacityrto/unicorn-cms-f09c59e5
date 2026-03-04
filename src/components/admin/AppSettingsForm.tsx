@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Settings } from "lucide-react";
+import { Save, Settings, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import type { CodeTable, CodeTableRow, CodeTableColumn } from "@/services/codeTablesService";
 
 interface AppSettingsFormProps {
@@ -14,6 +20,7 @@ interface AppSettingsFormProps {
   data: CodeTableRow[];
   loading: boolean;
   onSave: (whereClause: Record<string, any>, data: Record<string, any>) => void;
+  onAddSetting?: (columnName: string, dataType: string, defaultValue: string) => void;
   saving: boolean;
 }
 
@@ -50,10 +57,14 @@ function groupColumns(columns: CodeTableColumn[]): { label: string; columns: Cod
   return Object.entries(groups).map(([label, columns]) => ({ label, columns }));
 }
 
-export function AppSettingsForm({ table, data, loading, onSave, saving }: AppSettingsFormProps) {
+export function AppSettingsForm({ table, data, loading, onSave, onAddSetting, saving }: AppSettingsFormProps) {
   const row = data[0] ?? {};
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [dirty, setDirty] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newColName, setNewColName] = useState("");
+  const [newColType, setNewColType] = useState("boolean");
+  const [newColDefault, setNewColDefault] = useState("");
 
   // Stringify to get a stable dependency — data is a new array ref each render
   const dataJson = JSON.stringify(data[0] ?? null);
@@ -72,11 +83,20 @@ export function AppSettingsForm({ table, data, loading, onSave, saving }: AppSet
 
   function handleSubmit() {
     const pk = row.id !== undefined ? { id: row.id } : {};
-    // Strip hidden columns from save payload
     const payload = { ...formData };
     HIDDEN_COLUMNS.forEach((c) => delete payload[c]);
     onSave(pk, payload);
     setDirty(false);
+  }
+
+  function handleAddSetting() {
+    if (!newColName.trim() || !onAddSetting) return;
+    const snakeName = newColName.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+    onAddSetting(snakeName, newColType, newColDefault);
+    setNewColName("");
+    setNewColType("boolean");
+    setNewColDefault("");
+    setAddOpen(false);
   }
 
   const groups = groupColumns(table.columns);
@@ -94,15 +114,69 @@ export function AppSettingsForm({ table, data, loading, onSave, saving }: AppSet
       {/* Header */}
       <div className="p-4 border-b flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Settings className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Application Settings</h2>
+          <Settings className="h-5 w-5 text-destructive" />
+          <h2 className="text-lg font-semibold text-destructive">Application Settings</h2>
           <Badge variant="secondary" className="text-xs">Single-row config</Badge>
         </div>
-        <Button size="sm" onClick={handleSubmit} disabled={!dirty || saving}>
-          <Save className="h-4 w-4 mr-1" />
-          {saving ? "Saving..." : "Save Changes"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Add Setting
+          </Button>
+          <Button size="sm" onClick={handleSubmit} disabled={!dirty || saving}>
+            <Save className="h-4 w-4 mr-1" />
+            {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </div>
+
+      {/* Add Setting Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add New Setting</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Setting Name</Label>
+              <Input
+                placeholder="e.g. enable_new_feature"
+                value={newColName}
+                onChange={(e) => setNewColName(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Will be converted to snake_case column name
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Data Type</Label>
+              <Select value={newColType} onValueChange={setNewColType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="boolean">Boolean (toggle)</SelectItem>
+                  <SelectItem value="text">Text</SelectItem>
+                  <SelectItem value="integer">Integer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Default Value</Label>
+              <Input
+                placeholder={newColType === "boolean" ? "false" : newColType === "integer" ? "0" : ""}
+                value={newColDefault}
+                onChange={(e) => setNewColDefault(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddSetting} disabled={!newColName.trim()}>
+              Add Setting
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Form */}
       <ScrollArea className="flex-1">
