@@ -46662,6 +46662,14 @@ export type Database = {
         Args: { p_release_id: string }
         Returns: undefined
       }
+      add_app_setting: {
+        Args: {
+          p_column_name: string
+          p_data_type: string
+          p_default_value?: string
+        }
+        Returns: undefined
+      }
       add_audit_response: {
         Args: {
           p_audit_question_id: number

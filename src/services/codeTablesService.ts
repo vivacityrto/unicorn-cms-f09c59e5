@@ -89,4 +89,13 @@ export const codeTablesService = {
     if (error) throw error;
     return data as string;
   },
+
+  async addAppSetting(columnName: string, dataType: string, defaultValue: string): Promise<void> {
+    const { error } = await supabase.rpc("add_app_setting", {
+      p_column_name: columnName,
+      p_data_type: dataType,
+      p_default_value: defaultValue || null,
+    });
+    if (error) throw error;
+  },
 };

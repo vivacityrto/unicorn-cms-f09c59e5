@@ -5,7 +5,9 @@ import { CodeTableDataGrid } from "@/components/admin/CodeTableDataGrid";
 import { CodeRowDialog } from "@/components/admin/CodeRowDialog";
 import { AppSettingsForm } from "@/components/admin/AppSettingsForm";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { codeTablesService } from "@/services/codeTablesService";
 import type { CodeTableRow } from "@/services/codeTablesService";
+import { toast } from "@/hooks/use-toast";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -15,9 +17,9 @@ import {
 type DialogMode = "create" | "edit" | "duplicate";
 
 export default function CodeTablesAdmin() {
-  const { tables, loading: tablesLoading } = useCodeTables();
+  const { tables, loading: tablesLoading, refetch: refetchTables } = useCodeTables();
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
-  const { data, loading: dataLoading, createRow, updateRow, deleteRow } = useTableData(selectedTable);
+  const { data, loading: dataLoading, createRow, updateRow, deleteRow, refetch: refetchData } = useTableData(selectedTable);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -86,6 +88,16 @@ export default function CodeTablesAdmin() {
             onSave={(whereClause, rowData) =>
               updateRow.mutate({ whereClause, data: rowData })
             }
+            onAddSetting={async (columnName, dataType, defaultValue) => {
+              try {
+                await codeTablesService.addAppSetting(columnName, dataType, defaultValue);
+                toast({ title: "Setting added successfully" });
+                refetchTables();
+                refetchData();
+              } catch (err: any) {
+                toast({ title: "Failed to add setting", description: err.message, variant: "destructive" });
+              }
+            }}
             saving={updateRow.isPending}
           />
         ) : (

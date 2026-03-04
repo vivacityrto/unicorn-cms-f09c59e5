@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Shield, ShieldAlert, ShieldOff, Database } from "lucide-react";
+import { Search, Shield, ShieldAlert, ShieldOff, Database, Settings } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -57,37 +57,49 @@ export function CodeTableSidebar({ tables, selectedTable, onSelect, loading }: C
           ) : filtered.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">No tables found</div>
           ) : (
-            filtered.map((table) => (
-              <button
-                key={table.table_name}
-                onClick={() => onSelect(table.table_name)}
-                className={cn(
-                  "w-full text-left rounded-lg p-3 transition-all",
-                  "hover:bg-muted/50",
-                  selectedTable === table.table_name
-                    ? "ring-2 ring-primary bg-primary/10"
-                    : "bg-transparent"
-                )}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Database className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium truncate">
-                      {formatTableName(table.table_name)}
+            filtered.map((table) => {
+              const isAppSettings = table.table_name === "app_settings";
+              return (
+                <button
+                  key={table.table_name}
+                  onClick={() => onSelect(table.table_name)}
+                  className={cn(
+                    "w-full text-left rounded-lg p-3 transition-all",
+                    "hover:bg-muted/50",
+                    selectedTable === table.table_name
+                      ? isAppSettings
+                        ? "ring-2 ring-destructive bg-destructive/10"
+                        : "ring-2 ring-primary bg-primary/10"
+                      : "bg-transparent"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isAppSettings ? (
+                        <Settings className="h-4 w-4 text-destructive shrink-0" />
+                      ) : (
+                        <Database className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                      <span className={cn(
+                        "text-sm font-medium truncate",
+                        isAppSettings && "text-destructive"
+                      )}>
+                        {formatTableName(table.table_name)}
+                      </span>
+                    </div>
+                    <RlsIcon hasRls={table.has_rls} policyCount={table.policy_count} />
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 ml-6">
+                    <Badge variant="secondary" className="text-xs">
+                      {table.row_count} rows
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {table.columns?.length ?? 0} cols
                     </span>
                   </div>
-                  <RlsIcon hasRls={table.has_rls} policyCount={table.policy_count} />
-                </div>
-                <div className="flex items-center gap-2 mt-1 ml-6">
-                  <Badge variant="secondary" className="text-xs">
-                    {table.row_count} rows
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {table.columns?.length ?? 0} cols
-                  </span>
-                </div>
-              </button>
-            ))
+                </button>
+              );
+            })
           )}
         </div>
       </ScrollArea>
