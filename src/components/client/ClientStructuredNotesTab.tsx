@@ -1334,7 +1334,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           </DialogHeader>
           
           {selectedNote && (
-            <div className="flex-1 min-h-0 overflow-y-auto max-h-[60vh] border rounded-md p-4">
+            <div className="flex-1 min-h-0 overflow-y-auto max-h-[75vh] border rounded-md p-4">
               <div className="space-y-4">
                 {/* Tags */}
                 {selectedNote.tags.length > 0 && (
