@@ -36,6 +36,7 @@ import { SelectSeparator } from '@/components/ui/select';
 import { formatDistanceToNow, format, fromUnixTime, isValid, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { TenantClickUpAISearch } from '@/components/tenant/TenantClickUpAISearch';
 
 interface PackageInfo {
@@ -499,6 +500,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       const parsedDuration = duration ? parseInt(duration, 10) : 0;
       let noteId: string | null = null;
       if (selectedNote) {
+        const parentUpdate = selectedPkg
+          ? { parent_type: 'package_instance' as const, parent_id: selectedPkg.instance_id }
+          : { parent_type: 'tenant' as const, parent_id: tenantId };
         await updateNote(selectedNote.id, {
           note_type: noteType,
           title: title || null,
@@ -508,7 +512,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           duration: parsedDuration,
           tags,
           is_pinned: isPinned,
-          package_id: selectedPkg?.package_id || null
+          package_id: selectedPkg?.package_id || null,
+          ...parentUpdate
         });
       } else {
         noteId = await createNote({
@@ -1289,7 +1294,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       </Card>
       {/* View Note Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedNote && (() => {
@@ -1344,9 +1349,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 )}
                 
                 {/* Full note content */}
-                <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                  {selectedNote.note_details}
-                </div>
+                <div
+                  className="prose prose-sm dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedNote.note_details) }}
+                />
               </div>
             </div>
           )}

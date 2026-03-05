@@ -69,6 +69,8 @@ export interface UpdateNoteInput {
   file_names?: string[];
   assignees?: string[];
   package_id?: number | null;
+  parent_type?: NoteParentType;
+  parent_id?: number;
 }
 
 export interface NotesFilterOptions {
