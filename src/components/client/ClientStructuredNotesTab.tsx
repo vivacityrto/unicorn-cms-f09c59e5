@@ -1294,7 +1294,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       </Card>
       {/* View Note Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedNote && (() => {
