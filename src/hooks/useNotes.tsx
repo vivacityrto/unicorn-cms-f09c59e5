@@ -52,6 +52,7 @@ export interface CreateNoteInput {
   package_id?: number | null;
   parent_type_override?: NoteParentType;
   parent_id_override?: number;
+  timeentry_id?: string;
 }
 
 export interface UpdateNoteInput {
@@ -296,8 +297,9 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
           uploaded_files: input.uploaded_files || [],
           file_names: input.file_names || [],
           assignees: input.assignees || [],
-          created_by: userData.user.id
-        })
+          created_by: userData.user.id,
+          ...(input.timeentry_id ? { timeentry_id: input.timeentry_id } : {})
+        } as any)
         .select('id')
         .single();
 
