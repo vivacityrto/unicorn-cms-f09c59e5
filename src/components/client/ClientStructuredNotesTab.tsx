@@ -1568,6 +1568,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 onChange={setContent}
                 minHeight="280px"
                 className={speech.isRecording ? 'border-destructive' : ''}
+                tenantId={tenantId}
               />
             </div>
             
