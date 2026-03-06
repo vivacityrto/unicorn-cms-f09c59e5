@@ -692,9 +692,9 @@ export default function TenantNotes() {
                 <Label>Note Details *</Label>
                 <Textarea id="note-content-field" value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Enter note details..." rows={20} autoFocus={!!noteTitle} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Note Type</Label>
+              <div className="grid grid-cols-5 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Note Type</Label>
                   <Select value={noteType} onValueChange={setNoteType}>
                     <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                     <SelectContent>
@@ -709,8 +709,8 @@ export default function TenantNotes() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Priority</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs">Priority</Label>
                   <Select value={priority} onValueChange={setPriority}>
                     <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
                     <SelectContent>
@@ -721,10 +721,8 @@ export default function TenantNotes() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Started Date</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs">Started Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !startedDate && "text-muted-foreground")}>
@@ -734,8 +732,8 @@ export default function TenantNotes() {
                     <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startedDate} onSelect={setStartedDate} /></PopoverContent>
                   </Popover>
                 </div>
-                <div className="space-y-2">
-                  <Label>Completed Date</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs">Completed Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !completedDate && "text-muted-foreground")}>
@@ -745,16 +743,16 @@ export default function TenantNotes() {
                     <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={completedDate} onSelect={setCompletedDate} /></PopoverContent>
                   </Popover>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Timer</Label>
-                <div className="flex items-center gap-4">
-                  {!isTimerRunning ? (
-                    <Button type="button" variant="outline" onClick={handlePlayTimer} className="gap-2"><Play className="h-4 w-4" />Start Timer</Button>
-                  ) : (
-                    <Button type="button" variant="outline" onClick={handleStopTimer} className="gap-2"><Square className="h-4 w-4" />Stop Timer</Button>
-                  )}
-                  <span className="text-sm text-muted-foreground">Duration: {calculateDuration()}</span>
+                <div className="space-y-1">
+                  <Label className="text-xs">Timer</Label>
+                  <div className="flex items-center gap-2">
+                    {!isTimerRunning ? (
+                      <Button type="button" variant="outline" size="sm" onClick={handlePlayTimer} className="gap-1.5"><Play className="h-3.5 w-3.5" />Start</Button>
+                    ) : (
+                      <Button type="button" variant="outline" size="sm" onClick={handleStopTimer} className="gap-1.5"><Square className="h-3.5 w-3.5" />Stop</Button>
+                    )}
+                    <span className="text-xs text-muted-foreground">{calculateDuration()}</span>
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">
