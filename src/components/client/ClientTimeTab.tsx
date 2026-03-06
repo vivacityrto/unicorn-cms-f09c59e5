@@ -198,88 +198,72 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4">
       {combined.map(row => {
         const pct = row.percent_used;
         const isOver = pct > 100;
         return (
           <Card key={row.package_instance_id}>
-            <CardHeader className="pb-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <CardTitle className="text-sm font-medium">{row.package_name}</CardTitle>
+            <CardContent className="p-4">
+              <div className="flex items-baseline justify-between gap-2 mb-3">
+                <span className="text-sm font-medium">{row.package_name}</span>
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {formatLifecycle(row.lifecycle.start_date, row.lifecycle.end_date)}
                 </span>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Burndown summary */}
-              <div className="space-y-2">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-2xl font-bold">
-                    {formatDuration(row.used_minutes)}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    / {formatDuration(row.included_minutes)}
-                  </span>
-                </div>
-                <Progress
-                  value={Math.min(pct, 100)}
-                  className={cn('h-2', isOver && '[&>div]:bg-destructive')}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{Math.round(pct)}% used</span>
-                  <span className={cn(isOver ? 'text-destructive font-medium' : 'text-primary')}>
-                    {isOver
-                      ? `${formatDuration(Math.abs(row.remaining_minutes))} over`
-                      : `${formatDuration(row.remaining_minutes)} remaining`}
-                  </span>
-                </div>
-              </div>
-
-              {/* Monthly breakdown */}
-              {row.monthly.length > 0 && (
-                <div className="space-y-1 pt-2 border-t border-border">
-                  <div className="flex justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    <span>Monthly</span>
-                    <span className="flex gap-3">
-                      <span className="w-12 text-right">Total</span>
-                      <span className="w-12 text-right text-green-600">Bill</span>
-                      <span className="w-12 text-right">Non-bill</span>
+              <div className="flex gap-6">
+                {/* Left: Burndown summary */}
+                <div className="space-y-2 min-w-[180px]">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-2xl font-bold">{formatDuration(row.used_minutes)}</span>
+                    <span className="text-sm text-muted-foreground">/ {formatDuration(row.included_minutes)}</span>
+                  </div>
+                  <Progress value={Math.min(pct, 100)} className={cn('h-2', isOver && '[&>div]:bg-destructive')} />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{Math.round(pct)}% used</span>
+                    <span className={cn(isOver ? 'text-destructive font-medium' : 'text-primary')}>
+                      {isOver ? `${formatDuration(Math.abs(row.remaining_minutes))} over` : `${formatDuration(row.remaining_minutes)} remaining`}
                     </span>
                   </div>
-                  <div className="space-y-0.5 max-h-40 overflow-y-auto">
-                    {row.monthly.map((m) => (
-                      <div key={m.month} className="flex justify-between text-xs gap-2">
-                        <span className="text-muted-foreground">
-                          {format(new Date(m.month + '-01'), 'MMM yyyy')}
-                        </span>
-                        <span className="flex gap-3">
-                          <span className="w-12 text-right font-medium">{formatDuration(m.minutes)}</span>
-                          <span className="w-12 text-right text-green-600">{formatDuration(m.billable)}</span>
-                          <span className="w-12 text-right text-muted-foreground">{formatDuration(m.nonBillable)}</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  {row.totals.lastEntry && (
+                    <p className="text-xs text-muted-foreground pt-1">Last entry: {format(new Date(row.totals.lastEntry), 'd MMM yyyy')}</p>
+                  )}
                 </div>
-              )}
 
-              {/* Totals footer */}
-              <div className="flex justify-between items-center pt-2 border-t border-border">
-                <span className="text-xs text-muted-foreground">Total</span>
-                <span className="flex gap-3 text-xs">
-                  <span className="w-12 text-right font-semibold text-sm">{formatDuration(row.totals.total)}</span>
-                  <span className="w-12 text-right text-green-600 font-medium">{formatDuration(row.totals.billable)}</span>
-                  <span className="w-12 text-right text-muted-foreground">{formatDuration(row.totals.nonBillable)}</span>
-                </span>
+                {/* Right: Monthly breakdown */}
+                {row.monthly.length > 0 && (
+                  <div className="flex-1 border-l border-border pl-4 space-y-1">
+                    <div className="flex justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      <span>Monthly</span>
+                      <span className="flex gap-3">
+                        <span className="w-12 text-right">Total</span>
+                        <span className="w-12 text-right text-green-600">Bill</span>
+                        <span className="w-12 text-right">Non-bill</span>
+                      </span>
+                    </div>
+                    <div className="space-y-0.5 max-h-32 overflow-y-auto">
+                      {row.monthly.map((m) => (
+                        <div key={m.month} className="flex justify-between text-xs gap-2">
+                          <span className="text-muted-foreground">{format(new Date(m.month + '-01'), 'MMM yyyy')}</span>
+                          <span className="flex gap-3">
+                            <span className="w-12 text-right font-medium">{formatDuration(m.minutes)}</span>
+                            <span className="w-12 text-right text-green-600">{formatDuration(m.billable)}</span>
+                            <span className="w-12 text-right text-muted-foreground">{formatDuration(m.nonBillable)}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center pt-1 border-t border-border">
+                      <span className="text-xs text-muted-foreground">Total</span>
+                      <span className="flex gap-3 text-xs">
+                        <span className="w-12 text-right font-semibold">{formatDuration(row.totals.total)}</span>
+                        <span className="w-12 text-right text-green-600 font-medium">{formatDuration(row.totals.billable)}</span>
+                        <span className="w-12 text-right text-muted-foreground">{formatDuration(row.totals.nonBillable)}</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
-
-              {row.totals.lastEntry && (
-                <p className="text-xs text-muted-foreground">
-                  Last entry: {format(new Date(row.totals.lastEntry), 'd MMM yyyy')}
-                </p>
-              )}
             </CardContent>
           </Card>
         );
