@@ -25,6 +25,7 @@ import {
   AlertCircle,
   ChevronRight,
   RefreshCw,
+  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,6 +34,7 @@ import { formatDateTime } from '@/lib/utils';
 
 interface SharePointFileBrowserProps {
   tenantId: number;
+  onSelectLink?: (url: string) => void;
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -43,7 +45,7 @@ function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-export function SharePointFileBrowser({ tenantId }: SharePointFileBrowserProps) {
+export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFileBrowserProps) {
   const { profile } = useAuth();
   const [settingsStatus, setSettingsStatus] = useState<{
     loaded: boolean;
@@ -100,15 +102,17 @@ export function SharePointFileBrowser({ tenantId }: SharePointFileBrowserProps) 
     );
   }
 
-  return <FileBrowserContent tenantId={tenantId} rootName={settingsStatus.rootName} />;
+  return <FileBrowserContent tenantId={tenantId} rootName={settingsStatus.rootName} onSelectLink={onSelectLink} />;
 }
 
 function FileBrowserContent({
   tenantId,
   rootName,
+  onSelectLink,
 }: {
   tenantId: number;
   rootName: string | null;
+  onSelectLink?: (url: string) => void;
 }) {
   const {
     items,
@@ -212,6 +216,7 @@ function FileBrowserContent({
                   onNavigate={navigateToFolder}
                   onDownload={downloadFile}
                   downloading={downloading}
+                  onSelectLink={onSelectLink}
                 />
               ))}
             </TableBody>
@@ -227,11 +232,13 @@ function FileRow({
   onNavigate,
   onDownload,
   downloading,
+  onSelectLink,
 }: {
   item: SharePointItem;
   onNavigate: (id: string, name: string) => void;
   onDownload: (id: string, name: string) => Promise<void>;
   downloading: string | null;
+  onSelectLink?: (url: string) => void;
 }) {
   const isDownloading = downloading === item.id;
 
@@ -263,7 +270,16 @@ function FileRow({
         {formatDateTime(item.last_modified)}
       </TableCell>
       <TableCell>
-        {!item.is_folder && (
+        {!item.is_folder && onSelectLink ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onSelectLink(item.web_url)}
+            title="Insert link"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+        ) : !item.is_folder ? (
           <Button
             variant="ghost"
             size="sm"
@@ -276,7 +292,7 @@ function FileRow({
               <Download className="h-4 w-4" />
             )}
           </Button>
-        )}
+        ) : null}
       </TableCell>
     </TableRow>
   );

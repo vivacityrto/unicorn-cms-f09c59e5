@@ -112,8 +112,14 @@ export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLin
 
             {/* Browse SharePoint files */}
             <div className="border-t pt-4">
-              <p className="text-sm font-medium mb-2">Browse files (copy link from here):</p>
-              <SharePointFileBrowser tenantId={tenantId} />
+              <p className="text-sm font-medium mb-2">Browse files and insert link:</p>
+              <SharePointFileBrowser
+                tenantId={tenantId}
+                onSelectLink={(url) => {
+                  onSelectLink(url);
+                  onOpenChange(false);
+                }}
+              />
             </div>
           </div>
         )}
