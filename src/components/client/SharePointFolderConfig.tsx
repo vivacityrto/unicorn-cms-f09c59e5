@@ -77,6 +77,11 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const [validating, setValidating] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [browsingSharedFolder, setBrowsingSharedFolder] = useState(false);
+  const [sharedFolderBrowseItems, setSharedFolderBrowseItems] = useState<Array<{ id: string; name: string; is_folder: boolean }>>([]);
+  const [sharedFolderBrowseStack, setSharedFolderBrowseStack] = useState<Array<{ id: string; name: string }>>([]);
+  const [sharedFolderBrowseLoading, setSharedFolderBrowseLoading] = useState(false);
+  const [savingSharedFolder, setSavingSharedFolder] = useState(false);
 
   // Fetch global SharePoint site URL
   const { data: globalSiteUrl } = useQuery({
