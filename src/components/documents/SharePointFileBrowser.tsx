@@ -231,11 +231,13 @@ function FileRow({
   onNavigate,
   onDownload,
   downloading,
+  onSelectLink,
 }: {
   item: SharePointItem;
   onNavigate: (id: string, name: string) => void;
   onDownload: (id: string, name: string) => Promise<void>;
   downloading: string | null;
+  onSelectLink?: (url: string) => void;
 }) {
   const isDownloading = downloading === item.id;
 
@@ -267,7 +269,16 @@ function FileRow({
         {formatDateTime(item.last_modified)}
       </TableCell>
       <TableCell>
-        {!item.is_folder && (
+        {!item.is_folder && onSelectLink ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onSelectLink(item.web_url)}
+            title="Insert link"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+        ) : !item.is_folder ? (
           <Button
             variant="ghost"
             size="sm"
@@ -280,7 +291,7 @@ function FileRow({
               <Download className="h-4 w-4" />
             )}
           </Button>
-        )}
+        ) : null}
       </TableCell>
     </TableRow>
   );
