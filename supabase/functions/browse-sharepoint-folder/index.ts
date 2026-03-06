@@ -187,10 +187,14 @@ serve(async (req) => {
 
     // ===================== LIST FOLDER CONTENTS =====================
     if (action === "list") {
-      // folder_id defaults to root_item_id
-      const folderId = (body.folder_id as string) || root_item_id;
+      // Determine the effective root: use shared_folder_item_id if requested and configured
+      const useSharedRoot = body.use_shared_folder === true && spSettings.shared_folder_item_id;
+      const effectiveRootId = useSharedRoot ? spSettings.shared_folder_item_id : root_item_id;
+      
+      // folder_id defaults to effective root
+      const folderId = (body.folder_id as string) || effectiveRootId;
 
-      // If browsing a subfolder, verify it's within root
+      // If browsing a subfolder, verify it's within root (always validate against the actual root)
       if (folderId !== root_item_id) {
         const withinRoot = await verifyWithinRoot(accessToken, drive_id, folderId, root_item_id);
         if (!withinRoot) {
@@ -241,8 +245,8 @@ serve(async (req) => {
         JSON.stringify({
           items,
           folder_id: folderId,
-          is_root: folderId === root_item_id,
-          root_name: spSettings.root_name,
+          is_root: folderId === effectiveRootId,
+          root_name: useSharedRoot ? (spSettings.shared_folder_name || spSettings.root_name) : spSettings.root_name,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
