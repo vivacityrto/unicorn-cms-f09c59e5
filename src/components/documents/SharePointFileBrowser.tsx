@@ -44,7 +44,7 @@ function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-export function SharePointFileBrowser({ tenantId }: SharePointFileBrowserProps) {
+export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFileBrowserProps) {
   const { profile } = useAuth();
   const [settingsStatus, setSettingsStatus] = useState<{
     loaded: boolean;
