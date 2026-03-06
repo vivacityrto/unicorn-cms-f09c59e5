@@ -44,7 +44,7 @@ export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLin
   // For manual setup mode, a valid validation is sufficient (provisioning is not required)
   const isProvisioned = (
     settings?.provisioning_status === 'success' ||
-    (settings?.setup_mode === 'manual' && settings?.validation_status === 'valid')
+    settings?.validation_status === 'valid'
   ) && !!folderUrl;
 
   const handleInsertFolderLink = () => {
