@@ -215,6 +215,7 @@ function FileBrowserContent({
                   onNavigate={navigateToFolder}
                   onDownload={downloadFile}
                   downloading={downloading}
+                  onSelectLink={onSelectLink}
                 />
               ))}
             </TableBody>
