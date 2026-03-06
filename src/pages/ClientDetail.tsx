@@ -246,7 +246,7 @@ export default function ClientDetail() {
                     }}
                     disabled={!canEdit}
                   />
-                  <OrgTypeBadge orgType={profile?.org_type} />
+                  <OrgTypeBadge orgType={profile?.org_type} rtoNumber={profile?.rto_number} cricosNumber={profile?.cricos_number} />
                 </div>
                 {tenantPhone && (
                   <a href={`tel:${tenantPhone}`} className="text-xs text-muted-foreground mt-1 hover:text-primary hover:underline inline-flex items-center gap-1">
