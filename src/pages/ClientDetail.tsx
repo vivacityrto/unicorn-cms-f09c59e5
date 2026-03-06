@@ -57,6 +57,7 @@ import { ClientQuickNav } from '@/components/client/ClientQuickNav';
 import { AssignPackageDialog } from '@/components/client/AssignPackageDialog';
 import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
 import { TenantLogoUpload } from '@/components/tenant/TenantLogoUpload';
+import { OrgTypeBadge } from '@/components/tenant/OrgTypeBadge';
 
 interface TenantBasic {
   id: number;
@@ -245,6 +246,7 @@ export default function ClientDetail() {
                     }}
                     disabled={!canEdit}
                   />
+                  <OrgTypeBadge orgType={profile?.org_type} />
                 </div>
                 {tenantPhone && (
                   <a href={`tel:${tenantPhone}`} className="text-xs text-muted-foreground mt-1 hover:text-primary hover:underline inline-flex items-center gap-1">
