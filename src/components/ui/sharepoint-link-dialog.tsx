@@ -29,7 +29,7 @@ export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLin
     queryFn: async () => {
       const { data } = await supabase
         .from('tenant_sharepoint_settings')
-        .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status')
+        .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status, validation_status')
         .eq('tenant_id', tenantId)
         .maybeSingle();
       return data;
@@ -41,7 +41,11 @@ export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLin
     ? settings?.manual_folder_url
     : settings?.root_folder_url;
 
-  const isProvisioned = settings?.provisioning_status === 'success' && !!folderUrl;
+  // For manual setup mode, a valid validation is sufficient (provisioning is not required)
+  const isProvisioned = (
+    settings?.provisioning_status === 'success' ||
+    (settings?.setup_mode === 'manual' && settings?.validation_status === 'valid')
+  ) && !!folderUrl;
 
   const handleInsertFolderLink = () => {
     if (folderUrl) {
