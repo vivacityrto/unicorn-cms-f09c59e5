@@ -204,6 +204,8 @@ export default function TenantNotes() {
       const { data, error } = await supabase.from("users")
         .select("user_uuid, first_name, last_name, avatar_url")
         .in("unicorn_role", ["Super Admin", "Team Leader", "Team Member"])
+        .eq("disabled", false)
+        .eq("archived", false)
         .order("first_name");
       if (error) throw error;
       setVivacityTeam(data || []);
@@ -784,9 +786,9 @@ export default function TenantNotes() {
                 <Label>Assignees</Label>
                 <div className="flex flex-wrap gap-2">
                   {vivacityTeam.map((user) => (
-                    <Button key={user.user_uuid} type="button" variant={assignees.includes(user.user_uuid) ? "default" : "outline"} size="sm" onClick={() => toggleAssignee(user.user_uuid)} className="gap-2">
-                      <Avatar className="h-5 w-5">{user.avatar_url && <AvatarImage src={user.avatar_url} />}<AvatarFallback className="text-[10px]">{user.first_name?.[0]}{user.last_name?.[0]}</AvatarFallback></Avatar>
-                      {user.first_name} {user.last_name}
+                    <Button key={user.user_uuid} type="button" variant={assignees.includes(user.user_uuid) ? "default" : "outline"} size="sm" onClick={() => toggleAssignee(user.user_uuid)} className="gap-1.5 text-[11px] h-7 px-2">
+                      <Avatar className="h-4 w-4">{user.avatar_url && <AvatarImage src={user.avatar_url} />}<AvatarFallback className="text-[9px]">{user.first_name?.[0]}{user.last_name?.[0]}</AvatarFallback></Avatar>
+                      {user.first_name}
                     </Button>
                   ))}
                 </div>
