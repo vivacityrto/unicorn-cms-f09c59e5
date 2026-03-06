@@ -84,6 +84,7 @@ export default function TenantNotes() {
   const [clickupLoading, setClickupLoading] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [pendingTimeEntryId, setPendingTimeEntryId] = useState<string | null>(null);
+  const [cameFromDeepLink, setCameFromDeepLink] = useState(false);
 
   // Filter notes
   const filteredNotes = filterNotes(notes, { searchQuery, priority: sortPriority }).sort((a, b) => {
@@ -124,6 +125,7 @@ export default function TenantNotes() {
       const note = notes.find(n => n.id === editNoteId);
       if (note) {
         openEditDialog(note);
+        setCameFromDeepLink(true);
       }
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('editNoteId');
@@ -362,6 +364,10 @@ export default function TenantNotes() {
     setElapsedTime(0);
     setAccumulatedTime(0);
     setIsAddDialogOpen(false);
+    if (cameFromDeepLink) {
+      setCameFromDeepLink(false);
+      navigate(-1);
+    }
   };
 
   const handleDeleteNote = async () => {
