@@ -3,14 +3,21 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Toggle } from '@/components/ui/toggle';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   List, ListOrdered, Link as LinkIcon, AlignLeft, AlignCenter,
-  AlignRight, Undo, Redo, Heading2, Quote, Minus,
+  AlignRight, Undo, Redo, Heading2, Quote, Minus, FolderOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { SharePointLinkDialog } from './sharepoint-link-dialog';
 
 interface RichTextEditorProps {
   value: string;
@@ -18,9 +25,12 @@ interface RichTextEditorProps {
   className?: string;
   placeholder?: string;
   minHeight?: string;
+  tenantId?: number;
 }
 
-export function RichTextEditor({ value, onChange, className, placeholder, minHeight = '500px' }: RichTextEditorProps) {
+export function RichTextEditor({ value, onChange, className, placeholder, minHeight = '500px', tenantId }: RichTextEditorProps) {
+  const [spLinkOpen, setSpLinkOpen] = useState(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -72,6 +82,12 @@ export function RichTextEditor({ value, onChange, className, placeholder, minHei
       {children}
     </Toggle>
   );
+
+  const handleInsertLink = (url: string) => {
+    if (url && editor) {
+      editor.chain().focus().setLink({ href: url }).run();
+    }
+  };
 
   return (
     <div className={cn('border rounded-md overflow-hidden bg-background', className)}>
@@ -173,22 +189,57 @@ export function RichTextEditor({ value, onChange, className, placeholder, minHei
 
         <div className="w-px h-5 bg-border mx-1" />
 
-        <ToolbarButton
-          active={editor.isActive('link')}
-          onPress={() => {
-            if (editor.isActive('link')) {
-              editor.chain().focus().unsetLink().run();
-            } else {
-              const url = window.prompt('Enter URL:');
-              if (url) {
-                editor.chain().focus().setLink({ href: url }).run();
+        {/* Link button - with SharePoint option when tenantId is provided */}
+        {tenantId ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Toggle
+                size="sm"
+                pressed={editor.isActive('link')}
+                className="h-8 w-8 p-0"
+                title="Insert Link"
+              >
+                <LinkIcon className="h-4 w-4" />
+              </Toggle>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => {
+                if (editor.isActive('link')) {
+                  editor.chain().focus().unsetLink().run();
+                } else {
+                  const url = window.prompt('Enter URL:');
+                  if (url) {
+                    editor.chain().focus().setLink({ href: url }).run();
+                  }
+                }
+              }}>
+                <LinkIcon className="h-4 w-4 mr-2" />
+                {editor.isActive('link') ? 'Remove Link' : 'Enter URL'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSpLinkOpen(true)}>
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Browse SharePoint
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <ToolbarButton
+            active={editor.isActive('link')}
+            onPress={() => {
+              if (editor.isActive('link')) {
+                editor.chain().focus().unsetLink().run();
+              } else {
+                const url = window.prompt('Enter URL:');
+                if (url) {
+                  editor.chain().focus().setLink({ href: url }).run();
+                }
               }
-            }
-          }}
-          title="Link"
-        >
-          <LinkIcon className="h-4 w-4" />
-        </ToolbarButton>
+            }}
+            title="Link"
+          >
+            <LinkIcon className="h-4 w-4" />
+          </ToolbarButton>
+        )}
 
         <div className="flex-1" />
 
@@ -210,6 +261,16 @@ export function RichTextEditor({ value, onChange, className, placeholder, minHei
 
       {/* Editor */}
       <EditorContent editor={editor} />
+
+      {/* SharePoint Link Dialog */}
+      {tenantId && (
+        <SharePointLinkDialog
+          open={spLinkOpen}
+          onOpenChange={setSpLinkOpen}
+          tenantId={tenantId}
+          onSelectLink={handleInsertLink}
+        />
+      )}
     </div>
   );
 }
