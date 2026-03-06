@@ -1,36 +1,19 @@
 
 
-## Link Time Entries to Notes + Reposition Notify Client Checkbox
+## Open Linked Note Directly from Time Entries
 
-No migration needed — `timeentry_id` column already exists on `notes`.
+### Problem
+Clicking the note icon on a time entry navigates to `/tenant/{id}/notes` (the full list) instead of opening the specific linked note in the editor.
 
-### Changes
+### Solution
 
-**1. `src/components/client/AddTimeDialog.tsx`**
-
-- Update insert to use `.select('id').single()` to get the new time entry UUID
-- After save, show AlertDialog: "Create a note from this time entry?"
-  - **Yes**: navigate to `/tenant/{tenantId}/notes?initNote=true&noteTitle=TIME: {workTypeLabel} ({H:MM})&timeEntryId={uuid}&noteDetails={notes text}&packageId={selectedInstanceId}`
-  - **No**: close normally
-- **Move Notify Client checkbox** into DialogFooter left side: `[NotifyClient] ··· [Cancel] [Add Time]`
+**1. `src/components/client/ClientTimeTab.tsx`**
+- Change the navigate URL from `/tenant/${tenantId}/notes` to `/tenant/${tenantId}/notes?editNoteId={noteId}` using the linked note's ID from `linkedNoteMap[entry.id].id`.
 
 **2. `src/pages/TenantNotes.tsx`**
+- Add a `useEffect` that reads the `editNoteId` URL search param.
+- When present and notes are loaded, find the matching note and call `openEditDialog(note)`.
+- Clean up the URL param after opening.
 
-- Read `timeEntryId` and `noteDetails` from URL params in the `initNote` handler
-- Pre-fill noteText with noteDetails, store timeEntryId in state
-- Pass `timeentry_id` into `createNote` call
-- Clean up URL params after reading
-
-**3. `src/hooks/useNotes.tsx`**
-
-- Add `timeentry_id?: string` to `CreateNoteInput`
-- Include `timeentry_id` in the insert payload
-
-### Column name
-
-The notes table column is **`timeentry_id`** (no underscore between "time" and "entry"). All references use this exact name.
-
-### Title format
-
-`TIME: {Work Type Label} ({H}:{MM})` — e.g. `TIME: Document Review (1:30)`
+This ensures clicking the sticky-note icon in the time entries table opens the note editor dialog directly to that specific note.
 
