@@ -311,12 +311,15 @@ export function AddTimeDialog({
     const workLabel = workTypes.find(w => w.code === workType)?.label || workType;
     const h = Math.floor(savedTotalMinutes / 60);
     const m = savedTotalMinutes % 60;
-    const title = `TIME: ${workLabel} (${h}:${m.toString().padStart(2, '0')})`;
+    const notesSnippet = notes ? ` - ${notes.substring(0, 55)}` : '';
+    const title = `TIME: ${workLabel} (${h}:${m.toString().padStart(2, '0')})${notesSnippet}`;
+    const noteBody = notes && notes.length > 55 ? notes.substring(55) : '';
     const params = new URLSearchParams({
       initNote: 'true',
       noteTitle: title,
       timeEntryId: savedEntryId!,
-      ...(notes ? { noteDetails: notes } : {}),
+      ...(noteBody ? { noteDetails: noteBody } : {}),
+      ...(workType ? { workType } : {}),
       ...(selectedInstanceId ? { packageId: selectedInstanceId.toString() } : {}),
     });
     setShowNotePrompt(false);
