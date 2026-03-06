@@ -106,6 +106,8 @@ export default function TenantDetail() {
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const [tenantTypeValue, setTenantTypeValue] = useState<TenantType>("compliance_system");
   const [orgType, setOrgType] = useState<string | null>(null);
+  const [rtoNumber, setRtoNumber] = useState<string | null>(null);
+  const [cricosNumber, setCricosNumber] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const parsedTenantIdForReview = tenantId ? parseInt(tenantId) : null;
   const { reviewMode, toggleReviewMode, reviewSummary, summaryLoading } = useReviewMode(parsedTenantIdForReview);
@@ -271,10 +273,12 @@ export default function TenantDetail() {
       // Fetch org_type from tenant_profile
       const { data: tpData } = await supabase
         .from('tenant_profile')
-        .select('org_type')
+        .select('org_type, rto_number, cricos_number')
         .eq('tenant_id', parseInt(tenantId))
         .maybeSingle();
       setOrgType(tpData?.org_type || null);
+      setRtoNumber(tpData?.rto_number || null);
+      setCricosNumber(tpData?.cricos_number || null);
 
       setLogoPath((tenantData as any).logo_path || null);
       setLogoPath((tenantData as any).logo_path || null);
@@ -569,7 +573,7 @@ export default function TenantDetail() {
                   <div className="flex items-center gap-2 text-sm text-white/70">
                     <Building2 className="h-4 w-4" />
                     {clientData.companyname}
-                    <OrgTypeBadge orgType={orgType} />
+                    <OrgTypeBadge orgType={orgType} rtoNumber={rtoNumber} cricosNumber={cricosNumber} />
                   </div>
                   <div className="flex items-center gap-2 text-sm text-white/70">
                     <User className="h-4 w-4" />
