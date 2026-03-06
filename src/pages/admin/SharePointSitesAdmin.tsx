@@ -29,6 +29,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { CopyableId } from '@/components/ui/text';
 import { formatDateTime } from '@/lib/utils';
 
 interface SharePointSite {
@@ -300,8 +301,10 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
         <SettingRow label="Graph Site ID" editing={editing}>
           {editing ? (
             <Input value={graphSiteId} onChange={(e) => setGraphSiteId(e.target.value)} className="text-xs font-mono" placeholder="e.g. contoso.sharepoint.com,abc123,def456" />
+          ) : site.graph_site_id ? (
+            <CopyableId>{site.graph_site_id}</CopyableId>
           ) : (
-            <span className="text-xs font-mono break-all">{site.graph_site_id || <span className="text-muted-foreground italic">Not set</span>}</span>
+            <span className="text-muted-foreground italic text-xs">Not set</span>
           )}
         </SettingRow>
 
