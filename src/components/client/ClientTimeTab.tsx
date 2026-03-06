@@ -44,6 +44,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { EditTimeDialog } from './EditTimeDialog';
 import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
+import { EditNoteDialog } from '@/components/notes/EditNoteDialog';
 
 interface ClientTimeTabProps {
   tenantId: number;
@@ -744,6 +745,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
   const [deleteEntry, setDeleteEntry] = useState<TimeEntry | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
 
   const userIds = useMemo(() => [...new Set(entries.map(e => e.user_id).filter(Boolean))], [entries]);
   const { data: userMap = {} } = useQuery({
@@ -967,7 +969,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
         </div>
         <MembershipWeightsPanel tenantId={tenantId} />
       </div>
-
+  
 
       {/* Entries Table */}
       <Card>
@@ -1190,7 +1192,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                               variant="ghost"
                               size="sm"
                               className="h-7 px-2 text-primary"
-                              onClick={() => navigate(`/tenant/${tenantId}/notes?editNoteId=${linkedNoteMap[entry.id].id}`)}
+                              onClick={() => setEditingNoteId(String(linkedNoteMap[entry.id].id))}
                               title={linkedNoteMap[entry.id].title || 'Open linked note'}
                             >
                               <StickyNote className="h-3.5 w-3.5" />
@@ -1325,6 +1327,15 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
           }
         }}
       />
+      {editingNoteId && (
+        <EditNoteDialog
+          noteId={editingNoteId}
+          tenantId={tenantId}
+          open={!!editingNoteId}
+          onOpenChange={(open) => { if (!open) setEditingNoteId(null); }}
+          onSaved={handleRefresh}
+        />
+      )}
     </div>
   );
 }
