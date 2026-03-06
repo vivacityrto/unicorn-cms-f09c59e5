@@ -262,9 +262,6 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
             <CardTitle className="text-base">{site.site_name}</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className={`text-xs ${purposeColor}`}>
-              {purposeLabel}
-            </Badge>
             {isConfigured ? (
               <Badge variant="outline" className="gap-1 border-emerald-500/40 bg-emerald-50 text-emerald-800 text-xs">
                 <CheckCircle2 className="h-3 w-3" />
