@@ -132,6 +132,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const [graphSiteId, setGraphSiteId] = useState(site.graph_site_id || '');
@@ -201,6 +202,43 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
       setTestResult({ success: false, message: err.message });
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleResolveDriveId = async () => {
+    if (!graphSiteId.trim()) {
+      setTestResult({ success: false, message: 'Enter a Graph Site ID first.' });
+      return;
+    }
+    setResolving(true);
+    setTestResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-sharepoint-root-folder', {
+        body: { resolve_drive_id: true, graph_site_id: graphSiteId.trim() },
+      });
+      if (error) {
+        setTestResult({ success: false, message: error.message || 'Edge function error.' });
+      } else if (data?.error) {
+        setTestResult({ success: false, message: data.error });
+      } else if (data?.default_drive) {
+        const drive = data.default_drive;
+        setDriveId(drive.id);
+        const drivesInfo = (data.drives || []).map((d: any) => `${d.name} (${d.id})`).join(', ');
+        setTestResult({
+          success: true,
+          message: `Default drive: "${drive.name}" → ${drive.id}\nAll drives: ${drivesInfo}`,
+        });
+        if (!editing) setEditing(true);
+      } else if (data?.drives?.length) {
+        const first = data.drives[0];
+        setDriveId(first.id);
+        setTestResult({ success: true, message: `Drive: "${first.name}" → ${first.id}` });
+        if (!editing) setEditing(true);
+      }
+    } catch (err: any) {
+      setTestResult({ success: false, message: err.message });
+    } finally {
+      setResolving(false);
     }
   };
 
@@ -343,6 +381,15 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
               >
                 {testing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <HardDrive className="h-4 w-4 mr-1" />}
                 Test Access
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleResolveDriveId}
+                disabled={resolving || !graphSiteId.trim()}
+              >
+                {resolving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+                Resolve Drive ID
               </Button>
             </>
           )}

@@ -163,11 +163,64 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { tenant_id, root_folder_url, test_site_access } = body as {
+    const { tenant_id, root_folder_url, test_site_access, resolve_drive_id, graph_site_id } = body as {
       tenant_id: number;
       root_folder_url: string;
       test_site_access?: boolean;
+      resolve_drive_id?: boolean;
+      graph_site_id?: string;
     };
+
+    // ── Resolve Drive ID mode: just fetch /sites/{siteId}/drive and return ──
+    if (resolve_drive_id && graph_site_id) {
+      // Auth check first
+      const authHeader2 = req.headers.get('Authorization');
+      if (!authHeader2?.startsWith('Bearer ')) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const supabaseAdmin2 = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const jwt2 = authHeader2.replace('Bearer ', '');
+      const { data: { user: user2 }, error: authErr2 } = await supabaseAdmin2.auth.getUser(jwt2);
+      if (authErr2 || !user2) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const { data: caller2 } = await supabaseAdmin2.from('users').select('is_vivacity_internal').eq('user_uuid', user2.id).single();
+      if (!caller2?.is_vivacity_internal) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      console.log('[validate-sp] Resolving drive for site:', graph_site_id);
+      
+      // Get the default drive
+      const driveRes = await graphGet<{ id: string; name: string; webUrl: string; driveType: string }>(`/sites/${graph_site_id}/drive`);
+      if (!driveRes.ok) {
+        // Also try listing all drives
+        const drivesRes = await graphGet<{ value: Array<{ id: string; name: string; driveType: string; webUrl: string }> }>(`/sites/${graph_site_id}/drives`);
+        if (!drivesRes.ok) {
+          return new Response(
+            JSON.stringify({ success: false, error: `Cannot access drives for this site (status ${driveRes.status}). Check Sites.Selected permission.` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        // Return all drives so user can pick
+        return new Response(
+          JSON.stringify({ success: true, drives: drivesRes.data.value }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Also list all drives for visibility
+      const allDrivesRes = await graphGet<{ value: Array<{ id: string; name: string; driveType: string; webUrl: string }> }>(`/sites/${graph_site_id}/drives`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          default_drive: { id: driveRes.data.id, name: driveRes.data.name, webUrl: driveRes.data.webUrl, driveType: driveRes.data.driveType },
+          drives: allDrivesRes.ok ? allDrivesRes.data.value : [driveRes.data],
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // For site-level access tests, only root_folder_url is required
     if (test_site_access) {
