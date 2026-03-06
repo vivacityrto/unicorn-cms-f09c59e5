@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { NoteFormDialog, NoteFormData } from '@/components/notes/NoteFormDialog';
 import { useNotes, Note } from '@/hooks/useNotes';
 import { useNoteTags } from '@/hooks/useNoteTags';
 import { useClientActionItems } from '@/hooks/useClientManagementData';
@@ -649,6 +650,126 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       setSaving(false);
     }
   };
+
+  // Adapter for NoteFormDialog → existing save logic
+  const handleNoteFormSave = useCallback(async (data: NoteFormData) => {
+    setSaving(true);
+    try {
+      const selectedPkg = activePackages.find(p => String(p.instance_id) === data.packageInstanceId);
+      const parsedDuration = data.duration ? parseInt(data.duration, 10) : 0;
+      const DURATION_NOTE_TYPES = ['phone-call', 'meeting', 'action'];
+      let createdNoteId: string | null = null;
+
+      if (selectedNote) {
+        const parentUpdate = selectedPkg
+          ? { parent_type: 'package_instance' as const, parent_id: selectedPkg.instance_id }
+          : { parent_type: 'tenant' as const, parent_id: tenantId };
+        await updateNote(selectedNote.id, {
+          note_type: data.noteType,
+          title: data.title || null,
+          note_details: data.content,
+          priority: data.priority || null,
+          status: data.status || null,
+          duration: parsedDuration,
+          tags,
+          is_pinned: data.isPinned,
+          package_id: selectedPkg?.package_id || null,
+          ...parentUpdate,
+        });
+      } else {
+        createdNoteId = await createNote({
+          note_type: data.noteType,
+          title: data.title || undefined,
+          note_details: data.content,
+          priority: data.priority || undefined,
+          status: data.status || undefined,
+          duration: parsedDuration || undefined,
+          tags,
+          is_pinned: data.isPinned,
+          package_id: selectedPkg?.package_id || undefined,
+          parent_type_override: selectedPkg ? 'package_instance' : undefined,
+          parent_id_override: selectedPkg ? selectedPkg.instance_id : undefined,
+        });
+
+        // CSC notification
+        if (createdNoteId) {
+          try {
+            const { data: userData } = await supabase.auth.getUser();
+            const currentUserId = userData.user?.id;
+            if (currentUserId) {
+              const { data: cscData } = await supabase
+                .from('client_packages')
+                .select('assigned_csc_user_id')
+                .eq('tenant_id', tenantId)
+                .not('assigned_csc_user_id', 'is', null)
+                .limit(1);
+              const cscUserId = cscData?.[0]?.assigned_csc_user_id;
+              if (cscUserId && cscUserId !== currentUserId) {
+                const { data: authorUser } = await supabase.from('users').select('first_name, last_name').eq('user_uuid', currentUserId).single();
+                const authorName = authorUser ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim() : 'A team member';
+                await supabase.from('user_notifications').insert({
+                  user_id: cscUserId, tenant_id: tenantId,
+                  title: 'New note added to your client',
+                  message: `${authorName} added a note: "${(data.title || data.content.substring(0, 60)).trim()}"`,
+                  type: 'note_added', link: `/tenant/${tenantId}`, created_by: currentUserId,
+                });
+              }
+            }
+          } catch (e) { console.error('CSC notification failed:', e); }
+        }
+
+        // Team notifications
+        if (createdNoteId && data.notifyUserIds.length > 0) {
+          try {
+            const { data: userData } = await supabase.auth.getUser();
+            const currentUserId = userData.user?.id;
+            if (currentUserId) {
+              const { data: authorUser } = await supabase.from('users').select('first_name, last_name').eq('user_uuid', currentUserId).single();
+              const authorName = authorUser ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim() : 'A team member';
+              const notifRows = data.notifyUserIds.filter(uid => uid !== currentUserId).map(uid => ({
+                user_id: uid, tenant_id: tenantId,
+                title: 'Note shared with you',
+                message: `${authorName} shared a note: "${(data.title || data.content.substring(0, 60)).trim()}"`,
+                type: 'note_shared', link: `/tenant/${tenantId}`, created_by: currentUserId,
+              }));
+              if (notifRows.length > 0) await supabase.from('user_notifications').insert(notifRows);
+            }
+          } catch (e) { console.error('Notify notifications failed:', e); }
+        }
+
+        // Client notification
+        if (createdNoteId && data.notifyClient) {
+          try {
+            const { data: userData2 } = await supabase.auth.getUser();
+            const currentUser2 = userData2.user?.id;
+            const { data: authorUser2 } = currentUser2
+              ? await supabase.from('users').select('first_name, last_name').eq('user_uuid', currentUser2).single()
+              : { data: null };
+            const authorName2 = authorUser2 ? `${authorUser2.first_name || ''} ${authorUser2.last_name || ''}`.trim() : undefined;
+            notifyClientPrimaryContact({
+              tenantId, context: 'Note Added',
+              title: data.title || data.content.substring(0, 60),
+              description: data.content.substring(0, 300) || undefined,
+              priority: data.priority || undefined,
+              createdByName: authorName2 || undefined,
+            });
+          } catch (e) { console.error('Client notify error:', e); }
+        }
+      }
+
+      setIsAddDialogOpen(false);
+
+      // Prompt time log for comm types with duration
+      if (!selectedNote && DURATION_NOTE_TYPES.includes(data.noteType) && parsedDuration > 0) {
+        setPendingTimeLogData({ duration: parsedDuration, noteType: data.noteType, title: data.title || data.content.substring(0, 60) });
+        setIsTimeLogPromptOpen(true);
+      }
+
+      resetForm();
+    } finally {
+      setSaving(false);
+    }
+  }, [activePackages, selectedNote, tenantId, updateNote, createNote, tags, resetForm]);
   
   const handleTimeLogConfirm = async () => {
     if (!pendingTimeLogData) return;
@@ -1366,292 +1487,32 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       </Dialog>
 
       {/* Add/Edit Note Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="w-[90vw] max-w-[1400px] max-h-[95vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedNote ? 'Edit Note' : 'Add Note'}
-            </DialogTitle>
-            {/* Show package info if editing a package note */}
-            {selectedNote?.parent_type === 'package_instance' && (
-              <DialogDescription asChild>
-                <div className="flex items-center gap-2 mt-1">
-                  <Package className="h-4 w-4 text-blue-600" />
-                  <span className="font-medium text-blue-700 dark:text-blue-400">
-                    {selectedPackageInfo 
-                      ? `${selectedPackageInfo.name} – ${selectedPackageInfo.full_text}`
-                      : 'Package Note'}
-                  </span>
-                </div>
-              </DialogDescription>
-            )}
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {/* Package, Type, Priority, Status row */}
-            <div className={`grid gap-4 ${activePackages.length > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
-              {activePackages.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Package</Label>
-                  <Select value={selectedPackageInstanceId} onValueChange={setSelectedPackageInstanceId}>
-                    <SelectTrigger>
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Select package..." />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent className="bg-background">
-                      <SelectItem value="none">None (Client Note)</SelectItem>
-                      {activePackages.map(pkg => (
-                        <SelectItem key={pkg.instance_id} value={String(pkg.instance_id)}>
-                          {pkg.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select value={noteType} onValueChange={handleNoteTypeChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background">
-                    {noteTypeOptions.filter(type => type.code).map(type => {
-                      const style = NOTE_TYPE_STYLES[type.code] || DEFAULT_NOTE_STYLE;
-                      const TypeIcon = style.icon;
-                      return (
-                        <SelectItem key={type.code} value={type.code}>
-                          <span className="flex items-center gap-2">
-                            <TypeIcon className="h-4 w-4" />
-                            {type.label}
-                          </span>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <Select value={priority} onValueChange={setPriority}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Normal" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background">
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={noteStatus} onValueChange={setNoteStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background">
-                    {noteStatusOptions.filter(opt => opt.code).map(opt => (
-                      <SelectItem key={opt.code} value={opt.code}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Email mode prompt */}
-            {noteType === 'email' && emailMode === 'prompt' && !selectedNote && (
-              <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
-                <p className="text-sm font-medium">How would you like to proceed?</p>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setEmailMode('send_now');
-                      setIsAddDialogOpen(false);
-                      setComposeEmailOpen(true);
-                    }}
-                  >
-                    <Mail className="h-3.5 w-3.5 mr-1.5" />
-                    Send Now
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEmailMode('already_sent')}
-                  >
-                    Already Sent (Log only)
-                  </Button>
-                </div>
-                {primaryContactEmail && (
-                  <p className="text-xs text-muted-foreground">
-                    Recipient: {primaryContactEmail}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Optional Duration row */}
-            {showsDuration && (
-              <div className="grid gap-4 grid-cols-1 max-w-xs">
-                <div className="space-y-2">
-                  <Label>Duration (mins)</Label>
-                  <Input 
-                    type="number"
-                    min={0}
-                    step={15}
-                    value={duration}
-                    onChange={e => setDuration(e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-            )}
-            
-            {/* Title field - auto-extracted from content */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Title (optional)</Label>
-                <span className="flex items-center gap-1 text-xs text-muted-foreground italic">
-                  {extractingTitle && <Loader2 className="h-3 w-3 animate-spin" />}
-                  AI generated from Content
-                </span>
-              </div>
-              <Input 
-                value={title}
-                onChange={e => {
-                  setTitle(e.target.value);
-                  setTitleManuallyEdited(true);
-                }}
-                placeholder="Auto-generated from content..."
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Content *</Label>
-                {speech.isSupported && (
-                  <Button
-                    type="button"
-                    variant={speech.isRecording ? "destructive" : "ghost"}
-                    size="sm"
-                    className="gap-1.5 h-7 text-xs"
-                    onClick={() => {
-                      if (speech.isRecording) {
-                        speech.stopRecording();
-                      } else {
-                        speech.startRecording((text) => {
-                          setContent(prev => prev ? `${prev} ${text}` : text);
-                        });
-                      }
-                    }}
-                  >
-                    {speech.isRecording ? (
-                      <><MicOff className="h-3.5 w-3.5" /> Stop</>
-                    ) : (
-                      <><Mic className="h-3.5 w-3.5" /> Speak</>
-                    )}
-                  </Button>
-                )}
-              </div>
-              <RichTextEditor
-                value={speech.isRecording && speech.interimTranscript 
-                  ? (content ? `${content} ${speech.interimTranscript}` : speech.interimTranscript)
-                  : content}
-                onChange={setContent}
-                minHeight="280px"
-                className={speech.isRecording ? 'border-destructive' : ''}
-                tenantId={tenantId}
-              />
-            </div>
-            
-            
-            {/* Notify team members - only show when adding, not editing */}
-            {!selectedNote && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-1.5 text-xs">
-                  <Mail className="h-3 w-3" />
-                  Notify (optional)
-                </Label>
-                <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} />
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {vivacityTeam.map((user) => (
-                  <Button
-                    key={user.user_uuid}
-                    type="button"
-                    variant={notifyUserIds.includes(user.user_uuid) ? "default" : "outline"}
-                    onClick={() => setNotifyUserIds(prev => 
-                      prev.includes(user.user_uuid) 
-                        ? prev.filter(id => id !== user.user_uuid)
-                        : [...prev, user.user_uuid]
-                    )}
-                    className="h-7 px-2 gap-1 text-[11px]"
-                  >
-                    <Avatar className="h-4 w-4">
-                      {user.avatar_url && <AvatarImage src={user.avatar_url} />}
-                      <AvatarFallback className="text-[8px]">
-                        {user.first_name?.[0]}{user.last_name?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    {user.first_name}
-                  </Button>
-                ))}
-                {vivacityTeam.length === 0 && (
-                  <span className="text-xs text-muted-foreground">No team members available</span>
-                )}
-              </div>
-            </div>
-            )}
-
-            {/* Pin + action buttons on same row */}
-            <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center gap-2">
-                <Switch 
-                  id="pinned"
-                  checked={isPinned}
-                  onCheckedChange={setIsPinned}
-                />
-                <Label htmlFor="pinned" className="cursor-pointer text-xs">Pin this note</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                {selectedNote?.parent_type === 'package_instance' && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    className="text-xs h-8"
-                    onClick={() => {
-                      console.log('Send note to client:', selectedNote);
-                    }}
-                  >
-                    <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
-                    Email note
-                  </Button>
-                )}
-                <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button size="sm" className="text-xs h-8" onClick={handleSave} disabled={!content.trim() || saving}>
-                  {saving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-                  {selectedNote ? 'Save Changes' : 'Create Note'}
-                </Button>
-              </div>
-            </div>
-            
-          </div>
-          
-          
-        </DialogContent>
-      </Dialog>
+      <NoteFormDialog
+        open={isAddDialogOpen}
+        onOpenChange={(open) => { if (!open) resetForm(); setIsAddDialogOpen(open); }}
+        tenantId={tenantId}
+        mode={selectedNote ? 'edit' : 'create'}
+        initialNote={selectedNote}
+        activePackages={activePackages}
+        noteTypeOptions={noteTypeOptions}
+        noteStatusOptions={noteStatusOptions}
+        onSave={handleNoteFormSave}
+        onEmailSendNow={() => {
+          setIsAddDialogOpen(false);
+          setComposeEmailOpen(true);
+        }}
+        showPackageSelector={true}
+        showStatus={true}
+        showDates={true}
+        showTimer={true}
+        showFiles={true}
+        showAssignees={false}
+        showNotify={true}
+        showPin={true}
+        showSpeech={true}
+        showAiTitle={true}
+        showDuration={true}
+      />
 
       {/* Delete Confirmation */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
