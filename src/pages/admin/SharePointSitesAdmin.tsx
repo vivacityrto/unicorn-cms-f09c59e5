@@ -138,6 +138,8 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
   const [driveId, setDriveId] = useState(site.drive_id || '');
   const [masterDocsUrl, setMasterDocsUrl] = useState(site.master_docs_url || '');
   const [isActive, setIsActive] = useState(site.is_active);
+  const [siteName, setSiteName] = useState(site.site_name);
+  const [siteUrl, setSiteUrl] = useState(site.site_url);
 
   const isConfigured = !!site.graph_site_id && !!site.drive_id;
   const purposeLabel = PURPOSE_LABELS[site.purpose] || site.purpose;
@@ -149,6 +151,8 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
       const { error } = await supabase
         .from('sharepoint_sites')
         .update({
+          site_name: siteName.trim(),
+          site_url: siteUrl.trim(),
           graph_site_id: graphSiteId.trim() || null,
           drive_id: driveId.trim() || null,
           master_docs_url: masterDocsUrl.trim() || null,
@@ -201,6 +205,8 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
   };
 
   const handleReset = () => {
+    setSiteName(site.site_name);
+    setSiteUrl(site.site_url);
     setGraphSiteId(site.graph_site_id || '');
     setDriveId(site.drive_id || '');
     setMasterDocsUrl(site.master_docs_url || '');
@@ -215,10 +221,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Globe className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <CardTitle className="text-base">{site.site_name}</CardTitle>
-              <CardDescription className="text-xs mt-0.5">{site.site_url}</CardDescription>
-            </div>
+            <CardTitle className="text-base">{site.site_name}</CardTitle>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={`text-xs ${purposeColor}`}>
@@ -241,66 +244,54 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Current values display */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Graph Site ID</Label>
-            {editing ? (
-              <Input
-                value={graphSiteId}
-                onChange={(e) => setGraphSiteId(e.target.value)}
-                placeholder="e.g. contoso.sharepoint.com,abc123,def456"
-                className="text-xs font-mono"
-              />
-            ) : (
-              <div className="text-xs font-mono bg-muted rounded px-2 py-1.5 min-h-[32px] break-all">
-                {site.graph_site_id || <span className="text-muted-foreground italic">Not set</span>}
-              </div>
-            )}
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Drive ID</Label>
-            {editing ? (
-              <Input
-                value={driveId}
-                onChange={(e) => setDriveId(e.target.value)}
-                placeholder="e.g. b!abc123def456..."
-                className="text-xs font-mono"
-              />
-            ) : (
-              <div className="text-xs font-mono bg-muted rounded px-2 py-1.5 min-h-[32px] break-all">
-                {site.drive_id || <span className="text-muted-foreground italic">Not set</span>}
-              </div>
-            )}
-          </div>
-        </div>
+      <CardContent className="space-y-3">
+        {/* Each setting on its own row */}
+        <SettingRow label="Site Name" editing={editing}>
+          {editing ? (
+            <Input value={siteName} onChange={(e) => setSiteName(e.target.value)} className="text-sm" />
+          ) : (
+            <span className="text-sm">{site.site_name}</span>
+          )}
+        </SettingRow>
 
-        {/* Master docs URL (only for relevant purposes) */}
+        <SettingRow label="Site URL" editing={editing}>
+          {editing ? (
+            <Input value={siteUrl} onChange={(e) => setSiteUrl(e.target.value)} className="text-sm font-mono" placeholder="https://contoso.sharepoint.com/sites/..." />
+          ) : (
+            <span className="text-xs font-mono break-all">{site.site_url}</span>
+          )}
+        </SettingRow>
+
+        <SettingRow label="Graph Site ID" editing={editing}>
+          {editing ? (
+            <Input value={graphSiteId} onChange={(e) => setGraphSiteId(e.target.value)} className="text-xs font-mono" placeholder="e.g. contoso.sharepoint.com,abc123,def456" />
+          ) : (
+            <span className="text-xs font-mono break-all">{site.graph_site_id || <span className="text-muted-foreground italic">Not set</span>}</span>
+          )}
+        </SettingRow>
+
+        <SettingRow label="Drive ID" editing={editing}>
+          {editing ? (
+            <Input value={driveId} onChange={(e) => setDriveId(e.target.value)} className="text-xs font-mono" placeholder="e.g. b!abc123def456..." />
+          ) : (
+            <span className="text-xs font-mono break-all">{site.drive_id || <span className="text-muted-foreground italic">Not set</span>}</span>
+          )}
+        </SettingRow>
+
         {(site.purpose === 'master_documents' || site.master_docs_url || editing) && (
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Master Docs URL</Label>
+          <SettingRow label="Master Docs URL" editing={editing}>
             {editing ? (
-              <Input
-                value={masterDocsUrl}
-                onChange={(e) => setMasterDocsUrl(e.target.value)}
-                placeholder="https://vivacityteam.sharepoint.com/sites/..."
-                className="text-xs font-mono"
-              />
+              <Input value={masterDocsUrl} onChange={(e) => setMasterDocsUrl(e.target.value)} className="text-xs font-mono" placeholder="https://vivacityteam.sharepoint.com/sites/..." />
             ) : (
-              <div className="text-xs font-mono bg-muted rounded px-2 py-1.5 min-h-[32px] break-all">
-                {site.master_docs_url || <span className="text-muted-foreground italic">Not set</span>}
-              </div>
+              <span className="text-xs font-mono break-all">{site.master_docs_url || <span className="text-muted-foreground italic">Not set</span>}</span>
             )}
-          </div>
+          </SettingRow>
         )}
 
-        {/* Active toggle (only in edit mode) */}
         {editing && (
-          <div className="flex items-center gap-3">
+          <SettingRow label="Active" editing={editing}>
             <Switch checked={isActive} onCheckedChange={setIsActive} />
-            <Label className="text-sm">Active</Label>
-          </div>
+          </SettingRow>
         )}
 
         {/* Test result */}
@@ -375,5 +366,14 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function SettingRow({ label, editing, children }: { label: string; editing: boolean; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-4 py-1.5 border-b border-border/50 last:border-0">
+      <Label className="text-xs text-muted-foreground w-32 shrink-0 pt-1.5">{label}</Label>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
   );
 }
