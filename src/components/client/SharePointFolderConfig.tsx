@@ -44,6 +44,8 @@ interface SharePointSettings {
   last_validated_at: string | null;
   validation_status: string;
   validation_error: string | null;
+  shared_folder_item_id: string | null;
+  shared_folder_name: string | null;
   created_at: string;
   updated_at: string;
 }
