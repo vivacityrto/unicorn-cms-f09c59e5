@@ -101,7 +101,7 @@ export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFile
     );
   }
 
-  return <FileBrowserContent tenantId={tenantId} rootName={settingsStatus.rootName} />;
+  return <FileBrowserContent tenantId={tenantId} rootName={settingsStatus.rootName} onSelectLink={onSelectLink} />;
 }
 
 function FileBrowserContent({
