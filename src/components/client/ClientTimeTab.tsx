@@ -225,7 +225,7 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
         </div>
         <div className="flex gap-6 items-start">
           {/* Left: Burndown gauge */}
-          <div className="space-y-1.5 w-[200px] shrink-0">
+          <div className="space-y-1.5 flex-1 min-w-[200px]">
             <div className="flex items-baseline justify-between">
               <span className="text-xl font-bold">{formatDuration(row.used_minutes)}</span>
               <span className="text-xs text-muted-foreground">/ {formatDuration(row.included_minutes)}</span>
@@ -244,7 +244,7 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
 
           {/* Right: Monthly breakdown */}
           {row.monthly.length > 0 && (
-            <div className="flex-1 border-l border-border pl-4 space-y-0.5">
+            <div className="shrink-0 w-[280px] border-l border-border pl-4 space-y-0.5">
               <div className="flex justify-between text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
                 <span>Monthly</span>
                 <span className="flex gap-3">
