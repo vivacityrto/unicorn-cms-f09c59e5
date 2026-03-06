@@ -148,7 +148,24 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cricos_number" className="flex items-center h-5">CRICOS Provider Code</Label>
+            <Label htmlFor="cricos_number" className="flex items-center h-5 gap-1">
+              CRICOS Provider Code
+              {(() => {
+                const code = formData.cricos_number?.trim();
+                const isLinkable = code && !['tbc', 'tba', 'na', 'n/a', ''].includes(code.toLowerCase());
+                return isLinkable ? (
+                  <a
+                    href={`https://cricos.education.gov.au/Institution/InstitutionDetails.aspx?ProviderCode=${encodeURIComponent(code)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary/80 ml-1"
+                    title="View on CRICOS register"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                ) : null;
+              })()}
+            </Label>
             <Input
               id="cricos_number"
               value={formData.cricos_number || ''}
