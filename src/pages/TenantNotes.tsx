@@ -117,6 +117,20 @@ export default function TenantNotes() {
     }
   }, [searchParams, tenantId, navigate]);
 
+  // Open specific note from editNoteId URL param (e.g. from time entries)
+  useEffect(() => {
+    const editNoteId = searchParams.get('editNoteId');
+    if (editNoteId && notes.length > 0) {
+      const note = notes.find(n => n.id === editNoteId);
+      if (note) {
+        openEditDialog(note);
+      }
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('editNoteId');
+      navigate(`/tenant/${tenantId}/notes${newParams.toString() ? '?' + newParams.toString() : ''}`, { replace: true });
+    }
+  }, [searchParams, notes, tenantId, navigate]);
+
   // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
