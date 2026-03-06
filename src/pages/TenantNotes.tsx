@@ -84,7 +84,6 @@ export default function TenantNotes() {
   const [clickupLoading, setClickupLoading] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [pendingTimeEntryId, setPendingTimeEntryId] = useState<string | null>(null);
-  const [cameFromDeepLink, setCameFromDeepLink] = useState(false);
 
   // Filter notes
   const filteredNotes = filterNotes(notes, { searchQuery, priority: sortPriority }).sort((a, b) => {
@@ -117,21 +116,6 @@ export default function TenantNotes() {
       navigate(`/tenant/${tenantId}/notes${newParams.toString() ? '?' + newParams.toString() : ''}`, { replace: true });
     }
   }, [searchParams, tenantId, navigate]);
-
-  // Open specific note from editNoteId URL param (e.g. from time entries)
-  useEffect(() => {
-    const editNoteId = searchParams.get('editNoteId');
-    if (editNoteId && notes.length > 0) {
-      const note = notes.find(n => n.id === editNoteId);
-      if (note) {
-        openEditDialog(note);
-        setCameFromDeepLink(true);
-      }
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('editNoteId');
-      navigate(`/tenant/${tenantId}/notes${newParams.toString() ? '?' + newParams.toString() : ''}`, { replace: true });
-    }
-  }, [searchParams, notes, tenantId, navigate]);
 
   // Timer effect
   useEffect(() => {
@@ -364,10 +348,6 @@ export default function TenantNotes() {
     setElapsedTime(0);
     setAccumulatedTime(0);
     setIsAddDialogOpen(false);
-    if (cameFromDeepLink) {
-      setCameFromDeepLink(false);
-      navigate(-1);
-    }
   };
 
   const handleDeleteNote = async () => {
@@ -431,7 +411,7 @@ export default function TenantNotes() {
 
   return (
     <div className="min-h-screen bg-background">
-      {cameFromDeepLink ? null : <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6">
         {/* Back Button */}
         <Button variant="ghost" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
           <ArrowLeft className="h-4 w-4" />Back
@@ -699,7 +679,6 @@ export default function TenantNotes() {
           </CardContent>
         </Card>
         )}
-        </div>}
 
         {/* Add/Edit Note Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsAddDialogOpen(open); }}>
@@ -837,8 +816,7 @@ export default function TenantNotes() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-
+      </div>
     </div>
   );
 }
