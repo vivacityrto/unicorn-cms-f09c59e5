@@ -78,7 +78,6 @@ export interface NoteFormDialogProps {
   // Feature flags (all default true for full-featured dialog)
   showPackageSelector?: boolean;
   showStatus?: boolean;
-  showFiles?: boolean;
   showAssignees?: boolean;
   showNotify?: boolean;
   showPin?: boolean;
@@ -106,7 +105,6 @@ export function NoteFormDialog({
   initialNote,
   showPackageSelector = true,
   showStatus = true,
-  showFiles = true,
   showAssignees = false,
   showNotify = true,
   showPin = true,
@@ -605,42 +603,12 @@ export function NoteFormDialog({
                   ? (content ? `${content} ${speech.interimTranscript}` : speech.interimTranscript)
                   : content}
                 onChange={setContent}
-                minHeight="280px"
+                minHeight="500px"
                 className={speech.isRecording ? 'border-destructive' : ''}
                 tenantId={tenantId}
               />
             </div>
 
-            {/* Dates & Timer row */}
-
-            {/* Files */}
-            {showFiles && (
-              <div className="space-y-2">
-                <Label>Files</Label>
-                <div className="border rounded-lg p-4">
-                  <input type="file" multiple onChange={handleFileUpload} className="hidden" id={fileInputId} />
-                  <label htmlFor={fileInputId} className="flex items-center justify-center gap-2 cursor-pointer p-4 border-2 border-dashed rounded-lg hover:bg-muted/50">
-                    <Upload className="h-5 w-5 text-muted-foreground" /><span className="text-sm text-muted-foreground">Click to upload files</span>
-                  </label>
-                  {(uploadedFiles.length > 0 || existingFiles.length > 0) && (
-                    <div className="mt-3 space-y-2">
-                      {existingFiles.filter(f => !filesToRemove.includes(f.path)).map((file, index) => (
-                        <div key={`existing-${index}`} className="flex items-center justify-between p-2 bg-muted rounded">
-                          <span className="text-sm truncate">{file.name}</span>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => setFilesToRemove(prev => [...prev, file.path])}><X className="h-4 w-4" /></Button>
-                        </div>
-                      ))}
-                      {uploadedFiles.map((file, index) => (
-                        <div key={`new-${index}`} className="flex items-center justify-between p-2 bg-muted rounded">
-                          <span className="text-sm truncate">{file.name}</span>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => setUploadedFiles(prev => prev.filter((_, i) => i !== index))}><X className="h-4 w-4" /></Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Assignees (legacy – EditNoteDialog style) */}
             {showAssignees && (
