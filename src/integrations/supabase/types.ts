@@ -36296,6 +36296,8 @@ export type Database = {
           root_item_id: string | null
           root_name: string | null
           setup_mode: string
+          shared_folder_item_id: string | null
+          shared_folder_name: string | null
           site_id: string | null
           template_id: string | null
           tenant_id: number
@@ -36332,6 +36334,8 @@ export type Database = {
           root_item_id?: string | null
           root_name?: string | null
           setup_mode?: string
+          shared_folder_item_id?: string | null
+          shared_folder_name?: string | null
           site_id?: string | null
           template_id?: string | null
           tenant_id: number
@@ -36368,6 +36372,8 @@ export type Database = {
           root_item_id?: string | null
           root_name?: string | null
           setup_mode?: string
+          shared_folder_item_id?: string | null
+          shared_folder_name?: string | null
           site_id?: string | null
           template_id?: string | null
           tenant_id?: number
