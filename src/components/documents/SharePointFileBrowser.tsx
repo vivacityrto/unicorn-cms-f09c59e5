@@ -33,6 +33,7 @@ import { formatDateTime } from '@/lib/utils';
 
 interface SharePointFileBrowserProps {
   tenantId: number;
+  onSelectLink?: (url: string) => void;
 }
 
 function formatFileSize(bytes: number | null): string {
