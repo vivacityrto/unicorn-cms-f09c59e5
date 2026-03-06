@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, StickyNote, Calendar as CalendarComponent, X, Upload, Flag, Play, Square, Timer, CheckCircle2, Clock, Building2, Search, ArrowUpDown, Loader2, ExternalLink, MessageSquare, ListTodo } from "lucide-react";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -690,7 +691,7 @@ export default function TenantNotes() {
               </div>
               <div className="space-y-2">
                 <Label>Note Details *</Label>
-                <Textarea id="note-content-field" value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Enter note details..." rows={20} autoFocus={!!noteTitle} />
+                <RichTextEditor value={noteText} onChange={setNoteText} placeholder="Enter note details..." minHeight="300px" tenantId={parsedTenantId} />
               </div>
               <div className="grid grid-cols-5 gap-3">
                 <div className="space-y-1">

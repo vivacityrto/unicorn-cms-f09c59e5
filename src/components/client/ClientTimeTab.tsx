@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTimeTracking, formatDuration, TimeEntry } from '@/hooks/useTimeTracking';
@@ -36,6 +37,7 @@ import {
   Mail,
   Trash2,
   X,
+  StickyNote,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -725,6 +727,7 @@ function PaginationBar({
 
 // ── Main Tab Component ──────────────────────────────────────────────
 export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
+  const navigate = useNavigate();
   const { entries, loading, refresh: refreshTimeTracking } = useTimeTracking(tenantId);
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -841,6 +844,25 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       return map;
     },
     enabled: entries.length > 0,
+  });
+
+  // Fetch notes linked to time entries
+  const timeEntryIds = useMemo(() => entries.map(e => e.id).filter(Boolean), [entries]);
+  const { data: linkedNoteMap = {} } = useQuery({
+    queryKey: ['linked-notes-by-timeentry', tenantId, timeEntryIds.length],
+    queryFn: async () => {
+      if (timeEntryIds.length === 0) return {};
+      const { data } = await supabase
+        .from('notes')
+        .select('id, timeentry_id, title')
+        .in('timeentry_id', timeEntryIds);
+      const map: Record<string, { id: number; title: string | null }> = {};
+      (data || []).forEach((n: any) => {
+        if (n.timeentry_id) map[n.timeentry_id] = { id: n.id, title: n.title };
+      });
+      return map;
+    },
+    enabled: timeEntryIds.length > 0,
   });
 
   const hasMultiplePackages = (activePackages?.length ?? 0) > 1;
@@ -1163,6 +1185,17 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {linkedNoteMap[entry.id] && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-primary"
+                              onClick={() => navigate(`/tenant/${tenantId}/notes`)}
+                              title={linkedNoteMap[entry.id].title || 'Open linked note'}
+                            >
+                              <StickyNote className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
