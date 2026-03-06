@@ -184,7 +184,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
       // Use the validate edge function to test access
       const { data, error } = await supabase.functions.invoke('validate-sharepoint-root-folder', {
         body: {
-          // Pass site URL so the function can resolve via sharepoint_sites table
+          tenant_id: 0, // Dummy tenant_id — we're only testing site access, not validating a tenant folder
           root_folder_url: site.site_url,
           test_site_access: true,
         },
