@@ -23,6 +23,8 @@ import {
   ExternalLink,
   ShieldCheck,
   Save,
+  ArrowLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,6 +46,8 @@ interface SharePointSettings {
   last_validated_at: string | null;
   validation_status: string;
   validation_error: string | null;
+  shared_folder_item_id: string | null;
+  shared_folder_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -75,6 +79,11 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const [validating, setValidating] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [browsingSharedFolder, setBrowsingSharedFolder] = useState(false);
+  const [sharedFolderBrowseItems, setSharedFolderBrowseItems] = useState<Array<{ id: string; name: string; is_folder: boolean }>>([]);
+  const [sharedFolderBrowseStack, setSharedFolderBrowseStack] = useState<Array<{ id: string; name: string }>>([]);
+  const [sharedFolderBrowseLoading, setSharedFolderBrowseLoading] = useState(false);
+  const [savingSharedFolder, setSavingSharedFolder] = useState(false);
 
   // Fetch global SharePoint site URL
   const { data: globalSiteUrl } = useQuery({
@@ -404,6 +413,25 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
           </div>
         )}
 
+        {/* Shared Folder Configuration */}
+        {settings && settings.validation_status === 'valid' && (
+          <SharedFolderSection
+            settings={settings}
+            browsingSharedFolder={browsingSharedFolder}
+            setBrowsingSharedFolder={setBrowsingSharedFolder}
+            sharedFolderBrowseItems={sharedFolderBrowseItems}
+            setSharedFolderBrowseItems={setSharedFolderBrowseItems}
+            sharedFolderBrowseStack={sharedFolderBrowseStack}
+            setSharedFolderBrowseStack={setSharedFolderBrowseStack}
+            sharedFolderBrowseLoading={sharedFolderBrowseLoading}
+            setSharedFolderBrowseLoading={setSharedFolderBrowseLoading}
+            savingSharedFolder={savingSharedFolder}
+            setSavingSharedFolder={setSavingSharedFolder}
+            onSaved={fetchSettings}
+            toast={toast}
+          />
+        )}
+
         {/* Enable/Disable toggle */}
         {settings && (
           <div className="flex items-center justify-between rounded-lg border p-3">
@@ -424,5 +452,209 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/* ─── Shared Folder Picker Section ─── */
+
+function SharedFolderSection({
+  settings,
+  browsingSharedFolder,
+  setBrowsingSharedFolder,
+  sharedFolderBrowseItems,
+  setSharedFolderBrowseItems,
+  sharedFolderBrowseStack,
+  setSharedFolderBrowseStack,
+  sharedFolderBrowseLoading,
+  setSharedFolderBrowseLoading,
+  savingSharedFolder,
+  setSavingSharedFolder,
+  onSaved,
+  toast,
+}: {
+  settings: SharePointSettings;
+  browsingSharedFolder: boolean;
+  setBrowsingSharedFolder: (v: boolean) => void;
+  sharedFolderBrowseItems: Array<{ id: string; name: string; is_folder: boolean }>;
+  setSharedFolderBrowseItems: (v: Array<{ id: string; name: string; is_folder: boolean }>) => void;
+  sharedFolderBrowseStack: Array<{ id: string; name: string }>;
+  setSharedFolderBrowseStack: (v: Array<{ id: string; name: string }>) => void;
+  sharedFolderBrowseLoading: boolean;
+  setSharedFolderBrowseLoading: (v: boolean) => void;
+  savingSharedFolder: boolean;
+  setSavingSharedFolder: (v: boolean) => void;
+  onSaved: () => Promise<void>;
+  toast: ReturnType<typeof useToast>['toast'];
+}) {
+  const loadFolder = async (folderId?: string) => {
+    setSharedFolderBrowseLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('browse-sharepoint-folder', {
+        body: { action: 'list', folder_id: folderId || undefined },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+      const folders = (data.items || []).filter((i: any) => i.is_folder);
+      setSharedFolderBrowseItems(folders);
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to load folders', variant: 'destructive' });
+    } finally {
+      setSharedFolderBrowseLoading(false);
+    }
+  };
+
+  const startBrowsing = () => {
+    setBrowsingSharedFolder(true);
+    setSharedFolderBrowseStack([]);
+    loadFolder(); // load root
+  };
+
+  const navigateInto = (folderId: string, folderName: string) => {
+    setSharedFolderBrowseStack([...sharedFolderBrowseStack, { id: folderId, name: folderName }]);
+    loadFolder(folderId);
+  };
+
+  const navigateBack = () => {
+    const newStack = [...sharedFolderBrowseStack];
+    newStack.pop();
+    setSharedFolderBrowseStack(newStack);
+    const parentId = newStack.length > 0 ? newStack[newStack.length - 1].id : undefined;
+    loadFolder(parentId);
+  };
+
+  const selectAsSharedFolder = async (folderId: string, folderName: string) => {
+    setSavingSharedFolder(true);
+    try {
+      const { error } = await supabase
+        .from('tenant_sharepoint_settings')
+        .update({
+          shared_folder_item_id: folderId,
+          shared_folder_name: folderName,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', settings.id);
+      if (error) throw error;
+      toast({ title: 'Shared folder set', description: `"${folderName}" is now the shared folder for document linking.` });
+      setBrowsingSharedFolder(false);
+      await onSaved();
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to save', variant: 'destructive' });
+    } finally {
+      setSavingSharedFolder(false);
+    }
+  };
+
+  const clearSharedFolder = async () => {
+    setSavingSharedFolder(true);
+    try {
+      const { error } = await supabase
+        .from('tenant_sharepoint_settings')
+        .update({
+          shared_folder_item_id: null,
+          shared_folder_name: null,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', settings.id);
+      if (error) throw error;
+      toast({ title: 'Shared folder cleared' });
+      await onSaved();
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to clear', variant: 'destructive' });
+    } finally {
+      setSavingSharedFolder(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium">Shared Folder (for Insert Link)</p>
+          <p className="text-xs text-muted-foreground">
+            Select a subfolder within the client folder to use as the starting point when inserting document links.
+          </p>
+        </div>
+      </div>
+
+      {settings.shared_folder_name && !browsingSharedFolder && (
+        <div className="flex items-center gap-2">
+          <FolderOpen className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">{settings.shared_folder_name}</span>
+          <Button variant="outline" size="sm" onClick={startBrowsing} className="ml-auto">
+            Change
+          </Button>
+          <Button variant="ghost" size="sm" onClick={clearSharedFolder} disabled={savingSharedFolder}>
+            Clear
+          </Button>
+        </div>
+      )}
+
+      {!settings.shared_folder_name && !browsingSharedFolder && (
+        <Button variant="outline" size="sm" onClick={startBrowsing}>
+          <FolderOpen className="h-4 w-4 mr-2" />
+          Select Shared Folder
+        </Button>
+      )}
+
+      {browsingSharedFolder && (
+        <div className="space-y-2 border rounded-md p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-medium">{settings.root_name || 'Root'}</span>
+            {sharedFolderBrowseStack.map((item, idx) => (
+              <span key={idx} className="flex items-center gap-1">
+                <ChevronRight className="h-3 w-3" />
+                <span>{item.name}</span>
+              </span>
+            ))}
+          </div>
+
+          {sharedFolderBrowseStack.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={navigateBack} className="h-7 text-xs">
+                <ArrowLeft className="h-3 w-3 mr-1" />
+                Back
+              </Button>
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  const current = sharedFolderBrowseStack[sharedFolderBrowseStack.length - 1];
+                  selectAsSharedFolder(current.id, current.name);
+                }}
+                disabled={savingSharedFolder}
+              >
+                {savingSharedFolder && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                Use "{sharedFolderBrowseStack[sharedFolderBrowseStack.length - 1]?.name}" as Shared Folder
+              </Button>
+            </div>
+          )}
+
+          {sharedFolderBrowseLoading ? (
+            <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading folders...
+            </div>
+          ) : sharedFolderBrowseItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2 text-center">No subfolders found</p>
+          ) : (
+            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              {sharedFolderBrowseItems.map((item) => (
+                <button
+                  key={item.id}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted/50 text-left"
+                  onClick={() => navigateInto(item.id, item.name)}
+                >
+                  <FolderOpen className="h-4 w-4 text-primary flex-shrink-0" />
+                  {item.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <Button variant="ghost" size="sm" onClick={() => setBrowsingSharedFolder(false)} className="text-xs">
+            Cancel
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

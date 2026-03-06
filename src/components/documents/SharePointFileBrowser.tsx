@@ -126,7 +126,7 @@ function FileBrowserContent({
     navigateToRoot,
     downloadFile,
     refetch,
-  } = useSharePointBrowser(tenantId);
+  } = useSharePointBrowser(tenantId, { useSharedFolder: !!onSelectLink });
 
   // Sort: folders first, then files, both alphabetical
   const sortedItems = [...items].sort((a, b) => {

@@ -22,11 +22,13 @@ interface BrowseResult {
   root_name: string;
 }
 
-export function useSharePointBrowser(tenantId: number | null) {
+export function useSharePointBrowser(tenantId: number | null, options?: { useSharedFolder?: boolean }) {
   const { user } = useAuth();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
   const [downloading, setDownloading] = useState<string | null>(null);
+
+  const useSharedFolder = options?.useSharedFolder ?? false;
 
   // Fetch folder contents
   const {
@@ -35,7 +37,7 @@ export function useSharePointBrowser(tenantId: number | null) {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['sharepoint-browse', tenantId, currentFolderId],
+    queryKey: ['sharepoint-browse', tenantId, currentFolderId, useSharedFolder],
     queryFn: async (): Promise<BrowseResult | null> => {
       if (!tenantId || !user) return null;
 
@@ -45,6 +47,7 @@ export function useSharePointBrowser(tenantId: number | null) {
           body: {
             action: 'list',
             folder_id: currentFolderId || undefined,
+            use_shared_folder: useSharedFolder,
           },
         }
       );
