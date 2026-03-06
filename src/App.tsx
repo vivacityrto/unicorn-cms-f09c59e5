@@ -27,6 +27,7 @@ import { CelebrationProvider } from "./components/ui/celebration";
  const ManageCategoriesWrapper = lazy(() => import("./pages/ManageCategoriesWrapper"));
  const ManageStagesWrapper = lazy(() => import("./pages/ManageStagesWrapper"));
  const SharePointFolderMapping = lazy(() => import("./pages/admin/SharePointFolderMapping"));
+ const SharePointSitesAdmin = lazy(() => import("./pages/admin/SharePointSitesAdmin"));
  const GovernanceDocuments = lazy(() => import("./pages/admin/GovernanceDocuments"));
  
  const UserProfileWrapper = lazy(() => import("./pages/UserProfileWrapper"));
@@ -346,6 +347,14 @@ const App = () => (
                   <SharePointFolderMapping />
                 </ProtectedRoute>
               } 
+            />
+            <Route 
+              path="/admin/sharepoint-sites" 
+              element={
+                <ProtectedRoute>
+                  <SharePointSitesAdmin />
+                </ProtectedRoute>
+              }
             />
             <Route 
               path="/admin/governance-documents" 
