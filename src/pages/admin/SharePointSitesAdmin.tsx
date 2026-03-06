@@ -46,7 +46,7 @@ interface SharePointSite {
 
 const PURPOSE_LABELS: Record<string, string> = {
   client_success_files: 'Client Success Team Files',
-  client_files: 'Client Files (Clients938)',
+  client_files: 'Client Files',
   governance_client_files: 'Governance Client Files',
   master_documents: 'Master Documents',
 };
