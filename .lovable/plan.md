@@ -1,22 +1,36 @@
 
 
-## Clickable OrgTypeBadge — Revised Plan
+## Link Time Entries to Notes + Reposition Notify Client Checkbox
 
-**Change from previous plan:** GTO is excluded entirely. The popover only applies to RTO, CRICOS, and RTO+CRICOS org types.
+No migration needed — `timeentry_id` column already exists on `notes`.
 
-### Files to change
+### Changes
 
-**1. `src/components/tenant/OrgTypeBadge.tsx`**
-- Add optional props: `rtoNumber?: string`, `cricosNumber?: string`
-- Wrap badge in a `Popover` when linkable codes exist
-- Show popover with clickable code rows based on `orgType`:
-  - **RTO**: RTO Number → `https://training.gov.au/Organisation/Details/{code}`
-  - **CRICOS**: CRICOS Code → `https://cricos.education.gov.au/Institution/InstitutionDetails.aspx?ProviderCode={code}`
-  - **RTO + CRICOS**: Both links
-  - **GTO / other**: No popover, badge stays static
-- Filter out empty, "TBC", "TBA", "NA", "N/A" values
-- Add `cursor-pointer` only when popover is active
+**1. `src/components/client/AddTimeDialog.tsx`**
 
-**2. `src/pages/ClientDetail.tsx`**
-- Pass `rtoNumber={profile?.rto_number}` and `cricosNumber={profile?.cricos_number}` to `OrgTypeBadge`
+- Update insert to use `.select('id').single()` to get the new time entry UUID
+- After save, show AlertDialog: "Create a note from this time entry?"
+  - **Yes**: navigate to `/tenant/{tenantId}/notes?initNote=true&noteTitle=TIME: {workTypeLabel} ({H:MM})&timeEntryId={uuid}&noteDetails={notes text}&packageId={selectedInstanceId}`
+  - **No**: close normally
+- **Move Notify Client checkbox** into DialogFooter left side: `[NotifyClient] ··· [Cancel] [Add Time]`
+
+**2. `src/pages/TenantNotes.tsx`**
+
+- Read `timeEntryId` and `noteDetails` from URL params in the `initNote` handler
+- Pre-fill noteText with noteDetails, store timeEntryId in state
+- Pass `timeentry_id` into `createNote` call
+- Clean up URL params after reading
+
+**3. `src/hooks/useNotes.tsx`**
+
+- Add `timeentry_id?: string` to `CreateNoteInput`
+- Include `timeentry_id` in the insert payload
+
+### Column name
+
+The notes table column is **`timeentry_id`** (no underscore between "time" and "entry"). All references use this exact name.
+
+### Title format
+
+`TIME: {Work Type Label} ({H}:{MM})` — e.g. `TIME: Document Review (1:30)`
 
