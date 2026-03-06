@@ -47104,6 +47104,10 @@ export type Database = {
       current_user_role: { Args: never; Returns: string }
       current_user_tenant: { Args: never; Returns: number }
       current_user_tenant_ids: { Args: never; Returns: string[] }
+      derive_org_type_for_tenant: {
+        Args: { p_tenant_id: number }
+        Returns: undefined
+      }
       drop_rock_to_issue: { Args: { p_rock_id: string }; Returns: string }
       emit_notification: {
         Args: {
