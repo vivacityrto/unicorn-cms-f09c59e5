@@ -78,8 +78,6 @@ export interface NoteFormDialogProps {
   // Feature flags (all default true for full-featured dialog)
   showPackageSelector?: boolean;
   showStatus?: boolean;
-  showDates?: boolean;
-  showTimer?: boolean;
   showFiles?: boolean;
   showAssignees?: boolean;
   showNotify?: boolean;
@@ -108,8 +106,6 @@ export function NoteFormDialog({
   initialNote,
   showPackageSelector = true,
   showStatus = true,
-  showDates = true,
-  showTimer = true,
   showFiles = true,
   showAssignees = false,
   showNotify = true,
@@ -616,49 +612,6 @@ export function NoteFormDialog({
             </div>
 
             {/* Dates & Timer row */}
-            {(showDates || showTimer) && (
-              <div className="grid grid-cols-5 gap-3">
-                {showDates && (
-                  <>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Started Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !startedDate && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />{startedDate ? format(startedDate, "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startedDate} onSelect={setStartedDate} /></PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Completed Date</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !completedDate && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />{completedDate ? format(completedDate, "PPP") : "Pick a date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={completedDate} onSelect={setCompletedDate} /></PopoverContent>
-                      </Popover>
-                    </div>
-                  </>
-                )}
-                {showTimer && (
-                  <div className="space-y-1">
-                    <Label className="text-xs">Timer</Label>
-                    <div className="flex items-center gap-2">
-                      {!isTimerRunning ? (
-                        <Button type="button" variant="outline" size="sm" onClick={handlePlayTimer} className="gap-1.5"><Play className="h-3.5 w-3.5" />Start</Button>
-                      ) : (
-                        <Button type="button" variant="outline" size="sm" onClick={handleStopTimer} className="gap-1.5"><Square className="h-3.5 w-3.5" />Stop</Button>
-                      )}
-                      <span className="text-xs text-muted-foreground">{calculateDuration()}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Files */}
             {showFiles && (
