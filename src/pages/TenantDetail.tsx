@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, ChevronRight, ChevronDown, User, Phone, Mail, MapPin, Calendar, Users, FileText, TrendingUp, LogIn, Package as PackageIcon, CheckCircle2, Clock, AlertCircle, Globe, ExternalLink, Facebook, Instagram, Linkedin, ArrowLeft, Timer, Building2, XCircle, Eye, EyeOff, MessageSquare } from "lucide-react";
 import { ReviewModePanel } from "@/components/tenant/ReviewModePanel";
+import { OrgTypeBadge } from "@/components/tenant/OrgTypeBadge";
 import { useReviewMode } from "@/hooks/useReviewMode";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
@@ -104,6 +105,7 @@ export default function TenantDetail() {
   const [tenantStatus, setTenantStatus] = useState<string>("active");
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const [tenantTypeValue, setTenantTypeValue] = useState<TenantType>("compliance_system");
+  const [orgType, setOrgType] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const parsedTenantIdForReview = tenantId ? parseInt(tenantId) : null;
   const { reviewMode, toggleReviewMode, reviewSummary, summaryLoading } = useReviewMode(parsedTenantIdForReview);
@@ -265,6 +267,16 @@ export default function TenantDetail() {
       }
       setTenantStatus(tenantData.status || "active");
       setTenantTypeValue((tenantData.tenant_type as TenantType) || "compliance_system");
+
+      // Fetch org_type from tenant_profile
+      const { data: tpData } = await supabase
+        .from('tenant_profile')
+        .select('org_type')
+        .eq('tenant_id', parseInt(tenantId))
+        .maybeSingle();
+      setOrgType(tpData?.org_type || null);
+
+      setLogoPath((tenantData as any).logo_path || null);
       setLogoPath((tenantData as any).logo_path || null);
       const {
         count: memberCountData
@@ -557,6 +569,7 @@ export default function TenantDetail() {
                   <div className="flex items-center gap-2 text-sm text-white/70">
                     <Building2 className="h-4 w-4" />
                     {clientData.companyname}
+                    <OrgTypeBadge orgType={orgType} />
                   </div>
                   <div className="flex items-center gap-2 text-sm text-white/70">
                     <User className="h-4 w-4" />
