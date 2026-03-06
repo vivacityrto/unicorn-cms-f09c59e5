@@ -1190,7 +1190,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                               variant="ghost"
                               size="sm"
                               className="h-7 px-2 text-primary"
-                              onClick={() => navigate(`/tenant/${tenantId}/notes`)}
+                              onClick={() => navigate(`/tenant/${tenantId}/notes?editNoteId=${linkedNoteMap[entry.id].id}`)}
                               title={linkedNoteMap[entry.id].title || 'Open linked note'}
                             >
                               <StickyNote className="h-3.5 w-3.5" />
