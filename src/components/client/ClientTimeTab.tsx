@@ -198,77 +198,94 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4">
-      {combined.map(row => {
-        const pct = row.percent_used;
-        const isOver = pct > 100;
-        return (
-          <Card key={row.package_instance_id}>
-            <CardContent className="p-4">
-              <div className="flex items-baseline justify-between gap-2 mb-3">
-                <span className="text-sm font-medium">{row.package_name}</span>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {formatLifecycle(row.lifecycle.start_date, row.lifecycle.end_date)}
+    <div className="space-y-3">
+      {combined.map(row => (
+        <BurndownCard key={row.package_instance_id} row={row} />
+      ))}
+    </div>
+  );
+}
+
+function BurndownCard({ row }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null } } }) {
+  const [monthLimit, setMonthLimit] = useState(3);
+  const pct = row.percent_used;
+  const isOver = pct > 100;
+  const sorted = [...row.monthly].sort((a, b) => b.month.localeCompare(a.month));
+  const visible = sorted.slice(0, monthLimit);
+  const hasMore = sorted.length > monthLimit;
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-baseline justify-between gap-2 mb-2">
+          <span className="text-sm font-medium">{row.package_name}</span>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {formatLifecycle(row.lifecycle.start_date, row.lifecycle.end_date)}
+          </span>
+        </div>
+        <div className="flex gap-6 items-start">
+          {/* Left: Burndown gauge */}
+          <div className="space-y-1.5 w-[200px] shrink-0">
+            <div className="flex items-baseline justify-between">
+              <span className="text-xl font-bold">{formatDuration(row.used_minutes)}</span>
+              <span className="text-xs text-muted-foreground">/ {formatDuration(row.included_minutes)}</span>
+            </div>
+            <Progress value={Math.min(pct, 100)} className={cn('h-1.5', isOver && '[&>div]:bg-destructive')} />
+            <div className="flex justify-between text-[11px] text-muted-foreground">
+              <span>{Math.round(pct)}% used</span>
+              <span className={cn(isOver ? 'text-destructive font-medium' : 'text-primary')}>
+                {isOver ? `${formatDuration(Math.abs(row.remaining_minutes))} over` : `${formatDuration(row.remaining_minutes)} remaining`}
+              </span>
+            </div>
+            {row.totals.lastEntry && (
+              <p className="text-[11px] text-muted-foreground">Last entry: {format(new Date(row.totals.lastEntry), 'd MMM yyyy')}</p>
+            )}
+          </div>
+
+          {/* Right: Monthly breakdown */}
+          {row.monthly.length > 0 && (
+            <div className="flex-1 border-l border-border pl-4 space-y-0.5">
+              <div className="flex justify-between text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                <span>Monthly</span>
+                <span className="flex gap-3">
+                  <span className="w-10 text-right">Total</span>
+                  <span className="w-10 text-right text-green-600">Bill</span>
+                  <span className="w-10 text-right">Non-bill</span>
                 </span>
               </div>
-              <div className="flex gap-6">
-                {/* Left: Burndown summary */}
-                <div className="space-y-2 min-w-[180px]">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-2xl font-bold">{formatDuration(row.used_minutes)}</span>
-                    <span className="text-sm text-muted-foreground">/ {formatDuration(row.included_minutes)}</span>
-                  </div>
-                  <Progress value={Math.min(pct, 100)} className={cn('h-2', isOver && '[&>div]:bg-destructive')} />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{Math.round(pct)}% used</span>
-                    <span className={cn(isOver ? 'text-destructive font-medium' : 'text-primary')}>
-                      {isOver ? `${formatDuration(Math.abs(row.remaining_minutes))} over` : `${formatDuration(row.remaining_minutes)} remaining`}
-                    </span>
-                  </div>
-                  {row.totals.lastEntry && (
-                    <p className="text-xs text-muted-foreground pt-1">Last entry: {format(new Date(row.totals.lastEntry), 'd MMM yyyy')}</p>
+              {visible.map((m) => (
+                <div key={m.month} className="flex justify-between text-[11px] gap-2">
+                  <span className="text-muted-foreground">{format(new Date(m.month + '-01'), 'MMM yyyy')}</span>
+                  <span className="flex gap-3">
+                    <span className="w-10 text-right font-medium">{formatDuration(m.minutes)}</span>
+                    <span className="w-10 text-right text-green-600">{formatDuration(m.billable)}</span>
+                    <span className="w-10 text-right text-muted-foreground">{formatDuration(m.nonBillable)}</span>
+                  </span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center pt-1 border-t border-border">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted-foreground font-medium">Total</span>
+                  {hasMore && (
+                    <button
+                      onClick={() => setMonthLimit(prev => prev === 3 ? 6 : prev === 6 ? 12 : 3)}
+                      className="text-[10px] text-primary hover:underline"
+                    >
+                      {monthLimit === 3 ? 'Show 6m' : monthLimit === 6 ? 'Show 12m' : 'Show 3m'}
+                    </button>
                   )}
                 </div>
-
-                {/* Right: Monthly breakdown */}
-                {row.monthly.length > 0 && (
-                  <div className="flex-1 border-l border-border pl-4 space-y-1">
-                    <div className="flex justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      <span>Monthly</span>
-                      <span className="flex gap-3">
-                        <span className="w-12 text-right">Total</span>
-                        <span className="w-12 text-right text-green-600">Bill</span>
-                        <span className="w-12 text-right">Non-bill</span>
-                      </span>
-                    </div>
-                    <div className="space-y-0.5 max-h-32 overflow-y-auto">
-                      {row.monthly.map((m) => (
-                        <div key={m.month} className="flex justify-between text-xs gap-2">
-                          <span className="text-muted-foreground">{format(new Date(m.month + '-01'), 'MMM yyyy')}</span>
-                          <span className="flex gap-3">
-                            <span className="w-12 text-right font-medium">{formatDuration(m.minutes)}</span>
-                            <span className="w-12 text-right text-green-600">{formatDuration(m.billable)}</span>
-                            <span className="w-12 text-right text-muted-foreground">{formatDuration(m.nonBillable)}</span>
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between items-center pt-1 border-t border-border">
-                      <span className="text-xs text-muted-foreground">Total</span>
-                      <span className="flex gap-3 text-xs">
-                        <span className="w-12 text-right font-semibold">{formatDuration(row.totals.total)}</span>
-                        <span className="w-12 text-right text-green-600 font-medium">{formatDuration(row.totals.billable)}</span>
-                        <span className="w-12 text-right text-muted-foreground">{formatDuration(row.totals.nonBillable)}</span>
-                      </span>
-                    </div>
-                  </div>
-                )}
+                <span className="flex gap-3 text-[11px]">
+                  <span className="w-10 text-right font-semibold">{formatDuration(row.totals.total)}</span>
+                  <span className="w-10 text-right text-green-600 font-medium">{formatDuration(row.totals.billable)}</span>
+                  <span className="w-10 text-right text-muted-foreground">{formatDuration(row.totals.nonBillable)}</span>
+                </span>
               </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
