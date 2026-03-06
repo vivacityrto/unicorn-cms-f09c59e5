@@ -30663,6 +30663,7 @@ export type Database = {
       }
       sharepoint_sites: {
         Row: {
+          application_id: string | null
           created_at: string
           drive_id: string | null
           graph_site_id: string | null
@@ -30675,6 +30676,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          application_id?: string | null
           created_at?: string
           drive_id?: string | null
           graph_site_id?: string | null
@@ -30687,6 +30689,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          application_id?: string | null
           created_at?: string
           drive_id?: string | null
           graph_site_id?: string | null
