@@ -335,8 +335,27 @@ Deno.serve(async (req: Request) => {
             console.warn('[validate-sp] Drive resolution from site failed:', driveResp.status);
           }
         } else if (spSite.drive_id) {
-          driveId = spSite.drive_id;
-          console.log('[validate-sp] Using cached drive ID:', driveId);
+          // Validate that the drive_id looks like a real Graph drive ID (starts with b!)
+          // If it doesn't, it's likely a bad value (e.g. a user OID) — resolve from Graph
+          if (spSite.drive_id.startsWith('b!')) {
+            driveId = spSite.drive_id;
+            console.log('[validate-sp] Using cached drive ID:', driveId);
+          } else {
+            console.warn('[validate-sp] Cached drive_id does not look like a Graph drive ID:', spSite.drive_id, '— resolving from Graph...');
+            const driveResp = await graphGet<{ id: string }>(`/sites/${siteId}/drive`);
+            if (driveResp.ok) {
+              driveId = driveResp.data.id;
+              console.log('[validate-sp] Resolved drive ID from site:', driveId);
+              // Cache resolved drive ID back
+              await supabaseAdmin
+                .from('sharepoint_sites')
+                .update({ drive_id: driveId })
+                .eq('purpose', lookupPurpose)
+                .eq('is_active', true);
+            } else {
+              console.warn('[validate-sp] Drive resolution from site failed:', driveResp.status, '— the stored drive_id is invalid and cannot be auto-resolved. Grant Sites.Selected permission or manually set the correct drive_id.');
+            }
+          }
         }
       }
     }
