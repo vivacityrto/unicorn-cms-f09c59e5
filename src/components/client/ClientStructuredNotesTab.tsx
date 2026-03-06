@@ -1503,7 +1503,6 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         }}
         showPackageSelector={true}
         showStatus={true}
-        showFiles={true}
         showAssignees={false}
         showNotify={true}
         showPin={true}

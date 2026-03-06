@@ -84,7 +84,6 @@ export function EditNoteDialog({ noteId, tenantId, open, onOpenChange, onSaved }
       onSave={handleSave}
       showPackageSelector={true}
       showStatus={true}
-      showFiles={true}
       showAssignees={false}
       showNotify={false}
       showPin={true}
