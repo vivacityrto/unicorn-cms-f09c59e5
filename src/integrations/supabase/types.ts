@@ -23448,6 +23448,7 @@ export type Database = {
           tags: string[]
           tenant_id: number
           tenant_uuid: string | null
+          timeentry_id: string | null
           title: string | null
           u1_id: number | null
           u1_package: string | null
@@ -23481,6 +23482,7 @@ export type Database = {
           tags?: string[]
           tenant_id: number
           tenant_uuid?: string | null
+          timeentry_id?: string | null
           title?: string | null
           u1_id?: number | null
           u1_package?: string | null
@@ -23514,6 +23516,7 @@ export type Database = {
           tags?: string[]
           tenant_id?: number
           tenant_uuid?: string | null
+          timeentry_id?: string | null
           title?: string | null
           u1_id?: number | null
           u1_package?: string | null

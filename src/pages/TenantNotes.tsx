@@ -82,6 +82,7 @@ export default function TenantNotes() {
   const [clickupTasks, setClickupTasks] = useState<ClickUpTask[]>([]);
   const [clickupLoading, setClickupLoading] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [pendingTimeEntryId, setPendingTimeEntryId] = useState<string | null>(null);
 
   // Filter notes
   const filteredNotes = filterNotes(notes, { searchQuery, priority: sortPriority }).sort((a, b) => {
@@ -98,13 +99,19 @@ export default function TenantNotes() {
   useEffect(() => {
     const initNote = searchParams.get('initNote');
     const urlNoteTitle = searchParams.get('noteTitle');
+    const urlTimeEntryId = searchParams.get('timeEntryId');
+    const urlNoteDetails = searchParams.get('noteDetails');
     if (initNote === 'true') {
       setNoteTitle(urlNoteTitle || '');
+      if (urlNoteDetails) setNoteText(urlNoteDetails);
+      if (urlTimeEntryId) setPendingTimeEntryId(urlTimeEntryId);
       setIsAddDialogOpen(true);
       // Clean URL params
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('initNote');
       newParams.delete('noteTitle');
+      newParams.delete('timeEntryId');
+      newParams.delete('noteDetails');
       navigate(`/tenant/${tenantId}/notes${newParams.toString() ? '?' + newParams.toString() : ''}`, { replace: true });
     }
   }, [searchParams, tenantId, navigate]);
@@ -304,7 +311,11 @@ export default function TenantNotes() {
       if (selectedNote) {
         await updateNote(selectedNote.id, noteData);
       } else {
-        await createNote(noteData);
+        await createNote({
+          ...noteData,
+          ...(pendingTimeEntryId ? { timeentry_id: pendingTimeEntryId } : {}),
+        });
+        setPendingTimeEntryId(null);
       }
       resetForm();
     } catch (error: any) {
@@ -327,6 +338,7 @@ export default function TenantNotes() {
     setExistingFiles([]);
     setFilesToRemove([]);
     setAssignees(currentUserId ? [currentUserId] : []);
+    setPendingTimeEntryId(null);
     setSelectedNote(null);
     setIsTimerRunning(false);
     setTimerStartTime(null);

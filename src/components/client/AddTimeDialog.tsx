@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -7,6 +8,16 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -72,6 +83,7 @@ export function AddTimeDialog({
   showScopeSelector = false,
   onSuccess,
 }: AddTimeDialogProps) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const { isRecording, isSupported, interimTranscript, startRecording, stopRecording } = useSpeechToText();
@@ -89,6 +101,9 @@ export function AddTimeDialog({
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [notifyUserId, setNotifyUserId] = useState<string>('');
   const [notifyClient, setNotifyClient] = useState(false);
+  const [showNotePrompt, setShowNotePrompt] = useState(false);
+  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
+  const [savedTotalMinutes, setSavedTotalMinutes] = useState(0);
 
   // Fetch work types from dd_work_types lookup
   useEffect(() => {
@@ -212,7 +227,7 @@ export function AddTimeDialog({
     setSaving(true);
     try {
       // Insert directly into time_entries — allocation happens via DB trigger
-      const { error } = await supabase.from('time_entries').insert({
+      const { data: insertedEntry, error } = await supabase.from('time_entries').insert({
         tenant_id: tenantId,
         client_id: clientId,
         user_id: user.id,
@@ -225,7 +240,7 @@ export function AddTimeDialog({
         source: 'manual',
         package_id: selectedInstanceId,
         package_instance_id: selectedInstanceId,
-      } as any);
+      } as any).select('id').single();
 
       if (error) throw error;
 
@@ -257,9 +272,19 @@ export function AddTimeDialog({
         title: 'Time added',
         description: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m logged${notifyUserId ? ' — notification sent' : ''}`,
       });
-      resetForm();
-      onOpenChange(false);
-      onSuccess?.();
+
+      // Store entry data for note prompt, then show it
+      const entryId = (insertedEntry as any)?.id;
+      if (entryId) {
+        setSavedEntryId(entryId);
+        setSavedTotalMinutes(totalMinutes);
+        onOpenChange(false);
+        setShowNotePrompt(true);
+      } else {
+        resetForm();
+        onOpenChange(false);
+        onSuccess?.();
+      }
     } catch (err: any) {
       toast({ title: 'Failed to add time', description: err.message, variant: 'destructive' });
     } finally {
@@ -278,9 +303,36 @@ export function AddTimeDialog({
     setSelectedInstanceId(null);
     setNotifyUserId('');
     setNotifyClient(false);
+    setSavedEntryId(null);
+    setSavedTotalMinutes(0);
+  };
+
+  const handleNotePromptYes = () => {
+    const workLabel = workTypes.find(w => w.code === workType)?.label || workType;
+    const h = Math.floor(savedTotalMinutes / 60);
+    const m = savedTotalMinutes % 60;
+    const title = `TIME: ${workLabel} (${h}:${m.toString().padStart(2, '0')})`;
+    const params = new URLSearchParams({
+      initNote: 'true',
+      noteTitle: title,
+      timeEntryId: savedEntryId!,
+      ...(notes ? { noteDetails: notes } : {}),
+      ...(selectedInstanceId ? { packageId: selectedInstanceId.toString() } : {}),
+    });
+    setShowNotePrompt(false);
+    resetForm();
+    onSuccess?.();
+    navigate(`/tenant/${tenantId}/notes?${params.toString()}`);
+  };
+
+  const handleNotePromptNo = () => {
+    setShowNotePrompt(false);
+    resetForm();
+    onSuccess?.();
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -460,20 +512,35 @@ export function AddTimeDialog({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center justify-end">
+          <DialogFooter className="sm:justify-between">
             <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} />
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Saving...' : 'Add Time'}
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Saving...' : 'Add Time'}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
+
+      <AlertDialog open={showNotePrompt} onOpenChange={setShowNotePrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create a note from this time entry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A note will be pre-filled with the time entry details so you can add additional context.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleNotePromptNo}>No</AlertDialogCancel>
+            <AlertDialogAction onClick={handleNotePromptYes}>Yes</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
