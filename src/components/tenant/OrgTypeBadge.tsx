@@ -10,21 +10,21 @@ interface OrgTypeBadgeProps {
 const ORG_TYPE_CONFIG: Record<string, { label: string; className: string; gradient?: boolean }> = {
   rto: {
     label: 'RTO',
-    className: 'bg-primary text-primary-foreground',
+    className: 'bg-primary text-primary-foreground border border-white/30',
   },
   rto_cricos: {
     label: 'RTO + CRICOS',
-    className: 'text-white',
+    className: 'text-white border border-white/30',
     gradient: true,
   },
   cricos: {
     label: 'CRICOS',
-    className: 'text-white',
+    className: 'text-white border border-white/30',
     gradient: true,
   },
   gto: {
     label: 'GTO',
-    className: 'bg-brand-aqua text-white',
+    className: 'bg-brand-aqua text-white border border-white/30',
   },
 };
 
@@ -42,11 +42,11 @@ export function OrgTypeBadge({ orgType, className }: OrgTypeBadgeProps) {
     return (
       <span
         className={cn(
-          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-brand-light-purple text-brand-acai',
+          'inline-flex items-center rounded-full px-3 py-0.5 text-xs font-bold tracking-wide uppercase bg-brand-light-purple text-brand-acai border border-brand-light-purple-400/60 shadow-sm',
           className
         )}
       >
-        {orgType.replace(/_/g, ' ').toUpperCase()}
+        {orgType.replace(/_/g, ' ')}
       </span>
     );
   }
@@ -54,7 +54,7 @@ export function OrgTypeBadge({ orgType, className }: OrgTypeBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
+        'inline-flex items-center rounded-full px-3 py-0.5 text-xs font-bold tracking-wide uppercase shadow-sm',
         config.className,
         className
       )}
