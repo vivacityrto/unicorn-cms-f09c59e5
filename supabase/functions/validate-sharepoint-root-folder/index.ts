@@ -163,12 +163,21 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { tenant_id, root_folder_url } = body as {
+    const { tenant_id, root_folder_url, test_site_access } = body as {
       tenant_id: number;
       root_folder_url: string;
+      test_site_access?: boolean;
     };
 
-    if (!tenant_id || !root_folder_url) {
+    // For site-level access tests, only root_folder_url is required
+    if (test_site_access) {
+      if (!root_folder_url) {
+        return new Response(
+          JSON.stringify({ error: 'root_folder_url is required for site access test' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else if (!tenant_id || !root_folder_url) {
       return new Response(
         JSON.stringify({ error: 'tenant_id and root_folder_url are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -218,10 +227,12 @@ Deno.serve(async (req: Request) => {
     const siteInfo = extractSiteInfo(root_folder_url);
     if (!siteInfo) {
       const errorMessage = 'Could not parse this SharePoint URL. Navigate to the folder in SharePoint and copy the URL from the browser address bar.';
-      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-        validation_status: 'invalid',
-        validation_error: errorMessage,
-      });
+      if (!test_site_access) {
+        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+          validation_status: 'invalid',
+          validation_error: errorMessage,
+        });
+      }
       return new Response(
         JSON.stringify({ success: false, error: errorMessage }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -294,10 +305,12 @@ Deno.serve(async (req: Request) => {
           errorMessage = `Could not access site "${siteInfo.siteName}" (status ${siteRes.status}).`;
         }
         console.error('[validate-sp] Site resolution failed:', siteRes.status, JSON.stringify(siteRes.data));
-        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-          validation_status: 'invalid',
-          validation_error: errorMessage,
-        });
+        if (!test_site_access) {
+          await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+            validation_status: 'invalid',
+            validation_error: errorMessage,
+          });
+        }
         return new Response(
           JSON.stringify({ success: false, error: errorMessage }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -312,10 +325,12 @@ Deno.serve(async (req: Request) => {
 
       if (!drivesRes.ok || !drivesRes.data.value?.length) {
         const errorMessage = 'Could not list document libraries for this site.';
-        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-          validation_status: 'invalid',
-          validation_error: errorMessage,
-        });
+        if (!test_site_access) {
+          await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+            validation_status: 'invalid',
+            validation_error: errorMessage,
+          });
+        }
         return new Response(
           JSON.stringify({ success: false, error: errorMessage }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -376,10 +391,12 @@ Deno.serve(async (req: Request) => {
             const rootRes = await graphGet<DriveItem>(`/drives/${driveId}/root`);
             if (!rootRes.ok) {
               const errorMessage = 'Could not access the document library root.';
-              await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-                validation_status: 'invalid',
-                validation_error: errorMessage,
-              });
+              if (!test_site_access) {
+                await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+                  validation_status: 'invalid',
+                  validation_error: errorMessage,
+                });
+              }
               return new Response(
                 JSON.stringify({ success: false, error: errorMessage }),
                 { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -393,10 +410,12 @@ Deno.serve(async (req: Request) => {
           const rootRes = await graphGet<DriveItem>(`/drives/${driveId}/root`);
           if (!rootRes.ok) {
             const errorMessage = 'Could not access the document library root.';
-            await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-              validation_status: 'invalid',
-              validation_error: errorMessage,
-            });
+            if (!test_site_access) {
+              await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+                validation_status: 'invalid',
+                validation_error: errorMessage,
+              });
+            }
             return new Response(
               JSON.stringify({ success: false, error: errorMessage }),
               { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -416,10 +435,12 @@ Deno.serve(async (req: Request) => {
           const errorMessage = `Could not find folder "${directParsed.relativePath}". ${
             folderRes.status === 404 ? 'Check the folder path is correct.' : `Microsoft returned status ${folderRes.status}.`
           }`;
-          await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-            validation_status: 'invalid',
-            validation_error: errorMessage,
-          });
+          if (!test_site_access) {
+            await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+              validation_status: 'invalid',
+              validation_error: errorMessage,
+            });
+          }
           return new Response(
             JSON.stringify({ success: false, error: errorMessage }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -430,10 +451,12 @@ Deno.serve(async (req: Request) => {
         const rootRes = await graphGet<DriveItem>(`/drives/${driveId}/root`);
         if (!rootRes.ok) {
           const errorMessage = 'Could not access the document library root.';
-          await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-            validation_status: 'invalid',
-            validation_error: errorMessage,
-          });
+          if (!test_site_access) {
+            await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+              validation_status: 'invalid',
+              validation_error: errorMessage,
+            });
+          }
           return new Response(
             JSON.stringify({ success: false, error: errorMessage }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -446,10 +469,12 @@ Deno.serve(async (req: Request) => {
     // Verify it's a folder
     if (driveItem!.file) {
       const errorMessage = `"${driveItem!.name}" is a file, not a folder. Please provide a folder link.`;
-      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-        validation_status: 'invalid',
-        validation_error: errorMessage,
-      });
+      if (!test_site_access) {
+        await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+          validation_status: 'invalid',
+          validation_error: errorMessage,
+        });
+      }
       return new Response(
         JSON.stringify({ success: false, error: errorMessage, is_folder: false }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -462,29 +487,30 @@ Deno.serve(async (req: Request) => {
 
     console.log('[validate-sp] Resolved folder:', { driveId, rootItemId, rootName, webUrl });
 
-    // Upsert settings — valid
-    await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
-      validation_status: 'valid',
-      drive_id: driveId,
-      root_item_id: rootItemId,
-      root_name: rootName,
-      validation_error: null,
-      last_validated_at: new Date().toISOString(),
-    });
+    // Upsert settings and emit timeline — only for real tenant validations
+    if (!test_site_access) {
+      await upsertSettings(supabaseAdmin, tenant_id, root_folder_url, user.id, {
+        validation_status: 'valid',
+        drive_id: driveId,
+        root_item_id: rootItemId,
+        root_name: rootName,
+        validation_error: null,
+        last_validated_at: new Date().toISOString(),
+      });
 
-    // Emit timeline event
-    await emitTimelineEvent(supabaseAdmin, {
-      tenant_id,
-      client_id: String(tenant_id),
-      event_type: 'sharepoint_root_configured',
-      title: `SharePoint root folder configured: ${rootName}`,
-      source: 'microsoft',
-      visibility: 'internal',
-      entity_type: 'tenant_sharepoint_settings',
-      metadata: { root_name: rootName, drive_id: driveId, root_item_id: rootItemId },
-      created_by: user.id,
-      dedupe_key: `sp_root:${tenant_id}:${new Date().toISOString().split('T')[0]}`,
-    });
+      await emitTimelineEvent(supabaseAdmin, {
+        tenant_id,
+        client_id: String(tenant_id),
+        event_type: 'sharepoint_root_configured',
+        title: `SharePoint root folder configured: ${rootName}`,
+        source: 'microsoft',
+        visibility: 'internal',
+        entity_type: 'tenant_sharepoint_settings',
+        metadata: { root_name: rootName, drive_id: driveId, root_item_id: rootItemId },
+        created_by: user.id,
+        dedupe_key: `sp_root:${tenant_id}:${new Date().toISOString().split('T')[0]}`,
+      });
+    }
 
     return new Response(
       JSON.stringify({
