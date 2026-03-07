@@ -284,16 +284,48 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
       // Auto-create action item when assigning (not when unassigning)
       if (assigneeId && clientId) {
         try {
-          // Build a descriptive title and description
+          // Build a descriptive title: Package > Stage > Task
           const delegatorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unknown';
           const rawDesc = (oldTask?.task_description || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
           const descSnippet = rawDesc.length > 50 ? rawDesc.slice(0, 50) + '…' : rawDesc;
           const actionDesc = `Task delegated by: ${delegatorName}${descSnippet ? '\n' + descSnippet : ''}`;
 
+          // Resolve package name and stage name for the title
+          let packageName = '';
+          let stageName = '';
+          try {
+            const { data: si } = await (supabase
+              .from('stage_instances' as any)
+              .select('stage_id, packageinstance_id')
+              .eq('id', stageInstanceId)
+              .maybeSingle()) as { data: { stage_id: number | null; packageinstance_id: number | null } | null; error: any };
+
+            if (si?.stage_id) {
+              const { data: stage } = await supabase.from('stages').select('name').eq('id', si.stage_id).maybeSingle();
+              if (stage) stageName = stage.name || '';
+            }
+            if (si?.packageinstance_id) {
+              const { data: pi } = await (supabase
+                .from('package_instances' as any)
+                .select('package_id')
+                .eq('id', si.packageinstance_id)
+                .maybeSingle()) as { data: { package_id: number } | null; error: any };
+              if (pi?.package_id) {
+                const { data: pkg } = await supabase.from('packages').select('name').eq('id', pi.package_id).maybeSingle();
+                if (pkg) packageName = pkg.name || '';
+              }
+            }
+          } catch (e) {
+            console.error('Error resolving package/stage names:', e);
+          }
+
+          const taskName = oldTask?.task_name || `Staff Task ${taskId}`;
+          const actionTitle = [packageName, stageName, taskName].filter(Boolean).join(' > ');
+
           await supabase.rpc('rpc_create_action_item', {
             p_tenant_id: tenantId,
             p_client_id: clientId,
-            p_title: oldTask?.task_name || `Staff Task ${taskId}`,
+            p_title: actionTitle,
             p_description: actionDesc,
             p_owner_user_id: assigneeId,
             p_due_date: oldTask?.due_date ? oldTask.due_date.split('T')[0] : null,
