@@ -98,7 +98,6 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
 
   useEffect(() => {
     fetchTeamMembers();
-    fetchStatusOptions();
   }, []);
 
   const fetchTeamMembers = async () => {
@@ -109,15 +108,6 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
       .order('first_name');
     
     setTeamMembers(data || []);
-  };
-
-  const fetchStatusOptions = async () => {
-    const { data } = await supabase
-      .from('dd_status')
-      .select('value, description, code')
-      .in('code', [2, 100, 102, 103])
-      .order('code');
-    if (data) setStatusOptions(data.filter(s => s.value));
   };
 
   const resetForm = () => {
