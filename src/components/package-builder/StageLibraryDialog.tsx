@@ -34,6 +34,7 @@ export function StageLibraryDialog({
   const { toast } = useToast();
   const { isSuperAdmin } = useAuth();
   const { stages, createStage } = usePackageBuilder();
+  const { stageTypes: STAGE_TYPE_OPTIONS } = useStageTypeOptions();
   
   const [activeTab, setActiveTab] = useState('library');
   const [searchQuery, setSearchQuery] = useState('');
