@@ -63,12 +63,13 @@ const NOTE_TYPES = [
   { value: 'document', label: 'Document', icon: FileText },
 ];
 
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low', color: 'bg-muted text-muted-foreground' },
-  { value: 'normal', label: 'Normal', color: 'bg-secondary text-secondary-foreground' },
-  { value: 'high', label: 'High', color: 'bg-amber-100 text-amber-700' },
-  { value: 'urgent', label: 'Urgent', color: 'bg-destructive/10 text-destructive' },
-];
+const PRIORITY_COLOR_MAP: Record<string, string> = {
+  low: 'bg-muted text-muted-foreground',
+  normal: 'bg-secondary text-secondary-foreground',
+  medium: 'bg-blue-100 text-blue-700',
+  high: 'bg-amber-100 text-amber-700',
+  urgent: 'bg-destructive/10 text-destructive',
+};
 
 export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: PackageNotesSectionProps) {
   const navigate = useNavigate();
