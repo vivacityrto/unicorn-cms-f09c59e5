@@ -162,11 +162,13 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
         status: statusOption?.value || 'not_started',
       };
 
-      // Set completion_date if completing
-      if (newStatusId === 2 && oldStatusId !== 2) {
+      // Set completion_date and completed_by if completing (status 2 or 4)
+      if ((newStatusId === 2 || newStatusId === 4) && oldStatusId !== 2 && oldStatusId !== 4) {
         updateData.completion_date = new Date().toISOString().split('T')[0];
-      } else if (newStatusId !== 2) {
+        updateData.completed_by = profile?.user_uuid || null;
+      } else if (newStatusId !== 2 && newStatusId !== 4) {
         updateData.completion_date = null;
+        updateData.completed_by = null;
       }
 
       const { error } = await supabase
