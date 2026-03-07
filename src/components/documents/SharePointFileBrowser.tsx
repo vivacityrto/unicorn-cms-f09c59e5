@@ -111,10 +111,12 @@ export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFile
 function FileBrowserContent({
   tenantId,
   rootName,
+  sharedFolderName,
   onSelectLink,
 }: {
   tenantId: number;
   rootName: string | null;
+  sharedFolderName: string | null;
   onSelectLink?: (url: string, fileName?: string) => void;
 }) {
   const {
