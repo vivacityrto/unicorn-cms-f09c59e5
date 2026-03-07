@@ -332,7 +332,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       const stageIds = [...new Set(stageData.map(s => s.stage_id))] as number[];
       const { data: stagesMetadata, error: metaError } = await supabase
         .from('stages')
-        .select('id, name, shortname')
+        .select('id, name, shortname, stage_type')
         .in('id', stageIds);
 
       if (metaError) throw metaError;
