@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { 
   Plus, Trash2, FileText, Upload, Link2, GripVertical, 
-  Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff, History, Package, Layers, AlertTriangle, Filter
+  Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff, History, Package, Layers, AlertTriangle, Filter, Pencil
 } from 'lucide-react';
 import { DocumentVersionBadge } from '@/components/document/DocumentVersionBadge';
 import { BulkUploadWithMetadataDialog } from '@/components/document/BulkUploadWithMetadataDialog';
@@ -535,6 +535,15 @@ export function StageDocumentsPanel({
                             className="scale-75"
                           />
                         </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 opacity-50 group-hover:opacity-100" 
+                          onClick={() => doc.document && handleDocumentClick(doc)}
+                          title="Edit document"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
