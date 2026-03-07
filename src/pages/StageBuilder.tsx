@@ -22,8 +22,8 @@ import {
   Package, Wand2, Edit2, Info
 } from 'lucide-react';
 import { STAGE_TEMPLATES, StageTemplate, TemplateTask, TemplateEmail } from '@/lib/stage-templates';
+import { useStageTypeOptions } from '@/hooks/useStageTypeOptions';
 
-// Stage types loaded dynamically via useStageTypeOptions hook
 
 const PACKAGE_TYPE_OPTIONS = [
   { value: 'rto', label: 'RTO' },
