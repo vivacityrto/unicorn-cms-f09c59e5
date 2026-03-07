@@ -86,6 +86,8 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
         return 'bg-emerald-100 text-emerald-700 border-emerald-200';
       case 'at_risk':
         return 'bg-red-100 text-red-700 border-red-200';
+      case 'warning':
+        return 'bg-red-600 text-white border-red-700 font-bold animate-pulse';
       case 'paused':
         return 'bg-amber-100 text-amber-700 border-amber-200';
       case 'exiting':

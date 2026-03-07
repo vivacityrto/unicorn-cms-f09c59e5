@@ -1,7 +1,7 @@
 // Superhero Membership Dashboard Types
 import type { Json } from '@/integrations/supabase/types';
 
-export type MembershipState = 'active' | 'at_risk' | 'paused' | 'exiting';
+export type MembershipState = 'active' | 'at_risk' | 'warning' | 'paused' | 'exiting';
 export type ObligationStatus = 'not_scheduled' | 'scheduled' | 'delivered';
 
 // Package type definitions
@@ -18,7 +18,7 @@ export type TaskSource = 'manual' | 'template' | 'system_suggestion' | 'ai_sugge
 export type StageStatus = 'not_started' | 'in_progress' | 'blocked' | 'waiting' | 'complete' | 'skipped';
 
 // Client package state
-export type ClientPackageState = 'ACTIVE' | 'AT_RISK' | 'PAUSED' | 'EXITING' | 'CLOSED';
+export type ClientPackageState = 'ACTIVE' | 'AT_RISK' | 'WARNING' | 'PAUSED' | 'EXITING' | 'CLOSED';
 
 // Package Stage Map (links stages to packages)
 export interface PackageStageMap {

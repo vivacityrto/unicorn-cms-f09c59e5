@@ -12366,6 +12366,27 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_membership_state: {
+        Row: {
+          code: number
+          description: string
+          seq: number
+          value: string
+        }
+        Insert: {
+          code: number
+          description: string
+          seq?: number
+          value: string
+        }
+        Update: {
+          code?: number
+          description?: string
+          seq?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_note_status: {
         Row: {
           code: string
@@ -48627,6 +48648,7 @@ export type Database = {
         | "paused"
         | "exiting"
         | "complete"
+        | "warning"
       notification_delivery_target: "dm" | "channel"
       notification_event_type:
         | "task_assigned"
@@ -48916,6 +48938,7 @@ export const Constants = {
         "paused",
         "exiting",
         "complete",
+        "warning",
       ],
       notification_delivery_target: ["dm", "channel"],
       notification_event_type: [

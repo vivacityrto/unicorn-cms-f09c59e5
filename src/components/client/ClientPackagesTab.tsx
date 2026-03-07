@@ -75,6 +75,7 @@ interface ClientPackagesTabProps {
 const STATE_COLORS: Record<string, string> = {
   active: 'bg-green-500/10 text-green-600 border-green-500',
   at_risk: 'bg-amber-500/10 text-amber-600 border-amber-500',
+  warning: 'bg-red-600/20 text-red-700 border-red-600 font-semibold',
   paused: 'bg-gray-500/10 text-gray-600 border-gray-500',
   exiting: 'bg-red-500/10 text-red-600 border-red-500',
   complete: 'bg-muted text-muted-foreground border-border'
@@ -83,6 +84,7 @@ const STATE_COLORS: Record<string, string> = {
 const STATE_ICONS: Record<string, React.ReactNode> = {
   active: <PlayCircle className="h-3 w-3" />,
   at_risk: <AlertCircle className="h-3 w-3" />,
+  warning: <AlertCircle className="h-3 w-3 animate-pulse" />,
   paused: <PauseCircle className="h-3 w-3" />,
   exiting: <AlertCircle className="h-3 w-3" />,
   complete: <CheckCircle2 className="h-3 w-3" />
@@ -328,18 +330,18 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
         const isExpanded = expandedPackages.has(pkg.package_id);
         return (
           <Collapsible key={pkg.id} open={isExpanded} onOpenChange={() => togglePackage(pkg.package_id)}>
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className={cn("hover:shadow-md transition-shadow", pkg.membership_state === 'warning' && !pkg.is_complete && "border-red-500 border-2")}>
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-4">
                   {/* Left: Package Info */}
                   <div className="flex-1 space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Package2 className="h-5 w-5 text-primary" />
+                        <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", pkg.membership_state === 'warning' && !pkg.is_complete ? "bg-red-600/20" : "bg-primary/10")}>
+                          <Package2 className={cn("h-5 w-5", pkg.membership_state === 'warning' && !pkg.is_complete ? "text-red-600" : "text-primary")} />
                         </div>
                         <div className="flex items-baseline gap-2">
-                          <h3 className="font-semibold text-lg">{pkg.package_name}</h3>
+                          <h3 className={cn("font-semibold text-lg", pkg.membership_state === 'warning' && !pkg.is_complete && "bg-red-600/15 text-red-700 px-2 py-0.5 rounded")}>{pkg.package_name}</h3>
                           {pkg.package_full_text && (
                             <span className="text-sm text-muted-foreground">— {pkg.package_full_text}</span>
                           )}
