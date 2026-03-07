@@ -216,13 +216,7 @@ export default function AdminStageDetail() {
     due_date_offset: '',
     is_mandatory: true
   });
-  const [editEmailForm, setEditEmailForm] = useState({
-    name: '',
-    subject: '',
-    description: '',
-    content: '',
-    automation_enabled: false
-  });
+  // editEmailForm removed - now using EditStageEmailDialog component
 
   // Certified edit confirmation state
   const [certifiedEditDialogOpen, setCertifiedEditDialogOpen] = useState(false);
