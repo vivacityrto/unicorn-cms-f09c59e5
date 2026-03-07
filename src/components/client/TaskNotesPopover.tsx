@@ -70,12 +70,15 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInst
 
       toast({ title: 'Notes saved' });
       setOpen(false);
-      onSaved();
 
       // Prompt to create package note if text is non-empty
+      // Must set prompt state BEFORE onSaved, as onSaved triggers parent
+      // refetch which can remount this component and lose state.
       if (text.trim()) {
         setSavedText(text.trim());
         setShowNotePrompt(true);
+      } else {
+        onSaved();
       }
     } catch (error: any) {
       console.error('Error saving task notes:', error);
