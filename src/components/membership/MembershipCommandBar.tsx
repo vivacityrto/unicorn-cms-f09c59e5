@@ -55,12 +55,10 @@ export function MembershipCommandBar({
     { value: 'obligations_due', label: 'Obligations Due' },
   ];
 
+  const { data: stateOptionsData } = useMembershipStateOptions();
   const membershipStates = [
     { value: null, label: 'All States' },
-    { value: 'active', label: 'Active' },
-    { value: 'at_risk', label: 'At Risk' },
-    { value: 'paused', label: 'Paused' },
-    { value: 'exiting', label: 'Exiting' },
+    ...(stateOptionsData || []).map(s => ({ value: s.value, label: s.label })),
   ];
 
   const activeFiltersCount = [selectedTier, selectedState, selectedCSC].filter(Boolean).length;
