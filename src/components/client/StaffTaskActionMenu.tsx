@@ -28,6 +28,8 @@ interface StaffTaskActionMenuProps {
   stageStatusId?: number;
   stageEmails?: StageEmail[];
   onMarkComplete?: () => void;
+  taskDescription?: string | null;
+  stageName?: string;
 }
 
 export function StaffTaskActionMenu({
@@ -40,6 +42,8 @@ export function StaffTaskActionMenu({
   stageStatusId,
   stageEmails = [],
   onMarkComplete,
+  taskDescription,
+  stageName: stageNameProp,
 }: StaffTaskActionMenuProps) {
   const { type, cleanName } = parseTaskType(taskName);
   const actions = getActionsForType(type);
@@ -345,6 +349,9 @@ export function StaffTaskActionMenu({
         packageId={packageId}
         taskName={cleanName}
         taskId={taskId}
+        stageName={stageNameProp || stageName}
+        packageName={packageName}
+        taskDescription={taskDescription}
       />
 
       <SharePointFolderDialog

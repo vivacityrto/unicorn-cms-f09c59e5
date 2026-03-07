@@ -284,11 +284,17 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
       // Auto-create action item when assigning (not when unassigning)
       if (assigneeId && clientId) {
         try {
+          // Build a descriptive title and description
+          const delegatorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unknown';
+          const rawDesc = (oldTask?.task_description || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+          const descSnippet = rawDesc.length > 50 ? rawDesc.slice(0, 50) + '…' : rawDesc;
+          const actionDesc = `Task delegated from Package by: ${delegatorName}.${descSnippet ? ' ' + descSnippet : ''}`;
+
           await supabase.rpc('rpc_create_action_item', {
             p_tenant_id: tenantId,
             p_client_id: clientId,
             p_title: oldTask?.task_name || `Staff Task ${taskId}`,
-            p_description: oldTask?.task_description || null,
+            p_description: actionDesc,
             p_owner_user_id: assigneeId,
             p_due_date: oldTask?.due_date ? oldTask.due_date.split('T')[0] : null,
             p_priority: 'medium',

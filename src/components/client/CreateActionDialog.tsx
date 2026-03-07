@@ -20,6 +20,11 @@ import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { NotifyClientCheckbox } from './NotifyClientCheckbox';
 import { notifyClientPrimaryContact } from '@/lib/notifyClient';
 
+function stripHtmlTags(html: string): string {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 interface CreateActionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,6 +32,9 @@ interface CreateActionDialogProps {
   packageId?: number;
   taskName: string;
   taskId: number;
+  stageName?: string;
+  packageName?: string;
+  taskDescription?: string | null;
 }
 
 export function CreateActionDialog({
@@ -36,13 +44,23 @@ export function CreateActionDialog({
   packageId,
   taskName,
   taskId,
+  stageName,
+  packageName,
+  taskDescription,
 }: CreateActionDialogProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
   const { data: teamUsers = [] } = useVivacityTeamUsers();
   const [saving, setSaving] = useState(false);
-  const [title, setTitle] = useState(taskName);
-  const [description, setDescription] = useState('');
+
+  const delegatorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unknown';
+  const composedTitle = [packageName, stageName, taskName].filter(Boolean).join(' > ');
+  const strippedDesc = stripHtmlTags(taskDescription || '');
+  const descSnippet = strippedDesc.length > 50 ? strippedDesc.slice(0, 50) + '…' : strippedDesc;
+  const composedDescription = `Task delegated from Package by: ${delegatorName}.${descSnippet ? ' ' + descSnippet : ''}`;
+
+  const [title, setTitle] = useState(composedTitle);
+  const [description, setDescription] = useState(composedDescription);
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
@@ -106,7 +124,7 @@ export function CreateActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh]">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Create Action</DialogTitle>
         </DialogHeader>
@@ -117,7 +135,7 @@ export function CreateActionDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="action-desc">Description</Label>
-            <Textarea id="action-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={8} />
+            <Textarea id="action-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={12} className="min-h-[200px]" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
