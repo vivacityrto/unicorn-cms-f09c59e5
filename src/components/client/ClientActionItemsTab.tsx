@@ -68,6 +68,7 @@ const PRIORITY_COLOR_MAP: Record<string, string> = {
 export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTabProps) {
   const { items, loading, createItem, setStatus, updateItem, deleteItem, refresh } = useClientActionItems(tenantId, clientId);
   const speech = useSpeechToText();
+  const navigate = useNavigate();
   const { data: vivacityTeam = [] } = useVivacityTeamUsers();
   const { priorities: priorityOptions } = useActionPriorityOptions();
   const { statuses: actionStatusOptions } = useActionStatusOptions();
