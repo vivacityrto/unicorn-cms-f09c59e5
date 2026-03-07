@@ -11,7 +11,7 @@ import { useStageExportImport } from '@/hooks/useStageExportImport';
 import { useStageTypeOptions, getStageTypeColor as getStageTypeColorHelper, getStageTypeLabel } from '@/hooks/useStageTypeOptions';
 import { useStageQualityCheck, computeStageQuality } from '@/hooks/useStageQualityCheck';
 import { usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
-import { useStageTemplateContent, usePackageStageOverrides } from '@/hooks/useStageTemplateContent';
+import { useStageTemplateContent, usePackageStageOverrides, StageTeamTask, StageClientTask, StageEmail } from '@/hooks/useStageTemplateContent';
 import { useStageImpact, useSyncStageToPackages } from '@/hooks/usePackageStageOverrides';
 import { useStageDependencyCheck, updateStageDependencies, checkDependencyCertification } from '@/hooks/useStageDependencies';
 import { useStageVersions, StageVersion, CertifiedEditCheck } from '@/hooks/useStageVersions';
