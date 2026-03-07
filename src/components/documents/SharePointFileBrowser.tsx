@@ -274,10 +274,10 @@ function FileRow({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onSelectLink(item.web_url)}
-            title="Insert link"
+            onClick={() => onSelectLink(item.web_url, item.name)}
+            title="Insert link to this file"
           >
-            <ExternalLink className="h-4 w-4" />
+            <Link className="h-4 w-4" />
           </Button>
         ) : !item.is_folder ? (
           <Button
