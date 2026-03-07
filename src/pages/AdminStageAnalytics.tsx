@@ -20,14 +20,7 @@ import {
 import { format, formatDistanceToNow } from 'date-fns';
 import { StageFrameworkBadges } from '@/components/stage/StageFrameworkSelector';
 
-const STAGE_TYPE_OPTIONS = [
-  { value: 'onboarding', label: 'Onboarding' },
-  { value: 'delivery', label: 'Delivery' },
-  { value: 'documentation', label: 'Documentation' },
-  { value: 'support', label: 'Ongoing Support' },
-  { value: 'offboarding', label: 'Offboarding' },
-  { value: 'other', label: 'Other' }
-];
+// Stage types loaded dynamically via useStageTypeOptions hook
 
 const FRAMEWORK_OPTIONS = [
   { value: 'RTO', label: 'RTO' },

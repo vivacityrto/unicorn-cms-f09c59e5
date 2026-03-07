@@ -88,17 +88,7 @@ import { StageFrameworkBadges, formatFrameworks } from '@/components/stage/Stage
 import { Stage } from '@/hooks/usePackageBuilder';
 import { format } from 'date-fns';
 
-const STAGE_TYPE_OPTIONS = [
-  { value: 'all', label: 'All Types' },
-  { value: 'onboarding', label: 'Onboarding' },
-  { value: 'delivery', label: 'Delivery' },
-  { value: 'documentation', label: 'Documentation' },
-  { value: 'support', label: 'Ongoing Support' },
-  { value: 'monitor', label: 'Monitor (Ongoing)' },
-  { value: 'offboarding', label: 'Offboarding' },
-  { value: 'finalise', label: 'Finalise' },
-  { value: 'other', label: 'Other' },
-];
+// Stage types loaded dynamically via useStageTypeOptions hook
 
 const CERTIFIED_FILTER_OPTIONS = [
   { value: 'all', label: 'All' },

@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-/** Stage types excluded from the progress bar (ongoing or exit stages) */
-const NON_TRACKABLE_STAGE_TYPES = ['offboarding', 'monitor', 'finalise'];
+/** Stage types excluded from the progress bar (ongoing or exit stages) — static fallback */
+const NON_TRACKABLE_STAGE_TYPES = ['offboarding', 'monitor', 'monitoring'];
 
 export interface ClientPackage {
   id: string;

@@ -37,13 +37,7 @@ interface StageDetailPanelProps {
   onClose: () => void;
 }
 
-const STAGE_TYPE_OPTIONS = [
-  { value: 'onboarding', label: 'Onboarding', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
-  { value: 'delivery', label: 'Delivery', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-  { value: 'support', label: 'Ongoing Support', color: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
-  { value: 'offboarding', label: 'Offboarding', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-  { value: 'other', label: 'Other', color: 'bg-muted text-muted-foreground' }
-];
+// Stage types loaded dynamically via useStageTypeOptions hook
 
 export function StageDetailPanel({ packageId, stageId, stage, allStages = [], onClose }: StageDetailPanelProps) {
   const { toast } = useToast();

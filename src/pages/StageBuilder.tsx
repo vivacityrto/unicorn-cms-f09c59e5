@@ -23,16 +23,7 @@ import {
 } from 'lucide-react';
 import { STAGE_TEMPLATES, StageTemplate, TemplateTask, TemplateEmail } from '@/lib/stage-templates';
 
-const STAGE_TYPE_OPTIONS = [
-  { value: 'onboarding', label: 'Onboarding' },
-  { value: 'delivery', label: 'Delivery' },
-  { value: 'documentation', label: 'Documentation' },
-  { value: 'support', label: 'Ongoing Support' },
-  { value: 'monitor', label: 'Monitor (Ongoing)' },
-  { value: 'offboarding', label: 'Offboarding' },
-  { value: 'finalise', label: 'Finalise' },
-  { value: 'other', label: 'Other' },
-];
+// Stage types loaded dynamically via useStageTypeOptions hook
 
 const PACKAGE_TYPE_OPTIONS = [
   { value: 'rto', label: 'RTO' },
