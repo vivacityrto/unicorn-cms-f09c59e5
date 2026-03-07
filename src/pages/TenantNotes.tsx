@@ -85,6 +85,7 @@ export default function TenantNotes() {
   const [clickupLoading, setClickupLoading] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [pendingTimeEntryId, setPendingTimeEntryId] = useState<string | null>(null);
+  const [pendingPackageInstanceId, setPendingPackageInstanceId] = useState<number | null>(null);
 
   // Filter notes
   const filteredNotes = filterNotes(notes, { searchQuery, priority: sortPriority }).sort((a, b) => {
