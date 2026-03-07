@@ -46,6 +46,7 @@ import { StageDependencySelector } from '@/components/stage/StageDependencySelec
 import { StageFrameworkSelector, StageFrameworkBadges, updateStageFrameworks, isFrameworksNarrowed } from '@/components/stage/StageFrameworkSelector';
 import { StageStandardsSelector } from '@/components/stage/StageStandardsSelector';
 import { StageSimulationDialog } from '@/components/stage/StageSimulationDialog';
+import { EditStageEmailDialog } from '@/components/stage/EditStageEmailDialog';
 import { StageImpactPanel } from '@/components/package-builder/StageImpactPanel';
 import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
