@@ -22,11 +22,12 @@ interface StageStaffTasksProps {
   stageInstanceId: number;
   tenantId: number;
   packageId: number;
+  packageInstanceId?: number;
   stageStatusId?: number;
   stageName?: string;
 }
 
-export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageStatusId, stageName }: StageStaffTasksProps) {
+export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageInstanceId, stageStatusId, stageName }: StageStaffTasksProps) {
   const [filter, setFilter] = useState<TaskFilter>('active');
   const { 
     tasks, 
