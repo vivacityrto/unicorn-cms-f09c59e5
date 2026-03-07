@@ -347,13 +347,56 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                           )}
                         </div>
                       </div>
-                      <Badge 
-                        variant="outline"
-                        className={`${STATE_COLORS[pkg.is_complete ? 'complete' : pkg.membership_state] || ''}`}
-                      >
-                        {STATE_ICONS[pkg.is_complete ? 'complete' : pkg.membership_state]}
-                        <span className="ml-1 capitalize">{pkg.is_complete ? 'Complete' : pkg.membership_state}</span>
-                      </Badge>
+                      {pkg.is_complete ? (
+                        <Badge variant="outline" className={STATE_COLORS['complete']}>
+                          {STATE_ICONS['complete']}
+                          <span className="ml-1 capitalize">Complete</span>
+                        </Badge>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Badge 
+                              variant="outline"
+                              className={cn('cursor-pointer hover:opacity-80', STATE_COLORS[pkg.membership_state] || '')}
+                            >
+                              {STATE_ICONS[pkg.membership_state]}
+                              <span className="ml-1 capitalize">{pkg.membership_state.replace('_', ' ')}</span>
+                            </Badge>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {['active', 'at_risk', 'warning', 'paused', 'exiting'].map((state) => (
+                              <DropdownMenuItem
+                                key={state}
+                                className={cn('capitalize', state === pkg.membership_state && 'font-semibold bg-accent')}
+                                onClick={async () => {
+                                  if (state === pkg.membership_state) return;
+                                  try {
+                                    const { error } = await supabase.rpc('transition_membership_state', {
+                                      p_instance_id: parseInt(pkg.id, 10),
+                                      p_new_state: state as any,
+                                      p_reason: `Package state changed to ${state} by SuperAdmin`,
+                                    });
+                                    if (error) throw error;
+                                    toast.success(`Package state changed to ${state}`);
+                                    // Initiate note for halt statuses
+                                    if (['warning', 'exiting'].includes(state)) {
+                                      const stateLabel = state.replace('_', ' ');
+                                      const title = `** PACKAGE STATUS "${stateLabel.toUpperCase()}" — ${pkg.package_name} — ALL ACTIVITY HALTED **`;
+                                      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+                                    } else {
+                                      window.location.reload();
+                                    }
+                                  } catch (err: any) {
+                                    toast.error(err.message || 'Failed to change state');
+                                  }
+                                }}
+                              >
+                                {state.replace('_', ' ')}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
 
                     {/* Stats Row */}
