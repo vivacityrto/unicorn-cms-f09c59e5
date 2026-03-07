@@ -125,7 +125,7 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInst
         <PopoverContent className="w-72 p-3" align="end">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium">Task Notes</label>
+              <label className="text-xs font-medium truncate">Note: {stageName || 'Stage'} &gt; {taskName || 'Task'}</label>
               <span className={`text-[10px] ${text.length > MAX_NOTE_LENGTH ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                 {text.length}/{MAX_NOTE_LENGTH}
               </span>
