@@ -48,6 +48,7 @@ interface StageInstance {
   stage_id: number;
   stage_name: string;
   shortname: string | null;
+  stage_type: string | null;
   status: string | number;
   status_date: string | null;
   completion_date: string | null;
