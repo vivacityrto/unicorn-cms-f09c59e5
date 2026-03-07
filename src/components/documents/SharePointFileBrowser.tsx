@@ -140,31 +140,25 @@ function FileBrowserContent({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FolderOpen className="h-5 w-5" />
-            {rootName || 'SharePoint Documents'}
+          <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+            <FolderOpen className="h-5 w-5 flex-shrink-0" />
+            <span>{rootName || 'SharePoint Documents'}</span>
+            {!isRoot && folderStack.length > 1 && (
+              <>
+                <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                {folderStack.length > 2 && (
+                  <>
+                    <span className="text-muted-foreground">...</span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  </>
+                )}
+                <Folder className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-muted-foreground font-normal">
+                  {folderStack[folderStack.length - 1].name}
+                </span>
+              </>
+            )}
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Refresh
-          </Button>
-        </div>
-
-        {/* Breadcrumb */}
-        {!isRoot && (
-          <div className="flex items-center gap-1 text-sm mt-2">
-            <Button variant="ghost" size="sm" onClick={navigateToRoot} className="h-6 px-2">
-              <Home className="h-3 w-3 mr-1" />
-              {rootName || 'Root'}
-            </Button>
-            {folderStack.slice(1).map((folder, idx) => (
-              <span key={idx} className="flex items-center gap-1 text-muted-foreground">
-                <ChevronRight className="h-3 w-3" />
-                <span className="text-sm">{folder.name}</span>
-              </span>
-            ))}
-          </div>
-        )}
       </CardHeader>
       <CardContent>
         {error && (
