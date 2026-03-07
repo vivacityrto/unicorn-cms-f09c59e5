@@ -23,6 +23,7 @@ import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { NotifyClientCheckbox } from '@/components/client/NotifyClientCheckbox';
 import { formatDuration, formatElapsedTime } from '@/hooks/useNotes';
+import { useActionPriorityOptions } from '@/hooks/useActionPriorityOptions';
 
 // ── Note type style map ──
 const NOTE_TYPE_STYLES: Record<string, { icon: typeof StickyNote; color: string }> = {
@@ -119,6 +120,7 @@ export function NoteFormDialog({
   saving: externalSaving,
 }: NoteFormDialogProps) {
   const { toast } = useToast();
+  const { priorities: priorityOptions } = useActionPriorityOptions();
 
   // ── Form state ──
   const [title, setTitle] = useState('');
@@ -508,10 +510,9 @@ export function NoteFormDialog({
                 <Select value={priority} onValueChange={setPriority}>
                   <SelectTrigger><SelectValue placeholder="Normal" /></SelectTrigger>
                   <SelectContent className="bg-background">
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
+                    {priorityOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
