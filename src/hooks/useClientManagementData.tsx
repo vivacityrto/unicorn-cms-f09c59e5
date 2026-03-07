@@ -579,7 +579,7 @@ export function useClientActionItems(tenantId: number | null, clientId: string |
         p_description: data.description || null,
         p_owner_user_id: data.owner_user_id || null,
         p_due_date: data.due_date || null,
-        p_priority: data.priority || 'normal',
+        p_priority: data.priority || 'medium',
         p_source: data.source || 'manual',
         p_source_note_id: data.source_note_id || null,
         p_related_entity_type: data.related_entity_type || null,

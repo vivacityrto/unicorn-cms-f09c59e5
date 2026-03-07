@@ -540,9 +540,9 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map(opt => (
+                    {actionStatusOptions.map(opt => (
                       <SelectItem key={opt.value} value={opt.value}>
-                        {opt.description}
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -375,9 +375,9 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PRIORITY_OPTIONS.map(priority => (
-                      <SelectItem key={priority.value} value={priority.value}>
-                        {priority.label}
+                    {priorityOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

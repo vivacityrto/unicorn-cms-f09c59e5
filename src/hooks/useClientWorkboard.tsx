@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 // =============================================
 
 export type ItemType = 'internal' | 'client';
-export type ItemStatus = 'todo' | 'in_progress' | 'blocked' | 'waiting_client' | 'done' | 'cancelled';
+export type ItemStatus = 'todo' | 'open' | 'in_progress' | 'blocked' | 'waiting_client' | 'done' | 'cancelled';
 export type ItemPriority = 'low' | 'normal' | 'medium' | 'high' | 'urgent';
 
 export interface WorkboardItem {
