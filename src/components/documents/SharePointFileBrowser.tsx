@@ -147,20 +147,30 @@ function FileBrowserContent({
           <CardTitle className="text-base flex items-center gap-2 flex-wrap">
             <FolderOpen className="h-5 w-5 flex-shrink-0" />
             <span>{rootName || 'SharePoint Documents'}</span>
-            {!isRoot && folderStack.length > 1 && (
+            {onSelectLink && sharedFolderName ? (
               <>
                 <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                {folderStack.length > 2 && (
-                  <>
-                    <span className="text-muted-foreground">...</span>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  </>
-                )}
                 <Folder className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="text-muted-foreground font-normal">
-                  {folderStack[folderStack.length - 1].name}
+                  {sharedFolderName}
                 </span>
               </>
+            ) : (
+              !isRoot && folderStack.length > 1 && (
+                <>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  {folderStack.length > 2 && (
+                    <>
+                      <span className="text-muted-foreground">...</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </>
+                  )}
+                  <Folder className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground font-normal">
+                    {folderStack[folderStack.length - 1].name}
+                  </span>
+                </>
+              )
             )}
           </CardTitle>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
