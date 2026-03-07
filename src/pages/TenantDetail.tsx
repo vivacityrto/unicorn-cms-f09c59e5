@@ -548,15 +548,31 @@ export default function TenantDetail() {
         
       </div>;
   }
+  const isArrearsOrWarning = tenantStatus === 'In Arears' || tenantStatus === 'warning';
+
   return <div className="min-h-screen bg-background">
       {/* Back Button, Package Tabs and Status Header */}
       
 
+      {/* Arrears / Warning Banner */}
+      {isArrearsOrWarning && (
+        <div className="px-6 mb-0">
+          <div className="bg-red-600 text-white px-4 py-3 rounded-t-lg flex items-center gap-2 font-semibold text-sm">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 animate-pulse" />
+            {tenantStatus === 'In Arears'
+              ? 'Accounts must be contacted before any scheduled tasks or meetings.'
+              : 'WARNING: This client requires immediate attention. All team members must review before proceeding.'}
+          </div>
+        </div>
+      )}
+
       {/* Header Card */}
       <div className="px-6">
-        <Card className="border-0 shadow-lg overflow-hidden">
+        <Card className={`border-0 shadow-lg overflow-hidden ${isArrearsOrWarning ? 'rounded-t-none' : ''}`}>
           <div className="px-6 py-4 border-b border-white/20" style={{
-          backgroundImage: 'linear-gradient(135deg, rgb(98 33 145) 0%, rgb(213 28 73 / 72%) 100%)'
+          backgroundImage: isArrearsOrWarning
+            ? 'linear-gradient(135deg, rgb(185 28 28) 0%, rgb(127 29 29) 100%)'
+            : 'linear-gradient(135deg, rgb(98 33 145) 0%, rgb(213 28 73 / 72%) 100%)'
         }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -567,12 +583,14 @@ export default function TenantDetail() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
-                  <h3 className="text-base font-semibold text-white">
+                  <h3 className={`text-base font-semibold text-white ${isArrearsOrWarning ? 'bg-red-700/50 px-2 py-0.5 rounded' : ''}`}>
                     Hello, {clientData.contactname || clientData.companyname}
                   </h3>
                   <div className="flex items-center gap-2 text-sm text-white/70">
                     <Building2 className="h-4 w-4" />
-                    {clientData.companyname}
+                    <span className={isArrearsOrWarning ? 'bg-red-700/50 px-1.5 py-0.5 rounded text-white' : ''}>
+                      {clientData.companyname}
+                    </span>
                     <OrgTypeBadge orgType={orgType} rtoNumber={rtoNumber} cricosNumber={cricosNumber} />
                   </div>
                   <div className="flex items-center gap-2 text-sm text-white/70">
