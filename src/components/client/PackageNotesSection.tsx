@@ -275,7 +275,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                       </TableCell>
                       <TableCell>
                         {priorityOption && priorityOption.value !== 'normal' ? (
-                          <Badge variant="outline" className={cn("text-xs", priorityOption.color)}>
+                          <Badge variant="outline" className={cn("text-xs", PRIORITY_COLOR_MAP[priorityOption.value] || 'bg-secondary text-secondary-foreground')}>
                             {priorityOption.label}
                           </Badge>
                         ) : (
