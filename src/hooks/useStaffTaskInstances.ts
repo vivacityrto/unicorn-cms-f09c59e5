@@ -88,7 +88,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
       if (usersResult.error) throw usersResult.error;
 
       // Create lookup maps with proper typing
-      type TaskMeta = { id: number; name: string; description: string | null; order_number: number | null };
+      type TaskMeta = { id: number; name: string; description: string | null; order_number: number | null; is_recurring: boolean | null };
       type UserMeta = { user_uuid: string; first_name: string | null; last_name: string | null; avatar_url: string | null };
       
       const taskMap = new Map<number, TaskMeta>(
