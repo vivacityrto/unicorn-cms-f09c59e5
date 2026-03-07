@@ -53,14 +53,15 @@ export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFile
     enabled: boolean;
     valid: boolean;
     rootName: string | null;
-  }>({ loaded: false, enabled: false, valid: false, rootName: null });
+    sharedFolderName: string | null;
+  }>({ loaded: false, enabled: false, valid: false, rootName: null, sharedFolderName: null });
 
   // Check if SharePoint is configured for this tenant
   useEffect(() => {
     const fetchSettings = async () => {
       const { data } = await supabase
         .from('tenant_sharepoint_settings')
-        .select('is_enabled, validation_status, root_name')
+        .select('is_enabled, validation_status, root_name, shared_folder_name')
         .eq('tenant_id', tenantId)
         .maybeSingle();
 
@@ -69,6 +70,7 @@ export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFile
         enabled: data?.is_enabled ?? false,
         valid: data?.validation_status === 'valid',
         rootName: data?.root_name ?? null,
+        sharedFolderName: data?.shared_folder_name ?? null,
       });
     };
 
@@ -103,16 +105,18 @@ export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFile
     );
   }
 
-  return <FileBrowserContent tenantId={tenantId} rootName={settingsStatus.rootName} onSelectLink={onSelectLink} />;
+  return <FileBrowserContent tenantId={tenantId} rootName={settingsStatus.rootName} sharedFolderName={settingsStatus.sharedFolderName} onSelectLink={onSelectLink} />;
 }
 
 function FileBrowserContent({
   tenantId,
   rootName,
+  sharedFolderName,
   onSelectLink,
 }: {
   tenantId: number;
   rootName: string | null;
+  sharedFolderName: string | null;
   onSelectLink?: (url: string, fileName?: string) => void;
 }) {
   const {
@@ -143,20 +147,30 @@ function FileBrowserContent({
           <CardTitle className="text-base flex items-center gap-2 flex-wrap">
             <FolderOpen className="h-5 w-5 flex-shrink-0" />
             <span>{rootName || 'SharePoint Documents'}</span>
-            {!isRoot && folderStack.length > 1 && (
+            {onSelectLink && sharedFolderName ? (
               <>
                 <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                {folderStack.length > 2 && (
-                  <>
-                    <span className="text-muted-foreground">...</span>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  </>
-                )}
                 <Folder className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="text-muted-foreground font-normal">
-                  {folderStack[folderStack.length - 1].name}
+                  {sharedFolderName}
                 </span>
               </>
+            ) : (
+              !isRoot && folderStack.length > 1 && (
+                <>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  {folderStack.length > 2 && (
+                    <>
+                      <span className="text-muted-foreground">...</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </>
+                  )}
+                  <Folder className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground font-normal">
+                    {folderStack[folderStack.length - 1].name}
+                  </span>
+                </>
+              )
             )}
           </CardTitle>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
