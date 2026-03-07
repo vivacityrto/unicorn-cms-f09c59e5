@@ -47,6 +47,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { supabase } from '@/integrations/supabase/client';
+import { useActionPriorityOptions } from '@/hooks/useActionPriorityOptions';
 
 interface PackageNotesSectionProps {
   tenantId: number;
