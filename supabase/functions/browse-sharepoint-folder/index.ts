@@ -128,10 +128,10 @@ serve(async (req) => {
       );
     }
 
-    // Get tenant_id from user
+    // Get tenant_id and role from user
     const { data: userData } = await supabaseAdmin
       .from("users")
-      .select("tenant_id")
+      .select("tenant_id, unicorn_role, global_role")
       .eq("user_uuid", user.id)
       .single();
 
@@ -142,7 +142,21 @@ serve(async (req) => {
       );
     }
 
-    const tenantId = userData.tenant_id;
+    let tenantId = userData.tenant_id;
+
+    // If a different tenant_id was requested, allow only for SuperAdmins
+    const requestedTenantId = body.tenant_id as number | undefined;
+    if (requestedTenantId && requestedTenantId !== tenantId) {
+      const isSuperAdmin = userData.global_role === "SuperAdmin" || userData.unicorn_role === "Super Admin";
+
+      if (isSuperAdmin) {
+        tenantId = requestedTenantId;
+        console.log(`[browse-sp] SuperAdmin override: browsing tenant ${tenantId}`);
+      } else {
+        console.warn(`[browse-sp] Non-SuperAdmin attempted tenant override: ${requestedTenantId}`);
+        // Silently fall back to user's own tenant
+      }
+    }
 
     // Get SharePoint settings for tenant
     const { data: spSettings } = await supabaseAdmin

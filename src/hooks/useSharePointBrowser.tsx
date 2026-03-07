@@ -46,6 +46,7 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
         {
           body: {
             action: 'list',
+            tenant_id: tenantId,
             folder_id: currentFolderId || undefined,
             use_shared_folder: useSharedFolder,
           },
@@ -101,6 +102,7 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
           {
             body: {
               action: 'download',
+              tenant_id: tenantId,
               item_id: itemId,
             },
           }
