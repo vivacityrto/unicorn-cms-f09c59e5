@@ -170,6 +170,7 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
                 notes={task.notes}
                 tenantId={tenantId}
                 packageId={packageId}
+                packageInstanceId={packageInstanceId}
                 stageInstanceId={stageInstanceId}
                 stageName={stageName}
                 taskName={cleanName}
