@@ -94,6 +94,7 @@ const STATE_ICONS: Record<string, React.ReactNode> = {
 };
 
 export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, complyhubTier, autoExpandPackageInstanceId, autoExpandStageInstanceId }: ClientPackagesTabProps) {
+  const { data: membershipStateOptions } = useMembershipStateOptions();
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
   const [expandedPackages, setExpandedPackages] = useState<Set<number>>(new Set());
