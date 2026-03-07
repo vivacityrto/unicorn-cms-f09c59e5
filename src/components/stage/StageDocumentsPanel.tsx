@@ -539,6 +539,15 @@ export function StageDocumentsPanel({
                           variant="ghost" 
                           size="icon" 
                           className="h-7 w-7 opacity-50 group-hover:opacity-100" 
+                          onClick={() => doc.document && handleDocumentClick(doc)}
+                          title="Edit document"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 opacity-50 group-hover:opacity-100" 
                           onClick={() => safeAction(() => handleUnlink(doc.id))}
                           title="Unlink from stage"
                         >
