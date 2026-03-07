@@ -28,6 +28,7 @@ interface UseStaffTaskInstancesProps {
   stageInstanceId: number;
   tenantId: number;
   packageId: number;
+  clientId?: string;
 }
 
 export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: UseStaffTaskInstancesProps) {
