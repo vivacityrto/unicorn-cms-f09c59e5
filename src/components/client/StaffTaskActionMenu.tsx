@@ -28,6 +28,8 @@ interface StaffTaskActionMenuProps {
   stageStatusId?: number;
   stageEmails?: StageEmail[];
   onMarkComplete?: () => void;
+  taskDescription?: string | null;
+  stageName?: string;
 }
 
 export function StaffTaskActionMenu({
@@ -40,6 +42,8 @@ export function StaffTaskActionMenu({
   stageStatusId,
   stageEmails = [],
   onMarkComplete,
+  taskDescription,
+  stageName: stageNameProp,
 }: StaffTaskActionMenuProps) {
   const { type, cleanName } = parseTaskType(taskName);
   const actions = getActionsForType(type);
