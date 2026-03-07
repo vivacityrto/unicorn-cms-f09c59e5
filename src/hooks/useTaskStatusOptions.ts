@@ -7,6 +7,7 @@ import {
   Ban,
   ShieldCheck,
   AlertCircle,
+  Eye,
   type LucideIcon,
 } from 'lucide-react';
 
