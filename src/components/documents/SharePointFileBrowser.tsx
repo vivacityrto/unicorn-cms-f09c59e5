@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/table';
 import {
   FolderOpen,
+  Folder,
   FileText,
   ArrowLeft,
   Home,
