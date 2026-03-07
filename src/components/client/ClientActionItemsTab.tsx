@@ -87,8 +87,6 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
   const [notifyClient, setNotifyClient] = useState(false);
   
-  // Status options from dd_status
-  const [statusOptions, setStatusOptions] = useState<{ value: string; description: string }[]>([]);
   
   // Team members for assignment
   const [teamMembers, setTeamMembers] = useState<Array<{
