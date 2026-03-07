@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -70,10 +70,11 @@ interface TenantBasic {
 export default function ClientDetail() {
   const { tenantId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { profile: authProfile } = useAuth();
   const [tenant, setTenant] = useState<TenantBasic | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'overview');
   const [primaryContactName, setPrimaryContactName] = useState<string>('');
   const [primaryContactEmail, setPrimaryContactEmail] = useState<string>('');
   const [assignPackageOpen, setAssignPackageOpen] = useState(false);
@@ -453,6 +454,8 @@ export default function ClientDetail() {
               loading={packagesLoading}
               onAddPackage={() => setAssignPackageOpen(true)}
               complyhubTier={tenant?.complyhub_membership_tier}
+              autoExpandPackageInstanceId={searchParams.get('packageInstance') ? parseInt(searchParams.get('packageInstance')!, 10) : undefined}
+              autoExpandStageInstanceId={searchParams.get('stageInstance') ? parseInt(searchParams.get('stageInstance')!, 10) : undefined}
             />
             <AssignPackageDialog
               open={assignPackageOpen}

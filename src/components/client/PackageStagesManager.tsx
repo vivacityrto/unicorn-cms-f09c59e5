@@ -63,6 +63,7 @@ interface PackageStagesManagerProps {
   packageId: number;
   packageName: string;
   packageInstanceId?: number;
+  autoExpandStageInstanceId?: number;
 }
 
 // STATUS_OPTIONS and STATUS_MAP removed — now driven by useTaskStatusOptions hook
@@ -222,7 +223,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
   );
 }
 
-export function PackageStagesManager({ tenantId, packageId, packageName, packageInstanceId: propInstanceId }: PackageStagesManagerProps) {
+export function PackageStagesManager({ tenantId, packageId, packageName, packageInstanceId: propInstanceId, autoExpandStageInstanceId }: PackageStagesManagerProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
   const [stages, setStages] = useState<StageInstance[]>([]);
@@ -281,6 +282,13 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
   useEffect(() => {
     fetchStages();
   }, [tenantId, packageId]);
+
+  // Auto-expand stage when navigated via deep link
+  useEffect(() => {
+    if (autoExpandStageInstanceId && stages.length > 0) {
+      setExpandedStages(prev => new Set(prev).add(autoExpandStageInstanceId));
+    }
+  }, [autoExpandStageInstanceId, stages]);
 
   const fetchStages = async () => {
     setLoading(true);

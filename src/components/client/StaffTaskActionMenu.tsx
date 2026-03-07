@@ -72,7 +72,7 @@ export function StaffTaskActionMenu({
   const [packageName, setPackageName] = useState<string>('');
   const [packageFullText, setPackageFullText] = useState<string>('');
   useEffect(() => {
-    if (type !== 'email' || !tenantId) return;
+    if (!tenantId) return;
 
     const fetchContacts = async () => {
       // CSC: from tenant_csc_assignments → users
@@ -162,7 +162,7 @@ export function StaffTaskActionMenu({
     };
 
     fetchContacts();
-  }, [tenantId, type, stageInstanceId, packageId]);
+  }, [tenantId, stageInstanceId, packageId]);
 
   // Try to auto-match a stage email by comparing the clean task name to email subjects
   const matchedEmail = type === 'email' && cleanName

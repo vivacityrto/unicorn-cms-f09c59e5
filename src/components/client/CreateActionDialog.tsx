@@ -57,7 +57,7 @@ export function CreateActionDialog({
   const composedTitle = [packageName, stageName, taskName].filter(Boolean).join(' > ');
   const strippedDesc = stripHtmlTags(taskDescription || '');
   const descSnippet = strippedDesc.length > 50 ? strippedDesc.slice(0, 50) + '…' : strippedDesc;
-  const composedDescription = `Task delegated from Package by: ${delegatorName}.${descSnippet ? ' ' + descSnippet : ''}`;
+  const composedDescription = `Task delegated by: ${delegatorName}${descSnippet ? '\n' + descSnippet : ''}`;
 
   const [title, setTitle] = useState(composedTitle);
   const [description, setDescription] = useState(composedDescription);

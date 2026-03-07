@@ -70,6 +70,8 @@ interface ClientPackagesTabProps {
   loading: boolean;
   onAddPackage?: () => void;
   complyhubTier?: string | null;
+  autoExpandPackageInstanceId?: number;
+  autoExpandStageInstanceId?: number;
 }
 
 const STATE_COLORS: Record<string, string> = {
@@ -90,7 +92,7 @@ const STATE_ICONS: Record<string, React.ReactNode> = {
   complete: <CheckCircle2 className="h-3 w-3" />
 };
 
-export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, complyhubTier }: ClientPackagesTabProps) {
+export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, complyhubTier, autoExpandPackageInstanceId, autoExpandStageInstanceId }: ClientPackagesTabProps) {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
   const [expandedPackages, setExpandedPackages] = useState<Set<number>>(new Set());
@@ -110,7 +112,17 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const historyPackages = packages.filter(p => p.is_complete);
   const displayedPackages = viewMode === 'active' ? activePackages : historyPackages;
 
-  // Fetch available packages for renewal dropdown
+  // Auto-expand package when navigated via deep link
+  useEffect(() => {
+    if (autoExpandPackageInstanceId && packages.length > 0) {
+      const targetPkg = packages.find(p => parseInt(p.id, 10) === autoExpandPackageInstanceId);
+      if (targetPkg) {
+        setExpandedPackages(prev => new Set(prev).add(targetPkg.package_id));
+        if (targetPkg.is_complete) setViewMode('history');
+      }
+    }
+  }, [autoExpandPackageInstanceId, packages]);
+
   useEffect(() => {
     const fetchPackages = async () => {
       const { data } = await supabase.from('packages').select('id, name').order('name');
@@ -567,6 +579,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                           packageId={pkg.package_id} 
                           packageName={pkg.package_name}
                           packageInstanceId={Number(pkg.id)}
+                          autoExpandStageInstanceId={parseInt(pkg.id, 10) === autoExpandPackageInstanceId ? autoExpandStageInstanceId : undefined}
                         />
                       </div>
                     </TabsContent>
