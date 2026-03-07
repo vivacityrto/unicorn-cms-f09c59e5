@@ -30886,6 +30886,7 @@ export type Database = {
           stageinstance_id: number
           status: string
           status_id: number
+          task_instance_id: number | null
           u1_assignee_id: number | null
           u1_id: number | null
           updated_at: string | null
@@ -30904,6 +30905,7 @@ export type Database = {
           stageinstance_id: number
           status?: string
           status_id?: number
+          task_instance_id?: number | null
           u1_assignee_id?: number | null
           u1_id?: number | null
           updated_at?: string | null
@@ -30922,6 +30924,7 @@ export type Database = {
           stageinstance_id?: number
           status?: string
           status_id?: number
+          task_instance_id?: number | null
           u1_assignee_id?: number | null
           u1_id?: number | null
           updated_at?: string | null
