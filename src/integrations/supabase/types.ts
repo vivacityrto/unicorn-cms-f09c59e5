@@ -24717,8 +24717,8 @@ export type Database = {
           changed_at: string
           changed_by: string | null
           id: string
-          new_state: Database["public"]["Enums"]["membership_state_enum"]
-          old_state: Database["public"]["Enums"]["membership_state_enum"] | null
+          new_state: string
+          old_state: string | null
           package_instance_id: number
           reason: string | null
         }
@@ -24726,10 +24726,8 @@ export type Database = {
           changed_at?: string
           changed_by?: string | null
           id?: string
-          new_state: Database["public"]["Enums"]["membership_state_enum"]
-          old_state?:
-            | Database["public"]["Enums"]["membership_state_enum"]
-            | null
+          new_state: string
+          old_state?: string | null
           package_instance_id: number
           reason?: string | null
         }
@@ -24737,10 +24735,8 @@ export type Database = {
           changed_at?: string
           changed_by?: string | null
           id?: string
-          new_state?: Database["public"]["Enums"]["membership_state_enum"]
-          old_state?:
-            | Database["public"]["Enums"]["membership_state_enum"]
-            | null
+          new_state?: string
+          old_state?: string | null
           package_instance_id?: number
           reason?: string | null
         }
@@ -24876,7 +24872,7 @@ export type Database = {
           is_complete: boolean
           last_document_update_email: string | null
           manager_id: string | null
-          membership_state: Database["public"]["Enums"]["membership_state_enum"]
+          membership_state: string
           next_renewal_date: string | null
           package_id: number
           release_documents_office: boolean
@@ -24902,7 +24898,7 @@ export type Database = {
           is_complete: boolean
           last_document_update_email?: string | null
           manager_id?: string | null
-          membership_state?: Database["public"]["Enums"]["membership_state_enum"]
+          membership_state?: string
           next_renewal_date?: string | null
           package_id: number
           release_documents_office?: boolean
@@ -24928,7 +24924,7 @@ export type Database = {
           is_complete?: boolean
           last_document_update_email?: string | null
           manager_id?: string | null
-          membership_state?: Database["public"]["Enums"]["membership_state_enum"]
+          membership_state?: string
           next_renewal_date?: string | null
           package_id?: number
           release_documents_office?: boolean
@@ -24938,7 +24934,15 @@ export type Database = {
           u1_packageid?: number | null
           u2tid?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_package_instances_membership_state"
+            columns: ["membership_state"]
+            isOneToOne: false
+            referencedRelation: "dd_membership_state"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       package_notes: {
         Row: {
@@ -48469,11 +48473,7 @@ export type Database = {
         Returns: undefined
       }
       transition_membership_state: {
-        Args: {
-          p_instance_id: number
-          p_new_state: Database["public"]["Enums"]["membership_state_enum"]
-          p_reason?: string
-        }
+        Args: { p_instance_id: number; p_new_state: string; p_reason?: string }
         Returns: undefined
       }
       transition_stage_state: {
@@ -48723,13 +48723,6 @@ export type Database = {
         | "closed"
         | "locked"
       meeting_type: "level_10" | "quarterly" | "annual"
-      membership_state_enum:
-        | "active"
-        | "at_risk"
-        | "paused"
-        | "exiting"
-        | "complete"
-        | "warning"
       notification_delivery_target: "dm" | "channel"
       notification_event_type:
         | "task_assigned"
@@ -49013,14 +49006,6 @@ export const Constants = {
         "locked",
       ],
       meeting_type: ["level_10", "quarterly", "annual"],
-      membership_state_enum: [
-        "active",
-        "at_risk",
-        "paused",
-        "exiting",
-        "complete",
-        "warning",
-      ],
       notification_delivery_target: ["dm", "channel"],
       notification_event_type: [
         "task_assigned",
