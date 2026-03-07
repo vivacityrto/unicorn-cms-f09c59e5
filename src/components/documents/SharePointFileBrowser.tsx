@@ -112,7 +112,7 @@ function FileBrowserContent({
 }: {
   tenantId: number;
   rootName: string | null;
-  onSelectLink?: (url: string) => void;
+  onSelectLink?: (url: string, fileName?: string) => void;
 }) {
   const {
     items,
