@@ -1,24 +1,19 @@
 
 
-## Plan: Two small UI tweaks
+## Open Linked Note Directly from Time Entries
 
-### 1. Underline inserted SharePoint link text
-In `src/components/ui/rich-text-editor.tsx` line ~100, wrap the inserted filename in a `<u>` tag:
-```
-`<a href="${url}"><u>${displayText}</u></a> `
-```
+### Problem
+Clicking the note icon on a time entry navigates to `/tenant/{id}/notes` (the full list) instead of opening the specific linked note in the editor.
 
-### 2. Simplify "Visit Site" button to icon-only with tooltip
-In `src/components/ui/sharepoint-link-dialog.tsx` lines 95-100, replace the "Visit Site" label with just the Globe icon and add `title="Visit Folder"`:
-```tsx
-<Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0" title="Visit Folder">
-  <a href={folderUrl!} target="_blank" rel="noopener noreferrer">
-    <Globe className="h-4 w-4" />
-  </a>
-</Button>
-```
+### Solution
 
-### Files
-- `src/components/ui/rich-text-editor.tsx` — underline in inserted link HTML
-- `src/components/ui/sharepoint-link-dialog.tsx` — icon-only Visit button
+**1. `src/components/client/ClientTimeTab.tsx`**
+- Change the navigate URL from `/tenant/${tenantId}/notes` to `/tenant/${tenantId}/notes?editNoteId={noteId}` using the linked note's ID from `linkedNoteMap[entry.id].id`.
+
+**2. `src/pages/TenantNotes.tsx`**
+- Add a `useEffect` that reads the `editNoteId` URL search param.
+- When present and notes are loaded, find the matching note and call `openEditDialog(note)`.
+- Clean up the URL param after opening.
+
+This ensures clicking the sticky-note icon in the time entries table opens the note editor dialog directly to that specific note.
 
