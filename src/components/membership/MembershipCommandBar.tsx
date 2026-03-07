@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMembershipStateOptions } from '@/hooks/useMembershipStateOptions';
 import { Search, Plus, FileText, MessageSquare, ListTodo, User, Filter, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
