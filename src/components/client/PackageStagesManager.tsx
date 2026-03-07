@@ -343,12 +343,16 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       // Transform the data
       const transformed: StageInstance[] = stageData.map((row: any) => {
         const meta = stageMap.get(row.stage_id);
+        const stageType = (meta as any)?.stage_type || null;
+        // Auto-default: if stage type is 'monitor' and status is 0 (Not Started), show as Monitor (6)
+        const resolvedStatus = (stageType === 'monitor' && (row.status === 0 || row.status === null || row.status === '0')) ? 6 : (row.status ?? 0);
         return {
           id: row.id,
           stage_id: row.stage_id,
           stage_name: meta?.name || `Stage ${row.stage_id}`,
           shortname: meta?.shortname || null,
-          status: row.status ?? 0,
+          stage_type: stageType,
+          status: resolvedStatus,
           status_date: row.status_date || null,
           completion_date: row.completion_date,
           comment: row.comment || null,
