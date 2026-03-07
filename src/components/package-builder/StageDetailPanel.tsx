@@ -41,6 +41,7 @@ interface StageDetailPanelProps {
 // Stage types loaded dynamically via useStageTypeOptions hook
 
 export function StageDetailPanel({ packageId, stageId, stage, allStages = [], onClose }: StageDetailPanelProps) {
+  const { stageTypes: STAGE_TYPE_OPTIONS } = useStageTypeOptions();
   const { toast } = useToast();
   const { emailTemplates, updateStage, createStage } = usePackageBuilder();
   
