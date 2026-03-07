@@ -63,6 +63,7 @@ interface PackageStagesManagerProps {
   packageId: number;
   packageName: string;
   packageInstanceId?: number;
+  autoExpandStageInstanceId?: number;
 }
 
 // STATUS_OPTIONS and STATUS_MAP removed — now driven by useTaskStatusOptions hook
