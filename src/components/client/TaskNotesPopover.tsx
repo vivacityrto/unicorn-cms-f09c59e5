@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,15 +26,17 @@ interface TaskNotesPopoverProps {
   notes: string | null;
   tenantId: number;
   packageId: number;
+  packageInstanceId?: number;
   stageInstanceId: number;
   stageName?: string;
   taskName?: string;
   onSaved: () => void;
 }
 
-export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInstanceId, stageName, taskName, onSaved }: TaskNotesPopoverProps) {
+export function TaskNotesPopover({ taskId, notes, tenantId, packageId, packageInstanceId, stageInstanceId, stageName, taskName, onSaved }: TaskNotesPopoverProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(notes || '');
   const [saving, setSaving] = useState(false);
@@ -72,8 +75,6 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInst
       setOpen(false);
 
       // Prompt to create package note if text is non-empty
-      // Must set prompt state BEFORE onSaved, as onSaved triggers parent
-      // refetch which can remount this component and lose state.
       if (text.trim()) {
         setSavedText(text.trim());
         setShowNotePrompt(true);
@@ -88,30 +89,18 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInst
     }
   };
 
-  const handleCreatePackageNote = async () => {
+  const handleCreatePackageNote = () => {
     const noteTitle = `${stageName || 'Stage'} > ${taskName || 'Task'}: ${savedText}`;
-    try {
-      const { error } = await supabase.from('notes').insert({
-        tenant_id: tenantId,
-        package_id: packageId,
-        parent_type: 'package_instance',
-        parent_id: stageInstanceId,
-        title: noteTitle,
-        note_details: '',
-        note_type: 'general',
-        created_by: profile?.user_uuid,
-      });
+    const params = new URLSearchParams({
+      initNote: 'true',
+      noteTitle,
+    });
+    if (packageId) params.set('packageId', String(packageId));
+    if (packageInstanceId) params.set('packageInstanceId', String(packageInstanceId));
 
-      if (error) throw error;
-
-      toast({ title: 'Package note created' });
-    } catch (error: any) {
-      console.error('Error creating package note:', error);
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } finally {
-      setShowNotePrompt(false);
-      onSaved();
-    }
+    setShowNotePrompt(false);
+    onSaved();
+    navigate(`/tenant/${tenantId}/notes?${params.toString()}`);
   };
 
   const handleDismissPrompt = () => {
