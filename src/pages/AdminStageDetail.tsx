@@ -88,6 +88,7 @@ export default function AdminStageDetail() {
     updateClientTask,
     deleteClientTask,
     addEmail,
+    updateEmail,
     deleteEmail,
     addDocument,
     addBulkDocuments,
