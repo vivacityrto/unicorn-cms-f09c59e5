@@ -26,6 +26,7 @@ export interface CalendarEvent {
 export interface TimeDraft {
   id: string;
   calendar_event_id: string;
+  tenant_id?: number | null;
   client_id: number | null;
   package_id: number | null;
   stage_id: number | null;

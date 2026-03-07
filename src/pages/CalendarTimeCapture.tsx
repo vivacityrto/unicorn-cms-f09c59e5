@@ -235,20 +235,25 @@ export default function CalendarTimeCapture() {
   };
 
   const fetchPackagesForClient = async (clientId: number) => {
-    // Use package_instances as source of truth
+    // Use package_instances as source of truth — store instance ID, not base package ID
     const { data: instances } = await supabase
       .from('package_instances')
-      .select('package_id')
+      .select('id, package_id')
       .eq('tenant_id', clientId)
       .eq('is_complete', false);
     
     if (instances && instances.length > 0) {
-      const packageIds = [...new Set(instances.map(i => i.package_id))];
+      const basePackageIds = [...new Set(instances.map(i => i.package_id))];
       const { data: packages } = await supabase
         .from('packages')
         .select('id, name')
-        .in('id', packageIds);
-      setPackages((packages || []).map(p => ({ id: p.id, name: p.name })));
+        .in('id', basePackageIds);
+      // Map to package_instance IDs with display names from base packages
+      const pkgMap = new Map((packages || []).map(p => [p.id, p.name]));
+      setPackages(instances.map(inst => ({
+        id: Number(inst.id),  // package_instance_id
+        name: pkgMap.get(inst.package_id) || `Package ${inst.package_id}`
+      })));
     } else {
       setPackages([]);
     }
@@ -343,15 +348,17 @@ export default function CalendarTimeCapture() {
 
   const handlePostDraft = async () => {
     if (!editingDraft) return;
-    // Save first, then post
-    await updateDraft(editingDraft.id, {
+    // Save first, then post — abort if save fails
+    const updated = await updateDraft(editingDraft.id, {
       client_id: draftForm.client_id,
+      tenant_id: draftForm.client_id, // tenant_id = client_id in this system
       package_id: draftForm.package_id,
       stage_id: draftForm.stage_id,
       minutes: draftForm.minutes,
       work_date: draftForm.work_date,
       notes: draftForm.notes
     });
+    if (!updated) return;
     const success = await postDraft(editingDraft.id);
     if (success) setDraftDialogOpen(false);
   };
