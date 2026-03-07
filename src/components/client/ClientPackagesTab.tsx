@@ -377,24 +377,22 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                             </Badge>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {['active', 'at_risk', 'warning', 'paused', 'exiting'].map((state) => (
+                            {(membershipStateOptions || []).map((stateOpt) => (
                               <DropdownMenuItem
-                                key={state}
-                                className={cn('capitalize', state === pkg.membership_state && 'font-semibold bg-accent')}
+                                key={stateOpt.value}
+                                className={cn('capitalize', stateOpt.value === pkg.membership_state && 'font-semibold bg-accent')}
                                 onClick={async () => {
-                                  if (state === pkg.membership_state) return;
+                                  if (stateOpt.value === pkg.membership_state) return;
                                   try {
                                     const { error } = await supabase.rpc('transition_membership_state', {
                                       p_instance_id: parseInt(pkg.id, 10),
-                                      p_new_state: state as any,
-                                      p_reason: `Package state changed to ${state} by SuperAdmin`,
+                                      p_new_state: stateOpt.value as any,
+                                      p_reason: `Package state changed to ${stateOpt.value} by SuperAdmin`,
                                     });
                                     if (error) throw error;
-                                    toast.success(`Package state changed to ${state}`);
-                                    // Initiate note for halt statuses
-                                    if (['warning', 'exiting'].includes(state)) {
-                                      const stateLabel = state.replace('_', ' ');
-                                      const title = `** PACKAGE STATUS "${stateLabel.toUpperCase()}" — ${pkg.package_name} — ALL ACTIVITY HALTED **`;
+                                    toast.success(`Package state changed to ${stateOpt.label}`);
+                                    if (['warning', 'exiting'].includes(stateOpt.value)) {
+                                      const title = `** PACKAGE STATUS "${stateOpt.label.toUpperCase()}" — ${pkg.package_name} — ALL ACTIVITY HALTED **`;
                                       navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
                                     } else {
                                       window.location.reload();
@@ -404,7 +402,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                                   }
                                 }}
                               >
-                                {state.replace('_', ' ')}
+                                {stateOpt.label}
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuContent>
