@@ -467,6 +467,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       onRecurringClick={(s) => setRecurringConfirm(s)}
       tenantId={tenantId}
       packageId={packageId}
+      packageInstanceId={packageInstanceId ?? undefined}
       onUpdate={fetchStages}
       profile={profile}
     />
