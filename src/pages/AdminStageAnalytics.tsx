@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { StageFrameworkBadges } from '@/components/stage/StageFrameworkSelector';
+import { useStageTypeOptions, getStageTypeLabel } from '@/hooks/useStageTypeOptions';
 
 // Stage types loaded dynamically via useStageTypeOptions hook
 
