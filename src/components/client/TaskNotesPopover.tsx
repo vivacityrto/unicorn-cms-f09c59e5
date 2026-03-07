@@ -127,27 +127,32 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInst
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium truncate">Note: {stageName || 'Stage'} &gt; {taskName || 'Task'}</label>
-              <span className={`text-[10px] ${text.length > MAX_NOTE_LENGTH ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                {text.length}/{MAX_NOTE_LENGTH}
-              </span>
+              {(() => {
+                const maxLen = text.includes('/') ? EXTENDED_NOTE_LENGTH : BASE_NOTE_LENGTH;
+                return (
+                  <span className={`text-[10px] ${text.length > maxLen ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                    {text.length}/{maxLen}
+                  </span>
+                );
+              })()}
             </div>
             <p className="text-[10px] text-muted-foreground">
-              Limited to {MAX_NOTE_LENGTH} characters — used as package note title.
+              Limited to {BASE_NOTE_LENGTH} characters — use <span className="font-mono">/</span> to extend to {EXTENDED_NOTE_LENGTH}.
             </p>
             <Textarea
               placeholder="Add notes..."
               value={text}
               onChange={(e) => {
-                if (e.target.value.length <= MAX_NOTE_LENGTH) {
+                const maxLen = e.target.value.includes('/') ? EXTENDED_NOTE_LENGTH : BASE_NOTE_LENGTH;
+                if (e.target.value.length <= maxLen) {
                   setText(e.target.value);
                 }
               }}
               rows={2}
               className="text-xs min-h-[50px]"
-              maxLength={MAX_NOTE_LENGTH}
             />
             <div className="flex justify-end">
-              <Button size="sm" onClick={handleSave} disabled={saving || text.length > MAX_NOTE_LENGTH} className="h-7 text-xs">
+              <Button size="sm" onClick={handleSave} disabled={saving} className="h-7 text-xs">
                 {saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />}
                 Save
               </Button>
