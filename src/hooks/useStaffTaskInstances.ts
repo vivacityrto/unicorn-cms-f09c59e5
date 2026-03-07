@@ -31,7 +31,7 @@ interface UseStaffTaskInstancesProps {
   clientId?: string;
 }
 
-export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: UseStaffTaskInstancesProps) {
+export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, clientId }: UseStaffTaskInstancesProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
   const { statuses } = useTaskStatusOptions();
