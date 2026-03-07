@@ -477,6 +477,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
 
 function SharedFolderSection({
   settings,
+  tenantId,
   browsingSharedFolder,
   setBrowsingSharedFolder,
   sharedFolderBrowseItems,
@@ -491,6 +492,7 @@ function SharedFolderSection({
   toast,
 }: {
   settings: SharePointSettings;
+  tenantId: number;
   browsingSharedFolder: boolean;
   setBrowsingSharedFolder: (v: boolean) => void;
   sharedFolderBrowseItems: Array<{ id: string; name: string; is_folder: boolean }>;
@@ -508,7 +510,7 @@ function SharedFolderSection({
     setSharedFolderBrowseLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('browse-sharepoint-folder', {
-        body: { action: 'list', folder_id: folderId || undefined },
+        body: { action: 'list', tenant_id: tenantId, folder_id: folderId || undefined },
       });
       if (error || data?.error) throw new Error(data?.error || error?.message);
       const folders = (data.items || []).filter((i: any) => i.is_folder);
