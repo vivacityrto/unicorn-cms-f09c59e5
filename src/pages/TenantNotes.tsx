@@ -322,8 +322,13 @@ export default function TenantNotes() {
         await createNote({
           ...noteData,
           ...(pendingTimeEntryId ? { timeentry_id: pendingTimeEntryId } : {}),
+          ...(pendingPackageInstanceId ? {
+            parent_type_override: 'package_instance' as const,
+            parent_id_override: pendingPackageInstanceId,
+          } : {}),
         });
         setPendingTimeEntryId(null);
+        setPendingPackageInstanceId(null);
       }
       resetForm();
     } catch (error: any) {
