@@ -610,7 +610,10 @@ export default function TenantDetail() {
                     currentStatus={tenantStatus}
                     onStatusChange={setTenantStatus}
                     onNonActiveChange={(statusDescription) => {
-                      const title = `** CLIENT ${statusDescription.toUpperCase()} **`;
+                      const isHaltStatus = ['Warning', 'In Arears', 'Terminated', 'Cancelled'].includes(statusDescription);
+                      const title = isHaltStatus
+                        ? `** TENANT STATUS "${statusDescription.toUpperCase()}" — ALL CLIENT ACTIVITY HALTED **`
+                        : `** CLIENT ${statusDescription.toUpperCase()} **`;
                       navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
                     }}
                   />
