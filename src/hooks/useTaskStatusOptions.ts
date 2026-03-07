@@ -26,6 +26,7 @@ const ICON_MAP: Record<number, LucideIcon> = {
   3: Ban,
   4: ShieldCheck,
   5: AlertCircle,
+  6: Eye,
 };
 
 const COLOR_MAP: Record<number, string> = {
@@ -35,6 +36,7 @@ const COLOR_MAP: Record<number, string> = {
   3: 'text-muted-foreground',
   4: 'text-emerald-500',
   5: 'text-red-600',
+  6: 'text-amber-600',
 };
 
 const DEFAULT_ICON = Circle;
