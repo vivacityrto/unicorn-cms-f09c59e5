@@ -579,6 +579,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                           packageId={pkg.package_id} 
                           packageName={pkg.package_name}
                           packageInstanceId={Number(pkg.id)}
+                          autoExpandStageInstanceId={parseInt(pkg.id, 10) === autoExpandPackageInstanceId ? autoExpandStageInstanceId : undefined}
                         />
                       </div>
                     </TabsContent>

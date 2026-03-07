@@ -223,7 +223,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
   );
 }
 
-export function PackageStagesManager({ tenantId, packageId, packageName, packageInstanceId: propInstanceId }: PackageStagesManagerProps) {
+export function PackageStagesManager({ tenantId, packageId, packageName, packageInstanceId: propInstanceId, autoExpandStageInstanceId }: PackageStagesManagerProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
   const [stages, setStages] = useState<StageInstance[]>([]);
