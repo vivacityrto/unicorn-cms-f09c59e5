@@ -1426,6 +1426,9 @@ export default function AdminStageDetail() {
                                 )}
                               </div>
                             </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => openEditTeamTask(task))}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => handleDeleteStaffTask(task.id))}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
