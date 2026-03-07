@@ -333,10 +333,12 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
             <ScrollArea className="h-[500px]">
               <div className="space-y-2">
                 {filteredItems.map(item => {
-                  const statusConfig = STATUS_CONFIG[item.status];
-                  const priorityConfig = PRIORITY_CONFIG[item.priority];
-                  const StatusIcon = statusConfig.icon;
-                  const isOverdue = item.due_date && isPast(new Date(item.due_date)) && 
+                   const statusLabel = actionStatusOptions.find(s => s.value === item.status)?.label || item.status;
+                   const statusColor = STATUS_COLOR_MAP[item.status] || 'bg-slate-100 text-slate-700';
+                   const StatusIcon = STATUS_ICON_MAP[item.status] || Circle;
+                   const priorityLabel = priorityOptions.find(p => p.value === item.priority)?.label || item.priority;
+                   const priorityColor = PRIORITY_COLOR_MAP[item.priority] || 'bg-slate-100 text-slate-600';
+                   const isOverdue = item.due_date && isPast(new Date(item.due_date)) && 
                                    !isToday(new Date(item.due_date)) && 
                                    item.status !== 'done' && item.status !== 'cancelled';
                   
