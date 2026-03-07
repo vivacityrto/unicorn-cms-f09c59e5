@@ -120,7 +120,7 @@ export function StageDocumentsPanel({
 
   // Fetch stage usage counts for linked documents
   const fetchDocumentStageCounts = useCallback(async () => {
-    const docIds = documents.map(d => d.document_id);
+    const docIds = documents.map(d => d.document_id || (d as any).id);
     if (docIds.length === 0) return;
     
     try {
