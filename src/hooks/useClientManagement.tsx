@@ -632,12 +632,12 @@ export function useClientPackages(tenantId: number | null) {
       stageInstances.forEach((s: any) => stageIdSet.add(Number(s.stage_id)));
       const stageIds = Array.from(stageIdSet);
       const stageNamesResult = stageIds.length > 0
-        ? await (supabase.from('stages').select('id, name') as any).in('id', stageIds)
+        ? await (supabase.from('stages').select('id, name, stage_type') as any).in('id', stageIds)
         : { data: [] };
-      const stageNamesMap = ((stageNamesResult as any).data || []).reduce((acc: Record<number, string>, s: any) => {
-        acc[s.id] = s.name;
+      const stageMetaMap = ((stageNamesResult as any).data || []).reduce((acc: Record<number, { name: string; stage_type: string | null }>, s: any) => {
+        acc[s.id] = { name: s.name, stage_type: s.stage_type };
         return acc;
-      }, {} as Record<number, string>);
+      }, {} as Record<number, { name: string; stage_type: string | null }>);
 
       // Build package data with stage info
       const packageData: ClientPackage[] = (instances || []).map(inst => {
@@ -646,6 +646,17 @@ export function useClientPackages(tenantId: number | null) {
         const totalStages = pkgStages.length;
         const completedStages = pkgStages.filter((s: any) => s.status === 'completed' || s.status === '3').length;
         const hasBlocked = pkgStages.some((s: any) => s.status === 'blocked');
+
+        // Trackable stages exclude offboarding/monitor/finalise
+        const trackableStages = pkgStages.filter((s: any) => {
+          const sType = stageMetaMap[s.stage_id]?.stage_type?.toLowerCase();
+          return !NON_TRACKABLE_STAGE_TYPES.includes(sType || '');
+        });
+        const trackableCompleted = trackableStages.filter((s: any) => s.status === 'completed' || s.status === '3').length;
+        const monitorStages = pkgStages.filter((s: any) => {
+          const sType = stageMetaMap[s.stage_id]?.stage_type?.toLowerCase();
+          return sType === 'monitor';
+        }).length;
         const activeStage = pkgStages.find((s: any) => 
           s.status !== 'completed' && s.status !== '3' && s.status !== 'na' && s.status !== 'not_started'
         ) || pkgStages.find((s: any) => s.status === 'not_started');
