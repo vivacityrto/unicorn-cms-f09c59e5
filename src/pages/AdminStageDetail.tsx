@@ -8,6 +8,7 @@ import { useStageDuplication } from '@/hooks/useStageDuplication';
 import { useStageReplacement } from '@/hooks/useStageReplacement';
 import { useStageAuditLog, formatActionName, generateAuditSummary } from '@/hooks/useStageAuditLog';
 import { useStageExportImport } from '@/hooks/useStageExportImport';
+import { useStageTypeOptions, getStageTypeColor as getStageTypeColorHelper, getStageTypeLabel } from '@/hooks/useStageTypeOptions';
 import { useStageQualityCheck, computeStageQuality } from '@/hooks/useStageQualityCheck';
 import { usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
 import { useStageTemplateContent, usePackageStageOverrides } from '@/hooks/useStageTemplateContent';
