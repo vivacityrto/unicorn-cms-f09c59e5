@@ -120,7 +120,7 @@ export function StageDocumentsPanel({
 
   // Fetch stage usage counts for linked documents
   const fetchDocumentStageCounts = useCallback(async () => {
-    const docIds = documents.map(d => d.document_id);
+    const docIds = documents.map(d => d.document_id || (d as any).id);
     if (docIds.length === 0) return;
     
     try {
@@ -150,7 +150,7 @@ export function StageDocumentsPanel({
     setLoadingLibrary(true);
     try {
       // Get already linked document IDs
-      const linkedIds = new Set(documents.map(d => d.document_id));
+      const linkedIds = new Set(documents.map(d => d.document_id || (d as any).id));
       
       const { data, error } = await supabase
         .from('documents')
@@ -285,22 +285,37 @@ export function StageDocumentsPanel({
     }
   };
   
+  // Helper to get the actual document data regardless of shape (flat or nested)
+  const getDocumentData = (doc: StageDocumentItem) => {
+    if (doc.document) return doc.document;
+    // Flat shape from useStageTemplateContent - the doc itself IS the document
+    const flat = doc as any;
+    if (flat.title) return { id: flat.id, title: flat.title, format: flat.format, category: flat.category, description: flat.description, document_status: flat.document_status, ai_status: flat.ai_status, ai_confidence_score: flat.ai_confidence_score, ai_category_confidence: flat.ai_category_confidence, ai_description_confidence: flat.ai_description_confidence, ai_reasoning: flat.ai_reasoning } as Document;
+    return null;
+  };
+  
+  const getDocumentId = (doc: StageDocumentItem) => {
+    return doc.document_id || (doc as any).id;
+  };
+  
   // Handle document edit with reuse warning
   const handleDocumentClick = (doc: StageDocumentItem) => {
-    const stageData = documentStageCounts.get(doc.document_id);
+    const docId = getDocumentId(doc);
+    const docData = getDocumentData(doc);
+    const stageData = documentStageCounts.get(docId);
     const stageCount = stageData?.count || 0;
     
     if (stageCount > 1) {
       setSelectedDocForEdit({
-        id: doc.document_id,
-        title: doc.document?.title || 'Document',
+        id: docId,
+        title: docData?.title || 'Document',
         stageCount,
         stageNames: stageData?.names || []
       });
       setReuseWarningOpen(true);
     } else {
       // Navigate directly to document detail
-      window.open(`/admin/documents/${doc.document_id}`, '_blank');
+      window.open(`/admin/documents/${docId}`, '_blank');
     }
   };
   
@@ -344,7 +359,7 @@ export function StageDocumentsPanel({
       if (insertError) throw insertError;
       
       // Update stage_documents to point to new document
-      const currentStageDoc = documents.find(d => d.document_id === selectedDocForEdit.id);
+      const currentStageDoc = documents.find(d => getDocumentId(d) === selectedDocForEdit.id);
       if (currentStageDoc) {
         await supabase
           .from('stage_documents')
@@ -439,12 +454,15 @@ export function StageDocumentsPanel({
                 {documents
                   .filter(doc => {
                     if (aiStatusFilter === 'all') return true;
-                    const docAiStatus = doc.document?.ai_status || 'pending';
+                    const docData = getDocumentData(doc);
+                    const docAiStatus = docData?.ai_status || 'pending';
                     return docAiStatus === aiStatusFilter;
                   })
                   .map((doc) => {
-                  const fileType = getFileTypeBadge(doc.document?.format || null);
-                  const stageData = documentStageCounts.get(doc.document_id);
+                  const docData = getDocumentData(doc);
+                  const docId = getDocumentId(doc);
+                  const fileType = getFileTypeBadge(docData?.format || null);
+                  const stageData = documentStageCounts.get(docId);
                   const stageCount = stageData?.count || 0;
                   const isMultiStage = stageCount > 1;
                   
@@ -452,13 +470,13 @@ export function StageDocumentsPanel({
                     <div 
                       key={doc.id} 
                       className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30 group cursor-pointer hover:bg-muted/50"
-                      onClick={() => doc.document && handleDocumentClick(doc)}
+                      onClick={() => docData && handleDocumentClick(doc)}
                     >
                       <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab opacity-50 group-hover:opacity-100" />
                       <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium block truncate">{doc.document?.title || 'Unknown Document'}</span>
+                          <span className="font-medium block truncate">{docData?.title || 'Unknown Document'}</span>
                           {isMultiStage && (
                             <Badge 
                               variant="outline" 
@@ -473,39 +491,39 @@ export function StageDocumentsPanel({
                           <Badge variant="outline" className={`text-xs ${fileType.className}`}>
                             {fileType.label}
                           </Badge>
-                          {doc.document?.category && (
+                          {docData?.category && (
                             <Badge variant="secondary" className="text-xs">
-                              {doc.document.category}
+                              {docData.category}
                             </Badge>
                           )}
-                          {doc.document && (
+                          {docData && (
                             <DocumentVersionBadge 
-                              status={(doc.document.document_status || 'draft') as 'draft' | 'published' | 'archived'} 
+                              status={(docData.document_status || 'draft') as 'draft' | 'published' | 'archived'} 
                               showVersion={false}
                               size="sm"
                             />
                           )}
-                          {doc.document && (
+                          {docData && (
                             <DocumentReadinessBadge
-                              documentId={doc.document.id}
+                              documentId={docData.id}
                               tenantId={tenantId}
-                              isExcel={doc.document.format?.toLowerCase().includes('excel') || doc.document.format?.toLowerCase().includes('xls')}
+                              isExcel={docData.format?.toLowerCase().includes('excel') || docData.format?.toLowerCase().includes('xls')}
                               compact
                             />
                           )}
-                          {doc.document && (doc.document.format?.toLowerCase().includes('excel') || doc.document.format?.toLowerCase().includes('xls')) && (
+                          {docData && (docData.format?.toLowerCase().includes('excel') || docData.format?.toLowerCase().includes('xls')) && (
                             <ExcelBindingStatusBadge
-                              documentId={doc.document.id}
+                              documentId={docData.id}
                               compact
                             />
                           )}
-                          {doc.document?.ai_status && (
+                          {docData?.ai_status && (
                             <AIConfidenceBadge
-                              aiStatus={doc.document.ai_status}
-                              overallConfidence={doc.document.ai_confidence_score}
-                              categoryConfidence={doc.document.ai_category_confidence}
-                              descriptionConfidence={doc.document.ai_description_confidence}
-                              reasoning={doc.document.ai_reasoning}
+                              aiStatus={docData.ai_status}
+                              overallConfidence={docData.ai_confidence_score}
+                              categoryConfidence={docData.ai_category_confidence}
+                              descriptionConfidence={docData.ai_description_confidence}
+                              reasoning={docData.ai_reasoning}
                               compact
                             />
                           )}
@@ -539,7 +557,7 @@ export function StageDocumentsPanel({
                           variant="ghost" 
                           size="icon" 
                           className="h-7 w-7 opacity-50 group-hover:opacity-100" 
-                          onClick={() => doc.document && handleDocumentClick(doc)}
+                          onClick={() => docData && handleDocumentClick(doc)}
                           title="Edit document"
                         >
                           <Pencil className="h-3 w-3" />

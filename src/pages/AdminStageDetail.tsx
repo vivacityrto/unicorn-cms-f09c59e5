@@ -46,6 +46,7 @@ import { StageDependencySelector } from '@/components/stage/StageDependencySelec
 import { StageFrameworkSelector, StageFrameworkBadges, updateStageFrameworks, isFrameworksNarrowed } from '@/components/stage/StageFrameworkSelector';
 import { StageStandardsSelector } from '@/components/stage/StageStandardsSelector';
 import { StageSimulationDialog } from '@/components/stage/StageSimulationDialog';
+import { EditStageEmailDialog } from '@/components/stage/EditStageEmailDialog';
 import { StageImpactPanel } from '@/components/package-builder/StageImpactPanel';
 import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
@@ -215,13 +216,7 @@ export default function AdminStageDetail() {
     due_date_offset: '',
     is_mandatory: true
   });
-  const [editEmailForm, setEditEmailForm] = useState({
-    name: '',
-    subject: '',
-    description: '',
-    content: '',
-    automation_enabled: false
-  });
+  // editEmailForm removed - now using EditStageEmailDialog component
 
   // Certified edit confirmation state
   const [certifiedEditDialogOpen, setCertifiedEditDialogOpen] = useState(false);
@@ -864,31 +859,13 @@ export default function AdminStageDetail() {
   };
 
   const openEditEmail = (email: StageEmail) => {
-    setEditEmailForm({
-      name: email.name || '',
-      subject: email.subject || '',
-      description: email.description || '',
-      content: email.content || '',
-      automation_enabled: email.automation_enabled
-    });
     setEditingEmail(email);
   };
 
-  const handleSaveEmail = async () => {
-    if (!editingEmail || !editEmailForm.name.trim()) return;
-    try {
-      await updateEmail(editingEmail.id, {
-        name: editEmailForm.name,
-        subject: editEmailForm.subject,
-        description: editEmailForm.description || null,
-        content: editEmailForm.content || null,
-        automation_enabled: editEmailForm.automation_enabled
-      });
-      toast({ title: 'Email Updated' });
-      setEditingEmail(null);
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to update email', variant: 'destructive' });
-    }
+  const handleSaveEmail = async (emailId: number, data: Partial<Omit<StageEmail, 'id'>>) => {
+    await updateEmail(emailId, data);
+    toast({ title: 'Email Updated' });
+    setEditingEmail(null);
   };
 
   // Document handlers - now using stage template content
@@ -2043,57 +2020,14 @@ export default function AdminStageDetail() {
       </Dialog>
 
       {/* Edit Email Dialog */}
-      <Dialog open={!!editingEmail} onOpenChange={(open) => !open && setEditingEmail(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Email</DialogTitle>
-            <DialogDescription>Update email template details.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Name *</Label>
-                <Input
-                  value={editEmailForm.name}
-                  onChange={(e) => setEditEmailForm({ ...editEmailForm, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Subject</Label>
-                <Input
-                  value={editEmailForm.subject}
-                  onChange={(e) => setEditEmailForm({ ...editEmailForm, subject: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Description (internal notes)</Label>
-              <Textarea
-                value={editEmailForm.description}
-                onChange={(e) => setEditEmailForm({ ...editEmailForm, description: e.target.value })}
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Content (HTML body)</Label>
-              <Textarea
-                value={editEmailForm.content}
-                onChange={(e) => setEditEmailForm({ ...editEmailForm, content: e.target.value })}
-                rows={8}
-                className="font-mono text-xs"
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch checked={editEmailForm.automation_enabled} onCheckedChange={(c) => setEditEmailForm({ ...editEmailForm, automation_enabled: c })} />
-              <Label>Automation enabled</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingEmail(null)}>Cancel</Button>
-            <Button onClick={handleSaveEmail}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {editingEmail && (
+        <EditStageEmailDialog
+          open={!!editingEmail}
+          onOpenChange={(open) => !open && setEditingEmail(null)}
+          email={editingEmail}
+          onSave={handleSaveEmail}
+        />
+      )}
 
       {/* Edit Confirmation Dialog with typed phrase */}
       <AlertDialog open={editConfirmationOpen} onOpenChange={(open) => {
