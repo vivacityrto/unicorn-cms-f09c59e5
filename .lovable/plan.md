@@ -1,19 +1,41 @@
 
 
-## Open Linked Note Directly from Time Entries
+## Plan: Simplify Root Folder section layout
 
-### Problem
-Clicking the note icon on a time entry navigates to `/tenant/{id}/notes` (the full list) instead of opening the specific linked note in the editor.
+The current "Root Folder" status panel (lines 392-431) duplicates information already available via the "Root folder link" label. Per the annotated screenshot, we will remove the redundant panel and relocate its two useful data points.
 
-### Solution
+### Changes to `src/components/client/SharePointFolderConfig.tsx`
 
-**1. `src/components/client/ClientTimeTab.tsx`**
-- Change the navigate URL from `/tenant/${tenantId}/notes` to `/tenant/${tenantId}/notes?editNoteId={noteId}` using the linked note's ID from `linkedNoteMap[entry.id].id`.
+**Remove entirely:**
+- The "Root Folder" bordered panel containing: folder name, "Open in SharePoint" button, Drive ID, and Last validated
 
-**2. `src/pages/TenantNotes.tsx`**
-- Add a `useEffect` that reads the `editNoteId` URL search param.
-- When present and notes are loaded, find the matching note and call `openEditDialog(note)`.
-- Clean up the URL param after opening.
+**Relocate:**
+- **Drive ID** — show as small muted text *below* the URL input field (below the "Copy link" hint)
+- **Last validated** — show as small muted text *above* the "Root folder link" label
 
-This ensures clicking the sticky-note icon in the time entries table opens the note editor dialog directly to that specific note.
+**Grid change:**
+- With the Root Folder panel removed, the Shared Folder section no longer needs a 50/50 grid — it becomes full-width when valid
+
+### Resulting layout (top to bottom)
+```text
+┌─ CardHeader ──────────────────────────────────────────────┐
+│ SharePoint Folder  [Valid]          Enabled [toggle]      │
+│ Connect a SharePoint folder as the document root...       │
+├─ CardContent ─────────────────────────────────────────────┤
+│ Last validated: 06/03/2026 22:15                          │
+│ ROOT FOLDER LINK (with visit icon)                        │
+│ [ url input          ] [Save Link] [Validate & Save]     │
+│ ℹ Use "Copy link" from SharePoint...                      │
+│ Drive ID: b!XtHlgnqHCckGB5J3E16...                       │
+│                                                           │
+│ ┌─ Shared Folder Configuration (full width) ───────────┐ │
+│ │ ...                                                   │ │
+│ └───────────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────┘
+```
+
+### Files
+| File | Change |
+|------|--------|
+| `src/components/client/SharePointFolderConfig.tsx` | Remove Root Folder panel; move Drive ID below input, Last validated above label; remove grid wrapper around Shared Folder |
 
