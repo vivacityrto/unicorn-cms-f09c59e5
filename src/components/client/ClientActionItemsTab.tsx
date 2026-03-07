@@ -20,8 +20,9 @@ import {
   Plus, CheckSquare, MoreHorizontal, Edit, Trash2, 
   Calendar as CalendarIcon, User, Clock, Filter, Loader2,
   CheckCircle2, Circle, AlertCircle, XCircle, PauseCircle,
-  Mic, MicOff, Mail
+  Mic, MicOff, Mail, ExternalLink
 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast, isToday } from 'date-fns';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
