@@ -80,7 +80,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('normal');
+  const [priority, setPriority] = useState('medium');
   const [actionStatus, setActionStatus] = useState('open');
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [ownerUserId, setOwnerUserId] = useState<string | undefined>();
