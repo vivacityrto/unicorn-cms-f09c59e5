@@ -808,6 +808,89 @@ export default function AdminStageDetail() {
     }
   };
 
+  // Edit handlers
+  const openEditTeamTask = (task: StageTeamTask) => {
+    setEditTaskForm({
+      name: task.name,
+      description: task.description || '',
+      is_core: task.is_core,
+      due_date_offset: task.due_date_offset?.toString() || ''
+    });
+    setEditingTeamTask(task);
+  };
+
+  const handleSaveTeamTask = async () => {
+    if (!editingTeamTask || !editTaskForm.name.trim()) return;
+    try {
+      await updateTeamTask(editingTeamTask.id, {
+        name: editTaskForm.name,
+        description: editTaskForm.description || null,
+        is_core: editTaskForm.is_core,
+        due_date_offset: editTaskForm.due_date_offset ? parseInt(editTaskForm.due_date_offset) : null
+      });
+      toast({ title: 'Task Updated' });
+      setEditingTeamTask(null);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update task', variant: 'destructive' });
+    }
+  };
+
+  const openEditClientTask = (task: StageClientTask) => {
+    setEditClientTaskForm({
+      name: task.name,
+      description: task.description || '',
+      instructions: task.instructions || '',
+      due_date_offset: task.due_date_offset?.toString() || '',
+      is_mandatory: task.is_mandatory
+    });
+    setEditingClientTask(task);
+  };
+
+  const handleSaveClientTask = async () => {
+    if (!editingClientTask || !editClientTaskForm.name.trim()) return;
+    try {
+      await updateClientTask(editingClientTask.id, {
+        name: editClientTaskForm.name,
+        description: editClientTaskForm.description || null,
+        instructions: editClientTaskForm.instructions || null,
+        due_date_offset: editClientTaskForm.due_date_offset ? parseInt(editClientTaskForm.due_date_offset) : null,
+        is_mandatory: editClientTaskForm.is_mandatory
+      });
+      toast({ title: 'Client Task Updated' });
+      setEditingClientTask(null);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update client task', variant: 'destructive' });
+    }
+  };
+
+  const openEditEmail = (email: StageEmail) => {
+    setEditEmailForm({
+      name: email.name || '',
+      subject: email.subject || '',
+      description: email.description || '',
+      content: email.content || '',
+      automation_enabled: email.automation_enabled
+    });
+    setEditingEmail(email);
+  };
+
+  const handleSaveEmail = async () => {
+    if (!editingEmail || !editEmailForm.name.trim()) return;
+    try {
+      await updateEmail(editingEmail.id, {
+        name: editEmailForm.name,
+        subject: editEmailForm.subject,
+        description: editEmailForm.description || null,
+        content: editEmailForm.content || null,
+        automation_enabled: editEmailForm.automation_enabled
+      });
+      toast({ title: 'Email Updated' });
+      setEditingEmail(null);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update email', variant: 'destructive' });
+    }
+  };
+
   // Document handlers - now using stage template content
   const handleAddDocument = async (documentId: number) => {
     if (!stageIdNum) return;
