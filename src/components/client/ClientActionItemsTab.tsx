@@ -368,12 +368,12 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                             <span className={`font-medium ${item.status === 'done' ? 'line-through' : ''}`}>
                               {item.title}
                             </span>
-                            <Badge variant="outline" className={`text-xs ${statusConfig.color}`}>
-                              {statusConfig.label}
-                            </Badge>
-                            <Badge variant="outline" className={`text-xs ${priorityConfig.color}`}>
-                              {priorityConfig.label}
-                            </Badge>
+                             <Badge variant="outline" className={`text-xs ${statusColor}`}>
+                               {statusLabel}
+                             </Badge>
+                             <Badge variant="outline" className={`text-xs ${priorityColor}`}>
+                               {priorityLabel}
+                             </Badge>
                           </div>
                           
                           {item.description && (
