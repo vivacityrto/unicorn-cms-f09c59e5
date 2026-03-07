@@ -254,7 +254,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
               <TableBody>
                 {filteredNotes.map((note) => {
                   const TypeIcon = getTypeIcon(note.note_type);
-                  const priorityOption = PRIORITY_OPTIONS.find(p => p.value === note.priority);
+                  const priorityOption = priorityOptions.find(p => p.value === note.priority);
 
                   return (
                     <TableRow key={note.id} className={cn(note.is_pinned && "bg-primary/5")}>
