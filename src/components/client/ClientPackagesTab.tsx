@@ -112,7 +112,17 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const historyPackages = packages.filter(p => p.is_complete);
   const displayedPackages = viewMode === 'active' ? activePackages : historyPackages;
 
-  // Fetch available packages for renewal dropdown
+  // Auto-expand package when navigated via deep link
+  useEffect(() => {
+    if (autoExpandPackageInstanceId && packages.length > 0) {
+      const targetPkg = packages.find(p => parseInt(p.id, 10) === autoExpandPackageInstanceId);
+      if (targetPkg) {
+        setExpandedPackages(prev => new Set(prev).add(targetPkg.package_id));
+        if (targetPkg.is_complete) setViewMode('history');
+      }
+    }
+  }, [autoExpandPackageInstanceId, packages]);
+
   useEffect(() => {
     const fetchPackages = async () => {
       const { data } = await supabase.from('packages').select('id, name').order('name');
