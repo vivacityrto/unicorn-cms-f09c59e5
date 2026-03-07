@@ -859,31 +859,13 @@ export default function AdminStageDetail() {
   };
 
   const openEditEmail = (email: StageEmail) => {
-    setEditEmailForm({
-      name: email.name || '',
-      subject: email.subject || '',
-      description: email.description || '',
-      content: email.content || '',
-      automation_enabled: email.automation_enabled
-    });
     setEditingEmail(email);
   };
 
-  const handleSaveEmail = async () => {
-    if (!editingEmail || !editEmailForm.name.trim()) return;
-    try {
-      await updateEmail(editingEmail.id, {
-        name: editEmailForm.name,
-        subject: editEmailForm.subject,
-        description: editEmailForm.description || null,
-        content: editEmailForm.content || null,
-        automation_enabled: editEmailForm.automation_enabled
-      });
-      toast({ title: 'Email Updated' });
-      setEditingEmail(null);
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to update email', variant: 'destructive' });
-    }
+  const handleSaveEmail = async (emailId: number, data: Partial<Omit<StageEmail, 'id'>>) => {
+    await updateEmail(emailId, data);
+    toast({ title: 'Email Updated' });
+    setEditingEmail(null);
   };
 
   // Document handlers - now using stage template content
