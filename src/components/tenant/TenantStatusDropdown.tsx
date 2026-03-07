@@ -97,8 +97,7 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
           .from('package_instances')
           .update({ is_complete: true, is_active: false })
           .eq('tenant_id', tenantId)
-          .eq('is_complete', false)
-          .eq('is_active', true);
+          .eq('is_complete', false);
         if (pkgError) throw pkgError;
       }
 
