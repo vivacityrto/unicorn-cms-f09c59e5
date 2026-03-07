@@ -283,6 +283,13 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
     fetchStages();
   }, [tenantId, packageId]);
 
+  // Auto-expand stage when navigated via deep link
+  useEffect(() => {
+    if (autoExpandStageInstanceId && stages.length > 0) {
+      setExpandedStages(prev => new Set(prev).add(autoExpandStageInstanceId));
+    }
+  }, [autoExpandStageInstanceId, stages]);
+
   const fetchStages = async () => {
     setLoading(true);
     try {
