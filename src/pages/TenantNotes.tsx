@@ -42,6 +42,7 @@ export default function TenantNotes() {
   
   const parsedTenantId = tenantId ? parseInt(tenantId) : 0;
   const urlPackageId = searchParams.get('packageId');
+  const urlPackageInstanceId = searchParams.get('packageInstanceId');
   const parsedPackageId = urlPackageId ? parseInt(urlPackageId) : undefined;
   
   // Use the unified notes hook
