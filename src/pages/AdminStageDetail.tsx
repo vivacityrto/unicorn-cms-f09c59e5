@@ -825,7 +825,7 @@ export default function AdminStageDetail() {
   };
 
   const getStageTypeColor = (stageType: string) => {
-    return STAGE_TYPE_OPTIONS.find(opt => opt.value === stageType)?.color || 'bg-muted text-muted-foreground border-border';
+    return getStageTypeColorHelper(stageType, STAGE_TYPE_OPTIONS) + ' border-border';
   };
 
   // Access denied for non-SuperAdmins
