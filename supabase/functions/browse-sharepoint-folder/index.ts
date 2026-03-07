@@ -128,10 +128,10 @@ serve(async (req) => {
       );
     }
 
-    // Get tenant_id — allow override if user is a SuperAdmin
+    // Get tenant_id and role from user
     const { data: userData } = await supabaseAdmin
       .from("users")
-      .select("tenant_id")
+      .select("tenant_id, unicorn_role, global_role")
       .eq("user_uuid", user.id)
       .single();
 
@@ -147,14 +147,9 @@ serve(async (req) => {
     // If a different tenant_id was requested, allow only for SuperAdmins
     const requestedTenantId = body.tenant_id as number | undefined;
     if (requestedTenantId && requestedTenantId !== tenantId) {
-      const { data: roleData } = await supabaseAdmin
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "super_admin")
-        .maybeSingle();
+      const isSuperAdmin = userData.global_role === "SuperAdmin" || userData.unicorn_role === "Super Admin";
 
-      if (roleData) {
+      if (isSuperAdmin) {
         tenantId = requestedTenantId;
         console.log(`[browse-sp] SuperAdmin override: browsing tenant ${tenantId}`);
       } else {
