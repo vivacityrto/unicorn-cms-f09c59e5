@@ -12537,6 +12537,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_stage_types: {
+        Row: {
+          color: string
+          is_active: boolean
+          is_milestone: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          color?: string
+          is_active?: boolean
+          is_milestone?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          color?: string
+          is_active?: boolean
+          is_milestone?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_status: {
         Row: {
           code: number
