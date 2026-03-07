@@ -97,7 +97,7 @@ export function RichTextEditor({ value, onChange, className, placeholder, minHei
         editor
           .chain()
           .focus()
-          .insertContent(`<a href="${url}">${displayText}</a> `)
+          .insertContent(`<a href="${url}"><u>${displayText}</u></a> `)
           .run();
       }
     }

@@ -92,10 +92,9 @@ export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLin
                 Insert Root Folder Link
               </Button>
               <span className="text-xs text-muted-foreground truncate flex-1">{folderUrl}</span>
-              <Button variant="ghost" size="sm" asChild className="gap-1.5 shrink-0">
+              <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0" title="Visit Folder">
                 <a href={folderUrl!} target="_blank" rel="noopener noreferrer">
-                  <Globe className="h-3.5 w-3.5" />
-                  Visit Site
+                  <Globe className="h-4 w-4" />
                 </a>
               </Button>
             </div>
