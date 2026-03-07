@@ -119,12 +119,14 @@ export function useTenantTimeTracker(tenantId: number) {
       ? packages.find(p => p.id === overridePackageInstanceId) || null
       : selectedPackage;
 
-    const packageId = targetPkg?.package_id || null;
+    // Pass the package_instance ID (not the base package ID) so rpc_stop_timer
+    // can correctly insert into time_entries with a valid package_instances reference.
+    const instanceId = targetPkg?.id || null;
 
     const { data, error } = await supabase.rpc('rpc_start_timer', {
       p_tenant_id: tenantId,
       p_client_id: tenantId,
-      p_package_id: packageId,
+      p_package_id: instanceId,
       p_stage_id: null,
       p_task_id: null,
       p_work_type: workType,
