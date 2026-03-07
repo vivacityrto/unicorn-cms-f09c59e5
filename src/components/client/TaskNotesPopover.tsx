@@ -17,7 +17,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const MAX_NOTE_LENGTH = 45;
+const BASE_NOTE_LENGTH = 45;
+const EXTENDED_NOTE_LENGTH = 65;
 
 interface TaskNotesPopoverProps {
   taskId: number;
