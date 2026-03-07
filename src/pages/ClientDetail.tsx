@@ -75,6 +75,14 @@ export default function ClientDetail() {
   const [tenant, setTenant] = useState<TenantBasic | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'overview');
+
+  // Sync activeTab when URL search params change (e.g. from View Task navigation)
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
   const [primaryContactName, setPrimaryContactName] = useState<string>('');
   const [primaryContactEmail, setPrimaryContactEmail] = useState<string>('');
   const [assignPackageOpen, setAssignPackageOpen] = useState(false);
