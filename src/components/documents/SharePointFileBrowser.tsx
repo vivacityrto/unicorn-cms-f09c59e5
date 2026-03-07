@@ -53,7 +53,8 @@ export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFile
     enabled: boolean;
     valid: boolean;
     rootName: string | null;
-  }>({ loaded: false, enabled: false, valid: false, rootName: null });
+    sharedFolderName: string | null;
+  }>({ loaded: false, enabled: false, valid: false, rootName: null, sharedFolderName: null });
 
   // Check if SharePoint is configured for this tenant
   useEffect(() => {
