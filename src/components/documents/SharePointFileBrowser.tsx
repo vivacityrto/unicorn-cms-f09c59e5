@@ -105,7 +105,7 @@ export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFile
     );
   }
 
-  return <FileBrowserContent tenantId={tenantId} rootName={settingsStatus.rootName} onSelectLink={onSelectLink} />;
+  return <FileBrowserContent tenantId={tenantId} rootName={settingsStatus.rootName} sharedFolderName={settingsStatus.sharedFolderName} onSelectLink={onSelectLink} />;
 }
 
 function FileBrowserContent({
