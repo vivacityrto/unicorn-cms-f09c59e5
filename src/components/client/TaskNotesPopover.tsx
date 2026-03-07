@@ -6,6 +6,18 @@ import { Pencil, Save, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+const MAX_NOTE_LENGTH = 45;
 
 interface TaskNotesPopoverProps {
   taskId: number;
@@ -13,15 +25,19 @@ interface TaskNotesPopoverProps {
   tenantId: number;
   packageId: number;
   stageInstanceId: number;
+  stageName?: string;
+  taskName?: string;
   onSaved: () => void;
 }
 
-export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInstanceId, onSaved }: TaskNotesPopoverProps) {
+export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInstanceId, stageName, taskName, onSaved }: TaskNotesPopoverProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(notes || '');
   const [saving, setSaving] = useState(false);
+  const [showNotePrompt, setShowNotePrompt] = useState(false);
+  const [savedText, setSavedText] = useState('');
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen) {
@@ -54,6 +70,12 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInst
       toast({ title: 'Notes saved' });
       setOpen(false);
       onSaved();
+
+      // Prompt to create package note if text is non-empty
+      if (text.trim()) {
+        setSavedText(text.trim());
+        setShowNotePrompt(true);
+      }
     } catch (error: any) {
       console.error('Error saving task notes:', error);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -62,36 +84,94 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInst
     }
   };
 
+  const handleCreatePackageNote = async () => {
+    const noteTitle = `${stageName || 'Stage'} > ${taskName || 'Task'}: ${savedText}`;
+    try {
+      const { error } = await supabase.from('notes').insert({
+        tenant_id: tenantId,
+        package_id: packageId,
+        parent_type: 'package_instance',
+        parent_id: stageInstanceId,
+        title: noteTitle,
+        note_details: '',
+        note_type: 'general',
+        created_by: profile?.user_uuid,
+      });
+
+      if (error) throw error;
+
+      toast({ title: 'Package note created' });
+    } catch (error: any) {
+      console.error('Error creating package note:', error);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setShowNotePrompt(false);
+    }
+  };
+
   return (
-    <Popover open={open} onOpenChange={handleOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 shrink-0"
-          title="Task notes"
-        >
-          <Pencil className={`h-3 w-3 ${notes ? 'text-primary' : 'text-muted-foreground'}`} />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-3" align="end">
-        <div className="space-y-2">
-          <label className="text-xs font-medium">Task Notes</label>
-          <Textarea
-            placeholder="Add notes..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            className="text-xs min-h-[60px]"
-          />
-          <div className="flex justify-end">
-            <Button size="sm" onClick={handleSave} disabled={saving} className="h-7 text-xs">
-              {saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />}
-              Save
-            </Button>
+    <>
+      <Popover open={open} onOpenChange={handleOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            title="Task notes"
+          >
+            <Pencil className={`h-3 w-3 ${notes ? 'text-primary' : 'text-muted-foreground'}`} />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-3" align="end">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium">Task Notes</label>
+              <span className={`text-[10px] ${text.length > MAX_NOTE_LENGTH ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                {text.length}/{MAX_NOTE_LENGTH}
+              </span>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Limited to {MAX_NOTE_LENGTH} characters — used as package note title.
+            </p>
+            <Textarea
+              placeholder="Add notes..."
+              value={text}
+              onChange={(e) => {
+                if (e.target.value.length <= MAX_NOTE_LENGTH) {
+                  setText(e.target.value);
+                }
+              }}
+              rows={2}
+              className="text-xs min-h-[50px]"
+              maxLength={MAX_NOTE_LENGTH}
+            />
+            <div className="flex justify-end">
+              <Button size="sm" onClick={handleSave} disabled={saving || text.length > MAX_NOTE_LENGTH} className="h-7 text-xs">
+                {saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />}
+                Save
+              </Button>
+            </div>
           </div>
-        </div>
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+      </Popover>
+
+      <AlertDialog open={showNotePrompt} onOpenChange={setShowNotePrompt}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create Package Note?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Would you like to also create a package note with the title:
+              <span className="block mt-2 font-medium text-foreground text-sm">
+                {stageName || 'Stage'} &gt; {taskName || 'Task'}: {savedText}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No thanks</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCreatePackageNote}>Create Note</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -23,9 +23,10 @@ interface StageStaffTasksProps {
   tenantId: number;
   packageId: number;
   stageStatusId?: number;
+  stageName?: string;
 }
 
-export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageStatusId }: StageStaffTasksProps) {
+export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageStatusId, stageName }: StageStaffTasksProps) {
   const [filter, setFilter] = useState<TaskFilter>('active');
   const { 
     tasks, 
@@ -169,6 +170,8 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
                 tenantId={tenantId}
                 packageId={packageId}
                 stageInstanceId={stageInstanceId}
+                stageName={stageName}
+                taskName={cleanName}
                 onSaved={refetch}
               />
 
