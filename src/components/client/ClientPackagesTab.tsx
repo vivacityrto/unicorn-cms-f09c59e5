@@ -62,6 +62,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotes } from '@/hooks/useNotes';
 import { supabase } from '@/integrations/supabase/client';
+import { useMembershipStateOptions } from '@/hooks/useMembershipStateOptions';
 
 interface ClientPackagesTabProps {
   tenantId: number;
