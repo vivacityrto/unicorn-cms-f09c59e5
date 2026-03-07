@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, Calendar, CheckCircle2, StickyNote } from 'lucide-react';
+import { Loader2, Calendar, CheckCircle2, StickyNote, Repeat, CircleDot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { parseTaskType, getTaskTypeBadgeLabel, getTaskTypeBadgeClasses } from '@/utils/staffTaskType';
@@ -139,6 +139,21 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
                 </div>
                 {/* Status metadata line */}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "text-[10px] px-1.5 py-0 h-4 font-normal",
+                      task.is_recurring 
+                        ? "border-violet-200 bg-violet-50 text-violet-700" 
+                        : "border-sky-200 bg-sky-50 text-sky-700"
+                    )}
+                  >
+                    {task.is_recurring ? (
+                      <><Repeat className="h-2.5 w-2.5 mr-0.5" />Recurring</>
+                    ) : (
+                      <><CircleDot className="h-2.5 w-2.5 mr-0.5" />Once-off</>
+                    )}
+                  </Badge>
                   {task.status_id === 2 && task.completion_date && (
                     <span className="flex items-center gap-1">
                       <CheckCircle2 className="h-3 w-3" />
