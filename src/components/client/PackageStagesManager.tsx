@@ -48,6 +48,7 @@ interface StageInstance {
   stage_id: number;
   stage_name: string;
   shortname: string | null;
+  stage_type: string | null;
   status: string | number;
   status_date: string | null;
   completion_date: string | null;
@@ -99,7 +100,8 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
         className={cn(
           "rounded-lg border bg-card overflow-hidden",
           stage.status === 2 && "border-primary/50 bg-primary/5",
-          stage.status === 5 && "border-destructive/50 bg-destructive/5"
+          stage.status === 5 && "border-destructive/50 bg-destructive/5",
+          stage.status === 6 && "border-amber-500/30 bg-amber-500/5"
         )}
       >
         <div className="flex items-center justify-between gap-4 p-3">
@@ -330,7 +332,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       const stageIds = [...new Set(stageData.map(s => s.stage_id))] as number[];
       const { data: stagesMetadata, error: metaError } = await supabase
         .from('stages')
-        .select('id, name, shortname')
+        .select('id, name, shortname, stage_type')
         .in('id', stageIds);
 
       if (metaError) throw metaError;
@@ -341,12 +343,16 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       // Transform the data
       const transformed: StageInstance[] = stageData.map((row: any) => {
         const meta = stageMap.get(row.stage_id);
+        const stageType = (meta as any)?.stage_type || null;
+        // Auto-default: if stage type is 'monitor' and status is 0 (Not Started), show as Monitor (6)
+        const resolvedStatus = (stageType === 'monitor' && (row.status === 0 || row.status === null || row.status === '0')) ? 6 : (row.status ?? 0);
         return {
           id: row.id,
           stage_id: row.stage_id,
           stage_name: meta?.name || `Stage ${row.stage_id}`,
           shortname: meta?.shortname || null,
-          status: row.status ?? 0,
+          stage_type: stageType,
+          status: resolvedStatus,
           status_date: row.status_date || null,
           completion_date: row.completion_date,
           comment: row.comment || null,
