@@ -238,7 +238,7 @@ function FileRow({
   onNavigate: (id: string, name: string) => void;
   onDownload: (id: string, name: string) => Promise<void>;
   downloading: string | null;
-  onSelectLink?: (url: string) => void;
+  onSelectLink?: (url: string, fileName?: string) => void;
 }) {
   const isDownloading = downloading === item.id;
 

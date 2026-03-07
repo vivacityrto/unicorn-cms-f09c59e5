@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, FolderOpen, ExternalLink } from 'lucide-react';
+import { Loader2, FolderOpen, ExternalLink, Globe } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
