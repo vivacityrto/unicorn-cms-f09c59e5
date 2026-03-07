@@ -70,10 +70,11 @@ interface TenantBasic {
 export default function ClientDetail() {
   const { tenantId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { profile: authProfile } = useAuth();
   const [tenant, setTenant] = useState<TenantBasic | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'overview');
   const [primaryContactName, setPrimaryContactName] = useState<string>('');
   const [primaryContactEmail, setPrimaryContactEmail] = useState<string>('');
   const [assignPackageOpen, setAssignPackageOpen] = useState(false);
