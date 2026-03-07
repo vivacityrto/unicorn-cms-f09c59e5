@@ -102,6 +102,7 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
           {
             body: {
               action: 'download',
+              tenant_id: tenantId,
               item_id: itemId,
             },
           }
