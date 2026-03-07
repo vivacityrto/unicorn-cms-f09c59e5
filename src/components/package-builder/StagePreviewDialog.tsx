@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { Stage } from '@/hooks/usePackageBuilder';
 import { useStageDependencyCheck } from '@/hooks/useStageDependencies';
+import { useStageTypeOptions, getStageTypeColor as getStageTypeColorHelper, getStageTypeLabel as getStageTypeLabelHelper } from '@/hooks/useStageTypeOptions';
 import { useStandardsReference, resolveStandardCodes } from '@/hooks/useStageStandards';
 import { 
   Layers, 
