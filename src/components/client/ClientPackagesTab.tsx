@@ -399,7 +399,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                       )}
                     </div>
 
-                    {/* Stats Row */}
+                    {/* Stats Row: State badge first, then date+hours pushed right */}
                     <div className="flex items-center gap-6 text-sm">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <CalendarIcon className="h-4 w-4" />
@@ -417,30 +417,40 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                       </div>
                     </div>
 
-                    {/* Stage Progress */}
+                    {/* Stage Progress – excludes offboarding/monitor/finalise stages */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Stage Progress</span>
                         <span className="font-medium">
-                          {pkg.total_stages > 0 
-                            ? `${pkg.completed_stages}/${pkg.total_stages} stages`
+                          {pkg.trackable_total > 0 
+                            ? `${pkg.trackable_completed}/${pkg.trackable_total} stages`
                             : 'No stages configured'}
                         </span>
                       </div>
-                      {pkg.total_stages > 0 ? (
+                      {pkg.trackable_total > 0 ? (
                         <div className="flex items-center gap-2">
                           <Progress 
-                            value={(pkg.completed_stages / pkg.total_stages) * 100} 
+                            value={(pkg.trackable_completed / pkg.trackable_total) * 100} 
                             className="h-2 flex-1" 
                           />
                           <span className="text-sm font-medium w-12 text-right">
-                            {Math.round((pkg.completed_stages / pkg.total_stages) * 100)}%
+                            {Math.round((pkg.trackable_completed / pkg.trackable_total) * 100)}%
                           </span>
                         </div>
                       ) : (
                         <p className="text-sm text-amber-600">
                           <AlertCircle className="h-4 w-4 inline mr-1" />
                           Stage tracking not configured for this package
+                        </p>
+                      )}
+                      {pkg.monitor_stages > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          + {pkg.monitor_stages} ongoing monitor stage{pkg.monitor_stages !== 1 ? 's' : ''} (not counted in progress)
+                        </p>
+                      )}
+                      {(pkg.total_stages - pkg.trackable_total - pkg.monitor_stages) > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          + {pkg.total_stages - pkg.trackable_total - pkg.monitor_stages} exit stage{(pkg.total_stages - pkg.trackable_total - pkg.monitor_stages) !== 1 ? 's' : ''} excluded
                         </p>
                       )}
                     </div>
