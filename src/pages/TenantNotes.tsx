@@ -104,10 +104,12 @@ export default function TenantNotes() {
     const urlNoteTitle = searchParams.get('noteTitle');
     const urlTimeEntryId = searchParams.get('timeEntryId');
     const urlNoteDetails = searchParams.get('noteDetails');
+    const urlPkgInstanceId = searchParams.get('packageInstanceId');
     if (initNote === 'true') {
       setNoteTitle(urlNoteTitle || '');
       if (urlNoteDetails) setNoteText(urlNoteDetails);
       if (urlTimeEntryId) setPendingTimeEntryId(urlTimeEntryId);
+      if (urlPkgInstanceId) setPendingPackageInstanceId(parseInt(urlPkgInstanceId));
       setIsAddDialogOpen(true);
       // Clean URL params
       const newParams = new URLSearchParams(searchParams);
@@ -115,6 +117,7 @@ export default function TenantNotes() {
       newParams.delete('noteTitle');
       newParams.delete('timeEntryId');
       newParams.delete('noteDetails');
+      newParams.delete('packageInstanceId');
       navigate(`/tenant/${tenantId}/notes${newParams.toString() ? '?' + newParams.toString() : ''}`, { replace: true });
     }
   }, [searchParams, tenantId, navigate]);
