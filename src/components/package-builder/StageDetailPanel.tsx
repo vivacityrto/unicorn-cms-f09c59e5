@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Stage, useStageDetail, usePackageBuilder } from '@/hooks/usePackageBuilder';
 import { useStageActiveUsage } from '@/hooks/useStageActiveUsage';
 import { usePackageStageOverrides, useResolvedStageContent } from '@/hooks/useStageTemplateContent';
+import { useStageTypeOptions, getStageTypeColor as getStageTypeColorHelper, getStageTypeLabel } from '@/hooks/useStageTypeOptions';
 import { useCopyTemplateToPackage, usePackageOverrides } from '@/hooks/usePackageStageOverrides';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
