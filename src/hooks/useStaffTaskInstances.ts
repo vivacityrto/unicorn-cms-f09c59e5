@@ -15,6 +15,7 @@ export interface StaffTaskInstance {
   is_recurring: boolean;
   due_date: string | null;
   completion_date: string | null;
+  completed_by: string | null;
   assignee_id: string | null;
   assignee_name: string | null;
   assignee_avatar: string | null;
