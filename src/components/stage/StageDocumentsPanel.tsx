@@ -285,22 +285,37 @@ export function StageDocumentsPanel({
     }
   };
   
+  // Helper to get the actual document data regardless of shape (flat or nested)
+  const getDocumentData = (doc: StageDocumentItem) => {
+    if (doc.document) return doc.document;
+    // Flat shape from useStageTemplateContent - the doc itself IS the document
+    const flat = doc as any;
+    if (flat.title) return { id: flat.id, title: flat.title, format: flat.format, category: flat.category, description: flat.description, document_status: flat.document_status, ai_status: flat.ai_status, ai_confidence_score: flat.ai_confidence_score, ai_category_confidence: flat.ai_category_confidence, ai_description_confidence: flat.ai_description_confidence, ai_reasoning: flat.ai_reasoning } as Document;
+    return null;
+  };
+  
+  const getDocumentId = (doc: StageDocumentItem) => {
+    return doc.document_id || (doc as any).id;
+  };
+  
   // Handle document edit with reuse warning
   const handleDocumentClick = (doc: StageDocumentItem) => {
-    const stageData = documentStageCounts.get(doc.document_id);
+    const docId = getDocumentId(doc);
+    const docData = getDocumentData(doc);
+    const stageData = documentStageCounts.get(docId);
     const stageCount = stageData?.count || 0;
     
     if (stageCount > 1) {
       setSelectedDocForEdit({
-        id: doc.document_id,
-        title: doc.document?.title || 'Document',
+        id: docId,
+        title: docData?.title || 'Document',
         stageCount,
         stageNames: stageData?.names || []
       });
       setReuseWarningOpen(true);
     } else {
       // Navigate directly to document detail
-      window.open(`/admin/documents/${doc.document_id}`, '_blank');
+      window.open(`/admin/documents/${docId}`, '_blank');
     }
   };
   
