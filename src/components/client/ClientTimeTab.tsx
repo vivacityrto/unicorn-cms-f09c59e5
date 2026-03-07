@@ -111,11 +111,23 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   const { data: combined, isLoading } = useQuery({
     queryKey: ['package-burndown-combined', tenantId],
     queryFn: async () => {
-      // 1. Fetch burndown data
+      // 1. Get active (non-complete) instance IDs first
+      const { data: activeInstances, error: aiErr } = await supabase
+        .from('package_instances')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('is_complete', false);
+      if (aiErr) throw aiErr;
+
+      const activeIds = (activeInstances || []).map(r => r.id);
+      if (activeIds.length === 0) return [];
+
+      // 2. Fetch burndown data only for active instances
       const { data: burndownData, error: bdErr } = await supabase
         .from('v_package_burndown')
         .select('*')
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .in('package_instance_id', activeIds);
       if (bdErr) throw bdErr;
 
       const instanceIds = (burndownData || []).map(r => r.package_instance_id).filter(Boolean) as number[];
