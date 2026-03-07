@@ -344,8 +344,8 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       const transformed: StageInstance[] = stageData.map((row: any) => {
         const meta = stageMap.get(row.stage_id);
         const stageType = (meta as any)?.stage_type || null;
-        // Auto-default: if stage type is 'monitor' and status is 0 (Not Started), show as Monitor (6)
-        const resolvedStatus = (stageType === 'monitor' && (row.status === 0 || row.status === null || row.status === '0')) ? 6 : (row.status ?? 0);
+        // Auto-default: if stage type is 'monitor' or 'monitoring' and status is 0 (Not Started), show as Monitor (6)
+        const resolvedStatus = ((stageType === 'monitor' || stageType === 'monitoring') && (row.status === 0 || row.status === null || row.status === '0')) ? 6 : (row.status ?? 0);
         return {
           id: row.id,
           stage_id: row.stage_id,

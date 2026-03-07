@@ -22,17 +22,8 @@ import {
   Package, Wand2, Edit2, Info
 } from 'lucide-react';
 import { STAGE_TEMPLATES, StageTemplate, TemplateTask, TemplateEmail } from '@/lib/stage-templates';
+import { useStageTypeOptions } from '@/hooks/useStageTypeOptions';
 
-const STAGE_TYPE_OPTIONS = [
-  { value: 'onboarding', label: 'Onboarding' },
-  { value: 'delivery', label: 'Delivery' },
-  { value: 'documentation', label: 'Documentation' },
-  { value: 'support', label: 'Ongoing Support' },
-  { value: 'monitor', label: 'Monitor (Ongoing)' },
-  { value: 'offboarding', label: 'Offboarding' },
-  { value: 'finalise', label: 'Finalise' },
-  { value: 'other', label: 'Other' },
-];
 
 const PACKAGE_TYPE_OPTIONS = [
   { value: 'rto', label: 'RTO' },
@@ -79,6 +70,7 @@ export default function StageBuilder() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useRBAC();
   const { toast } = useToast();
+  const { stageTypes: STAGE_TYPE_OPTIONS } = useStageTypeOptions();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [isCreating, setIsCreating] = useState(false);

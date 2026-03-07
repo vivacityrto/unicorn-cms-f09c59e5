@@ -8,6 +8,7 @@ import { useStageDuplication } from '@/hooks/useStageDuplication';
 import { useStageReplacement } from '@/hooks/useStageReplacement';
 import { useStageAuditLog, formatActionName, generateAuditSummary } from '@/hooks/useStageAuditLog';
 import { useStageExportImport } from '@/hooks/useStageExportImport';
+import { useStageTypeOptions, getStageTypeColor as getStageTypeColorHelper, getStageTypeLabel } from '@/hooks/useStageTypeOptions';
 import { useStageQualityCheck, computeStageQuality } from '@/hooks/useStageQualityCheck';
 import { usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
 import { useStageTemplateContent, usePackageStageOverrides } from '@/hooks/useStageTemplateContent';
@@ -50,14 +51,7 @@ import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
 import { format } from 'date-fns';
 
-const STAGE_TYPE_OPTIONS = [
-  { value: 'onboarding', label: 'Onboarding', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
-  { value: 'delivery', label: 'Delivery', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-  { value: 'documentation', label: 'Documentation', color: 'bg-teal-500/10 text-teal-600 border-teal-500/20' },
-  { value: 'support', label: 'Ongoing Support', color: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
-  { value: 'offboarding', label: 'Offboarding', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-  { value: 'other', label: 'Other', color: 'bg-muted text-muted-foreground' }
-];
+// Stage types loaded dynamically via useStageTypeOptions hook
 
 interface PackageOption {
   id: number;
@@ -72,6 +66,7 @@ export default function AdminStageDetail() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useRBAC();
   const { toast } = useToast();
+  const { stageTypes: STAGE_TYPE_OPTIONS } = useStageTypeOptions();
   const { updateStage, emailTemplates } = usePackageBuilder();
   const { activeUsage } = useStageActiveUsage(stageIdNum);
   const { updateCertification, isUpdating: isCertUpdating } = useStageCertification();
@@ -831,7 +826,7 @@ export default function AdminStageDetail() {
   };
 
   const getStageTypeColor = (stageType: string) => {
-    return STAGE_TYPE_OPTIONS.find(opt => opt.value === stageType)?.color || 'bg-muted text-muted-foreground border-border';
+    return getStageTypeColorHelper(stageType, STAGE_TYPE_OPTIONS) + ' border-border';
   };
 
   // Access denied for non-SuperAdmins
@@ -893,7 +888,7 @@ export default function AdminStageDetail() {
                 <Layers className="h-7 w-7 shrink-0" />
                 <h1 className="text-2xl font-bold">{stage.title}</h1>
                 <Badge variant="outline" className={`text-xs capitalize ${getStageTypeColor(stage.stage_type)}`}>
-                  {STAGE_TYPE_OPTIONS.find(o => o.value === stage.stage_type)?.label || stage.stage_type}
+                  {getStageTypeLabel(stage.stage_type, STAGE_TYPE_OPTIONS)}
                 </Badge>
                 {stage.is_certified && (
                   <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">

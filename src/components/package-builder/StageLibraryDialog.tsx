@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
+import { useStageTypeOptions, getStageTypeColor as getStageTypeColorHelper } from '@/hooks/useStageTypeOptions';
 import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -22,13 +23,7 @@ interface StageLibraryDialogProps {
   existingStageIds: number[];
 }
 
-const STAGE_TYPE_OPTIONS = [
-  { value: 'onboarding', label: 'Onboarding', color: 'bg-blue-500/10 text-blue-600' },
-  { value: 'delivery', label: 'Delivery', color: 'bg-emerald-500/10 text-emerald-600' },
-  { value: 'support', label: 'Ongoing Support', color: 'bg-purple-500/10 text-purple-600' },
-  { value: 'offboarding', label: 'Offboarding', color: 'bg-amber-500/10 text-amber-600' },
-  { value: 'other', label: 'Other', color: 'bg-muted text-muted-foreground' }
-];
+// Stage types loaded dynamically via useStageTypeOptions hook
 
 export function StageLibraryDialog({ 
   open, 
@@ -39,6 +34,7 @@ export function StageLibraryDialog({
   const { toast } = useToast();
   const { isSuperAdmin } = useAuth();
   const { stages, createStage } = usePackageBuilder();
+  const { stageTypes: STAGE_TYPE_OPTIONS } = useStageTypeOptions();
   
   const [activeTab, setActiveTab] = useState('library');
   const [searchQuery, setSearchQuery] = useState('');
@@ -150,7 +146,7 @@ export function StageLibraryDialog({
   };
 
   const getStageTypeColor = (stageType: string) => {
-    return STAGE_TYPE_OPTIONS.find(opt => opt.value === stageType)?.color || 'bg-muted text-muted-foreground';
+    return getStageTypeColorHelper(stageType, STAGE_TYPE_OPTIONS);
   };
 
   return (

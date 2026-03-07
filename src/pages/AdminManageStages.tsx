@@ -86,19 +86,8 @@ import { StageQualityIndicator } from '@/components/stage/StageQualityIndicator'
 import { StageDependencyIndicator } from '@/components/stage/StageDependencyIndicator';
 import { StageFrameworkBadges, formatFrameworks } from '@/components/stage/StageFrameworkSelector';
 import { Stage } from '@/hooks/usePackageBuilder';
+import { useStageTypeOptions } from '@/hooks/useStageTypeOptions';
 import { format } from 'date-fns';
-
-const STAGE_TYPE_OPTIONS = [
-  { value: 'all', label: 'All Types' },
-  { value: 'onboarding', label: 'Onboarding' },
-  { value: 'delivery', label: 'Delivery' },
-  { value: 'documentation', label: 'Documentation' },
-  { value: 'support', label: 'Ongoing Support' },
-  { value: 'monitor', label: 'Monitor (Ongoing)' },
-  { value: 'offboarding', label: 'Offboarding' },
-  { value: 'finalise', label: 'Finalise' },
-  { value: 'other', label: 'Other' },
-];
 
 const CERTIFIED_FILTER_OPTIONS = [
   { value: 'all', label: 'All' },
@@ -154,6 +143,7 @@ export default function AdminManageStages() {
   const { isSuperAdmin } = useRBAC();
   const { duplicateAndNavigate, isDuplicating } = useStageDuplication();
   const { importStage, validateImportData, isImporting } = useStageExportImport();
+  const { stageTypes } = useStageTypeOptions();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [stages, setStages] = useState<StageWithUsage[]>([]);
@@ -569,7 +559,7 @@ export default function AdminManageStages() {
             <SelectValue placeholder="Stage Type" />
           </SelectTrigger>
           <SelectContent>
-            {STAGE_TYPE_OPTIONS.map((option) => (
+            {[{ value: 'all', label: 'All Types' }, ...stageTypes].map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>

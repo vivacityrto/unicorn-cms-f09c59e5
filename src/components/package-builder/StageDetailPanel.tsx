@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Stage, useStageDetail, usePackageBuilder } from '@/hooks/usePackageBuilder';
 import { useStageActiveUsage } from '@/hooks/useStageActiveUsage';
 import { usePackageStageOverrides, useResolvedStageContent } from '@/hooks/useStageTemplateContent';
+import { useStageTypeOptions, getStageTypeColor as getStageTypeColorHelper, getStageTypeLabel } from '@/hooks/useStageTypeOptions';
 import { useCopyTemplateToPackage, usePackageOverrides } from '@/hooks/usePackageStageOverrides';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,15 +38,10 @@ interface StageDetailPanelProps {
   onClose: () => void;
 }
 
-const STAGE_TYPE_OPTIONS = [
-  { value: 'onboarding', label: 'Onboarding', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
-  { value: 'delivery', label: 'Delivery', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-  { value: 'support', label: 'Ongoing Support', color: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
-  { value: 'offboarding', label: 'Offboarding', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-  { value: 'other', label: 'Other', color: 'bg-muted text-muted-foreground' }
-];
+// Stage types loaded dynamically via useStageTypeOptions hook
 
 export function StageDetailPanel({ packageId, stageId, stage, allStages = [], onClose }: StageDetailPanelProps) {
+  const { stageTypes: STAGE_TYPE_OPTIONS } = useStageTypeOptions();
   const { toast } = useToast();
   const { emailTemplates, updateStage, createStage } = usePackageBuilder();
   
@@ -376,7 +372,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
   }
 
   const getStageTypeColor = (stageType: string) => {
-    return STAGE_TYPE_OPTIONS.find(opt => opt.value === stageType)?.color || 'bg-muted text-muted-foreground';
+    return getStageTypeColorHelper(stageType, STAGE_TYPE_OPTIONS);
   };
 
   return (
@@ -388,7 +384,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
           <div className="flex items-center gap-2 mt-1">
             {stage?.stage_type && (
               <Badge variant="outline" className={getStageTypeColor(stage.stage_type)}>
-                {STAGE_TYPE_OPTIONS.find(o => o.value === stage.stage_type)?.label || stage.stage_type}
+                {getStageTypeLabel(stage.stage_type, STAGE_TYPE_OPTIONS)}
               </Badge>
             )}
             {isReused && (

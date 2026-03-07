@@ -19,15 +19,9 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { StageFrameworkBadges } from '@/components/stage/StageFrameworkSelector';
+import { useStageTypeOptions, getStageTypeLabel } from '@/hooks/useStageTypeOptions';
 
-const STAGE_TYPE_OPTIONS = [
-  { value: 'onboarding', label: 'Onboarding' },
-  { value: 'delivery', label: 'Delivery' },
-  { value: 'documentation', label: 'Documentation' },
-  { value: 'support', label: 'Ongoing Support' },
-  { value: 'offboarding', label: 'Offboarding' },
-  { value: 'other', label: 'Other' }
-];
+// Stage types loaded dynamically via useStageTypeOptions hook
 
 const FRAMEWORK_OPTIONS = [
   { value: 'RTO', label: 'RTO' },
@@ -48,6 +42,7 @@ export default function AdminStageAnalytics() {
   const [dateRangeDays, setDateRangeDays] = useState(30);
   const [frameworkFilter, setFrameworkFilter] = useState<string | null>(null);
   const [stageTypeFilter, setStageTypeFilter] = useState<string | null>(null);
+  const { stageTypes: STAGE_TYPE_OPTIONS } = useStageTypeOptions();
   const [certifiedFilter, setCertifiedFilter] = useState<'all' | 'certified' | 'uncertified'>('all');
 
   const {
@@ -342,7 +337,7 @@ export default function AdminStageAnalytics() {
                           <TableCell className="font-medium">{stage.title}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-xs capitalize">
-                              {STAGE_TYPE_OPTIONS.find(t => t.value === stage.stage_type)?.label || stage.stage_type}
+                              {getStageTypeLabel(stage.stage_type, STAGE_TYPE_OPTIONS)}
                             </Badge>
                           </TableCell>
                           <TableCell>
