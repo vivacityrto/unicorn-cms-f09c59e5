@@ -322,6 +322,12 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
       <CardContent className={`space-y-4 ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
         {/* URL Input — always visible even when disabled */}
         <div className={`space-y-2 ${isDisabled ? '!opacity-100 !pointer-events-auto' : ''}`}>
+          {settings?.last_validated_at && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              Last validated: {formatDateTime(settings.last_validated_at)}
+            </p>
+          )}
           <Label htmlFor="sp-root-url">
             {urlInput.trim().startsWith('https://') ? (
               <a
@@ -383,90 +389,38 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
             <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
             Use &quot;Copy link&quot; from SharePoint to get a sharing link for the folder.
           </p>
+          {settings?.drive_id && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              Drive ID: <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{settings.drive_id.substring(0, 20)}...</code>
+            </p>
+          )}
         </div>
 
-        {/* Side-by-side: Status Details + Shared Folder */}
-        {settings && settings.validation_status === 'valid' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Status Details */}
-            {(settings.last_validated_at || settings.validation_error || settings.root_name) && (
-              <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Root Folder</p>
-                {settings.root_name && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{settings.root_name}</span>
-                  </div>
-                )}
-                {settings.root_folder_url && (
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={settings.root_folder_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open in SharePoint
-                    </a>
-                  </Button>
-                )}
-                {settings.drive_id && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Drive ID:</span>
-                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                      {settings.drive_id.substring(0, 20)}...
-                    </code>
-                  </div>
-                )}
-                {settings.last_validated_at && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Last validated:</span>
-                    <span>{formatDateTime(settings.last_validated_at)}</span>
-                  </div>
-                )}
-                {settings.validation_error && (
-                  <Alert variant="destructive" className="mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{settings.validation_error}</AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            )}
-
-            {/* Shared Folder Configuration */}
-            <SharedFolderSection
-              settings={settings}
-              tenantId={tenantId}
-              browsingSharedFolder={browsingSharedFolder}
-              setBrowsingSharedFolder={setBrowsingSharedFolder}
-              sharedFolderBrowseItems={sharedFolderBrowseItems}
-              setSharedFolderBrowseItems={setSharedFolderBrowseItems}
-              sharedFolderBrowseStack={sharedFolderBrowseStack}
-              setSharedFolderBrowseStack={setSharedFolderBrowseStack}
-              sharedFolderBrowseLoading={sharedFolderBrowseLoading}
-              setSharedFolderBrowseLoading={setSharedFolderBrowseLoading}
-              savingSharedFolder={savingSharedFolder}
-              setSavingSharedFolder={setSavingSharedFolder}
-              onSaved={fetchSettings}
-              toast={toast}
-            />
-          </div>
+        {settings?.validation_error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{settings.validation_error}</AlertDescription>
+          </Alert>
         )}
 
-        {/* Non-valid status details (errors, etc.) */}
-        {settings && settings.validation_status !== 'valid' && (settings.last_validated_at || settings.validation_error) && (
-          <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-            {settings.last_validated_at && (
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Last validated:</span>
-                <span>{formatDateTime(settings.last_validated_at)}</span>
-              </div>
-            )}
-            {settings.validation_error && (
-              <Alert variant="destructive" className="mt-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{settings.validation_error}</AlertDescription>
-              </Alert>
-            )}
-          </div>
+        {/* Shared Folder Configuration — full width */}
+        {settings && settings.validation_status === 'valid' && (
+          <SharedFolderSection
+            settings={settings}
+            tenantId={tenantId}
+            browsingSharedFolder={browsingSharedFolder}
+            setBrowsingSharedFolder={setBrowsingSharedFolder}
+            sharedFolderBrowseItems={sharedFolderBrowseItems}
+            setSharedFolderBrowseItems={setSharedFolderBrowseItems}
+            sharedFolderBrowseStack={sharedFolderBrowseStack}
+            setSharedFolderBrowseStack={setSharedFolderBrowseStack}
+            sharedFolderBrowseLoading={sharedFolderBrowseLoading}
+            setSharedFolderBrowseLoading={setSharedFolderBrowseLoading}
+            savingSharedFolder={savingSharedFolder}
+            setSavingSharedFolder={setSavingSharedFolder}
+            onSaved={fetchSettings}
+            toast={toast}
+          />
         )}
       </CardContent>
     </Card>
