@@ -887,7 +887,7 @@ export default function AdminStageDetail() {
                 <Layers className="h-7 w-7 shrink-0" />
                 <h1 className="text-2xl font-bold">{stage.title}</h1>
                 <Badge variant="outline" className={`text-xs capitalize ${getStageTypeColor(stage.stage_type)}`}>
-                  {STAGE_TYPE_OPTIONS.find(o => o.value === stage.stage_type)?.label || stage.stage_type}
+                  {getStageTypeLabel(stage.stage_type, STAGE_TYPE_OPTIONS)}
                 </Badge>
                 {stage.is_certified && (
                   <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">

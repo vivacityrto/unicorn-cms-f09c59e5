@@ -70,6 +70,7 @@ export default function StageBuilder() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useRBAC();
   const { toast } = useToast();
+  const { stageTypes: STAGE_TYPE_OPTIONS } = useStageTypeOptions();
   
   const [currentStep, setCurrentStep] = useState(1);
   const [isCreating, setIsCreating] = useState(false);

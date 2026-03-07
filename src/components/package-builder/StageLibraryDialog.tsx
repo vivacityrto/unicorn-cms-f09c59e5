@@ -146,7 +146,7 @@ export function StageLibraryDialog({
   };
 
   const getStageTypeColor = (stageType: string) => {
-    return STAGE_TYPE_OPTIONS.find(opt => opt.value === stageType)?.color || 'bg-muted text-muted-foreground';
+    return getStageTypeColorHelper(stageType, STAGE_TYPE_OPTIONS);
   };
 
   return (

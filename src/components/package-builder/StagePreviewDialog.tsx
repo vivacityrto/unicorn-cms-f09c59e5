@@ -154,11 +154,11 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
   };
 
   const getStageTypeColor = (stageType: string) => {
-    return STAGE_TYPE_OPTIONS.find(opt => opt.value === stageType)?.color || 'bg-muted text-muted-foreground';
+    return getStageTypeColorHelper(stageType, stageTypes);
   };
 
   const getStageTypeLabel = (stageType: string) => {
-    return STAGE_TYPE_OPTIONS.find(opt => opt.value === stageType)?.label || stageType;
+    return getStageTypeLabelHelper(stageType, stageTypes);
   };
 
   if (!stage) return null;

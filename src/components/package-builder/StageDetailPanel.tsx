@@ -384,7 +384,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
           <div className="flex items-center gap-2 mt-1">
             {stage?.stage_type && (
               <Badge variant="outline" className={getStageTypeColor(stage.stage_type)}>
-                {STAGE_TYPE_OPTIONS.find(o => o.value === stage.stage_type)?.label || stage.stage_type}
+                {getStageTypeLabel(stage.stage_type, STAGE_TYPE_OPTIONS)}
               </Badge>
             )}
             {isReused && (

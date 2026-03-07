@@ -559,7 +559,7 @@ export default function AdminManageStages() {
             <SelectValue placeholder="Stage Type" />
           </SelectTrigger>
           <SelectContent>
-            {STAGE_TYPE_OPTIONS.map((option) => (
+            {[{ value: 'all', label: 'All Types' }, ...stageTypes].map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>

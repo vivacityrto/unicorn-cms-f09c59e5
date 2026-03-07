@@ -337,7 +337,7 @@ export default function AdminStageAnalytics() {
                           <TableCell className="font-medium">{stage.title}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-xs capitalize">
-                              {STAGE_TYPE_OPTIONS.find(t => t.value === stage.stage_type)?.label || stage.stage_type}
+                              {getStageTypeLabel(stage.stage_type, STAGE_TYPE_OPTIONS)}
                             </Badge>
                           </TableCell>
                           <TableCell>
