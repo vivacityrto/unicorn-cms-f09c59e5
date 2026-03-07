@@ -42,6 +42,7 @@ export default function AdminStageAnalytics() {
   const [dateRangeDays, setDateRangeDays] = useState(30);
   const [frameworkFilter, setFrameworkFilter] = useState<string | null>(null);
   const [stageTypeFilter, setStageTypeFilter] = useState<string | null>(null);
+  const { stageTypes: STAGE_TYPE_OPTIONS } = useStageTypeOptions();
   const [certifiedFilter, setCertifiedFilter] = useState<'all' | 'certified' | 'uncertified'>('all');
 
   const {
