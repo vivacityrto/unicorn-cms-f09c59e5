@@ -42,6 +42,7 @@ export default function TenantNotes() {
   
   const parsedTenantId = tenantId ? parseInt(tenantId) : 0;
   const urlPackageId = searchParams.get('packageId');
+  const urlPackageInstanceId = searchParams.get('packageInstanceId');
   const parsedPackageId = urlPackageId ? parseInt(urlPackageId) : undefined;
   
   // Use the unified notes hook
@@ -84,6 +85,7 @@ export default function TenantNotes() {
   const [clickupLoading, setClickupLoading] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [pendingTimeEntryId, setPendingTimeEntryId] = useState<string | null>(null);
+  const [pendingPackageInstanceId, setPendingPackageInstanceId] = useState<number | null>(null);
 
   // Filter notes
   const filteredNotes = filterNotes(notes, { searchQuery, priority: sortPriority }).sort((a, b) => {
@@ -102,10 +104,12 @@ export default function TenantNotes() {
     const urlNoteTitle = searchParams.get('noteTitle');
     const urlTimeEntryId = searchParams.get('timeEntryId');
     const urlNoteDetails = searchParams.get('noteDetails');
+    const urlPkgInstanceId = searchParams.get('packageInstanceId');
     if (initNote === 'true') {
       setNoteTitle(urlNoteTitle || '');
       if (urlNoteDetails) setNoteText(urlNoteDetails);
       if (urlTimeEntryId) setPendingTimeEntryId(urlTimeEntryId);
+      if (urlPkgInstanceId) setPendingPackageInstanceId(parseInt(urlPkgInstanceId));
       setIsAddDialogOpen(true);
       // Clean URL params
       const newParams = new URLSearchParams(searchParams);
@@ -113,6 +117,7 @@ export default function TenantNotes() {
       newParams.delete('noteTitle');
       newParams.delete('timeEntryId');
       newParams.delete('noteDetails');
+      newParams.delete('packageInstanceId');
       navigate(`/tenant/${tenantId}/notes${newParams.toString() ? '?' + newParams.toString() : ''}`, { replace: true });
     }
   }, [searchParams, tenantId, navigate]);
@@ -317,8 +322,13 @@ export default function TenantNotes() {
         await createNote({
           ...noteData,
           ...(pendingTimeEntryId ? { timeentry_id: pendingTimeEntryId } : {}),
+          ...(pendingPackageInstanceId ? {
+            parent_type_override: 'package_instance' as const,
+            parent_id_override: pendingPackageInstanceId,
+          } : {}),
         });
         setPendingTimeEntryId(null);
+        setPendingPackageInstanceId(null);
       }
       resetForm();
     } catch (error: any) {
@@ -342,6 +352,7 @@ export default function TenantNotes() {
     setFilesToRemove([]);
     setAssignees(currentUserId ? [currentUserId] : []);
     setPendingTimeEntryId(null);
+    setPendingPackageInstanceId(null);
     setSelectedNote(null);
     setIsTimerRunning(false);
     setTimerStartTime(null);

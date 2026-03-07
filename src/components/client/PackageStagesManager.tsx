@@ -75,11 +75,12 @@ interface StageRowProps {
   onRecurringClick: (stage: StageInstance) => void;
   tenantId: number;
   packageId: number;
+  packageInstanceId?: number;
   onUpdate: () => void;
   profile: any;
 }
 
-function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, onUpdate, profile }: StageRowProps) {
+function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, packageInstanceId, onUpdate, profile }: StageRowProps) {
   const { statuses } = useTaskStatusOptions();
   const statusCode = typeof stage.status === 'number' ? stage.status : 0;
   const StatusIcon = getStatusIcon(statusCode);
@@ -195,7 +196,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
               </TabsTrigger>
             </TabsList>
             <TabsContent value="staff-tasks" className="mt-0">
-              <StageStaffTasks stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} stageStatusId={statusCode} stageName={stage.stage_name} />
+              <StageStaffTasks stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} packageInstanceId={packageInstanceId ?? undefined} stageStatusId={statusCode} stageName={stage.stage_name} />
             </TabsContent>
             <TabsContent value="client-tasks" className="mt-0">
               <StageClientTasks stageInstanceId={stage.id} tenantId={tenantId} packageId={packageId} />
@@ -466,6 +467,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       onRecurringClick={(s) => setRecurringConfirm(s)}
       tenantId={tenantId}
       packageId={packageId}
+      packageInstanceId={packageInstanceId ?? undefined}
       onUpdate={fetchStages}
       profile={profile}
     />
