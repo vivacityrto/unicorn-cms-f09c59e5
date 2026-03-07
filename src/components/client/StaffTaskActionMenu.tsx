@@ -349,6 +349,9 @@ export function StaffTaskActionMenu({
         packageId={packageId}
         taskName={cleanName}
         taskId={taskId}
+        stageName={stageNameProp || stageName}
+        packageName={packageName}
+        taskDescription={taskDescription}
       />
 
       <SharePointFolderDialog

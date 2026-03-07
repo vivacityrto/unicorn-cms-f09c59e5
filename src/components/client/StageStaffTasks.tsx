@@ -212,6 +212,8 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
                 stageStatusId={stageStatusId}
                 stageEmails={stageEmails}
                 onMarkComplete={() => updateTaskStatus(task.id, 2)}
+                taskDescription={task.task_description}
+                stageName={stageName}
               />
 
               <Select

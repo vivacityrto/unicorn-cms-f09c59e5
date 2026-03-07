@@ -135,7 +135,7 @@ export function CreateActionDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="action-desc">Description</Label>
-            <Textarea id="action-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={8} />
+            <Textarea id="action-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={12} className="min-h-[200px]" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
