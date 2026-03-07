@@ -143,6 +143,7 @@ export default function AdminManageStages() {
   const { isSuperAdmin } = useRBAC();
   const { duplicateAndNavigate, isDuplicating } = useStageDuplication();
   const { importStage, validateImportData, isImporting } = useStageExportImport();
+  const { stageTypes } = useStageTypeOptions();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [stages, setStages] = useState<StageWithUsage[]>([]);
