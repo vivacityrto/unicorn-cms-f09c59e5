@@ -176,6 +176,11 @@ export default function AdminStageDetail() {
   const [isAddingClientTask, setIsAddingClientTask] = useState(false);
   const [isAddingEmail, setIsAddingEmail] = useState(false);
   
+  // Edit dialog states
+  const [editingTeamTask, setEditingTeamTask] = useState<StageTeamTask | null>(null);
+  const [editingClientTask, setEditingClientTask] = useState<StageClientTask | null>(null);
+  const [editingEmail, setEditingEmail] = useState<StageEmail | null>(null);
+  
   // Form states
   const [taskForm, setTaskForm] = useState({
     name: '',
@@ -194,6 +199,28 @@ export default function AdminStageDetail() {
     email_template_id: '',
     trigger_type: 'manual',
     recipient_type: 'tenant'
+  });
+  
+  // Edit form states
+  const [editTaskForm, setEditTaskForm] = useState({
+    name: '',
+    description: '',
+    is_core: true,
+    due_date_offset: ''
+  });
+  const [editClientTaskForm, setEditClientTaskForm] = useState({
+    name: '',
+    description: '',
+    instructions: '',
+    due_date_offset: '',
+    is_mandatory: true
+  });
+  const [editEmailForm, setEditEmailForm] = useState({
+    name: '',
+    subject: '',
+    description: '',
+    content: '',
+    automation_enabled: false
   });
 
   // Certified edit confirmation state
