@@ -5,6 +5,7 @@ import { useStageEmails } from '@/hooks/useStageEmails';
 import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { TaskNotesPopover } from './TaskNotesPopover';
 import { StaffTaskActionMenu } from './StaffTaskActionMenu';
+import { TaskAssigneeButton } from './TaskAssigneeButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
