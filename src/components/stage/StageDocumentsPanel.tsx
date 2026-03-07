@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { 
   Plus, Trash2, FileText, Upload, Link2, GripVertical, 
-  Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff, History, Package, Layers, AlertTriangle, Filter
+  Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff, History, Package, Layers, AlertTriangle, Filter, Pencil
 } from 'lucide-react';
 import { DocumentVersionBadge } from '@/components/document/DocumentVersionBadge';
 import { BulkUploadWithMetadataDialog } from '@/components/document/BulkUploadWithMetadataDialog';
