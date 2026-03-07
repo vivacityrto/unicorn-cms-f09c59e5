@@ -94,7 +94,9 @@ const STAGE_TYPE_OPTIONS = [
   { value: 'delivery', label: 'Delivery' },
   { value: 'documentation', label: 'Documentation' },
   { value: 'support', label: 'Ongoing Support' },
+  { value: 'monitor', label: 'Monitor (Ongoing)' },
   { value: 'offboarding', label: 'Offboarding' },
+  { value: 'finalise', label: 'Finalise' },
   { value: 'other', label: 'Other' },
 ];
 
@@ -486,8 +488,12 @@ export default function AdminManageStages() {
         return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
       case 'support':
         return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
+      case 'monitor':
+        return 'bg-cyan-500/10 text-cyan-600 border-cyan-500/20';
       case 'offboarding':
         return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+      case 'finalise':
+        return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
       default:
         return 'bg-muted text-muted-foreground border-border';
     }
