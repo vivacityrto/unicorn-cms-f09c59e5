@@ -1,19 +1,29 @@
 
 
-## Open Linked Note Directly from Time Entries
+## Plan: Show current folder path next to root folder name in browser header
 
-### Problem
-Clicking the note icon on a time entry navigates to `/tenant/{id}/notes` (the full list) instead of opening the specific linked note in the editor.
+The user wants the current browsed folder displayed inline next to the root folder name (e.g., "46110-Academy of Global Business Training  **› _QA2 VET Student Support**"), rather than on a separate breadcrumb line. If the current folder is nested more than one level deep, prefix with "...".
 
-### Solution
+### Changes to `src/components/documents/SharePointFileBrowser.tsx`
 
-**1. `src/components/client/ClientTimeTab.tsx`**
-- Change the navigate URL from `/tenant/${tenantId}/notes` to `/tenant/${tenantId}/notes?editNoteId={noteId}` using the linked note's ID from `linkedNoteMap[entry.id].id`.
+**Modify the CardTitle (lines 142-145):**
+- After the root name, append the current folder name inline with a different icon (e.g., `Folder` instead of `FolderOpen`)
+- If `folderStack` has more than 2 entries (meaning we're deeper than a direct child), show "..." before the current folder name
+- The current folder is the last entry in `folderStack` (or derived from the browse state)
+- Use `ChevronRight` as separator, and a `Folder` icon (closed) for the current subfolder to differentiate from the root's `FolderOpen`
 
-**2. `src/pages/TenantNotes.tsx`**
-- Add a `useEffect` that reads the `editNoteId` URL search param.
-- When present and notes are loaded, find the matching note and call `openEditDialog(note)`.
-- Clean up the URL param after opening.
+**Remove the separate breadcrumb block (lines 152-166):**
+- No longer needed since the path info moves into the header line
 
-This ensures clicking the sticky-note icon in the time entries table opens the note editor dialog directly to that specific note.
+**Keep the Back button** in CardContent as-is for navigation.
+
+### Example rendering
+- At root: `📂 46110-Academy of Global Business Training`
+- One level deep: `📂 46110-Academy of Global Business Training  ›  📁 _QA2 VET Student Support`
+- Two+ levels deep: `📂 46110-Academy of Global Business Training  ›  ...  ›  📁 Deep Subfolder`
+
+### File
+| File | Change |
+|------|--------|
+| `src/components/documents/SharePointFileBrowser.tsx` | Inline current folder in header, remove separate breadcrumb |
 
