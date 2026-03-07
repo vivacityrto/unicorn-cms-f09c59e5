@@ -359,7 +359,7 @@ export function StageDocumentsPanel({
       if (insertError) throw insertError;
       
       // Update stage_documents to point to new document
-      const currentStageDoc = documents.find(d => d.document_id === selectedDocForEdit.id);
+      const currentStageDoc = documents.find(d => getDocumentId(d) === selectedDocForEdit.id);
       if (currentStageDoc) {
         await supabase
           .from('stage_documents')
