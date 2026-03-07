@@ -1,19 +1,26 @@
 
 
-## Open Linked Note Directly from Time Entries
+## Plan: Show shared folder name statically in browser header
 
-### Problem
-Clicking the note icon on a time entry navigates to `/tenant/{id}/notes` (the full list) instead of opening the specific linked note in the editor.
+Dave, the issue is that when browsing in "Insert Link" mode, the header should always show the shared folder name (e.g., `📂 46110-Academy of Global Business Training › 📁 __ALL SRTOs 2025 policies and practice guides`) — and this should be **static**, not change as the user navigates deeper into subfolders.
 
-### Solution
+### Changes
 
-**1. `src/components/client/ClientTimeTab.tsx`**
-- Change the navigate URL from `/tenant/${tenantId}/notes` to `/tenant/${tenantId}/notes?editNoteId={noteId}` using the linked note's ID from `linkedNoteMap[entry.id].id`.
+**`src/components/documents/SharePointFileBrowser.tsx`**
 
-**2. `src/pages/TenantNotes.tsx`**
-- Add a `useEffect` that reads the `editNoteId` URL search param.
-- When present and notes are loaded, find the matching note and call `openEditDialog(note)`.
-- Clean up the URL param after opening.
+1. **Fetch `shared_folder_name`** alongside existing settings — add it to the select query and pass it to `FileBrowserContent`
+2. **Replace the dynamic breadcrumb** in the `CardTitle` with a static display of `rootName › shared_folder_name` when `onSelectLink` is provided (link-insert mode)
+3. The current dynamic folder path logic (showing navigated subfolder) only applies when NOT in link-insert mode (i.e., the Documents tab browser)
 
-This ensures clicking the sticky-note icon in the time entries table opens the note editor dialog directly to that specific note.
+### Header rendering logic
+
+| Context | Header displays |
+|---------|----------------|
+| Link-insert mode (has `onSelectLink`) | `📂 {rootName} › 📁 {sharedFolderName}` — always static |
+| Documents tab (no `onSelectLink`) | `📂 {rootName}` + dynamic current folder as before |
+
+### Minimal changes
+- Add `shared_folder_name` to the settings select query (line 63)
+- Add `sharedFolderName` to state and pass to `FileBrowserContent`
+- In `CardTitle`, when `onSelectLink` is truthy and `sharedFolderName` exists, render the static path instead of the dynamic breadcrumb
 
