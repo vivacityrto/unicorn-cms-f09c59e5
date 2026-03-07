@@ -175,7 +175,6 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
             tenant_id: tenantId,
             package_id: parseInt(renewalPackageId, 10),
             start_date: newStartDate,
-            is_active: true,
             is_complete: false,
             membership_state: 'active',
           });
