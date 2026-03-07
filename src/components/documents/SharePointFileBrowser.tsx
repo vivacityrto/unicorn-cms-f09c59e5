@@ -70,6 +70,7 @@ export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFile
         enabled: data?.is_enabled ?? false,
         valid: data?.validation_status === 'valid',
         rootName: data?.root_name ?? null,
+        sharedFolderName: data?.shared_folder_name ?? null,
       });
     };
 
