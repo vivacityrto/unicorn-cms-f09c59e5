@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+/** Stage types excluded from the progress bar (ongoing or exit stages) */
+const NON_TRACKABLE_STAGE_TYPES = ['offboarding', 'monitor', 'finalise'];
+
 export interface ClientPackage {
   id: string;
   package_id: number;
@@ -14,6 +17,11 @@ export interface ClientPackage {
   current_stage_name: string | null;
   completed_stages: number;
   total_stages: number;
+  /** Stages that count toward progress (excludes offboarding/monitor/finalise) */
+  trackable_completed: number;
+  trackable_total: number;
+  /** Number of stages classified as 'monitor' */
+  monitor_stages: number;
   has_blocked_stages: boolean;
   membership_started_at: string;
   is_complete: boolean;
