@@ -66,6 +66,7 @@ export default function AdminStageDetail() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useRBAC();
   const { toast } = useToast();
+  const { stageTypes: STAGE_TYPE_OPTIONS } = useStageTypeOptions();
   const { updateStage, emailTemplates } = usePackageBuilder();
   const { activeUsage } = useStageActiveUsage(stageIdNum);
   const { updateCertification, isUpdating: isCertUpdating } = useStageCertification();
