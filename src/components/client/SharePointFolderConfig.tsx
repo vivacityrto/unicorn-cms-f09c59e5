@@ -272,11 +272,13 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
 
   const status = STATUS_CONFIG[settings?.validation_status || 'unvalidated'] || STATUS_CONFIG.unvalidated;
 
+  const isDisabled = settings ? !settings.is_enabled : false;
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="space-y-1">
+          <div className="flex items-center gap-2">
             <CardTitle className="text-base flex items-center gap-2">
               <FolderOpen className="h-5 w-5" />
               {globalSiteUrl ? (
@@ -293,21 +295,33 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
                 'SharePoint Folder'
               )}
             </CardTitle>
-            <CardDescription className="mt-1">
-              Connect a SharePoint folder as the document root for this client
-            </CardDescription>
+            {settings && (
+              <Badge variant={status.variant} className="flex items-center gap-1">
+                {status.icon}
+                {status.label}
+              </Badge>
+            )}
           </div>
           {settings && (
-            <Badge variant={status.variant} className="flex items-center gap-1">
-              {status.icon}
-              {status.label}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {settings.is_enabled ? 'Enabled' : 'Disabled'}
+              </span>
+              <Switch
+                checked={settings.is_enabled}
+                onCheckedChange={handleToggleEnabled}
+                disabled={toggling}
+              />
+            </div>
           )}
         </div>
+        <CardDescription className="mt-1">
+          Connect a SharePoint folder as the document root for this client
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* URL Input */}
-        <div className="space-y-2">
+      <CardContent className={`space-y-4 ${isDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+        {/* URL Input — always visible even when disabled */}
+        <div className={`space-y-2 ${isDisabled ? '!opacity-100 !pointer-events-auto' : ''}`}>
           <Label htmlFor="sp-root-url">
             {urlInput.trim().startsWith('https://') ? (
               <a
@@ -371,32 +385,74 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
           </p>
         </div>
 
-        {/* Status Details — only show when there's something to display */}
-        {settings && (settings.validation_status === 'valid' || settings.last_validated_at || settings.validation_error) && (
+        {/* Side-by-side: Status Details + Shared Folder */}
+        {settings && settings.validation_status === 'valid' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Status Details */}
+            {(settings.last_validated_at || settings.validation_error || settings.root_name) && (
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Root Folder</p>
+                {settings.root_name && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{settings.root_name}</span>
+                  </div>
+                )}
+                {settings.root_folder_url && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={settings.root_folder_url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open in SharePoint
+                    </a>
+                  </Button>
+                )}
+                {settings.drive_id && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Drive ID:</span>
+                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                      {settings.drive_id.substring(0, 20)}...
+                    </code>
+                  </div>
+                )}
+                {settings.last_validated_at && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Last validated:</span>
+                    <span>{formatDateTime(settings.last_validated_at)}</span>
+                  </div>
+                )}
+                {settings.validation_error && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{settings.validation_error}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+
+            {/* Shared Folder Configuration */}
+            <SharedFolderSection
+              settings={settings}
+              tenantId={tenantId}
+              browsingSharedFolder={browsingSharedFolder}
+              setBrowsingSharedFolder={setBrowsingSharedFolder}
+              sharedFolderBrowseItems={sharedFolderBrowseItems}
+              setSharedFolderBrowseItems={setSharedFolderBrowseItems}
+              sharedFolderBrowseStack={sharedFolderBrowseStack}
+              setSharedFolderBrowseStack={setSharedFolderBrowseStack}
+              sharedFolderBrowseLoading={sharedFolderBrowseLoading}
+              setSharedFolderBrowseLoading={setSharedFolderBrowseLoading}
+              savingSharedFolder={savingSharedFolder}
+              setSavingSharedFolder={setSavingSharedFolder}
+              onSaved={fetchSettings}
+              toast={toast}
+            />
+          </div>
+        )}
+
+        {/* Non-valid status details (errors, etc.) */}
+        {settings && settings.validation_status !== 'valid' && (settings.last_validated_at || settings.validation_error) && (
           <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-            {settings.root_name && settings.validation_status === 'valid' && (
-              <div className="flex items-center gap-2 text-sm">
-                <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Root folder:</span>
-                <span className="font-medium">{settings.root_name}</span>
-              </div>
-            )}
-            {settings.validation_status === 'valid' && settings.root_folder_url && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={settings.root_folder_url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Open in SharePoint
-                </a>
-              </Button>
-            )}
-            {settings.drive_id && settings.validation_status === 'valid' && (
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Drive ID:</span>
-                <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                  {settings.drive_id.substring(0, 20)}...
-                </code>
-              </div>
-            )}
             {settings.last_validated_at && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -412,44 +468,6 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
             )}
           </div>
         )}
-
-        {/* Shared Folder Configuration */}
-        {settings && settings.validation_status === 'valid' && (
-          <SharedFolderSection
-            settings={settings}
-            browsingSharedFolder={browsingSharedFolder}
-            setBrowsingSharedFolder={setBrowsingSharedFolder}
-            sharedFolderBrowseItems={sharedFolderBrowseItems}
-            setSharedFolderBrowseItems={setSharedFolderBrowseItems}
-            sharedFolderBrowseStack={sharedFolderBrowseStack}
-            setSharedFolderBrowseStack={setSharedFolderBrowseStack}
-            sharedFolderBrowseLoading={sharedFolderBrowseLoading}
-            setSharedFolderBrowseLoading={setSharedFolderBrowseLoading}
-            savingSharedFolder={savingSharedFolder}
-            setSavingSharedFolder={setSavingSharedFolder}
-            onSaved={fetchSettings}
-            toast={toast}
-          />
-        )}
-
-        {/* Enable/Disable toggle */}
-        {settings && (
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div>
-              <p className="text-sm font-medium">SharePoint access</p>
-              <p className="text-xs text-muted-foreground">
-                {settings.is_enabled
-                  ? 'Tenant users can browse and download files'
-                  : 'Access is disabled for tenant users'}
-              </p>
-            </div>
-            <Switch
-              checked={settings.is_enabled}
-              onCheckedChange={handleToggleEnabled}
-              disabled={toggling}
-            />
-          </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -459,6 +477,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
 
 function SharedFolderSection({
   settings,
+  tenantId,
   browsingSharedFolder,
   setBrowsingSharedFolder,
   sharedFolderBrowseItems,
@@ -473,6 +492,7 @@ function SharedFolderSection({
   toast,
 }: {
   settings: SharePointSettings;
+  tenantId: number;
   browsingSharedFolder: boolean;
   setBrowsingSharedFolder: (v: boolean) => void;
   sharedFolderBrowseItems: Array<{ id: string; name: string; is_folder: boolean }>;
@@ -490,7 +510,7 @@ function SharedFolderSection({
     setSharedFolderBrowseLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('browse-sharepoint-folder', {
-        body: { action: 'list', folder_id: folderId || undefined },
+        body: { action: 'list', tenant_id: tenantId, folder_id: folderId || undefined },
       });
       if (error || data?.error) throw new Error(data?.error || error?.message);
       const folders = (data.items || []).filter((i: any) => i.is_folder);
