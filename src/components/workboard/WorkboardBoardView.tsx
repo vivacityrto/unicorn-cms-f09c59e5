@@ -208,6 +208,7 @@ export function WorkboardBoardView({ items, onUpdateStatus, onOpenDetail }: Work
   const itemsByStatus = useMemo(() => {
     const grouped: Record<ItemStatus, WorkboardItem[]> = {
       todo: [],
+      open: [],
       in_progress: [],
       blocked: [],
       waiting_client: [],
