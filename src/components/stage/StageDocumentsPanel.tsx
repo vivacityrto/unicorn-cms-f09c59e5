@@ -150,7 +150,7 @@ export function StageDocumentsPanel({
     setLoadingLibrary(true);
     try {
       // Get already linked document IDs
-      const linkedIds = new Set(documents.map(d => d.document_id));
+      const linkedIds = new Set(documents.map(d => d.document_id || (d as any).id));
       
       const { data, error } = await supabase
         .from('documents')
