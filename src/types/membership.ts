@@ -1,7 +1,8 @@
 // Superhero Membership Dashboard Types
 import type { Json } from '@/integrations/supabase/types';
 
-export type MembershipState = 'active' | 'at_risk' | 'warning' | 'paused' | 'exiting';
+// MembershipState values are now driven by dd_membership_state lookup table
+export type MembershipState = string;
 export type ObligationStatus = 'not_scheduled' | 'scheduled' | 'delivered';
 
 // Package type definitions
