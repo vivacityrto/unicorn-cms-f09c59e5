@@ -454,6 +454,8 @@ export default function ClientDetail() {
               loading={packagesLoading}
               onAddPackage={() => setAssignPackageOpen(true)}
               complyhubTier={tenant?.complyhub_membership_tier}
+              autoExpandPackageInstanceId={searchParams.get('packageInstance') ? parseInt(searchParams.get('packageInstance')!, 10) : undefined}
+              autoExpandStageInstanceId={searchParams.get('stageInstance') ? parseInt(searchParams.get('stageInstance')!, 10) : undefined}
             />
             <AssignPackageDialog
               open={assignPackageOpen}
