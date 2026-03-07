@@ -281,6 +281,25 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
         details: { package_id: packageId, stage_instance_id: stageInstanceId },
       });
 
+      // Auto-create action item when assigning (not when unassigning)
+      if (assigneeId && clientId) {
+        try {
+          await supabase.rpc('rpc_create_action_item', {
+            p_tenant_id: tenantId,
+            p_client_id: clientId,
+            p_title: oldTask?.task_name || `Staff Task ${taskId}`,
+            p_description: oldTask?.task_description || null,
+            p_owner_user_id: assigneeId,
+            p_due_date: oldTask?.due_date ? oldTask.due_date.split('T')[0] : null,
+            p_priority: 'medium',
+            p_source: 'task_assignment',
+          });
+        } catch (actionErr: any) {
+          console.error('Auto-create action failed:', actionErr);
+          // Non-blocking — assignment still succeeded
+        }
+      }
+
       toast({ title: 'Task Updated', description: 'Assignee changed' });
       fetchTasks();
     } catch (error: any) {
