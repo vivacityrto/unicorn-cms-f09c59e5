@@ -35,11 +35,12 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
     loading, 
     updating, 
     updateTaskStatus,
+    updateTaskAssignee,
     updateTaskCore,
     refetch,
     completedCount,
     totalCount 
-  } = useStaffTaskInstances({ stageInstanceId, tenantId, packageId });
+  } = useStaffTaskInstances({ stageInstanceId, tenantId, packageId, clientId: tenantId.toString() });
 
   const { statuses } = useTaskStatusOptions();
   const { emails: stageEmails } = useStageEmails({ stageInstanceId });
