@@ -47,6 +47,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { supabase } from '@/integrations/supabase/client';
+import { useActionPriorityOptions } from '@/hooks/useActionPriorityOptions';
 
 interface PackageNotesSectionProps {
   tenantId: number;
@@ -62,12 +63,13 @@ const NOTE_TYPES = [
   { value: 'document', label: 'Document', icon: FileText },
 ];
 
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low', color: 'bg-muted text-muted-foreground' },
-  { value: 'normal', label: 'Normal', color: 'bg-secondary text-secondary-foreground' },
-  { value: 'high', label: 'High', color: 'bg-amber-100 text-amber-700' },
-  { value: 'urgent', label: 'Urgent', color: 'bg-destructive/10 text-destructive' },
-];
+const PRIORITY_COLOR_MAP: Record<string, string> = {
+  low: 'bg-muted text-muted-foreground',
+  normal: 'bg-secondary text-secondary-foreground',
+  medium: 'bg-blue-100 text-blue-700',
+  high: 'bg-amber-100 text-amber-700',
+  urgent: 'bg-destructive/10 text-destructive',
+};
 
 export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: PackageNotesSectionProps) {
   const navigate = useNavigate();
@@ -76,6 +78,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
     parentId: packageInstanceId,
     tenantId,
   });
+  const { priorities: priorityOptions } = useActionPriorityOptions();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -251,7 +254,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
               <TableBody>
                 {filteredNotes.map((note) => {
                   const TypeIcon = getTypeIcon(note.note_type);
-                  const priorityOption = PRIORITY_OPTIONS.find(p => p.value === note.priority);
+                  const priorityOption = priorityOptions.find(p => p.value === note.priority);
 
                   return (
                     <TableRow key={note.id} className={cn(note.is_pinned && "bg-primary/5")}>
@@ -272,7 +275,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                       </TableCell>
                       <TableCell>
                         {priorityOption && priorityOption.value !== 'normal' ? (
-                          <Badge variant="outline" className={cn("text-xs", priorityOption.color)}>
+                          <Badge variant="outline" className={cn("text-xs", PRIORITY_COLOR_MAP[priorityOption.value] || 'bg-secondary text-secondary-foreground')}>
                             {priorityOption.label}
                           </Badge>
                         ) : (
@@ -372,9 +375,9 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PRIORITY_OPTIONS.map(priority => (
-                      <SelectItem key={priority.value} value={priority.value}>
-                        {priority.label}
+                    {priorityOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

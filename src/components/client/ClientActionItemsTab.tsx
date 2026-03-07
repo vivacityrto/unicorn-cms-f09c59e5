@@ -27,31 +27,49 @@ import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { NotifyClientCheckbox } from './NotifyClientCheckbox';
 import { notifyClientPrimaryContact } from '@/lib/notifyClient';
+import { useActionPriorityOptions } from '@/hooks/useActionPriorityOptions';
+import { useActionStatusOptions } from '@/hooks/useActionStatusOptions';
 
 interface ClientActionItemsTabProps {
   tenantId: number;
   clientId: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  open: { label: 'Open', icon: Circle, color: 'bg-slate-100 text-slate-700' },
-  in_progress: { label: 'In Progress', icon: Clock, color: 'bg-blue-100 text-blue-700' },
-  blocked: { label: 'Blocked', icon: PauseCircle, color: 'bg-red-100 text-red-700' },
-  done: { label: 'Done', icon: CheckCircle2, color: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Cancelled', icon: XCircle, color: 'bg-muted text-muted-foreground' }
+// Fallback icon/color maps for statuses
+const STATUS_ICON_MAP: Record<string, React.ElementType> = {
+  open: Circle,
+  in_progress: Clock,
+  blocked: PauseCircle,
+  done: CheckCircle2,
+  cancelled: XCircle,
+  todo: Circle,
+  waiting_client: Clock,
 };
 
-const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
-  low: { label: 'Low', color: 'bg-slate-100 text-slate-600' },
-  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-700' },
-  high: { label: 'High', color: 'bg-orange-100 text-orange-700' },
-  urgent: { label: 'Urgent', color: 'bg-red-100 text-red-700' }
+const STATUS_COLOR_MAP: Record<string, string> = {
+  open: 'bg-slate-100 text-slate-700',
+  in_progress: 'bg-blue-100 text-blue-700',
+  blocked: 'bg-red-100 text-red-700',
+  done: 'bg-green-100 text-green-700',
+  cancelled: 'bg-muted text-muted-foreground',
+  todo: 'bg-slate-100 text-slate-700',
+  waiting_client: 'bg-amber-100 text-amber-700',
+};
+
+const PRIORITY_COLOR_MAP: Record<string, string> = {
+  low: 'bg-slate-100 text-slate-600',
+  normal: 'bg-blue-100 text-blue-700',
+  medium: 'bg-blue-100 text-blue-700',
+  high: 'bg-orange-100 text-orange-700',
+  urgent: 'bg-red-100 text-red-700',
 };
 
 export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTabProps) {
   const { items, loading, createItem, setStatus, updateItem, deleteItem, refresh } = useClientActionItems(tenantId, clientId);
   const speech = useSpeechToText();
   const { data: vivacityTeam = [] } = useVivacityTeamUsers();
+  const { priorities: priorityOptions } = useActionPriorityOptions();
+  const { statuses: actionStatusOptions } = useActionStatusOptions();
   
   const [filter, setFilter] = useState('open');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -62,15 +80,13 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('normal');
+  const [priority, setPriority] = useState('medium');
   const [actionStatus, setActionStatus] = useState('open');
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [ownerUserId, setOwnerUserId] = useState<string | undefined>();
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
   const [notifyClient, setNotifyClient] = useState(false);
   
-  // Status options from dd_status
-  const [statusOptions, setStatusOptions] = useState<{ value: string; description: string }[]>([]);
   
   // Team members for assignment
   const [teamMembers, setTeamMembers] = useState<Array<{
@@ -82,7 +98,6 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
 
   useEffect(() => {
     fetchTeamMembers();
-    fetchStatusOptions();
   }, []);
 
   const fetchTeamMembers = async () => {
@@ -95,19 +110,10 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setTeamMembers(data || []);
   };
 
-  const fetchStatusOptions = async () => {
-    const { data } = await supabase
-      .from('dd_status')
-      .select('value, description, code')
-      .in('code', [2, 100, 102, 103])
-      .order('code');
-    if (data) setStatusOptions(data.filter(s => s.value));
-  };
-
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setPriority('normal');
+    setPriority('medium');
     setActionStatus('open');
     setDueDate(undefined);
     setOwnerUserId(undefined);
@@ -293,17 +299,16 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
             </div>
             <div className="flex items-center gap-2">
               <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-[130px] h-8">
+                <SelectTrigger className="w-[150px] h-8">
                   <Filter className="h-3 w-3 mr-1" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="blocked">Blocked</SelectItem>
+                  {actionStatusOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
                   <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
                 </SelectContent>
               </Select>
               <Button size="sm" onClick={handleOpenAdd}>
@@ -328,10 +333,12 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
             <ScrollArea className="h-[500px]">
               <div className="space-y-2">
                 {filteredItems.map(item => {
-                  const statusConfig = STATUS_CONFIG[item.status];
-                  const priorityConfig = PRIORITY_CONFIG[item.priority];
-                  const StatusIcon = statusConfig.icon;
-                  const isOverdue = item.due_date && isPast(new Date(item.due_date)) && 
+                   const statusLabel = actionStatusOptions.find(s => s.value === item.status)?.label || item.status;
+                   const statusColor = STATUS_COLOR_MAP[item.status] || 'bg-slate-100 text-slate-700';
+                   const StatusIcon = STATUS_ICON_MAP[item.status] || Circle;
+                   const priorityLabel = priorityOptions.find(p => p.value === item.priority)?.label || item.priority;
+                   const priorityColor = PRIORITY_COLOR_MAP[item.priority] || 'bg-slate-100 text-slate-600';
+                   const isOverdue = item.due_date && isPast(new Date(item.due_date)) && 
                                    !isToday(new Date(item.due_date)) && 
                                    item.status !== 'done' && item.status !== 'cancelled';
                   
@@ -361,12 +368,12 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                             <span className={`font-medium ${item.status === 'done' ? 'line-through' : ''}`}>
                               {item.title}
                             </span>
-                            <Badge variant="outline" className={`text-xs ${statusConfig.color}`}>
-                              {statusConfig.label}
-                            </Badge>
-                            <Badge variant="outline" className={`text-xs ${priorityConfig.color}`}>
-                              {priorityConfig.label}
-                            </Badge>
+                             <Badge variant="outline" className={`text-xs ${statusColor}`}>
+                               {statusLabel}
+                             </Badge>
+                             <Badge variant="outline" className={`text-xs ${priorityColor}`}>
+                               {priorityLabel}
+                             </Badge>
                           </div>
                           
                           {item.description && (
@@ -519,10 +526,9 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
+                    {priorityOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -534,9 +540,9 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map(opt => (
+                    {actionStatusOptions.map(opt => (
                       <SelectItem key={opt.value} value={opt.value}>
-                        {opt.description}
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
