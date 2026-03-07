@@ -23,6 +23,7 @@ import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { NotifyClientCheckbox } from '@/components/client/NotifyClientCheckbox';
 import { formatDuration, formatElapsedTime } from '@/hooks/useNotes';
+import { useActionPriorityOptions } from '@/hooks/useActionPriorityOptions';
 
 // ── Note type style map ──
 const NOTE_TYPE_STYLES: Record<string, { icon: typeof StickyNote; color: string }> = {
