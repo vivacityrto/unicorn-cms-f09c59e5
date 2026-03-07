@@ -77,6 +77,7 @@ export interface WorkboardFilters {
 
 export const STATUS_CONFIG: Record<ItemStatus, { label: string; color: string }> = {
   todo: { label: 'To Do', color: 'bg-slate-100 text-slate-700 border-slate-200' },
+  open: { label: 'Open', color: 'bg-slate-100 text-slate-700 border-slate-200' },
   in_progress: { label: 'In Progress', color: 'bg-blue-100 text-blue-700 border-blue-200' },
   blocked: { label: 'Blocked', color: 'bg-red-100 text-red-700 border-red-200' },
   waiting_client: { label: 'Waiting Client', color: 'bg-amber-100 text-amber-700 border-amber-200' },
@@ -86,6 +87,7 @@ export const STATUS_CONFIG: Record<ItemStatus, { label: string; color: string }>
 
 export const PRIORITY_CONFIG: Record<ItemPriority, { label: string; color: string }> = {
   low: { label: 'Low', color: 'bg-slate-100 text-slate-600' },
+  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-700' },
   medium: { label: 'Medium', color: 'bg-blue-100 text-blue-700' },
   high: { label: 'High', color: 'bg-orange-100 text-orange-700' },
   urgent: { label: 'Urgent', color: 'bg-red-100 text-red-700' }
