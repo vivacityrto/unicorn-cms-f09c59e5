@@ -27,25 +27,41 @@ import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { NotifyClientCheckbox } from './NotifyClientCheckbox';
 import { notifyClientPrimaryContact } from '@/lib/notifyClient';
+import { useActionPriorityOptions } from '@/hooks/useActionPriorityOptions';
+import { useActionStatusOptions } from '@/hooks/useActionStatusOptions';
 
 interface ClientActionItemsTabProps {
   tenantId: number;
   clientId: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  open: { label: 'Open', icon: Circle, color: 'bg-slate-100 text-slate-700' },
-  in_progress: { label: 'In Progress', icon: Clock, color: 'bg-blue-100 text-blue-700' },
-  blocked: { label: 'Blocked', icon: PauseCircle, color: 'bg-red-100 text-red-700' },
-  done: { label: 'Done', icon: CheckCircle2, color: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Cancelled', icon: XCircle, color: 'bg-muted text-muted-foreground' }
+// Fallback icon/color maps for statuses
+const STATUS_ICON_MAP: Record<string, React.ElementType> = {
+  open: Circle,
+  in_progress: Clock,
+  blocked: PauseCircle,
+  done: CheckCircle2,
+  cancelled: XCircle,
+  todo: Circle,
+  waiting_client: Clock,
 };
 
-const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
-  low: { label: 'Low', color: 'bg-slate-100 text-slate-600' },
-  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-700' },
-  high: { label: 'High', color: 'bg-orange-100 text-orange-700' },
-  urgent: { label: 'Urgent', color: 'bg-red-100 text-red-700' }
+const STATUS_COLOR_MAP: Record<string, string> = {
+  open: 'bg-slate-100 text-slate-700',
+  in_progress: 'bg-blue-100 text-blue-700',
+  blocked: 'bg-red-100 text-red-700',
+  done: 'bg-green-100 text-green-700',
+  cancelled: 'bg-muted text-muted-foreground',
+  todo: 'bg-slate-100 text-slate-700',
+  waiting_client: 'bg-amber-100 text-amber-700',
+};
+
+const PRIORITY_COLOR_MAP: Record<string, string> = {
+  low: 'bg-slate-100 text-slate-600',
+  normal: 'bg-blue-100 text-blue-700',
+  medium: 'bg-blue-100 text-blue-700',
+  high: 'bg-orange-100 text-orange-700',
+  urgent: 'bg-red-100 text-red-700',
 };
 
 export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTabProps) {
