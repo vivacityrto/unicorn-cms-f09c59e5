@@ -170,6 +170,8 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, stageSta
                 tenantId={tenantId}
                 packageId={packageId}
                 stageInstanceId={stageInstanceId}
+                stageName={stageName}
+                taskName={cleanName}
                 onSaved={refetch}
               />
 
