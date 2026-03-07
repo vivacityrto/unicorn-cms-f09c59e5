@@ -86,9 +86,8 @@ import { StageQualityIndicator } from '@/components/stage/StageQualityIndicator'
 import { StageDependencyIndicator } from '@/components/stage/StageDependencyIndicator';
 import { StageFrameworkBadges, formatFrameworks } from '@/components/stage/StageFrameworkSelector';
 import { Stage } from '@/hooks/usePackageBuilder';
+import { useStageTypeOptions } from '@/hooks/useStageTypeOptions';
 import { format } from 'date-fns';
-
-// Stage types loaded dynamically via useStageTypeOptions hook
 
 const CERTIFIED_FILTER_OPTIONS = [
   { value: 'all', label: 'All' },
