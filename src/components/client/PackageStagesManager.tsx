@@ -75,11 +75,12 @@ interface StageRowProps {
   onRecurringClick: (stage: StageInstance) => void;
   tenantId: number;
   packageId: number;
+  packageInstanceId?: number;
   onUpdate: () => void;
   profile: any;
 }
 
-function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, onUpdate, profile }: StageRowProps) {
+function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, packageInstanceId, onUpdate, profile }: StageRowProps) {
   const { statuses } = useTaskStatusOptions();
   const statusCode = typeof stage.status === 'number' ? stage.status : 0;
   const StatusIcon = getStatusIcon(statusCode);
