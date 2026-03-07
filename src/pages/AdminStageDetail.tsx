@@ -1940,6 +1940,161 @@ export default function AdminStageDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Team Task Dialog */}
+      <Dialog open={!!editingTeamTask} onOpenChange={(open) => !open && setEditingTeamTask(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Team Task</DialogTitle>
+            <DialogDescription>Update task details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Task Name *</Label>
+              <Input
+                value={editTaskForm.name}
+                onChange={(e) => setEditTaskForm({ ...editTaskForm, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Instructions</Label>
+              <Textarea
+                value={editTaskForm.description}
+                onChange={(e) => setEditTaskForm({ ...editTaskForm, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Due Offset (days)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editTaskForm.due_date_offset}
+                  onChange={(e) => setEditTaskForm({ ...editTaskForm, due_date_offset: e.target.value })}
+                  placeholder="e.g., 14"
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-6">
+                <Switch checked={editTaskForm.is_core} onCheckedChange={(c) => setEditTaskForm({ ...editTaskForm, is_core: c })} />
+                <Label>Core task</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingTeamTask(null)}>Cancel</Button>
+            <Button onClick={handleSaveTeamTask}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Client Task Dialog */}
+      <Dialog open={!!editingClientTask} onOpenChange={(open) => !open && setEditingClientTask(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Client Task</DialogTitle>
+            <DialogDescription>Update task visible to tenants.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Task Name *</Label>
+              <Input
+                value={editClientTaskForm.name}
+                onChange={(e) => setEditClientTaskForm({ ...editClientTaskForm, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={editClientTaskForm.description}
+                onChange={(e) => setEditClientTaskForm({ ...editClientTaskForm, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Instructions</Label>
+              <Textarea
+                value={editClientTaskForm.instructions}
+                onChange={(e) => setEditClientTaskForm({ ...editClientTaskForm, instructions: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Due Offset (days)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editClientTaskForm.due_date_offset}
+                  onChange={(e) => setEditClientTaskForm({ ...editClientTaskForm, due_date_offset: e.target.value })}
+                  placeholder="e.g., 7"
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-6">
+                <Switch checked={editClientTaskForm.is_mandatory} onCheckedChange={(c) => setEditClientTaskForm({ ...editClientTaskForm, is_mandatory: c })} />
+                <Label>Mandatory</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingClientTask(null)}>Cancel</Button>
+            <Button onClick={handleSaveClientTask}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Email Dialog */}
+      <Dialog open={!!editingEmail} onOpenChange={(open) => !open && setEditingEmail(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Email</DialogTitle>
+            <DialogDescription>Update email template details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input
+                  value={editEmailForm.name}
+                  onChange={(e) => setEditEmailForm({ ...editEmailForm, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Subject</Label>
+                <Input
+                  value={editEmailForm.subject}
+                  onChange={(e) => setEditEmailForm({ ...editEmailForm, subject: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Description (internal notes)</Label>
+              <Textarea
+                value={editEmailForm.description}
+                onChange={(e) => setEditEmailForm({ ...editEmailForm, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Content (HTML body)</Label>
+              <Textarea
+                value={editEmailForm.content}
+                onChange={(e) => setEditEmailForm({ ...editEmailForm, content: e.target.value })}
+                rows={8}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={editEmailForm.automation_enabled} onCheckedChange={(c) => setEditEmailForm({ ...editEmailForm, automation_enabled: c })} />
+              <Label>Automation enabled</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingEmail(null)}>Cancel</Button>
+            <Button onClick={handleSaveEmail}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Confirmation Dialog with typed phrase */}
       <AlertDialog open={editConfirmationOpen} onOpenChange={(open) => {
         setEditConfirmationOpen(open);
