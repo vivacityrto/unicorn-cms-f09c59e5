@@ -12156,6 +12156,30 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_action_status: {
+        Row: {
+          code: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          code: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          code?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_address_type: {
         Row: {
           code: string
@@ -12506,6 +12530,30 @@ export type Database = {
           code?: number
           description?: string
           seq?: number
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_priority: {
+        Row: {
+          code: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          code: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          code?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
           value?: string
         }
         Relationships: []
