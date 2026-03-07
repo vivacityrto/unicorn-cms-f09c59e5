@@ -113,7 +113,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setPriority('normal');
+    setPriority('medium');
     setActionStatus('open');
     setDueDate(undefined);
     setOwnerUserId(undefined);
