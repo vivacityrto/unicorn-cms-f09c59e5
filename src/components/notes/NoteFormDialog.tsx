@@ -509,10 +509,9 @@ export function NoteFormDialog({
                 <Select value={priority} onValueChange={setPriority}>
                   <SelectTrigger><SelectValue placeholder="Normal" /></SelectTrigger>
                   <SelectContent className="bg-background">
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
+                    {priorityOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
