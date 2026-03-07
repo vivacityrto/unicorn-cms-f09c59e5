@@ -83,9 +83,23 @@ export function RichTextEditor({ value, onChange, className, placeholder, minHei
     </Toggle>
   );
 
-  const handleInsertLink = (url: string) => {
+  const handleInsertLink = (url: string, linkText?: string) => {
     if (url && editor) {
-      editor.chain().focus().setLink({ href: url }).run();
+      const { from, to } = editor.state.selection;
+      const hasSelection = from !== to;
+
+      if (hasSelection) {
+        // Apply link to selected text
+        editor.chain().focus().setLink({ href: url }).run();
+      } else {
+        // No selection — insert the link text (filename) as a clickable link
+        const displayText = linkText || url.split('/').pop() || url;
+        editor
+          .chain()
+          .focus()
+          .insertContent(`<a href="${url}">${displayText}</a> `)
+          .run();
+      }
     }
   };
 
