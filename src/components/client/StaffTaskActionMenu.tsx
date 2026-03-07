@@ -72,7 +72,7 @@ export function StaffTaskActionMenu({
   const [packageName, setPackageName] = useState<string>('');
   const [packageFullText, setPackageFullText] = useState<string>('');
   useEffect(() => {
-    if (type !== 'email' || !tenantId) return;
+    if (!tenantId) return;
 
     const fetchContacts = async () => {
       // CSC: from tenant_csc_assignments → users
