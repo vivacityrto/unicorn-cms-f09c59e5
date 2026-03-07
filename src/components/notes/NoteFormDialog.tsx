@@ -120,6 +120,7 @@ export function NoteFormDialog({
   saving: externalSaving,
 }: NoteFormDialogProps) {
   const { toast } = useToast();
+  const { priorities: priorityOptions } = useActionPriorityOptions();
 
   // ── Form state ──
   const [title, setTitle] = useState('');
