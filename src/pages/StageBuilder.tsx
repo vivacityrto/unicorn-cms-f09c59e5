@@ -28,7 +28,9 @@ const STAGE_TYPE_OPTIONS = [
   { value: 'delivery', label: 'Delivery' },
   { value: 'documentation', label: 'Documentation' },
   { value: 'support', label: 'Ongoing Support' },
+  { value: 'monitor', label: 'Monitor (Ongoing)' },
   { value: 'offboarding', label: 'Offboarding' },
+  { value: 'finalise', label: 'Finalise' },
   { value: 'other', label: 'Other' },
 ];
 
