@@ -181,6 +181,14 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
                 </div>
               </div>
 
+              <TaskAssigneeButton
+                assigneeId={task.assignee_id}
+                assigneeName={task.assignee_name}
+                assigneeAvatar={task.assignee_avatar}
+                disabled={task.status_id === 3 || (stageStatusId === 2 || stageStatusId === 4)}
+                updating={isUpdating}
+                onAssign={(userId) => updateTaskAssignee(task.id, userId)}
+              />
 
               <TaskNotesPopover
                 taskId={task.id}
