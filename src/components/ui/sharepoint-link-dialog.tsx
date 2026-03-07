@@ -18,7 +18,7 @@ interface SharePointLinkDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenantId: number;
-  onSelectLink: (url: string) => void;
+  onSelectLink: (url: string, linkText?: string) => void;
 }
 
 export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLink }: SharePointLinkDialogProps) {
