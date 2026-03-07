@@ -18,8 +18,8 @@ export type TaskSource = 'manual' | 'template' | 'system_suggestion' | 'ai_sugge
 // Stage status enum
 export type StageStatus = 'not_started' | 'in_progress' | 'blocked' | 'waiting' | 'complete' | 'skipped';
 
-// Client package state
-export type ClientPackageState = 'ACTIVE' | 'AT_RISK' | 'WARNING' | 'PAUSED' | 'EXITING' | 'CLOSED';
+// Client package state — values driven by dd_membership_state lookup table
+export type ClientPackageState = string;
 
 // Package Stage Map (links stages to packages)
 export interface PackageStageMap {
