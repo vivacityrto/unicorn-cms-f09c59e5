@@ -100,7 +100,8 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
         className={cn(
           "rounded-lg border bg-card overflow-hidden",
           stage.status === 2 && "border-primary/50 bg-primary/5",
-          stage.status === 5 && "border-destructive/50 bg-destructive/5"
+          stage.status === 5 && "border-destructive/50 bg-destructive/5",
+          stage.status === 6 && "border-amber-500/30 bg-amber-500/5"
         )}
       >
         <div className="flex items-center justify-between gap-4 p-3">
