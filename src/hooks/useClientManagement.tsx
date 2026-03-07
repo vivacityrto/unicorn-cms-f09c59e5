@@ -324,7 +324,6 @@ export function useClientProfile(tenantId: number | null) {
           .from('package_instances')
           .select('package_id')
           .eq('tenant_id', tenantId)
-          .eq('is_active', true)
           .eq('is_complete', false);
         if (activePkgs && activePkgs.length > 0) {
           const pkgIds = activePkgs.map(p => p.package_id);

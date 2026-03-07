@@ -251,8 +251,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         .from('package_instances')
         .select('id, package_id')
         .eq('tenant_id', tenantId)
-        .eq('is_complete', false)
-        .eq('is_active', true);
+        .eq('is_complete', false);
 
       if (!instances || instances.length === 0) {
         setActivePackages([]);
