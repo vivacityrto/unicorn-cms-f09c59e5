@@ -5,6 +5,7 @@ import { useStageEmails } from '@/hooks/useStageEmails';
 import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { TaskNotesPopover } from './TaskNotesPopover';
 import { StaffTaskActionMenu } from './StaffTaskActionMenu';
+import { TaskAssigneeButton } from './TaskAssigneeButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -34,11 +35,12 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
     loading, 
     updating, 
     updateTaskStatus,
+    updateTaskAssignee,
     updateTaskCore,
     refetch,
     completedCount,
     totalCount 
-  } = useStaffTaskInstances({ stageInstanceId, tenantId, packageId });
+  } = useStaffTaskInstances({ stageInstanceId, tenantId, packageId, clientId: tenantId.toString() });
 
   const { statuses } = useTaskStatusOptions();
   const { emails: stageEmails } = useStageEmails({ stageInstanceId });
@@ -179,6 +181,14 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
                 </div>
               </div>
 
+              <TaskAssigneeButton
+                assigneeId={task.assignee_id}
+                assigneeName={task.assignee_name}
+                assigneeAvatar={task.assignee_avatar}
+                disabled={task.status_id === 3 || (stageStatusId === 2 || stageStatusId === 4)}
+                updating={isUpdating}
+                onAssign={(userId) => updateTaskAssignee(task.id, userId)}
+              />
 
               <TaskNotesPopover
                 taskId={task.id}

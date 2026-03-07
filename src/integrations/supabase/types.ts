@@ -30875,6 +30875,7 @@ export type Database = {
         Row: {
           assigned_date: string | null
           assignee_id: string | null
+          completed_by: string | null
           completion_date: string | null
           created_at: string | null
           due_date: string | null
@@ -30892,6 +30893,7 @@ export type Database = {
         Insert: {
           assigned_date?: string | null
           assignee_id?: string | null
+          completed_by?: string | null
           completion_date?: string | null
           created_at?: string | null
           due_date?: string | null
@@ -30909,6 +30911,7 @@ export type Database = {
         Update: {
           assigned_date?: string | null
           assignee_id?: string | null
+          completed_by?: string | null
           completion_date?: string | null
           created_at?: string | null
           due_date?: string | null
