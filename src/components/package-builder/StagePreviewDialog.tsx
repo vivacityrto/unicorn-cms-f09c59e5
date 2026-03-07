@@ -61,6 +61,7 @@ interface StageUsageData {
 // Stage types loaded dynamically via useStageTypeOptions hook
 
 export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDialogProps) {
+  const { stageTypes } = useStageTypeOptions();
   const [loading, setLoading] = useState(false);
   const [usageData, setUsageData] = useState<StageUsageData>({
     teamTasks: [],
