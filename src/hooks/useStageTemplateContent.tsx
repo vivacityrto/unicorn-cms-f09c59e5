@@ -41,6 +41,10 @@ export interface StageEmail {
   to: string | null;
   package_id: number | null;
   automation_enabled: boolean;
+  auth_mode: boolean;
+  auto_send_on_document_added: boolean;
+  auto_send_on_document_updated: boolean;
+  auto_send_on_task_assignment: boolean;
   created_at: string | null;
   created_by: string | null;
 }
