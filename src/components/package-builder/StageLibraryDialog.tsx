@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
+import { useStageTypeOptions, getStageTypeColor as getStageTypeColorHelper } from '@/hooks/useStageTypeOptions';
 import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
