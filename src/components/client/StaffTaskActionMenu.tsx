@@ -162,7 +162,7 @@ export function StaffTaskActionMenu({
     };
 
     fetchContacts();
-  }, [tenantId, type, stageInstanceId, packageId]);
+  }, [tenantId, stageInstanceId, packageId]);
 
   // Try to auto-match a stage email by comparing the clean task name to email subjects
   const matchedEmail = type === 'email' && cleanName

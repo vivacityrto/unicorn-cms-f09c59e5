@@ -288,7 +288,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
           const delegatorName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unknown';
           const rawDesc = (oldTask?.task_description || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
           const descSnippet = rawDesc.length > 50 ? rawDesc.slice(0, 50) + '…' : rawDesc;
-          const actionDesc = `Task delegated from Package by: ${delegatorName}.${descSnippet ? ' ' + descSnippet : ''}`;
+          const actionDesc = `Task delegated by: ${delegatorName}${descSnippet ? '\n' + descSnippet : ''}`;
 
           await supabase.rpc('rpc_create_action_item', {
             p_tenant_id: tenantId,
@@ -299,6 +299,8 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
             p_due_date: oldTask?.due_date ? oldTask.due_date.split('T')[0] : null,
             p_priority: 'medium',
             p_source: 'task_assignment',
+            p_related_entity_type: 'staff_task_instance',
+            p_related_entity_id: taskId.toString(),
           });
         } catch (actionErr: any) {
           console.error('Auto-create action failed:', actionErr);

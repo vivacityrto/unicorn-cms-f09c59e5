@@ -423,6 +423,35 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
+                            {item.related_entity_type === 'staff_task_instance' && item.related_entity_id && (
+                              <DropdownMenuItem onClick={async () => {
+                                try {
+                                  // Look up the stage instance and package instance for this task
+                                  const { data: taskData } = await supabase
+                                    .from('staff_task_instances')
+                                    .select('stageinstance_id')
+                                    .eq('id', parseInt(item.related_entity_id!, 10))
+                                    .maybeSingle() as { data: { stageinstance_id: number } | null; error: any };
+                                  
+                                  if (taskData?.stageinstance_id) {
+                                    const { data: stageData } = await supabase
+                                      .from('stage_instances')
+                                      .select('packageinstance_id')
+                                      .eq('id', taskData.stageinstance_id)
+                                      .maybeSingle() as { data: { packageinstance_id: number } | null; error: any };
+                                    
+                                    if (stageData?.packageinstance_id) {
+                                      navigate(`/tenant/${tenantId}?tab=packages&packageInstance=${stageData.packageinstance_id}&stageInstance=${taskData.stageinstance_id}`);
+                                    }
+                                  }
+                                } catch (err) {
+                                  console.error('Error navigating to task:', err);
+                                }
+                              }}>
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                View Task
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => setStatus(item.id, 'open')}>
                               <Circle className="h-4 w-4 mr-2" />
