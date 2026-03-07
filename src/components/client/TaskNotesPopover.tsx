@@ -170,7 +170,7 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInst
         </PopoverContent>
       </Popover>
 
-      <AlertDialog open={showNotePrompt} onOpenChange={setShowNotePrompt}>
+      <AlertDialog open={showNotePrompt} onOpenChange={(open) => { if (!open) handleDismissPrompt(); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Create Package Note?</AlertDialogTitle>
