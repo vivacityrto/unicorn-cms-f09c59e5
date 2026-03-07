@@ -352,6 +352,7 @@ export default function TenantNotes() {
     setFilesToRemove([]);
     setAssignees(currentUserId ? [currentUserId] : []);
     setPendingTimeEntryId(null);
+    setPendingPackageInstanceId(null);
     setSelectedNote(null);
     setIsTimerRunning(false);
     setTimerStartTime(null);
