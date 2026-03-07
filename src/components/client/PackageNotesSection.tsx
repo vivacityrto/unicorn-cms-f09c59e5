@@ -78,6 +78,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
     parentId: packageInstanceId,
     tenantId,
   });
+  const { priorities: priorityOptions } = useActionPriorityOptions();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
