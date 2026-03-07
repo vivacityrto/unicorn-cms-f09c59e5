@@ -122,7 +122,7 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInst
             <Pencil className={`h-3 w-3 ${notes ? 'text-primary' : 'text-muted-foreground'}`} />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-72 p-3" align="end">
+        <PopoverContent className="w-96 p-3" align="end">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium truncate">Note: {stageName || 'Stage'} &gt; {taskName || 'Task'}</label>
