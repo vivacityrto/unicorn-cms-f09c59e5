@@ -110,7 +110,13 @@ export function TaskNotesPopover({ taskId, notes, tenantId, packageId, stageInst
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
       setShowNotePrompt(false);
+      onSaved();
     }
+  };
+
+  const handleDismissPrompt = () => {
+    setShowNotePrompt(false);
+    onSaved();
   };
 
   return (
