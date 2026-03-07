@@ -60,7 +60,7 @@ export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFile
     const fetchSettings = async () => {
       const { data } = await supabase
         .from('tenant_sharepoint_settings')
-        .select('is_enabled, validation_status, root_name')
+        .select('is_enabled, validation_status, root_name, shared_folder_name')
         .eq('tenant_id', tenantId)
         .maybeSingle();
 
