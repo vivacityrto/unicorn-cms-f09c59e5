@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, FolderOpen, ExternalLink } from 'lucide-react';
+import { Loader2, FolderOpen, ExternalLink, Globe } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
@@ -18,7 +18,7 @@ interface SharePointLinkDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenantId: number;
-  onSelectLink: (url: string) => void;
+  onSelectLink: (url: string, linkText?: string) => void;
 }
 
 export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLink }: SharePointLinkDialogProps) {
@@ -85,18 +85,24 @@ export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLin
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Quick insert root folder link */}
+            {/* Quick insert root folder link + Visit Site */}
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={handleInsertFolderLink} className="gap-1.5 shrink-0">
                 <ExternalLink className="h-3.5 w-3.5" />
                 Insert Root Folder Link
               </Button>
               <span className="text-xs text-muted-foreground truncate flex-1">{folderUrl}</span>
+              <Button variant="ghost" size="sm" asChild className="gap-1.5 shrink-0">
+                <a href={folderUrl!} target="_blank" rel="noopener noreferrer">
+                  <Globe className="h-3.5 w-3.5" />
+                  Visit Site
+                </a>
+              </Button>
             </div>
 
             {/* Paste a specific SharePoint URL */}
             <div className="space-y-1.5">
-              <Label className="text-xs">Or paste a SharePoint file/folder URL:</Label>
+              <Label className="text-xs uppercase text-muted-foreground">Or paste a SharePoint file/folder URL:</Label>
               <div className="flex gap-2">
                 <Input
                   value={customUrl}
@@ -115,8 +121,8 @@ export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLin
               <p className="text-sm font-medium mb-2">Browse files and insert link:</p>
               <SharePointFileBrowser
                 tenantId={tenantId}
-                onSelectLink={(url) => {
-                  onSelectLink(url);
+                onSelectLink={(url, fileName) => {
+                  onSelectLink(url, fileName);
                   onOpenChange(false);
                 }}
               />

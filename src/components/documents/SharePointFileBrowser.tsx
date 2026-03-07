@@ -25,7 +25,7 @@ import {
   AlertCircle,
   ChevronRight,
   RefreshCw,
-  ExternalLink,
+  Link,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,7 +34,7 @@ import { formatDateTime } from '@/lib/utils';
 
 interface SharePointFileBrowserProps {
   tenantId: number;
-  onSelectLink?: (url: string) => void;
+  onSelectLink?: (url: string, fileName?: string) => void;
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -112,7 +112,7 @@ function FileBrowserContent({
 }: {
   tenantId: number;
   rootName: string | null;
-  onSelectLink?: (url: string) => void;
+  onSelectLink?: (url: string, fileName?: string) => void;
 }) {
   const {
     items,
@@ -238,7 +238,7 @@ function FileRow({
   onNavigate: (id: string, name: string) => void;
   onDownload: (id: string, name: string) => Promise<void>;
   downloading: string | null;
-  onSelectLink?: (url: string) => void;
+  onSelectLink?: (url: string, fileName?: string) => void;
 }) {
   const isDownloading = downloading === item.id;
 
@@ -274,10 +274,10 @@ function FileRow({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onSelectLink(item.web_url)}
-            title="Insert link"
+            onClick={() => onSelectLink(item.web_url, item.name)}
+            title="Insert link to this file"
           >
-            <ExternalLink className="h-4 w-4" />
+            <Link className="h-4 w-4" />
           </Button>
         ) : !item.is_folder ? (
           <Button
