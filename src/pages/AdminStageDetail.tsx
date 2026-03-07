@@ -11,7 +11,7 @@ import { useStageExportImport } from '@/hooks/useStageExportImport';
 import { useStageTypeOptions, getStageTypeColor as getStageTypeColorHelper, getStageTypeLabel } from '@/hooks/useStageTypeOptions';
 import { useStageQualityCheck, computeStageQuality } from '@/hooks/useStageQualityCheck';
 import { usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
-import { useStageTemplateContent, usePackageStageOverrides } from '@/hooks/useStageTemplateContent';
+import { useStageTemplateContent, usePackageStageOverrides, StageTeamTask, StageClientTask, StageEmail } from '@/hooks/useStageTemplateContent';
 import { useStageImpact, useSyncStageToPackages } from '@/hooks/usePackageStageOverrides';
 import { useStageDependencyCheck, updateStageDependencies, checkDependencyCertification } from '@/hooks/useStageDependencies';
 import { useStageVersions, StageVersion, CertifiedEditCheck } from '@/hooks/useStageVersions';
@@ -37,7 +37,7 @@ import {
   ArrowLeft, Layers, ShieldCheck, ShieldX, Settings, Users, CheckSquare, 
   Mail, FileText, BarChart3, History, Copy, AlertTriangle, Plus, Trash2, 
   User, Clock, GripVertical, Package, Info, Loader2, RefreshCw, ExternalLink,
-  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2, Globe, Play
+  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2, Globe, Play, Pencil
 } from 'lucide-react';
 import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTab';
 import { StageQualityPanel, StageQualityBadge } from '@/components/stage/StageQualityPanel';
@@ -88,6 +88,7 @@ export default function AdminStageDetail() {
     updateClientTask,
     deleteClientTask,
     addEmail,
+    updateEmail,
     deleteEmail,
     addDocument,
     addBulkDocuments,
@@ -175,6 +176,11 @@ export default function AdminStageDetail() {
   const [isAddingClientTask, setIsAddingClientTask] = useState(false);
   const [isAddingEmail, setIsAddingEmail] = useState(false);
   
+  // Edit dialog states
+  const [editingTeamTask, setEditingTeamTask] = useState<StageTeamTask | null>(null);
+  const [editingClientTask, setEditingClientTask] = useState<StageClientTask | null>(null);
+  const [editingEmail, setEditingEmail] = useState<StageEmail | null>(null);
+  
   // Form states
   const [taskForm, setTaskForm] = useState({
     name: '',
@@ -193,6 +199,28 @@ export default function AdminStageDetail() {
     email_template_id: '',
     trigger_type: 'manual',
     recipient_type: 'tenant'
+  });
+  
+  // Edit form states
+  const [editTaskForm, setEditTaskForm] = useState({
+    name: '',
+    description: '',
+    is_core: true,
+    due_date_offset: ''
+  });
+  const [editClientTaskForm, setEditClientTaskForm] = useState({
+    name: '',
+    description: '',
+    instructions: '',
+    due_date_offset: '',
+    is_mandatory: true
+  });
+  const [editEmailForm, setEditEmailForm] = useState({
+    name: '',
+    subject: '',
+    description: '',
+    content: '',
+    automation_enabled: false
   });
 
   // Certified edit confirmation state
@@ -780,6 +808,89 @@ export default function AdminStageDetail() {
     }
   };
 
+  // Edit handlers
+  const openEditTeamTask = (task: StageTeamTask) => {
+    setEditTaskForm({
+      name: task.name,
+      description: task.description || '',
+      is_core: task.is_core,
+      due_date_offset: task.due_date_offset?.toString() || ''
+    });
+    setEditingTeamTask(task);
+  };
+
+  const handleSaveTeamTask = async () => {
+    if (!editingTeamTask || !editTaskForm.name.trim()) return;
+    try {
+      await updateTeamTask(editingTeamTask.id, {
+        name: editTaskForm.name,
+        description: editTaskForm.description || null,
+        is_core: editTaskForm.is_core,
+        due_date_offset: editTaskForm.due_date_offset ? parseInt(editTaskForm.due_date_offset) : null
+      });
+      toast({ title: 'Task Updated' });
+      setEditingTeamTask(null);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update task', variant: 'destructive' });
+    }
+  };
+
+  const openEditClientTask = (task: StageClientTask) => {
+    setEditClientTaskForm({
+      name: task.name,
+      description: task.description || '',
+      instructions: task.instructions || '',
+      due_date_offset: task.due_date_offset?.toString() || '',
+      is_mandatory: task.is_mandatory
+    });
+    setEditingClientTask(task);
+  };
+
+  const handleSaveClientTask = async () => {
+    if (!editingClientTask || !editClientTaskForm.name.trim()) return;
+    try {
+      await updateClientTask(editingClientTask.id, {
+        name: editClientTaskForm.name,
+        description: editClientTaskForm.description || null,
+        instructions: editClientTaskForm.instructions || null,
+        due_date_offset: editClientTaskForm.due_date_offset ? parseInt(editClientTaskForm.due_date_offset) : null,
+        is_mandatory: editClientTaskForm.is_mandatory
+      });
+      toast({ title: 'Client Task Updated' });
+      setEditingClientTask(null);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update client task', variant: 'destructive' });
+    }
+  };
+
+  const openEditEmail = (email: StageEmail) => {
+    setEditEmailForm({
+      name: email.name || '',
+      subject: email.subject || '',
+      description: email.description || '',
+      content: email.content || '',
+      automation_enabled: email.automation_enabled
+    });
+    setEditingEmail(email);
+  };
+
+  const handleSaveEmail = async () => {
+    if (!editingEmail || !editEmailForm.name.trim()) return;
+    try {
+      await updateEmail(editingEmail.id, {
+        name: editEmailForm.name,
+        subject: editEmailForm.subject,
+        description: editEmailForm.description || null,
+        content: editEmailForm.content || null,
+        automation_enabled: editEmailForm.automation_enabled
+      });
+      toast({ title: 'Email Updated' });
+      setEditingEmail(null);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update email', variant: 'destructive' });
+    }
+  };
+
   // Document handlers - now using stage template content
   const handleAddDocument = async (documentId: number) => {
     if (!stageIdNum) return;
@@ -1315,6 +1426,9 @@ export default function AdminStageDetail() {
                                 )}
                               </div>
                             </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => openEditTeamTask(task))}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => handleDeleteStaffTask(task.id))}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -1372,6 +1486,9 @@ export default function AdminStageDetail() {
                                 </span>
                               )}
                             </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => openEditClientTask(task))}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => handleDeleteClientTask(task.id))}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -1430,6 +1547,9 @@ export default function AdminStageDetail() {
                                   )}
                                 </div>
                               </div>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => openEditEmail(email))}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => handleRemoveEmail(email.id))}>
                                 <Trash2 className="h-3 w-3" />
                               </Button>
@@ -1816,6 +1936,161 @@ export default function AdminStageDetail() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddingEmail(false)}>Cancel</Button>
             <Button onClick={handleAddEmail}>Add Email</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Team Task Dialog */}
+      <Dialog open={!!editingTeamTask} onOpenChange={(open) => !open && setEditingTeamTask(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Team Task</DialogTitle>
+            <DialogDescription>Update task details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Task Name *</Label>
+              <Input
+                value={editTaskForm.name}
+                onChange={(e) => setEditTaskForm({ ...editTaskForm, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Instructions</Label>
+              <Textarea
+                value={editTaskForm.description}
+                onChange={(e) => setEditTaskForm({ ...editTaskForm, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Due Offset (days)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editTaskForm.due_date_offset}
+                  onChange={(e) => setEditTaskForm({ ...editTaskForm, due_date_offset: e.target.value })}
+                  placeholder="e.g., 14"
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-6">
+                <Switch checked={editTaskForm.is_core} onCheckedChange={(c) => setEditTaskForm({ ...editTaskForm, is_core: c })} />
+                <Label>Core task</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingTeamTask(null)}>Cancel</Button>
+            <Button onClick={handleSaveTeamTask}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Client Task Dialog */}
+      <Dialog open={!!editingClientTask} onOpenChange={(open) => !open && setEditingClientTask(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Client Task</DialogTitle>
+            <DialogDescription>Update task visible to tenants.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Task Name *</Label>
+              <Input
+                value={editClientTaskForm.name}
+                onChange={(e) => setEditClientTaskForm({ ...editClientTaskForm, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={editClientTaskForm.description}
+                onChange={(e) => setEditClientTaskForm({ ...editClientTaskForm, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Instructions</Label>
+              <Textarea
+                value={editClientTaskForm.instructions}
+                onChange={(e) => setEditClientTaskForm({ ...editClientTaskForm, instructions: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Due Offset (days)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={editClientTaskForm.due_date_offset}
+                  onChange={(e) => setEditClientTaskForm({ ...editClientTaskForm, due_date_offset: e.target.value })}
+                  placeholder="e.g., 7"
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-6">
+                <Switch checked={editClientTaskForm.is_mandatory} onCheckedChange={(c) => setEditClientTaskForm({ ...editClientTaskForm, is_mandatory: c })} />
+                <Label>Mandatory</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingClientTask(null)}>Cancel</Button>
+            <Button onClick={handleSaveClientTask}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Email Dialog */}
+      <Dialog open={!!editingEmail} onOpenChange={(open) => !open && setEditingEmail(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Email</DialogTitle>
+            <DialogDescription>Update email template details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input
+                  value={editEmailForm.name}
+                  onChange={(e) => setEditEmailForm({ ...editEmailForm, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Subject</Label>
+                <Input
+                  value={editEmailForm.subject}
+                  onChange={(e) => setEditEmailForm({ ...editEmailForm, subject: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Description (internal notes)</Label>
+              <Textarea
+                value={editEmailForm.description}
+                onChange={(e) => setEditEmailForm({ ...editEmailForm, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Content (HTML body)</Label>
+              <Textarea
+                value={editEmailForm.content}
+                onChange={(e) => setEditEmailForm({ ...editEmailForm, content: e.target.value })}
+                rows={8}
+                className="font-mono text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch checked={editEmailForm.automation_enabled} onCheckedChange={(c) => setEditEmailForm({ ...editEmailForm, automation_enabled: c })} />
+              <Label>Automation enabled</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingEmail(null)}>Cancel</Button>
+            <Button onClick={handleSaveEmail}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
