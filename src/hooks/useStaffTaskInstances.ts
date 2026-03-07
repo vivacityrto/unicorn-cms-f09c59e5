@@ -116,6 +116,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
           is_recurring: taskMeta?.is_recurring ?? false,
           due_date: row.due_date,
           completion_date: row.completion_date,
+          completed_by: row.completed_by,
           assignee_id: row.assignee_id,
           assignee_name: assignee ? `${assignee.first_name || ''} ${assignee.last_name || ''}`.trim() : null,
           assignee_avatar: assignee?.avatar_url || null,
