@@ -70,6 +70,8 @@ interface ClientPackagesTabProps {
   loading: boolean;
   onAddPackage?: () => void;
   complyhubTier?: string | null;
+  autoExpandPackageInstanceId?: number;
+  autoExpandStageInstanceId?: number;
 }
 
 const STATE_COLORS: Record<string, string> = {
