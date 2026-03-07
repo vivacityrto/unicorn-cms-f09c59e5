@@ -348,15 +348,17 @@ export default function CalendarTimeCapture() {
 
   const handlePostDraft = async () => {
     if (!editingDraft) return;
-    // Save first, then post
-    await updateDraft(editingDraft.id, {
+    // Save first, then post — abort if save fails
+    const updated = await updateDraft(editingDraft.id, {
       client_id: draftForm.client_id,
+      tenant_id: draftForm.client_id, // tenant_id = client_id in this system
       package_id: draftForm.package_id,
       stage_id: draftForm.stage_id,
       minutes: draftForm.minutes,
       work_date: draftForm.work_date,
       notes: draftForm.notes
     });
+    if (!updated) return;
     const success = await postDraft(editingDraft.id);
     if (success) setDraftDialogOpen(false);
   };
