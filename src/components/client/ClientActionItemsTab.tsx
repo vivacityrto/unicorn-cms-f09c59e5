@@ -68,6 +68,8 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const { items, loading, createItem, setStatus, updateItem, deleteItem, refresh } = useClientActionItems(tenantId, clientId);
   const speech = useSpeechToText();
   const { data: vivacityTeam = [] } = useVivacityTeamUsers();
+  const { priorities: priorityOptions } = useActionPriorityOptions();
+  const { statuses: actionStatusOptions } = useActionStatusOptions();
   
   const [filter, setFilter] = useState('open');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
