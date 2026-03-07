@@ -454,12 +454,15 @@ export function StageDocumentsPanel({
                 {documents
                   .filter(doc => {
                     if (aiStatusFilter === 'all') return true;
-                    const docAiStatus = doc.document?.ai_status || 'pending';
+                    const docData = getDocumentData(doc);
+                    const docAiStatus = docData?.ai_status || 'pending';
                     return docAiStatus === aiStatusFilter;
                   })
                   .map((doc) => {
-                  const fileType = getFileTypeBadge(doc.document?.format || null);
-                  const stageData = documentStageCounts.get(doc.document_id);
+                  const docData = getDocumentData(doc);
+                  const docId = getDocumentId(doc);
+                  const fileType = getFileTypeBadge(docData?.format || null);
+                  const stageData = documentStageCounts.get(docId);
                   const stageCount = stageData?.count || 0;
                   const isMultiStage = stageCount > 1;
                   
@@ -467,13 +470,13 @@ export function StageDocumentsPanel({
                     <div 
                       key={doc.id} 
                       className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30 group cursor-pointer hover:bg-muted/50"
-                      onClick={() => doc.document && handleDocumentClick(doc)}
+                      onClick={() => docData && handleDocumentClick(doc)}
                     >
                       <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab opacity-50 group-hover:opacity-100" />
                       <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium block truncate">{doc.document?.title || 'Unknown Document'}</span>
+                          <span className="font-medium block truncate">{docData?.title || 'Unknown Document'}</span>
                           {isMultiStage && (
                             <Badge 
                               variant="outline" 
@@ -488,39 +491,39 @@ export function StageDocumentsPanel({
                           <Badge variant="outline" className={`text-xs ${fileType.className}`}>
                             {fileType.label}
                           </Badge>
-                          {doc.document?.category && (
+                          {docData?.category && (
                             <Badge variant="secondary" className="text-xs">
-                              {doc.document.category}
+                              {docData.category}
                             </Badge>
                           )}
-                          {doc.document && (
+                          {docData && (
                             <DocumentVersionBadge 
-                              status={(doc.document.document_status || 'draft') as 'draft' | 'published' | 'archived'} 
+                              status={(docData.document_status || 'draft') as 'draft' | 'published' | 'archived'} 
                               showVersion={false}
                               size="sm"
                             />
                           )}
-                          {doc.document && (
+                          {docData && (
                             <DocumentReadinessBadge
-                              documentId={doc.document.id}
+                              documentId={docData.id}
                               tenantId={tenantId}
-                              isExcel={doc.document.format?.toLowerCase().includes('excel') || doc.document.format?.toLowerCase().includes('xls')}
+                              isExcel={docData.format?.toLowerCase().includes('excel') || docData.format?.toLowerCase().includes('xls')}
                               compact
                             />
                           )}
-                          {doc.document && (doc.document.format?.toLowerCase().includes('excel') || doc.document.format?.toLowerCase().includes('xls')) && (
+                          {docData && (docData.format?.toLowerCase().includes('excel') || docData.format?.toLowerCase().includes('xls')) && (
                             <ExcelBindingStatusBadge
-                              documentId={doc.document.id}
+                              documentId={docData.id}
                               compact
                             />
                           )}
-                          {doc.document?.ai_status && (
+                          {docData?.ai_status && (
                             <AIConfidenceBadge
-                              aiStatus={doc.document.ai_status}
-                              overallConfidence={doc.document.ai_confidence_score}
-                              categoryConfidence={doc.document.ai_category_confidence}
-                              descriptionConfidence={doc.document.ai_description_confidence}
-                              reasoning={doc.document.ai_reasoning}
+                              aiStatus={docData.ai_status}
+                              overallConfidence={docData.ai_confidence_score}
+                              categoryConfidence={docData.ai_category_confidence}
+                              descriptionConfidence={docData.ai_description_confidence}
+                              reasoning={docData.ai_reasoning}
                               compact
                             />
                           )}
@@ -554,7 +557,7 @@ export function StageDocumentsPanel({
                           variant="ghost" 
                           size="icon" 
                           className="h-7 w-7 opacity-50 group-hover:opacity-100" 
-                          onClick={() => doc.document && handleDocumentClick(doc)}
+                          onClick={() => docData && handleDocumentClick(doc)}
                           title="Edit document"
                         >
                           <Pencil className="h-3 w-3" />
