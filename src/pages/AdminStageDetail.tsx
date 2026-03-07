@@ -2020,57 +2020,14 @@ export default function AdminStageDetail() {
       </Dialog>
 
       {/* Edit Email Dialog */}
-      <Dialog open={!!editingEmail} onOpenChange={(open) => !open && setEditingEmail(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Email</DialogTitle>
-            <DialogDescription>Update email template details.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Name *</Label>
-                <Input
-                  value={editEmailForm.name}
-                  onChange={(e) => setEditEmailForm({ ...editEmailForm, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Subject</Label>
-                <Input
-                  value={editEmailForm.subject}
-                  onChange={(e) => setEditEmailForm({ ...editEmailForm, subject: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Description (internal notes)</Label>
-              <Textarea
-                value={editEmailForm.description}
-                onChange={(e) => setEditEmailForm({ ...editEmailForm, description: e.target.value })}
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Content (HTML body)</Label>
-              <Textarea
-                value={editEmailForm.content}
-                onChange={(e) => setEditEmailForm({ ...editEmailForm, content: e.target.value })}
-                rows={8}
-                className="font-mono text-xs"
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch checked={editEmailForm.automation_enabled} onCheckedChange={(c) => setEditEmailForm({ ...editEmailForm, automation_enabled: c })} />
-              <Label>Automation enabled</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingEmail(null)}>Cancel</Button>
-            <Button onClick={handleSaveEmail}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {editingEmail && (
+        <EditStageEmailDialog
+          open={!!editingEmail}
+          onOpenChange={(open) => !open && setEditingEmail(null)}
+          email={editingEmail}
+          onSave={handleSaveEmail}
+        />
+      )}
 
       {/* Edit Confirmation Dialog with typed phrase */}
       <AlertDialog open={editConfirmationOpen} onOpenChange={(open) => {
