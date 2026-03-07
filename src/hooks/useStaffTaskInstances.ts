@@ -12,6 +12,7 @@ export interface StaffTaskInstance {
   status: string;
   status_id: number;
   is_core: boolean;
+  is_recurring: boolean;
   due_date: string | null;
   completion_date: string | null;
   assignee_id: string | null;
