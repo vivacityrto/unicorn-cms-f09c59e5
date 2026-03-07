@@ -299,17 +299,16 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
             </div>
             <div className="flex items-center gap-2">
               <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-[130px] h-8">
+                <SelectTrigger className="w-[150px] h-8">
                   <Filter className="h-3 w-3 mr-1" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="blocked">Blocked</SelectItem>
+                  {actionStatusOptions.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
                   <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
                 </SelectContent>
               </Select>
               <Button size="sm" onClick={handleOpenAdd}>
