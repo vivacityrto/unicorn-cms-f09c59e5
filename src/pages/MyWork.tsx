@@ -62,6 +62,7 @@ export default function MyWork() {
   const { items, overdueItems, dueSoonItems, allOpenItems, loading, refresh, setStatus } = useMyWork();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const filteredItems = allOpenItems.filter(item => {
     if (statusFilter !== 'all' && item.status !== statusFilter) return false;
