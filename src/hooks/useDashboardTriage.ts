@@ -203,6 +203,23 @@ export function useDashboardTriage() {
     staleTime: 60_000,
   });
 
+  // ── Overdue client tasks from tasks_tenants (portfolio-wide) ──
+  const { data: overdueClientTasks = 0 } = useQuery({
+    queryKey: ['triage-overdue-client-tasks'],
+    queryFn: async () => {
+      const now = new Date().toISOString().slice(0, 10);
+      const { count, error } = await supabase
+        .from('tasks_tenants')
+        .select('id', { count: 'exact', head: true })
+        .eq('completed', false)
+        .lt('due_date', now);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: isVivacityStaff,
+    staleTime: 60_000,
+  });
+
   // ── Attention-ranked tenants ──
   const { data: rawTenants = [], isLoading: tenantsLoading } = useQuery({
     queryKey: ['triage-attention-ranked'],
@@ -435,6 +452,23 @@ export function useDashboardTriage() {
       });
     }
 
+    // ── Overdue client tasks (portfolio-wide from tasks_tenants) ──
+    if (overdueClientTasks > 0) {
+      items.push({
+        id: 'focus-overdue-client-tasks',
+        severity: 'high',
+        tenantName: 'Client Tasks',
+        tenantId: 0,
+        reason: `${overdueClientTasks} overdue client task${overdueClientTasks === 1 ? '' : 's'} across portfolio`,
+        age: '',
+        ageMs: 0,
+        actionLabel: 'View Tasks',
+        actionType: 'view_tasks',
+        actionRoute: '/tasks-management',
+        whyText: `There are ${overdueClientTasks} client task${overdueClientTasks === 1 ? '' : 's'} past their due date across the portfolio that need attention.`,
+      });
+    }
+
     // If still empty, inject proactive items
     if (items.length === 0) {
       const sorted = [...tenants].sort((a, b) => b.attention_score - a.attention_score);
@@ -456,7 +490,7 @@ export function useDashboardTriage() {
     }
 
     return items.slice(0, 7);
-  }, [rawTenants, savedView, profile?.user_uuid, outstandingActions]);
+  }, [rawTenants, savedView, profile?.user_uuid, outstandingActions, overdueClientTasks]);
 
   // ── KPIs ──
   const kpis = useMemo(() => ({

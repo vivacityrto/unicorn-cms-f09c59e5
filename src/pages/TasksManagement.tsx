@@ -43,6 +43,7 @@ interface Task {
   created_by_name?: string;
   follower_users?: Array<{ user_uuid: string; first_name: string; last_name: string; avatar_url: string | null }>;
   file_paths?: string[];
+  source?: 'task' | 'action' | 'ops';
 }
 type TaskStatus = "pending" | "in_progress" | "completed" | "overdue" | "extended";
 export default function TasksManagement() {
@@ -67,7 +68,8 @@ export default function TasksManagement() {
     tenant_id: "",
     package_id: "",
     package_name: "",
-    status: "not_started"
+    status: "not_started",
+    assigned_to: ""
   });
   const [followers, setFollowers] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -148,8 +150,18 @@ export default function TasksManagement() {
       });
       if (tasksError) throw tasksError;
 
+      // Fetch action items from client_action_items and ops_work_items
+      const [{ data: clientActions }, { data: opsActions }] = await Promise.all([
+        supabase.from("client_action_items").select("id, title, description, priority, status, due_date, tenant_id, assignee_user_id, created_at, created_by_user_id").not('status', 'in', '("done","cancelled")'),
+        supabase.from("ops_work_items").select("id, title, description, priority, status, due_at, tenant_id, owner_user_uuid, created_at, created_by, package_instance_id").not('status', 'in', '("done","cancelled")'),
+      ]);
+
       // Fetch tenant and package names separately (no FK joins available)
-      const tenantIds = [...new Set(tasksData?.map((t: any) => t.tenant_id).filter(Boolean))];
+      const allTenantIds = new Set<number>();
+      tasksData?.forEach((t: any) => { if (t.tenant_id) allTenantIds.add(t.tenant_id); });
+      (clientActions || []).forEach((a: any) => { if (a.tenant_id) allTenantIds.add(a.tenant_id); });
+      (opsActions || []).forEach((a: any) => { if (a.tenant_id) allTenantIds.add(a.tenant_id); });
+      const tenantIds = [...allTenantIds];
       const packageIds = [...new Set(tasksData?.map((t: any) => t.package_id).filter(Boolean))];
 
       let tenantsMap = new Map<number, string>();
@@ -167,7 +179,13 @@ export default function TasksManagement() {
       // Get unique creator and follower user IDs
       const creatorIds = [...new Set(tasksData?.map((task: any) => task.created_by).filter(Boolean))] as string[];
       const followerIds = [...new Set(tasksData?.flatMap((task: any) => task.followers || []).filter(Boolean))] as string[];
-      const allUserIds = [...new Set([...creatorIds, ...followerIds])];
+      const actionUserIds = [
+        ...(clientActions || []).map((a: any) => a.assignee_user_id).filter(Boolean),
+        ...(clientActions || []).map((a: any) => a.created_by_user_id).filter(Boolean),
+        ...(opsActions || []).map((a: any) => a.owner_user_uuid).filter(Boolean),
+        ...(opsActions || []).map((a: any) => a.created_by).filter(Boolean),
+      ];
+      const allUserIds = [...new Set([...creatorIds, ...followerIds, ...actionUserIds])];
 
       // Fetch user data if there are any
       let usersMap = new Map<string, { user_uuid: string; first_name: string; last_name: string; avatar_url: string | null }>();
@@ -180,8 +198,14 @@ export default function TasksManagement() {
         }
       }
 
+      const getUserName = (id: string | null) => {
+        if (!id) return 'Unknown';
+        const u = usersMap.get(id);
+        return u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown' : 'Unknown';
+      };
+
       // Map all fields from tasks_tenants table
-      const transformedTasks = tasksData?.map((task: any) => {
+      const transformedTasks: Task[] = (tasksData || []).map((task: any) => {
         const pkg = task.package_id ? packagesMap.get(task.package_id) : null;
         return {
           id: task.id,
@@ -201,12 +225,57 @@ export default function TasksManagement() {
           package_name: pkg?.name || null,
           package_created_at: pkg?.created_at || null,
           package_full_text: pkg?.full_text || null,
-          created_by_name: task.created_by ? `${usersMap.get(task.created_by)?.first_name || ''} ${usersMap.get(task.created_by)?.last_name || ''}`.trim() || "Unknown" : "Unknown",
-          follower_users: (task.followers || []).map((id: string) => usersMap.get(id)).filter(Boolean)
+          created_by_name: getUserName(task.created_by),
+          follower_users: (task.followers || []).map((id: string) => usersMap.get(id)).filter(Boolean),
+          source: 'task' as const,
         };
-      }) || [];
-      setTasks(transformedTasks);
-      setFilteredTasks(transformedTasks);
+      });
+
+      // Normalize client_action_items
+      const clientTasks: Task[] = (clientActions || []).map((a: any) => ({
+        id: `ca-${a.id}`,
+        tenant_id: a.tenant_id,
+        package_id: null,
+        task_name: a.title,
+        description: a.description,
+        due_date: a.due_date || new Date().toISOString().slice(0, 10),
+        status: a.status === 'open' ? 'not_started' : a.status,
+        completed: a.status === 'done',
+        created_by: a.created_by_user_id,
+        followers: a.assignee_user_id ? [a.assignee_user_id] : [],
+        created_at: a.created_at,
+        tenant_name: tenantsMap.get(a.tenant_id) || "N/A",
+        package_name: null,
+        created_by_name: getUserName(a.created_by_user_id),
+        follower_users: a.assignee_user_id ? [usersMap.get(a.assignee_user_id)].filter(Boolean) as any : [],
+        file_paths: [],
+        source: 'action' as const,
+      }));
+
+      // Normalize ops_work_items
+      const opsTasks: Task[] = (opsActions || []).map((a: any) => ({
+        id: `ops-${a.id}`,
+        tenant_id: a.tenant_id || 0,
+        package_id: a.package_instance_id,
+        task_name: a.title,
+        description: a.description,
+        due_date: a.due_at || new Date().toISOString().slice(0, 10),
+        status: a.status === 'open' ? 'not_started' : a.status,
+        completed: a.status === 'done',
+        created_by: a.created_by,
+        followers: a.owner_user_uuid ? [a.owner_user_uuid] : [],
+        created_at: a.created_at,
+        tenant_name: a.tenant_id ? (tenantsMap.get(a.tenant_id) || "N/A") : "General",
+        package_name: null,
+        created_by_name: getUserName(a.created_by),
+        follower_users: a.owner_user_uuid ? [usersMap.get(a.owner_user_uuid)].filter(Boolean) as any : [],
+        file_paths: [],
+        source: 'ops' as const,
+      }));
+
+      const allTasks = [...transformedTasks, ...clientTasks, ...opsTasks];
+      setTasks(allTasks);
+      setFilteredTasks(allTasks);
     } catch (error: any) {
       console.error("Error fetching tasks:", error);
       toast({
@@ -542,6 +611,22 @@ export default function TasksManagement() {
                 </div>
 
                 <div className="grid gap-2">
+                  <Label className="text-primary font-semibold">Assign To</Label>
+                  <Combobox
+                    options={users.map((u: any) => ({
+                      value: u.user_uuid,
+                      label: `${u.first_name || ''} ${u.last_name || ''}`.trim()
+                    }))}
+                    value={formData.assigned_to}
+                    onValueChange={value => setFormData({ ...formData, assigned_to: value })}
+                    placeholder="Select assignee (optional)"
+                    searchPlaceholder="Search team member..."
+                    emptyText="No team members found."
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="grid gap-2">
                   <Label htmlFor="tenant">Client *</Label>
                   <Combobox options={tenants.map(tenant => ({
                   value: tenant.id.toString(),
@@ -605,6 +690,9 @@ export default function TasksManagement() {
                   if (!formData.task_name || !formData.due_date || !formData.tenant_id || !user) return;
                   
                   try {
+                    const assignedFollowers = formData.assigned_to 
+                      ? [...new Set([...followers, formData.assigned_to])]
+                      : followers;
                     const { data: newTask, error } = await supabase.from('tasks_tenants').insert({
                       tenant_id: parseInt(formData.tenant_id),
                       package_id: formData.package_id ? parseInt(formData.package_id) : null,
@@ -612,7 +700,7 @@ export default function TasksManagement() {
                       description: formData.description || null,
                       due_date: formData.due_date,
                       created_by: user.id,
-                      followers: followers.length > 0 ? followers : [],
+                      followers: assignedFollowers.length > 0 ? assignedFollowers : [],
                       status: formData.status || 'not_started',
                       completed: false
                     }).select().single();
@@ -662,7 +750,8 @@ export default function TasksManagement() {
                       tenant_id: "",
                       package_id: "",
                       package_name: "",
-                      status: "not_started"
+                      status: "not_started",
+                      assigned_to: ""
                     });
                     setFollowers([]);
                     setUploadedFiles([]);
@@ -957,6 +1046,7 @@ export default function TasksManagement() {
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Task</TableHead>
+                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Source</TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Client</TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
@@ -981,6 +1071,15 @@ export default function TasksManagement() {
                         <User className="w-3 h-3" />
                         <span>{task.created_by_name || "Unknown"}</span>
                       </div>
+                    </TableCell>
+                    <TableCell className="py-6 border-r border-border/50 whitespace-nowrap text-center">
+                      <Badge variant="outline" className={cn("text-[0.7rem]",
+                        task.source === 'action' && "bg-purple-500/10 text-purple-600 border-purple-500/30",
+                        task.source === 'ops' && "bg-blue-500/10 text-blue-600 border-blue-500/30",
+                        (!task.source || task.source === 'task') && "bg-muted text-muted-foreground border-border"
+                      )}>
+                        {task.source === 'action' ? 'Action' : task.source === 'ops' ? 'Ops' : 'Client Task'}
+                      </Badge>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[200px] whitespace-nowrap">
                       <div className="font-semibold text-foreground pb-[10px]">{task.tenant_name}</div>
@@ -1071,6 +1170,7 @@ export default function TasksManagement() {
                       )}
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      {(!task.source || task.source === 'task') ? (
                       <div className="flex items-center justify-center gap-2">
                         <Button
                           variant="ghost"
@@ -1085,7 +1185,8 @@ export default function TasksManagement() {
                               tenant_id: task.tenant_id.toString(),
                               package_id: task.package_id?.toString() || "",
                               package_name: task.package_name || "",
-                              status: task.status || "not_started"
+                              status: task.status || "not_started",
+                              assigned_to: ""
                             });
                             setFollowers(task.followers || []);
                             setIsEditDialogOpen(true);
@@ -1106,6 +1207,9 @@ export default function TasksManagement() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                   </TableRow>;
             })}

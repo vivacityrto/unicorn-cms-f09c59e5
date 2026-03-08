@@ -8,7 +8,8 @@ import {
   RefreshCw,
   Filter,
   AlertTriangle,
-  Clock
+  Clock,
+  Plus
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMyWork, MyWorkItem } from '@/hooks/useMyWork';
+import { CreateActionDialog } from '@/components/client/CreateActionDialog';
 import { cn } from '@/lib/utils';
 
 const priorityColors: Record<string, string> = {
@@ -60,6 +62,7 @@ export default function MyWork() {
   const { items, overdueItems, dueSoonItems, allOpenItems, loading, refresh, setStatus } = useMyWork();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const filteredItems = allOpenItems.filter(item => {
     if (statusFilter !== 'all' && item.status !== statusFilter) return false;
@@ -123,10 +126,16 @@ export default function MyWork() {
                   </p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={() => refresh()} className="gap-1.5">
-                <RefreshCw className="h-3.5 w-3.5" />
-                Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => setIsCreateOpen(true)} className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  Create Task
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => refresh()} className="gap-1.5">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Refresh
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -308,7 +317,14 @@ export default function MyWork() {
           </Table>
         </Card>
       </div>
-    </div>
+      </div>
+      <CreateActionDialog
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open);
+          if (!open) refresh();
+        }}
+      />
     </DashboardLayout>
   );
 }

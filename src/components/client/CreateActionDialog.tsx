@@ -65,6 +65,7 @@ export function CreateActionDialog({
   const [description, setDescription] = useState(composedDescription);
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
+  const [assigneeUserId, setAssigneeUserId] = useState(profile?.user_uuid || '');
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
   const [notifyClient, setNotifyClient] = useState(false);
 
@@ -83,7 +84,7 @@ export function CreateActionDialog({
         tenant_id: tenantId || null,
         package_instance_id: packageId ?? null,
         created_by: profile?.user_uuid || null,
-        owner_user_uuid: profile?.user_uuid || null,
+        owner_user_uuid: assigneeUserId || profile?.user_uuid || null,
         status: 'open',
       });
       if (error) throw error;
@@ -158,6 +159,19 @@ export function CreateActionDialog({
               <Label htmlFor="action-due">Due Date</Label>
               <Input id="action-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Assign To</Label>
+            <Select value={assigneeUserId} onValueChange={setAssigneeUserId}>
+              <SelectTrigger><SelectValue placeholder="Select team member" /></SelectTrigger>
+              <SelectContent>
+                {teamUsers.map((user) => (
+                  <SelectItem key={user.user_uuid} value={user.user_uuid}>
+                    {user.first_name} {user.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5 rounded-md border p-2.5 bg-muted/30">
             <div className="flex items-center justify-between">
