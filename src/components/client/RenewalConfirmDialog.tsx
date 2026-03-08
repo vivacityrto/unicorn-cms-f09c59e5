@@ -210,7 +210,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
 
       const legacyClientId = clientRow?.client_id || String(tenantId);
 
-      await supabase.rpc('rpc_create_client_note', {
+      const { error: noteError } = await supabase.rpc('rpc_create_client_note', {
         p_tenant_id: tenantId,
         p_client_id: legacyClientId,
         p_note_type: 'general',
@@ -221,6 +221,10 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         p_related_entity_id: pkg.id,
         p_is_pinned: false,
       });
+      if (noteError) {
+        console.error('Failed to create renewal note:', noteError);
+        toast.error('Renewal succeeded but failed to create the renewal note.');
+      }
 
       toast.success(
         `${pkg.package_name} renewed — next renewal ${format(newRenewalDate, 'dd MMM yyyy')}${carryOverChoice === 'carry' && cappedCarryOver > 0 ? ` (${formatMinutes(cappedCarryOver)} carried over)` : ''}`
