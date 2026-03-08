@@ -494,11 +494,13 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                           </Button>
                         </CollapsibleTrigger>
                       )}
-                      {isSuperAdmin() && !pkg.is_complete && (
+                      {isSuperAdmin() && !pkg.is_complete && (() => {
+                        const renewalDue = pkg.next_renewal_date ? parseISO(pkg.next_renewal_date) <= new Date() : false;
+                        return (
                         <div className="flex flex-col items-start">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm" className="gap-1">
+                              <Button variant="outline" size="sm" className="gap-1" disabled={!renewalDue}>
                                 <RefreshCw className="h-4 w-4" />
                                 Renew
                                 <ChevronDown className="h-3 w-3 ml-0.5" />
