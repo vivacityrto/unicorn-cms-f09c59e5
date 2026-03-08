@@ -506,8 +506,17 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                               <DropdownMenuItem
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation();
+                                  const { data: incomplete } = await (supabase as any)
+                                    .from('stage_instances')
+                                    .select('id')
+                                    .eq('packageinstance_id', parseInt(pkg.id, 10))
+                                    .or('status_id.is.null,status_id.eq.0');
+                                  if (incomplete && incomplete.length > 0) {
+                                    toast.error('All stages must have a status before renewing.');
+                                    return;
+                                  }
                                   setRenewTarget(pkg);
                                 }}
                               >
