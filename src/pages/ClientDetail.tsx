@@ -247,6 +247,7 @@ export default function ClientDetail() {
                       const title = `** CLIENT ${statusDescription.toUpperCase()} **`;
                       navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
                     }}
+                    clientId={tenant.id.toString()}
                   />
                   <RiskLevelBadge
                     riskLevel={profile?.risk_level}
@@ -254,6 +255,10 @@ export default function ClientDetail() {
                       await saveProfile({ risk_level: newLevel });
                     }}
                     disabled={!canEdit}
+                    onRiskChanged={(oldLevel, newLevel) => {
+                      const title = `Risk level changed: ${oldLevel} → ${newLevel}`;
+                      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+                    }}
                   />
                   <OrgTypeBadge orgType={profile?.org_type} rtoNumber={profile?.rto_number} cricosNumber={profile?.cricos_number} />
                 </div>
