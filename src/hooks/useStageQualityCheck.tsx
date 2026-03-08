@@ -594,13 +594,14 @@ export async function computeStageQuality(
       tenantEmailCount = emails?.filter((e: any) => e.recipient_type === 'tenant').length || 0;
       draftEmailCount = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
     } else {
-      const { data: emails } = await supabase
-        .from('package_stage_emails')
-        .select(`id, recipient_type, email_templates!inner (status)`)
+      const { count } = await supabase
+        .from('emails')
+        .select('*', { count: 'exact', head: true })
         .eq('stage_id', stageId);
 
-      tenantEmailCount = emails?.filter((e: any) => e.recipient_type === 'tenant').length || 0;
-      draftEmailCount = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
+      const eCount = count || 0;
+      tenantEmailCount = eCount;
+      draftEmailCount = 0;
     }
 
     if (['delivery', 'documentation', 'onboarding'].includes(stageType)) {
