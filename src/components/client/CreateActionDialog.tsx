@@ -160,6 +160,19 @@ export function CreateActionDialog({
               <Input id="action-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
           </div>
+          <div className="space-y-2">
+            <Label>Assign To</Label>
+            <Select value={assigneeUserId} onValueChange={setAssigneeUserId}>
+              <SelectTrigger><SelectValue placeholder="Select team member" /></SelectTrigger>
+              <SelectContent>
+                {teamUsers.map((user) => (
+                  <SelectItem key={user.user_uuid} value={user.user_uuid}>
+                    {user.first_name} {user.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1.5 rounded-md border p-2.5 bg-muted/30">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Notify (Optional)</Label>
