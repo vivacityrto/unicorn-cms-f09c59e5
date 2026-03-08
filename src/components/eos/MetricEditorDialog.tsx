@@ -97,7 +97,7 @@ export function MetricEditorDialog({ open, onOpenChange, metric }: MetricEditorD
 
       const { data, error } = await supabase
         .from('eos_scorecard_metrics')
-        .insert(payload)
+        .insert(payload as any)
         .select()
         .single();
       if (error) throw error;
