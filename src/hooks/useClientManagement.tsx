@@ -684,7 +684,8 @@ export function useClientPackages(tenantId: number | null) {
           membership_started_at: inst.start_date,
           is_complete: inst.is_complete || false,
           completed_at: inst.end_date || null,
-          next_renewal_date: inst.next_renewal_date || null
+          next_renewal_date: inst.next_renewal_date || null,
+          last_renewed_date: inst.last_renewed_date || null
         };
       });
 

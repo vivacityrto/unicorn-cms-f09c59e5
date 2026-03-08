@@ -416,6 +416,12 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                         <CalendarIcon className="h-4 w-4" />
                         <span>Started {new Date(pkg.membership_started_at).toLocaleDateString()}</span>
                       </div>
+                      {pkg.last_renewed_date && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          <span>Renewed {new Date(pkg.last_renewed_date).toLocaleDateString()}</span>
+                        </div>
+                      )}
                       {pkg.is_complete && pkg.completed_at && (
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <CheckCircle2 className="h-4 w-4" />
