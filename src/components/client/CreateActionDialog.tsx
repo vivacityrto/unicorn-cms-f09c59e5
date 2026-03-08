@@ -80,7 +80,7 @@ export function CreateActionDialog({
         description: description.trim() || null,
         priority,
         due_at: dueDate || null,
-        tenant_id: tenantId,
+        tenant_id: tenantId || null,
         package_instance_id: packageId ?? null,
         created_by: profile?.user_uuid || null,
         owner_user_uuid: profile?.user_uuid || null,
@@ -88,15 +88,17 @@ export function CreateActionDialog({
       });
       if (error) throw error;
 
-      // Audit log
-      await supabase.from('client_audit_log').insert({
-        tenant_id: tenantId,
-        actor_user_id: profile?.user_uuid,
-        action: 'ops_action_created_from_task',
-        entity_type: 'ops_work_items',
-        entity_id: title.trim(),
-        details: { source_task_id: taskId, package_id: packageId, notify_user_ids: notifyUserIds.length > 0 ? notifyUserIds : undefined },
-      });
+      // Audit log (only if tenant-scoped)
+      if (tenantId) {
+        await supabase.from('client_audit_log').insert({
+          tenant_id: tenantId,
+          actor_user_id: profile?.user_uuid,
+          action: 'ops_action_created_from_task',
+          entity_type: 'ops_work_items',
+          entity_id: title.trim(),
+          details: { source_task_id: taskId || null, package_id: packageId, notify_user_ids: notifyUserIds.length > 0 ? notifyUserIds : undefined },
+        });
+      }
 
       toast({ title: 'Action created', description: `"${title.trim()}" added to operations tracker.` });
 
