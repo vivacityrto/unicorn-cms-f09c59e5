@@ -1283,7 +1283,7 @@ export default function AdminStageDetail() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-6 pt-4 border-t">
+                <div className="flex items-center gap-6 pt-4 border-t flex-wrap">
                   <div className="flex items-center gap-3">
                     <Switch
                       checked={stage.is_reusable ?? true}
@@ -1298,6 +1298,36 @@ export default function AdminStageDetail() {
                       onCheckedChange={(checked) => handleUpdateStage({ dashboard_visible: checked })}
                     />
                     <Label>Dashboard Visible</Label>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={(stage as any).is_recurring ?? false}
+                      onCheckedChange={async (checked) => {
+                        try {
+                          const { data, error } = await supabase.rpc('cascade_stage_recurring', {
+                            p_stage_id: stage.id,
+                            p_is_recurring: checked,
+                          });
+                          if (error) throw error;
+                          const result = data as any;
+                          setStage(prev => prev ? { ...prev, is_recurring: checked } as any : null);
+                          toast({
+                            title: 'Recurring updated',
+                            description: `${stage.title} is now ${checked ? 'recurring' : 'non-recurring'}. Updated ${result?.package_stages_updated ?? 0} package stages and ${result?.stage_instances_updated ?? 0} active instances.`,
+                          });
+                        } catch (error: any) {
+                          toast({
+                            title: 'Error',
+                            description: error.message,
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                    />
+                    <Label className="flex items-center gap-1">
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Recurring
+                    </Label>
                   </div>
                 </div>
 
