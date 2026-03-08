@@ -43,6 +43,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
   const [includedMinutes, setIncludedMinutes] = useState(0);
   const [cappedCarryOver, setCappedCarryOver] = useState(0);
   const [isCapped, setIsCapped] = useState(false);
+  const [nullStatusCount, setNullStatusCount] = useState(0);
 
   // Renewal dates
   const currentRenewal = (pkg as any).next_renewal_date
