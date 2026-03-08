@@ -512,7 +512,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                                     .from('stage_instances')
                                     .select('id')
                                     .eq('packageinstance_id', parseInt(pkg.id, 10))
-                                    .or('status_id.is.null,status_id.eq.0');
+                                    .is('status_id', null);
                                   if (incomplete && incomplete.length > 0) {
                                     toast.error('All stages must have a status before renewing.');
                                     return;
