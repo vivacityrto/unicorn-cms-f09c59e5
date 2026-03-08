@@ -108,6 +108,8 @@ export interface FocusItem {
   actionLabel: string;
   actionType: string;
   whyText?: string;
+  /** Route to navigate to when actioned (optional override) */
+  actionRoute?: string;
 }
 
 const SEVERITY_RANK: Record<string, number> = { critical: 3, high: 2, moderate: 1 };
