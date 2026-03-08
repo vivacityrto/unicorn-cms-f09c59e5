@@ -27,6 +27,7 @@ export interface ClientPackage {
   is_complete: boolean;
   completed_at?: string | null;
   next_renewal_date?: string | null;
+  last_renewed_date?: string | null;
 }
 
 export interface ClientSummary {
