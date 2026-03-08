@@ -112,6 +112,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
           .from('time_entries')
           .insert({
             tenant_id: tenantId,
+            client_id: tenantId,
             package_id: instanceId,
             user_id: profile?.user_uuid,
             duration_minutes: -cappedCarryOver,
