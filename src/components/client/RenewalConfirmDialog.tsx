@@ -61,8 +61,8 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
       try {
         const instanceId = parseInt(pkg.id, 10);
 
-        // Fetch burndown and included_minutes in parallel
-        const [burndownResult, instanceResult] = await Promise.all([
+        // Fetch burndown, included_minutes, and null-status stages in parallel
+        const [burndownResult, instanceResult, nullStagesResult] = await Promise.all([
           (supabase as any)
             .from('v_package_burndown')
             .select('remaining_minutes, included_minutes')
@@ -73,6 +73,11 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
             .select('included_minutes')
             .eq('id', instanceId)
             .single(),
+          (supabase as any)
+            .from('stage_instances')
+            .select('id')
+            .eq('packageinstance_id', instanceId)
+            .is('status_id', null),
         ]);
 
         const remaining = burndownResult.data?.remaining_minutes ?? 0;
