@@ -70,6 +70,7 @@ interface ClientPackagesTabProps {
   packages: ClientPackage[];
   loading: boolean;
   onAddPackage?: () => void;
+  onRefresh?: () => void;
   complyhubTier?: string | null;
   autoExpandPackageInstanceId?: number;
   autoExpandStageInstanceId?: number;
