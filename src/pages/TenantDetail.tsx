@@ -616,6 +616,7 @@ export default function TenantDetail() {
                         : `** CLIENT ${statusDescription.toUpperCase()} **`;
                       navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
                     }}
+                    clientId={tenantId!}
                   />
                   {/* Enrich Tenant — SuperAdmin only */}
                   {tenantId && (
