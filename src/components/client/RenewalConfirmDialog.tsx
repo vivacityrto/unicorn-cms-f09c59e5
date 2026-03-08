@@ -82,6 +82,9 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         setIncludedMinutes(included);
         setCappedCarryOver(carry);
         setIsCapped(remaining > included && included > 0);
+        if (carry <= 0) {
+          setCarryOverChoice('forfeit');
+        }
       } catch (err) {
         console.error('Error fetching renewal data:', err);
       } finally {
