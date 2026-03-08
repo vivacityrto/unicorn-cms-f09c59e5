@@ -194,14 +194,19 @@ export default function ManageTenants() {
       const tenantPackagesMap = (packageInstancesData || []).reduce((acc, pi) => {
         if (!acc[pi.tenant_id]) acc[pi.tenant_id] = [];
         if (pi.package_id && packageLookup[pi.package_id]) {
-          acc[pi.tenant_id].push({
-            id: pi.package_id,
-            name: packageLookup[pi.package_id].name,
-            full_text: packageLookup[pi.package_id].full_text
-          });
+          const pkg = packageLookup[pi.package_id];
+          // Avoid duplicates (multiple instances of same package)
+          if (!acc[pi.tenant_id].some((p: TenantPackageInfo) => p.id === pi.package_id)) {
+            acc[pi.tenant_id].push({
+              id: pi.package_id,
+              name: pkg.name,
+              full_text: pkg.full_text,
+              slug: pkg.slug
+            });
+          }
         }
         return acc;
-      }, {} as Record<number, { id: number; name: string; full_text: string | null }[]>);
+      }, {} as Record<number, TenantPackageInfo[]>);
 
       // Build renewal date map: earliest next_renewal_date per tenant
       const tenantRenewalMap = (packageInstancesData || []).reduce((acc, pi) => {
