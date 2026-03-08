@@ -397,8 +397,14 @@ export default function ManageTenants() {
       filtered = filtered.filter(tenant => tenant.csc_user_id === cscFilter);
     }
 
-    // Renewal due filter (months)
-    if (renewalFilter !== "all") {
+    // Renewal due filter
+    if (renewalFilter === "overdue") {
+      const now = new Date();
+      filtered = filtered.filter(tenant => {
+        if (!tenant.next_renewal_date) return false;
+        return new Date(tenant.next_renewal_date) < now;
+      });
+    } else if (renewalFilter !== "all") {
       const months = parseInt(renewalFilter);
       const now = new Date();
       const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
