@@ -373,7 +373,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={processing || loading || (cappedCarryOver > 0 && !carryOverChoice)}
+            disabled={processing || loading || nullStatusCount > 0 || (cappedCarryOver > 0 && !carryOverChoice)}
           >
             {processing ? (
               <>
