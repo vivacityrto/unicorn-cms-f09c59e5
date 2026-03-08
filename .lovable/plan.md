@@ -1,15 +1,14 @@
-## Completed: Create `dd_stage_types` Lookup Table
 
-Created `dd_stage_types` table with 6 types (onboarding, delivery, documentation, support, monitoring, offboarding) including `is_milestone` column for progress metrics. Replaced all 7 hardcoded `STAGE_TYPE_OPTIONS` arrays with the `useStageTypeOptions` hook. Updated progress logic to use `is_milestone` fallback and added `monitoring` to auto-default logic.
 
-## Completed: Create `dd_priority` and `dd_action_status` Lookup Tables
+## Fix: "Confirm Renewal" button does nothing when no carry-over time
 
-Created `dd_priority` (low, normal, medium, high, urgent) and `dd_action_status` (open, in_progress, blocked, waiting_client, done, cancelled, todo) lookup tables. Dropped 4 conflicting CHECK constraints on `client_action_items` and replaced with a validation trigger (`trg_validate_action_item_priority_status`). Updated `rpc_create_action_item` to validate against `dd_priority` table and default to `'medium'`. Created `useActionPriorityOptions` and `useActionStatusOptions` hooks with module-level caching. Replaced all hardcoded priority/status configs in `ClientActionItemsTab`, `PackageNotesSection`, `useClientManagementData`, and `useClientWorkboard`. Added `'normal'` and `'open'` to `ItemPriority` and `ItemStatus` types.
+**Root Cause**: On line 96, `handleConfirm` exits immediately with `if (!carryOverChoice) return;`. When there is no unused time (`cappedCarryOver === 0`), the carry-over selection UI is hidden and `carryOverChoice` stays `null` forever. The button appears enabled (line 351 only disables when `cappedCarryOver > 0 && !carryOverChoice`) but clicking it silently returns.
 
-## Completed: Staff Task Assignment + `completed_by` Tracking
+**Fix** in `src/components/client/RenewalConfirmDialog.tsx`:
 
-Added `completed_by` UUID column to `staff_task_instances`. Created `TaskAssigneeButton` component (silhouette icon when unassigned, avatar when assigned, popover for team member selection with unassign option). Updated `useStaffTaskInstances` hook: on status → Completed/Core Complete sets `completed_by` to current user; on revert clears it; on assign auto-creates a linked action item via `rpc_create_action_item` with `source: 'task_assignment'`. Integrated `TaskAssigneeButton` into `StageStaffTasks.tsx` between task info and notes popover. Disabled for N/A tasks and finished stages.
+1. **Auto-set choice when no carry-over**: In the `useEffect` that fetches data, after computing `cappedCarryOver`, if it's 0, auto-set `carryOverChoice` to `'forfeit'` so the confirm handler proceeds.
 
-## Completed: Fix Documents Tab Error + Risk Note Auto-Open
+2. **Add error feedback**: Wrap the early return with a toast so if something unexpected blocks confirmation, the user is informed rather than seeing nothing happen.
 
-Fixed `validate_document_readiness` RPC to use `document_fields` + `dd_fields` tables instead of the dropped `merge_fields` column. Now validates required fields against `v_tenant_merge_fields` with real value checks per tenant. Also wired `ClientStructuredNotesTab` to consume `initNote`/`noteTitle` URL search params so risk level changes auto-open a pre-filled note dialog with type "risk".
+Single file change, two small edits.
+
