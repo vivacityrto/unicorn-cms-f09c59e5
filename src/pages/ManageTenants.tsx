@@ -260,10 +260,27 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string | null>);
 
+      // Fetch last note date per tenant
+      const { data: lastNotesData } = await supabase
+        .from("client_notes")
+        .select("tenant_id, created_at, title, content")
+        .in("tenant_id", tenantIds)
+        .order("created_at", { ascending: false });
+
+      const lastNoteMap = (lastNotesData || []).reduce((acc, note) => {
+        if (!acc[note.tenant_id]) {
+          const snippet = (note.title || note.content || '').substring(0, 50);
+          acc[note.tenant_id] = { date: note.created_at, snippet };
+        }
+        return acc;
+      }, {} as Record<number, { date: string; snippet: string }>);
+
       const tenantsWithCounts = tenantsData.map(tenant => {
         const activePackages = tenantPackagesMap[tenant.id] || [];
-        const firstPackage = activePackages[0];
+        const firstNonKS = activePackages.find((p: TenantPackageInfo) => !p.name.startsWith('KS'));
+        const firstPackage = firstNonKS || activePackages[0];
         const cscUserId = cscMap[tenant.id];
+        const hasKickStart = activePackages.some((p: TenantPackageInfo) => p.name.startsWith('KS'));
         return {
           ...tenant,
           lifecycle_status: tenant.lifecycle_status || 'active',
@@ -276,9 +293,14 @@ export default function ManageTenants() {
           package_name: firstPackage?.name || null,
           package_full_text: firstPackage?.full_text || null,
           package_id: firstPackage?.id || null,
+          all_packages: activePackages,
           state: stateMap[tenant.id] || null,
-          next_renewal_date: tenantRenewalMap[tenant.id] || null
-        };
+          next_renewal_date: tenantRenewalMap[tenant.id] || null,
+          last_note_date: lastNoteMap[tenant.id]?.date || null,
+          last_note_snippet: lastNoteMap[tenant.id]?.snippet || null,
+          // Override name prefix: if they have a KS, prepend KS indicator
+          _hasKickStart: hasKickStart,
+        } as any;
       });
       setTenants(tenantsWithCounts);
 
