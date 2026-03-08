@@ -478,6 +478,7 @@ export default function ClientDetail() {
               packages={packages}
               loading={packagesLoading}
               onAddPackage={() => setAssignPackageOpen(true)}
+              onRefresh={refreshPackages}
               complyhubTier={tenant?.complyhub_membership_tier}
               autoExpandPackageInstanceId={searchParams.get('packageInstance') ? parseInt(searchParams.get('packageInstance')!, 10) : undefined}
               autoExpandStageInstanceId={searchParams.get('stageInstance') ? parseInt(searchParams.get('stageInstance')!, 10) : undefined}

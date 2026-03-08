@@ -70,6 +70,7 @@ interface ClientPackagesTabProps {
   packages: ClientPackage[];
   loading: boolean;
   onAddPackage?: () => void;
+  onRefresh?: () => void;
   complyhubTier?: string | null;
   autoExpandPackageInstanceId?: number;
   autoExpandStageInstanceId?: number;
@@ -93,7 +94,7 @@ const STATE_ICONS: Record<string, React.ReactNode> = {
   complete: <CheckCircle2 className="h-3 w-3" />
 };
 
-export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, complyhubTier, autoExpandPackageInstanceId, autoExpandStageInstanceId }: ClientPackagesTabProps) {
+export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, onRefresh, complyhubTier, autoExpandPackageInstanceId, autoExpandStageInstanceId }: ClientPackagesTabProps) {
   const { data: membershipStateOptions } = useMembershipStateOptions();
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
@@ -721,7 +722,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           tenantId={tenantId}
           onSuccess={() => {
             setRenewTarget(null);
-            onAddPackage?.();
+            onRefresh?.();
           }}
         />
       )}
