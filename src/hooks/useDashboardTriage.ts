@@ -138,20 +138,25 @@ export function useDashboardTriage() {
   const { data: outstandingActions = [] } = useQuery({
     queryKey: ['triage-outstanding-actions', profile?.user_uuid],
     queryFn: async () => {
-      // Fetch overdue or high/urgent priority open items from ops_work_items
-      const { data: opsItems, error: opsErr } = await supabase
+      const userId = profile?.user_uuid;
+      // Fetch overdue or high/urgent priority open items from ops_work_items (owned by current user)
+      const opsQuery = supabase
         .from('ops_work_items')
         .select('id, title, priority, status, due_at, tenant_id, owner_user_uuid')
         .in('status', ['open', 'in_progress', 'blocked'])
         .order('due_at', { ascending: true, nullsFirst: false });
+      if (userId) opsQuery.eq('owner_user_uuid', userId);
+      const { data: opsItems, error: opsErr } = await opsQuery;
       if (opsErr) throw opsErr;
 
-      // Fetch overdue or high/urgent from client_action_items
-      const { data: clientItems, error: clientErr } = await supabase
+      // Fetch overdue or high/urgent from client_action_items (assigned to current user)
+      const clientQuery = supabase
         .from('client_action_items')
-        .select('id, title, priority, status, due_date, tenant_id')
+        .select('id, title, priority, status, due_date, tenant_id, assignee_user_id')
         .in('status', ['open', 'in_progress', 'blocked'])
         .order('due_date', { ascending: true, nullsFirst: false });
+      if (userId) clientQuery.eq('assignee_user_id', userId);
+      const { data: clientItems, error: clientErr } = await clientQuery;
       if (clientErr) throw clientErr;
 
       const now = new Date();
