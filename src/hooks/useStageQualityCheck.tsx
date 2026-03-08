@@ -536,7 +536,7 @@ export async function computeStageQuality(
       clientTaskCount = count || 0;
     } else {
       const { count } = await supabase
-        .from('package_client_tasks')
+        .from('client_tasks')
         .select('*', { count: 'exact', head: true })
         .eq('stage_id', stageId);
       clientTaskCount = count || 0;
