@@ -150,8 +150,18 @@ export default function TasksManagement() {
       });
       if (tasksError) throw tasksError;
 
+      // Fetch action items from client_action_items and ops_work_items
+      const [{ data: clientActions }, { data: opsActions }] = await Promise.all([
+        supabase.from("client_action_items").select("id, title, description, priority, status, due_date, tenant_id, assignee_user_id, created_at, created_by_user_id").not('status', 'in', '("done","cancelled")'),
+        supabase.from("ops_work_items").select("id, title, description, priority, status, due_at, tenant_id, owner_user_uuid, created_at, created_by, package_instance_id").not('status', 'in', '("done","cancelled")'),
+      ]);
+
       // Fetch tenant and package names separately (no FK joins available)
-      const tenantIds = [...new Set(tasksData?.map((t: any) => t.tenant_id).filter(Boolean))];
+      const allTenantIds = new Set<number>();
+      tasksData?.forEach((t: any) => { if (t.tenant_id) allTenantIds.add(t.tenant_id); });
+      (clientActions || []).forEach((a: any) => { if (a.tenant_id) allTenantIds.add(a.tenant_id); });
+      (opsActions || []).forEach((a: any) => { if (a.tenant_id) allTenantIds.add(a.tenant_id); });
+      const tenantIds = [...allTenantIds];
       const packageIds = [...new Set(tasksData?.map((t: any) => t.package_id).filter(Boolean))];
 
       let tenantsMap = new Map<number, string>();
@@ -169,7 +179,13 @@ export default function TasksManagement() {
       // Get unique creator and follower user IDs
       const creatorIds = [...new Set(tasksData?.map((task: any) => task.created_by).filter(Boolean))] as string[];
       const followerIds = [...new Set(tasksData?.flatMap((task: any) => task.followers || []).filter(Boolean))] as string[];
-      const allUserIds = [...new Set([...creatorIds, ...followerIds])];
+      const actionUserIds = [
+        ...(clientActions || []).map((a: any) => a.assignee_user_id).filter(Boolean),
+        ...(clientActions || []).map((a: any) => a.created_by_user_id).filter(Boolean),
+        ...(opsActions || []).map((a: any) => a.owner_user_uuid).filter(Boolean),
+        ...(opsActions || []).map((a: any) => a.created_by).filter(Boolean),
+      ];
+      const allUserIds = [...new Set([...creatorIds, ...followerIds, ...actionUserIds])];
 
       // Fetch user data if there are any
       let usersMap = new Map<string, { user_uuid: string; first_name: string; last_name: string; avatar_url: string | null }>();
@@ -182,8 +198,14 @@ export default function TasksManagement() {
         }
       }
 
+      const getUserName = (id: string | null) => {
+        if (!id) return 'Unknown';
+        const u = usersMap.get(id);
+        return u ? `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown' : 'Unknown';
+      };
+
       // Map all fields from tasks_tenants table
-      const transformedTasks = tasksData?.map((task: any) => {
+      const transformedTasks: Task[] = (tasksData || []).map((task: any) => {
         const pkg = task.package_id ? packagesMap.get(task.package_id) : null;
         return {
           id: task.id,
@@ -203,12 +225,57 @@ export default function TasksManagement() {
           package_name: pkg?.name || null,
           package_created_at: pkg?.created_at || null,
           package_full_text: pkg?.full_text || null,
-          created_by_name: task.created_by ? `${usersMap.get(task.created_by)?.first_name || ''} ${usersMap.get(task.created_by)?.last_name || ''}`.trim() || "Unknown" : "Unknown",
-          follower_users: (task.followers || []).map((id: string) => usersMap.get(id)).filter(Boolean)
+          created_by_name: getUserName(task.created_by),
+          follower_users: (task.followers || []).map((id: string) => usersMap.get(id)).filter(Boolean),
+          source: 'task' as const,
         };
-      }) || [];
-      setTasks(transformedTasks);
-      setFilteredTasks(transformedTasks);
+      });
+
+      // Normalize client_action_items
+      const clientTasks: Task[] = (clientActions || []).map((a: any) => ({
+        id: `ca-${a.id}`,
+        tenant_id: a.tenant_id,
+        package_id: null,
+        task_name: a.title,
+        description: a.description,
+        due_date: a.due_date || new Date().toISOString().slice(0, 10),
+        status: a.status === 'open' ? 'not_started' : a.status,
+        completed: a.status === 'done',
+        created_by: a.created_by_user_id,
+        followers: a.assignee_user_id ? [a.assignee_user_id] : [],
+        created_at: a.created_at,
+        tenant_name: tenantsMap.get(a.tenant_id) || "N/A",
+        package_name: null,
+        created_by_name: getUserName(a.created_by_user_id),
+        follower_users: a.assignee_user_id ? [usersMap.get(a.assignee_user_id)].filter(Boolean) as any : [],
+        file_paths: [],
+        source: 'action' as const,
+      }));
+
+      // Normalize ops_work_items
+      const opsTasks: Task[] = (opsActions || []).map((a: any) => ({
+        id: `ops-${a.id}`,
+        tenant_id: a.tenant_id || 0,
+        package_id: a.package_instance_id,
+        task_name: a.title,
+        description: a.description,
+        due_date: a.due_at || new Date().toISOString().slice(0, 10),
+        status: a.status === 'open' ? 'not_started' : a.status,
+        completed: a.status === 'done',
+        created_by: a.created_by,
+        followers: a.owner_user_uuid ? [a.owner_user_uuid] : [],
+        created_at: a.created_at,
+        tenant_name: a.tenant_id ? (tenantsMap.get(a.tenant_id) || "N/A") : "General",
+        package_name: null,
+        created_by_name: getUserName(a.created_by),
+        follower_users: a.owner_user_uuid ? [usersMap.get(a.owner_user_uuid)].filter(Boolean) as any : [],
+        file_paths: [],
+        source: 'ops' as const,
+      }));
+
+      const allTasks = [...transformedTasks, ...clientTasks, ...opsTasks];
+      setTasks(allTasks);
+      setFilteredTasks(allTasks);
     } catch (error: any) {
       console.error("Error fetching tasks:", error);
       toast({
