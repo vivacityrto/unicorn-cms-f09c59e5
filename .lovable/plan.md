@@ -13,3 +13,10 @@ Added `completed_by` UUID column to `staff_task_instances`. Created `TaskAssigne
 ## Completed: Fix Documents Tab Error + Risk Note Auto-Open
 
 Fixed `validate_document_readiness` RPC to use `document_fields` + `dd_fields` tables instead of the dropped `merge_fields` column. Now validates required fields against `v_tenant_merge_fields` with real value checks per tenant. Also wired `ClientStructuredNotesTab` to consume `initNote`/`noteTitle` URL search params so risk level changes auto-open a pre-filled note dialog with type "risk".
+
+## Completed: Tasks Management + My Work + Today's Focus Refinements
+
+1. **Today's Focus**: Added overdue `tasks_tenants` count (portfolio-wide) as a focus item linking to `/tasks-management`. Existing user action items remain.
+2. **Tasks Management**: Merged `client_action_items` and `ops_work_items` into the task listing with source badges (Client Task / Action / Ops). Added "Assign To" dropdown in the create dialog using Vivacity team members. Assignee is added to followers array. Edit/delete actions only available for native `tasks_tenants` items.
+3. **My Work**: Added "Create Task" button using `CreateActionDialog` with optional client association.
+4. **CreateActionDialog**: Added "Assign to" dropdown defaulting to current user, sets `owner_user_uuid` on `ops_work_items`.
