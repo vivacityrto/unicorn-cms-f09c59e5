@@ -102,7 +102,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
       // 1. Update next_renewal_date
       const { error: renewError } = await (supabase as any)
         .from('package_instances')
-        .update({ next_renewal_date: format(newRenewalDate, 'yyyy-MM-dd') })
+        .update({ next_renewal_date: format(newRenewalDate, 'yyyy-MM-dd'), last_renewed_date: format(new Date(), 'yyyy-MM-dd') })
         .eq('id', instanceId);
       if (renewError) throw renewError;
 
