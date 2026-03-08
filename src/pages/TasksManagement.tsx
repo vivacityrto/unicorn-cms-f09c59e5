@@ -43,6 +43,7 @@ interface Task {
   created_by_name?: string;
   follower_users?: Array<{ user_uuid: string; first_name: string; last_name: string; avatar_url: string | null }>;
   file_paths?: string[];
+  source?: 'task' | 'action' | 'ops';
 }
 type TaskStatus = "pending" | "in_progress" | "completed" | "overdue" | "extended";
 export default function TasksManagement() {
