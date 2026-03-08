@@ -43,6 +43,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
   const [includedMinutes, setIncludedMinutes] = useState(0);
   const [cappedCarryOver, setCappedCarryOver] = useState(0);
   const [isCapped, setIsCapped] = useState(false);
+  const [nullStatusCount, setNullStatusCount] = useState(0);
 
   // Renewal dates
   const currentRenewal = (pkg as any).next_renewal_date
@@ -60,8 +61,8 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
       try {
         const instanceId = parseInt(pkg.id, 10);
 
-        // Fetch burndown and included_minutes in parallel
-        const [burndownResult, instanceResult] = await Promise.all([
+        // Fetch burndown, included_minutes, and null-status stages in parallel
+        const [burndownResult, instanceResult, nullStagesResult] = await Promise.all([
           (supabase as any)
             .from('v_package_burndown')
             .select('remaining_minutes, included_minutes')
@@ -72,6 +73,11 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
             .select('included_minutes')
             .eq('id', instanceId)
             .single(),
+          (supabase as any)
+            .from('stage_instances')
+            .select('id')
+            .eq('packageinstance_id', instanceId)
+            .is('status_id', null),
         ]);
 
         const remaining = burndownResult.data?.remaining_minutes ?? 0;
@@ -82,6 +88,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         setIncludedMinutes(included);
         setCappedCarryOver(carry);
         setIsCapped(remaining > included && included > 0);
+        setNullStatusCount(nullStagesResult.data?.length ?? 0);
         if (carry <= 0) {
           setCarryOverChoice('forfeit');
         }
@@ -258,6 +265,14 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
           </div>
         ) : (
           <div className="space-y-4 py-2">
+            {nullStatusCount > 0 && (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive">
+                  There {nullStatusCount === 1 ? 'is' : 'are'} {nullStatusCount} Stage{nullStatusCount === 1 ? '' : 's'} with no status selected. All stages must have a status selected.
+                </p>
+              </div>
+            )}
             {/* Current period info */}
             <div className="rounded-lg border p-3 space-y-2">
               <div className="flex items-center justify-between text-sm">
@@ -358,7 +373,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={processing || loading || (cappedCarryOver > 0 && !carryOverChoice)}
+            disabled={processing || loading || nullStatusCount > 0 || (cappedCarryOver > 0 && !carryOverChoice)}
           >
             {processing ? (
               <>
