@@ -65,6 +65,7 @@ export function CreateActionDialog({
   const [description, setDescription] = useState(composedDescription);
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
+  const [assigneeUserId, setAssigneeUserId] = useState(profile?.user_uuid || '');
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
   const [notifyClient, setNotifyClient] = useState(false);
 
