@@ -149,7 +149,7 @@ export function useDashboardTriage() {
       // Fetch overdue or high/urgent from client_action_items
       const { data: clientItems, error: clientErr } = await supabase
         .from('client_action_items')
-        .select('id, title, priority, status, due_date, client_id, assigned_to')
+        .select('id, title, priority, status, due_date, tenant_id')
         .in('status', ['open', 'in_progress', 'blocked'])
         .order('due_date', { ascending: true, nullsFirst: false });
       if (clientErr) throw clientErr;
