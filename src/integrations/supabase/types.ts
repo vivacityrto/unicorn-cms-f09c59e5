@@ -18759,13 +18759,16 @@ export type Database = {
       }
       eos_scorecard_metrics: {
         Row: {
+          category: string | null
           created_at: string
           description: string | null
+          direction: string | null
           display_order: number
           frequency: string
           goal_value: number
           id: string
           is_active: boolean
+          is_archived: boolean | null
           metric_name: string
           name: string
           order_index: number
@@ -18778,13 +18781,16 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          category?: string | null
           created_at?: string
           description?: string | null
+          direction?: string | null
           display_order?: number
           frequency?: string
           goal_value: number
           id?: string
           is_active?: boolean
+          is_archived?: boolean | null
           metric_name: string
           name: string
           order_index?: number
@@ -18797,13 +18803,16 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          category?: string | null
           created_at?: string
           description?: string | null
+          direction?: string | null
           display_order?: number
           frequency?: string
           goal_value?: number
           id?: string
           is_active?: boolean
+          is_archived?: boolean | null
           metric_name?: string
           name?: string
           order_index?: number
