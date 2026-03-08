@@ -188,6 +188,34 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         details: auditDetails,
       });
 
+      // 5. Create renewal note
+      const userName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown' : 'Unknown';
+      const renewedAt = new Date().toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' });
+      const carryText = carryOverChoice === 'carry' && cappedCarryOver > 0
+        ? `${formatMinutes(cappedCarryOver)} carried over to the new period${isCapped ? ` (capped at package inclusion of ${formatMinutes(includedMinutes)})` : ''}.`
+        : 'No time carried over (forfeited).';
+
+      // Look up legacy client_id
+      const { data: clientRow } = await (supabase as any)
+        .from('v_client_to_tenant')
+        .select('client_id')
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+
+      const legacyClientId = clientRow?.client_id || String(tenantId);
+
+      await supabase.rpc('rpc_create_client_note', {
+        p_tenant_id: tenantId,
+        p_client_id: legacyClientId,
+        p_note_type: 'general',
+        p_title: `Package Renewed: ${pkg.package_name}`,
+        p_content: `<p><strong>${pkg.package_name}</strong> was renewed by ${userName} on ${renewedAt}.</p><p>Previous period: ${format(periodStart, 'dd MMM yyyy')} – ${format(currentRenewal, 'dd MMM yyyy')}.</p><p>New renewal date: ${format(newRenewalDate, 'dd MMM yyyy')}.</p><p>${carryText}</p>`,
+        p_tags: ['renewal'],
+        p_related_entity_type: 'package_instances',
+        p_related_entity_id: pkg.id,
+        p_is_pinned: false,
+      });
+
       toast.success(
         `${pkg.package_name} renewed — next renewal ${format(newRenewalDate, 'dd MMM yyyy')}${carryOverChoice === 'carry' && cappedCarryOver > 0 ? ` (${formatMinutes(cappedCarryOver)} carried over)` : ''}`
       );
