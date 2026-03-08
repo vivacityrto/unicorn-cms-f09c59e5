@@ -235,12 +235,13 @@ export function useTimeInbox() {
         return false;
       }
 
-      const result = data as { success: boolean; posted_count: number; errors: Array<{ draft_id: string; error: string }> };
+      const result = data as { success: boolean; posted_count: number; errors?: unknown };
+      const errors = Array.isArray(result.errors) ? result.errors as Array<{ draft_id: string; error: string }> : [];
       
-      if (result.errors?.length > 0) {
+      if (errors.length > 0) {
         toast({ 
-          title: `Posted ${result.posted_count}, ${result.errors.length} failed`, 
-          description: result.errors[0].error, 
+          title: `Posted ${result.posted_count}, ${errors.length} failed`, 
+          description: errors[0].error, 
           variant: 'destructive' 
         });
       } else {
