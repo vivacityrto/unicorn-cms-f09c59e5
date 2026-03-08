@@ -53,7 +53,10 @@ export function TodaysFocusSection({ items, onAction, onSnooze }: Props) {
                 <CardContent className="p-3 flex items-center gap-3">
                   <Badge className={cn('text-[10px] shrink-0', sev.class)}>{sev.label}</Badge>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{item.tenantName}</p>
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      {item.actionType === 'view_actions' && <ListChecks className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                      {item.tenantName}
+                    </p>
                     <p className="text-xs text-muted-foreground truncate">{item.reason}</p>
                   </div>
                   {/* Why this item tooltip */}
