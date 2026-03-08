@@ -600,7 +600,7 @@ export function useClientPackages(tenantId: number | null) {
       // Fetch ALL package instances (active + completed) for history support
       const { data: instances, error } = await supabase
         .from('package_instances')
-        .select('id, tenant_id, package_id, start_date, is_complete, included_minutes, hours_included, hours_used, hours_added, membership_state, end_date, next_renewal_date')
+        .select('id, tenant_id, package_id, start_date, is_complete, included_minutes, hours_included, hours_used, hours_added, membership_state, end_date, next_renewal_date, last_renewed_date')
         .eq('tenant_id', tenantId)
         .order('start_date', { ascending: false }) as { data: any[] | null; error: any };
 
