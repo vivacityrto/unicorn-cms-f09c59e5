@@ -664,7 +664,8 @@ export default function TasksManagement() {
                       tenant_id: "",
                       package_id: "",
                       package_name: "",
-                      status: "not_started"
+                      status: "not_started",
+                      assigned_to: ""
                     });
                     setFollowers([]);
                     setUploadedFiles([]);
