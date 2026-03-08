@@ -43,7 +43,7 @@ interface TenantStatusDropdownProps {
   clientId?: string | null;
 }
 
-export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, onNonActiveChange }: TenantStatusDropdownProps) {
+export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, onNonActiveChange, clientId }: TenantStatusDropdownProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
   const [options, setOptions] = useState<StatusOption[]>([]);
