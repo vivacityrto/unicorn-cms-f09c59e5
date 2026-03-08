@@ -20,7 +20,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import { CSCQuickAssignDialog } from "@/components/client/CSCQuickAssignDialog";
-import { TenantLifecycleActions } from "@/components/tenant/TenantLifecycleActions";
 
 interface Tenant {
   id: number;
