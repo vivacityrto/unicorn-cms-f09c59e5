@@ -187,9 +187,9 @@ export default function ManageTenants() {
         .in("id", packageIds);
 
       const packageLookup = (packagesData || []).reduce((acc, pkg) => {
-        acc[pkg.id] = { name: pkg.name, full_text: pkg.full_text, slug: pkg.slug };
+        acc[pkg.id] = { name: pkg.name, full_text: pkg.full_text, slug: pkg.slug, package_type: pkg.package_type };
         return acc;
-      }, {} as Record<number, { name: string; full_text: string | null; slug: string | null }>);
+      }, {} as Record<number, { name: string; full_text: string | null; slug: string | null; package_type: string | null }>);
 
       const tenantPackagesMap = (packageInstancesData || []).reduce((acc, pi) => {
         if (!acc[pi.tenant_id]) acc[pi.tenant_id] = [];
