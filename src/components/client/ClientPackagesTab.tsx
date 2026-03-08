@@ -94,7 +94,7 @@ const STATE_ICONS: Record<string, React.ReactNode> = {
   complete: <CheckCircle2 className="h-3 w-3" />
 };
 
-export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, complyhubTier, autoExpandPackageInstanceId, autoExpandStageInstanceId }: ClientPackagesTabProps) {
+export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, onRefresh, complyhubTier, autoExpandPackageInstanceId, autoExpandStageInstanceId }: ClientPackagesTabProps) {
   const { data: membershipStateOptions } = useMembershipStateOptions();
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
