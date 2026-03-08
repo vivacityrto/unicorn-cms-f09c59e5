@@ -542,7 +542,8 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                             </div>
                           )}
                         </div>
-                      )}
+                        );
+                      })()}
                       <Button 
                         variant="ghost" 
                         size="sm"
