@@ -134,6 +134,70 @@ export function useDashboardTriage() {
     burnRiskOnly: false,
   });
 
+  // ── Outstanding action items for Today's Focus ──
+  const { data: outstandingActions = [] } = useQuery({
+    queryKey: ['triage-outstanding-actions', profile?.user_uuid],
+    queryFn: async () => {
+      // Fetch overdue or high/urgent priority open items from ops_work_items
+      const { data: opsItems, error: opsErr } = await supabase
+        .from('ops_work_items')
+        .select('id, title, priority, status, due_at, tenant_id, owner_user_uuid')
+        .in('status', ['open', 'in_progress', 'blocked'])
+        .order('due_at', { ascending: true, nullsFirst: false });
+      if (opsErr) throw opsErr;
+
+      // Fetch overdue or high/urgent from client_action_items
+      const { data: clientItems, error: clientErr } = await supabase
+        .from('client_action_items')
+        .select('id, title, priority, status, due_date, client_id, assigned_to')
+        .in('status', ['open', 'in_progress', 'blocked'])
+        .order('due_date', { ascending: true, nullsFirst: false });
+      if (clientErr) throw clientErr;
+
+      const now = new Date();
+      const combined: Array<{
+        id: string; title: string; priority: string; status: string;
+        due: string | null; tenant_id: number | null; source: 'ops' | 'client';
+        is_overdue: boolean; is_high_priority: boolean;
+      }> = [];
+
+      (opsItems || []).forEach((i: any) => {
+        const isOverdue = i.due_at ? new Date(i.due_at) < now : false;
+        const isHighPriority = ['high', 'urgent'].includes(i.priority || '');
+        if (isOverdue || isHighPriority) {
+          combined.push({
+            id: i.id, title: i.title, priority: i.priority || 'medium',
+            status: i.status, due: i.due_at, tenant_id: i.tenant_id,
+            source: 'ops', is_overdue: isOverdue, is_high_priority: isHighPriority,
+          });
+        }
+      });
+
+      (clientItems || []).forEach((i: any) => {
+        const isOverdue = i.due_date ? new Date(i.due_date) < now : false;
+        const isHighPriority = ['high', 'urgent'].includes(i.priority || '');
+        if (isOverdue || isHighPriority) {
+          combined.push({
+            id: i.id, title: i.title, priority: i.priority || 'medium',
+            status: i.status, due: i.due_date, tenant_id: i.client_id,
+            source: 'client', is_overdue: isOverdue, is_high_priority: isHighPriority,
+          });
+        }
+      });
+
+      // Sort: overdue first, then by priority
+      const prioRank: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+      combined.sort((a, b) => {
+        if (a.is_overdue !== b.is_overdue) return a.is_overdue ? -1 : 1;
+        return (prioRank[b.priority] || 0) - (prioRank[a.priority] || 0);
+      });
+
+      return combined;
+    },
+    enabled: isVivacityStaff,
+    staleTime: 60_000,
+  });
+
   // ── Attention-ranked tenants ──
   const { data: rawTenants = [], isLoading: tenantsLoading } = useQuery({
     queryKey: ['triage-attention-ranked'],
