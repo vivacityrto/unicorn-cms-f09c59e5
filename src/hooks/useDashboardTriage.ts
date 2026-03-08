@@ -179,7 +179,7 @@ export function useDashboardTriage() {
         if (isOverdue || isHighPriority) {
           combined.push({
             id: i.id, title: i.title, priority: i.priority || 'medium',
-            status: i.status, due: i.due_date, tenant_id: i.client_id,
+            status: i.status, due: i.due_date, tenant_id: i.tenant_id,
             source: 'client', is_overdue: isOverdue, is_high_priority: isHighPriority,
           });
         }
