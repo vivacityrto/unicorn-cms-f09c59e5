@@ -183,7 +183,7 @@ export default function ManageTenants() {
       
       const { data: packagesData } = await supabase
         .from("packages")
-        .select("id, name, full_text, slug")
+        .select("id, name, full_text, slug, package_type")
         .in("id", packageIds);
 
       const packageLookup = (packagesData || []).reduce((acc, pkg) => {
