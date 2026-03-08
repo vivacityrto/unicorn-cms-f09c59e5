@@ -71,6 +71,8 @@ export interface EosAccountabilityChart {
   notes?: string;
 }
 
+export type MetricDirection = 'higher_is_better' | 'lower_is_better' | 'equals_target';
+
 export interface EosScorecardMetric {
   id: string;
   tenant_id: number;
@@ -82,6 +84,9 @@ export interface EosScorecardMetric {
   frequency: string;
   is_active: boolean;
   display_order: number;
+  category?: string;
+  direction?: MetricDirection;
+  is_archived?: boolean;
   created_at: string;
   updated_at: string;
 }

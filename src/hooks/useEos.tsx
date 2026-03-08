@@ -446,7 +446,7 @@ export const useEosMeetings = () => {
 };
 
 // Hook for Scorecard Metrics
-export const useEosScorecardMetrics = () => {
+export const useEosScorecardMetrics = (showArchived = false) => {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
@@ -457,13 +457,25 @@ export const useEosScorecardMetrics = () => {
   );
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['eos-scorecard-metrics', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
+    queryKey: ['eos-scorecard-metrics', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id, showArchived],
     queryFn: async () => {
       let query = supabase
         .from('eos_scorecard_metrics')
         .select('*')
         .eq('is_active', true)
         .order('display_order', { ascending: true });
+      
+      // Filter by archived state
+      if (showArchived) {
+        // When showing archived, show only archived
+        query = supabase
+          .from('eos_scorecard_metrics')
+          .select('*')
+          .eq('is_archived', true)
+          .order('display_order', { ascending: true });
+      } else {
+        query = query.eq('is_archived', false);
+      }
       
       // Vivacity Team sees all; client users filter by tenant
       if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
@@ -477,6 +489,18 @@ export const useEosScorecardMetrics = () => {
     enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
+  const auditLog = async (action: string, entityId: string, details?: Record<string, any>) => {
+    if (!profile?.tenant_id || !profile?.user_uuid) return;
+    await supabase.from('client_audit_log').insert({
+      tenant_id: profile.tenant_id,
+      actor_user_id: profile.user_uuid,
+      action,
+      entity_type: 'eos_scorecard_metric',
+      entity_id: entityId,
+      details: details || {},
+    });
+  };
+
   const createMetric = useMutation({
     mutationFn: async (metric: Partial<EosScorecardMetric>) => {
       const { tenant_id, ...metricData } = metric;
@@ -487,6 +511,7 @@ export const useEosScorecardMetrics = () => {
         .single();
       
       if (error) throw error;
+      await auditLog('scorecard_metric.created', data.id, { name: metricData.name });
       return data;
     },
     onSuccess: () => {
@@ -498,9 +523,79 @@ export const useEosScorecardMetrics = () => {
     },
   });
 
+  const updateMetric = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<EosScorecardMetric> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('eos_scorecard_metrics')
+        .update(updates as any)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      await auditLog('scorecard_metric.updated', id, updates);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-scorecard-metrics'] });
+      toast({ title: 'Metric updated successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating metric', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const archiveMetric = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('eos_scorecard_metrics')
+        .update({ is_archived: true, is_active: false } as any)
+        .eq('id', id);
+      if (error) throw error;
+      await auditLog('scorecard_metric.archived', id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-scorecard-metrics'] });
+      toast({ title: 'Metric archived' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error archiving metric', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteMetric = useMutation({
+    mutationFn: async (id: string) => {
+      // Check for entries first
+      const { count } = await supabase
+        .from('eos_scorecard_entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('metric_id', id);
+      
+      if (count && count > 0) {
+        throw new Error('This metric has recorded entries. Archive it instead of deleting.');
+      }
+
+      const { error } = await supabase
+        .from('eos_scorecard_metrics')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      await auditLog('scorecard_metric.deleted', id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-scorecard-metrics'] });
+      toast({ title: 'Metric deleted' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error deleting metric', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     metrics,
     isLoading,
     createMetric,
+    updateMetric,
+    archiveMetric,
+    deleteMetric,
   };
 };
