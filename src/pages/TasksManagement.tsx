@@ -611,6 +611,22 @@ export default function TasksManagement() {
                 </div>
 
                 <div className="grid gap-2">
+                  <Label className="text-primary font-semibold">Assign To</Label>
+                  <Combobox
+                    options={users.map((u: any) => ({
+                      value: u.user_uuid,
+                      label: `${u.first_name || ''} ${u.last_name || ''}`.trim()
+                    }))}
+                    value={formData.assigned_to}
+                    onValueChange={value => setFormData({ ...formData, assigned_to: value })}
+                    placeholder="Select assignee (optional)"
+                    searchPlaceholder="Search team member..."
+                    emptyText="No team members found."
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="grid gap-2">
                   <Label htmlFor="tenant">Client *</Label>
                   <Combobox options={tenants.map(tenant => ({
                   value: tenant.id.toString(),
