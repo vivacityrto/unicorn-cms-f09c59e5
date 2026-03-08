@@ -1088,7 +1088,8 @@ export default function TasksManagement() {
                               tenant_id: task.tenant_id.toString(),
                               package_id: task.package_id?.toString() || "",
                               package_name: task.package_name || "",
-                              status: task.status || "not_started"
+                              status: task.status || "not_started",
+                              assigned_to: ""
                             });
                             setFollowers(task.followers || []);
                             setIsEditDialogOpen(true);
