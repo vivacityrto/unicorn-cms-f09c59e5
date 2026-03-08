@@ -408,12 +408,6 @@ export default function TasksManagement() {
           <p className="text-muted-foreground">View and manage all client tasks</p>
         </div>
         <div className="flex items-center gap-2">
-          {isSuperAdmin() && (
-            <Button variant="outline" onClick={() => navigate("/admin/clickup-import")}>
-              <Upload className="h-4 w-4 mr-2" />
-              ClickUp
-            </Button>
-          )}
           <Dialog open={isCreateDialogOpen} onOpenChange={open => {
           setIsCreateDialogOpen(open);
           if (!open) {

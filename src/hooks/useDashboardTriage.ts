@@ -409,7 +409,7 @@ export function useDashboardTriage() {
         ageMs: 0,
         actionLabel: 'View Actions',
         actionType: 'view_actions',
-        actionRoute: '/tasks',
+        actionRoute: '/my-work',
         whyText: `You have ${overdueCount} overdue action item${overdueCount === 1 ? '' : 's'} across your portfolio. These are past their due date and need immediate resolution.`,
       });
     }
@@ -425,7 +425,7 @@ export function useDashboardTriage() {
         ageMs: 0,
         actionLabel: 'View Actions',
         actionType: 'view_actions',
-        actionRoute: '/tasks',
+        actionRoute: '/my-work',
         whyText: `${highPrioCount} action item${highPrioCount === 1 ? '' : 's'} marked as high or urgent priority requiring prompt action.`,
       });
     }
