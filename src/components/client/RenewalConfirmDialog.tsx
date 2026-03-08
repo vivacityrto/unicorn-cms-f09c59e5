@@ -88,6 +88,7 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         setIncludedMinutes(included);
         setCappedCarryOver(carry);
         setIsCapped(remaining > included && included > 0);
+        setNullStatusCount(nullStagesResult.data?.length ?? 0);
         if (carry <= 0) {
           setCarryOverChoice('forfeit');
         }
