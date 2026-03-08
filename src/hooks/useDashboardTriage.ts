@@ -391,6 +391,45 @@ export function useDashboardTriage() {
       });
     });
 
+    // ── Outstanding action items (overdue / high-priority) ──
+    const tenantNameMap: Record<number, string> = {};
+    tenants.forEach(t => { tenantNameMap[t.tenant_id] = t.tenant_name; });
+
+    const overdueCount = outstandingActions.filter(a => a.is_overdue).length;
+    const highPrioCount = outstandingActions.filter(a => a.is_high_priority && !a.is_overdue).length;
+
+    if (overdueCount > 0) {
+      items.push({
+        id: 'focus-overdue-actions',
+        severity: 'critical',
+        tenantName: 'Action Items',
+        tenantId: 0,
+        reason: `${overdueCount} overdue action item${overdueCount === 1 ? '' : 's'} need attention`,
+        age: '',
+        ageMs: 0,
+        actionLabel: 'View Actions',
+        actionType: 'view_actions',
+        actionRoute: '/tasks',
+        whyText: `You have ${overdueCount} overdue action item${overdueCount === 1 ? '' : 's'} across your portfolio. These are past their due date and need immediate resolution.`,
+      });
+    }
+
+    if (highPrioCount > 0 && items.length < 5) {
+      items.push({
+        id: 'focus-high-prio-actions',
+        severity: 'high',
+        tenantName: 'Action Items',
+        tenantId: 0,
+        reason: `${highPrioCount} high/urgent priority action item${highPrioCount === 1 ? '' : 's'}`,
+        age: '',
+        ageMs: 0,
+        actionLabel: 'View Actions',
+        actionType: 'view_actions',
+        actionRoute: '/tasks',
+        whyText: `${highPrioCount} action item${highPrioCount === 1 ? '' : 's'} marked as high or urgent priority requiring prompt action.`,
+      });
+    }
+
     // If still empty, inject proactive items
     if (items.length === 0) {
       const sorted = [...tenants].sort((a, b) => b.attention_score - a.attention_score);
@@ -411,8 +450,8 @@ export function useDashboardTriage() {
       });
     }
 
-    return items.slice(0, 5);
-  }, [rawTenants, savedView, profile?.user_uuid]);
+    return items.slice(0, 7);
+  }, [rawTenants, savedView, profile?.user_uuid, outstandingActions]);
 
   // ── KPIs ──
   const kpis = useMemo(() => ({

@@ -28,10 +28,10 @@ function stripHtmlTags(html: string): string {
 interface CreateActionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tenantId: number;
+  tenantId?: number | null;
   packageId?: number;
-  taskName: string;
-  taskId: number;
+  taskName?: string;
+  taskId?: number;
   stageName?: string;
   packageName?: string;
   taskDescription?: string | null;
