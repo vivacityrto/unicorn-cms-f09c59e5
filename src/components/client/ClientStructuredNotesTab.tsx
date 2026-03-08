@@ -106,6 +106,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   });
   const { toast } = useToast();
   const { createItem: createActionItem } = useClientActionItems(tenantId, clientId);
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Filter state
   const [parentTypeFilter, setParentTypeFilter] = useState<string>('all');
