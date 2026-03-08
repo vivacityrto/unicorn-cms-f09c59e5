@@ -183,13 +183,13 @@ export default function ManageTenants() {
       
       const { data: packagesData } = await supabase
         .from("packages")
-        .select("id, name, full_text, slug")
+        .select("id, name, full_text, slug, package_type")
         .in("id", packageIds);
 
       const packageLookup = (packagesData || []).reduce((acc, pkg) => {
-        acc[pkg.id] = { name: pkg.name, full_text: pkg.full_text, slug: pkg.slug };
+        acc[pkg.id] = { name: pkg.name, full_text: pkg.full_text, slug: pkg.slug, package_type: pkg.package_type };
         return acc;
-      }, {} as Record<number, { name: string; full_text: string | null; slug: string | null }>);
+      }, {} as Record<number, { name: string; full_text: string | null; slug: string | null; package_type: string | null }>);
 
       const tenantPackagesMap = (packageInstancesData || []).reduce((acc, pi) => {
         if (!acc[pi.tenant_id]) acc[pi.tenant_id] = [];
@@ -208,9 +208,12 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, TenantPackageInfo[]>);
 
-      // Build renewal date map: earliest next_renewal_date per tenant
+      // Build renewal date map: earliest next_renewal_date per tenant (excluding KickStart packages)
       const tenantRenewalMap = (packageInstancesData || []).reduce((acc, pi) => {
-        if (pi.next_renewal_date) {
+        if (pi.next_renewal_date && pi.package_id) {
+          const pkg = packageLookup[pi.package_id];
+          // Skip KickStart (regulatory_submission) packages for anniversary filtering
+          if (pkg?.package_type === 'regulatory_submission') return acc;
           if (!acc[pi.tenant_id] || pi.next_renewal_date < acc[pi.tenant_id]) {
             acc[pi.tenant_id] = pi.next_renewal_date;
           }
