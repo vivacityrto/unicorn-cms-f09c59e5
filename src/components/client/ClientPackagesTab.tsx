@@ -523,7 +523,8 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                                     .eq('packageinstance_id', parseInt(pkg.id, 10))
                                     .is('status_id', null);
                                   if (incomplete && incomplete.length > 0) {
-                                    toast.error('All stages must have a status before renewing.');
+                                    const count = incomplete.length;
+                                    toast.error(`There ${count === 1 ? 'is' : 'are'} ${count} Stage${count === 1 ? '' : 's'} with no status selected. All stages must have a status selected.`);
                                     return;
                                   }
                                   setRenewTarget(pkg);
