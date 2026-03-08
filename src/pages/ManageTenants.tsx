@@ -835,13 +835,13 @@ export default function ManageTenants() {
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[200px] pr-8">
                       <div>
-                        {secondaryPkg && (
-                          <div className="text-[10px] text-muted-foreground mb-0.5 whitespace-nowrap">
-                            {secondaryPkg.name}
-                          </div>
-                        )}
-                        <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
-                          {primaryPkg?.name || (tenant.all_packages.length > 0 ? tenant.all_packages[0].name : "NA")}
+                        <div className="flex items-center gap-2 font-semibold text-foreground pb-[10px] whitespace-nowrap">
+                          <span>{primaryPkg?.name || (tenant.all_packages.length > 0 ? tenant.all_packages[0].name : "NA")}</span>
+                          {secondaryPkg && (
+                            <span className="text-[10px] font-normal text-muted-foreground">
+                              {secondaryPkg.name}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 whitespace-nowrap">
                           <Package2 className="w-3 h-3" />
