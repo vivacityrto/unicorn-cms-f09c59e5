@@ -710,6 +710,7 @@ export default function ManageTenants() {
         <Combobox
           options={[
             { value: "all", label: "All Anniversaries", icon: Calendar, iconColor: "text-muted-foreground" },
+            { value: "overdue", label: "Overdue", icon: Calendar, iconColor: "text-red-600" },
             { value: "1", label: "Due within 1 month", icon: Calendar, iconColor: "text-red-600" },
             { value: "2", label: "Due within 2 months", icon: Calendar, iconColor: "text-amber-600" },
             { value: "3", label: "Due within 3 months", icon: Calendar, iconColor: "text-yellow-600" },
