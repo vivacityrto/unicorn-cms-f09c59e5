@@ -116,7 +116,7 @@ export function useStageQualityCheck({
         });
       }
 
-      // B) Team task checks - count from package_staff_tasks if packageId provided
+      // B) Team task checks - use base table for templates, package table for package context
       let teamTaskCount = 0;
       if (packageId) {
         const { count } = await supabase
@@ -126,9 +126,8 @@ export function useStageQualityCheck({
           .eq('package_id', packageId);
         teamTaskCount = count || 0;
       } else {
-        // Check across all packages if no specific package
         const { count } = await supabase
-          .from('package_staff_tasks')
+          .from('staff_tasks')
           .select('*', { count: 'exact', head: true })
           .eq('stage_id', stageId);
         teamTaskCount = count || 0;
@@ -163,7 +162,7 @@ export function useStageQualityCheck({
         clientTaskCount = count || 0;
       } else {
         const { count } = await supabase
-          .from('package_client_tasks')
+          .from('client_tasks')
           .select('*', { count: 'exact', head: true })
           .eq('stage_id', stageId);
         clientTaskCount = count || 0;
@@ -215,11 +214,7 @@ export function useStageQualityCheck({
       if (packageId) {
         const { data: emails } = await supabase
           .from('package_stage_emails')
-          .select(`
-            id,
-            recipient_type,
-            email_templates!inner (status)
-          `)
+          .select(`id, recipient_type, email_templates!inner (status)`)
           .eq('stage_id', stageId)
           .eq('package_id', packageId);
 
@@ -227,18 +222,16 @@ export function useStageQualityCheck({
         tenantEmailCount = emails?.filter((e: any) => e.recipient_type === 'tenant').length || 0;
         draftEmailCount = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
       } else {
-        const { data: emails } = await supabase
-          .from('package_stage_emails')
-          .select(`
-            id,
-            recipient_type,
-            email_templates!inner (status)
-          `)
+        // Template context: count from base emails table
+        const { count } = await supabase
+          .from('emails')
+          .select('*', { count: 'exact', head: true })
           .eq('stage_id', stageId);
 
-        emailCount = emails?.length || 0;
-        tenantEmailCount = emails?.filter((e: any) => e.recipient_type === 'tenant').length || 0;
-        draftEmailCount = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
+        emailCount = count || 0;
+        // Base emails table doesn't have recipient_type/template status, so treat all as tenant-facing
+        tenantEmailCount = emailCount;
+        draftEmailCount = 0;
       }
 
       if (['delivery', 'documentation', 'onboarding'].includes(stageType)) {
@@ -295,14 +288,15 @@ export function useStageQualityCheck({
         tenantVisibleDocs = docs?.filter((d: any) => d.visibility !== 'team_only').length || 0;
         teamOnlyDocs = docs?.filter((d: any) => d.visibility === 'team_only').length || 0;
       } else {
-        const { data: docs } = await supabase
-          .from('package_stage_documents')
-          .select('id, visibility')
-          .eq('stage_id', stageId);
+        // Template context: count from base documents table (stage column)
+        const { count } = await supabase
+          .from('documents')
+          .select('*', { count: 'exact', head: true })
+          .eq('stage', stageId);
 
-        documentCount = docs?.length || 0;
-        tenantVisibleDocs = docs?.filter((d: any) => d.visibility !== 'team_only').length || 0;
-        teamOnlyDocs = docs?.filter((d: any) => d.visibility === 'team_only').length || 0;
+        documentCount = count || 0;
+        tenantVisibleDocs = documentCount; // Base docs don't have visibility, assume tenant-visible
+        teamOnlyDocs = 0;
       }
 
       if (['delivery', 'documentation'].includes(stageType)) {
@@ -507,7 +501,7 @@ export async function computeStageQuality(
       teamTaskCount = count || 0;
     } else {
       const { count } = await supabase
-        .from('package_staff_tasks')
+        .from('staff_tasks')
         .select('*', { count: 'exact', head: true })
         .eq('stage_id', stageId);
       teamTaskCount = count || 0;
@@ -542,7 +536,7 @@ export async function computeStageQuality(
       clientTaskCount = count || 0;
     } else {
       const { count } = await supabase
-        .from('package_client_tasks')
+        .from('client_tasks')
         .select('*', { count: 'exact', head: true })
         .eq('stage_id', stageId);
       clientTaskCount = count || 0;
@@ -600,13 +594,14 @@ export async function computeStageQuality(
       tenantEmailCount = emails?.filter((e: any) => e.recipient_type === 'tenant').length || 0;
       draftEmailCount = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
     } else {
-      const { data: emails } = await supabase
-        .from('package_stage_emails')
-        .select(`id, recipient_type, email_templates!inner (status)`)
+      const { count } = await supabase
+        .from('emails')
+        .select('*', { count: 'exact', head: true })
         .eq('stage_id', stageId);
 
-      tenantEmailCount = emails?.filter((e: any) => e.recipient_type === 'tenant').length || 0;
-      draftEmailCount = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
+      const eCount = count || 0;
+      tenantEmailCount = eCount;
+      draftEmailCount = 0;
     }
 
     if (['delivery', 'documentation', 'onboarding'].includes(stageType)) {
@@ -655,14 +650,14 @@ export async function computeStageQuality(
       tenantVisibleDocs = docs?.filter((d: any) => d.visibility !== 'team_only').length || 0;
       teamOnlyDocs = docs?.filter((d: any) => d.visibility === 'team_only').length || 0;
     } else {
-      const { data: docs } = await supabase
-        .from('package_stage_documents')
-        .select('id, visibility')
-        .eq('stage_id', stageId);
+      const { count } = await supabase
+        .from('documents')
+        .select('*', { count: 'exact', head: true })
+        .eq('stage', stageId);
 
-      documentCount = docs?.length || 0;
-      tenantVisibleDocs = docs?.filter((d: any) => d.visibility !== 'team_only').length || 0;
-      teamOnlyDocs = docs?.filter((d: any) => d.visibility === 'team_only').length || 0;
+      documentCount = count || 0;
+      tenantVisibleDocs = documentCount;
+      teamOnlyDocs = 0;
     }
 
     if (['delivery', 'documentation'].includes(stageType)) {
