@@ -39,6 +39,8 @@ interface TenantStatusDropdownProps {
   currentStatus: string;
   onStatusChange: (newStatus: string) => void;
   onNonActiveChange?: (statusDescription: string) => void;
+  /** If provided, auto-inserts a note on status change */
+  clientId?: string | null;
 }
 
 export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, onNonActiveChange }: TenantStatusDropdownProps) {
