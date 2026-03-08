@@ -819,9 +819,9 @@ export default function ManageTenants() {
                       <div>
                         <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
                           {tenant.rto_id && <span className="text-primary font-bold mr-1.5">{tenant.rto_id}</span>}
-                          {hasKickStart ? (
+                          {!tenant.rto_id && hasKickStart && (
                             <span className="text-primary font-bold mr-1.5">KS</span>
-                          ) : tenant.name === 'TBA' || tenant.name.startsWith('TBA ') ? null : null}
+                          )}
                           {tenant.name}
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
