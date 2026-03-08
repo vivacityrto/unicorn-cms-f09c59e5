@@ -690,6 +690,9 @@ export default function TasksManagement() {
                   if (!formData.task_name || !formData.due_date || !formData.tenant_id || !user) return;
                   
                   try {
+                    const assignedFollowers = formData.assigned_to 
+                      ? [...new Set([...followers, formData.assigned_to])]
+                      : followers;
                     const { data: newTask, error } = await supabase.from('tasks_tenants').insert({
                       tenant_id: parseInt(formData.tenant_id),
                       package_id: formData.package_id ? parseInt(formData.package_id) : null,
@@ -697,7 +700,7 @@ export default function TasksManagement() {
                       description: formData.description || null,
                       due_date: formData.due_date,
                       created_by: user.id,
-                      followers: followers.length > 0 ? followers : [],
+                      followers: assignedFollowers.length > 0 ? assignedFollowers : [],
                       status: formData.status || 'not_started',
                       completed: false
                     }).select().single();
