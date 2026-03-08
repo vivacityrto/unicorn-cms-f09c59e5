@@ -1053,6 +1053,15 @@ export default function TasksManagement() {
                         <span>{task.created_by_name || "Unknown"}</span>
                       </div>
                     </TableCell>
+                    <TableCell className="py-6 border-r border-border/50 whitespace-nowrap text-center">
+                      <Badge variant="outline" className={cn("text-[0.7rem]",
+                        task.source === 'action' && "bg-purple-500/10 text-purple-600 border-purple-500/30",
+                        task.source === 'ops' && "bg-blue-500/10 text-blue-600 border-blue-500/30",
+                        (!task.source || task.source === 'task') && "bg-muted text-muted-foreground border-border"
+                      )}>
+                        {task.source === 'action' ? 'Action' : task.source === 'ops' ? 'Ops' : 'Client Task'}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[200px] whitespace-nowrap">
                       <div className="font-semibold text-foreground pb-[10px]">{task.tenant_name}</div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
