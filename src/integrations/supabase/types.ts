@@ -24871,6 +24871,7 @@ export type Database = {
           is_active: boolean
           is_complete: boolean
           last_document_update_email: string | null
+          last_renewed_date: string | null
           manager_id: string | null
           membership_state: string
           next_renewal_date: string | null
@@ -24897,6 +24898,7 @@ export type Database = {
           is_active?: boolean
           is_complete: boolean
           last_document_update_email?: string | null
+          last_renewed_date?: string | null
           manager_id?: string | null
           membership_state?: string
           next_renewal_date?: string | null
@@ -24923,6 +24925,7 @@ export type Database = {
           is_active?: boolean
           is_complete?: boolean
           last_document_update_email?: string | null
+          last_renewed_date?: string | null
           manager_id?: string | null
           membership_state?: string
           next_renewal_date?: string | null
