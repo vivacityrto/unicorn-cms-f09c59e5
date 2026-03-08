@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Zap, Clock, Info } from 'lucide-react';
 import type { FocusItem } from '@/hooks/useDashboardTriage';
 import { cn } from '@/lib/utils';
+import { ListChecks } from 'lucide-react';
 
 interface Props {
   items: FocusItem[];
