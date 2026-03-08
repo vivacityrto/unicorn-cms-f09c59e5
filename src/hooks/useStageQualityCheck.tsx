@@ -214,11 +214,7 @@ export function useStageQualityCheck({
       if (packageId) {
         const { data: emails } = await supabase
           .from('package_stage_emails')
-          .select(`
-            id,
-            recipient_type,
-            email_templates!inner (status)
-          `)
+          .select(`id, recipient_type, email_templates!inner (status)`)
           .eq('stage_id', stageId)
           .eq('package_id', packageId);
 
@@ -226,18 +222,16 @@ export function useStageQualityCheck({
         tenantEmailCount = emails?.filter((e: any) => e.recipient_type === 'tenant').length || 0;
         draftEmailCount = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
       } else {
-        const { data: emails } = await supabase
-          .from('package_stage_emails')
-          .select(`
-            id,
-            recipient_type,
-            email_templates!inner (status)
-          `)
+        // Template context: count from base emails table
+        const { count } = await supabase
+          .from('emails')
+          .select('*', { count: 'exact', head: true })
           .eq('stage_id', stageId);
 
-        emailCount = emails?.length || 0;
-        tenantEmailCount = emails?.filter((e: any) => e.recipient_type === 'tenant').length || 0;
-        draftEmailCount = emails?.filter((e: any) => e.email_templates?.status === 'draft').length || 0;
+        emailCount = count || 0;
+        // Base emails table doesn't have recipient_type/template status, so treat all as tenant-facing
+        tenantEmailCount = emailCount;
+        draftEmailCount = 0;
       }
 
       if (['delivery', 'documentation', 'onboarding'].includes(stageType)) {
