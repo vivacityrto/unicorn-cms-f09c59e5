@@ -21,6 +21,13 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { cn } from "@/lib/utils";
 import { CSCQuickAssignDialog } from "@/components/client/CSCQuickAssignDialog";
 
+interface TenantPackageInfo {
+  id: number;
+  name: string;
+  full_text: string | null;
+  slug: string | null;
+}
+
 interface Tenant {
   id: number;
   name: string;
@@ -39,9 +46,12 @@ interface Tenant {
   package_name?: string | null;
   package_full_text?: string | null;
   package_id?: number | null;
+  all_packages: TenantPackageInfo[];
   state?: string | null;
   complyhub_membership_tier?: string | null;
   next_renewal_date?: string | null;
+  last_note_date?: string | null;
+  last_note_snippet?: string | null;
 }
 
 interface CSCFilterOption {
