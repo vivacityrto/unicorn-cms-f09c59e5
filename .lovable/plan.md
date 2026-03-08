@@ -1,11 +1,48 @@
-## Completed: Create `dd_stage_types` Lookup Table
 
-Created `dd_stage_types` table with 6 types (onboarding, delivery, documentation, support, monitoring, offboarding) including `is_milestone` column for progress metrics. Replaced all 7 hardcoded `STAGE_TYPE_OPTIONS` arrays with the `useStageTypeOptions` hook. Updated progress logic to use `is_milestone` fallback and added `monitoring` to auto-default logic.
 
-## Completed: Create `dd_priority` and `dd_action_status` Lookup Tables
+## Review and Fix Plan
 
-Created `dd_priority` (low, normal, medium, high, urgent) and `dd_action_status` (open, in_progress, blocked, waiting_client, done, cancelled, todo) lookup tables. Dropped 4 conflicting CHECK constraints on `client_action_items` and replaced with a validation trigger (`trg_validate_action_item_priority_status`). Updated `rpc_create_action_item` to validate against `dd_priority` table and default to `'medium'`. Created `useActionPriorityOptions` and `useActionStatusOptions` hooks with module-level caching. Replaced all hardcoded priority/status configs in `ClientActionItemsTab`, `PackageNotesSection`, `useClientManagementData`, and `useClientWorkboard`. Added `'normal'` and `'open'` to `ItemPriority` and `ItemStatus` types.
+### Issue 1: Documents Tab Error — `record "v_document" has no field "merge_fields"`
 
-## Completed: Staff Task Assignment + `completed_by` Tracking
+**Root Cause**: The `validate_document_readiness` RPC function (last updated in migration `20260107042638`) references `v_document.merge_fields` (line 39), but the `documents` table no longer has a `merge_fields` column. It has `detected_merge_fields` instead. The function is called by `DocumentReadinessBadge` (rendered in `StageDocumentsPanel.tsx`) whenever the Documents tab loads.
 
-Added `completed_by` UUID column to `staff_task_instances`. Created `TaskAssigneeButton` component (silhouette icon when unassigned, avatar when assigned, popover for team member selection with unassign option). Updated `useStaffTaskInstances` hook: on status → Completed/Core Complete sets `completed_by` to current user; on revert clears it; on assign auto-creates a linked action item via `rpc_create_action_item` with `source: 'task_assignment'`. Integrated `TaskAssigneeButton` into `StageStaffTasks.tsx` between task info and notes popover. Disabled for N/A tasks and finished stages.
+**Fix**: Create a new migration to update `validate_document_readiness` to use `document_fields` table (the new authoritative source for required merge fields) instead of the dropped `merge_fields` column. The function should query `document_fields` joined with `dd_fields` to get required fields, then validate them against `v_tenant_merge_fields`.
+
+### Issue 2: Risk Level Change Note Dialog Never Opens
+
+**Root Cause**: When risk level changes in `ClientDetail.tsx`, it sets `setActiveTab('notes')` and puts `initNote=true` and `noteTitle` into URL search params. However, `ClientStructuredNotesTab` (the component rendered for the notes tab) does NOT read these URL params. Only `TenantNotes.tsx` (at route `/tenant/:id/notes`) has that logic. So the tab switches but no note dialog opens.
+
+**Fix**: Add `initNote`/`noteTitle` param reading to `ClientStructuredNotesTab`. When `initNote=true` is detected in search params:
+1. Auto-open the note creation dialog
+2. Pre-fill the title with the `noteTitle` param
+3. Pre-select note type as "risk"
+4. Clean up the URL params after opening
+
+### Implementation Steps
+
+1. **Migration: Fix `validate_document_readiness`**
+   - Replace `v_document.merge_fields` reference with a query to `document_fields` + `dd_fields` tables
+   - Keep the same function signature (backward-compatible)
+   - If no `document_fields` rows exist for the document, set merge_status to 'pass' (no requirements defined)
+
+2. **Update `ClientStructuredNotesTab.tsx`**
+   - Import `useSearchParams` from react-router-dom
+   - Add a `useEffect` that checks for `initNote=true` in search params
+   - When detected, auto-open the note form dialog with pre-filled title and "risk" note type
+   - Clear the params after consuming them
+
+3. **No changes needed** to `RiskLevelBadge.tsx` or `ClientDetail.tsx` — the param-setting logic is correct, just the consumer was missing.
+
+### Files to Change
+
+| File | Change |
+|------|--------|
+| New migration SQL | Fix `validate_document_readiness` to stop referencing `merge_fields` |
+| `src/components/client/ClientStructuredNotesTab.tsx` | Read `initNote`/`noteTitle` from URL params, auto-open note dialog |
+
+### Risks and Mitigations
+
+- The `validate_document_readiness` fix is backward-compatible — same function signature, same return shape
+- `ClientStructuredNotesTab` change is additive — only adds new behaviour when URL params are present
+- No RLS, foreign key, or schema changes required
+
