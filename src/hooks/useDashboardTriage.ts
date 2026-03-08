@@ -203,6 +203,23 @@ export function useDashboardTriage() {
     staleTime: 60_000,
   });
 
+  // ── Overdue client tasks from tasks_tenants (portfolio-wide) ──
+  const { data: overdueClientTasks = 0 } = useQuery({
+    queryKey: ['triage-overdue-client-tasks'],
+    queryFn: async () => {
+      const now = new Date().toISOString().slice(0, 10);
+      const { count, error } = await supabase
+        .from('tasks_tenants')
+        .select('id', { count: 'exact', head: true })
+        .eq('completed', false)
+        .lt('due_date', now);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: isVivacityStaff,
+    staleTime: 60_000,
+  });
+
   // ── Attention-ranked tenants ──
   const { data: rawTenants = [], isLoading: tenantsLoading } = useQuery({
     queryKey: ['triage-attention-ranked'],
