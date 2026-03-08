@@ -186,6 +186,24 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     fetchPrimaryContactEmail();
   }, [tenantId]);
 
+  // Auto-open note dialog when initNote=true is in URL params (e.g. from risk level change)
+  useEffect(() => {
+    if (searchParams.get('initNote') !== 'true') return;
+    const prefillTitle = searchParams.get('noteTitle') || '';
+    // Clean up params immediately to prevent re-triggering
+    setSearchParams(prev => {
+      prev.delete('initNote');
+      prev.delete('noteTitle');
+      return prev;
+    }, { replace: true });
+    // Pre-fill form and open dialog
+    resetForm();
+    setNoteType('risk');
+    setTitle(prefillTitle);
+    setTitleManuallyEdited(true);
+    setIsAddDialogOpen(true);
+  }, [searchParams]);
+
   // Auto-extract title from content using AI
   const extractTitle = useCallback(async (text: string) => {
     if (!text || text.trim().length < 10) return;
