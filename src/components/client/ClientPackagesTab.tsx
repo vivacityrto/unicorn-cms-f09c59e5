@@ -126,6 +126,14 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
     }
   }, [autoExpandPackageInstanceId, packages]);
 
+  // Auto-expand all active packages on first load
+  useEffect(() => {
+    if (packages.length > 0 && expandedPackages.size === 0 && !autoExpandPackageInstanceId) {
+      const activeIds = new Set(activePackages.map(p => p.package_id));
+      setExpandedPackages(activeIds);
+    }
+  }, [packages]);
+
   useEffect(() => {
     const fetchPackages = async () => {
       const { data } = await supabase.from('packages').select('id, name').order('name');
