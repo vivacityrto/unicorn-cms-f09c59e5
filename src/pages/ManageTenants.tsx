@@ -789,11 +789,17 @@ export default function ManageTenants() {
                   >
                     Anniversary {sortField === "renewal" && "▲"}
                   </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Last Note</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTenants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((tenant, index) => (
+                {filteredTenants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((tenant, index) => {
+                  const hasKickStart = (tenant as any)._hasKickStart || tenant.all_packages.some(p => p.name.startsWith('KS'));
+                  const nonKSPackages = tenant.all_packages.filter(p => !p.name.startsWith('KS'));
+                  const primaryPkg = nonKSPackages[0];
+                  const secondaryPkg = nonKSPackages.length > 1 ? nonKSPackages[1] : null;
+
+                  return (
                   <TableRow
                     key={tenant.id}
                     className={cn(
@@ -808,6 +814,9 @@ export default function ManageTenants() {
                       <div>
                         <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
                           {tenant.rto_id && <span className="text-primary font-bold mr-1.5">{tenant.rto_id}</span>}
+                          {hasKickStart ? (
+                            <span className="text-primary font-bold mr-1.5">KS</span>
+                          ) : tenant.name === 'TBA' || tenant.name.startsWith('TBA ') ? null : null}
                           {tenant.name}
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
@@ -821,12 +830,17 @@ export default function ManageTenants() {
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[200px] pr-8">
                       <div>
+                        {secondaryPkg && (
+                          <div className="text-[10px] text-muted-foreground mb-0.5 whitespace-nowrap">
+                            {secondaryPkg.name}
+                          </div>
+                        )}
                         <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
-                          {tenant.package_name === "NA" ? "NA" : tenant.package_name || "NA"}
+                          {primaryPkg?.name || (tenant.all_packages.length > 0 ? tenant.all_packages[0].name : "NA")}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 whitespace-nowrap">
                           <Package2 className="w-3 h-3" />
-                          <span>{tenant.package_name === "NA" ? "NA" : tenant.package_full_text || "No Packages Added"}</span>
+                          <span>{primaryPkg?.full_text || (tenant.all_packages.length > 0 ? tenant.all_packages[0].full_text : "No Packages Added")}</span>
                         </div>
                       </div>
                     </TableCell>
@@ -940,14 +954,27 @@ export default function ManageTenants() {
                       )}
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                        <TenantLifecycleActions
-                          tenantId={tenant.id}
-                          tenantName={tenant.name}
-                          lifecycleStatus={tenant.lifecycle_status}
-                          onSuccess={fetchTenants}
-                        />
-                      </div>
+                      {tenant.last_note_date ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground cursor-default">
+                                <MessageSquare className="h-3 w-3" />
+                                {new Date(tenant.last_note_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-[300px]">
+                              <p className="text-xs">{tenant.last_note_snippet || "—"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                  );
+                })}
                     </TableCell>
                   </TableRow>
                 ))}
