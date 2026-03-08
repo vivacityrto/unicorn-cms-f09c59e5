@@ -84,7 +84,7 @@ export function CreateActionDialog({
         tenant_id: tenantId || null,
         package_instance_id: packageId ?? null,
         created_by: profile?.user_uuid || null,
-        owner_user_uuid: profile?.user_uuid || null,
+        owner_user_uuid: assigneeUserId || profile?.user_uuid || null,
         status: 'open',
       });
       if (error) throw error;
