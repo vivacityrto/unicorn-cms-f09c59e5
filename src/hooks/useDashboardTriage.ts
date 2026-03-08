@@ -108,6 +108,8 @@ export interface FocusItem {
   actionLabel: string;
   actionType: string;
   whyText?: string;
+  /** Route to navigate to when actioned (optional override) */
+  actionRoute?: string;
 }
 
 const SEVERITY_RANK: Record<string, number> = { critical: 3, high: 2, moderate: 1 };
@@ -130,6 +132,70 @@ export function useDashboardTriage() {
     stageHealth: null,
     mandatoryGapsOnly: false,
     burnRiskOnly: false,
+  });
+
+  // ── Outstanding action items for Today's Focus ──
+  const { data: outstandingActions = [] } = useQuery({
+    queryKey: ['triage-outstanding-actions', profile?.user_uuid],
+    queryFn: async () => {
+      // Fetch overdue or high/urgent priority open items from ops_work_items
+      const { data: opsItems, error: opsErr } = await supabase
+        .from('ops_work_items')
+        .select('id, title, priority, status, due_at, tenant_id, owner_user_uuid')
+        .in('status', ['open', 'in_progress', 'blocked'])
+        .order('due_at', { ascending: true, nullsFirst: false });
+      if (opsErr) throw opsErr;
+
+      // Fetch overdue or high/urgent from client_action_items
+      const { data: clientItems, error: clientErr } = await supabase
+        .from('client_action_items')
+        .select('id, title, priority, status, due_date, tenant_id')
+        .in('status', ['open', 'in_progress', 'blocked'])
+        .order('due_date', { ascending: true, nullsFirst: false });
+      if (clientErr) throw clientErr;
+
+      const now = new Date();
+      const combined: Array<{
+        id: string; title: string; priority: string; status: string;
+        due: string | null; tenant_id: number | null; source: 'ops' | 'client';
+        is_overdue: boolean; is_high_priority: boolean;
+      }> = [];
+
+      (opsItems || []).forEach((i: any) => {
+        const isOverdue = i.due_at ? new Date(i.due_at) < now : false;
+        const isHighPriority = ['high', 'urgent'].includes(i.priority || '');
+        if (isOverdue || isHighPriority) {
+          combined.push({
+            id: i.id, title: i.title, priority: i.priority || 'medium',
+            status: i.status, due: i.due_at, tenant_id: i.tenant_id,
+            source: 'ops', is_overdue: isOverdue, is_high_priority: isHighPriority,
+          });
+        }
+      });
+
+      (clientItems || []).forEach((i: any) => {
+        const isOverdue = i.due_date ? new Date(i.due_date) < now : false;
+        const isHighPriority = ['high', 'urgent'].includes(i.priority || '');
+        if (isOverdue || isHighPriority) {
+          combined.push({
+            id: i.id, title: i.title, priority: i.priority || 'medium',
+            status: i.status, due: i.due_date, tenant_id: i.tenant_id,
+            source: 'client', is_overdue: isOverdue, is_high_priority: isHighPriority,
+          });
+        }
+      });
+
+      // Sort: overdue first, then by priority
+      const prioRank: Record<string, number> = { urgent: 4, high: 3, medium: 2, low: 1 };
+      combined.sort((a, b) => {
+        if (a.is_overdue !== b.is_overdue) return a.is_overdue ? -1 : 1;
+        return (prioRank[b.priority] || 0) - (prioRank[a.priority] || 0);
+      });
+
+      return combined;
+    },
+    enabled: isVivacityStaff,
+    staleTime: 60_000,
   });
 
   // ── Attention-ranked tenants ──
@@ -325,6 +391,45 @@ export function useDashboardTriage() {
       });
     });
 
+    // ── Outstanding action items (overdue / high-priority) ──
+    const tenantNameMap: Record<number, string> = {};
+    tenants.forEach(t => { tenantNameMap[t.tenant_id] = t.tenant_name; });
+
+    const overdueCount = outstandingActions.filter(a => a.is_overdue).length;
+    const highPrioCount = outstandingActions.filter(a => a.is_high_priority && !a.is_overdue).length;
+
+    if (overdueCount > 0) {
+      items.push({
+        id: 'focus-overdue-actions',
+        severity: 'critical',
+        tenantName: 'Action Items',
+        tenantId: 0,
+        reason: `${overdueCount} overdue action item${overdueCount === 1 ? '' : 's'} need attention`,
+        age: '',
+        ageMs: 0,
+        actionLabel: 'View Actions',
+        actionType: 'view_actions',
+        actionRoute: '/tasks',
+        whyText: `You have ${overdueCount} overdue action item${overdueCount === 1 ? '' : 's'} across your portfolio. These are past their due date and need immediate resolution.`,
+      });
+    }
+
+    if (highPrioCount > 0 && items.length < 5) {
+      items.push({
+        id: 'focus-high-prio-actions',
+        severity: 'high',
+        tenantName: 'Action Items',
+        tenantId: 0,
+        reason: `${highPrioCount} high/urgent priority action item${highPrioCount === 1 ? '' : 's'}`,
+        age: '',
+        ageMs: 0,
+        actionLabel: 'View Actions',
+        actionType: 'view_actions',
+        actionRoute: '/tasks',
+        whyText: `${highPrioCount} action item${highPrioCount === 1 ? '' : 's'} marked as high or urgent priority requiring prompt action.`,
+      });
+    }
+
     // If still empty, inject proactive items
     if (items.length === 0) {
       const sorted = [...tenants].sort((a, b) => b.attention_score - a.attention_score);
@@ -345,8 +450,8 @@ export function useDashboardTriage() {
       });
     }
 
-    return items.slice(0, 5);
-  }, [rawTenants, savedView, profile?.user_uuid]);
+    return items.slice(0, 7);
+  }, [rawTenants, savedView, profile?.user_uuid, outstandingActions]);
 
   // ── KPIs ──
   const kpis = useMemo(() => ({

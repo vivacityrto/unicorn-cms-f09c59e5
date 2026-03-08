@@ -28,10 +28,10 @@ function stripHtmlTags(html: string): string {
 interface CreateActionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tenantId: number;
+  tenantId?: number | null;
   packageId?: number;
-  taskName: string;
-  taskId: number;
+  taskName?: string;
+  taskId?: number;
   stageName?: string;
   packageName?: string;
   taskDescription?: string | null;
@@ -57,7 +57,9 @@ export function CreateActionDialog({
   const composedTitle = [packageName, stageName, taskName].filter(Boolean).join(' > ');
   const strippedDesc = stripHtmlTags(taskDescription || '');
   const descSnippet = strippedDesc.length > 50 ? strippedDesc.slice(0, 50) + '…' : strippedDesc;
-  const composedDescription = `Task delegated by: ${delegatorName}${descSnippet ? '\n' + descSnippet : ''}`;
+  const composedDescription = taskName
+    ? `Task delegated by: ${delegatorName}${descSnippet ? '\n' + descSnippet : ''}`
+    : '';
 
   const [title, setTitle] = useState(composedTitle);
   const [description, setDescription] = useState(composedDescription);
@@ -78,7 +80,7 @@ export function CreateActionDialog({
         description: description.trim() || null,
         priority,
         due_at: dueDate || null,
-        tenant_id: tenantId,
+        tenant_id: tenantId || null,
         package_instance_id: packageId ?? null,
         created_by: profile?.user_uuid || null,
         owner_user_uuid: profile?.user_uuid || null,
@@ -86,15 +88,17 @@ export function CreateActionDialog({
       });
       if (error) throw error;
 
-      // Audit log
-      await supabase.from('client_audit_log').insert({
-        tenant_id: tenantId,
-        actor_user_id: profile?.user_uuid,
-        action: 'ops_action_created_from_task',
-        entity_type: 'ops_work_items',
-        entity_id: title.trim(),
-        details: { source_task_id: taskId, package_id: packageId, notify_user_ids: notifyUserIds.length > 0 ? notifyUserIds : undefined },
-      });
+      // Audit log (only if tenant-scoped)
+      if (tenantId) {
+        await supabase.from('client_audit_log').insert({
+          tenant_id: tenantId,
+          actor_user_id: profile?.user_uuid,
+          action: 'ops_action_created_from_task',
+          entity_type: 'ops_work_items',
+          entity_id: title.trim(),
+          details: { source_task_id: taskId || null, package_id: packageId, notify_user_ids: notifyUserIds.length > 0 ? notifyUserIds : undefined },
+        });
+      }
 
       toast({ title: 'Action created', description: `"${title.trim()}" added to operations tracker.` });
 

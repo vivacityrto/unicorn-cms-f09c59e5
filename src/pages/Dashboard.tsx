@@ -109,7 +109,13 @@ const Dashboard = () => {
               {/* Section 1: Today's Focus */}
               <TodaysFocusSection
                 items={todaysFocus}
-                onAction={(item) => openDrawerById(item.tenantId)}
+                onAction={(item) => {
+                  if (item.actionRoute) {
+                    navigate(item.actionRoute);
+                  } else {
+                    openDrawerById(item.tenantId);
+                  }
+                }}
                 onSnooze={(item, days) => snoozeItem({ itemId: item.id, days })}
               />
 
