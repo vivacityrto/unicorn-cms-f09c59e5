@@ -118,12 +118,33 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
       });
 
       onStatusChange(newStatus);
+
+      // Auto-insert a note recording the status change
+      if (clientId) {
+        const fromDesc = options.find(o => o.value === currentStatus)?.description || currentStatus;
+        const toDesc = options.find(o => o.value === newStatus)?.description || newStatus;
+        const userName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unknown';
+        const timestamp = new Date().toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' });
+        
+        await supabase.rpc('rpc_create_client_note', {
+          p_tenant_id: tenantId,
+          p_client_id: clientId,
+          p_note_type: 'status_change',
+          p_title: `Tenant status changed to ${toDesc}`,
+          p_content: `Status changed from "${fromDesc}" to "${toDesc}" by ${userName} on ${timestamp}.${closePackages ? ' Open packages were also closed.' : ''}`,
+          p_tags: ['status-change'],
+          p_related_entity_type: 'tenant',
+          p_related_entity_id: String(tenantId),
+          p_is_pinned: false
+        });
+      }
+
       toast({
         title: 'Status Updated',
         description: `Tenant status changed to ${newStatus}${closePackages ? ' and open packages closed' : ''}.`,
       });
 
-      // Trigger note initiation for non-active statuses
+      // Trigger note initiation for non-active statuses (halt statuses pop up for editing)
       if (newStatus !== 'active' && onNonActiveChange) {
         const statusDesc = options.find(o => o.value === newStatus)?.description || newStatus;
         onNonActiveChange(statusDesc);
