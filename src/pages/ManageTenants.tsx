@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, Package2, UserPlus, Archive, Pause } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, Package2, UserPlus, Archive, Pause, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddTenantDialog } from "@/components/AddTenantDialog";
@@ -20,7 +20,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import { CSCQuickAssignDialog } from "@/components/client/CSCQuickAssignDialog";
-import { TenantLifecycleActions } from "@/components/tenant/TenantLifecycleActions";
+
+interface TenantPackageInfo {
+  id: number;
+  name: string;
+  full_text: string | null;
+  slug: string | null;
+}
 
 interface Tenant {
   id: number;
@@ -40,9 +46,12 @@ interface Tenant {
   package_name?: string | null;
   package_full_text?: string | null;
   package_id?: number | null;
+  all_packages: TenantPackageInfo[];
   state?: string | null;
   complyhub_membership_tier?: string | null;
   next_renewal_date?: string | null;
+  last_note_date?: string | null;
+  last_note_snippet?: string | null;
 }
 
 interface CSCFilterOption {
@@ -185,14 +194,19 @@ export default function ManageTenants() {
       const tenantPackagesMap = (packageInstancesData || []).reduce((acc, pi) => {
         if (!acc[pi.tenant_id]) acc[pi.tenant_id] = [];
         if (pi.package_id && packageLookup[pi.package_id]) {
-          acc[pi.tenant_id].push({
-            id: pi.package_id,
-            name: packageLookup[pi.package_id].name,
-            full_text: packageLookup[pi.package_id].full_text
-          });
+          const pkg = packageLookup[pi.package_id];
+          // Avoid duplicates (multiple instances of same package)
+          if (!acc[pi.tenant_id].some((p: TenantPackageInfo) => p.id === pi.package_id)) {
+            acc[pi.tenant_id].push({
+              id: pi.package_id,
+              name: pkg.name,
+              full_text: pkg.full_text,
+              slug: pkg.slug
+            });
+          }
         }
         return acc;
-      }, {} as Record<number, { id: number; name: string; full_text: string | null }[]>);
+      }, {} as Record<number, TenantPackageInfo[]>);
 
       // Build renewal date map: earliest next_renewal_date per tenant
       const tenantRenewalMap = (packageInstancesData || []).reduce((acc, pi) => {
@@ -246,10 +260,27 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string | null>);
 
+      // Fetch last note date per tenant
+      const { data: lastNotesData } = await supabase
+        .from("client_notes")
+        .select("tenant_id, created_at, title, content")
+        .in("tenant_id", tenantIds)
+        .order("created_at", { ascending: false });
+
+      const lastNoteMap = (lastNotesData || []).reduce((acc, note) => {
+        if (!acc[note.tenant_id]) {
+          const snippet = (note.title || note.content || '').substring(0, 50);
+          acc[note.tenant_id] = { date: note.created_at, snippet };
+        }
+        return acc;
+      }, {} as Record<number, { date: string; snippet: string }>);
+
       const tenantsWithCounts = tenantsData.map(tenant => {
         const activePackages = tenantPackagesMap[tenant.id] || [];
-        const firstPackage = activePackages[0];
+        const firstNonKS = activePackages.find((p: TenantPackageInfo) => !p.name.startsWith('KS'));
+        const firstPackage = firstNonKS || activePackages[0];
         const cscUserId = cscMap[tenant.id];
+        const hasKickStart = activePackages.some((p: TenantPackageInfo) => p.name.startsWith('KS'));
         return {
           ...tenant,
           lifecycle_status: tenant.lifecycle_status || 'active',
@@ -262,9 +293,14 @@ export default function ManageTenants() {
           package_name: firstPackage?.name || null,
           package_full_text: firstPackage?.full_text || null,
           package_id: firstPackage?.id || null,
+          all_packages: activePackages,
           state: stateMap[tenant.id] || null,
-          next_renewal_date: tenantRenewalMap[tenant.id] || null
-        };
+          next_renewal_date: tenantRenewalMap[tenant.id] || null,
+          last_note_date: lastNoteMap[tenant.id]?.date || null,
+          last_note_snippet: lastNoteMap[tenant.id]?.snippet || null,
+          // Override name prefix: if they have a KS, prepend KS indicator
+          _hasKickStart: hasKickStart,
+        } as any;
       });
       setTenants(tenantsWithCounts);
 
@@ -361,8 +397,14 @@ export default function ManageTenants() {
       filtered = filtered.filter(tenant => tenant.csc_user_id === cscFilter);
     }
 
-    // Renewal due filter (months)
-    if (renewalFilter !== "all") {
+    // Renewal due filter
+    if (renewalFilter === "overdue") {
+      const now = new Date();
+      filtered = filtered.filter(tenant => {
+        if (!tenant.next_renewal_date) return false;
+        return new Date(tenant.next_renewal_date) < now;
+      });
+    } else if (renewalFilter !== "all") {
       const months = parseInt(renewalFilter);
       const now = new Date();
       const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
@@ -674,6 +716,7 @@ export default function ManageTenants() {
         <Combobox
           options={[
             { value: "all", label: "All Anniversaries", icon: Calendar, iconColor: "text-muted-foreground" },
+            { value: "overdue", label: "Overdue", icon: Calendar, iconColor: "text-red-600" },
             { value: "1", label: "Due within 1 month", icon: Calendar, iconColor: "text-red-600" },
             { value: "2", label: "Due within 2 months", icon: Calendar, iconColor: "text-amber-600" },
             { value: "3", label: "Due within 3 months", icon: Calendar, iconColor: "text-yellow-600" },
@@ -746,11 +789,17 @@ export default function ManageTenants() {
                   >
                     Anniversary {sortField === "renewal" && "▲"}
                   </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Last Note</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTenants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((tenant, index) => (
+                {filteredTenants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((tenant, index) => {
+                  const hasKickStart = (tenant as any)._hasKickStart || tenant.all_packages.some(p => p.name.startsWith('KS'));
+                  const nonKSPackages = tenant.all_packages.filter(p => !p.name.startsWith('KS'));
+                  const primaryPkg = nonKSPackages[0];
+                  const secondaryPkg = nonKSPackages.length > 1 ? nonKSPackages[1] : null;
+
+                  return (
                   <TableRow
                     key={tenant.id}
                     className={cn(
@@ -765,6 +814,9 @@ export default function ManageTenants() {
                       <div>
                         <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
                           {tenant.rto_id && <span className="text-primary font-bold mr-1.5">{tenant.rto_id}</span>}
+                          {hasKickStart ? (
+                            <span className="text-primary font-bold mr-1.5">KS</span>
+                          ) : tenant.name === 'TBA' || tenant.name.startsWith('TBA ') ? null : null}
                           {tenant.name}
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
@@ -778,12 +830,17 @@ export default function ManageTenants() {
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[200px] pr-8">
                       <div>
+                        {secondaryPkg && (
+                          <div className="text-[10px] text-muted-foreground mb-0.5 whitespace-nowrap">
+                            {secondaryPkg.name}
+                          </div>
+                        )}
                         <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
-                          {tenant.package_name === "NA" ? "NA" : tenant.package_name || "NA"}
+                          {primaryPkg?.name || (tenant.all_packages.length > 0 ? tenant.all_packages[0].name : "NA")}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 whitespace-nowrap">
                           <Package2 className="w-3 h-3" />
-                          <span>{tenant.package_name === "NA" ? "NA" : tenant.package_full_text || "No Packages Added"}</span>
+                          <span>{primaryPkg?.full_text || (tenant.all_packages.length > 0 ? tenant.all_packages[0].full_text : "No Packages Added")}</span>
                         </div>
                       </div>
                     </TableCell>
@@ -897,17 +954,27 @@ export default function ManageTenants() {
                       )}
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                        <TenantLifecycleActions
-                          tenantId={tenant.id}
-                          tenantName={tenant.name}
-                          lifecycleStatus={tenant.lifecycle_status}
-                          onSuccess={fetchTenants}
-                        />
-                      </div>
+                      {tenant.last_note_date ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground cursor-default">
+                                <MessageSquare className="h-3 w-3" />
+                                {new Date(tenant.last_note_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="max-w-[300px]">
+                              <p className="text-xs">{tenant.last_note_snippet || "—"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

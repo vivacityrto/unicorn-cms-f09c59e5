@@ -12,6 +12,8 @@ interface RiskLevelBadgeProps {
   riskLevel: string | null | undefined;
   onUpdate: (newLevel: string) => Promise<void>;
   disabled?: boolean;
+  /** Called after risk level changes, with old and new levels, so the caller can pop a note dialog */
+  onRiskChanged?: (oldLevel: string, newLevel: string) => void;
 }
 
 const RISK_LEVELS = [
@@ -21,7 +23,7 @@ const RISK_LEVELS = [
   { value: 'critical', label: 'Critical', className: 'bg-red-500/10 text-red-600 border-red-600' },
 ];
 
-export function RiskLevelBadge({ riskLevel, onUpdate, disabled }: RiskLevelBadgeProps) {
+export function RiskLevelBadge({ riskLevel, onUpdate, disabled, onRiskChanged }: RiskLevelBadgeProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -29,9 +31,13 @@ export function RiskLevelBadge({ riskLevel, onUpdate, disabled }: RiskLevelBadge
 
   const handleSelect = async (value: string) => {
     if (value === riskLevel) return;
+    const oldLevel = riskLevel || 'low';
     setIsUpdating(true);
     try {
       await onUpdate(value);
+      if (onRiskChanged) {
+        onRiskChanged(oldLevel, value);
+      }
     } finally {
       setIsUpdating(false);
     }
