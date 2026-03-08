@@ -650,14 +650,14 @@ export async function computeStageQuality(
       tenantVisibleDocs = docs?.filter((d: any) => d.visibility !== 'team_only').length || 0;
       teamOnlyDocs = docs?.filter((d: any) => d.visibility === 'team_only').length || 0;
     } else {
-      const { data: docs } = await supabase
-        .from('package_stage_documents')
-        .select('id, visibility')
-        .eq('stage_id', stageId);
+      const { count } = await supabase
+        .from('documents')
+        .select('*', { count: 'exact', head: true })
+        .eq('stage', stageId);
 
-      documentCount = docs?.length || 0;
-      tenantVisibleDocs = docs?.filter((d: any) => d.visibility !== 'team_only').length || 0;
-      teamOnlyDocs = docs?.filter((d: any) => d.visibility === 'team_only').length || 0;
+      documentCount = count || 0;
+      tenantVisibleDocs = documentCount;
+      teamOnlyDocs = 0;
     }
 
     if (['delivery', 'documentation'].includes(stageType)) {
