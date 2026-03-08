@@ -8,7 +8,8 @@ import {
   RefreshCw,
   Filter,
   AlertTriangle,
-  Clock
+  Clock,
+  Plus
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMyWork, MyWorkItem } from '@/hooks/useMyWork';
+import { CreateActionDialog } from '@/components/client/CreateActionDialog';
 import { cn } from '@/lib/utils';
 
 const priorityColors: Record<string, string> = {
