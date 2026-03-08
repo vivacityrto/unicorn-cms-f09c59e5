@@ -317,7 +317,14 @@ export default function MyWork() {
           </Table>
         </Card>
       </div>
-    </div>
+      </div>
+      <CreateActionDialog
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open);
+          if (!open) refresh();
+        }}
+      />
     </DashboardLayout>
   );
 }
