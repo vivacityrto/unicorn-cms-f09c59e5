@@ -722,7 +722,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           tenantId={tenantId}
           onSuccess={() => {
             setRenewTarget(null);
-            onAddPackage?.();
+            onRefresh?.();
           }}
         />
       )}
