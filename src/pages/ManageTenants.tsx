@@ -975,8 +975,6 @@ export default function ManageTenants() {
                   </TableRow>
                   );
                 })}
-              </TableBody>
-              </TableBody>
             </Table>
           </div>
         </div>
