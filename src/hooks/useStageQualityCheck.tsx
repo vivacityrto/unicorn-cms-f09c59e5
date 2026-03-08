@@ -116,7 +116,7 @@ export function useStageQualityCheck({
         });
       }
 
-      // B) Team task checks - count from package_staff_tasks if packageId provided
+      // B) Team task checks - use base table for templates, package table for package context
       let teamTaskCount = 0;
       if (packageId) {
         const { count } = await supabase
@@ -126,9 +126,8 @@ export function useStageQualityCheck({
           .eq('package_id', packageId);
         teamTaskCount = count || 0;
       } else {
-        // Check across all packages if no specific package
         const { count } = await supabase
-          .from('package_staff_tasks')
+          .from('staff_tasks')
           .select('*', { count: 'exact', head: true })
           .eq('stage_id', stageId);
         teamTaskCount = count || 0;
