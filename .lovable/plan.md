@@ -1,22 +1,86 @@
-## Completed: Create `dd_stage_types` Lookup Table
 
-Created `dd_stage_types` table with 6 types (onboarding, delivery, documentation, support, monitoring, offboarding) including `is_milestone` column for progress metrics. Replaced all 7 hardcoded `STAGE_TYPE_OPTIONS` arrays with the `useStageTypeOptions` hook. Updated progress logic to use `is_milestone` fallback and added `monitoring` to auto-default logic.
 
-## Completed: Create `dd_priority` and `dd_action_status` Lookup Tables
+## Plan: Refactor EOS Scorecard with Metric Management Actions
 
-Created `dd_priority` (low, normal, medium, high, urgent) and `dd_action_status` (open, in_progress, blocked, waiting_client, done, cancelled, todo) lookup tables. Dropped 4 conflicting CHECK constraints on `client_action_items` and replaced with a validation trigger (`trg_validate_action_item_priority_status`). Updated `rpc_create_action_item` to validate against `dd_priority` table and default to `'medium'`. Created `useActionPriorityOptions` and `useActionStatusOptions` hooks with module-level caching. Replaced all hardcoded priority/status configs in `ClientActionItemsTab`, `PackageNotesSection`, `useClientManagementData`, and `useClientWorkboard`. Added `'normal'` and `'open'` to `ItemPriority` and `ItemStatus` types.
+### Schema Changes (Migration)
 
-## Completed: Staff Task Assignment + `completed_by` Tracking
+Add 3 columns to `eos_scorecard_metrics`:
 
-Added `completed_by` UUID column to `staff_task_instances`. Created `TaskAssigneeButton` component (silhouette icon when unassigned, avatar when assigned, popover for team member selection with unassign option). Updated `useStaffTaskInstances` hook: on status → Completed/Core Complete sets `completed_by` to current user; on revert clears it; on assign auto-creates a linked action item via `rpc_create_action_item` with `source: 'task_assignment'`. Integrated `TaskAssigneeButton` into `StageStaffTasks.tsx` between task info and notes popover. Disabled for N/A tasks and finished stages.
+```sql
+ALTER TABLE public.eos_scorecard_metrics
+  ADD COLUMN IF NOT EXISTS category text DEFAULT 'general',
+  ADD COLUMN IF NOT EXISTS direction text DEFAULT 'higher_is_better' CHECK (direction IN ('higher_is_better', 'lower_is_better', 'equals_target')),
+  ADD COLUMN IF NOT EXISTS is_archived boolean DEFAULT false;
+```
 
-## Completed: Fix Documents Tab Error + Risk Note Auto-Open
+No other table changes needed — `owner_id`, `display_order` already exist.
 
-Fixed `validate_document_readiness` RPC to use `document_fields` + `dd_fields` tables instead of the dropped `merge_fields` column. Now validates required fields against `v_tenant_merge_fields` with real value checks per tenant. Also wired `ClientStructuredNotesTab` to consume `initNote`/`noteTitle` URL search params so risk level changes auto-open a pre-filled note dialog with type "risk".
+### Type Updates
 
-## Completed: Tasks Management + My Work + Today's Focus Refinements
+**`src/types/eos.ts`** — Add `category`, `direction`, `is_archived` to `EosScorecardMetric`:
+```typescript
+export interface EosScorecardMetric {
+  // ...existing fields...
+  category?: string;
+  direction?: 'higher_is_better' | 'lower_is_better' | 'equals_target';
+  is_archived?: boolean;
+}
+```
 
-1. **Today's Focus**: Added overdue `tasks_tenants` count (portfolio-wide) as a focus item linking to `/tasks-management`. Existing user action items remain.
-2. **Tasks Management**: Merged `client_action_items` and `ops_work_items` into the task listing with source badges (Client Task / Action / Ops). Added "Assign To" dropdown in the create dialog using Vivacity team members. Assignee is added to followers array. Edit/delete actions only available for native `tasks_tenants` items.
-3. **My Work**: Added "Create Task" button using `CreateActionDialog` with optional client association.
-4. **CreateActionDialog**: Added "Assign to" dropdown defaulting to current user, sets `owner_user_uuid` on `ops_work_items`.
+### Hook Changes
+
+**`src/hooks/useEosScorecardMetrics.tsx`**:
+- Change filter from `.eq('is_active', true)` to also exclude archived: `.eq('is_archived', false)` (or handle via a toggle).
+- Add `updateMetric`, `archiveMetric`, and `deleteMetric` mutations.
+- `archiveMetric`: sets `is_archived = true` and `is_active = false`.
+- `deleteMetric`: hard-deletes only metrics with zero entries (check count first), otherwise toast an error suggesting archive.
+- All mutations invalidate `['eos-scorecard-metrics']`.
+
+### UI Changes
+
+#### 1. MetricEditorDialog (`src/components/eos/MetricEditorDialog.tsx`)
+- Accept optional `metric` prop for edit mode (pre-fill form).
+- Add fields: **Category** (text input), **Owner** (dropdown of tenant users via existing hook), **Direction** (select: Higher is Better / Lower is Better / Equals Target).
+- On submit: call `insert` for new or `update` for existing.
+
+#### 2. ScorecardEntryGrid (`src/components/eos/ScorecardEntryGrid.tsx`)
+- Add a `DropdownMenu` (three-dot icon) in the card header with: **Edit Metric**, **Archive Metric**, **Delete Metric**.
+- Edit opens `MetricEditorDialog` with the metric pre-filled.
+- Archive calls `archiveMetric` with a confirmation dialog.
+- Delete calls `deleteMetric` with a destructive confirmation dialog.
+- Fix `isOffTrack` logic to use `metric.direction`:
+  - `higher_is_better`: off-track if `value < target`
+  - `lower_is_better`: off-track if `value > target`
+  - `equals_target`: off-track if `value !== target`
+- Show a status badge on each metric card header: "On Track" (green) / "Off Track" (red) / "No Data" (muted) based on latest entry + direction.
+- Display `category` and `owner` (resolved name) as badges alongside existing target/frequency badges.
+
+#### 3. EosScorecard page (`src/pages/EosScorecard.tsx`)
+- Add "Show Archived" toggle to view archived metrics separately.
+- Pass edit state down to `MetricEditorDialog`.
+
+### Direction-Aware Status Logic
+
+```typescript
+function isOffTrack(value: number, target: number, direction: string): boolean {
+  switch (direction) {
+    case 'lower_is_better': return value > target;
+    case 'equals_target': return value !== target;
+    case 'higher_is_better':
+    default: return value < target;
+  }
+}
+```
+
+### Audit Logging
+
+Each mutation (create, update, archive, delete) will insert a row into `client_audit_log` with `entity_type: 'eos_scorecard_metric'`, `action`, `entity_id`, `performed_by`, and `tenant_id`.
+
+### Files to Edit
+1. **Migration SQL** — add `category`, `direction`, `is_archived` columns
+2. `src/types/eos.ts` — update `EosScorecardMetric` interface
+3. `src/hooks/useEosScorecardMetrics.tsx` — add update/archive/delete mutations + audit logging
+4. `src/components/eos/MetricEditorDialog.tsx` — add new fields, support edit mode
+5. `src/components/eos/ScorecardEntryGrid.tsx` — add actions menu, direction-aware status, owner/category badges
+6. `src/pages/EosScorecard.tsx` — wire edit state, add archived toggle
+
