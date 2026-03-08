@@ -126,10 +126,16 @@ export default function MyWork() {
                   </p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={() => refresh()} className="gap-1.5">
-                <RefreshCw className="h-3.5 w-3.5" />
-                Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => setIsCreateOpen(true)} className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  Create Task
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => refresh()} className="gap-1.5">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Refresh
+                </Button>
+              </div>
             </div>
           </div>
         </div>
