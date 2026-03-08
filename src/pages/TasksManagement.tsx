@@ -1170,6 +1170,7 @@ export default function TasksManagement() {
                       )}
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      {(!task.source || task.source === 'task') ? (
                       <div className="flex items-center justify-center gap-2">
                         <Button
                           variant="ghost"
@@ -1206,6 +1207,9 @@ export default function TasksManagement() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                   </TableRow>;
             })}
