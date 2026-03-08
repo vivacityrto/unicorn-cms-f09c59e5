@@ -392,7 +392,7 @@ export default function ManageTenants() {
     if (packageFilter === "complyhub") {
       filtered = filtered.filter(tenant => !!tenant.complyhub_membership_tier);
     } else if (packageFilter !== "all") {
-      filtered = filtered.filter(tenant => tenant.package_id?.toString() === packageFilter);
+      filtered = filtered.filter(tenant => tenant.all_packages.some(p => p.id.toString() === packageFilter));
     }
 
     // CSC filter
