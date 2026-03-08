@@ -245,7 +245,13 @@ export default function ClientDetail() {
                     onStatusChange={(newStatus) => setTenant(prev => prev ? { ...prev, status: newStatus } : null)}
                     onNonActiveChange={(statusDescription) => {
                       const title = `** CLIENT ${statusDescription.toUpperCase()} **`;
-                      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+                      setActiveTab('notes');
+                      setSearchParams(prev => {
+                        prev.set('tab', 'notes');
+                        prev.set('initNote', 'true');
+                        prev.set('noteTitle', title);
+                        return prev;
+                      });
                     }}
                     clientId={tenant.id.toString()}
                   />
@@ -257,7 +263,13 @@ export default function ClientDetail() {
                     disabled={!canEdit}
                     onRiskChanged={(oldLevel, newLevel) => {
                       const title = `Risk level changed: ${oldLevel} → ${newLevel}`;
-                      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+                      setActiveTab('notes');
+                      setSearchParams(prev => {
+                        prev.set('tab', 'notes');
+                        prev.set('initNote', 'true');
+                        prev.set('noteTitle', title);
+                        return prev;
+                      });
                     }}
                   />
                   <OrgTypeBadge orgType={profile?.org_type} rtoNumber={profile?.rto_number} cricosNumber={profile?.cricos_number} />

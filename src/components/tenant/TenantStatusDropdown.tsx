@@ -126,7 +126,7 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
         const userName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unknown';
         const timestamp = new Date().toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' });
         
-        await supabase.rpc('rpc_create_client_note', {
+        const { error: noteError } = await supabase.rpc('rpc_create_client_note', {
           p_tenant_id: tenantId,
           p_client_id: clientId,
           p_note_type: 'status_change',
@@ -137,6 +137,7 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
           p_related_entity_id: String(tenantId),
           p_is_pinned: false
         });
+        if (noteError) console.error('Auto-note insert failed:', noteError);
       }
 
       toast({

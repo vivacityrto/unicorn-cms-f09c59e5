@@ -260,20 +260,25 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string | null>);
 
-      // Fetch last note date per tenant
-      const { data: lastNotesData } = await supabase
-        .from("client_notes")
-        .select("tenant_id, created_at, title, content")
-        .in("tenant_id", tenantIds)
-        .order("created_at", { ascending: false });
-
-      const lastNoteMap = (lastNotesData || []).reduce((acc, note) => {
-        if (!acc[note.tenant_id]) {
-          const snippet = (note.title || note.content || '').substring(0, 50);
-          acc[note.tenant_id] = { date: note.created_at, snippet };
-        }
-        return acc;
-      }, {} as Record<number, { date: string; snippet: string }>);
+      // Fetch last note per tenant using a distinct-on-like approach
+      // Fetch in batches per tenant to avoid 1000-row limit truncation
+      const lastNoteMap: Record<number, { date: string; snippet: string }> = {};
+      const noteBatchSize = 50;
+      for (let i = 0; i < tenantIds.length; i += noteBatchSize) {
+        const batch = tenantIds.slice(i, i + noteBatchSize);
+        const { data: lastNotesData } = await supabase
+          .from("client_notes")
+          .select("tenant_id, created_at, title, content")
+          .in("tenant_id", batch)
+          .order("created_at", { ascending: false })
+          .limit(batch.length * 2); // at most 2 per tenant is enough to get the latest
+        (lastNotesData || []).forEach(note => {
+          if (!lastNoteMap[note.tenant_id]) {
+            const snippet = (note.title || note.content || '').substring(0, 50);
+            lastNoteMap[note.tenant_id] = { date: note.created_at, snippet };
+          }
+        });
+      }
 
       const tenantsWithCounts = tenantsData.map(tenant => {
         const activePackages = tenantPackagesMap[tenant.id] || [];
@@ -387,7 +392,7 @@ export default function ManageTenants() {
     if (packageFilter === "complyhub") {
       filtered = filtered.filter(tenant => !!tenant.complyhub_membership_tier);
     } else if (packageFilter !== "all") {
-      filtered = filtered.filter(tenant => tenant.package_id?.toString() === packageFilter);
+      filtered = filtered.filter(tenant => tenant.all_packages.some(p => p.id.toString() === packageFilter));
     }
 
     // CSC filter
