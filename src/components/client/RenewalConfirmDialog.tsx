@@ -82,6 +82,9 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
         setIncludedMinutes(included);
         setCappedCarryOver(carry);
         setIsCapped(remaining > included && included > 0);
+        if (carry <= 0) {
+          setCarryOverChoice('forfeit');
+        }
       } catch (err) {
         console.error('Error fetching renewal data:', err);
       } finally {
@@ -93,7 +96,10 @@ export function RenewalConfirmDialog({ open, onOpenChange, pkg, tenantId, onSucc
   }, [open, pkg]);
 
   const handleConfirm = async () => {
-    if (!carryOverChoice) return;
+    if (!carryOverChoice) {
+      toast.error('Please select a carry-over option before confirming.');
+      return;
+    }
     setProcessing(true);
 
     try {
