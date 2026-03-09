@@ -117,13 +117,29 @@ export function StartPackageDialog({
     }
   };
 
+  // Auto-fill CSC when attaching to a parent package
+  const handleAttachChange = (value: string) => {
+    const id = value === '__none__' ? '' : value;
+    setAttachToInstanceId(id);
+    if (id) {
+      const parent = activeInstances.find(inst => inst.id === parseInt(id));
+      if (parent?.manager_id) {
+        setSelectedCscId(parent.manager_id);
+      }
+    }
+  };
+
   const handleStart = async () => {
     if (!selectedPackageId) return;
+
+    const cscToUse = selectedCscId || (attachToInstanceId 
+      ? activeInstances.find(i => i.id === parseInt(attachToInstanceId))?.manager_id 
+      : undefined) || undefined;
 
     const packageInstanceId = await startPackage(
       tenantId,
       parseInt(selectedPackageId),
-      selectedCscId || undefined
+      cscToUse
     );
 
     if (packageInstanceId) {
