@@ -30,6 +30,7 @@ export interface ClientPackage {
   last_renewed_date?: string | null;
   parent_instance_id?: number | null;
   parent_package_name?: string | null;
+  comments?: string | null;
 }
 
 export interface ClientSummary {
