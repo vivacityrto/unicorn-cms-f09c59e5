@@ -111,16 +111,34 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   const { data: combined, isLoading } = useQuery({
     queryKey: ['package-burndown-combined', tenantId],
     queryFn: async () => {
-      // 1. Get active (non-complete) instance IDs first
-      const { data: activeInstances, error: aiErr } = await supabase
+      // 1. Get active (non-complete) instance IDs with renewal info
+      const { data: activeInstances, error: aiErr } = await (supabase as any)
         .from('package_instances')
-        .select('id')
+        .select('id, start_date, next_renewal_date')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false);
       if (aiErr) throw aiErr;
 
-      const activeIds = (activeInstances || []).map(r => r.id);
+      const activeIds = (activeInstances || []).map((r: any) => r.id);
       if (activeIds.length === 0) return [];
+
+      // Build renewal year window per instance
+      const renewalWindowMap: Record<number, { start: string; end: string }> = {};
+      (activeInstances || []).forEach((inst: any) => {
+        const renewalEnd = inst.next_renewal_date
+          ? new Date(inst.next_renewal_date)
+          : inst.start_date
+            ? new Date(new Date(inst.start_date).getFullYear() + 1, new Date(inst.start_date).getMonth(), new Date(inst.start_date).getDate())
+            : null;
+        if (renewalEnd) {
+          const renewalStart = new Date(renewalEnd);
+          renewalStart.setFullYear(renewalStart.getFullYear() - 1);
+          renewalWindowMap[inst.id] = {
+            start: renewalStart.toISOString(),
+            end: renewalEnd.toISOString(),
+          };
+        }
+      });
 
       // 2. Fetch burndown data only for active instances
       const { data: burndownData, error: bdErr } = await supabase
@@ -135,7 +153,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
 
       const { fullTextMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
-      // 2. Fetch per-month breakdown from time_entries
+      // 3. Fetch per-month breakdown from time_entries
       const { data: monthlyRows } = await (supabase as any)
         .from('time_entries')
         .select('package_id, package_instance_id, start_at, duration_minutes, is_billable')
@@ -180,6 +198,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
         package_instance_id: row.package_instance_id,
         package_name: fullTextMap[row.package_instance_id!] || 'Unknown',
         lifecycle: lifecycleMap[row.package_instance_id!] || { start_date: null, end_date: null },
+        renewalWindow: renewalWindowMap[row.package_instance_id!] || null,
         used_minutes: row.used_minutes ?? 0,
         included_minutes: row.included_minutes ?? 0,
         remaining_minutes: row.remaining_minutes ?? 0,
