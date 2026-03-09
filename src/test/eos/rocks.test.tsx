@@ -120,8 +120,8 @@ describe("EOS Rocks", () => {
         complete: 5,
       };
 
-      expect(statusPriority["Off_Track"]).toBeLessThan(statusPriority["At_Risk"]);
-      expect(statusPriority["At_Risk"]).toBeLessThan(statusPriority["On_Track"]);
+      expect(statusPriority["off_track"]).toBeLessThan(statusPriority["at_risk"]);
+      expect(statusPriority["at_risk"]).toBeLessThan(statusPriority["on_track"]);
     });
 
     it("should flag parent as at-risk when child is at-risk", () => {
