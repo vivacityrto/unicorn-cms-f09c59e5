@@ -689,22 +689,12 @@ export function useClientPackages(tenantId: number | null) {
         };
       });
 
-      // Deduplicate active packages: keep only the most recent instance per package_id
+      // Keep all active instances (no deduplication — each instance is unique, including add-ons)
       // Keep all completed packages for history
       const activePackages = packageData.filter(p => !p.is_complete);
       const completedPackages = packageData.filter(p => p.is_complete);
-      
-      const deduplicatedActive = Object.values(
-        activePackages.reduce((acc, pkg) => {
-          const key = pkg.package_id;
-          if (!acc[key] || new Date(pkg.membership_started_at || 0) > new Date(acc[key].membership_started_at || 0)) {
-            acc[key] = pkg;
-          }
-          return acc;
-        }, {} as Record<number, typeof packageData[0]>)
-      );
 
-      setPackages([...deduplicatedActive, ...completedPackages]);
+      setPackages([...activePackages, ...completedPackages]);
     } catch (error: any) {
       console.error('Error fetching client packages:', error);
       toast({
