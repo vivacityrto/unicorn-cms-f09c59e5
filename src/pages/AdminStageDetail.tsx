@@ -1413,6 +1413,12 @@ export default function AdminStageDetail() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{task.name}</span>
+                                {task.is_key_event && (
+                                  <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-700 gap-0.5">
+                                    <KeyRound className="h-2.5 w-2.5" />
+                                    Key Event
+                                  </Badge>
+                                )}
                                 {task.is_mandatory && (
                                   <Badge variant="secondary" className="text-xs">Required</Badge>
                                 )}
