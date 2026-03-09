@@ -251,7 +251,7 @@ export function StartPackageDialog({
                   <Link2 className="h-4 w-4" />
                   Attach to package (optional)
                 </Label>
-                <Select value={attachToInstanceId || "__none__"} onValueChange={(v) => setAttachToInstanceId(v === "__none__" ? "" : v)}>
+                <Select value={attachToInstanceId || "__none__"} onValueChange={handleAttachChange}>
                   <SelectTrigger id="attach">
                     <SelectValue placeholder="Stand-alone package" />
                   </SelectTrigger>
