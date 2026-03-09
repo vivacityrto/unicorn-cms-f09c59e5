@@ -372,7 +372,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                               (Time rolled into {pkg.parent_package_name})
                               {pkg.comments && (
                                 <span className="ml-1 not-italic text-foreground/70">
-                                  — {pkg.comments.length > 35 ? pkg.comments.slice(0, 35) + '…' : pkg.comments}
+                                  — {pkg.comments.length > 50 ? pkg.comments.slice(0, 50) + '…' : pkg.comments}
                                 </span>
                               )}
                             </span>
