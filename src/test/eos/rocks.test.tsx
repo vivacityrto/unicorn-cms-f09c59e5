@@ -15,11 +15,11 @@ describe("EOS Rocks", () => {
   describe("Rock Status Enum", () => {
     it("should have all valid rock statuses", () => {
       const expectedStatuses = [
-        "Not_Started",
-        "On_Track",
-        "At_Risk",
-        "Off_Track",
-        "Complete",
+        "not_started",
+        "on_track",
+        "at_risk",
+        "off_track",
+        "complete",
       ];
 
       expect(validEnumValues.rockStatus).toEqual(expectedStatuses);
