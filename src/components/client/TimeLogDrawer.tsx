@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import {
   Sheet,
@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -37,16 +36,31 @@ import {
   Clock, 
   Timer,
   FileEdit,
-  DollarSign
+  DollarSign,
+  ArrowRightLeft,
+  Check,
+  X,
+  Loader2
 } from 'lucide-react';
 import { useTimeTracking, formatDuration, TimeEntry } from '@/hooks/useTimeTracking';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface TimeLogDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clientId: number;
+}
+
+interface PackageInstanceOption {
+  id: number;
+  package_id: number;
+  package_name: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_complete: boolean;
 }
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -61,9 +75,48 @@ const WORK_TYPE_LABELS: Record<string, string> = {
 
 export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerProps) {
   const { user, isSuperAdmin } = useAuth();
-  const { entries, loading, deleteEntry, summary } = useTimeTracking(clientId);
+  const { entries, loading, deleteEntry, summary, refresh } = useTimeTracking(clientId);
+  const { toast } = useToast();
   const [workTypeFilter, setWorkTypeFilter] = useState<string>('all');
   const [billableFilter, setBillableFilter] = useState<string>('all');
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editPackageInstanceId, setEditPackageInstanceId] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [packageInstances, setPackageInstances] = useState<PackageInstanceOption[]>([]);
+
+  // Fetch all package instances for this client (including completed, for reassignment)
+  const fetchPackageInstances = useCallback(async () => {
+    if (!clientId) return;
+
+    const { data: instances, error } = await supabase
+      .from('package_instances')
+      .select('id, package_id, start_date, end_date, is_complete')
+      .eq('tenant_id', clientId)
+      .order('start_date', { ascending: false });
+
+    if (error || !instances) return;
+
+    const packageIds = [...new Set(instances.map(i => i.package_id))];
+    const { data: packages } = await supabase
+      .from('packages')
+      .select('id, name')
+      .in('id', packageIds);
+
+    const pkgMap = new Map((packages || []).map(p => [p.id, p.name]));
+
+    setPackageInstances(instances.map(inst => ({
+      id: inst.id,
+      package_id: inst.package_id,
+      package_name: pkgMap.get(inst.package_id) || `Package #${inst.package_id}`,
+      start_date: inst.start_date,
+      end_date: inst.end_date,
+      is_complete: inst.is_complete ?? false,
+    })));
+  }, [clientId]);
+
+  useEffect(() => {
+    if (open) fetchPackageInstances();
+  }, [open, fetchPackageInstances]);
 
   const filteredEntries = entries.filter((entry) => {
     if (workTypeFilter !== 'all' && entry.work_type !== workTypeFilter) return false;
@@ -72,7 +125,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
     return true;
   });
 
-  const canDelete = (entry: TimeEntry) => {
+  const canEdit = (entry: TimeEntry) => {
     return entry.user_id === user?.id || isSuperAdmin();
   };
 
@@ -82,9 +135,55 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
     }
   };
 
+  const startEditing = (entry: TimeEntry) => {
+    setEditingEntryId(entry.id);
+    setEditPackageInstanceId(entry.package_instance_id?.toString() || 'none');
+  };
+
+  const cancelEditing = () => {
+    setEditingEntryId(null);
+    setEditPackageInstanceId('');
+  };
+
+  const savePackageInstance = async (entryId: string) => {
+    setSaving(true);
+    const newInstanceId = editPackageInstanceId === 'none' ? null : Number(editPackageInstanceId);
+
+    // Find the package_id from the instance
+    const instance = packageInstances.find(pi => pi.id === newInstanceId);
+    const newPackageId = instance ? instance.package_id : null;
+
+    const { error } = await supabase
+      .from('time_entries')
+      .update({ 
+        package_instance_id: newInstanceId,
+        package_id: newPackageId ?? undefined,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', entryId);
+
+    setSaving(false);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Updated', description: 'Package instance reassigned.' });
+      setEditingEntryId(null);
+      refresh();
+    }
+  };
+
+  const getInstanceLabel = (instanceId: number | null) => {
+    if (!instanceId) return 'Unassigned';
+    const inst = packageInstances.find(pi => pi.id === instanceId);
+    if (!inst) return `#${instanceId}`;
+    const dateLabel = inst.start_date ? format(new Date(inst.start_date), 'MMM yyyy') : '';
+    return `${inst.package_name}${dateLabel ? ` (${dateLabel})` : ''}`;
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
@@ -156,6 +255,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                 <TableHead>Date</TableHead>
                 <TableHead>Duration</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Package Instance</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -192,6 +292,47 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                     </Badge>
                   </TableCell>
                   <TableCell>
+                    {editingEntryId === entry.id ? (
+                      <div className="flex items-center gap-1">
+                        <Select value={editPackageInstanceId} onValueChange={setEditPackageInstanceId}>
+                          <SelectTrigger className="h-7 w-[180px] text-xs">
+                            <SelectValue placeholder="Select instance" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Unassigned</SelectItem>
+                            {packageInstances.map(pi => (
+                              <SelectItem key={pi.id} value={pi.id.toString()}>
+                                <span className={pi.is_complete ? 'text-muted-foreground' : ''}>
+                                  {pi.package_name}
+                                  {pi.start_date && ` (${format(new Date(pi.start_date), 'MMM yyyy')})`}
+                                  {pi.is_complete && ' ✓'}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7" 
+                          onClick={() => savePackageInstance(entry.id)}
+                          disabled={saving}
+                        >
+                          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 text-green-600" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEditing}>
+                          <X className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span 
+                        className={`text-xs ${!entry.package_instance_id ? 'text-muted-foreground italic' : ''}`}
+                      >
+                        {getInstanceLabel(entry.package_instance_id)}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     {entry.source === 'timer' ? (
                       <Timer className="h-4 w-4 text-muted-foreground" />
                     ) : (
@@ -199,7 +340,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                     )}
                   </TableCell>
                   <TableCell>
-                    {canDelete(entry) && (
+                    {canEdit(entry) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -207,6 +348,10 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => startEditing(entry)}>
+                            <ArrowRightLeft className="h-4 w-4 mr-2" />
+                            Reassign Package
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleDelete(entry.id)}
                             className="text-destructive"
