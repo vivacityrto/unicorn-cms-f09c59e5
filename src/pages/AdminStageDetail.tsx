@@ -224,7 +224,7 @@ export default function AdminStageDetail() {
   // Certified edit confirmation state
   const [certifiedEditDialogOpen, setCertifiedEditDialogOpen] = useState(false);
   const [certifiedConfirmPhrase, setCertifiedConfirmPhrase] = useState('');
-  const [pendingCertifiedAction, setPendingCertifiedAction] = useState<(() => void) | null>(null);
+  const [pendingCertifiedAction, setPendingCertifiedAction] = useState<(() => void | Promise<void>) | null>(null);
   const CERTIFIED_CONFIRM_PHRASE = 'CERTIFIED';
   
   // Audit log filters
@@ -706,7 +706,7 @@ export default function AdminStageDetail() {
     return stage?.is_certified === true && !isUsedByActiveClients;
   };
 
-  const wrapCertifiedAction = (action: () => void) => {
+  const wrapCertifiedAction = (action: () => void | Promise<void>) => {
     if (requiresCertifiedConfirmation()) {
       setPendingCertifiedAction(() => action);
       setCertifiedEditDialogOpen(true);
@@ -808,14 +808,16 @@ export default function AdminStageDetail() {
 
   // Edit handlers
   const openEditTeamTask = (task: StageTeamTask) => {
+    // Always read from the latest teamTasks state to avoid stale data
+    const latestTask = teamTasks.find(t => t.id === task.id) || task;
     setEditTaskForm({
-      name: task.name,
-      description: task.description || '',
-      is_core: task.is_core,
-      is_key_event: task.is_key_event ?? false,
-      due_date_offset: task.due_date_offset?.toString() || ''
+      name: latestTask.name,
+      description: latestTask.description || '',
+      is_core: latestTask.is_core,
+      is_key_event: latestTask.is_key_event ?? false,
+      due_date_offset: latestTask.due_date_offset?.toString() || ''
     });
-    setEditingTeamTask(task);
+    setEditingTeamTask(latestTask);
   };
 
   const handleSaveTeamTask = async () => {
@@ -1429,7 +1431,7 @@ export default function AdminStageDetail() {
                                 )}
                               </div>
                               {task.description && (
-                                <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                                <p className="text-sm text-muted-foreground mt-1 line-clamp-1" dangerouslySetInnerHTML={{ __html: task.description }} />
                               )}
                               <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
@@ -1976,7 +1978,7 @@ export default function AdminStageDetail() {
 
       {/* Edit Team Task Dialog */}
       <Dialog open={!!editingTeamTask} onOpenChange={(open) => !open && setEditingTeamTask(null)}>
-        <DialogContent className="max-w-6xl max-h-[90vh]">
+        <DialogContent className="!w-[min(92vw,72rem)] max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Edit Team Task</DialogTitle>
             <DialogDescription>Update task details.</DialogDescription>
@@ -2418,7 +2420,7 @@ export default function AdminStageDetail() {
                     action: 'stage.certified_edited',
                     details: { stage_title: stage?.title },
                   });
-                  pendingCertifiedAction();
+                  await pendingCertifiedAction();
                 }
                 setCertifiedEditDialogOpen(false);
                 setCertifiedConfirmPhrase('');
