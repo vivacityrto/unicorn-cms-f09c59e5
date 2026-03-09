@@ -224,7 +224,7 @@ export default function AdminStageDetail() {
   // Certified edit confirmation state
   const [certifiedEditDialogOpen, setCertifiedEditDialogOpen] = useState(false);
   const [certifiedConfirmPhrase, setCertifiedConfirmPhrase] = useState('');
-  const [pendingCertifiedAction, setPendingCertifiedAction] = useState<(() => void) | null>(null);
+  const [pendingCertifiedAction, setPendingCertifiedAction] = useState<(() => void | Promise<void>) | null>(null);
   const CERTIFIED_CONFIRM_PHRASE = 'CERTIFIED';
   
   // Audit log filters
