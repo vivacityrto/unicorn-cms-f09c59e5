@@ -352,6 +352,9 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
             ) : (
               'Root folder link'
             )}
+            {settings?.root_name && (
+              <span className="font-semibold text-foreground ml-1">— {settings.root_name}</span>
+            )}
           </Label>
           <div className="flex gap-2">
             <Input
