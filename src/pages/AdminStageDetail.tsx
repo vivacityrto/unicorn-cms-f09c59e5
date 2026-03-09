@@ -2420,7 +2420,7 @@ export default function AdminStageDetail() {
                     action: 'stage.certified_edited',
                     details: { stage_title: stage?.title },
                   });
-                  pendingCertifiedAction();
+                  await pendingCertifiedAction();
                 }
                 setCertifiedEditDialogOpen(false);
                 setCertifiedConfirmPhrase('');
