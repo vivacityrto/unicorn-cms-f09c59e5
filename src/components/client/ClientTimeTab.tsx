@@ -1151,6 +1151,18 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                 </SelectContent>
               </Select>
 
+              {/* Period toggle */}
+              {renewalWindow && (
+                <Button
+                  variant={showAllEntries ? 'outline' : 'secondary'}
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => { setShowAllEntries(prev => !prev); setDateFrom(undefined); setDateTo(undefined); setPage(1); }}
+                >
+                  {showAllEntries ? 'Current period' : 'Show all'}
+                </Button>
+              )}
+
               {/* Date range filter */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -1166,7 +1178,9 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                         ? `From ${format(dateFrom, 'd MMM yyyy')}`
                         : dateTo
                           ? `To ${format(dateTo, 'd MMM yyyy')}`
-                          : 'Date range'}
+                          : isRenewalFiltered
+                            ? `From ${format(renewalWindow!, 'd MMM yyyy')}`
+                            : 'Date range'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-4" align="end">
