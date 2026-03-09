@@ -47,6 +47,7 @@ import { TimeLogDrawer } from './TimeLogDrawer';
 import { AddTimeFromMeetingDialog } from './AddTimeFromMeetingDialog';
 import { PackageBreakdownModal } from './PackageBreakdownModal';
 import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { timeTrackingKeys } from '@/hooks/useTimeTrackingQuery';
 import { packageUsageKeys } from '@/hooks/usePackageUsageQuery';
 
