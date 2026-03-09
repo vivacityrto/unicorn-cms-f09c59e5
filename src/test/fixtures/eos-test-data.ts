@@ -96,7 +96,7 @@ export const mockRocks = {
     id: "rock-company-001",
     title: "Increase Revenue by 20%",
     rock_type: "Company",
-    status: "On_Track",
+    status: "on_track",
     owner_id: mockVivacityUsers.superAdmin.user_uuid,
     tenant_id: VIVACITY_TENANT_ID,
     quarter_number: 1,
