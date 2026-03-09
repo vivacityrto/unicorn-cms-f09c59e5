@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Package2, User, Link2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientPackageInstances } from '@/hooks/useClientPackageInstances';
@@ -54,6 +56,8 @@ export function StartPackageDialog({
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [selectedCscId, setSelectedCscId] = useState<string>('');
   const [attachToInstanceId, setAttachToInstanceId] = useState<string>('');
+  const [comments, setComments] = useState('');
+  const [hoursUsed, setHoursUsed] = useState<string>('');
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
@@ -126,6 +130,12 @@ export function StartPackageDialog({
       if (parent?.manager_id) {
         setSelectedCscId(parent.manager_id);
       }
+      // Auto-fill hours from the selected package's total_hours
+      const selectedPkg = packages.find(p => p.id === parseInt(selectedPackageId));
+      setHoursUsed(selectedPkg?.total_hours?.toString() || '');
+    } else {
+      setHoursUsed('');
+      setComments('');
     }
   };
 
@@ -146,10 +156,13 @@ export function StartPackageDialog({
       const parentId = attachToInstanceId ? parseInt(attachToInstanceId) : null;
 
       if (parentId) {
-        // Link the new instance to the parent
+        // Link the new instance to the parent, save comments and hours_used
+        const updatePayload: Record<string, any> = { parent_instance_id: parentId };
+        if (comments.trim()) updatePayload.comments = comments.trim();
+        if (hoursUsed) updatePayload.hours_used = parseFloat(hoursUsed);
         await (supabase as any)
           .from('package_instances')
-          .update({ parent_instance_id: parentId })
+          .update(updatePayload)
           .eq('id', packageInstanceId);
 
         // Get the new package's total_hours to add to parent's hours_added
@@ -187,6 +200,8 @@ export function StartPackageDialog({
     setSelectedPackageId('');
     setSelectedCscId('');
     setAttachToInstanceId('');
+    setComments('');
+    setHoursUsed('');
     onOpenChange(false);
   };
 
@@ -265,9 +280,35 @@ export function StartPackageDialog({
                   </SelectContent>
                 </Select>
                 {attachToInstanceId && attachToInstanceId !== '__none__' && (
-                  <p className="text-xs text-muted-foreground">
-                    Hours from this package will be added to the parent's included hours and its time will roll into the parent burn-down.
-                  </p>
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Hours from this package will be added to the parent's included hours and its time will roll into the parent burn-down.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="hours">Hours</Label>
+                        <Input
+                          id="hours"
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={hoursUsed}
+                          onChange={(e) => setHoursUsed(e.target.value)}
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1 pt-1">
+                      <Label htmlFor="comments">Comments</Label>
+                      <Textarea
+                        id="comments"
+                        value={comments}
+                        onChange={(e) => setComments(e.target.value)}
+                        placeholder="e.g. Extra TAS days for Q2"
+                        rows={2}
+                      />
+                    </div>
+                  </>
                 )}
               </div>
             )}

@@ -1,27 +1,21 @@
+## Completed: Package Add-On / Time Top-Up via Parent Instance Linking
 
+### Summary
+Add-on packages (e.g. General Consult for extra TAS days) can now be attached to a parent package instance. This preserves the audit trail (separate `package_instance` row) while rolling hours into the parent's burn-down.
 
-## Show Comments and Hours Fields When Attaching to Parent
+### Database Changes
+- `package_instances.parent_instance_id` (bigint, self-referencing FK) — links child to parent
+- `rpc_get_package_usage` updated to include time entries from child instances (`OR te.package_id IN (SELECT id FROM package_instances WHERE parent_instance_id = ...)`)
 
-### What Changes
+### Frontend Changes
+- **StartPackageDialog**: New "Attach to package" dropdown lists active non-child instances. On attach, sets `parent_instance_id` and increments parent's `hours_added` by the new package's `total_hours`
+- **usePackageUsageQuery / usePackageUsage**: Queries filter `parent_instance_id IS NULL` so children don't appear as top-level packages
+- **PackageBurndownCards** (ClientTimeTab): Excludes children from card list; shows "Add-ons: Gen Consult +7h" sub-line under parent card
+- **ManageTenants**: Hours column excludes child instances to prevent double-counting
 
-When a parent package is selected in the "Attach to package" dropdown, two new fields appear:
-
-1. **Hours** — pre-filled with the selected package's `total_hours`, editable
-2. **Comments** — a text input for noting the reason/context (e.g. "Extra TAS days for Q2")
-
-Both values are saved to the new child `package_instances` record on creation.
-
-### Technical Details
-
-**`StartPackageDialog.tsx`**:
-- Add `comments` and `hoursUsed` state variables
-- When `attachToInstanceId` changes and a parent is selected, auto-fill `hoursUsed` from the selected package's `total_hours`
-- Render an `Input` (type number, for hours) and a `Textarea` (for comments) below the "Attach to" dropdown, only when a parent is selected
-- After creating the instance, update it with the `comments` value and set `hours_used` to the entered hours value
-
-**No migration needed** — the `comments` column already exists on `package_instances`. The `hours_used` column also already exists.
-
-### Files Modified
-
-- `src/components/client/StartPackageDialog.tsx`
-
+### How It Works
+1. SuperAdmin starts a package → optionally attaches to existing parent
+2. Child's `total_hours` added to parent's `hours_added`
+3. Child's time entries roll into parent burn-down via RPC
+4. Child excluded from burn-down cards and hours columns
+5. Child visible as add-on label under parent card for audit trail

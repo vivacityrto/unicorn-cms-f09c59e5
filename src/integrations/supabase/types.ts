@@ -24891,6 +24891,7 @@ export type Database = {
           billing_category: string | null
           billing_type: string
           clo_id: number
+          comments: string | null
           created_at: string | null
           duration: number | null
           end_date: string | null
@@ -24919,6 +24920,7 @@ export type Database = {
           billing_category?: string | null
           billing_type?: string
           clo_id: number
+          comments?: string | null
           created_at?: string | null
           duration?: number | null
           end_date?: string | null
@@ -24947,6 +24949,7 @@ export type Database = {
           billing_category?: string | null
           billing_type?: string
           clo_id?: number
+          comments?: string | null
           created_at?: string | null
           duration?: number | null
           end_date?: string | null
