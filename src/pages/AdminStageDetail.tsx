@@ -811,6 +811,7 @@ export default function AdminStageDetail() {
       name: task.name,
       description: task.description || '',
       is_core: task.is_core,
+      is_key_event: task.is_key_event ?? false,
       due_date_offset: task.due_date_offset?.toString() || ''
     });
     setEditingTeamTask(task);
