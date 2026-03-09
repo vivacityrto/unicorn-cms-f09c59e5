@@ -52,6 +52,7 @@ import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 // Stage types loaded dynamically via useStageTypeOptions hook
 
@@ -1412,7 +1413,7 @@ export default function AdminStageDetail() {
                     ) : (
                       <div className="space-y-2">
                         {teamTasks.map((task) => (
-                          <div key={task.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
+                          <div key={task.id} className={cn("flex items-start gap-2 p-3 rounded-lg border", task.is_key_event ? "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800" : "bg-muted/30")}>
                             <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
@@ -1975,7 +1976,7 @@ export default function AdminStageDetail() {
 
       {/* Edit Team Task Dialog */}
       <Dialog open={!!editingTeamTask} onOpenChange={(open) => !open && setEditingTeamTask(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Edit Team Task</DialogTitle>
             <DialogDescription>Update task details.</DialogDescription>
@@ -1990,10 +1991,10 @@ export default function AdminStageDetail() {
             </div>
             <div className="space-y-2">
               <Label>Instructions</Label>
-              <Textarea
+              <RichTextEditor
                 value={editTaskForm.description}
-                onChange={(e) => setEditTaskForm({ ...editTaskForm, description: e.target.value })}
-                rows={3}
+                onChange={(html) => setEditTaskForm({ ...editTaskForm, description: html })}
+                minHeight="300px"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
