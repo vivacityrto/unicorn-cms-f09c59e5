@@ -15,11 +15,11 @@ describe("EOS Rocks", () => {
   describe("Rock Status Enum", () => {
     it("should have all valid rock statuses", () => {
       const expectedStatuses = [
-        "Not_Started",
-        "On_Track",
-        "At_Risk",
-        "Off_Track",
-        "Complete",
+        "not_started",
+        "on_track",
+        "at_risk",
+        "off_track",
+        "complete",
       ];
 
       expect(validEnumValues.rockStatus).toEqual(expectedStatuses);
@@ -27,11 +27,11 @@ describe("EOS Rocks", () => {
 
     it("should map UI-friendly status names", () => {
       const statusMapping: Record<string, string> = {
-        Not_Started: "Not Started",
-        On_Track: "On Track",
-        At_Risk: "At Risk",
-        Off_Track: "Off Track",
-        Complete: "Complete",
+        not_started: "Not Started",
+        on_track: "On Track",
+        at_risk: "At Risk",
+        off_track: "Off Track",
+        complete: "Complete",
       };
 
       Object.entries(statusMapping).forEach(([dbStatus, uiStatus]) => {
@@ -113,21 +113,21 @@ describe("EOS Rocks", () => {
   describe("Status Rollup Logic", () => {
     it("should identify off-track status as highest priority", () => {
       const statusPriority: Record<string, number> = {
-        Off_Track: 1,
-        At_Risk: 2,
-        On_Track: 3,
-        Not_Started: 4,
-        Complete: 5,
+        off_track: 1,
+        at_risk: 2,
+        on_track: 3,
+        not_started: 4,
+        complete: 5,
       };
 
-      expect(statusPriority["Off_Track"]).toBeLessThan(statusPriority["At_Risk"]);
-      expect(statusPriority["At_Risk"]).toBeLessThan(statusPriority["On_Track"]);
+      expect(statusPriority["off_track"]).toBeLessThan(statusPriority["at_risk"]);
+      expect(statusPriority["at_risk"]).toBeLessThan(statusPriority["on_track"]);
     });
 
     it("should flag parent as at-risk when child is at-risk", () => {
       // Test the rollup logic concept
-      const childStatus = mockRocks.teamRock.status; // At_Risk
-      expect(childStatus).toBe("At_Risk");
+      const childStatus = mockRocks.teamRock.status; // at_risk
+      expect(childStatus).toBe("at_risk");
     });
   });
 

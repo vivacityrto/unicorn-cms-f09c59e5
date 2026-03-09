@@ -1,66 +1,66 @@
 /**
  * Rock Status Utilities
  * 
- * The database uses PascalCase enum values: Not_Started, On_Track, At_Risk, Off_Track, Complete
- * The UI uses lowercase for display logic: not_started, on_track, at_risk, off_track, complete
- * 
- * These utilities ensure consistent conversion between the two formats.
+ * Status values are lowercase snake_case text stored in eos_rocks.status,
+ * sourced from the dd_rock_status lookup table.
+ * Values: not_started, on_track, at_risk, off_track, complete
  */
 
-// Database enum values (exact strings stored in PostgreSQL)
+// Default status values (fallback when dd_rock_status hasn't loaded yet)
 export const DB_ROCK_STATUS = {
-  NOT_STARTED: 'Not_Started',
-  ON_TRACK: 'On_Track',
-  AT_RISK: 'At_Risk',
-  OFF_TRACK: 'Off_Track',
-  COMPLETE: 'Complete',
+  NOT_STARTED: 'not_started',
+  ON_TRACK: 'on_track',
+  AT_RISK: 'at_risk',
+  OFF_TRACK: 'off_track',
+  COMPLETE: 'complete',
 } as const;
 
-export type DbRockStatus = typeof DB_ROCK_STATUS[keyof typeof DB_ROCK_STATUS];
+export type DbRockStatus = string;
 
-// UI-friendly status values (lowercase for internal logic)
+// UI-friendly status values (now identical to DB values)
 export type UiRockStatus = 'not_started' | 'on_track' | 'at_risk' | 'off_track' | 'complete';
 
 // Status display configuration
 export interface StatusConfig {
-  value: DbRockStatus;
+  value: string;
   label: string;
   color: string;
   bgColor: string;
   borderColor: string;
 }
 
-export const ROCK_STATUS_CONFIG: Record<UiRockStatus, StatusConfig> = {
+// Fallback config used when dd_rock_status cache isn't available
+const FALLBACK_STATUS_CONFIG: Record<UiRockStatus, StatusConfig> = {
   not_started: {
-    value: DB_ROCK_STATUS.NOT_STARTED,
+    value: 'not_started',
     label: 'Not Started',
     color: 'text-gray-600',
     bgColor: 'bg-gray-100 dark:bg-gray-800',
     borderColor: 'border-gray-300',
   },
   on_track: {
-    value: DB_ROCK_STATUS.ON_TRACK,
+    value: 'on_track',
     label: 'On Track',
     color: 'text-green-600',
     bgColor: 'bg-green-100 dark:bg-green-900/30',
     borderColor: 'border-green-300',
   },
   at_risk: {
-    value: DB_ROCK_STATUS.AT_RISK,
+    value: 'at_risk',
     label: 'At Risk',
     color: 'text-amber-600',
     bgColor: 'bg-amber-100 dark:bg-amber-900/30',
     borderColor: 'border-amber-300',
   },
   off_track: {
-    value: DB_ROCK_STATUS.OFF_TRACK,
+    value: 'off_track',
     label: 'Off Track',
     color: 'text-red-600',
     bgColor: 'bg-red-100 dark:bg-red-900/30',
     borderColor: 'border-red-300',
   },
   complete: {
-    value: DB_ROCK_STATUS.COMPLETE,
+    value: 'complete',
     label: 'Complete',
     color: 'text-blue-600',
     bgColor: 'bg-blue-100 dark:bg-blue-900/30',
@@ -68,8 +68,12 @@ export const ROCK_STATUS_CONFIG: Record<UiRockStatus, StatusConfig> = {
   },
 };
 
+// Keep for backward compat
+export const ROCK_STATUS_CONFIG = FALLBACK_STATUS_CONFIG;
+
 /**
- * Convert database status to UI status (lowercase)
+ * Normalize any status string to a UiRockStatus.
+ * Handles legacy PascalCase values and lowercase.
  */
 export function dbToUiStatus(dbStatus: string | null | undefined): UiRockStatus {
   if (!dbStatus) return 'on_track';
@@ -93,27 +97,12 @@ export function dbToUiStatus(dbStatus: string | null | undefined): UiRockStatus 
 }
 
 /**
- * Convert UI status to database status (PascalCase)
+ * Convert UI status to database status.
+ * Now both are lowercase, so this is essentially a passthrough with normalization.
  */
-export function uiToDbStatus(uiStatus: string | null | undefined): DbRockStatus {
-  if (!uiStatus) return DB_ROCK_STATUS.ON_TRACK;
-  
-  const lower = uiStatus.toLowerCase().replace(/-/g, '_');
-  
-  const mapping: Record<string, DbRockStatus> = {
-    'not_started': DB_ROCK_STATUS.NOT_STARTED,
-    'notstarted': DB_ROCK_STATUS.NOT_STARTED,
-    'on_track': DB_ROCK_STATUS.ON_TRACK,
-    'ontrack': DB_ROCK_STATUS.ON_TRACK,
-    'at_risk': DB_ROCK_STATUS.AT_RISK,
-    'atrisk': DB_ROCK_STATUS.AT_RISK,
-    'off_track': DB_ROCK_STATUS.OFF_TRACK,
-    'offtrack': DB_ROCK_STATUS.OFF_TRACK,
-    'complete': DB_ROCK_STATUS.COMPLETE,
-    'completed': DB_ROCK_STATUS.COMPLETE,
-  };
-  
-  return mapping[lower] || DB_ROCK_STATUS.ON_TRACK;
+export function uiToDbStatus(uiStatus: string | null | undefined): string {
+  if (!uiStatus) return 'on_track';
+  return dbToUiStatus(uiStatus);
 }
 
 /**
@@ -121,18 +110,19 @@ export function uiToDbStatus(uiStatus: string | null | undefined): DbRockStatus 
  */
 export function getStatusConfig(status: string | null | undefined): StatusConfig {
   const uiStatus = dbToUiStatus(status);
-  return ROCK_STATUS_CONFIG[uiStatus];
+  return FALLBACK_STATUS_CONFIG[uiStatus];
 }
 
 /**
- * Get all available status options for select dropdowns
+ * Get all available status options for select dropdowns (fallback/static).
+ * Prefer useRockStatusOptions() hook for dynamic data from dd_rock_status.
  */
-export function getStatusOptions(): { value: DbRockStatus; label: string }[] {
+export function getStatusOptions(): { value: string; label: string }[] {
   return [
-    { value: DB_ROCK_STATUS.NOT_STARTED, label: 'Not Started' },
-    { value: DB_ROCK_STATUS.ON_TRACK, label: 'On Track' },
-    { value: DB_ROCK_STATUS.AT_RISK, label: 'At Risk' },
-    { value: DB_ROCK_STATUS.OFF_TRACK, label: 'Off Track' },
-    { value: DB_ROCK_STATUS.COMPLETE, label: 'Complete' },
+    { value: 'not_started', label: 'Not Started' },
+    { value: 'on_track', label: 'On Track' },
+    { value: 'at_risk', label: 'At Risk' },
+    { value: 'off_track', label: 'Off Track' },
+    { value: 'complete', label: 'Complete' },
   ];
 }

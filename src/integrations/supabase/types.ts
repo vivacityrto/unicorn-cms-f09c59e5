@@ -12508,6 +12508,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_rock_status: {
+        Row: {
+          code: number
+          color: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          code: number
+          color?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          code?: number
+          color?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_sms: {
         Row: {
           created_at: string
@@ -18458,7 +18485,7 @@ export type Database = {
           seat_id: string | null
           seat_owner_user_id: string | null
           sort_order: number | null
-          status: Database["public"]["Enums"]["eos_rock_status"] | null
+          status: string | null
           status_note: string | null
           tenant_id: number
           title: string
@@ -18494,7 +18521,7 @@ export type Database = {
           seat_id?: string | null
           seat_owner_user_id?: string | null
           sort_order?: number | null
-          status?: Database["public"]["Enums"]["eos_rock_status"] | null
+          status?: string | null
           status_note?: string | null
           tenant_id: number
           title: string
@@ -18530,7 +18557,7 @@ export type Database = {
           seat_id?: string | null
           seat_owner_user_id?: string | null
           sort_order?: number | null
-          status?: Database["public"]["Enums"]["eos_rock_status"] | null
+          status?: string | null
           status_note?: string | null
           tenant_id?: number
           title?: string
@@ -48726,12 +48753,6 @@ export type Database = {
         | "Custom"
         | "Same_Page"
       eos_participant_role: "Leader" | "Member" | "Observer"
-      eos_rock_status:
-        | "Not_Started"
-        | "On_Track"
-        | "At_Risk"
-        | "Off_Track"
-        | "Complete"
       eos_role:
         | "admin"
         | "facilitator"
@@ -49002,13 +49023,6 @@ export const Constants = {
         "Same_Page",
       ],
       eos_participant_role: ["Leader", "Member", "Observer"],
-      eos_rock_status: [
-        "Not_Started",
-        "On_Track",
-        "At_Risk",
-        "Off_Track",
-        "Complete",
-      ],
       eos_role: [
         "admin",
         "facilitator",

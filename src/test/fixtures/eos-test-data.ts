@@ -96,7 +96,7 @@ export const mockRocks = {
     id: "rock-company-001",
     title: "Increase Revenue by 20%",
     rock_type: "Company",
-    status: "On_Track",
+    status: "on_track",
     owner_id: mockVivacityUsers.superAdmin.user_uuid,
     tenant_id: VIVACITY_TENANT_ID,
     quarter_number: 1,
@@ -108,7 +108,7 @@ export const mockRocks = {
     id: "rock-team-001",
     title: "Launch New Client Portal",
     rock_type: "Team",
-    status: "At_Risk",
+    status: "at_risk",
     owner_id: mockVivacityUsers.teamLeader.user_uuid,
     parent_rock_id: "rock-company-001",
     tenant_id: VIVACITY_TENANT_ID,
@@ -121,7 +121,7 @@ export const mockRocks = {
     id: "rock-individual-001",
     title: "Complete API Integration",
     rock_type: "Individual",
-    status: "On_Track",
+    status: "on_track",
     owner_id: mockVivacityUsers.teamMember.user_uuid,
     parent_rock_id: "rock-team-001",
     tenant_id: VIVACITY_TENANT_ID,
@@ -315,7 +315,7 @@ export const mockAccountability = {
 
 // Enum validation data
 export const validEnumValues = {
-  rockStatus: ["Not_Started", "On_Track", "At_Risk", "Off_Track", "Complete"],
+  rockStatus: ["not_started", "on_track", "at_risk", "off_track", "complete"],
   issueStatus: [
     "Open",
     "Discussing",

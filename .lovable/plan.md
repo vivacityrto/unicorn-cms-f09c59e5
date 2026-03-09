@@ -1,69 +1,22 @@
+## Completed: Create `dd_stage_types` Lookup Table
 
+Created `dd_stage_types` table with 6 types (onboarding, delivery, documentation, support, monitoring, offboarding) including `is_milestone` column for progress metrics. Replaced all 7 hardcoded `STAGE_TYPE_OPTIONS` arrays with the `useStageTypeOptions` hook. Updated progress logic to use `is_milestone` fallback and added `monitoring` to auto-default logic.
 
-## Migrate EOS Rock Status from Enum to dd_ Lookup Table
+## Completed: Create `dd_priority` and `dd_action_status` Lookup Tables
 
-### Problem
-The `eos_rocks.status` column uses a PostgreSQL enum type (`eos_rock_status`), which is rigid and inconsistent with the project's established pattern of using `dd_` lookup tables for status/priority/type values (e.g., `dd_action_status`, `dd_priority`, `dd_status`, `dd_stage_types`).
+Created `dd_priority` (low, normal, medium, high, urgent) and `dd_action_status` (open, in_progress, blocked, waiting_client, done, cancelled, todo) lookup tables. Dropped 4 conflicting CHECK constraints on `client_action_items` and replaced with a validation trigger (`trg_validate_action_item_priority_status`). Updated `rpc_create_action_item` to validate against `dd_priority` table and default to `'medium'`. Created `useActionPriorityOptions` and `useActionStatusOptions` hooks with module-level caching. Replaced all hardcoded priority/status configs in `ClientActionItemsTab`, `PackageNotesSection`, `useClientManagementData`, and `useClientWorkboard`. Added `'normal'` and `'open'` to `ItemPriority` and `ItemStatus` types.
 
-### Solution
+## Completed: Staff Task Assignment + `completed_by` Tracking
 
-#### 1. Create `dd_rock_status` lookup table
-Standard columns matching the existing dd_ pattern:
-- `code` (integer PK)
-- `value` (text, unique) -- stored in eos_rocks.status
-- `label` (text) -- display name
-- `color` (text) -- Tailwind classes for UI
-- `sort_order` (integer)
-- `is_active` (boolean, default true)
+Added `completed_by` UUID column to `staff_task_instances`. Created `TaskAssigneeButton` component (silhouette icon when unassigned, avatar when assigned, popover for team member selection with unassign option). Updated `useStaffTaskInstances` hook: on status → Completed/Core Complete sets `completed_by` to current user; on revert clears it; on assign auto-creates a linked action item via `rpc_create_action_item` with `source: 'task_assignment'`. Integrated `TaskAssigneeButton` into `StageStaffTasks.tsx` between task info and notes popover. Disabled for N/A tasks and finished stages.
 
-Seed data (matching current enum values):
+## Completed: Fix Documents Tab Error + Risk Note Auto-Open
 
-| code | value | label | color | sort_order |
-|------|-------|-------|-------|------------|
-| 0 | not_started | Not Started | text-gray-600 | 0 |
-| 1 | on_track | On Track | text-green-600 | 1 |
-| 2 | at_risk | At Risk | text-amber-600 | 2 |
-| 3 | off_track | Off Track | text-red-600 | 3 |
-| 4 | complete | Complete | text-blue-600 | 4 |
+Fixed `validate_document_readiness` RPC to use `document_fields` + `dd_fields` tables instead of the dropped `merge_fields` column. Now validates required fields against `v_tenant_merge_fields` with real value checks per tenant. Also wired `ClientStructuredNotesTab` to consume `initNote`/`noteTitle` URL search params so risk level changes auto-open a pre-filled note dialog with type "risk".
 
-Values will be lowercase snake_case (matching other dd_ tables), not PascalCase.
+## Completed: Tasks Management + My Work + Today's Focus Refinements
 
-#### 2. Database migration
-1. Add a new `status_text` column (text) to `eos_rocks`
-2. Copy existing enum values to `status_text`, converting PascalCase to snake_case
-3. Drop the enum column and rename `status_text` to `status`
-4. Set default to `'not_started'`
-5. Add RLS to `dd_rock_status` (read for authenticated, write for SuperAdmin)
-
-#### 3. Update database functions
-These functions cast to `::eos_rock_status` and must be updated to use plain text:
-- `upsert_rock_with_parenting` -- remove all `::eos_rock_status` casts, use lowercase values
-- `cascade_rock_status_change` -- trigger references `status` column (no cast needed, works as-is)
-- `cascade_seat_owner_to_rocks` -- uses enum values (disabled but should be updated)
-
-#### 4. Create `useRockStatusOptions` hook
-New file: `src/hooks/useRockStatusOptions.ts`
-- Follows exact pattern of `useActionStatusOptions.ts`
-- Module-level cache, fetches from `dd_rock_status`
-- Exports `useRockStatusOptions()`, `getRockStatusLabel()`, `getRockStatusColor()`
-
-#### 5. Update `src/utils/rockStatusUtils.ts`
-- Remove hardcoded `DB_ROCK_STATUS` constants and `ROCK_STATUS_CONFIG`
-- `getStatusOptions()` becomes a thin wrapper or is replaced by the hook
-- `dbToUiStatus()` simplifies -- values are already lowercase, just passthrough
-- `uiToDbStatus()` simplifies -- no more PascalCase conversion needed
-- `getStatusConfig()` pulls from cached dd_ data or falls back to defaults
-
-#### 6. Update consuming components (9 files)
-All imports from `rockStatusUtils` continue to work since we keep the same export names. The key changes:
-- `RockFormDialog.tsx` -- use hook for status dropdown options
-- `RockProgressControl.tsx` -- use hook for status dropdown options
-- `CreateCompanyRockDialog.tsx`, `CreateTeamRockDialog.tsx`, `CreateIndividualRockDialog.tsx` -- default status becomes `'not_started'` (lowercase)
-- `RockCard.tsx`, `EosRocks.tsx`, `rockRollup.ts` -- work unchanged since `dbToUiStatus` still returns the same `UiRockStatus` type
-
-### Files changed
-- 1 new migration (create table, migrate column, update functions)
-- 1 new hook (`src/hooks/useRockStatusOptions.ts`)
-- 1 rewritten utility (`src/utils/rockStatusUtils.ts`)
-- ~6 component files updated for lowercase default values and hook usage
-
+1. **Today's Focus**: Added overdue `tasks_tenants` count (portfolio-wide) as a focus item linking to `/tasks-management`. Existing user action items remain.
+2. **Tasks Management**: Merged `client_action_items` and `ops_work_items` into the task listing with source badges (Client Task / Action / Ops). Added "Assign To" dropdown in the create dialog using Vivacity team members. Assignee is added to followers array. Edit/delete actions only available for native `tasks_tenants` items.
+3. **My Work**: Added "Create Task" button using `CreateActionDialog` with optional client association.
+4. **CreateActionDialog**: Added "Assign to" dropdown defaulting to current user, sets `owner_user_uuid` on `ops_work_items`.
