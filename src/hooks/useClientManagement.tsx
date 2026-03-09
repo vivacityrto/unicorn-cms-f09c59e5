@@ -28,6 +28,8 @@ export interface ClientPackage {
   completed_at?: string | null;
   next_renewal_date?: string | null;
   last_renewed_date?: string | null;
+  parent_instance_id?: number | null;
+  parent_package_name?: string | null;
 }
 
 export interface ClientSummary {
