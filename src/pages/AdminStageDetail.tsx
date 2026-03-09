@@ -1975,7 +1975,7 @@ export default function AdminStageDetail() {
 
       {/* Edit Team Task Dialog */}
       <Dialog open={!!editingTeamTask} onOpenChange={(open) => !open && setEditingTeamTask(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Edit Team Task</DialogTitle>
             <DialogDescription>Update task details.</DialogDescription>
@@ -1990,10 +1990,10 @@ export default function AdminStageDetail() {
             </div>
             <div className="space-y-2">
               <Label>Instructions</Label>
-              <Textarea
+              <RichTextEditor
                 value={editTaskForm.description}
-                onChange={(e) => setEditTaskForm({ ...editTaskForm, description: e.target.value })}
-                rows={3}
+                onChange={(html) => setEditTaskForm({ ...editTaskForm, description: html })}
+                minHeight="300px"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
