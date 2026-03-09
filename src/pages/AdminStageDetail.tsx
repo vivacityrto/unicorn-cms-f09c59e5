@@ -208,6 +208,7 @@ export default function AdminStageDetail() {
     name: '',
     description: '',
     is_core: true,
+    is_key_event: false,
     due_date_offset: ''
   });
   const [editClientTaskForm, setEditClientTaskForm] = useState({
@@ -810,6 +811,7 @@ export default function AdminStageDetail() {
       name: task.name,
       description: task.description || '',
       is_core: task.is_core,
+      is_key_event: task.is_key_event ?? false,
       due_date_offset: task.due_date_offset?.toString() || ''
     });
     setEditingTeamTask(task);
@@ -822,8 +824,9 @@ export default function AdminStageDetail() {
         name: editTaskForm.name,
         description: editTaskForm.description || null,
         is_core: editTaskForm.is_core,
+        is_key_event: editTaskForm.is_key_event,
         due_date_offset: editTaskForm.due_date_offset ? parseInt(editTaskForm.due_date_offset) : null
-      });
+      } as any);
       toast({ title: 'Task Updated' });
       setEditingTeamTask(null);
     } catch (error: any) {
@@ -2008,6 +2011,15 @@ export default function AdminStageDetail() {
                 <Switch checked={editTaskForm.is_core} onCheckedChange={(c) => setEditTaskForm({ ...editTaskForm, is_core: c })} />
                 <Label>Core task</Label>
               </div>
+              {(stage as any).is_recurring && (
+                <div className="flex items-center gap-3 pt-2">
+                  <Switch checked={editTaskForm.is_key_event} onCheckedChange={(c) => setEditTaskForm({ ...editTaskForm, is_key_event: c })} />
+                  <Label className="flex items-center gap-1.5">
+                    <KeyRound className={cn("h-3.5 w-3.5", editTaskForm.is_key_event && "text-primary")} />
+                    Key event
+                  </Label>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

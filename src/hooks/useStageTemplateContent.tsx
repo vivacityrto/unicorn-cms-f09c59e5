@@ -206,11 +206,14 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
+    // Audit insert - non-blocking (entity_id may not match UUID format for numeric stage IDs)
+    supabase.from('audit_events').insert({
       entity: 'stage',
       entity_id: stageId?.toString() || '',
       action: 'stage.template_updated',
       details: { change_type: 'team_task_updated', task_id: taskId }
+    }).then(({ error: auditError }) => {
+      if (auditError) console.warn('Audit event insert failed:', auditError.message);
     });
 
     await fetchContent();
