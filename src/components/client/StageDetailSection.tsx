@@ -34,6 +34,8 @@ export function StageDetailSection({
   completionDate,
   comment,
   stageStatus,
+  isRecurring = false,
+  eventConductedDate,
   onUpdate
 }: StageDetailSectionProps) {
   const { toast } = useToast();
@@ -41,17 +43,26 @@ export function StageDetailSection({
   
   // Normalize legacy null dates
   const normalizedDate = completionDate === LEGACY_NULL_DATE ? null : completionDate;
+  const normalizedEventDate = eventConductedDate === LEGACY_NULL_DATE ? null : (eventConductedDate || null);
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     normalizedDate ? new Date(normalizedDate) : (stageStatus === 3 ? new Date() : undefined)
   );
+  const [selectedEventDate, setSelectedEventDate] = useState<Date | undefined>(
+    normalizedEventDate ? new Date(normalizedEventDate) : undefined
+  );
   const [commentText, setCommentText] = useState(comment || '');
   const [saving, setSaving] = useState(false);
+  const [savingEvent, setSavingEvent] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [eventCalendarOpen, setEventCalendarOpen] = useState(false);
 
   const hasChanges = 
     (selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null) !== normalizedDate ||
     commentText !== (comment || '');
+
+  const hasEventDateChange =
+    (selectedEventDate ? format(selectedEventDate, 'yyyy-MM-dd') : null) !== normalizedEventDate;
 
   const handleSave = async () => {
     setSaving(true);
