@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, Package2, UserPlus, Archive, Pause, MessageSquare } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddTenantDialog } from "@/components/AddTenantDialog";
@@ -52,6 +52,7 @@ interface Tenant {
   next_renewal_date?: string | null;
   last_note_date?: string | null;
   last_note_snippet?: string | null;
+  primary_contact_name?: string | null;
 }
 
 interface CSCFilterOption {
@@ -263,6 +264,31 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string | null>);
 
+      // Fetch primary contacts per tenant
+      const { data: primaryContactsData } = await supabase
+        .from("tenant_users")
+        .select("tenant_id, user_id")
+        .in("tenant_id", tenantIds)
+        .eq("primary_contact", true)
+        .order("created_at", { ascending: true });
+
+      const primaryContactUserIds = [...new Set((primaryContactsData || []).map(pc => pc.user_id).filter(Boolean))];
+      const { data: primaryContactUsersData } = primaryContactUserIds.length > 0
+        ? await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", primaryContactUserIds)
+        : { data: [] };
+      const primaryContactUserMap = (primaryContactUsersData || []).reduce((acc, u) => {
+        acc[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || null;
+        return acc;
+      }, {} as Record<string, string | null>);
+
+      // Build tenant -> primary contact name map (first primary contact per tenant)
+      const primaryContactMap = (primaryContactsData || []).reduce((acc, pc) => {
+        if (!acc[pc.tenant_id]) {
+          acc[pc.tenant_id] = primaryContactUserMap[pc.user_id] || null;
+        }
+        return acc;
+      }, {} as Record<number, string | null>);
+
       // Fetch last note per tenant using a distinct-on-like approach
       // Fetch in batches per tenant to avoid 1000-row limit truncation
       const lastNoteMap: Record<number, { date: string; snippet: string }> = {};
@@ -306,6 +332,7 @@ export default function ManageTenants() {
           next_renewal_date: tenantRenewalMap[tenant.id] || null,
           last_note_date: lastNoteMap[tenant.id]?.date || null,
           last_note_snippet: lastNoteMap[tenant.id]?.snippet || null,
+          primary_contact_name: primaryContactMap[tenant.id] || null,
           // Override name prefix: if they have a KS, prepend KS indicator
           _hasKickStart: hasKickStart,
         } as any;
@@ -829,8 +856,8 @@ export default function ManageTenants() {
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(tenant.created_at).toLocaleDateString("en-GB")}
+                            <User className="w-3 h-3" />
+                            {tenant.primary_contact_name || "No primary contact"}
                           </span>
                           <span>{tenant.state || ""}</span>
                         </div>
