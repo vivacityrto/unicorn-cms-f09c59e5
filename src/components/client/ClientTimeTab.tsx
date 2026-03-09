@@ -129,7 +129,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
         .not('parent_instance_id', 'is', null);
 
       // Get child package names
-      const childPkgIds = [...new Set((childInstances || []).map((c: any) => c.package_id))];
+      const childPkgIds = [...new Set((childInstances || []).map((c: any) => c.package_id))] as number[];
       const { data: childPkgNames } = childPkgIds.length > 0
         ? await supabase.from('packages').select('id, name, total_hours').in('id', childPkgIds)
         : { data: [] };
