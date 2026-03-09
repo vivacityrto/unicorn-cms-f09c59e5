@@ -8,6 +8,7 @@ export interface TimeEntry {
   tenant_id: number;
   client_id: number;
   package_id: number | null;
+  package_instance_id: number | null;
   stage_id: number | null;
   task_id: string | null;
   user_id: string;
