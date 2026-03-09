@@ -589,6 +589,17 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
               </div>
             </div>
 
+            {/* Email — read-only */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                value={editingMember?.users?.email || ''}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+
             {/* Position */}
             <div className="space-y-2">
               <Label htmlFor="edit-job-title">Position</Label>
