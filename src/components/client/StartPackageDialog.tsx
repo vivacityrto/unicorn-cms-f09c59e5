@@ -130,6 +130,12 @@ export function StartPackageDialog({
       if (parent?.manager_id) {
         setSelectedCscId(parent.manager_id);
       }
+      // Auto-fill hours from the selected package's total_hours
+      const selectedPkg = packages.find(p => p.id === parseInt(selectedPackageId));
+      setHoursUsed(selectedPkg?.total_hours?.toString() || '');
+    } else {
+      setHoursUsed('');
+      setComments('');
     }
   };
 
