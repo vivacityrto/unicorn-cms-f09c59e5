@@ -32,74 +32,36 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
   const { data: membershipUsage } = useMembershipUsage(clientId);
   const [logOpen, setLogOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'calendar' | 'timer' | 'manual'>('all');
-  const [keyEvents, setKeyEvents] = useState<{ stageName: string; eventDate: string }[]>([]);
+  const [keyEvents, setKeyEvents] = useState<{ stageName: string; eventDate: string | null }[]>([]);
 
-  // Fetch key event task dates for recurring stages
+  // Fetch key event dates (event_conducted_date) for recurring stages
   useEffect(() => {
     async function fetchKeyEvents() {
-      // Get active package instances for this tenant
+      // Get active (non-complete) package instances for this tenant
       const { data: pkgInstances } = await (supabase
         .from('package_instances' as any)
         .select('id')
         .eq('tenant_id', clientId)
-        .in('status', ['active', 'in_progress'])) as { data: { id: number }[] | null };
+        .eq('is_complete', false)) as { data: { id: number }[] | null };
 
       if (!pkgInstances?.length) return;
 
       const pkgInstanceIds = pkgInstances.map(p => p.id);
 
-      // Get stage_instances for recurring stages
-      const { data: stageInstances } = await (supabase
+      // Get recurring stage_instances (with or without event_conducted_date)
+      const { data: stageData } = await (supabase
         .from('stage_instances' as any)
-        .select('id, stage_id, is_recurring')
+        .select('id, stage_id, event_conducted_date, is_recurring')
         .in('packageinstance_id', pkgInstanceIds)
-        .eq('is_recurring', true)) as { data: { id: number; stage_id: number; is_recurring: boolean }[] | null };
+        .eq('is_recurring', true)) as { data: { id: number; stage_id: number; event_conducted_date: string | null; is_recurring: boolean }[] | null };
 
-      if (!stageInstances?.length) {
+      if (!stageData?.length) {
         setKeyEvents([]);
         return;
       }
-
-      const stageInstanceIds = stageInstances.map(si => si.id);
-
-      // Get task instances whose base staff_task is flagged as key_event and has a completion_date
-      const { data: taskInstances } = await (supabase
-        .from('staff_task_instances' as any)
-        .select('id, staff_task_id, stage_instance_id, completion_date')
-        .in('stage_instance_id', stageInstanceIds)
-        .not('completion_date', 'is', null)) as { data: { id: number; staff_task_id: number; stage_instance_id: number; completion_date: string }[] | null };
-
-      if (!taskInstances?.length) {
-        setKeyEvents([]);
-        return;
-      }
-
-      // Get the base staff_tasks to check is_key_event
-      const staffTaskIds = [...new Set(taskInstances.map(t => t.staff_task_id))];
-      const { data: staffTasks } = await supabase
-        .from('staff_tasks')
-        .select('id, is_key_event')
-        .in('id', staffTaskIds)
-        .eq('is_key_event', true);
-
-      if (!staffTasks?.length) {
-        setKeyEvents([]);
-        return;
-      }
-
-      const keyTaskIds = new Set(staffTasks.map(t => t.id));
-      const keyTaskInstances = taskInstances.filter(t => keyTaskIds.has(t.staff_task_id));
-
-      if (!keyTaskInstances.length) {
-        setKeyEvents([]);
-        return;
-      }
-
-      // Map stage_instance_id → stage_id
-      const siToStageId = new Map(stageInstances.map(si => [si.id, si.stage_id]));
 
       // Get unique stage IDs and fetch stage metadata
-      const stageIds = [...new Set(keyTaskInstances.map(t => siToStageId.get(t.stage_instance_id)).filter(Boolean))] as number[];
+      const stageIds = [...new Set(stageData.map(s => s.stage_id))] as number[];
       const { data: stagesMeta } = await supabase
         .from('stages')
         .select('id, shortname, name')
@@ -107,22 +69,29 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
 
       const stageMap = new Map((stagesMeta || []).map(s => [s.id, s]));
 
-      // Build key events: most recent completion_date per stage
-      const eventsByStage = new Map<number, { stageName: string; eventDate: string }>();
-      for (const ti of keyTaskInstances) {
-        const stageId = siToStageId.get(ti.stage_instance_id);
-        if (!stageId) continue;
-        const meta = stageMap.get(stageId);
-        const existing = eventsByStage.get(stageId);
-        if (!existing || ti.completion_date > existing.eventDate) {
-          eventsByStage.set(stageId, {
-            stageName: meta?.shortname || meta?.name || `Stage ${stageId}`,
-            eventDate: ti.completion_date
+      // Build key events list — show most recent event_conducted_date per stage
+      // Include all recurring stages (null date = "Not yet")
+      const eventsByStage = new Map<number, { stageName: string; eventDate: string | null }>();
+      for (const si of stageData) {
+        const meta = stageMap.get(si.stage_id);
+        const existing = eventsByStage.get(si.stage_id);
+        if (!existing || (si.event_conducted_date && (!existing.eventDate || si.event_conducted_date > existing.eventDate))) {
+          eventsByStage.set(si.stage_id, {
+            stageName: meta?.shortname || meta?.name || `Stage ${si.stage_id}`,
+            eventDate: si.event_conducted_date
           });
         }
       }
 
-      setKeyEvents(Array.from(eventsByStage.values()).sort((a, b) => b.eventDate.localeCompare(a.eventDate)));
+      // Sort: stages with dates first (most recent), then stages without dates
+      const sorted = Array.from(eventsByStage.values()).sort((a, b) => {
+        if (a.eventDate && b.eventDate) return b.eventDate.localeCompare(a.eventDate);
+        if (a.eventDate) return -1;
+        if (b.eventDate) return 1;
+        return a.stageName.localeCompare(b.stageName);
+      });
+
+      setKeyEvents(sorted);
     }
     fetchKeyEvents();
   }, [clientId]);
@@ -244,14 +213,14 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
             {keyEvents.length > 0 && (
               <div className="mt-4 pt-3 border-t">
                 <p className="text-xs font-medium flex items-center gap-1 mb-2">
-                  <KeyRound className="h-3 w-3 text-amber-500" />
+                  <KeyRound className="h-3 w-3 text-primary" />
                   Key Events
                 </p>
                 <div className="space-y-1">
                   {keyEvents.map((evt, idx) => (
                     <div key={idx} className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Last {evt.stageName}</span>
-                      <span>{format(new Date(evt.eventDate), 'd MMM yyyy')}</span>
+                      <span>{evt.eventDate ? format(new Date(evt.eventDate), 'd MMM yyyy') : <span className="text-muted-foreground italic">Not yet</span>}</span>
                     </div>
                   ))}
                 </div>
