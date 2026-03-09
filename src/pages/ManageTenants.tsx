@@ -311,6 +311,36 @@ export default function ManageTenants() {
         });
       }
 
+      // Aggregate time usage per tenant (used minutes from time_entries)
+      const { data: timeUsageData } = await supabase
+        .from('time_entries')
+        .select('tenant_id, duration_minutes')
+        .in('tenant_id', tenantIds);
+
+      const tenantTimeUsedMap = (timeUsageData || []).reduce((acc, te) => {
+        acc[te.tenant_id] = (acc[te.tenant_id] || 0) + (te.duration_minutes || 0);
+        return acc;
+      }, {} as Record<number, number>);
+
+      // Aggregate included minutes per tenant from active package instances
+      const tenantIncludedMap = (packageInstancesData || []).reduce((acc, pi) => {
+        // We need hours_included from the instance; fetch separately
+        return acc;
+      }, {} as Record<number, number>);
+
+      // Fetch included_minutes from package_instances for active ones
+      const { data: piIncludedData } = await supabase
+        .from('package_instances')
+        .select('tenant_id, included_minutes, hours_included')
+        .eq('is_complete', false)
+        .in('tenant_id', tenantIds);
+
+      const tenantIncludedMinutesMap = (piIncludedData || []).reduce((acc, pi) => {
+        const mins = pi.included_minutes || ((pi.hours_included || 0) * 60);
+        acc[pi.tenant_id] = (acc[pi.tenant_id] || 0) + mins;
+        return acc;
+      }, {} as Record<number, number>);
+
       const tenantsWithCounts = tenantsData.map(tenant => {
         const activePackages = tenantPackagesMap[tenant.id] || [];
         const firstNonKS = activePackages.find((p: TenantPackageInfo) => !p.name.startsWith('KS'));
@@ -335,6 +365,8 @@ export default function ManageTenants() {
           last_note_date: lastNoteMap[tenant.id]?.date || null,
           last_note_snippet: lastNoteMap[tenant.id]?.snippet || null,
           primary_contact_name: primaryContactMap[tenant.id] || null,
+          hours_used_minutes: tenantTimeUsedMap[tenant.id] || 0,
+          hours_included_minutes: tenantIncludedMinutesMap[tenant.id] || 0,
           // Override name prefix: if they have a KS, prepend KS indicator
           _hasKickStart: hasKickStart,
         } as any;
