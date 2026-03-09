@@ -690,7 +690,8 @@ export function useClientPackages(tenantId: number | null) {
           next_renewal_date: inst.next_renewal_date || null,
           last_renewed_date: inst.last_renewed_date || null,
           parent_instance_id: inst.parent_instance_id || null,
-          parent_package_name: null // resolved below
+          parent_package_name: null, // resolved below
+          comments: inst.comments || null
         };
       });
 
