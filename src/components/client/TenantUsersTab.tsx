@@ -714,6 +714,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         tenantId={tenantId}
         tenantName={tenantName}
         onSuccess={() => {
+          fetchMembers();
           fetchPendingInvites();
         }}
       />
