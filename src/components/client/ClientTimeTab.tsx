@@ -111,13 +111,41 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   const { data: combined, isLoading } = useQuery({
     queryKey: ['package-burndown-combined', tenantId],
     queryFn: async () => {
-      // 1. Get active (non-complete) instance IDs with renewal info
+      // 1. Get active (non-complete, non-child) instance IDs with renewal info
       const { data: activeInstances, error: aiErr } = await (supabase as any)
         .from('package_instances')
         .select('id, start_date, next_renewal_date')
         .eq('tenant_id', tenantId)
-        .eq('is_complete', false);
+        .eq('is_complete', false)
+        .is('parent_instance_id', null);
       if (aiErr) throw aiErr;
+
+      // Also fetch child instances to show as add-ons
+      const { data: childInstances } = await (supabase as any)
+        .from('package_instances')
+        .select('id, package_id, parent_instance_id, hours_included, included_minutes')
+        .eq('tenant_id', tenantId)
+        .eq('is_complete', false)
+        .not('parent_instance_id', 'is', null);
+
+      // Get child package names
+      const childPkgIds = [...new Set((childInstances || []).map((c: any) => c.package_id))];
+      const { data: childPkgNames } = childPkgIds.length > 0
+        ? await supabase.from('packages').select('id, name, total_hours').in('id', childPkgIds)
+        : { data: [] };
+      const childPkgMap = new Map((childPkgNames || []).map((p: any) => [p.id, p]));
+
+      // Group children by parent_instance_id
+      const childrenByParent: Record<number, { name: string; hours: number }[]> = {};
+      (childInstances || []).forEach((child: any) => {
+        const pid = child.parent_instance_id;
+        if (!childrenByParent[pid]) childrenByParent[pid] = [];
+        const pkg = childPkgMap.get(child.package_id);
+        childrenByParent[pid].push({
+          name: pkg?.name || `Package #${child.package_id}`,
+          hours: pkg?.total_hours || (child.included_minutes ? child.included_minutes / 60 : (child.hours_included || 0)),
+        });
+      });
 
       const activeIds = (activeInstances || []).map((r: any) => r.id);
       if (activeIds.length === 0) return [];

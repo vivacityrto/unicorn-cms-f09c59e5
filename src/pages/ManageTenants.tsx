@@ -311,11 +311,12 @@ export default function ManageTenants() {
         });
       }
 
-      // Fetch included_minutes and IDs from active package_instances
-      const { data: piIncludedData } = await supabase
+      // Fetch included_minutes and IDs from active package_instances (exclude children)
+      const { data: piIncludedData } = await (supabase as any)
         .from('package_instances')
         .select('id, tenant_id, included_minutes, hours_included')
         .eq('is_complete', false)
+        .is('parent_instance_id', null)
         .in('tenant_id', tenantIds);
 
       const activeInstanceIds = (piIncludedData || []).map(pi => pi.id);

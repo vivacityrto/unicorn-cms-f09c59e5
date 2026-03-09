@@ -63,11 +63,13 @@ export function usePackageUsage(clientId: number | null) {
     if (!clientId) return;
 
     // Fetch active package instances
-    const { data: instances, error } = await supabase
+    // Exclude child instances from top-level list
+    const { data: instances, error } = await (supabase as any)
       .from('package_instances')
       .select('id, package_id, start_date, end_date, hours_included, hours_used, is_complete')
       .eq('tenant_id', clientId)
       .eq('is_complete', false)
+      .is('parent_instance_id', null)
       .order('start_date', { ascending: false });
 
     if (error) {
