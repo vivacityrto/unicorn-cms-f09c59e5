@@ -120,6 +120,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
       queryClient.invalidateQueries({ queryKey: timeTrackingKeys.entries(tenantId), refetchType: 'all' }),
       queryClient.invalidateQueries({ queryKey: packageUsageKeys.packages(tenantId), refetchType: 'all' }),
       queryClient.invalidateQueries({ queryKey: ['membership-combined-usage', tenantId], refetchType: 'all' }),
+      queryClient.invalidateQueries({ queryKey: ['burndown-header-totals', tenantId], refetchType: 'all' }),
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey;
