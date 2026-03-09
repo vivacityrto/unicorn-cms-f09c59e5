@@ -111,16 +111,34 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   const { data: combined, isLoading } = useQuery({
     queryKey: ['package-burndown-combined', tenantId],
     queryFn: async () => {
-      // 1. Get active (non-complete) instance IDs first
-      const { data: activeInstances, error: aiErr } = await supabase
+      // 1. Get active (non-complete) instance IDs with renewal info
+      const { data: activeInstances, error: aiErr } = await (supabase as any)
         .from('package_instances')
-        .select('id')
+        .select('id, start_date, next_renewal_date')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false);
       if (aiErr) throw aiErr;
 
-      const activeIds = (activeInstances || []).map(r => r.id);
+      const activeIds = (activeInstances || []).map((r: any) => r.id);
       if (activeIds.length === 0) return [];
+
+      // Build renewal year window per instance
+      const renewalWindowMap: Record<number, { start: string; end: string }> = {};
+      (activeInstances || []).forEach((inst: any) => {
+        const renewalEnd = inst.next_renewal_date
+          ? new Date(inst.next_renewal_date)
+          : inst.start_date
+            ? new Date(new Date(inst.start_date).getFullYear() + 1, new Date(inst.start_date).getMonth(), new Date(inst.start_date).getDate())
+            : null;
+        if (renewalEnd) {
+          const renewalStart = new Date(renewalEnd);
+          renewalStart.setFullYear(renewalStart.getFullYear() - 1);
+          renewalWindowMap[inst.id] = {
+            start: renewalStart.toISOString(),
+            end: renewalEnd.toISOString(),
+          };
+        }
+      });
 
       // 2. Fetch burndown data only for active instances
       const { data: burndownData, error: bdErr } = await supabase
@@ -135,7 +153,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
 
       const { fullTextMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
-      // 2. Fetch per-month breakdown from time_entries
+      // 3. Fetch per-month breakdown from time_entries
       const { data: monthlyRows } = await (supabase as any)
         .from('time_entries')
         .select('package_id, package_instance_id, start_at, duration_minutes, is_billable')
@@ -180,6 +198,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
         package_instance_id: row.package_instance_id,
         package_name: fullTextMap[row.package_instance_id!] || 'Unknown',
         lifecycle: lifecycleMap[row.package_instance_id!] || { start_date: null, end_date: null },
+        renewalWindow: renewalWindowMap[row.package_instance_id!] || null,
         used_minutes: row.used_minutes ?? 0,
         included_minutes: row.included_minutes ?? 0,
         remaining_minutes: row.remaining_minutes ?? 0,
@@ -218,13 +237,42 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   );
 }
 
-function BurndownCard({ row }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null } } }) {
+function BurndownCard({ row }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; renewalWindow: { start: string; end: string } | null; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null } } }) {
   const [monthLimit, setMonthLimit] = useState(3);
+  const [showAll, setShowAll] = useState(false);
   const pct = row.percent_used;
   const isOver = pct > 100;
   const sorted = [...row.monthly].sort((a, b) => b.month.localeCompare(a.month));
-  const visible = sorted.slice(0, monthLimit);
-  const hasMore = sorted.length > monthLimit;
+
+  // Filter to current membership period unless "Show All"
+  const hasRenewalWindow = !!row.renewalWindow;
+  const periodFiltered = useMemo(() => {
+    if (showAll || !row.renewalWindow) return sorted;
+    const windowStart = row.renewalWindow.start;
+    const windowEnd = row.renewalWindow.end;
+    return sorted.filter(m => {
+      // Month key is yyyy-MM, compare as start of month
+      const monthStart = m.month + '-01T00:00:00.000Z';
+      return monthStart >= windowStart.slice(0, 10) && monthStart <= windowEnd.slice(0, 10);
+    });
+  }, [sorted, showAll, row.renewalWindow]);
+
+  // Recalculate totals for the visible period
+  const displayTotals = useMemo(() => {
+    if (showAll || !row.renewalWindow) return row.totals;
+    return periodFiltered.reduce(
+      (acc, m) => ({
+        billable: acc.billable + m.billable,
+        nonBillable: acc.nonBillable + m.nonBillable,
+        total: acc.total + m.minutes,
+        lastEntry: row.totals.lastEntry,
+      }),
+      { billable: 0, nonBillable: 0, total: 0, lastEntry: row.totals.lastEntry }
+    );
+  }, [periodFiltered, showAll, row.renewalWindow, row.totals]);
+
+  const visible = periodFiltered.slice(0, monthLimit);
+  const hasMore = periodFiltered.length > monthLimit;
 
   return (
     <Card>
@@ -258,7 +306,17 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
           {row.monthly.length > 0 && (
             <div className="w-1/2 border-l border-border pl-4 space-y-0.5">
               <div className="flex justify-between text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                <span>Monthly</span>
+                <div className="flex items-center gap-1.5">
+                  <span>Monthly</span>
+                  {hasRenewalWindow && (
+                    <button
+                      onClick={() => setShowAll(prev => !prev)}
+                      className="text-[10px] text-primary hover:underline normal-case tracking-normal font-normal"
+                    >
+                      {showAll ? 'Current period' : 'Show all'}
+                    </button>
+                  )}
+                </div>
                 <span className="flex gap-3">
                   <span className="w-10 text-right">Total</span>
                   <span className="w-10 text-right text-green-600">Bill</span>
@@ -288,9 +346,9 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
                   )}
                 </div>
                 <span className="flex gap-3 text-[11px]">
-                  <span className="w-10 text-right font-semibold">{formatDuration(row.totals.total)}</span>
-                  <span className="w-10 text-right text-green-600 font-medium">{formatDuration(row.totals.billable)}</span>
-                  <span className="w-10 text-right text-muted-foreground">{formatDuration(row.totals.nonBillable)}</span>
+                  <span className="w-10 text-right font-semibold">{formatDuration(displayTotals.total)}</span>
+                  <span className="w-10 text-right text-green-600 font-medium">{formatDuration(displayTotals.billable)}</span>
+                  <span className="w-10 text-right text-muted-foreground">{formatDuration(displayTotals.nonBillable)}</span>
                 </span>
               </div>
             </div>
