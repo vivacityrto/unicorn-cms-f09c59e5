@@ -32,7 +32,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
   const { data: membershipUsage } = useMembershipUsage(clientId);
   const [logOpen, setLogOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'calendar' | 'timer' | 'manual'>('all');
-  const [keyEvents, setKeyEvents] = useState<{ stageName: string; eventDate: string }[]>([]);
+  const [keyEvents, setKeyEvents] = useState<{ stageName: string; eventDate: string | null }[]>([]);
 
   // Fetch key event dates (event_conducted_date) for recurring stages
   useEffect(() => {
