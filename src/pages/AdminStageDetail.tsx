@@ -2011,6 +2011,15 @@ export default function AdminStageDetail() {
                 <Switch checked={editTaskForm.is_core} onCheckedChange={(c) => setEditTaskForm({ ...editTaskForm, is_core: c })} />
                 <Label>Core task</Label>
               </div>
+              {(stage as any).is_recurring && (
+                <div className="flex items-center gap-3 pt-2">
+                  <Switch checked={editTaskForm.is_key_event} onCheckedChange={(c) => setEditTaskForm({ ...editTaskForm, is_key_event: c })} />
+                  <Label className="flex items-center gap-1.5">
+                    <KeyRound className={cn("h-3.5 w-3.5", editTaskForm.is_key_event && "text-primary")} />
+                    Key event
+                  </Label>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
