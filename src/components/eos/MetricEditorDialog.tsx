@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useTenantUsers } from '@/hooks/useTenantUsers';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import type { EosScorecardMetric, MetricDirection } from '@/types/eos';
 
 interface MetricEditorDialogProps {
@@ -21,7 +21,7 @@ interface MetricEditorDialogProps {
 export function MetricEditorDialog({ open, onOpenChange, metric }: MetricEditorDialogProps) {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
-  const { users } = useTenantUsers();
+  const { data: users = [] } = useVivacityTeamUsers();
   const isEditing = !!metric;
 
   const [name, setName] = useState('');

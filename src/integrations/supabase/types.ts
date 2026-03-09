@@ -12583,6 +12583,21 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_task_statuses: {
+        Row: {
+          code: string
+          order_index: number
+        }
+        Insert: {
+          code: string
+          order_index: number
+        }
+        Update: {
+          code?: string
+          order_index?: number
+        }
+        Relationships: []
+      }
       dd_unicorn_roles: {
         Row: {
           created_at: string
