@@ -208,6 +208,7 @@ export default function AdminStageDetail() {
     name: '',
     description: '',
     is_core: true,
+    is_key_event: false,
     due_date_offset: ''
   });
   const [editClientTaskForm, setEditClientTaskForm] = useState({
