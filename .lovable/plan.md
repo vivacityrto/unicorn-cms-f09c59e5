@@ -1,22 +1,51 @@
-## Completed: Create `dd_stage_types` Lookup Table
 
-Created `dd_stage_types` table with 6 types (onboarding, delivery, documentation, support, monitoring, offboarding) including `is_milestone` column for progress metrics. Replaced all 7 hardcoded `STAGE_TYPE_OPTIONS` arrays with the `useStageTypeOptions` hook. Updated progress logic to use `is_milestone` fallback and added `monitoring` to auto-default logic.
 
-## Completed: Create `dd_priority` and `dd_action_status` Lookup Tables
+## Plan: Key Event Date Tracking for Recurring Stages
 
-Created `dd_priority` (low, normal, medium, high, urgent) and `dd_action_status` (open, in_progress, blocked, waiting_client, done, cancelled, todo) lookup tables. Dropped 4 conflicting CHECK constraints on `client_action_items` and replaced with a validation trigger (`trg_validate_action_item_priority_status`). Updated `rpc_create_action_item` to validate against `dd_priority` table and default to `'medium'`. Created `useActionPriorityOptions` and `useActionStatusOptions` hooks with module-level caching. Replaced all hardcoded priority/status configs in `ClientActionItemsTab`, `PackageNotesSection`, `useClientManagementData`, and `useClientWorkboard`. Added `'normal'` and `'open'` to `ItemPriority` and `ItemStatus` types.
+### Summary
 
-## Completed: Staff Task Assignment + `completed_by` Tracking
+Add an `event_conducted_date` column to `stage_instances` and an `is_key_event` flag to `staff_tasks`. For recurring stages, display the event date inline and allow manual editing. Surface the latest key event dates in the Time Summary card on the Tenant Overview.
 
-Added `completed_by` UUID column to `staff_task_instances`. Created `TaskAssigneeButton` component (silhouette icon when unassigned, avatar when assigned, popover for team member selection with unassign option). Updated `useStaffTaskInstances` hook: on status → Completed/Core Complete sets `completed_by` to current user; on revert clears it; on assign auto-creates a linked action item via `rpc_create_action_item` with `source: 'task_assignment'`. Integrated `TaskAssigneeButton` into `StageStaffTasks.tsx` between task info and notes popover. Disabled for N/A tasks and finished stages.
+### Database Changes (1 migration)
 
-## Completed: Fix Documents Tab Error + Risk Note Auto-Open
+1. **`stage_instances`** -- Add `event_conducted_date DATE NULL`
+2. **`staff_tasks`** -- Add `is_key_event BOOLEAN NOT NULL DEFAULT false`
+3. **DB trigger** on `staff_task_instances`: When a task with `is_key_event = true` is marked Complete (status_id = 2 or 4), set `stage_instances.event_conducted_date = CURRENT_DATE` on the parent stage instance. If reverted, recalculate from remaining completed key-event tasks (latest date or NULL).
 
-Fixed `validate_document_readiness` RPC to use `document_fields` + `dd_fields` tables instead of the dropped `merge_fields` column. Now validates required fields against `v_tenant_merge_fields` with real value checks per tenant. Also wired `ClientStructuredNotesTab` to consume `initNote`/`noteTitle` URL search params so risk level changes auto-open a pre-filled note dialog with type "risk".
+### Frontend Changes
 
-## Completed: Tasks Management + My Work + Today's Focus Refinements
+#### 1. StageDetailSection -- Show event date for recurring stages
+- Add `isRecurring` prop to `StageDetailSectionProps`
+- Change visibility: currently only renders when `stageStatus === 3`. For recurring stages, **also** render the "Event Conducted Date" picker regardless of completion status (so it can be manually set/updated at any time)
+- Add a second date picker for `event_conducted_date` (distinct from the existing `completion_date` picker)
+- Save writes to `stage_instances.event_conducted_date` with audit logging
+- Label: "Event Conducted Date" with helper text "Actual date this event was performed"
 
-1. **Today's Focus**: Added overdue `tasks_tenants` count (portfolio-wide) as a focus item linking to `/tasks-management`. Existing user action items remain.
-2. **Tasks Management**: Merged `client_action_items` and `ops_work_items` into the task listing with source badges (Client Task / Action / Ops). Added "Assign To" dropdown in the create dialog using Vivacity team members. Assignee is added to followers array. Edit/delete actions only available for native `tasks_tenants` items.
-3. **My Work**: Added "Create Task" button using `CreateActionDialog` with optional client association.
-4. **CreateActionDialog**: Added "Assign to" dropdown defaulting to current user, sets `owner_user_uuid` on `ops_work_items`.
+#### 2. Stage instance data hooks
+- **`useClientPackageInstances.tsx`**: Include `event_conducted_date` in the stage instance select query (line ~242)
+- **`useStaffTaskInstances.ts`**: Include `is_key_event` from joined `staff_tasks` (line ~78)
+- Pass `isRecurring` and `eventConductedDate` through to `StageDetailSection`
+
+#### 3. ClientTimeSummaryCard -- "Key Events" section
+- After the membership year section (~line 145), add a new "Key Events" block
+- Query: fetch `stage_instances` joined to `stages` where `stage_instances.is_recurring = true` AND `event_conducted_date IS NOT NULL`, filtered by the tenant's active package instances
+- Display as a compact list: "Last CHC: 12 Oct 2025", "Last AV: 3 Sep 2025", etc.
+- Use stage `short_name` or `title` for the label
+
+#### 4. Admin Stage Detail -- `is_key_event` toggle on staff tasks
+- In `useStageTemplateContent.tsx`: include `is_key_event` in the staff task type and queries
+- In the Admin Stage Detail staff tasks list: add a small key/star icon toggle for `is_key_event`, only visible when the parent stage `is_recurring = true`
+
+#### 5. Visual indicators
+- In the client stage task list (`StageStaffTasks.tsx`): show a small key badge next to tasks where `is_key_event = true` so users know which task drives the event date
+
+### Files Changed
+- 1 new migration SQL
+- `src/components/client/StageDetailSection.tsx` -- add event date picker for recurring stages
+- `src/hooks/useClientPackageInstances.tsx` -- fetch `event_conducted_date`
+- `src/hooks/useStaffTaskInstances.ts` -- fetch `is_key_event`
+- `src/hooks/useStageTemplateContent.tsx` -- include `is_key_event`
+- `src/components/client/ClientTimeSummaryCard.tsx` -- new Key Events section
+- `src/pages/AdminStageDetail.tsx` -- `is_key_event` toggle on staff tasks
+- `src/components/client/StageStaffTasks.tsx` -- key event badge
+
