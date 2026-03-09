@@ -83,7 +83,7 @@ export function usePackageUsage(clientId: number | null) {
     }
 
     // Fetch package details
-    const packageIds = [...new Set(instances.map(i => i.package_id))];
+    const packageIds = [...new Set((instances as any[]).map(i => i.package_id))] as number[];
     const { data: packagesData } = await supabase
       .from('packages')
       .select('id, name, total_hours')

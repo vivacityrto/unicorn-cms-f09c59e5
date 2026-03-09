@@ -76,7 +76,7 @@ export function useClientPackagesQuery(clientId: number | null) {
       if (error) throw error;
       if (!instances || instances.length === 0) return [];
 
-      const packageIds = [...new Set(instances.map(i => i.package_id))];
+      const packageIds = [...new Set((instances as any[]).map(i => i.package_id))] as number[];
       const { data: packagesData } = await supabase
         .from('packages')
         .select('id, name, full_text, total_hours')

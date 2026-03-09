@@ -93,7 +93,7 @@ export function StartPackageDialog({
         .order('start_date', { ascending: false });
 
       if (instancesData && instancesData.length > 0) {
-        const pkgIds = [...new Set(instancesData.map((i: any) => i.package_id))];
+        const pkgIds = [...new Set(instancesData.map((i: any) => i.package_id))] as number[];
         const { data: pkgNames } = await supabase
           .from('packages')
           .select('id, name, full_text')

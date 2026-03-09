@@ -383,6 +383,18 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
             </div>
           )}
         </div>
+        {/* Add-on packages linked to this instance */}
+        {row.addons && row.addons.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Add-ons: </span>
+            {row.addons.map((addon, i) => (
+              <span key={i} className="text-[11px] text-muted-foreground">
+                {addon.name} <span className="text-primary font-medium">+{addon.hours}h</span>
+                {i < row.addons.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
