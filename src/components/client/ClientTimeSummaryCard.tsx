@@ -32,6 +32,61 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
   const { data: membershipUsage } = useMembershipUsage(clientId);
   const [logOpen, setLogOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'calendar' | 'timer' | 'manual'>('all');
+  const [keyEvents, setKeyEvents] = useState<{ stageName: string; eventDate: string }[]>([]);
+
+  // Fetch key event dates for recurring stages
+  useEffect(() => {
+    async function fetchKeyEvents() {
+      // Get active package instances for this tenant
+      const { data: pkgInstances } = await supabase
+        .from('package_instances')
+        .select('id')
+        .eq('tenant_id', clientId)
+        .in('status', ['active', 'in_progress']);
+
+      if (!pkgInstances?.length) return;
+
+      const pkgInstanceIds = pkgInstances.map(p => p.id);
+
+      // Get stage_instances with event_conducted_date
+      const { data: stageData } = await (supabase
+        .from('stage_instances' as any)
+        .select('id, stage_id, event_conducted_date, is_recurring')
+        .in('packageinstance_id', pkgInstanceIds)
+        .eq('is_recurring', true)
+        .not('event_conducted_date', 'is', null)) as { data: any[] | null };
+
+      if (!stageData?.length) {
+        setKeyEvents([]);
+        return;
+      }
+
+      // Get unique stage IDs and fetch stage metadata
+      const stageIds = [...new Set(stageData.map(s => s.stage_id))] as number[];
+      const { data: stagesMeta } = await supabase
+        .from('stages')
+        .select('id, shortname, name')
+        .in('id', stageIds);
+
+      const stageMap = new Map((stagesMeta || []).map(s => [s.id, s]));
+
+      // Build key events list (take the most recent event per stage)
+      const eventsByStage = new Map<number, { stageName: string; eventDate: string }>();
+      for (const si of stageData) {
+        const meta = stageMap.get(si.stage_id);
+        const existing = eventsByStage.get(si.stage_id);
+        if (!existing || si.event_conducted_date > existing.eventDate) {
+          eventsByStage.set(si.stage_id, {
+            stageName: meta?.shortname || meta?.name || `Stage ${si.stage_id}`,
+            eventDate: si.event_conducted_date
+          });
+        }
+      }
+
+      setKeyEvents(Array.from(eventsByStage.values()).sort((a, b) => b.eventDate.localeCompare(a.eventDate)));
+    }
+    fetchKeyEvents();
+  }, [clientId]);
 
   const loading = timeLoading || usageLoading;
 
