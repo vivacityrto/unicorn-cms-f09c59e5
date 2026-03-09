@@ -14,6 +14,7 @@ export interface StageTeamTask {
   is_mandatory: boolean;
   is_core: boolean;
   is_recurring: boolean;
+  is_key_event: boolean;
   due_date_offset: number | null;
 }
 
