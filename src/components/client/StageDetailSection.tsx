@@ -18,6 +18,8 @@ interface StageDetailSectionProps {
   completionDate: string | null;
   comment: string | null;
   stageStatus: number;
+  isRecurring?: boolean;
+  eventConductedDate?: string | null;
   onUpdate: () => void;
 }
 
