@@ -111,13 +111,41 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   const { data: combined, isLoading } = useQuery({
     queryKey: ['package-burndown-combined', tenantId],
     queryFn: async () => {
-      // 1. Get active (non-complete) instance IDs with renewal info
+      // 1. Get active (non-complete, non-child) instance IDs with renewal info
       const { data: activeInstances, error: aiErr } = await (supabase as any)
         .from('package_instances')
         .select('id, start_date, next_renewal_date')
         .eq('tenant_id', tenantId)
-        .eq('is_complete', false);
+        .eq('is_complete', false)
+        .is('parent_instance_id', null);
       if (aiErr) throw aiErr;
+
+      // Also fetch child instances to show as add-ons
+      const { data: childInstances } = await (supabase as any)
+        .from('package_instances')
+        .select('id, package_id, parent_instance_id, hours_included, included_minutes')
+        .eq('tenant_id', tenantId)
+        .eq('is_complete', false)
+        .not('parent_instance_id', 'is', null);
+
+      // Get child package names
+      const childPkgIds = [...new Set((childInstances || []).map((c: any) => c.package_id))] as number[];
+      const { data: childPkgNames } = childPkgIds.length > 0
+        ? await supabase.from('packages').select('id, name, total_hours').in('id', childPkgIds)
+        : { data: [] };
+      const childPkgMap = new Map((childPkgNames || []).map((p: any) => [p.id, p]));
+
+      // Group children by parent_instance_id
+      const childrenByParent: Record<number, { name: string; hours: number }[]> = {};
+      (childInstances || []).forEach((child: any) => {
+        const pid = child.parent_instance_id;
+        if (!childrenByParent[pid]) childrenByParent[pid] = [];
+        const pkg = childPkgMap.get(child.package_id);
+        childrenByParent[pid].push({
+          name: pkg?.name || `Package #${child.package_id}`,
+          hours: pkg?.total_hours || (child.included_minutes ? child.included_minutes / 60 : (child.hours_included || 0)),
+        });
+      });
 
       const activeIds = (activeInstances || []).map((r: any) => r.id);
       if (activeIds.length === 0) return [];
@@ -205,6 +233,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
         percent_used: row.percent_used ?? 0,
         monthly: monthlyMap[row.package_instance_id!] || [],
         totals: instanceTotals[row.package_instance_id!] || { billable: 0, nonBillable: 0, total: 0, lastEntry: null },
+        addons: childrenByParent[row.package_instance_id!] || [],
       }));
     },
   });
@@ -237,7 +266,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   );
 }
 
-function BurndownCard({ row }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; renewalWindow: { start: string; end: string } | null; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null } } }) {
+function BurndownCard({ row }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; renewalWindow: { start: string; end: string } | null; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null }; addons: { name: string; hours: number }[] } }) {
   const [monthLimit, setMonthLimit] = useState(3);
   const [showAll, setShowAll] = useState(false);
   const pct = row.percent_used;
@@ -354,6 +383,18 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
             </div>
           )}
         </div>
+        {/* Add-on packages linked to this instance */}
+        {row.addons && row.addons.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Add-ons: </span>
+            {row.addons.map((addon, i) => (
+              <span key={i} className="text-[11px] text-muted-foreground">
+                {addon.name} <span className="text-primary font-medium">+{addon.hours}h</span>
+                {i < row.addons.length - 1 ? ', ' : ''}
+              </span>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

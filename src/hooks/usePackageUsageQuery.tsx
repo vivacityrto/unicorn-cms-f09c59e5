@@ -64,17 +64,19 @@ export function useClientPackagesQuery(clientId: number | null) {
     queryFn: async (): Promise<ClientPackageInfo[]> => {
       if (!clientId) return [];
 
-      const { data: instances, error } = await supabase
+      // Exclude child instances (parent_instance_id IS NULL) from top-level list
+      const { data: instances, error } = await (supabase as any)
         .from('package_instances')
         .select('id, package_id, start_date, end_date, hours_included, hours_used, is_complete')
         .eq('tenant_id', clientId)
         .eq('is_complete', false)
+        .is('parent_instance_id', null)
         .order('start_date', { ascending: false });
 
       if (error) throw error;
       if (!instances || instances.length === 0) return [];
 
-      const packageIds = [...new Set(instances.map(i => i.package_id))];
+      const packageIds = [...new Set((instances as any[]).map(i => i.package_id))] as number[];
       const { data: packagesData } = await supabase
         .from('packages')
         .select('id, name, full_text, total_hours')
@@ -82,7 +84,7 @@ export function useClientPackagesQuery(clientId: number | null) {
 
       const packageMap = new Map((packagesData || []).map(p => [Number(p.id), p]));
 
-      return instances.map(inst => {
+      return (instances as any[]).map(inst => {
         const instId = Number(inst.id);
         const pkgId = Number(inst.package_id);
         const pkg = packageMap.get(pkgId);

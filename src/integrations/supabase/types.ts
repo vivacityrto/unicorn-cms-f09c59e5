@@ -24907,6 +24907,7 @@ export type Database = {
           membership_state: string
           next_renewal_date: string | null
           package_id: number
+          parent_instance_id: number | null
           release_documents_office: boolean
           release_documents_pdf: boolean
           start_date: string
@@ -24934,6 +24935,7 @@ export type Database = {
           membership_state?: string
           next_renewal_date?: string | null
           package_id: number
+          parent_instance_id?: number | null
           release_documents_office?: boolean
           release_documents_pdf?: boolean
           start_date: string
@@ -24961,6 +24963,7 @@ export type Database = {
           membership_state?: string
           next_renewal_date?: string | null
           package_id?: number
+          parent_instance_id?: number | null
           release_documents_office?: boolean
           release_documents_pdf?: boolean
           start_date?: string
@@ -24975,6 +24978,118 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "dd_membership_state"
             referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_dashboard_progress"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_usage_summary"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instances_parent_instance_id_fkey"
+            columns: ["parent_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_stage_instances"
+            referencedColumns: ["package_instance_id"]
           },
         ]
       }
