@@ -209,20 +209,28 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
               </div>
             )}
 
-            {/* Key Events */}
+            {/* Key Events - inline format */}
             {keyEvents.length > 0 && (
               <div className="mt-4 pt-3 border-t">
-                <p className="text-xs font-medium flex items-center gap-1 mb-2">
-                  <KeyRound className="h-3 w-3 text-primary" />
-                  Key Events
-                </p>
-                <div className="space-y-1">
-                  {keyEvents.map((evt, idx) => (
-                    <div key={idx} className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">Last {evt.stageName}</span>
-                      <span>{evt.eventDate ? format(new Date(evt.eventDate), 'd MMM yyyy') : <span className="text-muted-foreground italic">Not yet</span>}</span>
-                    </div>
-                  ))}
+                <div className="flex items-center gap-1 text-xs flex-wrap">
+                  <KeyRound className="h-3 w-3 text-primary shrink-0" />
+                  {keyEvents.map((evt, idx) => {
+                    // Normalize consult names
+                    let label = evt.stageName;
+                    if (label.toLowerCase().includes('consult')) {
+                      label = 'Consult';
+                    }
+                    const dateStr = evt.eventDate 
+                      ? format(new Date(evt.eventDate), 'd MMM yyyy')
+                      : '—';
+                    return (
+                      <span key={idx} className="flex items-center gap-1">
+                        <span className="font-medium">{label}:</span>
+                        <span className={evt.eventDate ? '' : 'text-muted-foreground'}>{dateStr}</span>
+                        {idx < keyEvents.length - 1 && <span className="text-muted-foreground mx-1">•</span>}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
