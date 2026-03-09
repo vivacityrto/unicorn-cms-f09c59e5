@@ -113,11 +113,11 @@ describe("EOS Rocks", () => {
   describe("Status Rollup Logic", () => {
     it("should identify off-track status as highest priority", () => {
       const statusPriority: Record<string, number> = {
-        Off_Track: 1,
-        At_Risk: 2,
-        On_Track: 3,
-        Not_Started: 4,
-        Complete: 5,
+        off_track: 1,
+        at_risk: 2,
+        on_track: 3,
+        not_started: 4,
+        complete: 5,
       };
 
       expect(statusPriority["Off_Track"]).toBeLessThan(statusPriority["At_Risk"]);
