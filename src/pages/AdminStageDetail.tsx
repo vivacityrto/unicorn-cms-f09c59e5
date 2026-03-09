@@ -1431,7 +1431,9 @@ export default function AdminStageDetail() {
                                 )}
                               </div>
                               {task.description && (
-                                <p className="text-sm text-muted-foreground mt-1 line-clamp-1" dangerouslySetInnerHTML={{ __html: task.description }} />
+                                <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                                  {task.description.replace(/<[^>]*>/g, '').slice(0, 120)}
+                                </p>
                               )}
                               <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
@@ -1514,7 +1516,9 @@ export default function AdminStageDetail() {
                             <div className="flex-1 min-w-0">
                               <span className="font-medium block">{task.name}</span>
                               {task.description && (
-                                <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                                <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                                  {task.description.replace(/<[^>]*>/g, '').slice(0, 120)}
+                                </p>
                               )}
                               {task.due_date_offset && (
                                 <span className="text-xs text-muted-foreground mt-1 block">
