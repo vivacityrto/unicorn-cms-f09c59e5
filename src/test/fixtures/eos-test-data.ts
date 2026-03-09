@@ -121,7 +121,7 @@ export const mockRocks = {
     id: "rock-individual-001",
     title: "Complete API Integration",
     rock_type: "Individual",
-    status: "On_Track",
+    status: "on_track",
     owner_id: mockVivacityUsers.teamMember.user_uuid,
     parent_rock_id: "rock-team-001",
     tenant_id: VIVACITY_TENANT_ID,
