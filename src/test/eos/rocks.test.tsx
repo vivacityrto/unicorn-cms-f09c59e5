@@ -27,11 +27,11 @@ describe("EOS Rocks", () => {
 
     it("should map UI-friendly status names", () => {
       const statusMapping: Record<string, string> = {
-        Not_Started: "Not Started",
-        On_Track: "On Track",
-        At_Risk: "At Risk",
-        Off_Track: "Off Track",
-        Complete: "Complete",
+        not_started: "Not Started",
+        on_track: "On Track",
+        at_risk: "At Risk",
+        off_track: "Off Track",
+        complete: "Complete",
       };
 
       Object.entries(statusMapping).forEach(([dbStatus, uiStatus]) => {
