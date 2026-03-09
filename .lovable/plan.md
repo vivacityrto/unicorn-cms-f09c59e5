@@ -1,52 +1,17 @@
+## Completed: Key Event Date Tracking for Recurring Stages
 
+Added `event_conducted_date` column to `stage_instances` and `is_key_event` flag to `staff_tasks`. When a staff task marked as key event is completed, a DB trigger auto-updates the parent stage's event conducted date. For recurring stages, the event date picker is shown regardless of completion status, allowing manual override.
 
-## Fix: Primary Contact Not Showing After Adding Users
+### Database Changes
+- `staff_tasks.is_key_event` (boolean, default false)
+- `stage_instances.event_conducted_date` (date, nullable)
+- Trigger `trg_staff_task_event_conducted` on `staff_task_instances` — auto-sets `event_conducted_date` when key-event task is completed
 
-### Root Cause
-
-The `invite-user` edge function creates `tenant_users` rows with `role: 'parent'` for Admin users but **does not set `primary_contact: true`**. The header and Manage Clients list both filter on `primary_contact = true`, so these contacts are invisible.
-
-**Evidence**: Tenant 7505 has Vanessa Kemper with `role = 'parent'` but `primary_contact = NULL`.
-
-### Changes
-
-**1. Edge function fix** (`supabase/functions/invite-user/index.ts`, line 291-295)
-
-Add `primary_contact: true` when role is `parent`:
-```ts
-.insert({
-  user_id: userUuid,
-  tenant_id: payload.tenant_id,
-  role: payload.unicorn_role === 'Admin' ? 'parent' : 'child',
-  primary_contact: payload.unicorn_role === 'Admin',
-})
-```
-
-**2. Database trigger** — safety net so any future insert/update that sets `role = 'parent'` automatically sets `primary_contact = true`:
-```sql
-CREATE OR REPLACE FUNCTION sync_primary_contact_on_role()
-RETURNS trigger AS $$
-BEGIN
-  IF NEW.role = 'parent' AND (NEW.primary_contact IS NULL OR NEW.primary_contact = false) THEN
-    NEW.primary_contact := true;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_sync_primary_contact
-  BEFORE INSERT OR UPDATE ON public.tenant_users
-  FOR EACH ROW EXECUTE FUNCTION sync_primary_contact_on_role();
-```
-
-**3. Backfill existing data** — fix all existing `parent` rows missing the flag:
-```sql
-UPDATE public.tenant_users
-SET primary_contact = true
-WHERE role = 'parent' AND (primary_contact IS NULL OR primary_contact = false);
-```
-
-### Files Modified
-- `supabase/functions/invite-user/index.ts` (add `primary_contact` field)
-- New SQL migration (trigger + backfill)
-
+### Frontend Changes
+- **StageDetailSection**: Shows "Event Conducted Date" picker for recurring stages regardless of status
+- **useStaffTaskInstances**: Includes `is_key_event` from staff_tasks
+- **useStageTemplateContent**: Includes `is_key_event` in StageTeamTask type
+- **StageStaffTasks**: Key badge (KeyRound icon) on tasks where `is_key_event = true`
+- **AdminStageDetail**: Toggle for `is_key_event` on team tasks (only visible for recurring stages)
+- **PackageStagesManager**: Passes `isRecurring` and `eventConductedDate` to StageDetailSection
+- **ClientTimeSummaryCard**: "Key Events" section showing latest event dates for recurring stages

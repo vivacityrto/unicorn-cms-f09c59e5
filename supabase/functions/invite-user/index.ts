@@ -292,6 +292,7 @@ serve(async (req) => {
           user_id: userUuid,
           tenant_id: payload.tenant_id,
           role: payload.unicorn_role === 'Admin' ? 'parent' : 'child',
+          primary_contact: payload.unicorn_role === 'Admin',
         });
 
       if (tuError) {
