@@ -318,7 +318,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                           onClick={() => savePackageInstance(entry.id)}
                           disabled={saving}
                         >
-                          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 text-green-600" />}
+                          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 text-primary" />}
                         </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEditing}>
                           <X className="h-3 w-3 text-destructive" />
