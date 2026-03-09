@@ -1,17 +1,12 @@
-## Completed: Key Event Date Tracking for Recurring Stages
-
-Added `event_conducted_date` column to `stage_instances` and `is_key_event` flag to `staff_tasks`. When a staff task marked as key event is completed, a DB trigger auto-updates the parent stage's event conducted date. For recurring stages, the event date picker is shown regardless of completion status, allowing manual override.
+## Completed: Package Burn-down Billable Split & Manage Clients Hours Column
 
 ### Database Changes
-- `staff_tasks.is_key_event` (boolean, default false)
-- `stage_instances.event_conducted_date` (date, nullable)
-- Trigger `trg_staff_task_event_conducted` on `staff_task_instances` — auto-sets `event_conducted_date` when key-event task is completed
+- `rpc_get_package_usage` now returns `billable_minutes_total` and `non_billable_minutes_total` fields
 
 ### Frontend Changes
-- **StageDetailSection**: Shows "Event Conducted Date" picker for recurring stages regardless of status
-- **useStaffTaskInstances**: Includes `is_key_event` from staff_tasks
-- **useStageTemplateContent**: Includes `is_key_event` in StageTeamTask type
-- **StageStaffTasks**: Key badge (KeyRound icon) on tasks where `is_key_event = true`
-- **AdminStageDetail**: Toggle for `is_key_event` on team tasks (only visible for recurring stages)
-- **PackageStagesManager**: Passes `isRecurring` and `eventConductedDate` to StageDetailSection
-- **ClientTimeSummaryCard**: "Key Events" section showing latest event dates for recurring stages
+- **PackageUsage interfaces** (`usePackageUsageQuery.tsx`, `usePackageUsage.tsx`): Added `billable_minutes_total` and `non_billable_minutes_total`
+- **ClientTimeSummaryCard**: Burn-down card now shows billable/non-billable breakdown line above the source (calendar/timer/manual) breakdown
+- **ManageTenants**: Added "Hours" column showing `used / included` (e.g. `36:00 / 56:00`) with colour coding at 80% (yellow) and 100% (red)
+
+### Data Fix Needed
+- Watto Training M-SAR package shows 49h but should be 56h — fix via Package Data Manager inline edit
