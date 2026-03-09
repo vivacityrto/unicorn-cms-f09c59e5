@@ -76,7 +76,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
         staffTaskIds.length > 0
           ? supabase
               .from('staff_tasks')
-              .select('id, name, description, order_number, is_recurring')
+              .select('id, name, description, order_number, is_recurring, is_key_event')
               .in('id', staffTaskIds)
           : Promise.resolve({ data: [], error: null }),
         assigneeIds.length > 0
