@@ -34,7 +34,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
   const [sourceFilter, setSourceFilter] = useState<'all' | 'calendar' | 'timer' | 'manual'>('all');
   const [keyEvents, setKeyEvents] = useState<{ stageName: string; eventDate: string }[]>([]);
 
-  // Fetch key event dates for recurring stages
+  // Fetch key event task dates for recurring stages
   useEffect(() => {
     async function fetchKeyEvents() {
       // Get active package instances for this tenant
@@ -48,21 +48,58 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
 
       const pkgInstanceIds = pkgInstances.map(p => p.id);
 
-      // Get stage_instances with event_conducted_date
-      const { data: stageData } = await (supabase
+      // Get stage_instances for recurring stages
+      const { data: stageInstances } = await (supabase
         .from('stage_instances' as any)
-        .select('id, stage_id, event_conducted_date, is_recurring')
+        .select('id, stage_id, is_recurring')
         .in('packageinstance_id', pkgInstanceIds)
-        .eq('is_recurring', true)
-        .not('event_conducted_date', 'is', null)) as { data: any[] | null };
+        .eq('is_recurring', true)) as { data: { id: number; stage_id: number; is_recurring: boolean }[] | null };
 
-      if (!stageData?.length) {
+      if (!stageInstances?.length) {
         setKeyEvents([]);
         return;
       }
 
+      const stageInstanceIds = stageInstances.map(si => si.id);
+
+      // Get task instances whose base staff_task is flagged as key_event and has a completion_date
+      const { data: taskInstances } = await (supabase
+        .from('staff_task_instances' as any)
+        .select('id, staff_task_id, stage_instance_id, completion_date')
+        .in('stage_instance_id', stageInstanceIds)
+        .not('completion_date', 'is', null)) as { data: { id: number; staff_task_id: number; stage_instance_id: number; completion_date: string }[] | null };
+
+      if (!taskInstances?.length) {
+        setKeyEvents([]);
+        return;
+      }
+
+      // Get the base staff_tasks to check is_key_event
+      const staffTaskIds = [...new Set(taskInstances.map(t => t.staff_task_id))];
+      const { data: staffTasks } = await supabase
+        .from('staff_tasks')
+        .select('id, is_key_event')
+        .in('id', staffTaskIds)
+        .eq('is_key_event', true);
+
+      if (!staffTasks?.length) {
+        setKeyEvents([]);
+        return;
+      }
+
+      const keyTaskIds = new Set(staffTasks.map(t => t.id));
+      const keyTaskInstances = taskInstances.filter(t => keyTaskIds.has(t.staff_task_id));
+
+      if (!keyTaskInstances.length) {
+        setKeyEvents([]);
+        return;
+      }
+
+      // Map stage_instance_id → stage_id
+      const siToStageId = new Map(stageInstances.map(si => [si.id, si.stage_id]));
+
       // Get unique stage IDs and fetch stage metadata
-      const stageIds = [...new Set(stageData.map(s => s.stage_id))] as number[];
+      const stageIds = [...new Set(keyTaskInstances.map(t => siToStageId.get(t.stage_instance_id)).filter(Boolean))] as number[];
       const { data: stagesMeta } = await supabase
         .from('stages')
         .select('id, shortname, name')
@@ -70,15 +107,17 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
 
       const stageMap = new Map((stagesMeta || []).map(s => [s.id, s]));
 
-      // Build key events list (take the most recent event per stage)
+      // Build key events: most recent completion_date per stage
       const eventsByStage = new Map<number, { stageName: string; eventDate: string }>();
-      for (const si of stageData) {
-        const meta = stageMap.get(si.stage_id);
-        const existing = eventsByStage.get(si.stage_id);
-        if (!existing || si.event_conducted_date > existing.eventDate) {
-          eventsByStage.set(si.stage_id, {
-            stageName: meta?.shortname || meta?.name || `Stage ${si.stage_id}`,
-            eventDate: si.event_conducted_date
+      for (const ti of keyTaskInstances) {
+        const stageId = siToStageId.get(ti.stage_instance_id);
+        if (!stageId) continue;
+        const meta = stageMap.get(stageId);
+        const existing = eventsByStage.get(stageId);
+        if (!existing || ti.completion_date > existing.eventDate) {
+          eventsByStage.set(stageId, {
+            stageName: meta?.shortname || meta?.name || `Stage ${stageId}`,
+            eventDate: ti.completion_date
           });
         }
       }
