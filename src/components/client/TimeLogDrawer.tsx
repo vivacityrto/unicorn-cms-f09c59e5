@@ -282,7 +282,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{formatDuration(entry.duration_minutes)}</span>
                       {entry.is_billable && (
-                        <DollarSign className="h-3 w-3 text-green-600" />
+                        <DollarSign className="h-3 w-3 text-primary" />
                       )}
                     </div>
                   </TableCell>
