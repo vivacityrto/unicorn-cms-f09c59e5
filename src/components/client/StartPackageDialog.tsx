@@ -280,9 +280,35 @@ export function StartPackageDialog({
                   </SelectContent>
                 </Select>
                 {attachToInstanceId && attachToInstanceId !== '__none__' && (
-                  <p className="text-xs text-muted-foreground">
-                    Hours from this package will be added to the parent's included hours and its time will roll into the parent burn-down.
-                  </p>
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Hours from this package will be added to the parent's included hours and its time will roll into the parent burn-down.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="hours">Hours</Label>
+                        <Input
+                          id="hours"
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={hoursUsed}
+                          onChange={(e) => setHoursUsed(e.target.value)}
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1 pt-1">
+                      <Label htmlFor="comments">Comments</Label>
+                      <Textarea
+                        id="comments"
+                        value={comments}
+                        onChange={(e) => setComments(e.target.value)}
+                        placeholder="e.g. Extra TAS days for Q2"
+                        rows={2}
+                      />
+                    </div>
+                  </>
                 )}
               </div>
             )}
