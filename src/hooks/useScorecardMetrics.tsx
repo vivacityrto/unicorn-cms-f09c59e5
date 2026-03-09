@@ -128,9 +128,9 @@ export function useScorecardMetrics(showArchived = false) {
       actor_user_id: profile.user_uuid,
       action,
       entity_type: 'scorecard_metric',
-      entity_id: entityId,
-      details: details || {},
-    });
+      entity_id: String(entityId),
+      details: (details || {}) as never,
+    } as never);
   };
 
   const createMetric = useMutation({
