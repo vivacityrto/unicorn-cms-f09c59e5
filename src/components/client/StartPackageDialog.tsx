@@ -200,6 +200,8 @@ export function StartPackageDialog({
     setSelectedPackageId('');
     setSelectedCscId('');
     setAttachToInstanceId('');
+    setComments('');
+    setHoursUsed('');
     onOpenChange(false);
   };
 
