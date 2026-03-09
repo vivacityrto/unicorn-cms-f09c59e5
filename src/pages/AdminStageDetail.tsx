@@ -1439,6 +1439,22 @@ export default function AdminStageDetail() {
                                 )}
                               </div>
                             </div>
+                            {/* Key Event toggle - only show for recurring stages */}
+                            {(stage as any)?.is_recurring && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn("h-7 w-7", task.is_key_event && "text-amber-500")}
+                                onClick={() => wrapCertifiedAction(async () => {
+                                  const newVal = !task.is_key_event;
+                                  await updateTeamTask(task.id, { is_key_event: newVal } as any);
+                                  toast({ title: newVal ? 'Marked as key event' : 'Removed key event flag' });
+                                })}
+                                title={task.is_key_event ? 'Remove key event flag' : 'Mark as key event'}
+                              >
+                                <KeyRound className="h-3 w-3" />
+                              </Button>
+                            )}
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => openEditTeamTask(task))}>
                               <Pencil className="h-3 w-3" />
                             </Button>
