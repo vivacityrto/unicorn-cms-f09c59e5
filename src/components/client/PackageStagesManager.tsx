@@ -56,6 +56,7 @@ interface StageInstance {
   paid: boolean;
   released_client_tasks: boolean;
   is_recurring: boolean;
+  event_conducted_date: string | null;
 }
 
 interface PackageStagesManagerProps {
