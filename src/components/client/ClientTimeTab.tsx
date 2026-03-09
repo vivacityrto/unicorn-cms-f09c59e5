@@ -176,8 +176,13 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
         .in('package_instance_id', activeIds);
       if (bdErr) throw bdErr;
 
-      const instanceIds = (burndownData || []).map(r => r.package_instance_id).filter(Boolean) as number[];
+      // Use activeIds as primary source so packages without time entries still appear
+      const instanceIds = activeIds as number[];
       if (instanceIds.length === 0) return [];
+
+      // Index burndown data by instance id for fast lookup
+      const burndownMap: Record<number, any> = {};
+      (burndownData || []).forEach((r: any) => { if (r.package_instance_id) burndownMap[r.package_instance_id] = r; });
 
       const { fullTextMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
@@ -222,19 +227,22 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
       });
       Object.values(monthlyMap).forEach(arr => arr.sort((a, b) => a.month.localeCompare(b.month)));
 
-      return (burndownData || []).map(row => ({
-        package_instance_id: row.package_instance_id,
-        package_name: fullTextMap[row.package_instance_id!] || 'Unknown',
-        lifecycle: lifecycleMap[row.package_instance_id!] || { start_date: null, end_date: null },
-        renewalWindow: renewalWindowMap[row.package_instance_id!] || null,
-        used_minutes: row.used_minutes ?? 0,
-        included_minutes: row.included_minutes ?? 0,
-        remaining_minutes: row.remaining_minutes ?? 0,
-        percent_used: row.percent_used ?? 0,
-        monthly: monthlyMap[row.package_instance_id!] || [],
-        totals: instanceTotals[row.package_instance_id!] || { billable: 0, nonBillable: 0, total: 0, lastEntry: null },
-        addons: childrenByParent[row.package_instance_id!] || [],
-      }));
+      return instanceIds.map(instId => {
+        const row = burndownMap[instId] || {};
+        return {
+          package_instance_id: instId,
+          package_name: fullTextMap[instId] || 'Unknown',
+          lifecycle: lifecycleMap[instId] || { start_date: null, end_date: null },
+          renewalWindow: renewalWindowMap[instId] || null,
+          used_minutes: row.used_minutes ?? 0,
+          included_minutes: row.included_minutes ?? 0,
+          remaining_minutes: row.remaining_minutes ?? 0,
+          percent_used: row.percent_used ?? 0,
+          monthly: monthlyMap[instId] || [],
+          totals: instanceTotals[instId] || { billable: 0, nonBillable: 0, total: 0, lastEntry: null },
+          addons: childrenByParent[instId] || [],
+        };
+      });
     },
   });
 
