@@ -52,6 +52,7 @@ import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 // Stage types loaded dynamically via useStageTypeOptions hook
 
