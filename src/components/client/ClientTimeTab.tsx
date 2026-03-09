@@ -979,10 +979,14 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     if (workTypeFilter !== 'all') {
       result = result.filter(e => e.work_type === workTypeFilter);
     }
+    // Apply explicit date filters
     if (dateFrom) {
       const fromStart = new Date(dateFrom);
       fromStart.setHours(0, 0, 0, 0);
       result = result.filter(e => e.start_at && new Date(e.start_at) >= fromStart);
+    } else if (!showAllEntries && renewalWindow) {
+      // Default to current renewal period
+      result = result.filter(e => e.start_at && new Date(e.start_at) >= renewalWindow);
     }
     if (dateTo) {
       const toEnd = new Date(dateTo);
@@ -994,7 +998,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       const db = b.start_at ? new Date(b.start_at).getTime() : 0;
       return db - da;
     });
-  }, [entries, packageFilter, workTypeFilter, dateFrom, dateTo]);
+  }, [entries, packageFilter, workTypeFilter, dateFrom, dateTo, showAllEntries, renewalWindow]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
