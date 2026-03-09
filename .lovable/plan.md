@@ -1,17 +1,23 @@
-## Completed: Key Event Date Tracking for Recurring Stages
 
-Added `event_conducted_date` column to `stage_instances` and `is_key_event` flag to `staff_tasks`. When a staff task marked as key event is completed, a DB trigger auto-updates the parent stage's event conducted date. For recurring stages, the event date picker is shown regardless of completion status, allowing manual override.
 
-### Database Changes
-- `staff_tasks.is_key_event` (boolean, default false)
-- `stage_instances.event_conducted_date` (date, nullable)
-- Trigger `trg_staff_task_event_conducted` on `staff_task_instances` — auto-sets `event_conducted_date` when key-event task is completed
+## Fix: Key Event Toggle Visibility and Visual Indicator
 
-### Frontend Changes
-- **StageDetailSection**: Shows "Event Conducted Date" picker for recurring stages regardless of status
-- **useStaffTaskInstances**: Includes `is_key_event` from staff_tasks
-- **useStageTemplateContent**: Includes `is_key_event` in StageTeamTask type
-- **StageStaffTasks**: Key badge (KeyRound icon) on tasks where `is_key_event = true`
-- **AdminStageDetail**: Toggle for `is_key_event` on team tasks (only visible for recurring stages)
-- **PackageStagesManager**: Passes `isRecurring` and `eventConductedDate` to StageDetailSection
-- **ClientTimeSummaryCard**: "Key Events" section showing latest event dates for recurring stages
+### Issues
+1. The key event toggle is currently visible for **all** stages — it should only show for **recurring** stages.
+2. When a task is flagged as a key event, the toggle button doesn't look distinct enough — needs a coloured key icon so it's obvious at a glance.
+3. The "single key event per stage" enforcement should be removed — multiple key events per stage are valid.
+
+### Changes
+
+**`src/pages/AdminStageDetail.tsx`**:
+- Wrap the KeyRound toggle button in a condition: only render when `(stage as any).is_recurring === true`
+- Remove the logic that clears other key events when toggling one on (lines 1450-1455)
+- Make the KeyRound icon use a vivid brand colour when active: `text-primary` (purple) instead of `text-amber-500`, so the key visually "lights up" when selected
+- The existing amber badge next to the task name is fine for confirming the state
+
+**`src/components/client/StageStaffTasks.tsx`**:
+- No changes needed — the key badge already only renders when `is_key_event` is true
+
+### Files
+- `src/pages/AdminStageDetail.tsx` — conditional visibility, remove single-key-event enforcement, coloured key icon
+
