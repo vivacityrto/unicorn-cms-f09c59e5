@@ -915,6 +915,24 @@ export default function ManageTenants() {
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                      {(() => {
+                        const used = tenant.hours_used_minutes || 0;
+                        const included = tenant.hours_included_minutes || 0;
+                        if (included === 0 && used === 0) return <span className="text-xs text-muted-foreground">—</span>;
+                        const usedH = Math.floor(used / 60);
+                        const usedM = Math.round(used % 60);
+                        const inclH = Math.floor(included / 60);
+                        const inclM = Math.round(included % 60);
+                        const pct = included > 0 ? (used / included) * 100 : 0;
+                        const colorClass = pct >= 100 ? 'text-destructive' : pct >= 80 ? 'text-yellow-600' : '';
+                        return (
+                          <span className={cn("text-sm font-medium", colorClass)}>
+                            {usedH}:{usedM.toString().padStart(2, '0')} / {inclH}:{inclM.toString().padStart(2, '0')}
+                          </span>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       {tenant.complyhub_membership_tier ? (
                         <Badge variant="outline" className="gap-1 border-primary/30 text-primary">
                           {tenant.complyhub_membership_tier}
