@@ -233,6 +233,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
         percent_used: row.percent_used ?? 0,
         monthly: monthlyMap[row.package_instance_id!] || [],
         totals: instanceTotals[row.package_instance_id!] || { billable: 0, nonBillable: 0, total: 0, lastEntry: null },
+        addons: childrenByParent[row.package_instance_id!] || [],
       }));
     },
   });
