@@ -52,6 +52,7 @@ interface Tenant {
   next_renewal_date?: string | null;
   last_note_date?: string | null;
   last_note_snippet?: string | null;
+  primary_contact_name?: string | null;
 }
 
 interface CSCFilterOption {
