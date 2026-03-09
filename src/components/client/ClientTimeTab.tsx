@@ -176,8 +176,13 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
         .in('package_instance_id', activeIds);
       if (bdErr) throw bdErr;
 
-      const instanceIds = (burndownData || []).map(r => r.package_instance_id).filter(Boolean) as number[];
+      // Use activeIds as primary source so packages without time entries still appear
+      const instanceIds = activeIds as number[];
       if (instanceIds.length === 0) return [];
+
+      // Index burndown data by instance id for fast lookup
+      const burndownMap: Record<number, any> = {};
+      (burndownData || []).forEach((r: any) => { if (r.package_instance_id) burndownMap[r.package_instance_id] = r; });
 
       const { fullTextMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
