@@ -332,6 +332,7 @@ export default function ManageTenants() {
           next_renewal_date: tenantRenewalMap[tenant.id] || null,
           last_note_date: lastNoteMap[tenant.id]?.date || null,
           last_note_snippet: lastNoteMap[tenant.id]?.snippet || null,
+          primary_contact_name: primaryContactMap[tenant.id] || null,
           // Override name prefix: if they have a KS, prepend KS indicator
           _hasKickStart: hasKickStart,
         } as any;
