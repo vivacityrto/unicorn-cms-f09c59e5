@@ -1976,7 +1976,7 @@ export default function AdminStageDetail() {
 
       {/* Edit Team Task Dialog */}
       <Dialog open={!!editingTeamTask} onOpenChange={(open) => !open && setEditingTeamTask(null)}>
-        <DialogContent className="max-w-6xl max-h-[90vh]">
+        <DialogContent className="!w-[min(92vw,72rem)] max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Edit Team Task</DialogTitle>
             <DialogDescription>Update task details.</DialogDescription>
