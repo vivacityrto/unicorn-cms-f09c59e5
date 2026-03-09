@@ -1431,7 +1431,7 @@ export default function AdminStageDetail() {
                                 )}
                               </div>
                               {task.description && (
-                                <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                                <p className="text-sm text-muted-foreground mt-1 line-clamp-1" dangerouslySetInnerHTML={{ __html: task.description }} />
                               )}
                               <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
