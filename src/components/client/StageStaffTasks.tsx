@@ -129,6 +129,14 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId, packageI
                   )}>
                     {cleanName}
                   </p>
+                  {task.is_key_event && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <KeyRound className="h-3 w-3 text-amber-500 shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">Key event — drives milestone date</TooltipContent>
+                    </Tooltip>
+                  )}
                   <TaskDescriptionButton taskName={cleanName} description={task.task_description} />
                   {task.notes && (
                     <Tooltip>
