@@ -78,7 +78,8 @@ export function MetricEditorDialogV2({
     profile?.unicorn_role || '',
   );
   const { data: vivacityUsers = [] } = useVivacityTeamUsers();
-  const { users: tenantUsers = [] } = useTenantUsers();
+  const { users: tenantUsersRaw } = useTenantUsers();
+  const tenantUsers = tenantUsersRaw || [];
   const users = isVivacityTeam ? vivacityUsers : tenantUsers;
 
   // Form state
