@@ -56,6 +56,7 @@ interface StageInstance {
   paid: boolean;
   released_client_tasks: boolean;
   is_recurring: boolean;
+  event_conducted_date: string | null;
 }
 
 interface PackageStagesManagerProps {
@@ -177,6 +178,8 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
             completionDate={stage.completion_date}
             comment={stage.comment}
             stageStatus={typeof stage.status === 'number' ? stage.status : 0}
+            isRecurring={stage.is_recurring}
+            eventConductedDate={stage.event_conducted_date}
             onUpdate={onUpdate}
           />
           <Tabs defaultValue="staff-tasks" className="border-t">
@@ -321,7 +324,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       // Fetch stage_instances for this package_instance
       const stageResult = await (supabase
         .from('stage_instances' as any)
-        .select('id, stage_id, status, status_date, completion_date, comment, paid, released_client_tasks, is_recurring')
+        .select('id, stage_id, status, status_date, completion_date, comment, paid, released_client_tasks, is_recurring, event_conducted_date')
         .eq('packageinstance_id', resolvedInstanceId)
         .order('stage_sortorder')) as { data: Array<{ id: number; stage_id: number; status: string | null; completion_date: string | null; paid: boolean | null; released_client_tasks: boolean | null }> | null; error: any };
       
@@ -367,6 +370,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
           paid: row.paid ?? false,
           released_client_tasks: row.released_client_tasks ?? false,
           is_recurring: row.is_recurring ?? false,
+          event_conducted_date: row.event_conducted_date || null,
         };
       });
 

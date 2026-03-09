@@ -31022,6 +31022,7 @@ export type Database = {
           due_date_offset: number | null
           id: number
           is_core: boolean
+          is_key_event: boolean
           is_recurring: boolean
           name: string | null
           order_number: number
@@ -31032,6 +31033,7 @@ export type Database = {
           due_date_offset?: number | null
           id?: number
           is_core?: boolean
+          is_key_event?: boolean
           is_recurring?: boolean
           name?: string | null
           order_number: number
@@ -31042,6 +31044,7 @@ export type Database = {
           due_date_offset?: number | null
           id?: number
           is_core?: boolean
+          is_key_event?: boolean
           is_recurring?: boolean
           name?: string | null
           order_number?: number
@@ -31325,6 +31328,7 @@ export type Database = {
         Row: {
           comment: string | null
           completion_date: string | null
+          event_conducted_date: string | null
           id: number
           is_recurring: boolean
           packageinstance_id: number
@@ -31340,6 +31344,7 @@ export type Database = {
         Insert: {
           comment?: string | null
           completion_date?: string | null
+          event_conducted_date?: string | null
           id?: number
           is_recurring?: boolean
           packageinstance_id: number
@@ -31355,6 +31360,7 @@ export type Database = {
         Update: {
           comment?: string | null
           completion_date?: string | null
+          event_conducted_date?: string | null
           id?: number
           is_recurring?: boolean
           packageinstance_id?: number

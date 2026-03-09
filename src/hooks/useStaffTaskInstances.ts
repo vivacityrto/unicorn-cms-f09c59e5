@@ -13,6 +13,7 @@ export interface StaffTaskInstance {
   status_id: number;
   is_core: boolean;
   is_recurring: boolean;
+  is_key_event: boolean;
   due_date: string | null;
   completion_date: string | null;
   completed_by: string | null;
@@ -75,7 +76,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
         staffTaskIds.length > 0
           ? supabase
               .from('staff_tasks')
-              .select('id, name, description, order_number, is_recurring')
+              .select('id, name, description, order_number, is_recurring, is_key_event')
               .in('id', staffTaskIds)
           : Promise.resolve({ data: [], error: null }),
         assigneeIds.length > 0
@@ -90,7 +91,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
       if (usersResult.error) throw usersResult.error;
 
       // Create lookup maps with proper typing
-      type TaskMeta = { id: number; name: string; description: string | null; order_number: number | null; is_recurring: boolean | null };
+      type TaskMeta = { id: number; name: string; description: string | null; order_number: number | null; is_recurring: boolean | null; is_key_event: boolean | null };
       type UserMeta = { user_uuid: string; first_name: string | null; last_name: string | null; avatar_url: string | null };
       
       const taskMap = new Map<number, TaskMeta>(
@@ -114,6 +115,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
           status_id: row.status_id ?? 0,
           is_core: row.is_core ?? true,
           is_recurring: taskMeta?.is_recurring ?? false,
+          is_key_event: taskMeta?.is_key_event ?? false,
           due_date: row.due_date,
           completion_date: row.completion_date,
           completed_by: row.completed_by,

@@ -37,7 +37,7 @@ import {
   ArrowLeft, Layers, ShieldCheck, ShieldX, Settings, Users, CheckSquare, 
   Mail, FileText, BarChart3, History, Copy, AlertTriangle, Plus, Trash2, 
   User, Clock, GripVertical, Package, Info, Loader2, RefreshCw, ExternalLink,
-  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2, Globe, Play, Pencil
+  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2, Globe, Play, Pencil, KeyRound
 } from 'lucide-react';
 import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTab';
 import { StageQualityPanel, StageQualityBadge } from '@/components/stage/StageQualityPanel';
@@ -51,6 +51,7 @@ import { StageImpactPanel } from '@/components/package-builder/StageImpactPanel'
 import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 // Stage types loaded dynamically via useStageTypeOptions hook
 
@@ -1413,6 +1414,12 @@ export default function AdminStageDetail() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{task.name}</span>
+                                {task.is_key_event && (
+                                  <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-700 gap-0.5">
+                                    <KeyRound className="h-2.5 w-2.5" />
+                                    Key Event
+                                  </Badge>
+                                )}
                                 {task.is_mandatory && (
                                   <Badge variant="secondary" className="text-xs">Required</Badge>
                                 )}
@@ -1433,6 +1440,22 @@ export default function AdminStageDetail() {
                                 )}
                               </div>
                             </div>
+                            {/* Key Event toggle - only show for recurring stages */}
+                            {(stage as any)?.is_recurring && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn("h-7 w-7", task.is_key_event && "text-amber-500")}
+                                onClick={() => wrapCertifiedAction(async () => {
+                                  const newVal = !task.is_key_event;
+                                  await updateTeamTask(task.id, { is_key_event: newVal } as any);
+                                  toast({ title: newVal ? 'Marked as key event' : 'Removed key event flag' });
+                                })}
+                                title={task.is_key_event ? 'Remove key event flag' : 'Mark as key event'}
+                              >
+                                <KeyRound className="h-3 w-3" />
+                              </Button>
+                            )}
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => openEditTeamTask(task))}>
                               <Pencil className="h-3 w-3" />
                             </Button>

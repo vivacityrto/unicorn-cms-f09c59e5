@@ -14,6 +14,7 @@ export interface StageTeamTask {
   is_mandatory: boolean;
   is_core: boolean;
   is_recurring: boolean;
+  is_key_event: boolean;
   due_date_offset: number | null;
 }
 
@@ -134,6 +135,7 @@ export function useStageTemplateContent(stageId: number | null) {
         is_mandatory: true,
         is_core: t.is_core ?? true,
         is_recurring: t.is_recurring ?? false,
+        is_key_event: t.is_key_event ?? false,
         due_date_offset: t.due_date_offset,
       })));
       setClientTasks((clientResult.data || []) as unknown as StageClientTask[]);

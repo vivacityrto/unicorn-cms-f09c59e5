@@ -2,15 +2,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine, ChevronDown } from 'lucide-react';
+import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine, ChevronDown, KeyRound } from 'lucide-react';
 import { useTimeTrackingQuery, formatDuration } from '@/hooks/useTimeTrackingQuery';
 import { usePackageUsageQuery, formatHours, formatForecast } from '@/hooks/usePackageUsageQuery';
 import { useMembershipUsage } from '@/hooks/useCapacityEngine';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TimeLogDrawer } from './TimeLogDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 interface ClientTimeSummaryCardProps {
   clientId: number;
@@ -30,6 +32,61 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
   const { data: membershipUsage } = useMembershipUsage(clientId);
   const [logOpen, setLogOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'calendar' | 'timer' | 'manual'>('all');
+  const [keyEvents, setKeyEvents] = useState<{ stageName: string; eventDate: string }[]>([]);
+
+  // Fetch key event dates for recurring stages
+  useEffect(() => {
+    async function fetchKeyEvents() {
+      // Get active package instances for this tenant
+      const { data: pkgInstances } = await (supabase
+        .from('package_instances' as any)
+        .select('id')
+        .eq('tenant_id', clientId)
+        .in('status', ['active', 'in_progress'])) as { data: { id: number }[] | null };
+
+      if (!pkgInstances?.length) return;
+
+      const pkgInstanceIds = pkgInstances.map(p => p.id);
+
+      // Get stage_instances with event_conducted_date
+      const { data: stageData } = await (supabase
+        .from('stage_instances' as any)
+        .select('id, stage_id, event_conducted_date, is_recurring')
+        .in('packageinstance_id', pkgInstanceIds)
+        .eq('is_recurring', true)
+        .not('event_conducted_date', 'is', null)) as { data: any[] | null };
+
+      if (!stageData?.length) {
+        setKeyEvents([]);
+        return;
+      }
+
+      // Get unique stage IDs and fetch stage metadata
+      const stageIds = [...new Set(stageData.map(s => s.stage_id))] as number[];
+      const { data: stagesMeta } = await supabase
+        .from('stages')
+        .select('id, shortname, name')
+        .in('id', stageIds);
+
+      const stageMap = new Map((stagesMeta || []).map(s => [s.id, s]));
+
+      // Build key events list (take the most recent event per stage)
+      const eventsByStage = new Map<number, { stageName: string; eventDate: string }>();
+      for (const si of stageData) {
+        const meta = stageMap.get(si.stage_id);
+        const existing = eventsByStage.get(si.stage_id);
+        if (!existing || si.event_conducted_date > existing.eventDate) {
+          eventsByStage.set(si.stage_id, {
+            stageName: meta?.shortname || meta?.name || `Stage ${si.stage_id}`,
+            eventDate: si.event_conducted_date
+          });
+        }
+      }
+
+      setKeyEvents(Array.from(eventsByStage.values()).sort((a, b) => b.eventDate.localeCompare(a.eventDate)));
+    }
+    fetchKeyEvents();
+  }, [clientId]);
 
   const loading = timeLoading || usageLoading;
 
@@ -141,6 +198,24 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                 <p className="text-xs text-muted-foreground">
                   Membership year: {new Date(membershipUsage.membership_year_start).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} — {new Date(membershipUsage.membership_year_end).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
+              </div>
+            )}
+
+            {/* Key Events */}
+            {keyEvents.length > 0 && (
+              <div className="mt-4 pt-3 border-t">
+                <p className="text-xs font-medium flex items-center gap-1 mb-2">
+                  <KeyRound className="h-3 w-3 text-amber-500" />
+                  Key Events
+                </p>
+                <div className="space-y-1">
+                  {keyEvents.map((evt, idx) => (
+                    <div key={idx} className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Last {evt.stageName}</span>
+                      <span>{format(new Date(evt.eventDate), 'd MMM yyyy')}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>

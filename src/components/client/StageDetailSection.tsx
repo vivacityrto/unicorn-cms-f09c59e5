@@ -18,6 +18,8 @@ interface StageDetailSectionProps {
   completionDate: string | null;
   comment: string | null;
   stageStatus: number;
+  isRecurring?: boolean;
+  eventConductedDate?: string | null;
   onUpdate: () => void;
 }
 
@@ -32,6 +34,8 @@ export function StageDetailSection({
   completionDate,
   comment,
   stageStatus,
+  isRecurring = false,
+  eventConductedDate,
   onUpdate
 }: StageDetailSectionProps) {
   const { toast } = useToast();
@@ -39,17 +43,26 @@ export function StageDetailSection({
   
   // Normalize legacy null dates
   const normalizedDate = completionDate === LEGACY_NULL_DATE ? null : completionDate;
+  const normalizedEventDate = eventConductedDate === LEGACY_NULL_DATE ? null : (eventConductedDate || null);
   
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     normalizedDate ? new Date(normalizedDate) : (stageStatus === 3 ? new Date() : undefined)
   );
+  const [selectedEventDate, setSelectedEventDate] = useState<Date | undefined>(
+    normalizedEventDate ? new Date(normalizedEventDate) : undefined
+  );
   const [commentText, setCommentText] = useState(comment || '');
   const [saving, setSaving] = useState(false);
+  const [savingEvent, setSavingEvent] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [eventCalendarOpen, setEventCalendarOpen] = useState(false);
 
   const hasChanges = 
     (selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null) !== normalizedDate ||
     commentText !== (comment || '');
+
+  const hasEventDateChange =
+    (selectedEventDate ? format(selectedEventDate, 'yyyy-MM-dd') : null) !== normalizedEventDate;
 
   const handleSave = async () => {
     setSaving(true);
@@ -89,70 +102,165 @@ export function StageDetailSection({
     }
   };
 
-  // Only show completion details when stage is marked Complete (status 3)
-  if (stageStatus !== 3) return null;
+  const handleSaveEventDate = async () => {
+    setSavingEvent(true);
+    try {
+      const oldData = { event_conducted_date: normalizedEventDate };
+      const newData = {
+        event_conducted_date: selectedEventDate ? format(selectedEventDate, 'yyyy-MM-dd') : null
+      };
+
+      const { error } = await supabase
+        .from('stage_instances')
+        .update(newData)
+        .eq('id', stageInstanceId);
+
+      if (error) throw error;
+
+      await supabase.from('client_audit_log').insert({
+        tenant_id: tenantId,
+        actor_user_id: profile?.user_uuid,
+        action: 'event_conducted_date_updated',
+        entity_type: 'stage_instances',
+        entity_id: stageInstanceId.toString(),
+        before_data: oldData,
+        after_data: newData,
+        details: { package_id: packageId, stage_id: stageId }
+      });
+
+      toast({ title: 'Event date saved' });
+      onUpdate();
+    } catch (error: any) {
+      console.error('Error saving event date:', error);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingEvent(false);
+    }
+  };
+
+  // Show event date picker for recurring stages regardless of completion status
+  const showEventDateOnly = isRecurring && stageStatus !== 3;
+  // Show completion details when stage is marked Complete (status 3)
+  const showCompletionDetails = stageStatus === 3;
+
+  if (!showEventDateOnly && !showCompletionDetails) return null;
 
   return (
     <div className="space-y-4 p-4 bg-muted/30 border-t">
-      <div className="grid gap-4 sm:grid-cols-2">
-        {/* Completion Date */}
+      {/* Event Conducted Date — shown for all recurring stages */}
+      {isRecurring && (
         <div className="space-y-2">
-          <label className="text-sm font-medium">Completion Date</label>
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !selectedDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, 'PPP') : 'Select date...'}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => {
-                  setSelectedDate(date);
-                  setCalendarOpen(false);
-                }}
-                initialFocus
-                className="p-3 pointer-events-auto"
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium">Event Conducted Date</label>
+            <span className="text-xs text-muted-foreground">Actual date this event was performed</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Popover open={eventCalendarOpen} onOpenChange={setEventCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[240px] justify-start text-left font-normal",
+                    !selectedEventDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedEventDate ? format(selectedEventDate, 'PPP') : 'Select date...'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedEventDate}
+                  onSelect={(date) => {
+                    setSelectedEventDate(date);
+                    setEventCalendarOpen(false);
+                  }}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            <Button
+              onClick={handleSaveEventDate}
+              disabled={!hasEventDateChange || savingEvent}
+              size="sm"
+            >
+              {savingEvent ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-1" />
+              )}
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Completion details — only when status is Complete */}
+      {showCompletionDetails && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Completion Date */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Completion Date</label>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, 'PPP') : 'Select date...'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      setSelectedDate(date);
+                      setCalendarOpen(false);
+                    }}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Comment */}
+            <div className="space-y-2 sm:col-span-2">
+              <label className="text-sm font-medium">Comment</label>
+              <Textarea
+                placeholder="Add notes about this stage..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                rows={3}
               />
-            </PopoverContent>
-          </Popover>
-        </div>
+            </div>
+          </div>
 
-        {/* Comment */}
-        <div className="space-y-2 sm:col-span-2">
-          <label className="text-sm font-medium">Comment</label>
-          <Textarea
-            placeholder="Add notes about this stage..."
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            rows={3}
-          />
-        </div>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button 
-          onClick={handleSave} 
-          disabled={!hasChanges || saving}
-          size="sm"
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          Save Details
-        </Button>
-      </div>
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button 
+              onClick={handleSave} 
+              disabled={!hasChanges || saving}
+              size="sm"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save Details
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
