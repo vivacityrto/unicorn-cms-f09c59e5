@@ -266,7 +266,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   );
 }
 
-function BurndownCard({ row }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; renewalWindow: { start: string; end: string } | null; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null } } }) {
+function BurndownCard({ row }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; renewalWindow: { start: string; end: string } | null; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null }; addons: { name: string; hours: number }[] } }) {
   const [monthLimit, setMonthLimit] = useState(3);
   const [showAll, setShowAll] = useState(false);
   const pct = row.percent_used;
