@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle } from 'lucide-react';
 import { useEosRocks, useEosIssues } from '@/hooks/useEos';
-import { getStatusOptions, dbToUiStatus, uiToDbStatus } from '@/utils/rockStatusUtils';
+import { dbToUiStatus } from '@/utils/rockStatusUtils';
+import { useRockStatusOptions } from '@/hooks/useRockStatusOptions';
 import type { EosRock } from '@/types/eos';
 
 interface RockProgressControlProps {
@@ -11,11 +12,10 @@ interface RockProgressControlProps {
   compact?: boolean;
 }
 
-const statusOptions = getStatusOptions();
-
 export function RockProgressControl({ rock, compact = false }: RockProgressControlProps) {
   const { updateRock } = useEosRocks();
   const { createIssue } = useEosIssues();
+  const { statuses } = useRockStatusOptions();
   const [status, setStatus] = useState(rock.status);
 
   const handleStatusChange = async (newStatus: string) => {
@@ -38,6 +38,16 @@ export function RockProgressControl({ rock, compact = false }: RockProgressContr
   };
 
   const isOffTrack = dbToUiStatus(status) === 'off_track';
+
+  const statusOptions = statuses.length > 0
+    ? statuses.map(s => ({ value: s.value, label: s.label }))
+    : [
+        { value: 'not_started', label: 'Not Started' },
+        { value: 'on_track', label: 'On Track' },
+        { value: 'at_risk', label: 'At Risk' },
+        { value: 'off_track', label: 'Off Track' },
+        { value: 'complete', label: 'Complete' },
+      ];
 
   if (compact) {
     return (
