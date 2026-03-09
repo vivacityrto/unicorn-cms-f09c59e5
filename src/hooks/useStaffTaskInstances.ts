@@ -115,6 +115,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
           status_id: row.status_id ?? 0,
           is_core: row.is_core ?? true,
           is_recurring: taskMeta?.is_recurring ?? false,
+          is_key_event: taskMeta?.is_key_event ?? false,
           due_date: row.due_date,
           completion_date: row.completion_date,
           completed_by: row.completed_by,

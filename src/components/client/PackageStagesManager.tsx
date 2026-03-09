@@ -178,6 +178,8 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
             completionDate={stage.completion_date}
             comment={stage.comment}
             stageStatus={typeof stage.status === 'number' ? stage.status : 0}
+            isRecurring={stage.is_recurring}
+            eventConductedDate={stage.event_conducted_date}
             onUpdate={onUpdate}
           />
           <Tabs defaultValue="staff-tasks" className="border-t">
