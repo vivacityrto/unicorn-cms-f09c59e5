@@ -1305,7 +1305,7 @@ export default function AdminStageDetail() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Switch
-                      checked={(stage as any).is_recurring ?? false}
+                      checked={(stage as any)?.is_recurring ?? false}
                       onCheckedChange={async (checked) => {
                         try {
                           const { data, error } = await supabase.rpc('cascade_stage_recurring', {
