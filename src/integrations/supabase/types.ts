@@ -18692,6 +18692,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          description: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -18701,6 +18702,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          description?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -18710,6 +18712,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          description?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -18720,37 +18723,52 @@ export type Database = {
       }
       eos_scorecard_entries: {
         Row: {
+          actual_value: number | null
+          created_by: string | null
           entered_at: string
           entered_by: string
+          entry_source: string
           id: string
           metric_id: string
           notes: string | null
           recorded_by: string | null
+          status: string | null
           tenant_id: number
+          updated_at: string | null
           value: number
           week_ending: string
           workspace_id: string | null
         }
         Insert: {
+          actual_value?: number | null
+          created_by?: string | null
           entered_at?: string
           entered_by: string
+          entry_source?: string
           id?: string
           metric_id: string
           notes?: string | null
           recorded_by?: string | null
+          status?: string | null
           tenant_id: number
+          updated_at?: string | null
           value: number
           week_ending: string
           workspace_id?: string | null
         }
         Update: {
+          actual_value?: number | null
+          created_by?: string | null
           entered_at?: string
           entered_by?: string
+          entry_source?: string
           id?: string
           metric_id?: string
           notes?: string | null
           recorded_by?: string | null
+          status?: string | null
           tenant_id?: number
+          updated_at?: string | null
           value?: number
           week_ending?: string
           workspace_id?: string | null
@@ -18776,15 +18794,19 @@ export type Database = {
         Row: {
           category: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           direction: string | null
           display_order: number
+          example_result: string | null
           frequency: string
           goal_value: number
           id: string
           is_active: boolean
           is_archived: boolean | null
+          metric_key: string | null
           metric_name: string
+          metric_source: string
           name: string
           order_index: number
           owner_id: string | null
@@ -18798,15 +18820,19 @@ export type Database = {
         Insert: {
           category?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           direction?: string | null
           display_order?: number
+          example_result?: string | null
           frequency?: string
           goal_value: number
           id?: string
           is_active?: boolean
           is_archived?: boolean | null
+          metric_key?: string | null
           metric_name: string
+          metric_source?: string
           name: string
           order_index?: number
           owner_id?: string | null
@@ -18820,15 +18846,19 @@ export type Database = {
         Update: {
           category?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           direction?: string | null
           display_order?: number
+          example_result?: string | null
           frequency?: string
           goal_value?: number
           id?: string
           is_active?: boolean
           is_archived?: boolean | null
+          metric_key?: string | null
           metric_name?: string
+          metric_source?: string
           name?: string
           order_index?: number
           owner_id?: string | null
@@ -29417,6 +29447,53 @@ export type Database = {
             columns: ["champion_id"]
             isOneToOne: false
             referencedRelation: "sch_champion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scorecard_metric_automation_rules: {
+        Row: {
+          created_at: string
+          id: string
+          is_enabled: boolean
+          last_run_at: string | null
+          last_run_status: string | null
+          metric_id: string
+          source_config: Json
+          source_type: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          last_run_at?: string | null
+          last_run_status?: string | null
+          metric_id: string
+          source_config?: Json
+          source_type: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          last_run_at?: string | null
+          last_run_status?: string | null
+          metric_id?: string
+          source_config?: Json
+          source_type?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scorecard_metric_automation_rules_metric_id_fkey"
+            columns: ["metric_id"]
+            isOneToOne: false
+            referencedRelation: "eos_scorecard_metrics"
             referencedColumns: ["id"]
           },
         ]
