@@ -212,7 +212,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
             {/* Key Events - inline format */}
             {keyEvents.length > 0 && (
               <div className="mt-4 pt-3 border-t">
-                <div className="flex items-center gap-1 text-xs flex-wrap">
+                <div className="flex items-center gap-4 text-xs flex-wrap">
                   <KeyRound className="h-3 w-3 text-primary shrink-0" />
                   {keyEvents.map((evt, idx) => {
                     // Normalize consult names
@@ -220,14 +220,12 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                     if (label.toLowerCase().includes('consult')) {
                       label = 'Consult';
                     }
-                    const dateStr = evt.eventDate 
-                      ? format(new Date(evt.eventDate), 'd MMM yyyy')
-                      : '—';
                     return (
                       <span key={idx} className="flex items-center gap-1">
                         <span className="font-medium">{label}:</span>
-                        <span className={evt.eventDate ? '' : 'text-muted-foreground'}>{dateStr}</span>
-                        {idx < keyEvents.length - 1 && <span className="text-muted-foreground mx-1">•</span>}
+                        <span className={evt.eventDate ? '' : 'text-muted-foreground italic'}>
+                          {evt.eventDate ? format(new Date(evt.eventDate), 'd MMM yyyy') : 'Not yet'}
+                        </span>
                       </span>
                     );
                   })}
