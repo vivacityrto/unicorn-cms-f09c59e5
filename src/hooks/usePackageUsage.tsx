@@ -19,6 +19,8 @@ export interface PackageUsage {
   manual_minutes_30d: number;
   timer_minutes_30d: number;
   calendar_minutes_30d: number;
+  billable_minutes_total: number;
+  non_billable_minutes_total: number;
 }
 
 export interface ClientAlert {

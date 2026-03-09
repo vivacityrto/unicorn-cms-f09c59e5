@@ -53,6 +53,8 @@ interface Tenant {
   last_note_date?: string | null;
   last_note_snippet?: string | null;
   primary_contact_name?: string | null;
+  hours_used_minutes?: number;
+  hours_included_minutes?: number;
 }
 
 interface CSCFilterOption {
