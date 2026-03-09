@@ -108,7 +108,7 @@ export const mockRocks = {
     id: "rock-team-001",
     title: "Launch New Client Portal",
     rock_type: "Team",
-    status: "At_Risk",
+    status: "at_risk",
     owner_id: mockVivacityUsers.teamLeader.user_uuid,
     parent_rock_id: "rock-company-001",
     tenant_id: VIVACITY_TENANT_ID,
