@@ -1,12 +1,21 @@
-## Completed: Package Burn-down Billable Split & Manage Clients Hours Column
+## Completed: Package Add-On / Time Top-Up via Parent Instance Linking
+
+### Summary
+Add-on packages (e.g. General Consult for extra TAS days) can now be attached to a parent package instance. This preserves the audit trail (separate `package_instance` row) while rolling hours into the parent's burn-down.
 
 ### Database Changes
-- `rpc_get_package_usage` now returns `billable_minutes_total` and `non_billable_minutes_total` fields
+- `package_instances.parent_instance_id` (bigint, self-referencing FK) — links child to parent
+- `rpc_get_package_usage` updated to include time entries from child instances (`OR te.package_id IN (SELECT id FROM package_instances WHERE parent_instance_id = ...)`)
 
 ### Frontend Changes
-- **PackageUsage interfaces** (`usePackageUsageQuery.tsx`, `usePackageUsage.tsx`): Added `billable_minutes_total` and `non_billable_minutes_total`
-- **ClientTimeSummaryCard**: Burn-down card now shows billable/non-billable breakdown line above the source (calendar/timer/manual) breakdown
-- **ManageTenants**: Added "Hours" column showing `used / included` (e.g. `36:00 / 56:00`) with colour coding at 80% (yellow) and 100% (red)
+- **StartPackageDialog**: New "Attach to package" dropdown lists active non-child instances. On attach, sets `parent_instance_id` and increments parent's `hours_added` by the new package's `total_hours`
+- **usePackageUsageQuery / usePackageUsage**: Queries filter `parent_instance_id IS NULL` so children don't appear as top-level packages
+- **PackageBurndownCards** (ClientTimeTab): Excludes children from card list; shows "Add-ons: Gen Consult +7h" sub-line under parent card
+- **ManageTenants**: Hours column excludes child instances to prevent double-counting
 
-### Data Fix Needed
-- Watto Training M-SAR package shows 49h but should be 56h — fix via Package Data Manager inline edit
+### How It Works
+1. SuperAdmin starts a package → optionally attaches to existing parent
+2. Child's `total_hours` added to parent's `hours_added`
+3. Child's time entries roll into parent burn-down via RPC
+4. Child excluded from burn-down cards and hours columns
+5. Child visible as add-on label under parent card for audit trail
