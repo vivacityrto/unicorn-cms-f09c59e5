@@ -264,6 +264,31 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string | null>);
 
+      // Fetch primary contacts per tenant
+      const { data: primaryContactsData } = await supabase
+        .from("tenant_users")
+        .select("tenant_id, user_id")
+        .in("tenant_id", tenantIds)
+        .eq("primary_contact", true)
+        .order("created_at", { ascending: true });
+
+      const primaryContactUserIds = [...new Set((primaryContactsData || []).map(pc => pc.user_id).filter(Boolean))];
+      const { data: primaryContactUsersData } = primaryContactUserIds.length > 0
+        ? await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", primaryContactUserIds)
+        : { data: [] };
+      const primaryContactUserMap = (primaryContactUsersData || []).reduce((acc, u) => {
+        acc[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || null;
+        return acc;
+      }, {} as Record<string, string | null>);
+
+      // Build tenant -> primary contact name map (first primary contact per tenant)
+      const primaryContactMap = (primaryContactsData || []).reduce((acc, pc) => {
+        if (!acc[pc.tenant_id]) {
+          acc[pc.tenant_id] = primaryContactUserMap[pc.user_id] || null;
+        }
+        return acc;
+      }, {} as Record<number, string | null>);
+
       // Fetch last note per tenant using a distinct-on-like approach
       // Fetch in batches per tenant to avoid 1000-row limit truncation
       const lastNoteMap: Record<number, { date: string; snippet: string }> = {};
