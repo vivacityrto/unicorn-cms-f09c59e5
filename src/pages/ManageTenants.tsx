@@ -855,8 +855,8 @@ export default function ManageTenants() {
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(tenant.created_at).toLocaleDateString("en-GB")}
+                            <User className="w-3 h-3" />
+                            {tenant.primary_contact_name || "No primary contact"}
                           </span>
                           <span>{tenant.state || ""}</span>
                         </div>
