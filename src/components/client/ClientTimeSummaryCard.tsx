@@ -38,11 +38,11 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
   useEffect(() => {
     async function fetchKeyEvents() {
       // Get active package instances for this tenant
-      const { data: pkgInstances } = await supabase
-        .from('package_instances')
+      const { data: pkgInstances } = await (supabase
+        .from('package_instances' as any)
         .select('id')
         .eq('tenant_id', clientId)
-        .in('status', ['active', 'in_progress']);
+        .in('status', ['active', 'in_progress'])) as { data: { id: number }[] | null };
 
       if (!pkgInstances?.length) return;
 
