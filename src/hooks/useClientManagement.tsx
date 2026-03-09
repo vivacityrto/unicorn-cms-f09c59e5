@@ -28,6 +28,8 @@ export interface ClientPackage {
   completed_at?: string | null;
   next_renewal_date?: string | null;
   last_renewed_date?: string | null;
+  parent_instance_id?: number | null;
+  parent_package_name?: string | null;
 }
 
 export interface ClientSummary {
@@ -600,7 +602,7 @@ export function useClientPackages(tenantId: number | null) {
       // Fetch ALL package instances (active + completed) for history support
       const { data: instances, error } = await supabase
         .from('package_instances')
-        .select('id, tenant_id, package_id, start_date, is_complete, included_minutes, hours_included, hours_used, hours_added, membership_state, end_date, next_renewal_date, last_renewed_date')
+        .select('id, tenant_id, package_id, start_date, is_complete, included_minutes, hours_included, hours_used, hours_added, membership_state, end_date, next_renewal_date, last_renewed_date, parent_instance_id')
         .eq('tenant_id', tenantId)
         .order('start_date', { ascending: false }) as { data: any[] | null; error: any };
 
@@ -685,8 +687,21 @@ export function useClientPackages(tenantId: number | null) {
           is_complete: inst.is_complete || false,
           completed_at: inst.end_date || null,
           next_renewal_date: inst.next_renewal_date || null,
-          last_renewed_date: inst.last_renewed_date || null
+          last_renewed_date: inst.last_renewed_date || null,
+          parent_instance_id: inst.parent_instance_id || null,
+          parent_package_name: null // resolved below
         };
+      });
+
+      // Resolve parent package names for child instances
+      const instanceMap = new Map(packageData.map(p => [Number(p.id), p]));
+      packageData.forEach(p => {
+        if (p.parent_instance_id) {
+          const parent = instanceMap.get(Number(p.parent_instance_id));
+          if (parent) {
+            p.parent_package_name = parent.package_slug || parent.package_name;
+          }
+        }
       });
 
       // Keep all active instances (no deduplication — each instance is unique, including add-ons)
