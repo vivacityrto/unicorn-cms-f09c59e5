@@ -706,7 +706,7 @@ export default function AdminStageDetail() {
     return stage?.is_certified === true && !isUsedByActiveClients;
   };
 
-  const wrapCertifiedAction = (action: () => void) => {
+  const wrapCertifiedAction = (action: () => void | Promise<void>) => {
     if (requiresCertifiedConfirmation()) {
       setPendingCertifiedAction(() => action);
       setCertifiedEditDialogOpen(true);
