@@ -809,6 +809,37 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [showAllEntries, setShowAllEntries] = useState(false);
+
+  // Fetch renewal window to default entries to current period
+  const { data: renewalWindow } = useQuery({
+    queryKey: ['renewal-window', tenantId],
+    queryFn: async () => {
+      const { data: instances } = await (supabase as any)
+        .from('package_instances')
+        .select('start_date, next_renewal_date')
+        .eq('tenant_id', tenantId)
+        .eq('is_complete', false);
+      if (!instances || instances.length === 0) return null;
+      // Find earliest renewal start across all active instances
+      let earliestStart: Date | null = null;
+      (instances as any[]).forEach((inst: any) => {
+        const renewalEnd = inst.next_renewal_date
+          ? new Date(inst.next_renewal_date)
+          : inst.start_date
+            ? new Date(new Date(inst.start_date).getFullYear() + 1, new Date(inst.start_date).getMonth(), new Date(inst.start_date).getDate())
+            : null;
+        if (renewalEnd) {
+          const renewalStart = new Date(renewalEnd);
+          renewalStart.setFullYear(renewalStart.getFullYear() - 1);
+          if (!earliestStart || renewalStart < earliestStart) earliestStart = renewalStart;
+        }
+      });
+      return earliestStart;
+    },
+    enabled: !!tenantId,
+    staleTime: 60_000,
+  });
   const [page, setPage] = useState(1);
   const [moveEntry, setMoveEntry] = useState<TimeEntry | null>(null);
   const [splitEntry, setSplitEntry] = useState<TimeEntry | null>(null);
@@ -948,10 +979,14 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     if (workTypeFilter !== 'all') {
       result = result.filter(e => e.work_type === workTypeFilter);
     }
+    // Apply explicit date filters
     if (dateFrom) {
       const fromStart = new Date(dateFrom);
       fromStart.setHours(0, 0, 0, 0);
       result = result.filter(e => e.start_at && new Date(e.start_at) >= fromStart);
+    } else if (!showAllEntries && renewalWindow) {
+      // Default to current renewal period
+      result = result.filter(e => e.start_at && new Date(e.start_at) >= renewalWindow);
     }
     if (dateTo) {
       const toEnd = new Date(dateTo);
@@ -963,7 +998,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       const db = b.start_at ? new Date(b.start_at).getTime() : 0;
       return db - da;
     });
-  }, [entries, packageFilter, workTypeFilter, dateFrom, dateTo]);
+  }, [entries, packageFilter, workTypeFilter, dateFrom, dateTo, showAllEntries, renewalWindow]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
@@ -978,7 +1013,8 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const handleDateFrom = (d: Date | undefined) => { setDateFrom(d); setPage(1); };
   const handleDateTo = (d: Date | undefined) => { setDateTo(d); setPage(1); };
   const hasDateFilter = !!dateFrom || !!dateTo;
-  const clearDateFilter = () => { setDateFrom(undefined); setDateTo(undefined); setPage(1); };
+  const isRenewalFiltered = !showAllEntries && !!renewalWindow && !dateFrom && !dateTo;
+  const clearDateFilter = () => { setDateFrom(undefined); setDateTo(undefined); setShowAllEntries(false); setPage(1); };
 
   const handleRefresh = useCallback(() => {
     refreshTimeTracking();
@@ -1115,6 +1151,18 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                 </SelectContent>
               </Select>
 
+              {/* Period toggle */}
+              {renewalWindow && (
+                <Button
+                  variant={showAllEntries ? 'outline' : 'secondary'}
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => { setShowAllEntries(prev => !prev); setDateFrom(undefined); setDateTo(undefined); setPage(1); }}
+                >
+                  {showAllEntries ? 'Current period' : 'Show all'}
+                </Button>
+              )}
+
               {/* Date range filter */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -1130,7 +1178,9 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                         ? `From ${format(dateFrom, 'd MMM yyyy')}`
                         : dateTo
                           ? `To ${format(dateTo, 'd MMM yyyy')}`
-                          : 'Date range'}
+                          : isRenewalFiltered
+                            ? `From ${format(renewalWindow!, 'd MMM yyyy')}`
+                            : 'Date range'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-4" align="end">

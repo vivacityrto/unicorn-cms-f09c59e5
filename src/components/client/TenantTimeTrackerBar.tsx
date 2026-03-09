@@ -39,13 +39,15 @@ import {
 } from 'lucide-react';
 import { useTenantTimeTracker } from '@/hooks/useTenantTimeTracker';
 import { formatHours } from '@/hooks/usePackageUsageQuery';
-import { useTenantMemberships, useMembershipUsage, type ScopeTag } from '@/hooks/useTenantMemberships';
+import { useTenantMemberships, type ScopeTag } from '@/hooks/useTenantMemberships';
+import { useQuery } from '@tanstack/react-query';
 import { ScopeSelectorBadge } from './ScopeSelectorBadge';
 import { AddTimeDialog } from './AddTimeDialog';
 import { TimeLogDrawer } from './TimeLogDrawer';
 import { AddTimeFromMeetingDialog } from './AddTimeFromMeetingDialog';
 import { PackageBreakdownModal } from './PackageBreakdownModal';
 import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { timeTrackingKeys } from '@/hooks/useTimeTrackingQuery';
 import { packageUsageKeys } from '@/hooks/usePackageUsageQuery';
 
@@ -71,7 +73,6 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
   } = useTenantTimeTracker(tenantId);
 
   const membership = useTenantMemberships(tenantId);
-  const { data: membershipUsage } = useMembershipUsage(tenantId);
 
   const queryClient = useQueryClient();
   const [scopeTag, setScopeTag] = useState<ScopeTag>(membership.defaultScope);
@@ -81,10 +82,33 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
   const [breakdownOpen, setBreakdownOpen] = useState(false);
   const [timerPickerOpen, setTimerPickerOpen] = useState(false);
 
-  // Membership usage metrics
-  const totalUsed = membershipUsage?.total_used_minutes ?? 0;
-  const totalIncluded = membershipUsage?.total_included_minutes ?? 0;
-  const remaining = membershipUsage?.remaining_minutes ?? 0;
+  // Renewal-period-scoped usage from v_package_burndown (matches burn-down cards)
+  const { data: burndownTotals } = useQuery({
+    queryKey: ['burndown-header-totals', tenantId],
+    queryFn: async () => {
+      const { data: activeInstances } = await (supabase as any)
+        .from('package_instances')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('is_complete', false);
+      const activeIds = (activeInstances || []).map((r: any) => r.id);
+      if (activeIds.length === 0) return { used: 0, included: 0 };
+      const { data: bd } = await supabase
+        .from('v_package_burndown')
+        .select('used_minutes, included_minutes')
+        .eq('tenant_id', tenantId)
+        .in('package_instance_id', activeIds);
+      let used = 0, included = 0;
+      (bd || []).forEach((r: any) => { used += r.used_minutes ?? 0; included += r.included_minutes ?? 0; });
+      return { used, included };
+    },
+    enabled: !!tenantId,
+    staleTime: 30_000,
+  });
+
+  const totalUsed = burndownTotals?.used ?? 0;
+  const totalIncluded = burndownTotals?.included ?? 0;
+  const remaining = totalIncluded - totalUsed;
   const usedPercent = totalIncluded > 0 ? (totalUsed / totalIncluded) * 100 : 0;
   const isOverBudget = usedPercent >= 100;
   const isNearLimit = usedPercent >= 80;
@@ -96,6 +120,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
       queryClient.invalidateQueries({ queryKey: timeTrackingKeys.entries(tenantId), refetchType: 'all' }),
       queryClient.invalidateQueries({ queryKey: packageUsageKeys.packages(tenantId), refetchType: 'all' }),
       queryClient.invalidateQueries({ queryKey: ['membership-combined-usage', tenantId], refetchType: 'all' }),
+      queryClient.invalidateQueries({ queryKey: ['burndown-header-totals', tenantId], refetchType: 'all' }),
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey;
