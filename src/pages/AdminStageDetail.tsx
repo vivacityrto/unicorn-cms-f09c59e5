@@ -1444,7 +1444,7 @@ export default function AdminStageDetail() {
                               </div>
                             </div>
                             {/* Key Event toggle - only for recurring stages */}
-                            {(stage as any).is_recurring && (
+                            {(stage as any)?.is_recurring && (
                               <Button
                                 variant="ghost"
                                 size="icon"
