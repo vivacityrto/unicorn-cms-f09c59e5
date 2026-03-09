@@ -51,6 +51,7 @@ import { StageImpactPanel } from '@/components/package-builder/StageImpactPanel'
 import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 // Stage types loaded dynamically via useStageTypeOptions hook
 
