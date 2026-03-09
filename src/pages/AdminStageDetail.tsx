@@ -808,14 +808,16 @@ export default function AdminStageDetail() {
 
   // Edit handlers
   const openEditTeamTask = (task: StageTeamTask) => {
+    // Always read from the latest teamTasks state to avoid stale data
+    const latestTask = teamTasks.find(t => t.id === task.id) || task;
     setEditTaskForm({
-      name: task.name,
-      description: task.description || '',
-      is_core: task.is_core,
-      is_key_event: task.is_key_event ?? false,
-      due_date_offset: task.due_date_offset?.toString() || ''
+      name: latestTask.name,
+      description: latestTask.description || '',
+      is_core: latestTask.is_core,
+      is_key_event: latestTask.is_key_event ?? false,
+      due_date_offset: latestTask.due_date_offset?.toString() || ''
     });
-    setEditingTeamTask(task);
+    setEditingTeamTask(latestTask);
   };
 
   const handleSaveTeamTask = async () => {
