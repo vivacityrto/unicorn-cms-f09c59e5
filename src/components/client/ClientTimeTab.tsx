@@ -237,13 +237,42 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   );
 }
 
-function BurndownCard({ row }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null } } }) {
+function BurndownCard({ row }: { row: { package_instance_id: number | null; package_name: string; lifecycle: { start_date: string | null; end_date: string | null }; renewalWindow: { start: string; end: string } | null; used_minutes: number; included_minutes: number; remaining_minutes: number; percent_used: number; monthly: { month: string; minutes: number; billable: number; nonBillable: number }[]; totals: { billable: number; nonBillable: number; total: number; lastEntry: string | null } } }) {
   const [monthLimit, setMonthLimit] = useState(3);
+  const [showAll, setShowAll] = useState(false);
   const pct = row.percent_used;
   const isOver = pct > 100;
   const sorted = [...row.monthly].sort((a, b) => b.month.localeCompare(a.month));
-  const visible = sorted.slice(0, monthLimit);
-  const hasMore = sorted.length > monthLimit;
+
+  // Filter to current membership period unless "Show All"
+  const hasRenewalWindow = !!row.renewalWindow;
+  const periodFiltered = useMemo(() => {
+    if (showAll || !row.renewalWindow) return sorted;
+    const windowStart = row.renewalWindow.start;
+    const windowEnd = row.renewalWindow.end;
+    return sorted.filter(m => {
+      // Month key is yyyy-MM, compare as start of month
+      const monthStart = m.month + '-01T00:00:00.000Z';
+      return monthStart >= windowStart.slice(0, 10) && monthStart <= windowEnd.slice(0, 10);
+    });
+  }, [sorted, showAll, row.renewalWindow]);
+
+  // Recalculate totals for the visible period
+  const displayTotals = useMemo(() => {
+    if (showAll || !row.renewalWindow) return row.totals;
+    return periodFiltered.reduce(
+      (acc, m) => ({
+        billable: acc.billable + m.billable,
+        nonBillable: acc.nonBillable + m.nonBillable,
+        total: acc.total + m.minutes,
+        lastEntry: row.totals.lastEntry,
+      }),
+      { billable: 0, nonBillable: 0, total: 0, lastEntry: row.totals.lastEntry }
+    );
+  }, [periodFiltered, showAll, row.renewalWindow, row.totals]);
+
+  const visible = periodFiltered.slice(0, monthLimit);
+  const hasMore = periodFiltered.length > monthLimit;
 
   return (
     <Card>
@@ -277,7 +306,17 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
           {row.monthly.length > 0 && (
             <div className="w-1/2 border-l border-border pl-4 space-y-0.5">
               <div className="flex justify-between text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                <span>Monthly</span>
+                <div className="flex items-center gap-1.5">
+                  <span>Monthly</span>
+                  {hasRenewalWindow && (
+                    <button
+                      onClick={() => setShowAll(prev => !prev)}
+                      className="text-[10px] text-primary hover:underline normal-case tracking-normal font-normal"
+                    >
+                      {showAll ? 'Current period' : 'Show all'}
+                    </button>
+                  )}
+                </div>
                 <span className="flex gap-3">
                   <span className="w-10 text-right">Total</span>
                   <span className="w-10 text-right text-green-600">Bill</span>
@@ -307,9 +346,9 @@ function BurndownCard({ row }: { row: { package_instance_id: number | null; pack
                   )}
                 </div>
                 <span className="flex gap-3 text-[11px]">
-                  <span className="w-10 text-right font-semibold">{formatDuration(row.totals.total)}</span>
-                  <span className="w-10 text-right text-green-600 font-medium">{formatDuration(row.totals.billable)}</span>
-                  <span className="w-10 text-right text-muted-foreground">{formatDuration(row.totals.nonBillable)}</span>
+                  <span className="w-10 text-right font-semibold">{formatDuration(displayTotals.total)}</span>
+                  <span className="w-10 text-right text-green-600 font-medium">{formatDuration(displayTotals.billable)}</span>
+                  <span className="w-10 text-right text-muted-foreground">{formatDuration(displayTotals.nonBillable)}</span>
                 </span>
               </div>
             </div>
