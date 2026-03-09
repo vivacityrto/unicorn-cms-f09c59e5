@@ -21,7 +21,7 @@ interface MetricEditorDialogProps {
 export function MetricEditorDialog({ open, onOpenChange, metric }: MetricEditorDialogProps) {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
-  const { users } = useTenantUsers();
+  const { data: users = [] } = useVivacityTeamUsers();
   const isEditing = !!metric;
 
   const [name, setName] = useState('');
