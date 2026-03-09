@@ -367,6 +367,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                           {pkg.package_full_text && (
                             <span className="text-sm text-muted-foreground">— {pkg.package_full_text}</span>
                           )}
+                          {pkg.parent_package_name && (
+                            <span className="text-xs text-muted-foreground italic">(Time rolled into {pkg.parent_package_name})</span>
+                          )}
                         </div>
                       </div>
                       {pkg.is_complete ? (
