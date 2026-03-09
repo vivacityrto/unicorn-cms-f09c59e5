@@ -326,21 +326,26 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, number>);
 
-      // Aggregate time usage scoped to active package instances only
+      // Aggregate renewal-period-scoped usage from v_package_burndown
       let tenantTimeUsedMap: Record<number, number> = {};
       if (activeInstanceIds.length > 0) {
-        // Batch in chunks to avoid query limits
-        const chunkSize = 200;
-        for (let i = 0; i < activeInstanceIds.length; i += chunkSize) {
-          const chunk = activeInstanceIds.slice(i, i + chunkSize);
-          const { data: timeUsageData } = await supabase
-            .from('time_entries')
-            .select('tenant_id, duration_minutes')
-            .in('package_id', chunk);
-          (timeUsageData || []).forEach(te => {
-            tenantTimeUsedMap[te.tenant_id] = (tenantTimeUsedMap[te.tenant_id] || 0) + (te.duration_minutes || 0);
-          });
-        }
+        const { data: burndownData } = await supabase
+          .from('v_package_burndown')
+          .select('tenant_id, used_minutes, included_minutes')
+          .in('tenant_id', tenantIds)
+          .in('package_instance_id', activeInstanceIds);
+        (burndownData || []).forEach((r: any) => {
+          tenantTimeUsedMap[r.tenant_id] = (tenantTimeUsedMap[r.tenant_id] || 0) + (r.used_minutes || 0);
+        });
+        // Also override included from burndown (which accounts for hours_added)
+        const tenantIncludedFromBurndown: Record<number, number> = {};
+        (burndownData || []).forEach((r: any) => {
+          tenantIncludedFromBurndown[r.tenant_id] = (tenantIncludedFromBurndown[r.tenant_id] || 0) + (r.included_minutes || 0);
+        });
+        // Use burndown included if available (more accurate, includes hours_added)
+        Object.keys(tenantIncludedFromBurndown).forEach(tid => {
+          tenantIncludedMinutesMap[Number(tid)] = tenantIncludedFromBurndown[Number(tid)];
+        });
       }
 
       const tenantsWithCounts = tenantsData.map(tenant => {
