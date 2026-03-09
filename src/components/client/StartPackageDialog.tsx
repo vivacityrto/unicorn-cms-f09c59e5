@@ -156,10 +156,13 @@ export function StartPackageDialog({
       const parentId = attachToInstanceId ? parseInt(attachToInstanceId) : null;
 
       if (parentId) {
-        // Link the new instance to the parent
+        // Link the new instance to the parent, save comments and hours_used
+        const updatePayload: Record<string, any> = { parent_instance_id: parentId };
+        if (comments.trim()) updatePayload.comments = comments.trim();
+        if (hoursUsed) updatePayload.hours_used = parseFloat(hoursUsed);
         await (supabase as any)
           .from('package_instances')
-          .update({ parent_instance_id: parentId })
+          .update(updatePayload)
           .eq('id', packageInstanceId);
 
         // Get the new package's total_hours to add to parent's hours_added
