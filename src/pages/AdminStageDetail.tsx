@@ -824,8 +824,9 @@ export default function AdminStageDetail() {
         name: editTaskForm.name,
         description: editTaskForm.description || null,
         is_core: editTaskForm.is_core,
+        is_key_event: editTaskForm.is_key_event,
         due_date_offset: editTaskForm.due_date_offset ? parseInt(editTaskForm.due_date_offset) : null
-      });
+      } as any);
       toast({ title: 'Task Updated' });
       setEditingTeamTask(null);
     } catch (error: any) {
