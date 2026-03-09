@@ -84,7 +84,7 @@ export function useClientPackagesQuery(clientId: number | null) {
 
       const packageMap = new Map((packagesData || []).map(p => [Number(p.id), p]));
 
-      return instances.map(inst => {
+      return (instances as any[]).map(inst => {
         const instId = Number(inst.id);
         const pkgId = Number(inst.package_id);
         const pkg = packageMap.get(pkgId);
