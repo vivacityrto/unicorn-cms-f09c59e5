@@ -311,35 +311,37 @@ export default function ManageTenants() {
         });
       }
 
-      // Aggregate time usage per tenant (used minutes from time_entries)
-      const { data: timeUsageData } = await supabase
-        .from('time_entries')
-        .select('tenant_id, duration_minutes')
-        .in('tenant_id', tenantIds);
-
-      const tenantTimeUsedMap = (timeUsageData || []).reduce((acc, te) => {
-        acc[te.tenant_id] = (acc[te.tenant_id] || 0) + (te.duration_minutes || 0);
-        return acc;
-      }, {} as Record<number, number>);
-
-      // Aggregate included minutes per tenant from active package instances
-      const tenantIncludedMap = (packageInstancesData || []).reduce((acc, pi) => {
-        // We need hours_included from the instance; fetch separately
-        return acc;
-      }, {} as Record<number, number>);
-
-      // Fetch included_minutes from package_instances for active ones
+      // Fetch included_minutes and IDs from active package_instances
       const { data: piIncludedData } = await supabase
         .from('package_instances')
-        .select('tenant_id, included_minutes, hours_included')
+        .select('id, tenant_id, included_minutes, hours_included')
         .eq('is_complete', false)
         .in('tenant_id', tenantIds);
+
+      const activeInstanceIds = (piIncludedData || []).map(pi => pi.id);
 
       const tenantIncludedMinutesMap = (piIncludedData || []).reduce((acc, pi) => {
         const mins = pi.included_minutes || ((pi.hours_included || 0) * 60);
         acc[pi.tenant_id] = (acc[pi.tenant_id] || 0) + mins;
         return acc;
       }, {} as Record<number, number>);
+
+      // Aggregate time usage scoped to active package instances only
+      let tenantTimeUsedMap: Record<number, number> = {};
+      if (activeInstanceIds.length > 0) {
+        // Batch in chunks to avoid query limits
+        const chunkSize = 200;
+        for (let i = 0; i < activeInstanceIds.length; i += chunkSize) {
+          const chunk = activeInstanceIds.slice(i, i + chunkSize);
+          const { data: timeUsageData } = await supabase
+            .from('time_entries')
+            .select('tenant_id, duration_minutes')
+            .in('package_id', chunk);
+          (timeUsageData || []).forEach(te => {
+            tenantTimeUsedMap[te.tenant_id] = (tenantTimeUsedMap[te.tenant_id] || 0) + (te.duration_minutes || 0);
+          });
+        }
+      }
 
       const tenantsWithCounts = tenantsData.map(tenant => {
         const activePackages = tenantPackagesMap[tenant.id] || [];
