@@ -53,6 +53,8 @@ interface Tenant {
   last_note_date?: string | null;
   last_note_snippet?: string | null;
   primary_contact_name?: string | null;
+  hours_used_minutes?: number;
+  hours_included_minutes?: number;
 }
 
 interface CSCFilterOption {
@@ -309,6 +311,36 @@ export default function ManageTenants() {
         });
       }
 
+      // Aggregate time usage per tenant (used minutes from time_entries)
+      const { data: timeUsageData } = await supabase
+        .from('time_entries')
+        .select('tenant_id, duration_minutes')
+        .in('tenant_id', tenantIds);
+
+      const tenantTimeUsedMap = (timeUsageData || []).reduce((acc, te) => {
+        acc[te.tenant_id] = (acc[te.tenant_id] || 0) + (te.duration_minutes || 0);
+        return acc;
+      }, {} as Record<number, number>);
+
+      // Aggregate included minutes per tenant from active package instances
+      const tenantIncludedMap = (packageInstancesData || []).reduce((acc, pi) => {
+        // We need hours_included from the instance; fetch separately
+        return acc;
+      }, {} as Record<number, number>);
+
+      // Fetch included_minutes from package_instances for active ones
+      const { data: piIncludedData } = await supabase
+        .from('package_instances')
+        .select('tenant_id, included_minutes, hours_included')
+        .eq('is_complete', false)
+        .in('tenant_id', tenantIds);
+
+      const tenantIncludedMinutesMap = (piIncludedData || []).reduce((acc, pi) => {
+        const mins = pi.included_minutes || ((pi.hours_included || 0) * 60);
+        acc[pi.tenant_id] = (acc[pi.tenant_id] || 0) + mins;
+        return acc;
+      }, {} as Record<number, number>);
+
       const tenantsWithCounts = tenantsData.map(tenant => {
         const activePackages = tenantPackagesMap[tenant.id] || [];
         const firstNonKS = activePackages.find((p: TenantPackageInfo) => !p.name.startsWith('KS'));
@@ -333,6 +365,8 @@ export default function ManageTenants() {
           last_note_date: lastNoteMap[tenant.id]?.date || null,
           last_note_snippet: lastNoteMap[tenant.id]?.snippet || null,
           primary_contact_name: primaryContactMap[tenant.id] || null,
+          hours_used_minutes: tenantTimeUsedMap[tenant.id] || 0,
+          hours_included_minutes: tenantIncludedMinutesMap[tenant.id] || 0,
           // Override name prefix: if they have a KS, prepend KS indicator
           _hasKickStart: hasKickStart,
         } as any;
@@ -813,6 +847,7 @@ export default function ManageTenants() {
                 <TableRow className="border-b-2 hover:bg-transparent">
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Tenant Name</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
+                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Hours</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">ComplyHub</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Status</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">CSC</TableHead>
@@ -878,6 +913,24 @@ export default function ManageTenants() {
                           <span>{primaryPkg?.full_text || (tenant.all_packages.length > 0 ? tenant.all_packages[0].full_text : "No Packages Added")}</span>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                      {(() => {
+                        const used = tenant.hours_used_minutes || 0;
+                        const included = tenant.hours_included_minutes || 0;
+                        if (included === 0 && used === 0) return <span className="text-xs text-muted-foreground">—</span>;
+                        const usedH = Math.floor(used / 60);
+                        const usedM = Math.round(used % 60);
+                        const inclH = Math.floor(included / 60);
+                        const inclM = Math.round(included % 60);
+                        const pct = included > 0 ? (used / included) * 100 : 0;
+                        const colorClass = pct >= 100 ? 'text-destructive' : pct >= 80 ? 'text-yellow-600' : '';
+                        return (
+                          <span className={cn("text-sm font-medium", colorClass)}>
+                            {usedH}:{usedM.toString().padStart(2, '0')} / {inclH}:{inclM.toString().padStart(2, '0')}
+                          </span>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       {tenant.complyhub_membership_tier ? (

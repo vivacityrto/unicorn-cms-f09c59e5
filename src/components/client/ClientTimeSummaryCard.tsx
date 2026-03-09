@@ -324,10 +324,16 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                         />
                       )}
                       {sourceFilter === 'all' && (
-                        <div className="text-[10px] text-muted-foreground flex gap-3 mt-1">
-                          <span className="flex items-center gap-1"><Calendar className="h-2.5 w-2.5" /> Calendar {formatHours(usage.calendar_minutes_total || 0)}</span>
-                          <span className="flex items-center gap-1"><Timer className="h-2.5 w-2.5" /> Timer {formatHours(usage.timer_minutes_total || 0)}</span>
-                          <span className="flex items-center gap-1"><PenLine className="h-2.5 w-2.5" /> Manual {formatHours(usage.manual_minutes_total || 0)}</span>
+                        <div className="space-y-1 mt-1">
+                          <div className="text-[10px] text-muted-foreground flex gap-3">
+                            <span className="flex items-center gap-1"><DollarSign className="h-2.5 w-2.5 text-green-600" /> Billable {formatHours(usage.billable_minutes_total || 0)}</span>
+                            <span className="flex items-center gap-1">Non-billable {formatHours(usage.non_billable_minutes_total || 0)}</span>
+                          </div>
+                          <div className="text-[10px] text-muted-foreground flex gap-3">
+                            <span className="flex items-center gap-1"><Calendar className="h-2.5 w-2.5" /> Calendar {formatHours(usage.calendar_minutes_total || 0)}</span>
+                            <span className="flex items-center gap-1"><Timer className="h-2.5 w-2.5" /> Timer {formatHours(usage.timer_minutes_total || 0)}</span>
+                            <span className="flex items-center gap-1"><PenLine className="h-2.5 w-2.5" /> Manual {formatHours(usage.manual_minutes_total || 0)}</span>
+                          </div>
                         </div>
                       )}
                     </div>
