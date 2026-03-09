@@ -2,15 +2,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine, ChevronDown } from 'lucide-react';
+import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine, ChevronDown, KeyRound } from 'lucide-react';
 import { useTimeTrackingQuery, formatDuration } from '@/hooks/useTimeTrackingQuery';
 import { usePackageUsageQuery, formatHours, formatForecast } from '@/hooks/usePackageUsageQuery';
 import { useMembershipUsage } from '@/hooks/useCapacityEngine';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TimeLogDrawer } from './TimeLogDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 interface ClientTimeSummaryCardProps {
   clientId: number;
