@@ -213,14 +213,14 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
             {keyEvents.length > 0 && (
               <div className="mt-4 pt-3 border-t">
                 <p className="text-xs font-medium flex items-center gap-1 mb-2">
-                  <KeyRound className="h-3 w-3 text-amber-500" />
+                  <KeyRound className="h-3 w-3 text-primary" />
                   Key Events
                 </p>
                 <div className="space-y-1">
                   {keyEvents.map((evt, idx) => (
                     <div key={idx} className="flex justify-between text-xs">
                       <span className="text-muted-foreground">Last {evt.stageName}</span>
-                      <span>{format(new Date(evt.eventDate), 'd MMM yyyy')}</span>
+                      <span>{evt.eventDate ? format(new Date(evt.eventDate), 'd MMM yyyy') : <span className="text-muted-foreground italic">Not yet</span>}</span>
                     </div>
                   ))}
                 </div>
