@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, Calendar, CheckCircle2, StickyNote, Repeat, CircleDot } from 'lucide-react';
+import { Loader2, Calendar, CheckCircle2, StickyNote, Repeat, CircleDot, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { parseTaskType, getTaskTypeBadgeLabel, getTaskTypeBadgeClasses } from '@/utils/staffTaskType';
