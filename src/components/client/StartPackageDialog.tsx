@@ -87,7 +87,7 @@ export function StartPackageDialog({
       // Fetch active (non-complete, non-child) package instances for this tenant
       const { data: instancesData } = await (supabase as any)
         .from('package_instances')
-        .select('id, package_id')
+        .select('id, package_id, manager_id')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false)
         .is('parent_instance_id', null)
@@ -105,6 +105,7 @@ export function StartPackageDialog({
           id: inst.id,
           package_id: inst.package_id,
           package_name: nameMap.get(inst.package_id) || `Package #${inst.package_id}`,
+          manager_id: inst.manager_id || null,
         })));
       } else {
         setActiveInstances([]);
