@@ -315,7 +315,7 @@ export const mockAccountability = {
 
 // Enum validation data
 export const validEnumValues = {
-  rockStatus: ["Not_Started", "On_Track", "At_Risk", "Off_Track", "Complete"],
+  rockStatus: ["not_started", "on_track", "at_risk", "off_track", "complete"],
   issueStatus: [
     "Open",
     "Discussing",

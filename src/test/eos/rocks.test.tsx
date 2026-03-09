@@ -126,8 +126,8 @@ describe("EOS Rocks", () => {
 
     it("should flag parent as at-risk when child is at-risk", () => {
       // Test the rollup logic concept
-      const childStatus = mockRocks.teamRock.status; // At_Risk
-      expect(childStatus).toBe("At_Risk");
+      const childStatus = mockRocks.teamRock.status; // at_risk
+      expect(childStatus).toBe("at_risk");
     });
   });
 
