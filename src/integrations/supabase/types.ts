@@ -48586,23 +48586,14 @@ export type Database = {
       }
       stage_instance_tenant_id: { Args: { p_si_id: number }; Returns: number }
       standardize_code_value: { Args: { input_label: string }; Returns: string }
-      start_client_package:
-        | {
-            Args: {
-              p_assigned_csc_user_id?: string
-              p_package_id: number
-              p_tenant_id: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              p_assigned_csc_user_id?: string
-              p_package_id: number
-              p_tenant_id: number
-            }
-            Returns: number
-          }
+      start_client_package: {
+        Args: {
+          p_assigned_csc_user_id?: string
+          p_package_id: number
+          p_tenant_id: number
+        }
+        Returns: number
+      }
       start_meeting_instance: {
         Args: { p_meeting_id: string }
         Returns: boolean

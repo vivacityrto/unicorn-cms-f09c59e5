@@ -35,6 +35,7 @@ interface ActiveInstance {
   id: number;
   package_id: number;
   package_name: string;
+  manager_id: string | null;
 }
 
 export function StartPackageDialog({
@@ -86,7 +87,7 @@ export function StartPackageDialog({
       // Fetch active (non-complete, non-child) package instances for this tenant
       const { data: instancesData } = await (supabase as any)
         .from('package_instances')
-        .select('id, package_id')
+        .select('id, package_id, manager_id')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false)
         .is('parent_instance_id', null)
@@ -104,6 +105,7 @@ export function StartPackageDialog({
           id: inst.id,
           package_id: inst.package_id,
           package_name: nameMap.get(inst.package_id) || `Package #${inst.package_id}`,
+          manager_id: inst.manager_id || null,
         })));
       } else {
         setActiveInstances([]);
@@ -115,13 +117,29 @@ export function StartPackageDialog({
     }
   };
 
+  // Auto-fill CSC when attaching to a parent package
+  const handleAttachChange = (value: string) => {
+    const id = value === '__none__' ? '' : value;
+    setAttachToInstanceId(id);
+    if (id) {
+      const parent = activeInstances.find(inst => inst.id === parseInt(id));
+      if (parent?.manager_id) {
+        setSelectedCscId(parent.manager_id);
+      }
+    }
+  };
+
   const handleStart = async () => {
     if (!selectedPackageId) return;
+
+    const cscToUse = selectedCscId || (attachToInstanceId 
+      ? activeInstances.find(i => i.id === parseInt(attachToInstanceId))?.manager_id 
+      : undefined) || undefined;
 
     const packageInstanceId = await startPackage(
       tenantId,
       parseInt(selectedPackageId),
-      selectedCscId || undefined
+      cscToUse
     );
 
     if (packageInstanceId) {
@@ -233,7 +251,7 @@ export function StartPackageDialog({
                   <Link2 className="h-4 w-4" />
                   Attach to package (optional)
                 </Label>
-                <Select value={attachToInstanceId || "__none__"} onValueChange={(v) => setAttachToInstanceId(v === "__none__" ? "" : v)}>
+                <Select value={attachToInstanceId || "__none__"} onValueChange={handleAttachChange}>
                   <SelectTrigger id="attach">
                     <SelectValue placeholder="Stand-alone package" />
                   </SelectTrigger>
