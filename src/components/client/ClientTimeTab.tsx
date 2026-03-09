@@ -1013,7 +1013,8 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const handleDateFrom = (d: Date | undefined) => { setDateFrom(d); setPage(1); };
   const handleDateTo = (d: Date | undefined) => { setDateTo(d); setPage(1); };
   const hasDateFilter = !!dateFrom || !!dateTo;
-  const clearDateFilter = () => { setDateFrom(undefined); setDateTo(undefined); setPage(1); };
+  const isRenewalFiltered = !showAllEntries && !!renewalWindow && !dateFrom && !dateTo;
+  const clearDateFilter = () => { setDateFrom(undefined); setDateTo(undefined); setShowAllEntries(false); setPage(1); };
 
   const handleRefresh = useCallback(() => {
     refreshTimeTracking();
