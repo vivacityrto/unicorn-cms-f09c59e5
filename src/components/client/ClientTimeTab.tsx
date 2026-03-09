@@ -809,6 +809,37 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [showAllEntries, setShowAllEntries] = useState(false);
+
+  // Fetch renewal window to default entries to current period
+  const { data: renewalWindow } = useQuery({
+    queryKey: ['renewal-window', tenantId],
+    queryFn: async () => {
+      const { data: instances } = await (supabase as any)
+        .from('package_instances')
+        .select('start_date, next_renewal_date')
+        .eq('tenant_id', tenantId)
+        .eq('is_complete', false);
+      if (!instances || instances.length === 0) return null;
+      // Find earliest renewal start across all active instances
+      let earliestStart: Date | null = null;
+      (instances as any[]).forEach((inst: any) => {
+        const renewalEnd = inst.next_renewal_date
+          ? new Date(inst.next_renewal_date)
+          : inst.start_date
+            ? new Date(new Date(inst.start_date).getFullYear() + 1, new Date(inst.start_date).getMonth(), new Date(inst.start_date).getDate())
+            : null;
+        if (renewalEnd) {
+          const renewalStart = new Date(renewalEnd);
+          renewalStart.setFullYear(renewalStart.getFullYear() - 1);
+          if (!earliestStart || renewalStart < earliestStart) earliestStart = renewalStart;
+        }
+      });
+      return earliestStart;
+    },
+    enabled: !!tenantId,
+    staleTime: 60_000,
+  });
   const [page, setPage] = useState(1);
   const [moveEntry, setMoveEntry] = useState<TimeEntry | null>(null);
   const [splitEntry, setSplitEntry] = useState<TimeEntry | null>(null);
