@@ -39,7 +39,8 @@ import {
 } from 'lucide-react';
 import { useTenantTimeTracker } from '@/hooks/useTenantTimeTracker';
 import { formatHours } from '@/hooks/usePackageUsageQuery';
-import { useTenantMemberships, useMembershipUsage, type ScopeTag } from '@/hooks/useTenantMemberships';
+import { useTenantMemberships, type ScopeTag } from '@/hooks/useTenantMemberships';
+import { useQuery } from '@tanstack/react-query';
 import { ScopeSelectorBadge } from './ScopeSelectorBadge';
 import { AddTimeDialog } from './AddTimeDialog';
 import { TimeLogDrawer } from './TimeLogDrawer';
