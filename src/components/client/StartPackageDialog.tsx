@@ -35,6 +35,7 @@ interface ActiveInstance {
   id: number;
   package_id: number;
   package_name: string;
+  manager_id: string | null;
 }
 
 export function StartPackageDialog({
