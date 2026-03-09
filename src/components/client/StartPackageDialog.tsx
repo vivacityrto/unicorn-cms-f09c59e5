@@ -56,6 +56,8 @@ export function StartPackageDialog({
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [selectedCscId, setSelectedCscId] = useState<string>('');
   const [attachToInstanceId, setAttachToInstanceId] = useState<string>('');
+  const [comments, setComments] = useState('');
+  const [hoursUsed, setHoursUsed] = useState<string>('');
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
