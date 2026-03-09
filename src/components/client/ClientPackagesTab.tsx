@@ -368,7 +368,14 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                             <span className="text-sm text-muted-foreground">— {pkg.package_full_text}</span>
                           )}
                           {pkg.parent_package_name && (
-                            <span className="text-xs text-muted-foreground italic">(Time rolled into {pkg.parent_package_name})</span>
+                            <span className="text-xs text-muted-foreground italic">
+                              (Time rolled into {pkg.parent_package_name})
+                              {pkg.comments && (
+                                <span className="ml-1 not-italic text-foreground/70">
+                                  — {pkg.comments.length > 35 ? pkg.comments.slice(0, 35) + '…' : pkg.comments}
+                                </span>
+                              )}
+                            </span>
                           )}
                         </div>
                       </div>
