@@ -41,6 +41,7 @@ export interface QuarterlyConversation {
   quarter_end: string;
   scheduled_at: string | null;
   completed_at: string | null;
+  meeting_started_at: string | null;
   status: QCStatus;
   visibility: QCVisibility;
   created_by: string | null;
