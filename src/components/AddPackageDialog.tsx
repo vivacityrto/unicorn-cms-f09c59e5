@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Package2, Loader2, Plus, Calendar } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 interface AddPackageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -39,6 +40,8 @@ export function AddPackageDialog({
   const [durationMonths, setDurationMonths] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showPropagateDialog, setShowPropagateDialog] = useState(false);
+  const [pendingPropagateData, setPendingPropagateData] = useState<{ packageId: number; totalHours: number } | null>(null);
   useEffect(() => {
     if (packageToEdit && open) {
       setPackageAbbr(packageToEdit.name || '');
@@ -83,6 +86,8 @@ export function AddPackageDialog({
           title: 'Success',
           description: 'Package updated successfully'
         });
+        // Check if duration changed (which may affect total_hours) — 
+        // For AddPackageDialog, total_hours isn't edited here, but we keep the pattern
       } else {
         // Insert new package - use RPC or explicit column selection to avoid type issues
         const {
@@ -126,7 +131,33 @@ export function AddPackageDialog({
       resetForm();
     }
   }, [open]);
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  const handlePropagateToInstances = async () => {
+    if (!pendingPropagateData) return;
+    try {
+      const client: any = supabase;
+      const { error } = await client
+        .from('package_instances')
+        .update({ included_minutes: pendingPropagateData.totalHours * 60 })
+        .eq('package_id', pendingPropagateData.packageId)
+        .eq('status', 'active');
+      if (error) throw error;
+      toast({
+        title: 'Instances Updated',
+        description: `Active instances updated to ${pendingPropagateData.totalHours}h included.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update instances',
+        variant: 'destructive'
+      });
+    } finally {
+      setShowPropagateDialog(false);
+      setPendingPropagateData(null);
+    }
+  };
+
+  return <><Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
         <DialogOverlay className="z-[70] bg-black/70" />
         <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-[70] grid w-full max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto border-[3px] border-[#dfdfdf] bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg" style={{
@@ -208,5 +239,16 @@ export function AddPackageDialog({
         </DialogFooter>
         </DialogPrimitive.Content>
       </DialogPortal>
-    </Dialog>;
+    </Dialog>
+    <ConfirmDialog
+      open={showPropagateDialog}
+      onOpenChange={setShowPropagateDialog}
+      variant="warning"
+      title="Update Active Package Instances?"
+      description={`This will update the included hours to ${pendingPropagateData?.totalHours ?? 0}h for all active instances of this package. Instances that should keep their current hours can be edited individually.`}
+      confirmText="Update Active Instances"
+      cancelText="Skip"
+      onConfirm={handlePropagateToInstances}
+    />
+  </>;
 }

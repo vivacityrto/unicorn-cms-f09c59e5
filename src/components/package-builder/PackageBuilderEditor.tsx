@@ -16,6 +16,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { supabase } from '@/integrations/supabase/client';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -280,6 +282,8 @@ export function PackageBuilderEditor() {
     stageFrameworks: string[] | null;
   } | null>(null);
   const [isStandardsCoverageOpen, setIsStandardsCoverageOpen] = useState(false);
+  const [showPropagateDialog, setShowPropagateDialog] = useState(false);
+  const [pendingTotalHours, setPendingTotalHours] = useState<number>(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -313,11 +317,17 @@ export function PackageBuilderEditor() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
+      const oldTotalHours = packageData?.total_hours || 0;
       await updatePackageData(formData);
       toast({
         title: 'Package Saved',
         description: 'Your changes have been saved successfully.'
       });
+      // If total_hours changed, prompt to propagate to active instances
+      if (formData.total_hours !== oldTotalHours && packageId) {
+        setPendingTotalHours(formData.total_hours);
+        setShowPropagateDialog(true);
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -326,6 +336,31 @@ export function PackageBuilderEditor() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePropagateToInstances = async () => {
+    if (!packageId) return;
+    try {
+      const client: any = supabase;
+      const { error } = await client
+        .from('package_instances')
+        .update({ included_minutes: pendingTotalHours * 60 })
+        .eq('package_id', packageId)
+        .eq('status', 'active');
+      if (error) throw error;
+      toast({
+        title: 'Instances Updated',
+        description: `Active instances updated to ${pendingTotalHours}h included.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update instances',
+        variant: 'destructive'
+      });
+    } finally {
+      setShowPropagateDialog(false);
     }
   };
 
@@ -862,6 +897,18 @@ export function PackageBuilderEditor() {
         open={isStandardsCoverageOpen}
         onOpenChange={setIsStandardsCoverageOpen}
         coverage={standardsCoverage}
+      />
+
+      {/* Propagate Hours to Active Instances */}
+      <ConfirmDialog
+        open={showPropagateDialog}
+        onOpenChange={setShowPropagateDialog}
+        variant="warning"
+        title="Update Active Package Instances?"
+        description={`This will update the included hours to ${pendingTotalHours}h for all active instances of this package. Instances that should keep their current hours can be edited individually.`}
+        confirmText="Update Active Instances"
+        cancelText="Skip"
+        onConfirm={handlePropagateToInstances}
       />
     </div>
   );
