@@ -46,6 +46,8 @@ const routeTitles: Record<string, string> = {
   "/manage-documents": "Documents",
   "/communications": "Communications",
   "/rto-tips": "RTO Tips",
+  "/suggestions": "Suggestions",
+  "/suggestions/new": "New Suggestion",
   "/eos": "EOS Overview",
   "/eos/leadership": "Leadership Dashboard",
   "/eos/scorecard": "Scorecard",
