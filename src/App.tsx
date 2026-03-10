@@ -146,7 +146,10 @@ const KnowledgeExplorer = lazy(() => import("./pages/KnowledgeExplorer"));
  const WorkflowOptimisation = lazy(() => import("./pages/WorkflowOptimisation"));
  const RiskCommandCentre = lazy(() => import("./pages/RiskCommandCentre"));
  const StrategicOrchestrationDashboard = lazy(() => import("./pages/StrategicOrchestrationDashboard"));
- const CodeTablesAdmin = lazy(() => import("./pages/CodeTablesAdmin"));
+const CodeTablesAdmin = lazy(() => import("./pages/CodeTablesAdmin"));
+const SuggestionRegister = lazy(() => import("./pages/SuggestionRegister"));
+const NewSuggestionForm = lazy(() => import("./pages/NewSuggestionForm"));
+const SuggestionDetail = lazy(() => import("./pages/SuggestionDetail"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
 const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
 
