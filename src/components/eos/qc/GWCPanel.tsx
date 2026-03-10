@@ -8,7 +8,6 @@ import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { SaveStatusIndicator } from './SaveStatusIndicator';
 import type { QCSection, QCFit } from '@/types/qc';
-import type { QCSection, QCFit } from '@/types/qc';
 
 interface GWCPanelProps {
   qcId: string;
