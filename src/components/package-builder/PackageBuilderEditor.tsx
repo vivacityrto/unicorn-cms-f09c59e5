@@ -282,6 +282,8 @@ export function PackageBuilderEditor() {
     stageFrameworks: string[] | null;
   } | null>(null);
   const [isStandardsCoverageOpen, setIsStandardsCoverageOpen] = useState(false);
+  const [showPropagateDialog, setShowPropagateDialog] = useState(false);
+  const [pendingTotalHours, setPendingTotalHours] = useState<number>(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
