@@ -146,7 +146,10 @@ const KnowledgeExplorer = lazy(() => import("./pages/KnowledgeExplorer"));
  const WorkflowOptimisation = lazy(() => import("./pages/WorkflowOptimisation"));
  const RiskCommandCentre = lazy(() => import("./pages/RiskCommandCentre"));
  const StrategicOrchestrationDashboard = lazy(() => import("./pages/StrategicOrchestrationDashboard"));
- const CodeTablesAdmin = lazy(() => import("./pages/CodeTablesAdmin"));
+const CodeTablesAdmin = lazy(() => import("./pages/CodeTablesAdmin"));
+const SuggestionRegister = lazy(() => import("./pages/SuggestionRegister"));
+const NewSuggestionForm = lazy(() => import("./pages/NewSuggestionForm"));
+const SuggestionDetail = lazy(() => import("./pages/SuggestionDetail"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
 const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
 
@@ -1000,6 +1003,10 @@ const App = () => (
             <Route path="/admin/risk-command" element={<ProtectedRoute requireSuperAdmin><RiskCommandCentre /></ProtectedRoute>} />
             <Route path="/admin/strategic-orchestration" element={<ProtectedRoute requireSuperAdmin><StrategicOrchestrationDashboard /></ProtectedRoute>} />
             <Route path="/admin/code-tables" element={<ProtectedRoute requireSuperAdmin><CodeTablesAdmin /></ProtectedRoute>} />
+            {/* Suggestion & Issue Register */}
+            <Route path="/suggestions" element={<ProtectedRoute><SuggestionRegister /></ProtectedRoute>} />
+            <Route path="/suggestions/new" element={<ProtectedRoute><NewSuggestionForm /></ProtectedRoute>} />
+            <Route path="/suggestions/:id" element={<ProtectedRoute><SuggestionDetail /></ProtectedRoute>} />
             <Route path="/admin/merge-field-tags" element={<ProtectedRoute requireSuperAdmin><MergeFieldTagsAdmin /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />

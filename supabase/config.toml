@@ -277,3 +277,6 @@ verify_jwt = false
 
 [functions.send-email-graph]
 verify_jwt = false
+
+[functions.extract-suggest-title]
+verify_jwt = false
