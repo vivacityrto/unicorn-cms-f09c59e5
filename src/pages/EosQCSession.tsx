@@ -24,6 +24,73 @@ export default function EosQCSession() {
   const { profile } = useAuth();
   const { qc, template, answers, fit, signoffs, isLoading } = useQCDetails(id);
   const { startMeeting } = useQuarterlyConversations();
+  const [sendingReminder, setSendingReminder] = useState(false);
+
+  const sendReminder = async () => {
+    if (!qc || !profile) return;
+    setSendingReminder(true);
+    const senderName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Your manager';
+    const formattedDate = qc.scheduled_at ? format(new Date(qc.scheduled_at), 'PPP') : 'TBD';
+    const qcLink = `/eos/qc/${qc.id}`;
+
+    // Determine who to remind: all participants who haven't completed their assessment
+    const recipientIds = [qc.reviewee_id, ...qc.manager_ids].filter(uid => uid !== profile.user_uuid);
+
+    try {
+      // In-app notifications
+      const notifications = recipientIds.map(uid => ({
+        user_id: uid,
+        type: 'qc_reminder',
+        title: 'QC Reminder: Complete Your Assessment',
+        message: `${senderName} is reminding you to complete your Quarterly Conversation assessment scheduled for ${formattedDate}.`,
+        link: qcLink,
+        created_by: profile.user_uuid,
+      }));
+      await supabase.from('user_notifications').insert(notifications as any);
+
+      // Email notifications
+      const { data: userData } = await supabase
+        .from('users')
+        .select('user_uuid, email, first_name')
+        .in('user_uuid', recipientIds);
+
+      if (userData?.length) {
+        await Promise.allSettled(
+          userData.map(u =>
+            supabase.functions.invoke('send-composed-email', {
+              body: {
+                tenant_id: 111,
+                to: u.email,
+                subject: `Reminder: Complete Your Quarterly Conversation — ${formattedDate}`,
+                body_html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #333;">QC Reminder</h2>
+                    <p>Hi ${u.first_name || 'there'},</p>
+                    <p><strong>${senderName}</strong> is reminding you to complete your Quarterly Conversation assessment.</p>
+                    <table style="margin: 16px 0; border-collapse: collapse;">
+                      <tr><td style="padding: 4px 12px 4px 0; color: #666; font-weight: 600;">Scheduled</td><td>${formattedDate}</td></tr>
+                    </table>
+                    <p style="margin-top: 24px;">
+                      <a href="https://unicorn-cms.lovable.app${qcLink}" style="background-color: #7c3aed; color: #fff; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+                        Complete Your Assessment
+                      </a>
+                    </p>
+                  </div>
+                `,
+              },
+            })
+          )
+        );
+      }
+
+      toast({ title: 'Reminder sent', description: `Notified ${recipientIds.length} team member(s) to complete their assessment.` });
+    } catch (e) {
+      console.error('Failed to send QC reminder:', e);
+      toast({ title: 'Failed to send reminder', variant: 'destructive' });
+    } finally {
+      setSendingReminder(false);
+    }
+  };
 
   // Collect user IDs for profile resolution
   const allUserIds = useMemo(() => {
