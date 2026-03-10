@@ -343,7 +343,14 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{section.title}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>{section.title}</CardTitle>
+          <SaveStatusIndicator
+            isSaving={isDirty || upsertAnswer.isPending}
+            isError={upsertAnswer.isError}
+            lastSavedKey={saveCount}
+          />
+        </div>
         <CardDescription>
           {hasCoreValues
             ? (respondentRole === 'manager'
