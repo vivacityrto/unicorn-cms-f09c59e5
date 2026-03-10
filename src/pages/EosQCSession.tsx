@@ -196,13 +196,25 @@ export default function EosQCSession() {
               </div>
             </div>
             {isManager && (
-              <Button
-                onClick={() => startMeeting.mutate(qc.id)}
-                disabled={startMeeting.isPending}
-              >
-                <Play className="h-4 w-4 mr-2" />
-                {startMeeting.isPending ? 'Starting...' : 'Start Meeting'}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={sendReminder}
+                  disabled={sendingReminder}
+                  isLoading={sendingReminder}
+                >
+                  <Bell className="h-4 w-4 mr-2" />
+                  Send Reminder
+                </Button>
+                <Button
+                  onClick={() => startMeeting.mutate(qc.id)}
+                  disabled={startMeeting.isPending}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  {startMeeting.isPending ? 'Starting...' : 'Start Meeting'}
+                </Button>
+              </div>
             )}
           </div>
         )}
