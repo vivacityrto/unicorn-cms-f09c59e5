@@ -65,10 +65,12 @@ export default function EosQCSession() {
   const isMeetingMode = !!qc.meeting_started_at;
   const respondentRole: 'manager' | 'reviewee' = isReviewee ? 'reviewee' : 'manager';
 
-  // Filter answers based on mode
+  // Filter answers based on role and mode
+  // Manager: always sees both sets of answers
+  // Reviewee: sees only their own until meeting mode
   const myAnswers = answers?.filter(a => a.respondent_role === respondentRole) || [];
   const otherAnswers = answers?.filter(a => a.respondent_role !== respondentRole) || [];
-  const visibleAnswers = isMeetingMode ? (answers || []) : myAnswers;
+  const canSeeOther = isManager || isMeetingMode;
 
   // Filter fit records
   const myFit = fit?.find(f => f.respondent_role === respondentRole) || null;
@@ -120,7 +122,7 @@ export default function EosQCSession() {
                 <p className="font-medium">Preparation Phase</p>
                 <p className="text-sm text-muted-foreground">
                   {isManager
-                    ? "Complete your assessment independently. The reviewee's responses are hidden until you start the meeting."
+                    ? "Complete your assessment. You can view the reviewee's responses alongside your own."
                     : "Complete your self-assessment independently. Your manager's responses are hidden until the meeting begins."}
                 </p>
               </div>
@@ -235,9 +237,9 @@ export default function EosQCSession() {
                   qcId={qc.id}
                   section={section}
                   myFit={myFit}
-                  otherFit={isMeetingMode ? otherFit : null}
+                  otherFit={canSeeOther ? otherFit : null}
                   respondentRole={respondentRole}
-                  isMeetingMode={isMeetingMode}
+                  isMeetingMode={canSeeOther}
                   disabled={!!isSigned}
                 />
               ) : (
@@ -245,9 +247,9 @@ export default function EosQCSession() {
                   qcId={qc.id}
                   section={section}
                   myAnswers={myAnswers.filter(a => a.section_key === section.key)}
-                  otherAnswers={isMeetingMode ? otherAnswers.filter(a => a.section_key === section.key) : []}
+                  otherAnswers={canSeeOther ? otherAnswers.filter(a => a.section_key === section.key) : []}
                   respondentRole={respondentRole}
-                  isMeetingMode={isMeetingMode}
+                  isMeetingMode={canSeeOther}
                   disabled={!!isSigned}
                   coreValues={section.key === 'core_values' ? coreValues : undefined}
                 />
