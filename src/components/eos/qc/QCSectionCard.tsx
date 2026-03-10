@@ -53,6 +53,7 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
   const handleAnswerChange = (promptKey: string, value: any) => {
     const newAnswers = { ...localAnswers, [promptKey]: { value } };
     setLocalAnswers(newAnswers);
+    setIsDirty(true);
 
     if (debounceTimers.current[promptKey]) {
       clearTimeout(debounceTimers.current[promptKey]);
