@@ -113,6 +113,7 @@ export const useQuarterlyConversations = () => {
       capacity,
       notes,
       seat_id,
+      respondent_role,
     }: {
       qc_id: string;
       gets_it: boolean;
@@ -120,6 +121,7 @@ export const useQuarterlyConversations = () => {
       capacity: boolean;
       notes?: string;
       seat_id?: string;
+      respondent_role: 'manager' | 'reviewee';
     }) => {
       const { data, error } = await supabase.rpc('qc_set_fit', {
         p_qc_id: qc_id,
@@ -128,6 +130,7 @@ export const useQuarterlyConversations = () => {
         p_capacity: capacity,
         p_notes: notes || null,
         p_seat_id: seat_id || null,
+        p_respondent_role: respondent_role,
       });
       
       if (error) throw error;
