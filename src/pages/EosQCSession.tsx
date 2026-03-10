@@ -239,7 +239,7 @@ export default function EosQCSession() {
                   myFit={myFit}
                   otherFit={canSeeOther ? otherFit : null}
                   respondentRole={respondentRole}
-                  isMeetingMode={isMeetingMode}
+                  isMeetingMode={canSeeOther}
                   disabled={!!isSigned}
                 />
               ) : (
