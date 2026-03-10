@@ -227,12 +227,14 @@ export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMee
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          GWC Assessment
-          {allTrue && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-          {!allTrue && myFit && <XCircle className="h-5 w-5 text-yellow-600" />}
-        </CardTitle>
-        <CardDescription>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            GWC Assessment
+            {allTrue && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+            {!allTrue && myFit && <XCircle className="h-5 w-5 text-yellow-600" />}
+          </CardTitle>
+          <SaveStatusIndicator isSaving={setFit.isPending} isError={setFit.isError} />
+        </div>
           Assess whether the team member Gets it, Wants it, and has Capacity for their role
         </CardDescription>
       </CardHeader>
