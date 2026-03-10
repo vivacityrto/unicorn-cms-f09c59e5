@@ -209,6 +209,24 @@ export const useQuarterlyConversations = () => {
     },
   });
 
+  // Start meeting (manager only)
+  const startMeeting = useMutation({
+    mutationFn: async (qc_id: string) => {
+      const { error } = await supabase.rpc('qc_start_meeting', {
+        p_qc_id: qc_id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['qc-conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['qc-detail'] });
+      toast({ title: 'Meeting started', description: 'Both parties can now see all responses side-by-side.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error starting meeting', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     conversations,
     isLoading,
@@ -219,6 +237,7 @@ export const useQuarterlyConversations = () => {
     createLinks,
     signQC,
     scheduleNext,
+    startMeeting,
   };
 };
 
