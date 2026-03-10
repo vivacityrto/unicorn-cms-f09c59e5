@@ -91,7 +91,7 @@ export const QCScheduler = ({ open, onOpenChange, onScheduled }: QCSchedulerProp
 
     setIsSubmitting(true);
     try {
-      await scheduleQC.mutateAsync({
+      const qcId = await scheduleQC.mutateAsync({
         reviewee_id: revieweeId,
         manager_ids: managerIds,
         template_id: defaultTemplate.id,
@@ -99,6 +99,59 @@ export const QCScheduler = ({ open, onOpenChange, onScheduled }: QCSchedulerProp
         quarter_end: quarterEnd,
         scheduled_at: scheduledDate,
       });
+
+      // Send notifications to reviewee and managers
+      const schedulerName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Your manager';
+      const formattedDate = format(new Date(scheduledDate), 'PPP');
+      const qcLink = `/eos/qc/${qcId}`;
+
+      // In-app notification for reviewee
+      try {
+        await supabase.from('user_notifications').insert({
+          user_id: revieweeId,
+          type: 'qc_scheduled',
+          title: 'Quarterly Conversation Scheduled',
+          message: `${schedulerName} has scheduled a Quarterly Conversation with you for ${formattedDate}. Please complete your self-assessment before the meeting.`,
+          link: qcLink,
+          created_by: profile?.user_uuid || null,
+        } as any);
+      } catch (e) {
+        console.error('Failed to create in-app notification:', e);
+      }
+
+      // Email notification to reviewee
+      try {
+        const revieweeUser = vivacityUsers?.find(u => u.user_uuid === revieweeId);
+        if (revieweeUser?.email) {
+          await supabase.functions.invoke('send-composed-email', {
+            body: {
+              tenant_id: 111, // Vivacity tenant
+              to: revieweeUser.email,
+              subject: `Quarterly Conversation Scheduled — ${formattedDate}`,
+              body_html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #333;">Quarterly Conversation Scheduled</h2>
+                  <p>Hi ${revieweeUser.first_name || 'there'},</p>
+                  <p><strong>${schedulerName}</strong> has scheduled a Quarterly Conversation with you.</p>
+                  <table style="margin: 16px 0; border-collapse: collapse;">
+                    <tr><td style="padding: 4px 12px 4px 0; color: #666; font-weight: 600;">Date</td><td>${formattedDate}</td></tr>
+                    <tr><td style="padding: 4px 12px 4px 0; color: #666; font-weight: 600;">Quarter</td><td>${format(new Date(quarterStart), 'MMM yyyy')} — ${format(new Date(quarterEnd), 'MMM yyyy')}</td></tr>
+                  </table>
+                  <p>Please log in and complete your <strong>self-assessment</strong> before the meeting. This includes rating your alignment with core values, GWC, and other sections.</p>
+                  <p style="margin-top: 24px;">
+                    <a href="https://unicorn-cms.lovable.app${qcLink}" style="background-color: #7c3aed; color: #fff; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+                      Complete Your Assessment
+                    </a>
+                  </p>
+                  <p style="margin-top: 24px; color: #888; font-size: 13px;">Your responses will remain private until the manager starts the meeting.</p>
+                </div>
+              `,
+            },
+          });
+        }
+      } catch (e) {
+        console.error('Failed to send QC email notification:', e);
+      }
 
       onScheduled?.();
       onOpenChange(false);
