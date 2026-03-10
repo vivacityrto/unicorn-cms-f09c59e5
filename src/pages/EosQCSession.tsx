@@ -32,6 +32,24 @@ export default function EosQCSession() {
 
   const { getUser } = useQCUserProfiles(allUserIds);
 
+  // Fetch core values from VTO for this tenant
+  const { data: coreValues } = useQuery({
+    queryKey: ['vto-core-values', qc?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eos_vto')
+        .select('core_values')
+        .eq('tenant_id', qc!.tenant_id!)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return Array.isArray(data?.core_values) ? (data.core_values as string[]) : [];
+    },
+    enabled: !!qc?.tenant_id,
+    staleTime: 10 * 60 * 1000,
+  });
+
   if (isLoading || !qc || !template) {
     return (
       <DashboardLayout>
