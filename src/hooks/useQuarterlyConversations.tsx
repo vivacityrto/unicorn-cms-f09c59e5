@@ -189,6 +189,25 @@ export const useQuarterlyConversations = () => {
     },
   });
 
+  // Update scheduled date/time
+  const updateSchedule = useMutation({
+    mutationFn: async ({ qc_id, scheduled_at }: { qc_id: string; scheduled_at: string }) => {
+      const { error } = await supabase
+        .from('eos_qc')
+        .update({ scheduled_at })
+        .eq('id', qc_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['qc-conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['qc-detail'] });
+      toast({ title: 'Schedule updated successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error updating schedule', description: error.message, variant: 'destructive' });
+    },
+  });
+
   // Schedule next QC
   const scheduleNext = useMutation({
     mutationFn: async ({ qc_id, next_start }: { qc_id: string; next_start?: string }) => {
@@ -232,6 +251,7 @@ export const useQuarterlyConversations = () => {
     isLoading,
     templates,
     scheduleQC,
+    updateSchedule,
     upsertAnswer,
     setFit,
     createLinks,

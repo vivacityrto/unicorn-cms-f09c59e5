@@ -4,8 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Users, Calendar, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Users, Calendar, CheckCircle, Clock, Pencil } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { useQCUserProfiles } from '@/hooks/useQCUserProfiles';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +19,7 @@ import { QCScheduler } from '@/components/eos/qc/QCScheduler';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { format } from 'date-fns';
 import type { QCStatus } from '@/types/qc';
+import type { QuarterlyConversation } from '@/types/qc';
 
 export default function EosQC() {
   return (
@@ -24,8 +29,66 @@ export default function EosQC() {
   );
 }
 
+function ScheduleEditPopover({ qc, onSave }: { qc: QuarterlyConversation; onSave: (qcId: string, scheduledAt: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const currentDate = qc.scheduled_at ? new Date(qc.scheduled_at) : new Date();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(currentDate);
+  const [time, setTime] = useState(qc.scheduled_at ? format(currentDate, 'HH:mm') : '09:00');
+
+  const handleSave = () => {
+    if (!selectedDate) return;
+    const [hours, minutes] = time.split(':').map(Number);
+    const dt = new Date(selectedDate);
+    dt.setHours(hours, minutes, 0, 0);
+    onSave(qc.id, dt.toISOString());
+    setOpen(false);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={(o) => {
+      if (o) {
+        // Reset state when opening
+        const d = qc.scheduled_at ? new Date(qc.scheduled_at) : new Date();
+        setSelectedDate(d);
+        setTime(qc.scheduled_at ? format(d, 'HH:mm') : '09:00');
+      }
+      setOpen(o);
+    }}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground">
+          <Pencil className="h-3 w-3" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-4" align="start">
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Reschedule</Label>
+          <CalendarPicker
+            mode="single"
+            selected={selectedDate}
+            onSelect={setSelectedDate}
+            initialFocus
+          />
+          <div className="space-y-1">
+            <Label className="text-xs">Time</Label>
+            <Input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleSave} disabled={!selectedDate}>Save</Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 const QCContent = () => {
-  const { conversations, isLoading } = useQuarterlyConversations();
+  const { conversations, isLoading, updateSchedule } = useQuarterlyConversations();
   const { profile } = useAuth();
   const { canScheduleQC, canViewAllQC } = useRBAC();
   const navigate = useNavigate();
@@ -44,6 +107,10 @@ const QCContent = () => {
   }, [conversations]);
 
   const { getUser } = useQCUserProfiles(allUserIds);
+
+  const handleUpdateSchedule = (qcId: string, scheduledAt: string) => {
+    updateSchedule.mutate({ qc_id: qcId, scheduled_at: scheduledAt });
+  };
 
   const getStatusBadge = (status: QCStatus) => {
     const statusConfig = {
@@ -146,6 +213,7 @@ const QCContent = () => {
             filteredConversations.map((qc) => {
               const reviewee = getUser(qc.reviewee_id);
               const managers = qc.manager_ids.map(id => getUser(id));
+              const isEditable = qc.status === 'scheduled' || qc.status === 'in_progress';
 
               return (
                 <Card key={qc.id} className="hover:shadow-md transition-shadow">
@@ -160,7 +228,17 @@ const QCContent = () => {
                           {qc.scheduled_at && (
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              Scheduled: {format(new Date(qc.scheduled_at), 'PPP')}
+                              Scheduled: {format(new Date(qc.scheduled_at), 'MMMM do, yyyy')} at {format(new Date(qc.scheduled_at), 'h:mm a')}
+                              {isEditable && (
+                                <ScheduleEditPopover qc={qc} onSave={handleUpdateSchedule} />
+                              )}
+                            </span>
+                          )}
+                          {!qc.scheduled_at && isEditable && (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              No date set
+                              <ScheduleEditPopover qc={qc} onSave={handleUpdateSchedule} />
                             </span>
                           )}
                         </CardDescription>
