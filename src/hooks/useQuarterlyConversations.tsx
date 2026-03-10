@@ -76,17 +76,20 @@ export const useQuarterlyConversations = () => {
       section_key,
       prompt_key,
       value_json,
+      respondent_role,
     }: {
       qc_id: string;
       section_key: string;
       prompt_key: string;
       value_json: Record<string, any>;
+      respondent_role: 'manager' | 'reviewee';
     }) => {
       const { data, error } = await supabase.rpc('qc_upsert_answer', {
         p_qc_id: qc_id,
         p_section_key: section_key,
         p_prompt_key: prompt_key,
         p_value_json: value_json,
+        p_respondent_role: respondent_role,
       });
       
       if (error) throw error;
@@ -110,6 +113,7 @@ export const useQuarterlyConversations = () => {
       capacity,
       notes,
       seat_id,
+      respondent_role,
     }: {
       qc_id: string;
       gets_it: boolean;
@@ -117,6 +121,7 @@ export const useQuarterlyConversations = () => {
       capacity: boolean;
       notes?: string;
       seat_id?: string;
+      respondent_role: 'manager' | 'reviewee';
     }) => {
       const { data, error } = await supabase.rpc('qc_set_fit', {
         p_qc_id: qc_id,
@@ -125,6 +130,7 @@ export const useQuarterlyConversations = () => {
         p_capacity: capacity,
         p_notes: notes || null,
         p_seat_id: seat_id || null,
+        p_respondent_role: respondent_role,
       });
       
       if (error) throw error;
@@ -203,6 +209,24 @@ export const useQuarterlyConversations = () => {
     },
   });
 
+  // Start meeting (manager only)
+  const startMeeting = useMutation({
+    mutationFn: async (qc_id: string) => {
+      const { error } = await supabase.rpc('qc_start_meeting', {
+        p_qc_id: qc_id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['qc-conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['qc-detail'] });
+      toast({ title: 'Meeting started', description: 'Both parties can now see all responses side-by-side.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error starting meeting', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     conversations,
     isLoading,
@@ -213,6 +237,7 @@ export const useQuarterlyConversations = () => {
     createLinks,
     signQC,
     scheduleNext,
+    startMeeting,
   };
 };
 
@@ -268,11 +293,10 @@ export const useQCDetails = (qcId: string | undefined) => {
       const { data, error } = await supabase
         .from('eos_qc_fit')
         .select('*')
-        .eq('qc_id', qcId!)
-        .maybeSingle();
+        .eq('qc_id', qcId!);
       
       if (error) throw error;
-      return data as unknown as QCFit | null;
+      return data as unknown as QCFit[];
     },
     enabled: !!qcId,
   });

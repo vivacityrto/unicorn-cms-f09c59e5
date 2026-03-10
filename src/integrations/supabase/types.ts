@@ -18161,6 +18161,7 @@ export type Database = {
           created_by: string | null
           id: string
           manager_ids: string[]
+          meeting_started_at: string | null
           quarter_end: string
           quarter_start: string
           reviewee_id: string
@@ -18179,6 +18180,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           manager_ids: string[]
+          meeting_started_at?: string | null
           quarter_end: string
           quarter_start: string
           reviewee_id: string
@@ -18197,6 +18199,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           manager_ids?: string[]
+          meeting_started_at?: string | null
           quarter_end?: string
           quarter_start?: string
           reviewee_id?: string
@@ -18233,6 +18236,7 @@ export type Database = {
           id: string
           prompt_key: string
           qc_id: string
+          respondent_role: string
           section_key: string
           updated_at: string
           value_json: Json
@@ -18243,6 +18247,7 @@ export type Database = {
           id?: string
           prompt_key: string
           qc_id: string
+          respondent_role?: string
           section_key: string
           updated_at?: string
           value_json?: Json
@@ -18253,6 +18258,7 @@ export type Database = {
           id?: string
           prompt_key?: string
           qc_id?: string
+          respondent_role?: string
           section_key?: string
           updated_at?: string
           value_json?: Json
@@ -18310,6 +18316,7 @@ export type Database = {
           id: string
           notes: string | null
           qc_id: string
+          respondent_role: string
           seat_id: string | null
           updated_at: string
           wants_it: boolean | null
@@ -18321,6 +18328,7 @@ export type Database = {
           id?: string
           notes?: string | null
           qc_id: string
+          respondent_role?: string
           seat_id?: string | null
           updated_at?: string
           wants_it?: boolean | null
@@ -18332,6 +18340,7 @@ export type Database = {
           id?: string
           notes?: string | null
           qc_id?: string
+          respondent_role?: string
           seat_id?: string | null
           updated_at?: string
           wants_it?: boolean | null
@@ -18340,7 +18349,7 @@ export type Database = {
           {
             foreignKeyName: "eos_qc_fit_qc_id_fkey"
             columns: ["qc_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "eos_qc"
             referencedColumns: ["id"]
           },
@@ -48105,27 +48114,52 @@ export type Database = {
         Args: { p_current_qc_id: string; p_next_quarter_start?: string }
         Returns: string
       }
-      qc_set_fit: {
-        Args: {
-          p_capacity: boolean
-          p_gets_it: boolean
-          p_notes?: string
-          p_qc_id: string
-          p_seat_id?: string
-          p_wants_it: boolean
-        }
-        Returns: string
-      }
+      qc_set_fit:
+        | {
+            Args: {
+              p_capacity: boolean
+              p_gets_it: boolean
+              p_notes?: string
+              p_qc_id: string
+              p_seat_id?: string
+              p_wants_it: boolean
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_capacity: boolean
+              p_gets_it: boolean
+              p_notes?: string
+              p_qc_id: string
+              p_respondent_role?: string
+              p_seat_id?: string
+              p_wants_it: boolean
+            }
+            Returns: string
+          }
       qc_sign: { Args: { p_qc_id: string; p_role: string }; Returns: boolean }
-      qc_upsert_answer: {
-        Args: {
-          p_prompt_key: string
-          p_qc_id: string
-          p_section_key: string
-          p_value_json: Json
-        }
-        Returns: string
-      }
+      qc_start_meeting: { Args: { p_qc_id: string }; Returns: undefined }
+      qc_upsert_answer:
+        | {
+            Args: {
+              p_prompt_key: string
+              p_qc_id: string
+              p_section_key: string
+              p_value_json: Json
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_prompt_key: string
+              p_qc_id: string
+              p_respondent_role?: string
+              p_section_key: string
+              p_value_json: Json
+            }
+            Returns: string
+          }
       record_resource_usage: {
         Args: { p_downloaded?: boolean; p_resource_id: string }
         Returns: undefined

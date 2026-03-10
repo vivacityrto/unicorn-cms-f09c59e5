@@ -41,6 +41,7 @@ export interface QuarterlyConversation {
   quarter_end: string;
   scheduled_at: string | null;
   completed_at: string | null;
+  meeting_started_at: string | null;
   status: QCStatus;
   visibility: QCVisibility;
   created_by: string | null;
@@ -54,6 +55,7 @@ export interface QCAnswer {
   section_key: string;
   prompt_key: string;
   value_json: Record<string, any>;
+  respondent_role: 'manager' | 'reviewee';
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -67,6 +69,7 @@ export interface QCFit {
   capacity: boolean | null;
   notes: string | null;
   seat_id: string | null;
+  respondent_role: 'manager' | 'reviewee';
   created_at: string;
   updated_at: string;
 }
