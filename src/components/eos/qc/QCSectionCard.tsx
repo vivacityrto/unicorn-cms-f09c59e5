@@ -19,7 +19,7 @@ interface QCSectionCardProps {
   coreValues?: string[];
 }
 
-export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, respondentRole, isMeetingMode, disabled }: QCSectionCardProps) => {
+export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, respondentRole, isMeetingMode, disabled, coreValues }: QCSectionCardProps) => {
   const { upsertAnswer } = useQuarterlyConversations();
   const [localAnswers, setLocalAnswers] = useState<Record<string, any>>({});
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
