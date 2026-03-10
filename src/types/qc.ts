@@ -69,6 +69,7 @@ export interface QCFit {
   capacity: boolean | null;
   notes: string | null;
   seat_id: string | null;
+  respondent_role: 'manager' | 'reviewee';
   created_at: string;
   updated_at: string;
 }
