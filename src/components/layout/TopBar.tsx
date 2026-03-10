@@ -121,6 +121,28 @@ const getBreadcrumbs = (pathname: string) => {
   return breadcrumbs;
 };
 
+function SuggestionsButton() {
+  const navigate = useNavigate();
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 text-xs"
+          onClick={() => navigate('/suggestions')}
+        >
+          <Lightbulb className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Suggestions</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Suggestion & Issue Register</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 interface TopBarProps {
   showSearch?: boolean;
 }
