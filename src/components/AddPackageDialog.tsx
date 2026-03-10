@@ -134,7 +134,8 @@ export function AddPackageDialog({
   const handlePropagateToInstances = async () => {
     if (!pendingPropagateData) return;
     try {
-      const { error } = await supabase
+      const client: any = supabase;
+      const { error } = await client
         .from('package_instances')
         .update({ included_minutes: pendingPropagateData.totalHours * 60 })
         .eq('package_id', pendingPropagateData.packageId)
