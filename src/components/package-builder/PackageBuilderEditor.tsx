@@ -317,11 +317,17 @@ export function PackageBuilderEditor() {
   const handleSave = async () => {
     try {
       setIsSaving(true);
+      const oldTotalHours = packageData?.total_hours || 0;
       await updatePackageData(formData);
       toast({
         title: 'Package Saved',
         description: 'Your changes have been saved successfully.'
       });
+      // If total_hours changed, prompt to propagate to active instances
+      if (formData.total_hours !== oldTotalHours && packageId) {
+        setPendingTotalHours(formData.total_hours);
+        setShowPropagateDialog(true);
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -330,6 +336,30 @@ export function PackageBuilderEditor() {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePropagateToInstances = async () => {
+    if (!packageId) return;
+    try {
+      const { error } = await supabase
+        .from('package_instances')
+        .update({ included_minutes: pendingTotalHours * 60 })
+        .eq('package_id', packageId)
+        .eq('status', 'active');
+      if (error) throw error;
+      toast({
+        title: 'Instances Updated',
+        description: `Active instances updated to ${pendingTotalHours}h included.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update instances',
+        variant: 'destructive'
+      });
+    } finally {
+      setShowPropagateDialog(false);
     }
   };
 
