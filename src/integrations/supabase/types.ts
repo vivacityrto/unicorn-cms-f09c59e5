@@ -12610,6 +12610,204 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_suggest_category: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dd_suggest_impact_rating: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dd_suggest_item_type: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dd_suggest_priority: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dd_suggest_release_status: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dd_suggest_status: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dd_task_statuses: {
         Row: {
           code: string
@@ -32141,6 +32339,682 @@ export type Database = {
           signal_type?: string
         }
         Relationships: []
+      }
+      suggest_attachments: {
+        Row: {
+          attachment_kind: string
+          created_at: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_size_bytes: number | null
+          id: string
+          mime_type: string | null
+          suggest_item_id: string
+          tenant_id: number
+        }
+        Insert: {
+          attachment_kind?: string
+          created_at?: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          suggest_item_id: string
+          tenant_id: number
+        }
+        Update: {
+          attachment_kind?: string
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          file_path?: string
+          file_size_bytes?: number | null
+          id?: string
+          mime_type?: string | null
+          suggest_item_id?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggest_attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_suggest_item_id_fkey"
+            columns: ["suggest_item_id"]
+            isOneToOne: false
+            referencedRelation: "suggest_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      suggest_items: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          is_deleted: boolean
+          release_notes: string | null
+          release_version: string | null
+          released_at: string | null
+          released_by: string | null
+          reported_by: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          source_area: string | null
+          source_component: string | null
+          source_page_label: string | null
+          source_page_url: string | null
+          suggest_category_id: string | null
+          suggest_impact_rating_id: string
+          suggest_item_type_id: string
+          suggest_priority_id: string
+          suggest_release_status_id: string
+          suggest_status_id: string
+          tenant_id: number
+          title: string
+          title_generated_by_ai: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          is_deleted?: boolean
+          release_notes?: string | null
+          release_version?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          reported_by: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_area?: string | null
+          source_component?: string | null
+          source_page_label?: string | null
+          source_page_url?: string | null
+          suggest_category_id?: string | null
+          suggest_impact_rating_id: string
+          suggest_item_type_id: string
+          suggest_priority_id: string
+          suggest_release_status_id: string
+          suggest_status_id: string
+          tenant_id: number
+          title: string
+          title_generated_by_ai?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          is_deleted?: boolean
+          release_notes?: string | null
+          release_version?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          reported_by?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_area?: string | null
+          source_component?: string | null
+          source_page_label?: string | null
+          source_page_url?: string | null
+          suggest_category_id?: string | null
+          suggest_impact_rating_id?: string
+          suggest_item_type_id?: string
+          suggest_priority_id?: string
+          suggest_release_status_id?: string
+          suggest_status_id?: string
+          tenant_id?: number
+          title?: string
+          title_generated_by_ai?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggest_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_suggest_category_id_fkey"
+            columns: ["suggest_category_id"]
+            isOneToOne: false
+            referencedRelation: "dd_suggest_category"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggest_items_suggest_impact_rating_id_fkey"
+            columns: ["suggest_impact_rating_id"]
+            isOneToOne: false
+            referencedRelation: "dd_suggest_impact_rating"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggest_items_suggest_item_type_id_fkey"
+            columns: ["suggest_item_type_id"]
+            isOneToOne: false
+            referencedRelation: "dd_suggest_item_type"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggest_items_suggest_priority_id_fkey"
+            columns: ["suggest_priority_id"]
+            isOneToOne: false
+            referencedRelation: "dd_suggest_priority"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggest_items_suggest_release_status_id_fkey"
+            columns: ["suggest_release_status_id"]
+            isOneToOne: false
+            referencedRelation: "dd_suggest_release_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggest_items_suggest_status_id_fkey"
+            columns: ["suggest_status_id"]
+            isOneToOne: false
+            referencedRelation: "dd_suggest_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       support_requests: {
         Row: {
