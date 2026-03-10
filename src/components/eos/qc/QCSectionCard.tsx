@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
+import { Heart } from 'lucide-react';
 import type { QCSection, QCAnswer, QCPrompt } from '@/types/qc';
 
 interface QCSectionCardProps {
@@ -15,6 +16,7 @@ interface QCSectionCardProps {
   respondentRole: 'manager' | 'reviewee';
   isMeetingMode: boolean;
   disabled?: boolean;
+  coreValues?: string[];
 }
 
 export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, respondentRole, isMeetingMode, disabled }: QCSectionCardProps) => {
