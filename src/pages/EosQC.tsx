@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Users, Calendar, CheckCircle, Clock } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
+import { useQCUserProfiles } from '@/hooks/useQCUserProfiles';
 import { useAuth } from '@/hooks/useAuth';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useNavigate } from 'react-router-dom';
@@ -28,8 +30,20 @@ const QCContent = () => {
   const { canScheduleQC, canViewAllQC } = useRBAC();
   const navigate = useNavigate();
   const [schedulerOpen, setSchedulerOpen] = useState(false);
-  // Default to 'my-reviews' for General Users (who can't see 'all')
   const [activeTab, setActiveTab] = useState<string>(canViewAllQC() ? 'all' : 'my-reviews');
+
+  // Collect all user IDs from conversations for batch profile fetch
+  const allUserIds = useMemo(() => {
+    if (!conversations) return [];
+    const ids: string[] = [];
+    conversations.forEach((qc) => {
+      ids.push(qc.reviewee_id);
+      ids.push(...qc.manager_ids);
+    });
+    return ids;
+  }, [conversations]);
+
+  const { getUser } = useQCUserProfiles(allUserIds);
 
   const getStatusBadge = (status: QCStatus) => {
     const statusConfig = {
@@ -42,18 +56,12 @@ const QCContent = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  // Filter conversations based on user role
-  // SuperAdmin (canViewAllQC) sees all; General User sees only their own
   const filteredConversations = conversations?.filter((qc) => {
-    // First filter by role-based access
     if (!canViewAllQC()) {
-      // General User can only see QCs where they are reviewee or manager
       const isReviewee = qc.reviewee_id === profile?.user_uuid;
       const isManager = qc.manager_ids.includes(profile?.user_uuid || '');
       if (!isReviewee && !isManager) return false;
     }
-
-    // Then apply tab filter
     if (activeTab === 'all') return true;
     if (activeTab === 'my-reviews') return qc.reviewee_id === profile?.user_uuid;
     if (activeTab === 'managing') return qc.manager_ids.includes(profile?.user_uuid || '');
@@ -135,43 +143,79 @@ const QCContent = () => {
 
         <TabsContent value={activeTab} className="mt-6 space-y-4">
           {filteredConversations && filteredConversations.length > 0 ? (
-            filteredConversations.map((qc) => (
-              <Card key={qc.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <CardTitle className="flex items-center gap-2">
-                        Quarter: {format(new Date(qc.quarter_start), 'MMM yyyy')}
-                        {getStatusBadge(qc.status)}
-                      </CardTitle>
-                      <CardDescription>
-                        {qc.scheduled_at && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Scheduled: {format(new Date(qc.scheduled_at), 'PPP')}
-                          </span>
-                        )}
-                      </CardDescription>
+            filteredConversations.map((qc) => {
+              const reviewee = getUser(qc.reviewee_id);
+              const managers = qc.manager_ids.map(id => getUser(id));
+
+              return (
+                <Card key={qc.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <CardTitle className="flex items-center gap-2">
+                          Quarter: {format(new Date(qc.quarter_start), 'MMM yyyy')}
+                          {getStatusBadge(qc.status)}
+                        </CardTitle>
+                        <CardDescription>
+                          {qc.scheduled_at && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              Scheduled: {format(new Date(qc.scheduled_at), 'PPP')}
+                            </span>
+                          )}
+                        </CardDescription>
+                      </div>
+                      <Button
+                        onClick={() => navigate(`/eos/qc/${qc.id}`)}
+                        variant={qc.status === 'completed' ? 'outline' : 'default'}
+                      >
+                        {qc.status === 'completed' ? 'View Summary' : 'Continue'}
+                      </Button>
                     </div>
-                    <Button
-                      onClick={() => navigate(`/eos/qc/${qc.id}`)}
-                      variant={qc.status === 'completed' ? 'outline' : 'default'}
-                    >
-                      {qc.status === 'completed' ? 'View Summary' : 'Continue'}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <div>Reviewee: {qc.reviewee_id}</div>
-                    <div>Managers: {qc.manager_ids.length} assigned</div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-sm">
+                      {/* Reviewee */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground font-medium shrink-0">Reviewee:</span>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-7 w-7">
+                            <AvatarImage src={reviewee.avatarUrl || undefined} alt={reviewee.fullName} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              {reviewee.initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium">{reviewee.fullName}</span>
+                        </div>
+                      </div>
+
+                      {/* Managers */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground font-medium shrink-0">Manager{managers.length > 1 ? 's' : ''}:</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {managers.map((mgr, idx) => (
+                            <div key={qc.manager_ids[idx]} className="flex items-center gap-1.5">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={mgr.avatarUrl || undefined} alt={mgr.fullName} />
+                                <AvatarFallback className="bg-accent text-accent-foreground text-xs">
+                                  {mgr.initials}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{mgr.fullName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                     {qc.completed_at && (
-                      <div>Completed: {format(new Date(qc.completed_at), 'PPP')}</div>
+                      <div className="text-sm text-muted-foreground mt-2">
+                        Completed: {format(new Date(qc.completed_at), 'PPP')}
+                      </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              );
+            })
           ) : (
             <Card>
               <CardContent className="pt-6 text-center py-12">
