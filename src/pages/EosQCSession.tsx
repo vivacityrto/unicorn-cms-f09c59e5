@@ -26,8 +26,12 @@ export default function EosQCSession() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { qc, template, answers, fit, signoffs, isLoading } = useQCDetails(id);
-  const { startMeeting } = useQuarterlyConversations();
+  const { startMeeting, upsertAnswer } = useQuarterlyConversations();
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [summaryText, setSummaryText] = useState('');
+  const [summaryDirty, setSummaryDirty] = useState(false);
+  const [summaryCount, setSummaryCount] = useState(0);
+  const summaryTimer = useRef<NodeJS.Timeout | null>(null);
 
   const sendReminder = async () => {
     if (!qc || !profile) return;
