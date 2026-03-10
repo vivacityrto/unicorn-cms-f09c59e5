@@ -31,6 +31,16 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
   const { upsertAnswer } = useQuarterlyConversations();
   const [localAnswers, setLocalAnswers] = useState<Record<string, any>>({});
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
+  const [isDirty, setIsDirty] = useState(false);
+  const [saveCount, setSaveCount] = useState(0);
+
+  // Track successful saves
+  useEffect(() => {
+    if (!upsertAnswer.isPending && !upsertAnswer.isError && isDirty) {
+      setSaveCount(c => c + 1);
+      setIsDirty(false);
+    }
+  }, [upsertAnswer.isPending, upsertAnswer.isError]);
 
   useEffect(() => {
     const answerMap: Record<string, any> = {};
