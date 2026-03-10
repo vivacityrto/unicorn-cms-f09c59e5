@@ -139,6 +139,34 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
       });
 
       toast({ title: 'Task Updated', description: `Status changed to ${getStatusLabel(newStatusId, statuses)}` });
+
+      // Auto-promote stage to In Progress if currently Not Started and task is set to anything other than N/A
+      if (newStatusId !== 3) {
+        const { data: stageData } = await supabase
+          .from('stage_instances')
+          .select('status_id')
+          .eq('id', stageInstanceId)
+          .single();
+
+        if (stageData && (stageData as any).status_id === 0) {
+          const inProgressOption = statuses.find(s => s.code === 1);
+          await supabase
+            .from('stage_instances')
+            .update({ status_id: 1, status: inProgressOption?.value || 'in_progress' })
+            .eq('id', stageInstanceId);
+
+          await supabase.from('client_audit_log').insert({
+            tenant_id: tenantId,
+            actor_user_id: profile?.user_uuid,
+            action: 'stage_auto_in_progress',
+            entity_type: 'stage_instances',
+            entity_id: stageInstanceId.toString(),
+            after_data: { status_id: 1 },
+            details: { package_id: packageId, reason: 'client_task_status_changed' },
+          });
+        }
+      }
+
       fetchTasks();
     } catch (error: any) {
       console.error('Error updating client task:', error);
