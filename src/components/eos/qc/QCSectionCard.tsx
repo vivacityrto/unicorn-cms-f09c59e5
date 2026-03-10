@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { SaveStatusIndicator } from './SaveStatusIndicator';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,6 +31,16 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
   const { upsertAnswer } = useQuarterlyConversations();
   const [localAnswers, setLocalAnswers] = useState<Record<string, any>>({});
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
+  const [isDirty, setIsDirty] = useState(false);
+  const [saveCount, setSaveCount] = useState(0);
+
+  // Track successful saves
+  useEffect(() => {
+    if (!upsertAnswer.isPending && !upsertAnswer.isError && isDirty) {
+      setSaveCount(c => c + 1);
+      setIsDirty(false);
+    }
+  }, [upsertAnswer.isPending, upsertAnswer.isError]);
 
   useEffect(() => {
     const answerMap: Record<string, any> = {};
@@ -42,6 +53,7 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
   const handleAnswerChange = (promptKey: string, value: any) => {
     const newAnswers = { ...localAnswers, [promptKey]: { value } };
     setLocalAnswers(newAnswers);
+    setIsDirty(true);
 
     if (debounceTimers.current[promptKey]) {
       clearTimeout(debounceTimers.current[promptKey]);
@@ -331,7 +343,14 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{section.title}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>{section.title}</CardTitle>
+          <SaveStatusIndicator
+            isSaving={isDirty || upsertAnswer.isPending}
+            isError={upsertAnswer.isError}
+            lastSavedKey={saveCount}
+          />
+        </div>
         <CardDescription>
           {hasCoreValues
             ? (respondentRole === 'manager'

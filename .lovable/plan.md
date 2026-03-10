@@ -1,28 +1,21 @@
+## Completed: Package Add-On / Time Top-Up via Parent Instance Linking
 
+### Summary
+Add-on packages (e.g. General Consult for extra TAS days) can now be attached to a parent package instance. This preserves the audit trail (separate `package_instance` row) while rolling hours into the parent's burn-down.
 
-## Add Autosave Status Indicator to QC Forms
+### Database Changes
+- `package_instances.parent_instance_id` (bigint, self-referencing FK) — links child to parent
+- `rpc_get_package_usage` updated to include time entries from child instances (`OR te.package_id IN (SELECT id FROM package_instances WHERE parent_instance_id = ...)`)
 
-The app already autosaves every change with a 1-second debounce delay -- data is persisted to Supabase automatically as you type. The problem is there is no visual feedback confirming this.
+### Frontend Changes
+- **StartPackageDialog**: New "Attach to package" dropdown lists active non-child instances. On attach, sets `parent_instance_id` and increments parent's `hours_added` by the new package's `total_hours`
+- **usePackageUsageQuery / usePackageUsage**: Queries filter `parent_instance_id IS NULL` so children don't appear as top-level packages
+- **PackageBurndownCards** (ClientTimeTab): Excludes children from card list; shows "Add-ons: Gen Consult +7h" sub-line under parent card
+- **ManageTenants**: Hours column excludes child instances to prevent double-counting
 
-### What to build
-
-Add a small save-status indicator that shows the current state: **Saving...**, **Saved**, or **Error**. This will appear at the top of each section card (or globally at the top of the session page).
-
-### Technical approach
-
-1. **Track mutation state in `QCSectionCard.tsx`**: The `upsertAnswer` mutation from `useQuarterlyConversations()` already has `isPending`/`isError`/`isSuccess` states via React Query. Use these plus the debounce timer to derive a 3-state indicator:
-   - While debounce timer is active or mutation is pending: "Saving..."
-   - After mutation succeeds: "All changes saved" (with a checkmark)
-   - On error: "Save failed" (with retry option)
-
-2. **Add a subtle status badge** near the section header showing the state with appropriate icons (Loader2 spinning for saving, Check for saved, AlertCircle for error).
-
-3. **Apply the same pattern to `GWCPanel.tsx`** which also saves data independently via `qc_set_fit`.
-
-4. **Optional global indicator**: Add a small persistent "All changes saved" text at the top of the `EosQCSession` page that aggregates status across all sections.
-
-### Files to edit
-- `src/components/eos/qc/QCSectionCard.tsx` -- add per-section save indicator
-- `src/components/eos/qc/GWCPanel.tsx` -- add save indicator for GWC
-- Optionally `src/pages/EosQCSession.tsx` -- add a global autosave status bar
-
+### How It Works
+1. SuperAdmin starts a package → optionally attaches to existing parent
+2. Child's `total_hours` added to parent's `hours_added`
+3. Child's time entries roll into parent burn-down via RPC
+4. Child excluded from burn-down cards and hours columns
+5. Child visible as add-on label under parent card for audit trail

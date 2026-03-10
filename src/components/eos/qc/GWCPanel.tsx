@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { CheckCircle2, XCircle } from 'lucide-react';
+import { SaveStatusIndicator } from './SaveStatusIndicator';
 import type { QCSection, QCFit } from '@/types/qc';
 
 interface GWCPanelProps {
@@ -92,7 +93,10 @@ export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMee
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">GWC Assessment — Side-by-Side</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">GWC Assessment — Side-by-Side</CardTitle>
+            <SaveStatusIndicator isSaving={setFit.isPending} isError={setFit.isError} />
+          </div>
           <CardDescription>Compare both assessments and discuss differences</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -223,11 +227,14 @@ export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMee
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          GWC Assessment
-          {allTrue && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-          {!allTrue && myFit && <XCircle className="h-5 w-5 text-yellow-600" />}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            GWC Assessment
+            {allTrue && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+            {!allTrue && myFit && <XCircle className="h-5 w-5 text-yellow-600" />}
+          </CardTitle>
+          <SaveStatusIndicator isSaving={setFit.isPending} isError={setFit.isError} />
+        </div>
         <CardDescription>
           Assess whether the team member Gets it, Wants it, and has Capacity for their role
         </CardDescription>
