@@ -342,12 +342,12 @@ export function PackageBuilderEditor() {
   const handlePropagateToInstances = async () => {
     if (!packageId) return;
     try {
-      const result: any = await supabase
+      const client: any = supabase;
+      const { error } = await client
         .from('package_instances')
-        .update({ included_minutes: pendingTotalHours * 60 } as any)
-        .eq('package_id', packageId as any)
-        .eq('status', 'active' as any);
-      const error = result.error;
+        .update({ included_minutes: pendingTotalHours * 60 })
+        .eq('package_id', packageId)
+        .eq('status', 'active');
       if (error) throw error;
       toast({
         title: 'Instances Updated',

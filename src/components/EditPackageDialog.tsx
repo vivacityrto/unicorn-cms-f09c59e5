@@ -99,12 +99,12 @@ export const EditPackageDialog = ({ open, onOpenChange, onSuccess, packageData }
   const handlePropagateToInstances = async () => {
     if (!packageData) return;
     try {
-      const result: any = await supabase
+      const client: any = supabase;
+      const { error } = await client
         .from('package_instances')
-        .update({ included_minutes: pendingTotalHours * 60 } as any)
-        .eq('package_id', packageData.id as any)
-        .eq('status', 'active' as any);
-      const error = result.error;
+        .update({ included_minutes: pendingTotalHours * 60 })
+        .eq('package_id', packageData.id)
+        .eq('status', 'active');
       if (error) throw error;
       toast({
         title: 'Instances Updated',
