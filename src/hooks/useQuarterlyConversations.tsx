@@ -76,17 +76,20 @@ export const useQuarterlyConversations = () => {
       section_key,
       prompt_key,
       value_json,
+      respondent_role,
     }: {
       qc_id: string;
       section_key: string;
       prompt_key: string;
       value_json: Record<string, any>;
+      respondent_role: 'manager' | 'reviewee';
     }) => {
       const { data, error } = await supabase.rpc('qc_upsert_answer', {
         p_qc_id: qc_id,
         p_section_key: section_key,
         p_prompt_key: prompt_key,
         p_value_json: value_json,
+        p_respondent_role: respondent_role,
       });
       
       if (error) throw error;
