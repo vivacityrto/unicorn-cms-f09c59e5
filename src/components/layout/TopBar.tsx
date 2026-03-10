@@ -127,9 +127,8 @@ function SuggestionsButton() {
   const navigate = useNavigate();
   return (
     <Button
-      variant="outline"
       size="sm"
-      className="gap-1.5 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+      className="gap-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
       onClick={() => navigate('/suggestions')}
       title="Suggestion & Issue Register"
     >
