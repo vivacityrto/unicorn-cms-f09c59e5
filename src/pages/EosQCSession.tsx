@@ -65,10 +65,12 @@ export default function EosQCSession() {
   const isMeetingMode = !!qc.meeting_started_at;
   const respondentRole: 'manager' | 'reviewee' = isReviewee ? 'reviewee' : 'manager';
 
-  // Filter answers based on mode
+  // Filter answers based on role and mode
+  // Manager: always sees both sets of answers
+  // Reviewee: sees only their own until meeting mode
   const myAnswers = answers?.filter(a => a.respondent_role === respondentRole) || [];
   const otherAnswers = answers?.filter(a => a.respondent_role !== respondentRole) || [];
-  const visibleAnswers = isMeetingMode ? (answers || []) : myAnswers;
+  const canSeeOther = isManager || isMeetingMode;
 
   // Filter fit records
   const myFit = fit?.find(f => f.respondent_role === respondentRole) || null;
