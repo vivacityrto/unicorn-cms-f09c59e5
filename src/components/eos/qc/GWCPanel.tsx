@@ -235,6 +235,7 @@ export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMee
           </CardTitle>
           <SaveStatusIndicator isSaving={setFit.isPending} isError={setFit.isError} />
         </div>
+        <CardDescription>
           Assess whether the team member Gets it, Wants it, and has Capacity for their role
         </CardDescription>
       </CardHeader>
