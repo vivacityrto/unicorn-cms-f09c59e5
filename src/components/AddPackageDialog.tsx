@@ -40,6 +40,8 @@ export function AddPackageDialog({
   const [durationMonths, setDurationMonths] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showPropagateDialog, setShowPropagateDialog] = useState(false);
+  const [pendingPropagateData, setPendingPropagateData] = useState<{ packageId: number; totalHours: number } | null>(null);
   useEffect(() => {
     if (packageToEdit && open) {
       setPackageAbbr(packageToEdit.name || '');
