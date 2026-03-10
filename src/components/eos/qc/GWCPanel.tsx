@@ -97,6 +97,7 @@ export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMee
             <CardTitle className="flex items-center gap-2">GWC Assessment — Side-by-Side</CardTitle>
             <SaveStatusIndicator isSaving={setFit.isPending} isError={setFit.isError} />
           </div>
+          <CardDescription>Compare both assessments and discuss differences</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-3 gap-4 text-sm font-medium text-muted-foreground border-b pb-2">
