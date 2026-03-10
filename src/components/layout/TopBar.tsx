@@ -220,6 +220,8 @@ export function TopBar({ showSearch = false }: TopBarProps) {
 
       {/* Right: Actions & Avatar - never pushed off-screen */}
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        {/* Suggestions button */}
+        <SuggestionsButton />
         <TooltipProvider>
           {/* Help Center button - Client roles only */}
           {isClientRole && (
