@@ -55,6 +55,7 @@ export interface QCAnswer {
   section_key: string;
   prompt_key: string;
   value_json: Record<string, any>;
+  respondent_role: 'manager' | 'reviewee';
   created_by: string | null;
   created_at: string;
   updated_at: string;
