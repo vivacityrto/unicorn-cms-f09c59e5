@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, CheckCircle, FileText, Calendar, Play, Lock, Clock } from 'lucide-react';
+import { ArrowLeft, CheckCircle, FileText, Calendar, Play, Lock, Clock, Bell } from 'lucide-react';
 import { useQCDetails, useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { useQCUserProfiles } from '@/hooks/useQCUserProfiles';
 import { useAuth } from '@/hooks/useAuth';
