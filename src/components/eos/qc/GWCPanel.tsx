@@ -18,21 +18,52 @@ interface GWCPanelProps {
   disabled?: boolean;
 }
 
+interface GWCNotes {
+  gets_it: string;
+  wants_it: string;
+  capacity: string;
+  general: string;
+}
+
+/** Parse notes field — supports both legacy string and new JSON format */
+function parseNotes(raw: string | null): GWCNotes {
+  const empty: GWCNotes = { gets_it: '', wants_it: '', capacity: '', general: '' };
+  if (!raw) return empty;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed === 'object' && parsed !== null) {
+      return { ...empty, ...parsed };
+    }
+  } catch {
+    // Legacy single-string notes → put in general
+    return { ...empty, general: raw };
+  }
+  return empty;
+}
+
+function serializeNotes(n: GWCNotes): string {
+  return JSON.stringify(n);
+}
+
 export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMeetingMode, disabled }: GWCPanelProps) => {
   const { setFit } = useQuarterlyConversations();
   const [getsIt, setGetsIt] = useState(myFit?.gets_it ?? false);
   const [wantsIt, setWantsIt] = useState(myFit?.wants_it ?? false);
   const [capacity, setCapacity] = useState(myFit?.capacity ?? false);
-  const [notes, setNotes] = useState(myFit?.notes || '');
+  const [gwcNotes, setGwcNotes] = useState<GWCNotes>(() => parseNotes(myFit?.notes || null));
 
   useEffect(() => {
     if (myFit) {
       setGetsIt(myFit.gets_it ?? false);
       setWantsIt(myFit.wants_it ?? false);
       setCapacity(myFit.capacity ?? false);
-      setNotes(myFit.notes || '');
+      setGwcNotes(parseNotes(myFit.notes));
     }
   }, [myFit]);
+
+  const updateNote = (key: keyof GWCNotes, value: string) => {
+    setGwcNotes(prev => ({ ...prev, [key]: value }));
+  };
 
   const handleSave = async () => {
     await setFit.mutateAsync({
@@ -40,7 +71,7 @@ export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMee
       gets_it: getsIt,
       wants_it: wantsIt,
       capacity: capacity,
-      notes: notes || undefined,
+      notes: serializeNotes(gwcNotes),
       respondent_role: respondentRole,
     });
   };
@@ -48,15 +79,16 @@ export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMee
   const allTrue = getsIt && wantsIt && capacity;
 
   const gwcItems = [
-    { key: 'gets_it', label: 'Gets It', desc: 'Understands the role, responsibilities, and what success looks like', value: getsIt, setter: setGetsIt },
-    { key: 'wants_it', label: 'Wants It', desc: 'Passionate about the work, motivated, and engaged', value: wantsIt, setter: setWantsIt },
-    { key: 'capacity', label: 'Capacity', desc: 'Has the time, capability, and resources to succeed', value: capacity, setter: setCapacity },
+    { key: 'gets_it' as const, label: 'Gets It', desc: 'Understands the role, responsibilities, and what success looks like', value: getsIt, setter: setGetsIt },
+    { key: 'wants_it' as const, label: 'Wants It', desc: 'Passionate about the work, motivated, and engaged', value: wantsIt, setter: setWantsIt },
+    { key: 'capacity' as const, label: 'Capacity', desc: 'Has the time, capability, and resources to succeed', value: capacity, setter: setCapacity },
   ];
 
   const otherLabel = respondentRole === 'manager' ? "Reviewee" : "Manager";
   const myLabel = respondentRole === 'manager' ? "Manager (You)" : "Reviewee (You)";
 
   if (isMeetingMode && otherFit) {
+    const otherNotes = parseNotes(otherFit.notes);
     return (
       <Card>
         <CardHeader>
@@ -76,56 +108,102 @@ export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMee
 
           {gwcItems.map((item) => {
             const otherVal = otherFit[item.key as keyof QCFit] as boolean | null;
+            const myNoteVal = gwcNotes[item.key];
+            const otherNoteVal = otherNotes[item.key];
             return (
-              <div key={item.key} className="grid grid-cols-3 gap-4 items-center p-4 border rounded-lg">
-                <div>
-                  <p className="font-medium">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+              <div key={item.key} className="border rounded-lg p-4 space-y-3">
+                <div className="grid grid-cols-3 gap-4 items-center">
+                  <div>
+                    <p className="font-medium">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.desc}</p>
+                  </div>
+                  <div className="flex justify-center">
+                    {respondentRole === 'reviewee' ? (
+                      <Switch checked={item.value} onCheckedChange={item.setter} disabled={disabled} />
+                    ) : (
+                      <span className={`text-sm font-medium ${otherVal ? 'text-green-600' : 'text-red-500'}`}>
+                        {otherVal ? '✓ Yes' : '✗ No'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex justify-center">
+                    {respondentRole === 'manager' ? (
+                      <Switch checked={item.value} onCheckedChange={item.setter} disabled={disabled} />
+                    ) : (
+                      <span className={`text-sm font-medium ${otherVal ? 'text-green-600' : 'text-red-500'}`}>
+                        {otherVal ? '✓ Yes' : '✗ No'}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex justify-center">
-                  {respondentRole === 'reviewee' ? (
-                    <Switch checked={item.value} onCheckedChange={item.setter} disabled={disabled} />
-                  ) : (
-                    <span className={`text-sm font-medium ${otherVal ? 'text-green-600' : 'text-red-500'}`}>
-                      {otherVal ? '✓ Yes' : '✗ No'}
-                    </span>
-                  )}
-                </div>
-                <div className="flex justify-center">
-                  {respondentRole === 'manager' ? (
-                    <Switch checked={item.value} onCheckedChange={item.setter} disabled={disabled} />
-                  ) : (
-                    <span className={`text-sm font-medium ${otherVal ? 'text-green-600' : 'text-red-500'}`}>
-                      {otherVal ? '✓ Yes' : '✗ No'}
-                    </span>
-                  )}
+                {/* Per-item notes side-by-side */}
+                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border/50">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">
+                      {respondentRole === 'reviewee' ? 'Your Notes' : "Reviewee's Notes"}
+                    </Label>
+                    {respondentRole === 'reviewee' ? (
+                      <Textarea
+                        value={myNoteVal}
+                        onChange={(e) => updateNote(item.key, e.target.value)}
+                        disabled={disabled}
+                        placeholder={`Notes for ${item.label}...`}
+                        rows={2}
+                        className="text-sm"
+                      />
+                    ) : (
+                      <p className="text-sm p-2 border rounded bg-muted/30 min-h-[40px] whitespace-pre-wrap">
+                        {otherNoteVal || <span className="text-muted-foreground italic">No notes</span>}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">
+                      {respondentRole === 'manager' ? 'Your Notes' : "Manager's Notes"}
+                    </Label>
+                    {respondentRole === 'manager' ? (
+                      <Textarea
+                        value={myNoteVal}
+                        onChange={(e) => updateNote(item.key, e.target.value)}
+                        disabled={disabled}
+                        placeholder={`Notes for ${item.label}...`}
+                        rows={2}
+                        className="text-sm"
+                      />
+                    ) : (
+                      <p className="text-sm p-2 border rounded bg-muted/30 min-h-[40px] whitespace-pre-wrap">
+                        {otherNoteVal || <span className="text-muted-foreground italic">No notes</span>}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             );
           })}
 
+          {/* General discussion notes */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                {respondentRole === 'reviewee' ? 'Your Notes' : "Reviewee's Notes"}
+                {respondentRole === 'reviewee' ? 'Your General Notes' : "Reviewee's General Notes"}
               </Label>
               {respondentRole === 'reviewee' ? (
-                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={disabled} rows={3} />
+                <Textarea value={gwcNotes.general} onChange={(e) => updateNote('general', e.target.value)} disabled={disabled} rows={3} placeholder="Overall GWC discussion notes..." />
               ) : (
                 <p className="text-sm p-3 border rounded-lg bg-muted/30 min-h-[80px] whitespace-pre-wrap">
-                  {otherFit.notes || <span className="text-muted-foreground italic">No notes</span>}
+                  {otherNotes.general || <span className="text-muted-foreground italic">No notes</span>}
                 </p>
               )}
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                {respondentRole === 'manager' ? 'Your Notes' : "Manager's Notes"}
+                {respondentRole === 'manager' ? 'Your General Notes' : "Manager's General Notes"}
               </Label>
               {respondentRole === 'manager' ? (
-                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={disabled} rows={3} />
+                <Textarea value={gwcNotes.general} onChange={(e) => updateNote('general', e.target.value)} disabled={disabled} rows={3} placeholder="Overall GWC discussion notes..." />
               ) : (
                 <p className="text-sm p-3 border rounded-lg bg-muted/30 min-h-[80px] whitespace-pre-wrap">
-                  {otherFit.notes || <span className="text-muted-foreground italic">No notes</span>}
+                  {otherNotes.general || <span className="text-muted-foreground italic">No notes</span>}
                 </p>
               )}
             </div>
@@ -141,7 +219,7 @@ export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMee
     );
   }
 
-  // Pre-meeting: single form
+  // Pre-meeting: single form with per-item notes
   return (
     <Card>
       <CardHeader>
@@ -157,25 +235,38 @@ export const GWCPanel = ({ qcId, section, myFit, otherFit, respondentRole, isMee
       <CardContent className="space-y-6">
         <div className="grid gap-6">
           {gwcItems.map((item) => (
-            <div key={item.key} className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="space-y-1">
-                <Label className="text-base font-medium">{item.label}</Label>
-                <p className="text-sm text-muted-foreground">{item.desc}</p>
+            <div key={item.key} className="border rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label className="text-base font-medium">{item.label}</Label>
+                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+                </div>
+                <Switch checked={item.value} onCheckedChange={item.setter} disabled={disabled} />
               </div>
-              <Switch checked={item.value} onCheckedChange={item.setter} disabled={disabled} />
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Notes & Examples</Label>
+                <Textarea
+                  value={gwcNotes[item.key]}
+                  onChange={(e) => updateNote(item.key, e.target.value)}
+                  disabled={disabled}
+                  placeholder={`Add notes or examples for "${item.label}"...`}
+                  rows={2}
+                  className="text-sm"
+                />
+              </div>
             </div>
           ))}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="gwc-notes">Discussion Notes</Label>
+          <Label htmlFor="gwc-notes">General Discussion Notes</Label>
           <Textarea
             id="gwc-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            value={gwcNotes.general}
+            onChange={(e) => updateNote('general', e.target.value)}
             disabled={disabled}
-            placeholder="Add notes about the GWC discussion..."
-            rows={4}
+            placeholder="Add overall notes about the GWC discussion..."
+            rows={3}
           />
         </div>
 
