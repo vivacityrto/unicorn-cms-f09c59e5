@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
+import { Heart } from 'lucide-react';
 import type { QCSection, QCAnswer, QCPrompt } from '@/types/qc';
 
 interface QCSectionCardProps {
@@ -15,9 +16,10 @@ interface QCSectionCardProps {
   respondentRole: 'manager' | 'reviewee';
   isMeetingMode: boolean;
   disabled?: boolean;
+  coreValues?: string[];
 }
 
-export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, respondentRole, isMeetingMode, disabled }: QCSectionCardProps) => {
+export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, respondentRole, isMeetingMode, disabled, coreValues }: QCSectionCardProps) => {
   const { upsertAnswer } = useQuarterlyConversations();
   const [localAnswers, setLocalAnswers] = useState<Record<string, any>>({});
   const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
@@ -138,6 +140,26 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Show core values from VTO if available */}
+        {coreValues && coreValues.length > 0 && (
+          <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Heart className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">Core Values</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The behaviours and standards that guide every decision and action.
+            </p>
+            <ul className="space-y-1">
+              {coreValues.map((value, idx) => (
+                <li key={idx} className="flex items-center gap-2 text-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                  {value}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {section.prompts.map((prompt) => {
           const myValue = localAnswers[prompt.key]?.value || '';
 

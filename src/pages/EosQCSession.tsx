@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { ArrowLeft, CheckCircle, FileText, Calendar, Play, Lock, Clock } from 'l
 import { useQCDetails, useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { useQCUserProfiles } from '@/hooks/useQCUserProfiles';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { QCSectionCard } from '@/components/eos/qc/QCSectionCard';
 import { GWCPanel } from '@/components/eos/qc/GWCPanel';
@@ -29,6 +31,24 @@ export default function EosQCSession() {
   }, [qc]);
 
   const { getUser } = useQCUserProfiles(allUserIds);
+
+  // Fetch core values from VTO for this tenant
+  const { data: coreValues } = useQuery({
+    queryKey: ['vto-core-values', qc?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eos_vto')
+        .select('core_values')
+        .eq('tenant_id', qc!.tenant_id!)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return Array.isArray(data?.core_values) ? (data.core_values as string[]) : [];
+    },
+    enabled: !!qc?.tenant_id,
+    staleTime: 10 * 60 * 1000,
+  });
 
   if (isLoading || !qc || !template) {
     return (
@@ -229,6 +249,7 @@ export default function EosQCSession() {
                   respondentRole={respondentRole}
                   isMeetingMode={isMeetingMode}
                   disabled={!!isSigned}
+                  coreValues={section.key === 'core_values' ? coreValues : undefined}
                 />
               )}
             </TabsContent>
