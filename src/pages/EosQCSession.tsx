@@ -249,6 +249,7 @@ export default function EosQCSession() {
                   respondentRole={respondentRole}
                   isMeetingMode={isMeetingMode}
                   disabled={!!isSigned}
+                  coreValues={section.key === 'core_values' ? coreValues : undefined}
                 />
               )}
             </TabsContent>
