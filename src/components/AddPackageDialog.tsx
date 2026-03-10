@@ -86,6 +86,8 @@ export function AddPackageDialog({
           title: 'Success',
           description: 'Package updated successfully'
         });
+        // Check if duration changed (which may affect total_hours) — 
+        // For AddPackageDialog, total_hours isn't edited here, but we keep the pattern
       } else {
         // Insert new package - use RPC or explicit column selection to avoid type issues
         const {
