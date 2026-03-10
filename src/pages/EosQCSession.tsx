@@ -247,9 +247,9 @@ export default function EosQCSession() {
                   qcId={qc.id}
                   section={section}
                   myAnswers={myAnswers.filter(a => a.section_key === section.key)}
-                  otherAnswers={isMeetingMode ? otherAnswers.filter(a => a.section_key === section.key) : []}
+                  otherAnswers={canSeeOther ? otherAnswers.filter(a => a.section_key === section.key) : []}
                   respondentRole={respondentRole}
-                  isMeetingMode={isMeetingMode}
+                  isMeetingMode={canSeeOther}
                   disabled={!!isSigned}
                   coreValues={section.key === 'core_values' ? coreValues : undefined}
                 />
