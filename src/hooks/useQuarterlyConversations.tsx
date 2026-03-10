@@ -251,6 +251,7 @@ export const useQuarterlyConversations = () => {
     isLoading,
     templates,
     scheduleQC,
+    updateSchedule,
     upsertAnswer,
     setFit,
     createLinks,
