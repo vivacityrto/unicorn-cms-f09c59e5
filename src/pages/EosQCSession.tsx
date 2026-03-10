@@ -13,6 +13,7 @@ import { useQCUserProfiles } from '@/hooks/useQCUserProfiles';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 import { QCSectionCard } from '@/components/eos/qc/QCSectionCard';
 import { GWCPanel } from '@/components/eos/qc/GWCPanel';
 import { QCSignoffBar } from '@/components/eos/qc/QCSignoffBar';
