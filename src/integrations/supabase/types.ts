@@ -47951,6 +47951,7 @@ export type Database = {
         Args: { _meeting_id: string; _user_id: string }
         Returns: boolean
       }
+      is_qc_admin_safe: { Args: { p_user_id: string }; Returns: boolean }
       is_qc_signed: { Args: { _qc_id: string }; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       is_stage_in_active_use: { Args: { p_stage_id: number }; Returns: boolean }
