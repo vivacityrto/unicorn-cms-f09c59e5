@@ -1,11 +1,14 @@
+import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, CheckCircle, FileText, Calendar } from 'lucide-react';
 import { useQCDetails } from '@/hooks/useQuarterlyConversations';
+import { useQCUserProfiles } from '@/hooks/useQCUserProfiles';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { QCSectionCard } from '@/components/eos/qc/QCSectionCard';
@@ -17,6 +20,14 @@ export default function EosQCSession() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { qc, template, answers, fit, signoffs, isLoading } = useQCDetails(id);
+
+  // Collect user IDs for profile resolution
+  const allUserIds = useMemo(() => {
+    if (!qc) return [];
+    return [qc.reviewee_id, ...qc.manager_ids];
+  }, [qc]);
+
+  const { getUser } = useQCUserProfiles(allUserIds);
 
   if (isLoading || !qc || !template) {
     return (
@@ -30,6 +41,9 @@ export default function EosQCSession() {
   const isManager = qc.manager_ids.includes(profile?.user_uuid || '');
   const isSigned = signoffs && signoffs.length >= 2;
   const hasUserSigned = signoffs?.some(s => s.signed_by === profile?.user_uuid);
+
+  const reviewee = getUser(qc.reviewee_id);
+  const managers = qc.manager_ids.map(id => ({ id, ...getUser(id) }));
 
   return (
     <DashboardLayout>
@@ -56,20 +70,54 @@ export default function EosQCSession() {
           <CardHeader>
             <CardTitle className="text-lg">Conversation Details</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="font-medium">Reviewee:</span> {qc.reviewee_id}
+          <CardContent className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-6">
+              {/* Reviewee */}
+              <div className="space-y-1.5">
+                <span className="text-muted-foreground font-medium text-xs uppercase tracking-wide">Reviewee</span>
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={reviewee.avatarUrl || undefined} alt={reviewee.fullName} />
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                      {reviewee.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium">{reviewee.fullName}</span>
+                </div>
               </div>
-              <div>
-                <span className="font-medium">Manager(s):</span> {qc.manager_ids.length} assigned
+
+              {/* Manager(s) */}
+              <div className="space-y-1.5">
+                <span className="text-muted-foreground font-medium text-xs uppercase tracking-wide">
+                  Manager{managers.length > 1 ? 's' : ''}
+                </span>
+                <div className="flex flex-col gap-2">
+                  {managers.map((mgr) => (
+                    <div key={mgr.id} className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={mgr.avatarUrl || undefined} alt={mgr.fullName} />
+                        <AvatarFallback className="bg-accent text-accent-foreground text-sm font-medium">
+                          {mgr.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{mgr.fullName}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <span className="font-medium">Scheduled:</span>{' '}
-                {qc.scheduled_at ? format(new Date(qc.scheduled_at), 'PPP') : 'Not scheduled'}
+
+              {/* Scheduled */}
+              <div className="space-y-1.5">
+                <span className="text-muted-foreground font-medium text-xs uppercase tracking-wide">Scheduled</span>
+                <span className="block font-medium">
+                  {qc.scheduled_at ? format(new Date(qc.scheduled_at), 'PPP') : 'Not scheduled'}
+                </span>
               </div>
-              <div>
-                <span className="font-medium">Template:</span> {template.name}
+
+              {/* Template */}
+              <div className="space-y-1.5">
+                <span className="text-muted-foreground font-medium text-xs uppercase tracking-wide">Template</span>
+                <span className="block font-medium">{template.name}</span>
               </div>
             </div>
           </CardContent>
