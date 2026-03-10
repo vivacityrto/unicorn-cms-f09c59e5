@@ -131,7 +131,32 @@ export function AddPackageDialog({
       resetForm();
     }
   }, [open]);
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  const handlePropagateToInstances = async () => {
+    if (!pendingPropagateData) return;
+    try {
+      const { error } = await supabase
+        .from('package_instances')
+        .update({ included_minutes: pendingPropagateData.totalHours * 60 })
+        .eq('package_id', pendingPropagateData.packageId)
+        .eq('status', 'active');
+      if (error) throw error;
+      toast({
+        title: 'Instances Updated',
+        description: `Active instances updated to ${pendingPropagateData.totalHours}h included.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update instances',
+        variant: 'destructive'
+      });
+    } finally {
+      setShowPropagateDialog(false);
+      setPendingPropagateData(null);
+    }
+  };
+
+  return <><Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
         <DialogOverlay className="z-[70] bg-black/70" />
         <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-[70] grid w-full max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto border-[3px] border-[#dfdfdf] bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg" style={{
