@@ -245,7 +245,8 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
             );
           }
 
-          // Pre-meeting: single rating per value
+          // Pre-meeting: single rating per value + notes
+          const myNotes = localAnswers[`cv_notes_${idx}`]?.value || '';
           return (
             <div key={idx} className="rounded-lg border border-border p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -272,6 +273,17 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
                     </button>
                   );
                 })}
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Notes & Examples</Label>
+                <Textarea
+                  value={myNotes}
+                  onChange={(e) => !disabled && handleAnswerChange(`cv_notes_${idx}`, e.target.value)}
+                  disabled={disabled}
+                  placeholder={`Provide examples for "${valueName}"...`}
+                  rows={2}
+                  className="text-sm"
+                />
               </div>
             </div>
           );
