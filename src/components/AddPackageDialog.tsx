@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Package2, Loader2, Plus, Calendar } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 interface AddPackageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
