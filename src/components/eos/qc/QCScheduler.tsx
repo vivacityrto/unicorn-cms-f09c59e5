@@ -12,6 +12,7 @@ import { Users, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { useVivacityTeamUsers, VivacityTeamUser } from '@/hooks/useVivacityTeamUsers';
+import { supabase } from '@/integrations/supabase/client';
 import { format, addMonths } from 'date-fns';
 import { cn } from '@/lib/utils';
 
