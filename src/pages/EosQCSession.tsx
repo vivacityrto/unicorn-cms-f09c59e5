@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, CheckCircle, FileText, Calendar } from 'lucide-react';
-import { useQCDetails } from '@/hooks/useQuarterlyConversations';
+import { ArrowLeft, CheckCircle, FileText, Calendar, Play, Lock, Clock } from 'lucide-react';
+import { useQCDetails, useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { useQCUserProfiles } from '@/hooks/useQCUserProfiles';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
@@ -20,6 +20,7 @@ export default function EosQCSession() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { qc, template, answers, fit, signoffs, isLoading } = useQCDetails(id);
+  const { startMeeting } = useQuarterlyConversations();
 
   // Collect user IDs for profile resolution
   const allUserIds = useMemo(() => {
@@ -41,6 +42,17 @@ export default function EosQCSession() {
   const isManager = qc.manager_ids.includes(profile?.user_uuid || '');
   const isSigned = signoffs && signoffs.length >= 2;
   const hasUserSigned = signoffs?.some(s => s.signed_by === profile?.user_uuid);
+  const isMeetingMode = !!qc.meeting_started_at;
+  const respondentRole: 'manager' | 'reviewee' = isReviewee ? 'reviewee' : 'manager';
+
+  // Filter answers based on mode
+  const myAnswers = answers?.filter(a => a.respondent_role === respondentRole) || [];
+  const otherAnswers = answers?.filter(a => a.respondent_role !== respondentRole) || [];
+  const visibleAnswers = isMeetingMode ? (answers || []) : myAnswers;
+
+  // Filter fit records
+  const myFit = fit?.find(f => f.respondent_role === respondentRole) || null;
+  const otherFit = fit?.find(f => f.respondent_role !== respondentRole) || null;
 
   const reviewee = getUser(qc.reviewee_id);
   const managers = qc.manager_ids.map(id => ({ id, ...getUser(id) }));
@@ -61,10 +73,61 @@ export default function EosQCSession() {
               </p>
             </div>
           </div>
-          <Badge variant={isSigned ? 'outline' : 'default'}>
-            {isSigned ? 'Completed' : qc.status}
-          </Badge>
+          <div className="flex items-center gap-3">
+            {isMeetingMode ? (
+              <Badge variant="default" className="bg-green-600">
+                <Play className="h-3 w-3 mr-1" />
+                Meeting Mode
+              </Badge>
+            ) : (
+              <Badge variant="secondary">
+                <Clock className="h-3 w-3 mr-1" />
+                Preparation Phase
+              </Badge>
+            )}
+            <Badge variant={isSigned ? 'outline' : 'default'}>
+              {isSigned ? 'Completed' : qc.status}
+            </Badge>
+          </div>
         </div>
+
+        {/* Phase indicator */}
+        {!isMeetingMode && !isSigned && (
+          <div className="bg-accent/50 border border-border rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Lock className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">Preparation Phase</p>
+                <p className="text-sm text-muted-foreground">
+                  {isManager
+                    ? "Complete your assessment independently. The reviewee's responses are hidden until you start the meeting."
+                    : "Complete your self-assessment independently. Your manager's responses are hidden until the meeting begins."}
+                </p>
+              </div>
+            </div>
+            {isManager && (
+              <Button
+                onClick={() => startMeeting.mutate(qc.id)}
+                disabled={startMeeting.isPending}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                {startMeeting.isPending ? 'Starting...' : 'Start Meeting'}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {isMeetingMode && !isSigned && (
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center gap-3">
+            <Play className="h-5 w-5 text-green-600" />
+            <div>
+              <p className="font-medium text-green-900 dark:text-green-100">Meeting In Progress</p>
+              <p className="text-sm text-green-700 dark:text-green-300">
+                Both responses are now visible side-by-side. Discuss differences and align on outcomes.
+              </p>
+            </div>
+          </div>
+        )}
 
         <Card>
           <CardHeader>
@@ -148,13 +211,24 @@ export default function EosQCSession() {
           {template.sections.map((section) => (
             <TabsContent key={section.key} value={section.key}>
               {section.key === 'gwc' ? (
-                <GWCPanel qcId={qc.id} section={section} fit={fit} disabled={isSigned} />
+                <GWCPanel
+                  qcId={qc.id}
+                  section={section}
+                  myFit={myFit}
+                  otherFit={isMeetingMode ? otherFit : null}
+                  respondentRole={respondentRole}
+                  isMeetingMode={isMeetingMode}
+                  disabled={!!isSigned}
+                />
               ) : (
                 <QCSectionCard 
                   qcId={qc.id}
                   section={section}
-                  answers={answers?.filter(a => a.section_key === section.key) || []}
-                  disabled={isSigned}
+                  myAnswers={myAnswers.filter(a => a.section_key === section.key)}
+                  otherAnswers={isMeetingMode ? otherAnswers.filter(a => a.section_key === section.key) : []}
+                  respondentRole={respondentRole}
+                  isMeetingMode={isMeetingMode}
+                  disabled={!!isSigned}
                 />
               )}
             </TabsContent>
