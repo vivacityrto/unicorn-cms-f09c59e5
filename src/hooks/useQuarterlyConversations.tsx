@@ -293,11 +293,10 @@ export const useQCDetails = (qcId: string | undefined) => {
       const { data, error } = await supabase
         .from('eos_qc_fit')
         .select('*')
-        .eq('qc_id', qcId!)
-        .maybeSingle();
+        .eq('qc_id', qcId!);
       
       if (error) throw error;
-      return data as unknown as QCFit | null;
+      return data as unknown as QCFit[];
     },
     enabled: !!qcId,
   });
