@@ -384,11 +384,28 @@ export default function EosQCSession() {
                 <CardTitle>Summary & Sign-off</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="prose prose-sm">
-                  <h3>Conversation Summary</h3>
-                  <p className="text-muted-foreground">
-                    Review all sections before signing off on this conversation.
-                  </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold">Conversation Summary</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Capture key takeaways, agreed actions, and outcomes from this conversation.
+                      </p>
+                    </div>
+                    <SaveStatusIndicator
+                      isSaving={summaryDirty || upsertAnswer.isPending}
+                      isError={upsertAnswer.isError}
+                      lastSavedKey={summaryCount}
+                    />
+                  </div>
+                  <Textarea
+                    value={summaryText}
+                    onChange={(e) => !isSigned && handleSummaryChange(e.target.value)}
+                    disabled={!!isSigned}
+                    placeholder="Summarise the key discussion points, agreements, and action items from this quarterly conversation..."
+                    rows={6}
+                    className="text-sm"
+                  />
                 </div>
 
                 <QCSignoffBar 
