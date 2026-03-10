@@ -237,7 +237,7 @@ export default function EosQCSession() {
                   qcId={qc.id}
                   section={section}
                   myFit={myFit}
-                  otherFit={isMeetingMode ? otherFit : null}
+                  otherFit={canSeeOther ? otherFit : null}
                   respondentRole={respondentRole}
                   isMeetingMode={isMeetingMode}
                   disabled={!!isSigned}
