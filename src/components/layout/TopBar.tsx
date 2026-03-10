@@ -129,7 +129,7 @@ function SuggestionsButton() {
     <Button
       variant="outline"
       size="sm"
-      className="gap-1.5 text-xs"
+      className="gap-1.5 text-xs border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
       onClick={() => navigate('/suggestions')}
       title="Suggestion & Issue Register"
     >
