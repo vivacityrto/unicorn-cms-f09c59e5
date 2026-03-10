@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Bell,
   LogOut,
   Settings,
   Search,
   ChevronRight,
+  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,8 @@ const routeTitles: Record<string, string> = {
   "/manage-documents": "Documents",
   "/communications": "Communications",
   "/rto-tips": "RTO Tips",
+  "/suggestions": "Suggestions",
+  "/suggestions/new": "New Suggestion",
   "/eos": "EOS Overview",
   "/eos/leadership": "Leadership Dashboard",
   "/eos/scorecard": "Scorecard",
@@ -119,6 +122,22 @@ const getBreadcrumbs = (pathname: string) => {
 
   return breadcrumbs;
 };
+
+function SuggestionsButton() {
+  const navigate = useNavigate();
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="gap-1.5 text-xs"
+      onClick={() => navigate('/suggestions')}
+      title="Suggestion & Issue Register"
+    >
+      <Lightbulb className="h-3.5 w-3.5" />
+      <span className="hidden sm:inline">Suggestions</span>
+    </Button>
+  );
+}
 
 interface TopBarProps {
   showSearch?: boolean;
@@ -219,6 +238,8 @@ export function TopBar({ showSearch = false }: TopBarProps) {
 
       {/* Right: Actions & Avatar - never pushed off-screen */}
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        {/* Suggestions button */}
+        <SuggestionsButton />
         <TooltipProvider>
           {/* Help Center button - Client roles only */}
           {isClientRole && (
