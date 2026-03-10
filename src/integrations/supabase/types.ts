@@ -39855,26 +39855,32 @@ export type Database = {
       }
       training_videos: {
         Row: {
+          added_by: string | null
           created_at: string
           folder_id: string
           folder_name: string | null
           id: string
+          thumbnail: string | null
           video_name: string
           vimeo_url: string
         }
         Insert: {
+          added_by?: string | null
           created_at?: string
           folder_id: string
           folder_name?: string | null
           id?: string
+          thumbnail?: string | null
           video_name: string
           vimeo_url: string
         }
         Update: {
+          added_by?: string | null
           created_at?: string
           folder_id?: string
           folder_name?: string | null
           id?: string
+          thumbnail?: string | null
           video_name?: string
           vimeo_url?: string
         }
