@@ -238,5 +238,16 @@ export function AddPackageDialog({
         </DialogFooter>
         </DialogPrimitive.Content>
       </DialogPortal>
-    </Dialog>;
+    </Dialog>
+    <ConfirmDialog
+      open={showPropagateDialog}
+      onOpenChange={setShowPropagateDialog}
+      variant="warning"
+      title="Update Active Package Instances?"
+      description={`This will update the included hours to ${pendingPropagateData?.totalHours ?? 0}h for all active instances of this package. Instances that should keep their current hours can be edited individually.`}
+      confirmText="Update Active Instances"
+      cancelText="Skip"
+      onConfirm={handlePropagateToInstances}
+    />
+  </>;
 }

@@ -897,6 +897,18 @@ export function PackageBuilderEditor() {
         onOpenChange={setIsStandardsCoverageOpen}
         coverage={standardsCoverage}
       />
+
+      {/* Propagate Hours to Active Instances */}
+      <ConfirmDialog
+        open={showPropagateDialog}
+        onOpenChange={setShowPropagateDialog}
+        variant="warning"
+        title="Update Active Package Instances?"
+        description={`This will update the included hours to ${pendingTotalHours}h for all active instances of this package. Instances that should keep their current hours can be edited individually.`}
+        confirmText="Update Active Instances"
+        cancelText="Skip"
+        onConfirm={handlePropagateToInstances}
+      />
     </div>
   );
 }
