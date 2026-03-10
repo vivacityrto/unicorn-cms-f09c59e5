@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -8,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, CheckCircle, FileText, Calendar, Play, Lock, Clock, Bell } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { SaveStatusIndicator } from '@/components/eos/qc/SaveStatusIndicator';
 import { useQCDetails, useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { useQCUserProfiles } from '@/hooks/useQCUserProfiles';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,8 +26,12 @@ export default function EosQCSession() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { qc, template, answers, fit, signoffs, isLoading } = useQCDetails(id);
-  const { startMeeting } = useQuarterlyConversations();
+  const { startMeeting, upsertAnswer } = useQuarterlyConversations();
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [summaryText, setSummaryText] = useState('');
+  const [summaryDirty, setSummaryDirty] = useState(false);
+  const [summaryCount, setSummaryCount] = useState(0);
+  const summaryTimer = useRef<NodeJS.Timeout | null>(null);
 
   const sendReminder = async () => {
     if (!qc || !profile) return;
@@ -117,6 +124,40 @@ export default function EosQCSession() {
     enabled: !!qc?.tenant_id,
     staleTime: 10 * 60 * 1000,
   });
+
+  // Initialize summary from existing answers
+  useEffect(() => {
+    if (answers) {
+      const respondent = profile?.user_uuid === qc?.reviewee_id ? 'reviewee' : 'manager';
+      const summaryAnswer = answers.find(a => a.section_key === 'summary' && a.prompt_key === 'conversation_summary' && a.respondent_role === respondent);
+      if (summaryAnswer?.value_json?.value) {
+        setSummaryText(summaryAnswer.value_json.value);
+      }
+    }
+  }, [answers, profile?.user_uuid, qc?.reviewee_id]);
+
+  // Track save completion for summary
+  useEffect(() => {
+    if (!upsertAnswer.isPending && !upsertAnswer.isError && summaryDirty) {
+      setSummaryCount(c => c + 1);
+      setSummaryDirty(false);
+    }
+  }, [upsertAnswer.isPending, upsertAnswer.isError]);
+
+  const handleSummaryChange = (value: string) => {
+    setSummaryText(value);
+    setSummaryDirty(true);
+    if (summaryTimer.current) clearTimeout(summaryTimer.current);
+    summaryTimer.current = setTimeout(() => {
+      upsertAnswer.mutate({
+        qc_id: qc!.id,
+        section_key: 'summary',
+        prompt_key: 'conversation_summary',
+        value_json: { value },
+        respondent_role: isReviewee ? 'reviewee' : 'manager',
+      });
+    }, 1000);
+  };
 
   if (isLoading || !qc || !template) {
     return (
@@ -343,11 +384,28 @@ export default function EosQCSession() {
                 <CardTitle>Summary & Sign-off</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="prose prose-sm">
-                  <h3>Conversation Summary</h3>
-                  <p className="text-muted-foreground">
-                    Review all sections before signing off on this conversation.
-                  </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold">Conversation Summary</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Capture key takeaways, agreed actions, and outcomes from this conversation.
+                      </p>
+                    </div>
+                    <SaveStatusIndicator
+                      isSaving={summaryDirty || upsertAnswer.isPending}
+                      isError={upsertAnswer.isError}
+                      lastSavedKey={summaryCount}
+                    />
+                  </div>
+                  <Textarea
+                    value={summaryText}
+                    onChange={(e) => !isSigned && handleSummaryChange(e.target.value)}
+                    disabled={!!isSigned}
+                    placeholder="Summarise the key discussion points, agreements, and action items from this quarterly conversation..."
+                    rows={6}
+                    className="text-sm"
+                  />
                 </div>
 
                 <QCSignoffBar 
