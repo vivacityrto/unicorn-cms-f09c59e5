@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { ArrowLeft, CheckCircle, FileText, Calendar, Play, Lock, Clock } from 'l
 import { useQCDetails, useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { useQCUserProfiles } from '@/hooks/useQCUserProfiles';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { QCSectionCard } from '@/components/eos/qc/QCSectionCard';
 import { GWCPanel } from '@/components/eos/qc/GWCPanel';
