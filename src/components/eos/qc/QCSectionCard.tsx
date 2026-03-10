@@ -177,6 +177,8 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
           const otherValue = getOtherValue(promptKey);
 
           if (isMeetingMode) {
+            const myNotes = localAnswers[`cv_notes_${idx}`]?.value || '';
+            const otherNotes = getOtherValue(`cv_notes_${idx}`);
             return (
               <div key={idx} className="rounded-lg border border-border p-4 space-y-3">
                 <div className="flex items-center gap-2">
@@ -211,6 +213,23 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
                     ) : (
                       <div>{renderAlignmentBadge(otherValue)}</div>
                     )}
+                    <div className="mt-1">
+                      <Label className="text-xs text-muted-foreground">Notes & Examples</Label>
+                      {respondentRole === 'reviewee' ? (
+                        <Textarea
+                          value={myNotes}
+                          onChange={(e) => !disabled && handleAnswerChange(`cv_notes_${idx}`, e.target.value)}
+                          disabled={disabled}
+                          placeholder={`Examples for "${valueName}"...`}
+                          rows={2}
+                          className="text-sm mt-1"
+                        />
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap mt-1 p-2 border rounded bg-muted/30 min-h-[40px]">
+                          {otherNotes || <span className="text-muted-foreground italic">No response</span>}
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -239,13 +258,31 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
                     ) : (
                       <div>{renderAlignmentBadge(otherValue)}</div>
                     )}
+                    <div className="mt-1">
+                      <Label className="text-xs text-muted-foreground">Notes & Examples</Label>
+                      {respondentRole === 'manager' ? (
+                        <Textarea
+                          value={myNotes}
+                          onChange={(e) => !disabled && handleAnswerChange(`cv_notes_${idx}`, e.target.value)}
+                          disabled={disabled}
+                          placeholder={`Examples for "${valueName}"...`}
+                          rows={2}
+                          className="text-sm mt-1"
+                        />
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap mt-1 p-2 border rounded bg-muted/30 min-h-[40px]">
+                          {otherNotes || <span className="text-muted-foreground italic">No response</span>}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             );
           }
 
-          // Pre-meeting: single rating per value
+          // Pre-meeting: single rating per value + notes
+          const myNotes = localAnswers[`cv_notes_${idx}`]?.value || '';
           return (
             <div key={idx} className="rounded-lg border border-border p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -272,6 +309,17 @@ export const QCSectionCard = ({ qcId, section, myAnswers, otherAnswers, responde
                     </button>
                   );
                 })}
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Notes & Examples</Label>
+                <Textarea
+                  value={myNotes}
+                  onChange={(e) => !disabled && handleAnswerChange(`cv_notes_${idx}`, e.target.value)}
+                  disabled={disabled}
+                  placeholder={`Provide examples for "${valueName}"...`}
+                  rows={2}
+                  className="text-sm"
+                />
               </div>
             </div>
           );
