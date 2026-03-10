@@ -125,6 +125,40 @@ export default function EosQCSession() {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Initialize summary from existing answers
+  useEffect(() => {
+    if (answers) {
+      const respondent = profile?.user_uuid === qc?.reviewee_id ? 'reviewee' : 'manager';
+      const summaryAnswer = answers.find(a => a.section_key === 'summary' && a.prompt_key === 'conversation_summary' && a.respondent_role === respondent);
+      if (summaryAnswer?.value_json?.value) {
+        setSummaryText(summaryAnswer.value_json.value);
+      }
+    }
+  }, [answers, profile?.user_uuid, qc?.reviewee_id]);
+
+  // Track save completion for summary
+  useEffect(() => {
+    if (!upsertAnswer.isPending && !upsertAnswer.isError && summaryDirty) {
+      setSummaryCount(c => c + 1);
+      setSummaryDirty(false);
+    }
+  }, [upsertAnswer.isPending, upsertAnswer.isError]);
+
+  const handleSummaryChange = (value: string) => {
+    setSummaryText(value);
+    setSummaryDirty(true);
+    if (summaryTimer.current) clearTimeout(summaryTimer.current);
+    summaryTimer.current = setTimeout(() => {
+      upsertAnswer.mutate({
+        qc_id: qc!.id,
+        section_key: 'summary',
+        prompt_key: 'conversation_summary',
+        value_json: { value },
+        respondent_role: isReviewee ? 'reviewee' : 'manager',
+      });
+    }, 1000);
+  };
+
   if (isLoading || !qc || !template) {
     return (
       <DashboardLayout>
