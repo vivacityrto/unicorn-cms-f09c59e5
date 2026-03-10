@@ -1,21 +1,29 @@
-## Completed: Package Add-On / Time Top-Up via Parent Instance Linking
+## Completed: Suggestion & Issue Register
 
 ### Summary
-Add-on packages (e.g. General Consult for extra TAS days) can now be attached to a parent package instance. This preserves the audit trail (separate `package_instance` row) while rolling hours into the parent's burn-down.
+Lightweight internal module for logging suggestions, improvements, data enhancements, errors, and functionality fails. Supports resolution tracking and release note capture directly on each item.
 
-### Database Changes
-- `package_instances.parent_instance_id` (bigint, self-referencing FK) — links child to parent
-- `rpc_get_package_usage` updated to include time entries from child instances (`OR te.package_id IN (SELECT id FROM package_instances WHERE parent_instance_id = ...)`)
+### Database
+- 6 dropdown tables: `dd_suggest_item_type`, `dd_suggest_status`, `dd_suggest_priority`, `dd_suggest_impact_rating`, `dd_suggest_release_status`, `dd_suggest_category`
+- `suggest_items` — main register table with corrected FK types (integer tenant_id, uuid user refs to public.users)
+- `suggest_attachments` — file metadata with private `suggest-attachments` storage bucket
+- RLS using existing helpers: `has_tenant_access_safe`, `is_super_admin_safe`, `is_vivacity_team_safe`
+- Seed data for all dropdown tables
+- `updated_at` trigger on suggest_items
 
-### Frontend Changes
-- **StartPackageDialog**: New "Attach to package" dropdown lists active non-child instances. On attach, sets `parent_instance_id` and increments parent's `hours_added` by the new package's `total_hours`
-- **usePackageUsageQuery / usePackageUsage**: Queries filter `parent_instance_id IS NULL` so children don't appear as top-level packages
-- **PackageBurndownCards** (ClientTimeTab): Excludes children from card list; shows "Add-ons: Gen Consult +7h" sub-line under parent card
-- **ManageTenants**: Hours column excludes child instances to prevent double-counting
+### Edge Function
+- `extract-suggest-title` — AI title generation from description (clone of extract-note-title pattern)
 
-### How It Works
-1. SuperAdmin starts a package → optionally attaches to existing parent
-2. Child's `total_hours` added to parent's `hours_added`
-3. Child's time entries roll into parent burn-down via RPC
-4. Child excluded from burn-down cards and hours columns
-5. Child visible as add-on label under parent card for audit trail
+### Frontend
+- **SuggestionRegister** (`/suggestions`) — filterable list with search, type/status/priority/category/release filters
+- **NewSuggestionForm** (`/suggestions/new`) — create form with dictation (useSpeechToText), AI title generation, source page context prefill
+- **SuggestionDetail** (`/suggestions/:id`) — edit all fields, resolution/release workflows, attachment upload with signed URLs
+- Hooks: `useSuggestItems`, `useSuggestDropdowns`, `useSuggestAttachments`
+- Reuses: `useVivacityTeamUsers` for assignment, `useSpeechToText` for dictation
+- Dropdown admin via existing CodeTablesAdmin (auto-discovered)
+
+### Architecture Corrections Applied
+- `tenant_id` → integer (not uuid) matching `tenants.id`
+- All user FKs → `public.users(user_uuid)` (not `auth.users(id)`)
+- Uses `tenant_members` via existing RLS helpers (actual table name handled internally)
+- Private storage bucket with signed URL access
