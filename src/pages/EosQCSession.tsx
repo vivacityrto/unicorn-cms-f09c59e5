@@ -122,7 +122,7 @@ export default function EosQCSession() {
                 <p className="font-medium">Preparation Phase</p>
                 <p className="text-sm text-muted-foreground">
                   {isManager
-                    ? "Complete your assessment independently. The reviewee's responses are hidden until you start the meeting."
+                    ? "Complete your assessment. You can view the reviewee's responses alongside your own."
                     : "Complete your self-assessment independently. Your manager's responses are hidden until the meeting begins."}
                 </p>
               </div>
