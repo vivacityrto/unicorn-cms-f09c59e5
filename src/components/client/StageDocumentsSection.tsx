@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,8 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { FileText, CheckCircle2, Clock, Sparkles, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { FileText, CheckCircle2, Clock, Sparkles, Loader2, AlertTriangle, ExternalLink, RefreshCw, UserCheck, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface StageDocumentsSectionProps {
@@ -34,6 +34,26 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'second
   pending: { label: 'Pending', variant: 'secondary' },
   released: { label: 'Released', variant: 'outline' },
 };
+
+const GENERATION_STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; className: string }> = {
+  generated: { label: 'Generated', icon: CheckCircle2, className: 'text-green-600' },
+  pending: { label: 'Pending', icon: Clock, className: 'text-muted-foreground' },
+  generating: { label: 'Generating...', icon: Loader2, className: 'text-blue-600' },
+  failed: { label: 'Failed', icon: XCircle, className: 'text-destructive' },
+  skipped: { label: 'Skipped', icon: Clock, className: 'text-muted-foreground' },
+};
+
+function categoriseError(error: string | null): { label: string; description: string } {
+  if (!error) return { label: 'Unknown', description: 'No error details available.' };
+  const lower = error.toLowerCase();
+  if (lower.includes('merge') || lower.includes('field') || lower.includes('placeholder'))
+    return { label: 'Missing merge data', description: 'Some merge fields could not be populated. Check that all required client data (e.g. RTO name, scope) has been entered.' };
+  if (lower.includes('sharepoint') || lower.includes('governance folder') || lower.includes('drive') || lower.includes('graph'))
+    return { label: 'SharePoint configuration', description: 'The SharePoint connection or governance folder could not be reached. Check SharePoint settings under Integrations.' };
+  if (lower.includes('template') || lower.includes('version') || lower.includes('storage_path') || lower.includes('not found'))
+    return { label: 'Template issue', description: 'The document template could not be found or is not in the correct format. Contact your consultant if this persists.' };
+  return { label: 'System error', description: 'An unexpected error occurred. This has been logged and the Vivacity team has been notified.' };
+}
 
 export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, debug, isVivacityStaff }: StageDocumentsSectionProps) {
   const { documents, loading, totalCount, refetch } = useStageDocuments({ stageInstanceId, tenantId, debug });
@@ -132,29 +152,102 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
       )}
 
       <div className="divide-y">
-        {documents.map((doc) => (
-          <div key={doc.id} className="flex items-center gap-3 px-4 py-2">
-            {doc.isgenerated ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-            ) : (
-              <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1">
-                <p className="text-sm truncate">{doc.title}</p>
-                <TaskDescriptionButton taskName={doc.title} description={doc.description} />
+        {documents.map((doc) => {
+          const genConfig = GENERATION_STATUS_CONFIG[doc.generation_status || 'pending'] || GENERATION_STATUS_CONFIG.pending;
+          const GenIcon = genConfig.icon;
+          const errorInfo = doc.last_error ? categoriseError(doc.last_error) : null;
+
+          return (
+            <div key={doc.id} className="flex items-center gap-3 px-4 py-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <GenIcon className={`h-4 w-4 shrink-0 ${genConfig.className} ${doc.generation_status === 'generating' ? 'animate-spin' : ''}`} />
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    <p className="text-xs font-medium">{genConfig.label}</p>
+                    {doc.generationdate && (
+                      <p className="text-xs text-muted-foreground">
+                        Last generated: {format(new Date(doc.generationdate), 'dd MMM yyyy HH:mm')}
+                      </p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1">
+                  <p className="text-sm truncate">{doc.title}</p>
+                  <TaskDescriptionButton taskName={doc.title} description={doc.description} />
+                  {doc.is_manual_allocation && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <UserCheck className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">Manually allocated</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {doc.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(doc.created_at), 'dd MMM yyyy')}
+                    </p>
+                  )}
+                  {doc.generated_file_url && (
+                    <a
+                      href={doc.generated_file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline flex items-center gap-0.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      View file
+                    </a>
+                  )}
+                </div>
+                {errorInfo && doc.generation_status === 'failed' && (
+                  <div className="mt-1 flex items-start gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-destructive">{errorInfo.label}</p>
+                      <p className="text-xs text-muted-foreground">{errorInfo.description}</p>
+                    </div>
+                  </div>
+                )}
               </div>
-              {doc.created_at && (
-                <p className="text-xs text-muted-foreground">
-                  {format(new Date(doc.created_at), 'dd MMM yyyy')}
-                </p>
-              )}
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                {doc.generation_status === 'failed' && isVivacityStaff && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            // Retry will be handled by bulk generation for now
+                            handleBulkGenerate();
+                          }}
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p className="text-xs">Retry generation</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                <Badge variant={STATUS_BADGE[doc.status]?.variant || 'secondary'} className="text-xs">
+                  {STATUS_BADGE[doc.status]?.label || doc.status}
+                </Badge>
+              </div>
             </div>
-            <Badge variant={STATUS_BADGE[doc.status]?.variant || 'secondary'} className="text-xs">
-              {STATUS_BADGE[doc.status]?.label || doc.status}
-            </Badge>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {totalCount > 10 && (
         <div className="px-4 py-2 border-t text-center">
