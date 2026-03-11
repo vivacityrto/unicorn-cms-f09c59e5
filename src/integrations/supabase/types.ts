@@ -1913,6 +1913,8 @@ export type Database = {
           enable_checkpoint_phases: boolean
           generation_enabled: boolean | null
           generation_rate_limit_per_hour: number | null
+          governance_overwrite_enabled: boolean | null
+          governance_use_stage_documents: boolean | null
           id: number
           max_generation_retries: number | null
           microsoft_addin_enabled: boolean
@@ -1940,6 +1942,8 @@ export type Database = {
           enable_checkpoint_phases?: boolean
           generation_enabled?: boolean | null
           generation_rate_limit_per_hour?: number | null
+          governance_overwrite_enabled?: boolean | null
+          governance_use_stage_documents?: boolean | null
           id?: never
           max_generation_retries?: number | null
           microsoft_addin_enabled?: boolean
@@ -1967,6 +1971,8 @@ export type Database = {
           enable_checkpoint_phases?: boolean
           generation_enabled?: boolean | null
           generation_rate_limit_per_hour?: number | null
+          governance_overwrite_enabled?: boolean | null
+          governance_use_stage_documents?: boolean | null
           id?: never
           max_generation_retries?: number | null
           microsoft_addin_enabled?: boolean
@@ -12154,6 +12160,30 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_doc_generation_status: {
+        Row: {
+          id: number
+          is_active: boolean | null
+          label: string
+          sort_order: number | null
+          value: string
+        }
+        Insert: {
+          id?: number
+          is_active?: boolean | null
+          label: string
+          sort_order?: number | null
+          value: string
+        }
+        Update: {
+          id?: number
+          is_active?: boolean | null
+          label?: string
+          sort_order?: number | null
+          value?: string
+        }
+        Relationships: []
+      }
       dd_document_categories: {
         Row: {
           id: number
@@ -12176,6 +12206,30 @@ export type Database = {
           is_active?: boolean
           label?: string
           sharepoint_folder_name?: string | null
+          sort_order?: number | null
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_document_status: {
+        Row: {
+          id: number
+          is_active: boolean | null
+          label: string
+          sort_order: number | null
+          value: string
+        }
+        Insert: {
+          id?: number
+          is_active?: boolean | null
+          label: string
+          sort_order?: number | null
+          value: string
+        }
+        Update: {
+          id?: number
+          is_active?: boolean | null
+          label?: string
           sort_order?: number | null
           value?: string
         }
@@ -12253,6 +12307,30 @@ export type Database = {
           source_table?: string | null
           tag?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      dd_governance_framework: {
+        Row: {
+          id: number
+          is_active: boolean | null
+          label: string
+          sort_order: number | null
+          value: string
+        }
+        Insert: {
+          id?: number
+          is_active?: boolean | null
+          label: string
+          sort_order?: number | null
+          value: string
+        }
+        Update: {
+          id?: number
+          is_active?: boolean | null
+          label?: string
+          sort_order?: number | null
+          value?: string
         }
         Relationships: []
       }
@@ -13575,48 +13653,107 @@ export type Database = {
           },
         ]
       }
+      document_generation_errors: {
+        Row: {
+          created_at: string
+          documentinstance_id: number
+          error_code: string | null
+          error_detail: Json | null
+          error_message: string
+          id: number
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          documentinstance_id: number
+          error_code?: string | null
+          error_detail?: Json | null
+          error_message: string
+          id?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          documentinstance_id?: number
+          error_code?: string | null
+          error_detail?: Json | null
+          error_message?: string
+          id?: number
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_generation_errors_documentinstance_id_fkey"
+            columns: ["documentinstance_id"]
+            isOneToOne: false
+            referencedRelation: "document_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_instances: {
         Row: {
           coments: string | null
           created_at: string
           document_id: number | null
           generated_by: string | null
+          generated_file_url: string | null
+          generated_item_id: string | null
+          generation_status: string | null
           generationdate: string | null
           id: number
           is_core: boolean | null
+          is_manual_allocation: boolean
           isgenerated: boolean | null
+          last_error: string | null
           stageinstance_id: number | null
           status: string | null
           tenant_id: number | null
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
           coments?: string | null
           created_at?: string
           document_id?: number | null
           generated_by?: string | null
+          generated_file_url?: string | null
+          generated_item_id?: string | null
+          generation_status?: string | null
           generationdate?: string | null
           id?: number
           is_core?: boolean | null
+          is_manual_allocation?: boolean
           isgenerated?: boolean | null
+          last_error?: string | null
           stageinstance_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
           coments?: string | null
           created_at?: string
           document_id?: number | null
           generated_by?: string | null
+          generated_file_url?: string | null
+          generated_item_id?: string | null
+          generation_status?: string | null
           generationdate?: string | null
           id?: number
           is_core?: boolean | null
+          is_manual_allocation?: boolean
           isgenerated?: boolean | null
+          last_error?: string | null
           stageinstance_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -31441,12 +31578,15 @@ export type Database = {
       }
       stage_documents: {
         Row: {
+          added_source: string | null
           created_at: string | null
           created_by: string | null
           delivery_type: string
           document_id: number
           id: number
+          is_active: boolean
           is_auto_generated: boolean | null
+          is_core: boolean
           is_required: boolean
           is_team_only: boolean | null
           is_tenant_downloadable: boolean | null
@@ -31455,15 +31595,20 @@ export type Database = {
           pinned_version_id: string | null
           sort_order: number
           stage_id: number
+          updated_at: string | null
+          updated_by: string | null
           visibility: string
         }
         Insert: {
+          added_source?: string | null
           created_at?: string | null
           created_by?: string | null
           delivery_type?: string
           document_id: number
           id?: never
+          is_active?: boolean
           is_auto_generated?: boolean | null
+          is_core?: boolean
           is_required?: boolean
           is_team_only?: boolean | null
           is_tenant_downloadable?: boolean | null
@@ -31472,15 +31617,20 @@ export type Database = {
           pinned_version_id?: string | null
           sort_order?: number
           stage_id: number
+          updated_at?: string | null
+          updated_by?: string | null
           visibility?: string
         }
         Update: {
+          added_source?: string | null
           created_at?: string | null
           created_by?: string | null
           delivery_type?: string
           document_id?: number
           id?: never
+          is_active?: boolean
           is_auto_generated?: boolean | null
+          is_core?: boolean
           is_required?: boolean
           is_team_only?: boolean | null
           is_tenant_downloadable?: boolean | null
@@ -31489,6 +31639,8 @@ export type Database = {
           pinned_version_id?: string | null
           sort_order?: number
           stage_id?: number
+          updated_at?: string | null
+          updated_by?: string | null
           visibility?: string
         }
         Relationships: [
