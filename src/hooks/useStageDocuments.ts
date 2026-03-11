@@ -79,6 +79,11 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
           status: inst.status || 'pending',
           isgenerated: inst.isgenerated ?? false,
           created_at: inst.created_at || '',
+          generation_status: (inst as any).generation_status || null,
+          generated_file_url: (inst as any).generated_file_url || null,
+          generationdate: (inst as any).generationdate || null,
+          last_error: (inst as any).last_error || null,
+          is_manual_allocation: (inst as any).is_manual_allocation ?? false,
         };
       });
 
