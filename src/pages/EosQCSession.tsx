@@ -26,7 +26,7 @@ export default function EosQCSession() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { qc, template, answers, fit, signoffs, isLoading } = useQCDetails(id);
-  const { startMeeting, upsertAnswer } = useQuarterlyConversations();
+  const { startMeeting, upsertAnswer, scheduleNext } = useQuarterlyConversations();
   const [sendingReminder, setSendingReminder] = useState(false);
   const [summaryText, setSummaryText] = useState('');
   const [summaryDirty, setSummaryDirty] = useState(false);
@@ -418,13 +418,18 @@ export default function EosQCSession() {
 
                 {isSigned && (
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1">
+                    <Button variant="outline" className="flex-1" onClick={() => window.print()}>
                       <FileText className="h-4 w-4 mr-2" />
                       Download PDF
                     </Button>
-                    <Button variant="outline" className="flex-1">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      disabled={scheduleNext.isPending}
+                      onClick={() => qc && scheduleNext.mutate({ qc_id: qc.id })}
+                    >
                       <Calendar className="h-4 w-4 mr-2" />
-                      Schedule Next QC
+                      {scheduleNext.isPending ? 'Scheduling…' : 'Schedule Next QC'}
                     </Button>
                   </div>
                 )}
