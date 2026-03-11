@@ -533,6 +533,28 @@ export function StageDocumentsPanel({
                       </div>
                       <div className="flex items-center gap-4 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
+                          <Label htmlFor={`core-${doc.id}`} className="text-xs text-muted-foreground hidden sm:inline">
+                            Core
+                          </Label>
+                          <Switch
+                            id={`core-${doc.id}`}
+                            checked={doc.is_core}
+                            onCheckedChange={(checked) => safeAction(() => onUpdate(doc.id, { is_core: checked }))}
+                            className="scale-75"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`active-${doc.id}`} className="text-xs text-muted-foreground hidden sm:inline">
+                            Active
+                          </Label>
+                          <Switch
+                            id={`active-${doc.id}`}
+                            checked={doc.is_active}
+                            onCheckedChange={(checked) => safeAction(() => onUpdate(doc.id, { is_active: checked }))}
+                            className="scale-75"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
                           <Label htmlFor={`visible-${doc.id}`} className="text-xs text-muted-foreground flex items-center gap-1 cursor-pointer">
                             {doc.is_tenant_visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                             <span className="hidden sm:inline">Visible</span>
