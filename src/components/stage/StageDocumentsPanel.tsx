@@ -48,6 +48,8 @@ interface StageDocumentItem {
   delivery_type: string;
   is_tenant_visible: boolean;
   is_required: boolean;
+  is_core: boolean;
+  is_active: boolean;
   notes: string | null;
   pinned_version_id: string | null;
   document?: Document;
@@ -60,7 +62,7 @@ interface StageDocumentsPanelProps {
   loading: boolean;
   onRefresh: () => void;
   onDelete: (docId: number) => Promise<void>;
-  onUpdate: (docId: number, data: { is_tenant_visible?: boolean; is_required?: boolean }) => Promise<void>;
+  onUpdate: (docId: number, data: { is_tenant_visible?: boolean; is_required?: boolean; is_core?: boolean; is_active?: boolean }) => Promise<void>;
   isCertified?: boolean;
   wrapCertifiedAction?: (fn: () => void) => void;
   tenantId?: number;
@@ -530,6 +532,28 @@ export function StageDocumentsPanel({
                         </div>
                       </div>
                       <div className="flex items-center gap-4 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`core-${doc.id}`} className="text-xs text-muted-foreground hidden sm:inline">
+                            Core
+                          </Label>
+                          <Switch
+                            id={`core-${doc.id}`}
+                            checked={doc.is_core}
+                            onCheckedChange={(checked) => safeAction(() => onUpdate(doc.id, { is_core: checked }))}
+                            className="scale-75"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`active-${doc.id}`} className="text-xs text-muted-foreground hidden sm:inline">
+                            Active
+                          </Label>
+                          <Switch
+                            id={`active-${doc.id}`}
+                            checked={doc.is_active}
+                            onCheckedChange={(checked) => safeAction(() => onUpdate(doc.id, { is_active: checked }))}
+                            className="scale-75"
+                          />
+                        </div>
                         <div className="flex items-center gap-2">
                           <Label htmlFor={`visible-${doc.id}`} className="text-xs text-muted-foreground flex items-center gap-1 cursor-pointer">
                             {doc.is_tenant_visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}

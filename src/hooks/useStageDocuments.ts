@@ -9,6 +9,11 @@ export interface StageDocument {
   status: string;
   isgenerated: boolean;
   created_at: string;
+  generation_status: string | null;
+  generated_file_url: string | null;
+  generationdate: string | null;
+  last_error: string | null;
+  is_manual_allocation: boolean;
 }
 
 interface UseStageDocumentsOptions {
@@ -36,7 +41,7 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
       // Fetch document_instances for this stage_instance, scoped to tenant
       const { data: instances, error, count } = await supabase
         .from('document_instances')
-        .select('id, document_id, isgenerated, status, created_at', { count: 'exact' })
+        .select('id, document_id, isgenerated, status, created_at, generation_status, generated_file_url, generationdate, last_error, is_manual_allocation', { count: 'exact' })
         .eq('stageinstance_id', stageInstanceId)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
@@ -74,6 +79,11 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
           status: inst.status || 'pending',
           isgenerated: inst.isgenerated ?? false,
           created_at: inst.created_at || '',
+          generation_status: (inst as any).generation_status || null,
+          generated_file_url: (inst as any).generated_file_url || null,
+          generationdate: (inst as any).generationdate || null,
+          last_error: (inst as any).last_error || null,
+          is_manual_allocation: (inst as any).is_manual_allocation ?? false,
         };
       });
 
