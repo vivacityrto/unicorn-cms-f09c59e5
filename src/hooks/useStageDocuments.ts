@@ -41,7 +41,7 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
       // Fetch document_instances for this stage_instance, scoped to tenant
       const { data: instances, error, count } = await supabase
         .from('document_instances')
-        .select('id, document_id, isgenerated, status, created_at', { count: 'exact' })
+        .select('id, document_id, isgenerated, status, created_at, generation_status, generated_file_url, generationdate, last_error, is_manual_allocation', { count: 'exact' })
         .eq('stageinstance_id', stageInstanceId)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
