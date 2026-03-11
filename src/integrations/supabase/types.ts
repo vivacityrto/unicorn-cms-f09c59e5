@@ -13583,6 +13583,7 @@ export type Database = {
           generated_by: string | null
           generationdate: string | null
           id: number
+          is_core: boolean | null
           isgenerated: boolean | null
           stageinstance_id: number | null
           status: string | null
@@ -13596,6 +13597,7 @@ export type Database = {
           generated_by?: string | null
           generationdate?: string | null
           id?: number
+          is_core?: boolean | null
           isgenerated?: boolean | null
           stageinstance_id?: number | null
           status?: string | null
@@ -13609,6 +13611,7 @@ export type Database = {
           generated_by?: string | null
           generationdate?: string | null
           id?: number
+          is_core?: boolean | null
           isgenerated?: boolean | null
           stageinstance_id?: number | null
           status?: string | null
@@ -14198,6 +14201,7 @@ export type Database = {
           framework_type: string | null
           id: number
           is_auto_generated: boolean | null
+          is_core: boolean | null
           is_released: boolean | null
           is_team_only: boolean | null
           is_tenant_downloadable: boolean | null
@@ -14251,6 +14255,7 @@ export type Database = {
           framework_type?: string | null
           id?: never
           is_auto_generated?: boolean | null
+          is_core?: boolean | null
           is_released?: boolean | null
           is_team_only?: boolean | null
           is_tenant_downloadable?: boolean | null
@@ -14304,6 +14309,7 @@ export type Database = {
           framework_type?: string | null
           id?: never
           is_auto_generated?: boolean | null
+          is_core?: boolean | null
           is_released?: boolean | null
           is_team_only?: boolean | null
           is_tenant_downloadable?: boolean | null
@@ -14824,6 +14830,7 @@ export type Database = {
           content: string | null
           email_id: number | null
           id: number
+          is_core: boolean | null
           is_sent: boolean
           sender: string | null
           sender_id: number | null
@@ -14840,6 +14847,7 @@ export type Database = {
           content?: string | null
           email_id?: number | null
           id?: number
+          is_core?: boolean | null
           is_sent: boolean
           sender?: string | null
           sender_id?: number | null
@@ -14856,6 +14864,7 @@ export type Database = {
           content?: string | null
           email_id?: number | null
           id?: number
+          is_core?: boolean | null
           is_sent?: boolean
           sender?: string | null
           sender_id?: number | null
@@ -15575,6 +15584,7 @@ export type Database = {
           description: string | null
           files: string[] | null
           id: number
+          is_core: boolean | null
           name: string | null
           order_number: number
           package_id: number | null
@@ -15595,6 +15605,7 @@ export type Database = {
           description?: string | null
           files?: string[] | null
           id?: number
+          is_core?: boolean | null
           name?: string | null
           order_number: number
           package_id?: number | null
@@ -15615,6 +15626,7 @@ export type Database = {
           description?: string | null
           files?: string[] | null
           id?: number
+          is_core?: boolean | null
           name?: string | null
           order_number?: number
           package_id?: number | null
