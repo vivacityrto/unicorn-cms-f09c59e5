@@ -9,6 +9,11 @@ export interface StageDocument {
   status: string;
   isgenerated: boolean;
   created_at: string;
+  generation_status: string | null;
+  generated_file_url: string | null;
+  generationdate: string | null;
+  last_error: string | null;
+  is_manual_allocation: boolean;
 }
 
 interface UseStageDocumentsOptions {
