@@ -62,7 +62,7 @@ interface StageDocumentsPanelProps {
   loading: boolean;
   onRefresh: () => void;
   onDelete: (docId: number) => Promise<void>;
-  onUpdate: (docId: number, data: { is_tenant_visible?: boolean; is_required?: boolean }) => Promise<void>;
+  onUpdate: (docId: number, data: { is_tenant_visible?: boolean; is_required?: boolean; is_core?: boolean; is_active?: boolean }) => Promise<void>;
   isCertified?: boolean;
   wrapCertifiedAction?: (fn: () => void) => void;
   tenantId?: number;
