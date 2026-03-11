@@ -48,6 +48,8 @@ interface StageDocumentItem {
   delivery_type: string;
   is_tenant_visible: boolean;
   is_required: boolean;
+  is_core: boolean;
+  is_active: boolean;
   notes: string | null;
   pinned_version_id: string | null;
   document?: Document;
