@@ -533,8 +533,25 @@ serve(async (req) => {
       .select("tag");
     const knownTags = new Set((allDdFields || []).map((f) => f.tag));
 
-    // ── Process DOCX (also detects tags) ───────────────────────────────────
-    const { bytes: processedBytes, detectedTags } = await processDocxTemplate(templateBytes, mergeData, imageData);
+    // ── Process template based on format ──────────────────────────────────
+    const docFormat = ((doc.format as string) || '').toLowerCase();
+    let processedBytes: Uint8Array;
+    let detectedTags: string[];
+
+    if (docFormat === 'pptx') {
+      const result = await processPptxTemplate(templateBytes, mergeData, imageData);
+      processedBytes = result.bytes;
+      detectedTags = result.detectedTags;
+    } else if (docFormat === 'docx') {
+      const result = await processDocxTemplate(templateBytes, mergeData, imageData);
+      processedBytes = result.bytes;
+      detectedTags = result.detectedTags;
+    } else {
+      // XLSX, PDF, etc. — pass through unchanged, just scan for tags
+      const result = await scanTemplateForTags(templateBytes);
+      processedBytes = result.bytes;
+      detectedTags = result.detectedTags;
+    }
 
     // 4. Detect invalid tags
     const invalidTags = detectedTags.filter((tag) => !knownTags.has(tag));
