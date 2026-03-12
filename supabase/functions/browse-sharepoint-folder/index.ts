@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const MICROSOFT_CLIENT_ID = Deno.env.get("MICROSOFT_CLIENT_ID")!;
@@ -167,13 +167,21 @@ serve(async (req) => {
 
     if (sitePurpose) {
       // Browse a global SharePoint site by purpose (e.g., "master_documents")
-      const { data: site } = await supabaseAdmin
+      const { data: site, error: siteError } = await supabaseAdmin
         .from("sharepoint_sites")
-        .select("drive_id, graph_site_id, label")
+        .select("drive_id, graph_site_id, site_name")
         .eq("purpose", sitePurpose)
         .eq("is_active", true)
         .limit(1)
         .maybeSingle();
+
+      if (siteError) {
+        console.error("[browse-sp] Failed to load sharepoint_sites config:", siteError);
+        return new Response(
+          JSON.stringify({ error: "Failed to load SharePoint site configuration" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       if (!site?.drive_id) {
         return new Response(
@@ -183,7 +191,7 @@ serve(async (req) => {
       }
 
       drive_id = site.drive_id;
-      root_name = site.label || sitePurpose;
+      root_name = site.site_name || sitePurpose;
       // No root_item_id constraint — browse from drive root
     } else {
       // Standard tenant-based browsing
