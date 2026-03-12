@@ -19,18 +19,19 @@ function GovernanceDocuments() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [frameworkFilter, setFrameworkFilter] = useState<string>('all');
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   // Fetch documents that are team-only (governance templates)
   const { data: documents, isLoading } = useQuery({
-    queryKey: ['governance-documents', search, categoryFilter, statusFilter],
+    queryKey: ['governance-documents', search, categoryFilter, statusFilter, frameworkFilter],
     queryFn: async () => {
       let query = supabase
         .from('documents')
         .select(`
-          id, title, format, category, document_status,
+          id, title, format, category, document_status, framework_type,
           source_template_url, updated_at, current_published_version_id,
           document_versions!document_versions_document_id_fkey(id, version_number, status, created_at, published_at, checksum_sha256)
         `)
@@ -46,6 +47,13 @@ function GovernanceDocuments() {
       if (statusFilter && statusFilter !== 'all') {
         query = query.eq('document_status', statusFilter);
       }
+      if (frameworkFilter && frameworkFilter !== 'all') {
+        if (frameworkFilter === '__none__') {
+          query = query.is('framework_type', null);
+        } else {
+          query = query.eq('framework_type', frameworkFilter);
+        }
+      }
 
       const { data, error } = await query.limit(200);
       if (error) throw error;
@@ -55,6 +63,19 @@ function GovernanceDocuments() {
 
   // Fetch categories for filter
   const { categories, valueLabelMap } = useDocumentCategories();
+
+  // Fetch frameworks for filter
+  const { data: frameworks } = useQuery({
+    queryKey: ['dd_governance_framework'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('dd_governance_framework')
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      return data || [];
+    },
+  });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -148,6 +169,18 @@ function GovernanceDocuments() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Framework" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Frameworks</SelectItem>
+              <SelectItem value="__none__">No Framework</SelectItem>
+              {frameworks?.map((f) => (
+                <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Status" />
@@ -165,6 +198,7 @@ function GovernanceDocuments() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Framework</TableHead>
               <TableHead>
                 <Button variant="ghost" size="sm" onClick={() => toggleSort('title')} className="gap-1 -ml-3">
                   Title <ArrowUpDown className="h-3 w-3" />
@@ -186,13 +220,13 @@ function GovernanceDocuments() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Loading governance documents...
                 </TableCell>
               </TableRow>
             ) : !documents?.length ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   No governance documents found
                 </TableCell>
               </TableRow>
@@ -205,6 +239,9 @@ function GovernanceDocuments() {
                     className="cursor-pointer"
                     onClick={() => setSelectedDocId(doc.id)}
                   >
+                    <TableCell>
+                      <span className="text-xs font-medium">{doc.framework_type || '—'}</span>
+                    </TableCell>
                     <TableCell className="font-medium">{doc.title}</TableCell>
                     <TableCell>
                       <span className="text-xs text-muted-foreground">{valueLabelMap.get(doc.category) || doc.category || '—'}</span>
