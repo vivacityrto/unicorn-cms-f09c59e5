@@ -90,16 +90,20 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
     }
   }, [browseResult, effectiveStartFolder]);
 
-  // Navigate into a subfolder
+  // Track the current folder name for breadcrumb purposes
+  const currentFolderNameRef = useRef<string>('');
+
   const navigateToFolder = useCallback(
     (folderId: string, folderName: string) => {
+      const nameForStack = currentFolderNameRef.current || folderStack[folderStack.length - 1]?.name || 'Root';
       setFolderStack((prev) => [
         ...prev,
-        { id: currentFolderId || 'root', name: browseResult?.root_name || 'Root' },
+        { id: currentFolderId || 'root', name: folderName },
       ]);
+      currentFolderNameRef.current = folderName;
       setCurrentFolderId(folderId);
     },
-    [currentFolderId, browseResult?.root_name]
+    [currentFolderId, folderStack]
   );
 
   // Navigate back
