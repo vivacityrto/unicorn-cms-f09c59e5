@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag, Pencil } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag, Pencil, FolderOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
+import { useAuth } from '@/hooks/useAuth';
 import { GovernanceVersionHistory } from './GovernanceVersionHistory';
 import { GovernancePublishDialog } from './GovernancePublishDialog';
-import { GovernanceImportDialog } from './GovernanceImportDialog';
+import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
 import { GovernanceMappingEditor } from './GovernanceMappingEditor';
 import { GovernanceDeliveryDialog } from './GovernanceDeliveryDialog';
 import { GovernanceDeliveryHistory } from './GovernanceDeliveryHistory';
@@ -25,9 +27,10 @@ interface GovernanceDocumentDetailProps {
 }
 
 export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocumentDetailProps) {
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [publishVersionId, setPublishVersionId] = useState<string | null>(null);
-  const [showImport, setShowImport] = useState(false);
+  const [showSharePointBrowser, setShowSharePointBrowser] = useState(false);
   const [mappingVersionId, setMappingVersionId] = useState<string | null>(null);
   const [showDelivery, setShowDelivery] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
@@ -138,7 +141,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
               <Send className="h-4 w-4 mr-2" /> Deliver to Clients
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+          <Button variant="outline" size="sm" onClick={() => setShowSharePointBrowser(true)}>
             <Upload className="h-4 w-4 mr-2" /> Link to SharePoint
           </Button>
           {doc.source_template_url && (
@@ -276,16 +279,43 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         />
       )}
 
-      {showImport && (
-        <GovernanceImportDialog
-          documentId={documentId}
-          documentTitle={doc.title}
-          frameworkType={doc.framework_type}
-          open={showImport}
-          onOpenChange={setShowImport}
-          onSuccess={invalidateAll}
-        />
-      )}
+      {showSharePointBrowser && profile?.tenant_id && (() => {
+        const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
+        const autoFolder = doc.framework_type
+          ? frameworkFolderMap[doc.framework_type.toLowerCase()] || 'Other'
+          : 'Other';
+        return (
+          <Dialog open={true} onOpenChange={(open) => { if (!open) setShowSharePointBrowser(false); }}>
+            <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  Master Documents — Select Template File
+                </DialogTitle>
+              </DialogHeader>
+              <SharePointFileBrowser
+                tenantId={profile.tenant_id}
+                sitePurpose="master_documents"
+                onSelectLink={async (url) => {
+                  const { error } = await supabase
+                    .from('documents')
+                    .update({ source_template_url: url })
+                    .eq('id', documentId);
+                  if (error) {
+                    toast.error('Failed to update SharePoint URL');
+                  } else {
+                    toast.success('SharePoint URL saved');
+                    invalidateAll();
+                  }
+                  setShowSharePointBrowser(false);
+                }}
+                defaultFilter={doc.title}
+                autoNavigateFolder={autoFolder}
+              />
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
 
       {showDelivery && publishedVersion && (
         <GovernanceDeliveryDialog
