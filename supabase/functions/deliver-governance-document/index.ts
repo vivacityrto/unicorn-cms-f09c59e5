@@ -210,12 +210,10 @@ async function processPptxTemplate(
           return escapeXml(mergeData[cleanField] || "");
         }
         if (imageData[cleanField]) {
-          // For PPTX image injection, we need to insert a <a:blip> reference
-          // and track the relationship for the slide's .rels file
           const rId = `rIdImg${imageCounter++}`;
           const imgFileName = `image_${cleanField}.png`;
 
-          // Determine which slide rels file this belongs to
+          // Track the relationship for the slide's .rels file
           const slideMatch = entry.filename.match(/^ppt\/slides\/(slide\d+)\.xml$/);
           if (slideMatch) {
             const relsPath = `ppt/slides/_rels/${slideMatch[1]}.xml.rels`;
@@ -225,11 +223,9 @@ async function processPptxTemplate(
             slideRelsMap.get(relsPath)!.injections.push({ rId, fileName: imgFileName });
           }
 
-          // Replace the text with a picture element in PPTX DrawingML
-          return `</a:t></a:r><a:r><a:rPr lang="en-AU" dirty="0"/></a:r></a:p><a:p><a:r><a:rPr lang="en-AU" dirty="0"/><a:t>`;
-          // Note: For simple text replacement in PPTX, image injection is complex.
-          // A more robust approach: replace the text placeholder and add the image as a new shape.
-          // For now, we clear the placeholder text and inject via the relationship approach below.
+          // Replace the {{Logo}} text run with an inline picture element in PPTX DrawingML
+          // cx/cy in EMUs: 1800000 = ~1.27cm width, 900000 = ~0.63cm height (same as DOCX)
+          return `</a:t></a:r></a:p><a:p><a:r><a:rPr lang="en-AU" dirty="0"/><a:drawing><a:inline distT="0" distB="0" distL="0" distR="0"><a:extent cx="1800000" cy="900000"/><a:docPr id="${imageCounter}" name="${cleanField}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${imageCounter}" name="${imgFileName}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1800000" cy="900000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></a:inline></a:drawing></a:r><a:r><a:rPr lang="en-AU" dirty="0"/><a:t>`;
         }
         return fullMatch;
       });
