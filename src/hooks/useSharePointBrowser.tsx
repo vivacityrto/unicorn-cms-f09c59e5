@@ -76,17 +76,19 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
   });
 
   // Auto-navigate into startFolderName on first successful root load
+  // Use startFolderName from options, or fall back to server-provided start_folder_name
+  const effectiveStartFolder = startFolderName || browseResult?.start_folder_name;
   useEffect(() => {
-    if (autoNavigated.current || !startFolderName || !browseResult?.items || !browseResult.is_root) return;
+    if (autoNavigated.current || !effectiveStartFolder || !browseResult?.items || !browseResult.is_root) return;
     const target = browseResult.items.find(
-      (item) => item.is_folder && item.name.toLowerCase() === startFolderName.toLowerCase()
+      (item) => item.is_folder && item.name.toLowerCase() === effectiveStartFolder.toLowerCase()
     );
     if (target) {
       autoNavigated.current = true;
       setFolderStack([{ id: 'root', name: browseResult.root_name || 'Root' }]);
       setCurrentFolderId(target.id);
     }
-  }, [browseResult, startFolderName]);
+  }, [browseResult, effectiveStartFolder]);
 
   // Navigate into a subfolder
   const navigateToFolder = useCallback(
