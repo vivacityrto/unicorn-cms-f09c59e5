@@ -235,7 +235,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
 
       {/* Description */}
       {doc.description && (
-        <Card className="max-w-2xl">
+        <Card>
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">{doc.description}</p>
           </CardContent>
