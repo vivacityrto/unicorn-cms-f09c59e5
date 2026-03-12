@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,15 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileCheck, ExternalLink, Upload, Eye, ArrowUpDown, Link2 } from 'lucide-react';
+import { Search, FileCheck, ExternalLink, Upload, Eye, ArrowUpDown, Link2, Link2Off } from 'lucide-react';
 import { format } from 'date-fns';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
+import { SharePointLinkDialog } from '@/components/ui/sharepoint-link-dialog';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 type SortField = 'title' | 'category' | null;
 type SortOrder = 'asc' | 'desc';
 
 function GovernanceDocuments() {
+  const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -24,6 +29,22 @@ function GovernanceDocuments() {
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [sharepointBrowseDocId, setSharepointBrowseDocId] = useState<number | null>(null);
+
+  const handleSharePointLinkSelected = async (url: string) => {
+    if (!sharepointBrowseDocId) return;
+    const { error } = await supabase
+      .from('documents')
+      .update({ source_template_url: url })
+      .eq('id', sharepointBrowseDocId);
+    if (error) {
+      toast.error('Failed to update SharePoint URL');
+    } else {
+      toast.success('SharePoint URL saved');
+      queryClient.invalidateQueries({ queryKey: ['governance-documents'] });
+    }
+    setSharepointBrowseDocId(null);
+  };
 
   // Fetch documents that are team-only (governance templates)
   const { data: documents, isLoading } = useQuery({
@@ -301,9 +322,13 @@ function GovernanceDocuments() {
                           <span className="text-xs">SP</span>
                         </a>
                       ) : (
-                        <span className="text-muted-foreground/40">
-                          <Link2 className="h-3.5 w-3.5" />
-                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSharepointBrowseDocId(doc.id); }}
+                          className="text-muted-foreground hover:text-primary cursor-pointer inline-flex items-center gap-1"
+                          title="Click to set SharePoint URL"
+                        >
+                          <Link2Off className="h-3.5 w-3.5" />
+                        </button>
                       )}
                     </TableCell>
                     <TableCell>
@@ -322,6 +347,16 @@ function GovernanceDocuments() {
             )}
           </TableBody>
         </Table>
+
+        {/* SharePoint Link Browser Dialog */}
+        {profile?.tenant_id && (
+          <SharePointLinkDialog
+            open={!!sharepointBrowseDocId}
+            onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}
+            tenantId={profile.tenant_id}
+            onSelectLink={handleSharePointLinkSelected}
+          />
+        )}
       </div>
     </DashboardLayout>
   );
