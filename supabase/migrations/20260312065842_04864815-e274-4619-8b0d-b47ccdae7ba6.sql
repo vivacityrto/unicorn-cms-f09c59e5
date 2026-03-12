@@ -1,0 +1,1 @@
+UPDATE documents SET category = 'q1-training_assessment', framework_type = 'RTO' WHERE title LIKE 'Q1.%' AND (category IS NULL OR framework_type IS NULL);
