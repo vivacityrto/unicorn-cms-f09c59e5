@@ -29,6 +29,8 @@ export function GovernanceDocumentEditDialog({
 }: GovernanceDocumentEditDialogProps) {
   const queryClient = useQueryClient();
   const { categories } = useDocumentCategories();
+  const { profile } = useAuth();
+  const [showSpBrowser, setShowSpBrowser] = useState(false);
 
   // Fetch full document
   const { data: doc } = useQuery({
