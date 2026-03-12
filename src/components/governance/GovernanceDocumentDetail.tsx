@@ -280,6 +280,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         <GovernanceImportDialog
           documentId={documentId}
           documentTitle={doc.title}
+          frameworkType={doc.framework_type}
           open={showImport}
           onOpenChange={setShowImport}
           onSuccess={invalidateAll}

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalDescription, AppModalBody, AppModalFooter } from '@/components/ui/app-modal';
-import { Folder, FileText, Loader2, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Folder, FileText, Loader2, Upload, CheckCircle2, AlertTriangle, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SharePointItem {
@@ -29,12 +30,20 @@ interface ImportResult {
 interface GovernanceImportDialogProps {
   documentId: number;
   documentTitle: string;
+  frameworkType?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }
 
-export function GovernanceImportDialog({ documentId, documentTitle, open, onOpenChange, onSuccess }: GovernanceImportDialogProps) {
+// Map framework_type values to expected SharePoint subfolder names
+const FRAMEWORK_FOLDER_MAP: Record<string, string> = {
+  rto: 'RTO',
+  gto: 'GTO',
+  cricos: 'CRICOS',
+};
+
+export function GovernanceImportDialog({ documentId, documentTitle, frameworkType, open, onOpenChange, onSuccess }: GovernanceImportDialogProps) {
   const [items, setItems] = useState<SharePointItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -43,6 +52,8 @@ export function GovernanceImportDialog({ documentId, documentTitle, open, onOpen
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbEntry[]>([{ id: null, name: 'Root' }]);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [filterText, setFilterText] = useState(documentTitle || '');
+  const [autoNavigated, setAutoNavigated] = useState(false);
 
   const browse = async (folderId?: string) => {
     setLoading(true);
@@ -57,20 +68,42 @@ export function GovernanceImportDialog({ documentId, documentTitle, open, onOpen
       setItems(data.items || []);
       if (data.drive_id) setDriveId(data.drive_id);
       setInitialLoaded(true);
+      return data.items || [];
     } catch (err: any) {
       toast.error(err.message || 'Failed to browse SharePoint');
+      return [];
     } finally {
       setLoading(false);
     }
   };
 
+  // Auto-navigate into framework subfolder after initial load
+  useEffect(() => {
+    if (!autoNavigated && initialLoaded && frameworkType && items.length > 0) {
+      const targetFolderName = FRAMEWORK_FOLDER_MAP[frameworkType.toLowerCase()];
+      if (targetFolderName) {
+        const targetFolder = items.find(
+          (item) => item.isFolder && item.name.toLowerCase() === targetFolderName.toLowerCase()
+        );
+        if (targetFolder) {
+          setAutoNavigated(true);
+          setBreadcrumbs(prev => [...prev, { id: targetFolder.id, name: targetFolder.name }]);
+          browse(targetFolder.id);
+        }
+      }
+    }
+  }, [initialLoaded, items, frameworkType, autoNavigated]);
+
   const handleOpen = (isOpen: boolean) => {
     onOpenChange(isOpen);
     if (isOpen && !initialLoaded) {
+      setFilterText(documentTitle || '');
+      setAutoNavigated(false);
       browse();
     }
     if (!isOpen) {
       setImportResult(null);
+      setAutoNavigated(false);
     }
   };
 
@@ -124,13 +157,27 @@ export function GovernanceImportDialog({ documentId, documentTitle, open, onOpen
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  // Filter items by filterText (case-insensitive, matches anywhere in name)
+  const filteredItems = items
+    .filter((item) => {
+      if (!filterText.trim()) return true;
+      // Always show folders
+      if (item.isFolder) return true;
+      return item.name.toLowerCase().includes(filterText.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (a.isFolder && !b.isFolder) return -1;
+      if (!a.isFolder && b.isFolder) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
   return (
     <AppModal open={open} onOpenChange={handleOpen}>
       <AppModalContent size="lg">
         <AppModalHeader>
-          <AppModalTitle>Import Template from SharePoint</AppModalTitle>
+          <AppModalTitle>Master Documents — Select Template File</AppModalTitle>
           <AppModalDescription>
-            Browse the Master Documents library and select a file to import as a new version of "{documentTitle}".
+            Browse the Master Documents library and select a file to link as a new version of "{documentTitle}".
           </AppModalDescription>
         </AppModalHeader>
         <AppModalBody>
@@ -150,6 +197,25 @@ export function GovernanceImportDialog({ documentId, documentTitle, open, onOpen
             ))}
           </div>
 
+          {/* Filter input */}
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Filter files by name..."
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              className="pl-9 pr-9 h-9 text-sm"
+            />
+            {filterText && (
+              <button
+                onClick={() => setFilterText('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
           {/* File list */}
           <div className="border rounded-lg max-h-[400px] overflow-y-auto">
             {loading ? (
@@ -157,19 +223,13 @@ export function GovernanceImportDialog({ documentId, documentTitle, open, onOpen
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 <span className="ml-2 text-sm text-muted-foreground">Loading…</span>
               </div>
-            ) : items.length === 0 ? (
+            ) : filteredItems.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground text-sm">
-                No files or folders found
+                {filterText ? 'No files match your filter' : 'No files or folders found'}
               </div>
             ) : (
               <div className="divide-y">
-                {items
-                  .sort((a, b) => {
-                    if (a.isFolder && !b.isFolder) return -1;
-                    if (!a.isFolder && b.isFolder) return 1;
-                    return a.name.localeCompare(b.name);
-                  })
-                  .map((item) => (
+                {filteredItems.map((item) => (
                     <button
                       key={item.id}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/50 transition-colors ${
