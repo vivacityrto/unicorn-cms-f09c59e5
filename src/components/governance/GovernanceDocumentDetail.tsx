@@ -27,9 +27,10 @@ interface GovernanceDocumentDetailProps {
 }
 
 export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocumentDetailProps) {
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [publishVersionId, setPublishVersionId] = useState<string | null>(null);
-  const [showImport, setShowImport] = useState(false);
+  const [showSharePointBrowser, setShowSharePointBrowser] = useState(false);
   const [mappingVersionId, setMappingVersionId] = useState<string | null>(null);
   const [showDelivery, setShowDelivery] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
