@@ -19,18 +19,28 @@ export function GovernancePackageAssignments({ documentId }: Props) {
   const { data: assignments, isLoading } = useQuery({
     queryKey: ['governance-package-assignments', documentId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('package_stage_documents')
-        .select('package_id, delivery_type, stage_id')
+      // 1. Get stages linked to this document
+      const { data: stageDocs, error: sdError } = await supabase
+        .from('stage_documents')
+        .select('stage_id, delivery_type')
         .eq('document_id', documentId)
-        .eq('is_deleted', false)
-        .order('package_id');
-      if (error) throw error;
-      if (!data || data.length === 0) return [] as PackageAssignment[];
+        .eq('is_active', true);
+      if (sdError) throw sdError;
+      if (!stageDocs || stageDocs.length === 0) return [] as PackageAssignment[];
 
-      const pkgIds = [...new Set(data.map(r => r.package_id))];
-      const stageIds = [...new Set(data.map(r => r.stage_id))];
+      const stageIds = [...new Set(stageDocs.map(r => r.stage_id))];
 
+      // 2. Get packages linked to those stages
+      const { data: pkgStages, error: psError } = await supabase
+        .from('package_stages')
+        .select('stage_id, package_id')
+        .in('stage_id', stageIds);
+      if (psError) throw psError;
+      if (!pkgStages || pkgStages.length === 0) return [] as PackageAssignment[];
+
+      const pkgIds = [...new Set(pkgStages.map(r => r.package_id))];
+
+      // 3. Fetch names
       const [pkgRes, stageRes] = await Promise.all([
         supabase.from('packages').select('id, name').in('id', pkgIds),
         supabase.from('stages').select('id, name').in('id', stageIds),
@@ -39,11 +49,15 @@ export function GovernancePackageAssignments({ documentId }: Props) {
       const pkgMap = new Map((pkgRes.data || []).map((p: any) => [p.id, p.name]));
       const stageMap = new Map((stageRes.data || []).map((s: any) => [s.id, s.name]));
 
-      return data.map((row) => ({
-        package_id: row.package_id,
-        package_name: pkgMap.get(row.package_id) ?? 'Unknown',
-        stage_title: stageMap.get(row.stage_id) ?? 'Unknown',
-        delivery_type: row.delivery_type,
+      // 4. Build delivery_type lookup from stage_documents
+      const deliveryMap = new Map(stageDocs.map(r => [r.stage_id, r.delivery_type]));
+
+      // 5. Map: for each package_stage combo, create an assignment
+      return pkgStages.map((ps) => ({
+        package_id: ps.package_id,
+        package_name: pkgMap.get(ps.package_id) ?? 'Unknown',
+        stage_title: stageMap.get(ps.stage_id) ?? 'Unknown',
+        delivery_type: deliveryMap.get(ps.stage_id) ?? 'standard',
       })) as PackageAssignment[];
     },
     staleTime: 2 * 60_000,
