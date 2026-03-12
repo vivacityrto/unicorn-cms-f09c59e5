@@ -197,6 +197,7 @@ function GovernanceDocuments() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Framework</TableHead>
               <TableHead>
                 <Button variant="ghost" size="sm" onClick={() => toggleSort('title')} className="gap-1 -ml-3">
                   Title <ArrowUpDown className="h-3 w-3" />
