@@ -22,13 +22,14 @@ interface BrowseResult {
   root_name: string;
 }
 
-export function useSharePointBrowser(tenantId: number | null, options?: { useSharedFolder?: boolean }) {
+export function useSharePointBrowser(tenantId: number | null, options?: { useSharedFolder?: boolean; sitePurpose?: string }) {
   const { user } = useAuth();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
   const [downloading, setDownloading] = useState<string | null>(null);
 
   const useSharedFolder = options?.useSharedFolder ?? false;
+  const sitePurpose = options?.sitePurpose;
 
   // Fetch folder contents
   const {
@@ -37,20 +38,29 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
     error,
     refetch,
   } = useQuery({
-    queryKey: ['sharepoint-browse', tenantId, currentFolderId, useSharedFolder],
+    queryKey: ['sharepoint-browse', tenantId, currentFolderId, useSharedFolder, sitePurpose],
     queryFn: async (): Promise<BrowseResult | null> => {
-      if (!tenantId || !user) return null;
+      if (!user) return null;
+      // Either tenantId or sitePurpose must be provided
+      if (!tenantId && !sitePurpose) return null;
+
+      const requestBody: Record<string, unknown> = {
+        action: 'list',
+        folder_id: currentFolderId || undefined,
+      };
+
+      if (sitePurpose) {
+        requestBody.site_purpose = sitePurpose;
+        // Still pass tenant_id for audit logging if available
+        if (tenantId) requestBody.tenant_id = tenantId;
+      } else {
+        requestBody.tenant_id = tenantId;
+        requestBody.use_shared_folder = useSharedFolder;
+      }
 
       const { data, error } = await supabase.functions.invoke(
         'browse-sharepoint-folder',
-        {
-          body: {
-            action: 'list',
-            tenant_id: tenantId,
-            folder_id: currentFolderId || undefined,
-            use_shared_folder: useSharedFolder,
-          },
-        }
+        { body: requestBody }
       );
 
       if (error) throw new Error(error.message || 'Failed to list folder');
@@ -58,7 +68,7 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
 
       return data as BrowseResult;
     },
-    enabled: !!tenantId && !!user,
+    enabled: !!user && (!!tenantId || !!sitePurpose),
     staleTime: QUERY_STALE_TIMES.LIST,
   });
 

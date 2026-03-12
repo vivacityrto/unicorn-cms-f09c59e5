@@ -158,18 +158,52 @@ serve(async (req) => {
       }
     }
 
-    // Get SharePoint settings for tenant
-    const { data: spSettings } = await supabaseAdmin
-      .from("tenant_sharepoint_settings")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .single();
+    // Determine browsing mode: site_purpose (global site) or tenant settings
+    const sitePurpose = body.site_purpose as string | undefined;
+    let drive_id: string;
+    let root_item_id: string | null = null;
+    let root_name: string = "SharePoint";
+    let spSettings: Record<string, unknown> | null = null;
 
-    if (!spSettings || !spSettings.is_enabled || spSettings.validation_status !== "valid") {
-      return new Response(
-        JSON.stringify({ error: "SharePoint folder not configured or disabled for this tenant" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (sitePurpose) {
+      // Browse a global SharePoint site by purpose (e.g., "master_documents")
+      const { data: site } = await supabaseAdmin
+        .from("sharepoint_sites")
+        .select("drive_id, graph_site_id, label")
+        .eq("purpose", sitePurpose)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (!site?.drive_id) {
+        return new Response(
+          JSON.stringify({ error: `No SharePoint site configured for purpose: ${sitePurpose}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      drive_id = site.drive_id;
+      root_name = site.label || sitePurpose;
+      // No root_item_id constraint — browse from drive root
+    } else {
+      // Standard tenant-based browsing
+      const { data: settings } = await supabaseAdmin
+        .from("tenant_sharepoint_settings")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .single();
+
+      if (!settings || !settings.is_enabled || settings.validation_status !== "valid") {
+        return new Response(
+          JSON.stringify({ error: "SharePoint folder not configured or disabled for this tenant" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      spSettings = settings as Record<string, unknown>;
+      drive_id = settings.drive_id;
+      root_item_id = settings.root_item_id;
+      root_name = settings.root_name || "SharePoint";
     }
 
     // Get user's Microsoft token
@@ -197,25 +231,30 @@ serve(async (req) => {
       );
     }
 
-    const { drive_id, root_item_id } = spSettings;
-
     // ===================== LIST FOLDER CONTENTS =====================
     if (action === "list") {
-      // Determine the effective root: use shared_folder_item_id if requested and configured
-      const useSharedRoot = body.use_shared_folder === true && spSettings.shared_folder_item_id;
-      const effectiveRootId = useSharedRoot ? spSettings.shared_folder_item_id : root_item_id;
-      
-      // folder_id defaults to effective root
-      const folderId = (body.folder_id as string) || effectiveRootId;
+      let folderId: string;
+      let effectiveRootId: string | null;
 
-      // If browsing a subfolder, verify it's within root (always validate against the actual root)
-      if (folderId !== root_item_id) {
-        const withinRoot = await verifyWithinRoot(accessToken, drive_id, folderId, root_item_id);
-        if (!withinRoot) {
-          return new Response(
-            JSON.stringify({ error: "Access denied — folder is outside the configured root" }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
+      if (sitePurpose) {
+        // For site_purpose mode: browse from drive root or specified folder
+        folderId = (body.folder_id as string) || "root";
+        effectiveRootId = null; // no root constraint
+      } else {
+        // Standard tenant mode with root constraint
+        const useSharedRoot = body.use_shared_folder === true && spSettings?.shared_folder_item_id;
+        effectiveRootId = useSharedRoot ? (spSettings!.shared_folder_item_id as string) : root_item_id;
+        folderId = (body.folder_id as string) || effectiveRootId!;
+
+        // If browsing a subfolder, verify it's within root
+        if (folderId !== root_item_id && root_item_id) {
+          const withinRoot = await verifyWithinRoot(accessToken, drive_id, folderId, root_item_id);
+          if (!withinRoot) {
+            return new Response(
+              JSON.stringify({ error: "Access denied — folder is outside the configured root" }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
         }
       }
 
@@ -255,12 +294,18 @@ serve(async (req) => {
         file_name: null,
       });
 
+      let displayRootName = root_name;
+      if (!sitePurpose && spSettings) {
+        const useSharedRoot = body.use_shared_folder === true && spSettings.shared_folder_item_id;
+        displayRootName = useSharedRoot ? ((spSettings.shared_folder_name as string) || (spSettings.root_name as string)) : (spSettings.root_name as string);
+      }
+
       return new Response(
         JSON.stringify({
           items,
           folder_id: folderId,
-          is_root: folderId === effectiveRootId,
-          root_name: useSharedRoot ? (spSettings.shared_folder_name || spSettings.root_name) : spSettings.root_name,
+          is_root: sitePurpose ? folderId === "root" : folderId === effectiveRootId,
+          root_name: displayRootName,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -276,13 +321,15 @@ serve(async (req) => {
         );
       }
 
-      // Verify within root (server-side enforcement)
-      const withinRoot = await verifyWithinRoot(accessToken, drive_id, itemId, root_item_id);
-      if (!withinRoot) {
-        return new Response(
-          JSON.stringify({ error: "Access denied — file is outside the configured root folder" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Verify within root (server-side enforcement) — skip for site_purpose mode
+      if (!sitePurpose && root_item_id) {
+        const withinRoot = await verifyWithinRoot(accessToken, drive_id, itemId, root_item_id);
+        if (!withinRoot) {
+          return new Response(
+            JSON.stringify({ error: "Access denied — file is outside the configured root folder" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       // Get item metadata for name
