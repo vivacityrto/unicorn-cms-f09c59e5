@@ -279,16 +279,43 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         />
       )}
 
-      {showImport && (
-        <GovernanceImportDialog
-          documentId={documentId}
-          documentTitle={doc.title}
-          frameworkType={doc.framework_type}
-          open={showImport}
-          onOpenChange={setShowImport}
-          onSuccess={invalidateAll}
-        />
-      )}
+      {showSharePointBrowser && profile?.tenant_id && (() => {
+        const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
+        const autoFolder = doc.framework_type
+          ? frameworkFolderMap[doc.framework_type.toLowerCase()] || 'Other'
+          : 'Other';
+        return (
+          <Dialog open={true} onOpenChange={(open) => { if (!open) setShowSharePointBrowser(false); }}>
+            <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  Master Documents — Select Template File
+                </DialogTitle>
+              </DialogHeader>
+              <SharePointFileBrowser
+                tenantId={profile.tenant_id}
+                sitePurpose="master_documents"
+                onSelectLink={async (url) => {
+                  const { error } = await supabase
+                    .from('documents')
+                    .update({ source_template_url: url })
+                    .eq('id', documentId);
+                  if (error) {
+                    toast.error('Failed to update SharePoint URL');
+                  } else {
+                    toast.success('SharePoint URL saved');
+                    invalidateAll();
+                  }
+                  setShowSharePointBrowser(false);
+                }}
+                defaultFilter={doc.title}
+                autoNavigateFolder={autoFolder}
+              />
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
 
       {showDelivery && publishedVersion && (
         <GovernanceDeliveryDialog
