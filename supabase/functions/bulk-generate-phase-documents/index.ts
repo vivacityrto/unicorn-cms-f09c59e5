@@ -8,7 +8,7 @@ interface BulkGenerateRequest {
   tenant_id: number;
   stageinstance_id: number;
   package_id?: number;
-  mode: 'all' | 'pending_only';
+  mode: 'all' | 'pending_only' | 'overwrite_all';
 }
 
 interface TokenBinding {
@@ -161,6 +161,7 @@ Deno.serve(async (req: Request) => {
       const fmt = (doc.format || '').toLowerCase();
       if (!['xlsx', 'xls', 'xlsm', 'docx'].includes(fmt)) return false;
       if (mode === 'pending_only' && inst.isgenerated) return false;
+      // overwrite_all: include already-generated docs for re-generation
       return true;
     });
 
@@ -300,16 +301,47 @@ Deno.serve(async (req: Request) => {
           merge_data: mergeData
         });
 
-        // Update document_instance
+        // Update document_instance with generation tracking
         await supabase
           .from('document_instances')
-          .update({ isgenerated: true, status: 'generated' })
+          .update({
+            isgenerated: true,
+            status: 'generated',
+            generation_status: 'generated',
+            generationdate: new Date().toISOString(),
+            last_error: null,
+            updated_by: user.id,
+          })
           .eq('id', inst.id);
+
+        // Resolve any active errors for this instance
+        await supabase
+          .from('document_generation_errors')
+          .update({ resolved_at: new Date().toISOString(), resolved_by: user.id })
+          .eq('documentinstance_id', inst.id)
+          .is('resolved_at', null);
 
         results.push({ document_instance_id: inst.id, document_title: doc.title, status: 'generated' });
         generated++;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
+
+        // Track failure on document_instances
+        try {
+          await supabase
+            .from('document_instances')
+            .update({ generation_status: 'failed', last_error: msg, updated_by: user.id })
+            .eq('id', inst.id);
+
+          await supabase.from('document_generation_errors').insert({
+            documentinstance_id: inst.id,
+            error_code: 'BULK_GEN_FAILED',
+            error_message: msg,
+          });
+        } catch (trackErr) {
+          console.error('Failed to track generation error:', trackErr);
+        }
+
         results.push({ document_instance_id: inst.id, document_title: doc.title, status: 'failed', error: msg });
         failed++;
       }
