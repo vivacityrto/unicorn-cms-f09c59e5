@@ -26,12 +26,12 @@ function GovernanceDocuments() {
 
   // Fetch documents that are team-only (governance templates)
   const { data: documents, isLoading } = useQuery({
-    queryKey: ['governance-documents', search, categoryFilter, statusFilter],
+    queryKey: ['governance-documents', search, categoryFilter, statusFilter, frameworkFilter],
     queryFn: async () => {
       let query = supabase
         .from('documents')
         .select(`
-          id, title, format, category, document_status,
+          id, title, format, category, document_status, framework_type,
           source_template_url, updated_at, current_published_version_id,
           document_versions!document_versions_document_id_fkey(id, version_number, status, created_at, published_at, checksum_sha256)
         `)
@@ -46,6 +46,13 @@ function GovernanceDocuments() {
       }
       if (statusFilter && statusFilter !== 'all') {
         query = query.eq('document_status', statusFilter);
+      }
+      if (frameworkFilter && frameworkFilter !== 'all') {
+        if (frameworkFilter === '__none__') {
+          query = query.is('framework_type', null);
+        } else {
+          query = query.eq('framework_type', frameworkFilter);
+        }
       }
 
       const { data, error } = await query.limit(200);
