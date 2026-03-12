@@ -169,7 +169,7 @@ serve(async (req) => {
       // Browse a global SharePoint site by purpose (e.g., "master_documents")
       const { data: site, error: siteError } = await supabaseAdmin
         .from("sharepoint_sites")
-        .select("drive_id, graph_site_id, site_name")
+        .select("drive_id, graph_site_id, site_name, start_folder_name")
         .eq("purpose", sitePurpose)
         .eq("is_active", true)
         .limit(1)
