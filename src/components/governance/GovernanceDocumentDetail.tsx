@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
@@ -17,6 +17,7 @@ import { GovernanceDeliveryDialog } from './GovernanceDeliveryDialog';
 import { GovernanceDeliveryHistory } from './GovernanceDeliveryHistory';
 import { GovernanceTailoringHealth } from './GovernanceTailoringHealth';
 import { GovernancePackageAssignments } from './GovernancePackageAssignments';
+import { GovernanceDocumentEditDialog } from './GovernanceDocumentEditDialog';
 
 interface GovernanceDocumentDetailProps {
   documentId: number;
@@ -29,6 +30,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
   const [showImport, setShowImport] = useState(false);
   const [mappingVersionId, setMappingVersionId] = useState<string | null>(null);
   const [showDelivery, setShowDelivery] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const { data: doc, isLoading } = useQuery({
     queryKey: ['governance-doc-detail', documentId],
@@ -37,7 +39,8 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         .from('documents')
         .select(`
           id, title, description, format, category, document_status,
-          source_template_url, updated_at, current_published_version_id
+          source_template_url, updated_at, current_published_version_id,
+          framework_type, is_core, standard_set
         `)
         .eq('id', documentId)
         .single();
@@ -127,6 +130,9 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
+            <Pencil className="h-4 w-4 mr-2" /> Edit
+          </Button>
           {publishedVersion && (
             <Button variant="default" size="sm" onClick={() => setShowDelivery(true)}>
               <Send className="h-4 w-4 mr-2" /> Deliver to Clients
@@ -146,8 +152,8 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       </div>
 
       {/* Document Info */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <Card className="md:col-span-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <Card className="col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Tag className="h-4 w-4" /> Category
@@ -177,6 +183,16 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           </CardHeader>
           <CardContent>
             {getStatusBadge(doc.document_status)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Shield className="h-4 w-4" /> Framework
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <span className="text-sm">{doc.framework_type || '—'}</span>
           </CardContent>
         </Card>
         <Card>
@@ -280,6 +296,13 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           onSuccess={invalidateAll}
         />
       )}
+
+      <GovernanceDocumentEditDialog
+        documentId={documentId}
+        open={showEdit}
+        onOpenChange={setShowEdit}
+        onSuccess={invalidateAll}
+      />
     </div>
   );
 }
