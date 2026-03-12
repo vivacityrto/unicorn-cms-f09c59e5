@@ -61,6 +61,19 @@ function GovernanceDocuments() {
     },
   });
 
+  // Fetch total document count (unfiltered)
+  const { data: totalCount } = useQuery({
+    queryKey: ['governance-documents-total'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('documents')
+        .select('id', { count: 'exact', head: true })
+        .or('is_team_only.is.null,is_team_only.eq.false');
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   // Fetch categories for filter
   const { categories, valueLabelMap } = useDocumentCategories();
 
