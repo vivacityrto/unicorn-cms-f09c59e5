@@ -199,26 +199,31 @@ function FileBrowserContent({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2 flex-wrap">
-            <FolderOpen className="h-5 w-5 flex-shrink-0" />
-            <span>{rootName || 'SharePoint Documents'}</span>
             {onSelectLink && sharedFolderName ? (
               <>
+                <FolderOpen className="h-5 w-5 flex-shrink-0" />
+                <span>{rootName || 'SharePoint Documents'}</span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <Folder className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="text-muted-foreground font-normal">
                   {sharedFolderName}
                 </span>
               </>
-            ) : (
+            ) : folderStack.length > 0 ? (
               folderStack.map((entry, i) => (
                 <span key={i} className="flex items-center gap-2">
-                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  {i > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
                   <Folder className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-muted-foreground font-normal">
+                  <span className={i === folderStack.length - 1 ? 'font-semibold' : 'text-muted-foreground font-normal'}>
                     {entry.name}
                   </span>
                 </span>
               ))
+            ) : (
+              <>
+                <FolderOpen className="h-5 w-5 flex-shrink-0" />
+                <span>{rootName || 'SharePoint Documents'}</span>
+              </>
             )}
           </CardTitle>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
