@@ -56,6 +56,12 @@ function GovernanceDocuments() {
         }
       }
 
+      if (sharepointFilter === 'has_url') {
+        query = query.not('source_template_url', 'is', null);
+      } else if (sharepointFilter === 'no_url') {
+        query = query.is('source_template_url', null);
+      }
+
       const { data, error } = await query.limit(200);
       if (error) throw error;
       return data || [];
