@@ -39,7 +39,8 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         .from('documents')
         .select(`
           id, title, description, format, category, document_status,
-          source_template_url, updated_at, current_published_version_id
+          source_template_url, updated_at, current_published_version_id,
+          framework_type, is_core, standard_set
         `)
         .eq('id', documentId)
         .single();
