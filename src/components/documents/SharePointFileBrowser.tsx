@@ -147,7 +147,7 @@ function FileBrowserContent({
     navigateToRoot,
     downloadFile,
     refetch,
-  } = useSharePointBrowser(tenantId, { useSharedFolder: !sitePurpose && !!onSelectLink, sitePurpose });
+  } = useSharePointBrowser(tenantId, { useSharedFolder: !sitePurpose && !!onSelectLink, sitePurpose, startFolderName });
 
   // Sort: folders first, then files, both alphabetical
   const sortedItems = [...items].sort((a, b) => {

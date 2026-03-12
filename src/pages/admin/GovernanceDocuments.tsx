@@ -361,6 +361,7 @@ function GovernanceDocuments() {
               <SharePointFileBrowser
                 tenantId={profile.tenant_id}
                 sitePurpose="master_documents"
+                startFolderName="UNICORN"
                 onSelectLink={(url, fileName) => {
                   handleSharePointLinkSelected(url);
                 }}
