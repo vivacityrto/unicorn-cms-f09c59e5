@@ -349,15 +349,26 @@ function GovernanceDocuments() {
           </TableBody>
         </Table>
 
-        {/* SharePoint Link Browser Dialog */}
-        {profile?.tenant_id && (
-          <SharePointLinkDialog
-            open={!!sharepointBrowseDocId}
-            onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}
-            tenantId={profile.tenant_id}
-            onSelectLink={handleSharePointLinkSelected}
-          />
-        )}
+        {/* Master Documents SharePoint Browser Dialog */}
+        <Dialog open={!!sharepointBrowseDocId} onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}>
+          <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FolderOpen className="h-5 w-5" />
+                Master Documents — Select Template File
+              </DialogTitle>
+            </DialogHeader>
+            {profile?.tenant_id && (
+              <SharePointFileBrowser
+                tenantId={profile.tenant_id}
+                sitePurpose="master_documents"
+                onSelectLink={(url, fileName) => {
+                  handleSharePointLinkSelected(url);
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
