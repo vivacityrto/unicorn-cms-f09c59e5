@@ -152,8 +152,8 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       </div>
 
       {/* Document Info */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <Card className="md:col-span-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <Card className="col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Tag className="h-4 w-4" /> Category
@@ -183,6 +183,16 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           </CardHeader>
           <CardContent>
             {getStatusBadge(doc.document_status)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Shield className="h-4 w-4" /> Framework
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <span className="text-sm">{doc.framework_type || '—'}</span>
           </CardContent>
         </Card>
         <Card>
