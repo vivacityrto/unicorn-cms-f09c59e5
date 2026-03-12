@@ -20,6 +20,7 @@ interface BrowseResult {
   folder_id: string;
   is_root: boolean;
   root_name: string;
+  start_folder_name?: string | null;
 }
 
 export function useSharePointBrowser(tenantId: number | null, options?: { useSharedFolder?: boolean; sitePurpose?: string; startFolderName?: string }) {
