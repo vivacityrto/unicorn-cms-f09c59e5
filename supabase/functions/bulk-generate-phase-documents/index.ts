@@ -8,7 +8,7 @@ interface BulkGenerateRequest {
   tenant_id: number;
   stageinstance_id: number;
   package_id?: number;
-  mode: 'all' | 'pending_only';
+  mode: 'all' | 'pending_only' | 'overwrite_all';
 }
 
 interface TokenBinding {

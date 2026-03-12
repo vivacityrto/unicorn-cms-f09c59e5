@@ -463,6 +463,39 @@ serve(async (req) => {
 
     console.log(`[deliver] Uploaded to SharePoint: ${driveItem.webUrl}`);
 
+    // ── Update document_instances with generation tracking ─────────────────
+    const { data: matchedInstances } = await supabase
+      .from("document_instances")
+      .select("id")
+      .eq("document_id", doc.id)
+      .eq("tenant_id", tenant_id);
+
+    if (matchedInstances && matchedInstances.length > 0) {
+      const instanceIds = matchedInstances.map((i: any) => i.id);
+      await supabase
+        .from("document_instances")
+        .update({
+          generation_status: "generated",
+          generated_file_url: driveItem.webUrl,
+          generated_item_id: driveItem.id,
+          isgenerated: true,
+          generationdate: new Date().toISOString(),
+          last_error: null,
+          updated_by: user.id,
+        })
+        .eq("document_id", doc.id)
+        .eq("tenant_id", tenant_id);
+
+      // Resolve any active errors for these instances
+      for (const instId of instanceIds) {
+        await supabase
+          .from("document_generation_errors")
+          .update({ resolved_at: new Date().toISOString(), resolved_by: user.id })
+          .eq("documentinstance_id", instId)
+          .is("resolved_at", null);
+      }
+    }
+
     // ── Insert delivery record with tailoring data ─────────────────────────
     const { data: delivery, error: insErr } = await supabase
       .from("governance_document_deliveries")
@@ -515,6 +548,45 @@ serve(async (req) => {
   } catch (error) {
     console.error("[deliver] Error:", error);
     const msg = error instanceof Error ? error.message : "Internal server error";
+
+    // ── Track failure on document_instances ─────────────────────────────────
+    try {
+      if (doc?.id && tenant_id) {
+        const { data: failedInstances } = await supabase
+          .from("document_instances")
+          .select("id")
+          .eq("document_id", doc.id)
+          .eq("tenant_id", tenant_id);
+
+        if (failedInstances && failedInstances.length > 0) {
+          await supabase
+            .from("document_instances")
+            .update({ generation_status: "failed", last_error: msg, updated_by: user?.id || null })
+            .eq("document_id", doc.id)
+            .eq("tenant_id", tenant_id);
+
+          for (const inst of failedInstances) {
+            await supabase.from("document_generation_errors").insert({
+              documentinstance_id: inst.id,
+              error_code: "DELIVERY_FAILED",
+              error_message: msg,
+            });
+          }
+
+          // Audit log for failure
+          await supabase.from("document_activity_log").insert({
+            tenant_id,
+            activity_type: "governance_generation_failed",
+            document_id: doc.id,
+            actor_user_id: user?.id || null,
+            metadata: { error: msg, document_version_id },
+          });
+        }
+      }
+    } catch (trackErr) {
+      console.error("[deliver] Failed to track generation error:", trackErr);
+    }
+
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
