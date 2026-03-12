@@ -210,21 +210,15 @@ function FileBrowserContent({
                 </span>
               </>
             ) : (
-              !isRoot && folderStack.length > 1 && (
-                <>
+              folderStack.map((entry, i) => (
+                <span key={i} className="flex items-center gap-2">
                   <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  {folderStack.length > 2 && (
-                    <>
-                      <span className="text-muted-foreground">...</span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    </>
-                  )}
                   <Folder className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <span className="text-muted-foreground font-normal">
-                    {folderStack[folderStack.length - 1].name}
+                    {entry.name}
                   </span>
-                </>
-              )
+                </span>
+              ))
             )}
           </CardTitle>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
