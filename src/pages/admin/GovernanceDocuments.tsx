@@ -264,7 +264,6 @@ function GovernanceDocuments() {
               <TableHead>Format</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Source</TableHead>
               <TableHead>Updated</TableHead>
               <TableHead className="w-[120px] text-right">
                 <span className="text-xs text-muted-foreground font-normal">
