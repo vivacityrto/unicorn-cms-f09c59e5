@@ -239,6 +239,9 @@ function GovernanceDocuments() {
                     className="cursor-pointer"
                     onClick={() => setSelectedDocId(doc.id)}
                   >
+                    <TableCell>
+                      <span className="text-xs font-medium">{doc.framework_type || '—'}</span>
+                    </TableCell>
                     <TableCell className="font-medium">{doc.title}</TableCell>
                     <TableCell>
                       <span className="text-xs text-muted-foreground">{valueLabelMap.get(doc.category) || doc.category || '—'}</span>
