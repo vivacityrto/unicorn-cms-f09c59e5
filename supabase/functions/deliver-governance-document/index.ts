@@ -597,7 +597,8 @@ serve(async (req) => {
 
     const tenantName = sanitiseFileName(tenant?.name || `tenant_${tenant_id}`);
     const docTitle = sanitiseFileName(doc.title || "document");
-    const deliveredFileName = `${docTitle}_${tenantName}_v${version.version_number}.docx`;
+    const fileExt = docFormat || 'docx';
+    const deliveredFileName = `${docTitle}_${tenantName}_v${version.version_number}.${fileExt}`;
 
     // ── Resolve SharePoint folder ──────────────────────────────────────────
     const { data: spSettings } = await supabase
