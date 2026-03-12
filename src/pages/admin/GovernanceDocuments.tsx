@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileCheck, ExternalLink, Upload, Eye, ArrowUpDown } from 'lucide-react';
+import { Search, FileCheck, ExternalLink, Upload, Eye, ArrowUpDown, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
@@ -20,13 +20,14 @@ function GovernanceDocuments() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [frameworkFilter, setFrameworkFilter] = useState<string>('all');
+  const [sharepointFilter, setSharepointFilter] = useState<string>('all');
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   // Fetch documents that are team-only (governance templates)
   const { data: documents, isLoading } = useQuery({
-    queryKey: ['governance-documents', search, categoryFilter, statusFilter, frameworkFilter],
+    queryKey: ['governance-documents', search, categoryFilter, statusFilter, frameworkFilter, sharepointFilter],
     queryFn: async () => {
       let query = supabase
         .from('documents')
@@ -53,6 +54,12 @@ function GovernanceDocuments() {
         } else {
           query = query.eq('framework_type', frameworkFilter);
         }
+      }
+
+      if (sharepointFilter === 'has_url') {
+        query = query.not('source_template_url', 'is', null);
+      } else if (sharepointFilter === 'no_url') {
+        query = query.is('source_template_url', null);
       }
 
       const { data, error } = await query.limit(200);
@@ -205,6 +212,16 @@ function GovernanceDocuments() {
               <SelectItem value="archived">Archived</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={sharepointFilter} onValueChange={setSharepointFilter}>
+            <SelectTrigger className="w-[170px]">
+              <SelectValue placeholder="SharePoint" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All SP Status</SelectItem>
+              <SelectItem value="has_url">Has SP URL</SelectItem>
+              <SelectItem value="no_url">No SP URL</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Table */}
@@ -278,12 +295,15 @@ function GovernanceDocuments() {
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           className="text-primary hover:underline inline-flex items-center gap-1"
+                          title={doc.source_template_url}
                         >
-                          <ExternalLink className="h-3 w-3" />
-                          Source
+                          <Link2 className="h-3.5 w-3.5" />
+                          <span className="text-xs">SP</span>
                         </a>
                       ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <span className="text-muted-foreground/40">
+                          <Link2 className="h-3.5 w-3.5" />
+                        </span>
                       )}
                     </TableCell>
                     <TableCell>
