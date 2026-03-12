@@ -315,7 +315,7 @@ serve(async (req) => {
           folder_id: folderId,
           is_root: sitePurpose ? folderId === "root" : folderId === effectiveRootId,
           root_name: displayRootName,
-          start_folder_name: sitePurpose ? (site?.start_folder_name || null) : null,
+          start_folder_name: startFolderName,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
