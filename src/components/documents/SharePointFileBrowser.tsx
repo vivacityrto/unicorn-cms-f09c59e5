@@ -124,11 +124,13 @@ function FileBrowserContent({
   rootName,
   sharedFolderName,
   onSelectLink,
+  sitePurpose,
 }: {
   tenantId: number;
   rootName: string | null;
   sharedFolderName: string | null;
   onSelectLink?: (url: string, fileName?: string) => void;
+  sitePurpose?: string;
 }) {
   const {
     items,
@@ -142,7 +144,7 @@ function FileBrowserContent({
     navigateToRoot,
     downloadFile,
     refetch,
-  } = useSharePointBrowser(tenantId, { useSharedFolder: !!onSelectLink });
+  } = useSharePointBrowser(tenantId, { useSharedFolder: !sitePurpose && !!onSelectLink, sitePurpose });
 
   // Sort: folders first, then files, both alphabetical
   const sortedItems = [...items].sort((a, b) => {
