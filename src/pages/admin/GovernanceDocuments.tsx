@@ -223,17 +223,6 @@ function GovernanceDocuments() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={sharepointFilter} onValueChange={setSharepointFilter}>
             <SelectTrigger className="w-[170px]">
               <SelectValue placeholder="SharePoint" />
