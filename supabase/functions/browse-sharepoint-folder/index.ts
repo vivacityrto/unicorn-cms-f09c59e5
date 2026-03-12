@@ -294,12 +294,18 @@ serve(async (req) => {
         file_name: null,
       });
 
+      let displayRootName = root_name;
+      if (!sitePurpose && spSettings) {
+        const useSharedRoot = body.use_shared_folder === true && spSettings.shared_folder_item_id;
+        displayRootName = useSharedRoot ? ((spSettings.shared_folder_name as string) || (spSettings.root_name as string)) : (spSettings.root_name as string);
+      }
+
       return new Response(
         JSON.stringify({
           items,
           folder_id: folderId,
-          is_root: folderId === effectiveRootId,
-          root_name: useSharedRoot ? (spSettings.shared_folder_name || spSettings.root_name) : spSettings.root_name,
+          is_root: sitePurpose ? folderId === "root" : folderId === effectiveRootId,
+          root_name: displayRootName,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
