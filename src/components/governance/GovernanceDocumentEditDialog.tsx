@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
-import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Loader2, FolderSearch } from 'lucide-react';
+import { SharePointLinkDialog } from '@/components/ui/sharepoint-link-dialog';
 
 interface GovernanceDocumentEditDialogProps {
   documentId: number;
