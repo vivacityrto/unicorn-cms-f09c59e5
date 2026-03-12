@@ -281,7 +281,7 @@ function GovernanceDocuments() {
               </TableRow>
             ) : !documents?.length ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No governance documents found
                 </TableCell>
               </TableRow>
