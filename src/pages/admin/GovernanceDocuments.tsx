@@ -19,6 +19,8 @@ type SortField = 'title' | 'category' | null;
 type SortOrder = 'asc' | 'desc';
 
 function GovernanceDocuments() {
+  const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -27,6 +29,22 @@ function GovernanceDocuments() {
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [sharepointBrowseDocId, setSharepointBrowseDocId] = useState<number | null>(null);
+
+  const handleSharePointLinkSelected = async (url: string) => {
+    if (!sharepointBrowseDocId) return;
+    const { error } = await supabase
+      .from('documents')
+      .update({ source_template_url: url })
+      .eq('id', sharepointBrowseDocId);
+    if (error) {
+      toast.error('Failed to update SharePoint URL');
+    } else {
+      toast.success('SharePoint URL saved');
+      queryClient.invalidateQueries({ queryKey: ['governance-documents'] });
+    }
+    setSharepointBrowseDocId(null);
+  };
 
   // Fetch documents that are team-only (governance templates)
   const { data: documents, isLoading } = useQuery({
