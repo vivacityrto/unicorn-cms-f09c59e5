@@ -141,7 +141,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
               <Send className="h-4 w-4 mr-2" /> Deliver to Clients
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+          <Button variant="outline" size="sm" onClick={() => setShowSharePointBrowser(true)}>
             <Upload className="h-4 w-4 mr-2" /> Link to SharePoint
           </Button>
           {doc.source_template_url && (
