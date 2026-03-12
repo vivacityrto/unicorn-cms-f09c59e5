@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
