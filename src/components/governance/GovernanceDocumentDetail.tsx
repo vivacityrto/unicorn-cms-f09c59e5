@@ -30,6 +30,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
   const [showImport, setShowImport] = useState(false);
   const [mappingVersionId, setMappingVersionId] = useState<string | null>(null);
   const [showDelivery, setShowDelivery] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const { data: doc, isLoading } = useQuery({
     queryKey: ['governance-doc-detail', documentId],
