@@ -90,7 +90,6 @@ export function GovernanceImportDialog({ documentId, documentTitle, frameworkTyp
         setAutoNavigated(true);
         setBreadcrumbs(prev => [...prev, { id: targetFolder.id, name: targetFolder.name }]);
         browse(targetFolder.id);
-        }
       }
     }
   }, [initialLoaded, items, frameworkType, autoNavigated]);
