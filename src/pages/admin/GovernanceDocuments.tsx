@@ -19,6 +19,7 @@ function GovernanceDocuments() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [frameworkFilter, setFrameworkFilter] = useState<string>('all');
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
