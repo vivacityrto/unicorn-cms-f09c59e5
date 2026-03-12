@@ -200,17 +200,6 @@ function GovernanceDocuments() {
               className="pl-9"
             />
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Framework" />
@@ -220,6 +209,17 @@ function GovernanceDocuments() {
               <SelectItem value="__none__">No Framework</SelectItem>
               {frameworks?.map((f) => (
                 <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -264,7 +264,6 @@ function GovernanceDocuments() {
               <TableHead>Format</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Source</TableHead>
               <TableHead>Updated</TableHead>
               <TableHead className="w-[120px] text-right">
                 <span className="text-xs text-muted-foreground font-normal">
@@ -276,13 +275,13 @@ function GovernanceDocuments() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Loading governance documents...
                 </TableCell>
               </TableRow>
             ) : !documents?.length ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No governance documents found
                 </TableCell>
               </TableRow>
@@ -310,37 +309,37 @@ function GovernanceDocuments() {
                     </TableCell>
                     <TableCell>{getStatusBadge(doc.document_status)}</TableCell>
                     <TableCell>
-                      {doc.source_template_url ? (
-                        <a
-                          href={doc.source_template_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-primary hover:underline inline-flex items-center gap-1"
-                          title={doc.source_template_url}
-                        >
-                          <Link2 className="h-3.5 w-3.5" />
-                          <span className="text-xs">SP</span>
-                        </a>
-                      ) : (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSharepointBrowseDocId(doc.id); }}
-                          className="text-muted-foreground hover:text-primary cursor-pointer inline-flex items-center gap-1"
-                          title="Click to set SharePoint URL"
-                        >
-                          <Link2Off className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </TableCell>
-                    <TableCell>
                       <span className="text-xs text-muted-foreground">
                         {doc.updated_at ? format(new Date(doc.updated_at), 'dd MMM yyyy') : '—'}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedDocId(doc.id); }}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        {doc.source_template_url ? (
+                          <a
+                            href={doc.source_template_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary hover:underline inline-flex items-center gap-1"
+                            title={doc.source_template_url}
+                          >
+                            <Link2 className="h-3.5 w-3.5" />
+                            <span className="text-xs">SP</span>
+                          </a>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSharepointBrowseDocId(doc.id); }}
+                            className="text-muted-foreground hover:text-primary cursor-pointer inline-flex items-center gap-1"
+                            title="Click to set SharePoint URL"
+                          >
+                            <Link2Off className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedDocId(doc.id); }}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
