@@ -47,8 +47,19 @@ function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFileBrowserProps) {
+export function SharePointFileBrowser({ tenantId, onSelectLink, sitePurpose }: SharePointFileBrowserProps) {
   const { profile } = useAuth();
+
+  // If using sitePurpose mode, skip tenant settings check
+  if (sitePurpose) {
+    return <FileBrowserContent tenantId={tenantId} rootName={null} sharedFolderName={null} onSelectLink={onSelectLink} sitePurpose={sitePurpose} />;
+  }
+
+  return <TenantSettingsGate tenantId={tenantId} onSelectLink={onSelectLink} />;
+}
+
+/** Gate component that checks tenant SharePoint settings before rendering browser */
+function TenantSettingsGate({ tenantId, onSelectLink }: { tenantId: number; onSelectLink?: (url: string, fileName?: string) => void }) {
   const [settingsStatus, setSettingsStatus] = useState<{
     loaded: boolean;
     enabled: boolean;
@@ -57,7 +68,6 @@ export function SharePointFileBrowser({ tenantId, onSelectLink }: SharePointFile
     sharedFolderName: string | null;
   }>({ loaded: false, enabled: false, valid: false, rootName: null, sharedFolderName: null });
 
-  // Check if SharePoint is configured for this tenant
   useEffect(() => {
     const fetchSettings = async () => {
       const { data } = await supabase
