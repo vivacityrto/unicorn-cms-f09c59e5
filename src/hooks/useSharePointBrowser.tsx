@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,14 +22,16 @@ interface BrowseResult {
   root_name: string;
 }
 
-export function useSharePointBrowser(tenantId: number | null, options?: { useSharedFolder?: boolean; sitePurpose?: string }) {
+export function useSharePointBrowser(tenantId: number | null, options?: { useSharedFolder?: boolean; sitePurpose?: string; startFolderName?: string }) {
   const { user } = useAuth();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const autoNavigated = useRef(false);
 
   const useSharedFolder = options?.useSharedFolder ?? false;
   const sitePurpose = options?.sitePurpose;
+  const startFolderName = options?.startFolderName;
 
   // Fetch folder contents
   const {
