@@ -17,6 +17,7 @@ import { GovernanceDeliveryDialog } from './GovernanceDeliveryDialog';
 import { GovernanceDeliveryHistory } from './GovernanceDeliveryHistory';
 import { GovernanceTailoringHealth } from './GovernanceTailoringHealth';
 import { GovernancePackageAssignments } from './GovernancePackageAssignments';
+import { GovernanceDocumentEditDialog } from './GovernanceDocumentEditDialog';
 
 interface GovernanceDocumentDetailProps {
   documentId: number;
