@@ -275,7 +275,7 @@ function GovernanceDocuments() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Loading governance documents...
                 </TableCell>
               </TableRow>
