@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileCheck, ExternalLink, Upload, Eye, ArrowUpDown, Link2, Link2Off } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, FileCheck, ExternalLink, Upload, Eye, ArrowUpDown, Link2, Link2Off, FolderOpen } from 'lucide-react';
 import { format } from 'date-fns';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
-import { SharePointLinkDialog } from '@/components/ui/sharepoint-link-dialog';
+import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
