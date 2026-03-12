@@ -295,12 +295,15 @@ function GovernanceDocuments() {
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           className="text-primary hover:underline inline-flex items-center gap-1"
+                          title={doc.source_template_url}
                         >
-                          <ExternalLink className="h-3 w-3" />
-                          Source
+                          <Link2 className="h-3.5 w-3.5" />
+                          <span className="text-xs">SP</span>
                         </a>
                       ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <span className="text-muted-foreground/40">
+                          <Link2 className="h-3.5 w-3.5" />
+                        </span>
                       )}
                     </TableCell>
                     <TableCell>
