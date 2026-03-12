@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,10 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileCheck, ExternalLink, Upload, Eye, ArrowUpDown, Link2 } from 'lucide-react';
+import { Search, FileCheck, ExternalLink, Upload, Eye, ArrowUpDown, Link2, Link2Off } from 'lucide-react';
 import { format } from 'date-fns';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
+import { SharePointLinkDialog } from '@/components/ui/sharepoint-link-dialog';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 type SortField = 'title' | 'category' | null;
 type SortOrder = 'asc' | 'desc';
