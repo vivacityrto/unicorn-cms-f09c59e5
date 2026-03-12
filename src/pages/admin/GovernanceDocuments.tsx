@@ -64,6 +64,19 @@ function GovernanceDocuments() {
   // Fetch categories for filter
   const { categories, valueLabelMap } = useDocumentCategories();
 
+  // Fetch frameworks for filter
+  const { data: frameworks } = useQuery({
+    queryKey: ['dd_governance_framework'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('dd_governance_framework')
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      return data || [];
+    },
+  });
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'published':
