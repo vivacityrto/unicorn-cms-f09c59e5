@@ -21,9 +21,11 @@
 - `StageDocumentsSection.tsx` — generation status badges, self-service error diagnostics, retry button, file links, manual allocation indicator
 - `useStageDocuments.ts` — expanded query to include generation tracking columns
 
-### Phase 4: Backend Logic (Feature-Flagged Cutover) — PENDING
-- Update `start_client_package` RPC with `governance_use_stage_documents` flag
-- Note: This requires a database migration to modify the RPC, which should be done via Supabase SQL editor
+### Phase 4: Backend Logic (Feature-Flagged Cutover) ✅ COMPLETE
+- Updated `start_client_package` RPC with `governance_use_stage_documents` feature flag
+- When flag ON: seeds `document_instances` from `stage_documents` (respects `is_active`, carries `is_core`, sets `generation_status`)
+- When flag OFF: legacy path unchanged (seeds from `documents.stage`)
+- Audit log now records `document_source` in metadata
 
 ### Phase 5: Generation Hardening ✅ COMPLETE
 - Updated `deliver-governance-document` edge function:
