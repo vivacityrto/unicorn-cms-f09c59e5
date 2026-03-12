@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,14 +22,16 @@ interface BrowseResult {
   root_name: string;
 }
 
-export function useSharePointBrowser(tenantId: number | null, options?: { useSharedFolder?: boolean; sitePurpose?: string }) {
+export function useSharePointBrowser(tenantId: number | null, options?: { useSharedFolder?: boolean; sitePurpose?: string; startFolderName?: string }) {
   const { user } = useAuth();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [folderStack, setFolderStack] = useState<{ id: string; name: string }[]>([]);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const autoNavigated = useRef(false);
 
   const useSharedFolder = options?.useSharedFolder ?? false;
   const sitePurpose = options?.sitePurpose;
+  const startFolderName = options?.startFolderName;
 
   // Fetch folder contents
   const {
@@ -71,6 +73,19 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
     enabled: !!user && (!!tenantId || !!sitePurpose),
     staleTime: QUERY_STALE_TIMES.LIST,
   });
+
+  // Auto-navigate into startFolderName on first successful root load
+  useEffect(() => {
+    if (autoNavigated.current || !startFolderName || !browseResult?.items || !browseResult.is_root) return;
+    const target = browseResult.items.find(
+      (item) => item.is_folder && item.name.toLowerCase() === startFolderName.toLowerCase()
+    );
+    if (target) {
+      autoNavigated.current = true;
+      setFolderStack([{ id: 'root', name: browseResult.root_name || 'Root' }]);
+      setCurrentFolderId(target.id);
+    }
+  }, [browseResult, startFolderName]);
 
   // Navigate into a subfolder
   const navigateToFolder = useCallback(

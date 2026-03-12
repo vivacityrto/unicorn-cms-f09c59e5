@@ -37,6 +37,7 @@ interface SharePointFileBrowserProps {
   tenantId: number;
   onSelectLink?: (url: string, fileName?: string) => void;
   sitePurpose?: string;
+  startFolderName?: string;
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -47,12 +48,12 @@ function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-export function SharePointFileBrowser({ tenantId, onSelectLink, sitePurpose }: SharePointFileBrowserProps) {
+export function SharePointFileBrowser({ tenantId, onSelectLink, sitePurpose, startFolderName }: SharePointFileBrowserProps) {
   const { profile } = useAuth();
 
   // If using sitePurpose mode, skip tenant settings check
   if (sitePurpose) {
-    return <FileBrowserContent tenantId={tenantId} rootName={null} sharedFolderName={null} onSelectLink={onSelectLink} sitePurpose={sitePurpose} />;
+    return <FileBrowserContent tenantId={tenantId} rootName={null} sharedFolderName={null} onSelectLink={onSelectLink} sitePurpose={sitePurpose} startFolderName={startFolderName} />;
   }
 
   return <TenantSettingsGate tenantId={tenantId} onSelectLink={onSelectLink} />;
@@ -125,12 +126,14 @@ function FileBrowserContent({
   sharedFolderName,
   onSelectLink,
   sitePurpose,
+  startFolderName,
 }: {
   tenantId: number;
   rootName: string | null;
   sharedFolderName: string | null;
   onSelectLink?: (url: string, fileName?: string) => void;
   sitePurpose?: string;
+  startFolderName?: string;
 }) {
   const {
     items,
@@ -144,7 +147,7 @@ function FileBrowserContent({
     navigateToRoot,
     downloadFile,
     refetch,
-  } = useSharePointBrowser(tenantId, { useSharedFolder: !sitePurpose && !!onSelectLink, sitePurpose });
+  } = useSharePointBrowser(tenantId, { useSharedFolder: !sitePurpose && !!onSelectLink, sitePurpose, startFolderName });
 
   // Sort: folders first, then files, both alphabetical
   const sortedItems = [...items].sort((a, b) => {
