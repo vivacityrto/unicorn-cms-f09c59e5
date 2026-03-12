@@ -79,17 +79,17 @@ export function GovernanceImportDialog({ documentId, documentTitle, frameworkTyp
 
   // Auto-navigate into framework subfolder after initial load
   useEffect(() => {
-    if (!autoNavigated && initialLoaded && frameworkType && items.length > 0) {
-      const targetFolderName = FRAMEWORK_FOLDER_MAP[frameworkType.toLowerCase()];
-      if (targetFolderName) {
-        const targetFolder = items.find(
-          (item) => item.isFolder && item.name.toLowerCase() === targetFolderName.toLowerCase()
-        );
-        if (targetFolder) {
-          setAutoNavigated(true);
-          setBreadcrumbs(prev => [...prev, { id: targetFolder.id, name: targetFolder.name }]);
-          browse(targetFolder.id);
-        }
+    if (!autoNavigated && initialLoaded && items.length > 0) {
+      const targetFolderName = frameworkType
+        ? FRAMEWORK_FOLDER_MAP[frameworkType.toLowerCase()] || 'Other'
+        : 'Other';
+      const targetFolder = items.find(
+        (item) => item.isFolder && item.name.toLowerCase() === targetFolderName.toLowerCase()
+      );
+      if (targetFolder) {
+        setAutoNavigated(true);
+        setBreadcrumbs(prev => [...prev, { id: targetFolder.id, name: targetFolder.name }]);
+        browse(targetFolder.id);
       }
     }
   }, [initialLoaded, items, frameworkType, autoNavigated]);
