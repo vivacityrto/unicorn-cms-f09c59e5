@@ -285,6 +285,13 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           onSuccess={invalidateAll}
         />
       )}
+
+      <GovernanceDocumentEditDialog
+        documentId={documentId}
+        open={showEdit}
+        onOpenChange={setShowEdit}
+        onSuccess={invalidateAll}
+      />
     </div>
   );
 }
