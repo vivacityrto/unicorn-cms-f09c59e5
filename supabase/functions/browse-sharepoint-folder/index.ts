@@ -164,6 +164,7 @@ serve(async (req) => {
     let root_item_id: string | null = null;
     let root_name: string = "SharePoint";
     let spSettings: Record<string, unknown> | null = null;
+    let startFolderName: string | null = null;
 
     if (sitePurpose) {
       // Browse a global SharePoint site by purpose (e.g., "master_documents")
