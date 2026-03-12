@@ -139,7 +139,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
-            <Upload className="h-4 w-4 mr-2" /> Import from SharePoint
+            <Upload className="h-4 w-4 mr-2" /> Link to SharePoint
           </Button>
           {doc.source_template_url && (
             <Button variant="outline" size="sm" asChild>

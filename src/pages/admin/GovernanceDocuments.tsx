@@ -223,17 +223,6 @@ function GovernanceDocuments() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={sharepointFilter} onValueChange={setSharepointFilter}>
             <SelectTrigger className="w-[170px]">
               <SelectValue placeholder="SharePoint" />
@@ -263,7 +252,7 @@ function GovernanceDocuments() {
               </TableHead>
               <TableHead>Format</TableHead>
               <TableHead>Version</TableHead>
-              <TableHead>Status</TableHead>
+              
               <TableHead>Updated</TableHead>
               <TableHead className="w-[120px] text-right">
                 <span className="text-xs text-muted-foreground font-normal">
@@ -307,7 +296,7 @@ function GovernanceDocuments() {
                     <TableCell>
                       {currentVersion ? `v${currentVersion.version_number}` : '—'}
                     </TableCell>
-                    <TableCell>{getStatusBadge(doc.document_status)}</TableCell>
+                    
                     <TableCell>
                       <span className="text-xs text-muted-foreground">
                         {doc.updated_at ? format(new Date(doc.updated_at), 'dd MMM yyyy') : '—'}
