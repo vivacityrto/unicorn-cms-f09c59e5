@@ -212,6 +212,16 @@ function GovernanceDocuments() {
               <SelectItem value="archived">Archived</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={sharepointFilter} onValueChange={setSharepointFilter}>
+            <SelectTrigger className="w-[170px]">
+              <SelectValue placeholder="SharePoint" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All SP Status</SelectItem>
+              <SelectItem value="has_url">Has SP URL</SelectItem>
+              <SelectItem value="no_url">No SP URL</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Table */}
