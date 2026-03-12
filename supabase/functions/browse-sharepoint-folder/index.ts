@@ -158,18 +158,52 @@ serve(async (req) => {
       }
     }
 
-    // Get SharePoint settings for tenant
-    const { data: spSettings } = await supabaseAdmin
-      .from("tenant_sharepoint_settings")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .single();
+    // Determine browsing mode: site_purpose (global site) or tenant settings
+    const sitePurpose = body.site_purpose as string | undefined;
+    let drive_id: string;
+    let root_item_id: string | null = null;
+    let root_name: string = "SharePoint";
+    let spSettings: Record<string, unknown> | null = null;
 
-    if (!spSettings || !spSettings.is_enabled || spSettings.validation_status !== "valid") {
-      return new Response(
-        JSON.stringify({ error: "SharePoint folder not configured or disabled for this tenant" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (sitePurpose) {
+      // Browse a global SharePoint site by purpose (e.g., "master_documents")
+      const { data: site } = await supabaseAdmin
+        .from("sharepoint_sites")
+        .select("drive_id, graph_site_id, label")
+        .eq("purpose", sitePurpose)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+
+      if (!site?.drive_id) {
+        return new Response(
+          JSON.stringify({ error: `No SharePoint site configured for purpose: ${sitePurpose}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      drive_id = site.drive_id;
+      root_name = site.label || sitePurpose;
+      // No root_item_id constraint — browse from drive root
+    } else {
+      // Standard tenant-based browsing
+      const { data: settings } = await supabaseAdmin
+        .from("tenant_sharepoint_settings")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .single();
+
+      if (!settings || !settings.is_enabled || settings.validation_status !== "valid") {
+        return new Response(
+          JSON.stringify({ error: "SharePoint folder not configured or disabled for this tenant" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      spSettings = settings as Record<string, unknown>;
+      drive_id = settings.drive_id;
+      root_item_id = settings.root_item_id;
+      root_name = settings.root_name || "SharePoint";
     }
 
     // Get user's Microsoft token
