@@ -85,7 +85,7 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
     );
     if (target) {
       autoNavigated.current = true;
-      setFolderStack([{ id: 'root', name: browseResult.root_name || 'Root' }]);
+      setFolderStack([{ id: 'root', name: effectiveStartFolder }]);
       setCurrentFolderId(target.id);
     }
   }, [browseResult, effectiveStartFolder]);
