@@ -167,13 +167,21 @@ serve(async (req) => {
 
     if (sitePurpose) {
       // Browse a global SharePoint site by purpose (e.g., "master_documents")
-      const { data: site } = await supabaseAdmin
+      const { data: site, error: siteError } = await supabaseAdmin
         .from("sharepoint_sites")
-        .select("drive_id, graph_site_id, label")
+        .select("drive_id, graph_site_id, site_name")
         .eq("purpose", sitePurpose)
         .eq("is_active", true)
         .limit(1)
         .maybeSingle();
+
+      if (siteError) {
+        console.error("[browse-sp] Failed to load sharepoint_sites config:", siteError);
+        return new Response(
+          JSON.stringify({ error: "Failed to load SharePoint site configuration" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       if (!site?.drive_id) {
         return new Response(
@@ -183,7 +191,7 @@ serve(async (req) => {
       }
 
       drive_id = site.drive_id;
-      root_name = site.label || sitePurpose;
+      root_name = site.site_name || sitePurpose;
       // No root_item_id constraint — browse from drive root
     } else {
       // Standard tenant-based browsing
