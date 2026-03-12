@@ -126,12 +126,14 @@ function FileBrowserContent({
   sharedFolderName,
   onSelectLink,
   sitePurpose,
+  startFolderName,
 }: {
   tenantId: number;
   rootName: string | null;
   sharedFolderName: string | null;
   onSelectLink?: (url: string, fileName?: string) => void;
   sitePurpose?: string;
+  startFolderName?: string;
 }) {
   const {
     items,
