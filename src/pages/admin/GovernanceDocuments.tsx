@@ -27,7 +27,7 @@ function GovernanceDocuments() {
 
   // Fetch documents that are team-only (governance templates)
   const { data: documents, isLoading } = useQuery({
-    queryKey: ['governance-documents', search, categoryFilter, statusFilter, frameworkFilter],
+    queryKey: ['governance-documents', search, categoryFilter, statusFilter, frameworkFilter, sharepointFilter],
     queryFn: async () => {
       let query = supabase
         .from('documents')
