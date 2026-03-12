@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Table,
@@ -27,6 +28,8 @@ import {
   ChevronRight,
   RefreshCw,
   Link,
+  Search,
+  X,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,6 +41,8 @@ interface SharePointFileBrowserProps {
   onSelectLink?: (url: string, fileName?: string) => void;
   sitePurpose?: string;
   startFolderName?: string;
+  defaultFilter?: string;
+  autoNavigateFolder?: string;
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -48,12 +53,12 @@ function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-export function SharePointFileBrowser({ tenantId, onSelectLink, sitePurpose, startFolderName }: SharePointFileBrowserProps) {
+export function SharePointFileBrowser({ tenantId, onSelectLink, sitePurpose, startFolderName, defaultFilter, autoNavigateFolder }: SharePointFileBrowserProps) {
   const { profile } = useAuth();
 
   // If using sitePurpose mode, skip tenant settings check
   if (sitePurpose) {
-    return <FileBrowserContent tenantId={tenantId} rootName={null} sharedFolderName={null} onSelectLink={onSelectLink} sitePurpose={sitePurpose} startFolderName={startFolderName} />;
+    return <FileBrowserContent tenantId={tenantId} rootName={null} sharedFolderName={null} onSelectLink={onSelectLink} sitePurpose={sitePurpose} startFolderName={startFolderName} defaultFilter={defaultFilter} autoNavigateFolder={autoNavigateFolder} />;
   }
 
   return <TenantSettingsGate tenantId={tenantId} onSelectLink={onSelectLink} />;
@@ -127,6 +132,8 @@ function FileBrowserContent({
   onSelectLink,
   sitePurpose,
   startFolderName,
+  defaultFilter,
+  autoNavigateFolder,
 }: {
   tenantId: number;
   rootName: string | null;
@@ -134,7 +141,12 @@ function FileBrowserContent({
   onSelectLink?: (url: string, fileName?: string) => void;
   sitePurpose?: string;
   startFolderName?: string;
+  defaultFilter?: string;
+  autoNavigateFolder?: string;
 }) {
+  const [filterText, setFilterText] = useState(defaultFilter || '');
+  const [autoNavDone, setAutoNavDone] = useState(false);
+
   const {
     items,
     isRoot,
@@ -149,12 +161,38 @@ function FileBrowserContent({
     refetch,
   } = useSharePointBrowser(tenantId, { useSharedFolder: !sitePurpose && !!onSelectLink, sitePurpose, startFolderName });
 
-  // Sort: folders first, then files, both alphabetical
-  const sortedItems = [...items].sort((a, b) => {
-    if (a.is_folder && !b.is_folder) return -1;
-    if (!a.is_folder && b.is_folder) return 1;
-    return a.name.localeCompare(b.name);
-  });
+  // Auto-navigate into framework subfolder after start_folder_name navigation completes
+  useEffect(() => {
+    if (autoNavDone || !autoNavigateFolder || isLoading || items.length === 0) return;
+    // Only auto-navigate once we're past root (start_folder_name already navigated)
+    if (folderStack.length === 0) return;
+    // Check if we're at the level where framework folders exist (one level deep from start)
+    if (folderStack.length === 1) {
+      const target = items.find(
+        (item) => item.is_folder && item.name.toLowerCase() === autoNavigateFolder.toLowerCase()
+      );
+      if (target) {
+        setAutoNavDone(true);
+        navigateToFolder(target.id, target.name);
+      } else {
+        // No matching folder found, stop trying
+        setAutoNavDone(true);
+      }
+    }
+  }, [autoNavigateFolder, autoNavDone, isLoading, items, folderStack, navigateToFolder]);
+
+  // Filter items: always show folders, filter files by name
+  const sortedItems = [...items]
+    .filter((item) => {
+      if (!filterText.trim()) return true;
+      if (item.is_folder) return true;
+      return item.name.toLowerCase().includes(filterText.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (a.is_folder && !b.is_folder) return -1;
+      if (!a.is_folder && b.is_folder) return 1;
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <Card>
@@ -205,6 +243,25 @@ function FileBrowserContent({
           </Alert>
         )}
 
+        {/* Filter input */}
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter files by name..."
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            className="pl-9 pr-9 h-9 text-sm"
+          />
+          {filterText && (
+            <button
+              onClick={() => setFilterText('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
         {/* Back button */}
         {!isRoot && (
           <Button
@@ -226,7 +283,7 @@ function FileBrowserContent({
         ) : sortedItems.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <FolderOpen className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">This folder is empty</p>
+            <p className="text-sm">{filterText ? 'No files match your filter' : 'This folder is empty'}</p>
           </div>
         ) : (
           <Table>
