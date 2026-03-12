@@ -74,6 +74,19 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
     staleTime: QUERY_STALE_TIMES.LIST,
   });
 
+  // Auto-navigate into startFolderName on first successful root load
+  useEffect(() => {
+    if (autoNavigated.current || !startFolderName || !browseResult?.items || !browseResult.is_root) return;
+    const target = browseResult.items.find(
+      (item) => item.is_folder && item.name.toLowerCase() === startFolderName.toLowerCase()
+    );
+    if (target) {
+      autoNavigated.current = true;
+      setFolderStack([{ id: 'root', name: browseResult.root_name || 'Root' }]);
+      setCurrentFolderId(target.id);
+    }
+  }, [browseResult, startFolderName]);
+
   // Navigate into a subfolder
   const navigateToFolder = useCallback(
     (folderId: string, folderName: string) => {
