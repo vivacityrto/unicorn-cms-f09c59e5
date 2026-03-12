@@ -322,9 +322,13 @@ function GovernanceDocuments() {
                           <span className="text-xs">SP</span>
                         </a>
                       ) : (
-                        <span className="text-muted-foreground/40">
-                          <Link2 className="h-3.5 w-3.5" />
-                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSharepointBrowseDocId(doc.id); }}
+                          className="text-muted-foreground hover:text-primary cursor-pointer inline-flex items-center gap-1"
+                          title="Click to set SharePoint URL"
+                        >
+                          <Link2Off className="h-3.5 w-3.5" />
+                        </button>
                       )}
                     </TableCell>
                     <TableCell>
@@ -343,6 +347,16 @@ function GovernanceDocuments() {
             )}
           </TableBody>
         </Table>
+
+        {/* SharePoint Link Browser Dialog */}
+        {profile?.tenant_id && (
+          <SharePointLinkDialog
+            open={!!sharepointBrowseDocId}
+            onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}
+            tenantId={profile.tenant_id}
+            onSelectLink={handleSharePointLinkSelected}
+          />
+        )}
       </div>
     </DashboardLayout>
   );
