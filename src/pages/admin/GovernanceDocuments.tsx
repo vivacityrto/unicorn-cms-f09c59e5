@@ -61,6 +61,19 @@ function GovernanceDocuments() {
     },
   });
 
+  // Fetch total document count (unfiltered)
+  const { data: totalCount } = useQuery({
+    queryKey: ['governance-documents-total'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('documents')
+        .select('id', { count: 'exact', head: true })
+        .or('is_team_only.is.null,is_team_only.eq.false');
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   // Fetch categories for filter
   const { categories, valueLabelMap } = useDocumentCategories();
 
@@ -214,7 +227,11 @@ function GovernanceDocuments() {
               <TableHead>Status</TableHead>
               <TableHead>Source</TableHead>
               <TableHead>Updated</TableHead>
-              <TableHead className="w-[80px]"></TableHead>
+              <TableHead className="w-[120px] text-right">
+                <span className="text-xs text-muted-foreground font-normal">
+                  {documents?.length ?? 0} / {totalCount ?? 0}
+                </span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
