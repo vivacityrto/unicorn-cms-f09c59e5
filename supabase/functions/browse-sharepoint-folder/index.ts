@@ -164,12 +164,13 @@ serve(async (req) => {
     let root_item_id: string | null = null;
     let root_name: string = "SharePoint";
     let spSettings: Record<string, unknown> | null = null;
+    let startFolderName: string | null = null;
 
     if (sitePurpose) {
       // Browse a global SharePoint site by purpose (e.g., "master_documents")
       const { data: site, error: siteError } = await supabaseAdmin
         .from("sharepoint_sites")
-        .select("drive_id, graph_site_id, site_name")
+        .select("drive_id, graph_site_id, site_name, start_folder_name")
         .eq("purpose", sitePurpose)
         .eq("is_active", true)
         .limit(1)
@@ -192,7 +193,7 @@ serve(async (req) => {
 
       drive_id = site.drive_id;
       root_name = site.site_name || sitePurpose;
-      // No root_item_id constraint — browse from drive root
+      startFolderName = site.start_folder_name || null;
     } else {
       // Standard tenant-based browsing
       const { data: settings } = await supabaseAdmin
@@ -314,6 +315,7 @@ serve(async (req) => {
           folder_id: folderId,
           is_root: sitePurpose ? folderId === "root" : folderId === effectiveRootId,
           root_name: displayRootName,
+          start_folder_name: startFolderName,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

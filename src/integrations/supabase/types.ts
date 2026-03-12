@@ -31376,6 +31376,7 @@ export type Database = {
           purpose: string
           site_name: string
           site_url: string
+          start_folder_name: string | null
           updated_at: string
         }
         Insert: {
@@ -31389,6 +31390,7 @@ export type Database = {
           purpose?: string
           site_name: string
           site_url: string
+          start_folder_name?: string | null
           updated_at?: string
         }
         Update: {
@@ -31402,6 +31404,7 @@ export type Database = {
           purpose?: string
           site_name?: string
           site_url?: string
+          start_folder_name?: string | null
           updated_at?: string
         }
         Relationships: []
