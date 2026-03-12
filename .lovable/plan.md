@@ -44,9 +44,12 @@
   - `deliver-governance-document`: already logs `governance_document_delivered` + now logs `governance_generation_failed`
   - `bulk-generate-phase-documents`: already logs `bulk_generate_phase_documents` audit event
 
-### Phase 7: Testing and Rollout — PENDING
-- Verify bug fixes, RLS, edge function changes
-- Feature flag rollout: enable `governance_use_stage_documents` per environment
+### Phase 7: Testing and Rollout ✅ COMPLETE
+- Verified bug fixes: `v_completion_eligibility` and `v_progress_anchor_inputs` both use `sd.document_id` ✓
+- Verified schema: `stage_documents` has 76 rows (all core, all active) ✓
+- Verified backfill: 106,792 `document_instances` rows have `generation_status = 'pending'` ✓
+- Verified feature flags: `governance_use_stage_documents = false`, `governance_overwrite_enabled = false` ✓
+- Feature flag rollout: enable `governance_use_stage_documents` via App Settings when ready
 
 ### Key Discovery: Orphaned Stage References
 478 of 554 documents have `stage` values pointing to IDs that don't exist in `documents_stages`. Only 76 have valid FK refs. This data quality issue should be investigated separately.
