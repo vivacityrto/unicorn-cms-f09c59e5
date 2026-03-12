@@ -309,37 +309,37 @@ function GovernanceDocuments() {
                     </TableCell>
                     <TableCell>{getStatusBadge(doc.document_status)}</TableCell>
                     <TableCell>
-                      {doc.source_template_url ? (
-                        <a
-                          href={doc.source_template_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-primary hover:underline inline-flex items-center gap-1"
-                          title={doc.source_template_url}
-                        >
-                          <Link2 className="h-3.5 w-3.5" />
-                          <span className="text-xs">SP</span>
-                        </a>
-                      ) : (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSharepointBrowseDocId(doc.id); }}
-                          className="text-muted-foreground hover:text-primary cursor-pointer inline-flex items-center gap-1"
-                          title="Click to set SharePoint URL"
-                        >
-                          <Link2Off className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </TableCell>
-                    <TableCell>
                       <span className="text-xs text-muted-foreground">
                         {doc.updated_at ? format(new Date(doc.updated_at), 'dd MMM yyyy') : '—'}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedDocId(doc.id); }}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        {doc.source_template_url ? (
+                          <a
+                            href={doc.source_template_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary hover:underline inline-flex items-center gap-1"
+                            title={doc.source_template_url}
+                          >
+                            <Link2 className="h-3.5 w-3.5" />
+                            <span className="text-xs">SP</span>
+                          </a>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSharepointBrowseDocId(doc.id); }}
+                            className="text-muted-foreground hover:text-primary cursor-pointer inline-flex items-center gap-1"
+                            title="Click to set SharePoint URL"
+                          >
+                            <Link2Off className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedDocId(doc.id); }}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
