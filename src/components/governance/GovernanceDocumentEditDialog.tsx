@@ -268,17 +268,42 @@ export function GovernanceDocumentEditDialog({
           {/* SharePoint Template URL */}
           <div className="space-y-1.5">
             <Label htmlFor="edit-source-url">SharePoint Template URL</Label>
-            <Input
-              id="edit-source-url"
-              value={form.source_template_url}
-              onChange={(e) => updateField('source_template_url', e.target.value)}
-              placeholder="https://sharepoint.com/sites/..."
-              type="url"
-            />
+            <div className="flex gap-2">
+              <Input
+                id="edit-source-url"
+                value={form.source_template_url}
+                onChange={(e) => updateField('source_template_url', e.target.value)}
+                placeholder="https://sharepoint.com/sites/..."
+                type="url"
+                className="flex-1"
+              />
+              {profile?.tenant_id && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowSpBrowser(true)}
+                  title="Browse SharePoint"
+                >
+                  <FolderSearch className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               Direct link to the source template file in SharePoint used for generation
             </p>
           </div>
+
+          {profile?.tenant_id && (
+            <SharePointLinkDialog
+              open={showSpBrowser}
+              onOpenChange={setShowSpBrowser}
+              tenantId={profile.tenant_id}
+              onSelectLink={(url) => {
+                updateField('source_template_url', url);
+              }}
+            />
+          )}
 
           {/* Standard Set */}
           <div className="space-y-1.5">
