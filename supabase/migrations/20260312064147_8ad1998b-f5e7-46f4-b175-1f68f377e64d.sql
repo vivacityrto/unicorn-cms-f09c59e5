@@ -1,0 +1,1 @@
+SELECT setval('public.dd_governance_framework_id_seq', (SELECT MAX(id) FROM dd_governance_framework));
