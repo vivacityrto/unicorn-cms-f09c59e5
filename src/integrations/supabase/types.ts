@@ -12242,7 +12242,7 @@ export type Database = {
           value: string
         }
         Insert: {
-          id: number
+          id?: number
           is_active?: boolean
           label: string
           sharepoint_folder_name?: string | null
