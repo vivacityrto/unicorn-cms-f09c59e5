@@ -129,6 +129,9 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
+            <Pencil className="h-4 w-4 mr-2" /> Edit
+          </Button>
           {publishedVersion && (
             <Button variant="default" size="sm" onClick={() => setShowDelivery(true)}>
               <Send className="h-4 w-4 mr-2" /> Deliver to Clients
