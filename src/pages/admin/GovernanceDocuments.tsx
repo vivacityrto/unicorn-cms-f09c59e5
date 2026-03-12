@@ -296,7 +296,7 @@ function GovernanceDocuments() {
                     <TableCell>
                       {currentVersion ? `v${currentVersion.version_number}` : '—'}
                     </TableCell>
-                    <TableCell>{getStatusBadge(doc.document_status)}</TableCell>
+                    
                     <TableCell>
                       <span className="text-xs text-muted-foreground">
                         {doc.updated_at ? format(new Date(doc.updated_at), 'dd MMM yyyy') : '—'}
