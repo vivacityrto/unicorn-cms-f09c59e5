@@ -227,7 +227,11 @@ function GovernanceDocuments() {
               <TableHead>Status</TableHead>
               <TableHead>Source</TableHead>
               <TableHead>Updated</TableHead>
-              <TableHead className="w-[80px]"></TableHead>
+              <TableHead className="w-[120px] text-right">
+                <span className="text-xs text-muted-foreground font-normal">
+                  {documents?.length ?? 0} / {totalCount ?? 0}
+                </span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
