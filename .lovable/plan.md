@@ -51,5 +51,14 @@
 - Verified feature flags: `governance_use_stage_documents = false`, `governance_overwrite_enabled = false` ✓
 - Feature flag rollout: enable `governance_use_stage_documents` via App Settings when ready
 
+### Phase 8: Replace CHECK Constraints with dd_ Lookup Validation ✅ COMPLETE
+- Created `dd_ai_analysis_status` table (pending, analyzing, completed, failed, skipped) with RLS
+- Created `dd_ai_status` table (pending, auto_approved, needs_review, rejected) with RLS
+- Added `RTO` fallback value to `dd_governance_framework` for AI-assigned framework types
+- Dropped 4 CHECK constraints: `chk_document_status`, `documents_framework_type_check`, `documents_ai_analysis_status_check`, `documents_ai_status_check`
+- Created `trg_validate_documents_lookup_fields` SECURITY DEFINER trigger validating all 4 columns against their respective dd_ tables
+- Zero data migration required — all existing values are valid in the lookup tables
+- Both new tables auto-appear in Code Tables Admin for self-service management
+
 ### Key Discovery: Orphaned Stage References
 478 of 554 documents have `stage` values pointing to IDs that don't exist in `documents_stages`. Only 76 have valid FK refs. This data quality issue should be investigated separately.
