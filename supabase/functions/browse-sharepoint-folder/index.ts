@@ -321,13 +321,15 @@ serve(async (req) => {
         );
       }
 
-      // Verify within root (server-side enforcement)
-      const withinRoot = await verifyWithinRoot(accessToken, drive_id, itemId, root_item_id);
-      if (!withinRoot) {
-        return new Response(
-          JSON.stringify({ error: "Access denied — file is outside the configured root folder" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Verify within root (server-side enforcement) — skip for site_purpose mode
+      if (!sitePurpose && root_item_id) {
+        const withinRoot = await verifyWithinRoot(accessToken, drive_id, itemId, root_item_id);
+        if (!withinRoot) {
+          return new Response(
+            JSON.stringify({ error: "Access denied — file is outside the configured root folder" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       // Get item metadata for name
