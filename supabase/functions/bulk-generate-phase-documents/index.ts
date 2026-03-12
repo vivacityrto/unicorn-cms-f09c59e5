@@ -161,6 +161,7 @@ Deno.serve(async (req: Request) => {
       const fmt = (doc.format || '').toLowerCase();
       if (!['xlsx', 'xls', 'xlsm', 'docx'].includes(fmt)) return false;
       if (mode === 'pending_only' && inst.isgenerated) return false;
+      // overwrite_all: include already-generated docs for re-generation
       return true;
     });
 
