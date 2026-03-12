@@ -169,6 +169,17 @@ function GovernanceDocuments() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Framework" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Frameworks</SelectItem>
+              <SelectItem value="__none__">No Framework</SelectItem>
+              {frameworks?.map((f) => (
+                <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+              ))}
+            </SelectContent>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Status" />
