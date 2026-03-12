@@ -192,7 +192,7 @@ serve(async (req) => {
 
       drive_id = site.drive_id;
       root_name = site.site_name || sitePurpose;
-      // No root_item_id constraint — browse from drive root
+      // Keep site reference for start_folder_name in response
     } else {
       // Standard tenant-based browsing
       const { data: settings } = await supabaseAdmin
