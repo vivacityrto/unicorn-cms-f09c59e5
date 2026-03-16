@@ -41,6 +41,7 @@ interface SharePointSite {
   graph_site_id: string | null;
   drive_id: string | null;
   master_docs_url: string | null;
+  start_folder_name: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -142,6 +143,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
   const [driveId, setDriveId] = useState(site.drive_id || '');
   const [masterDocsUrl, setMasterDocsUrl] = useState(site.master_docs_url || '');
   const [isActive, setIsActive] = useState(site.is_active);
+  const [startFolderName, setStartFolderName] = useState(site.start_folder_name || '');
   const [siteName, setSiteName] = useState(site.site_name);
   const [siteUrl, setSiteUrl] = useState(site.site_url);
 
@@ -160,6 +162,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
           graph_site_id: graphSiteId.trim() || null,
           drive_id: driveId.trim() || null,
           master_docs_url: masterDocsUrl.trim() || null,
+          start_folder_name: startFolderName.trim() || null,
           is_active: isActive,
           updated_at: new Date().toISOString(),
         })
@@ -251,6 +254,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
     setGraphSiteId(site.graph_site_id || '');
     setDriveId(site.drive_id || '');
     setMasterDocsUrl(site.master_docs_url || '');
+    setStartFolderName(site.start_folder_name || '');
     setIsActive(site.is_active);
     setEditing(false);
     setTestResult(null);
@@ -370,9 +374,16 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
         )}
 
         {editing && (
-          <SettingRow label="Active" editing={editing}>
-            <Switch checked={isActive} onCheckedChange={setIsActive} />
-          </SettingRow>
+          <>
+            {site.purpose === 'master_documents' && (
+              <SettingRow label="Start Folder" editing={editing}>
+                <Input value={startFolderName} onChange={(e) => setStartFolderName(e.target.value)} className="text-sm" placeholder="e.g. UNICORN (subfolder to auto-navigate into)" />
+              </SettingRow>
+            )}
+            <SettingRow label="Active" editing={editing}>
+              <Switch checked={isActive} onCheckedChange={setIsActive} />
+            </SettingRow>
+          </>
         )}
 
         {/* Test result */}
