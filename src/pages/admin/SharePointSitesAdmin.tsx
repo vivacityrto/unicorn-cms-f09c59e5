@@ -41,6 +41,7 @@ interface SharePointSite {
   graph_site_id: string | null;
   drive_id: string | null;
   master_docs_url: string | null;
+  start_folder_name: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
