@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Package } from 'lucide-react';
+import { useSuggestDropdowns } from '@/hooks/useSuggestDropdowns';
 
 interface CreatePackageDialogProps {
   open: boolean;
