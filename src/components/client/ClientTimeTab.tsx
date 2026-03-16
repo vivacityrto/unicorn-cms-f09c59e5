@@ -46,6 +46,7 @@ import { EditTimeDialog } from './EditTimeDialog';
 import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
 import { EditNoteDialog } from '@/components/notes/EditNoteDialog';
 import { useWorkSubTypeLabels } from '@/hooks/useWorkSubTypeLabels';
+import { useSuggestDropdowns } from '@/hooks/useSuggestDropdowns';
 
 interface ClientTimeTabProps {
   tenantId: number;
