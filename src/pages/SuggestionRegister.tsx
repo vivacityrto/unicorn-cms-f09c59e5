@@ -54,6 +54,7 @@ export default function SuggestionRegister() {
 
   const [search, setSearch] = useState('');
   const [releasedSearch, setReleasedSearch] = useState('');
+  const [releasedReporterFilter, setReleasedReporterFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -78,15 +79,28 @@ export default function SuggestionRegister() {
     });
   }, [items, search, typeFilter, statusFilter, priorityFilter, categoryFilter, releaseStatusFilter]);
 
+  const releasedReporters = useMemo(() => {
+    if (!releasedItems) return [];
+    const seen = new Map<string, string>();
+    releasedItems.forEach(item => {
+      if (item.reported_by && !seen.has(item.reported_by)) {
+        seen.set(item.reported_by, userName(item.reported_by_user));
+      }
+    });
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [releasedItems]);
+
   const filteredReleased = useMemo(() => {
     if (!releasedItems) return [];
-    if (!releasedSearch) return releasedItems;
-    const q = releasedSearch.toLowerCase();
-    return releasedItems.filter(item =>
-      item.title.toLowerCase().includes(q) ||
-      (item.release_notes ?? '').toLowerCase().includes(q)
-    );
-  }, [releasedItems, releasedSearch]);
+    return releasedItems.filter(item => {
+      if (releasedSearch) {
+        const q = releasedSearch.toLowerCase();
+        if (!item.title.toLowerCase().includes(q) && !(item.release_notes ?? '').toLowerCase().includes(q)) return false;
+      }
+      if (releasedReporterFilter !== 'all' && item.reported_by !== releasedReporterFilter) return false;
+      return true;
+    });
+  }, [releasedItems, releasedSearch, releasedReporterFilter]);
 
   return (
     <DashboardLayout>
@@ -163,7 +177,7 @@ export default function SuggestionRegister() {
                     <SelectContent>
                       <SelectItem value="all">All Release</SelectItem>
                       <SelectItem value="not_released">Not Released</SelectItem>
-                      {dropdowns.releaseStatuses.map(r => <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>)}
+                      {dropdowns.releaseStatuses.filter(r => r.code !== 'not_released').map(r => <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -237,14 +251,23 @@ export default function SuggestionRegister() {
 
           <TabsContent value="released">
             <div className="space-y-4">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search title or release notes…"
-                  value={releasedSearch}
-                  onChange={e => setReleasedSearch(e.target.value)}
-                  className="pl-9"
-                />
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[200px] max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search title or release notes…"
+                    value={releasedSearch}
+                    onChange={e => setReleasedSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={releasedReporterFilter} onValueChange={setReleasedReporterFilter}>
+                  <SelectTrigger className="w-[180px]"><SelectValue placeholder="Reported By" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Reporters</SelectItem>
+                    {releasedReporters.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
 
               {releasedLoading ? (
