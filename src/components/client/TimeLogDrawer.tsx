@@ -288,9 +288,16 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs">
-                      {WORK_TYPE_LABELS[entry.work_type] || entry.work_type}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline" className="text-xs">
+                        {WORK_TYPE_LABELS[entry.work_type] || entry.work_type}
+                      </Badge>
+                      {(entry as any).work_sub_type && (
+                        <Badge variant="secondary" className="text-xs">
+                          {(entry as any).work_sub_type}
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {editingEntryId === entry.id ? (
