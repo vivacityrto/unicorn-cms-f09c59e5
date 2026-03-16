@@ -51,7 +51,7 @@ export default function SuggestionRegister() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [releaseStatusFilter, setReleaseStatusFilter] = useState('all');
+  const [releaseStatusFilter, setReleaseStatusFilter] = useState('not_released');
 
   const filtered = useMemo(() => {
     if (!items) return [];
@@ -64,7 +64,9 @@ export default function SuggestionRegister() {
       if (statusFilter !== 'all' && item.status?.code !== statusFilter) return false;
       if (priorityFilter !== 'all' && item.priority?.code !== priorityFilter) return false;
       if (categoryFilter !== 'all' && item.category?.code !== categoryFilter) return false;
-      if (releaseStatusFilter !== 'all' && item.release_status?.code !== releaseStatusFilter) return false;
+      if (releaseStatusFilter === 'not_released') {
+        if (item.release_status?.code === 'released') return false;
+      } else if (releaseStatusFilter !== 'all' && item.release_status?.code !== releaseStatusFilter) return false;
       return true;
     });
   }, [items, search, typeFilter, statusFilter, priorityFilter, categoryFilter, releaseStatusFilter]);
@@ -153,6 +155,7 @@ export default function SuggestionRegister() {
                     <SelectTrigger className="w-[160px]"><SelectValue placeholder="Release" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Release</SelectItem>
+                      <SelectItem value="not_released">Not Released</SelectItem>
                       {dropdowns.releaseStatuses.map(r => <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -268,7 +271,7 @@ export default function SuggestionRegister() {
                                 {item.release_notes}
                               </p>
                             )}
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1 flex-wrap">
+                            <div className="flex items-center gap-5 text-xs text-muted-foreground pt-1 flex-wrap">
                               <span className="flex items-center gap-1">
                                 <User className="h-3 w-3" />
                                 {userName(item.reported_by_user)}
@@ -283,6 +286,10 @@ export default function SuggestionRegister() {
                                   Released {format(new Date(item.released_at), 'dd MMM yyyy')}
                                 </span>
                               )}
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {userName(item.assigned_to_user)}
+                              </span>
                             </div>
                           </div>
                         </div>
