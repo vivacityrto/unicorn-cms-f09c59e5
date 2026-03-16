@@ -143,6 +143,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
   const [driveId, setDriveId] = useState(site.drive_id || '');
   const [masterDocsUrl, setMasterDocsUrl] = useState(site.master_docs_url || '');
   const [isActive, setIsActive] = useState(site.is_active);
+  const [startFolderName, setStartFolderName] = useState(site.start_folder_name || '');
   const [siteName, setSiteName] = useState(site.site_name);
   const [siteUrl, setSiteUrl] = useState(site.site_url);
 
