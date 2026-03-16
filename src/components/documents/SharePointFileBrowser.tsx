@@ -162,26 +162,28 @@ function FileBrowserContent({
   } = useSharePointBrowser(tenantId, { useSharedFolder: !sitePurpose && !!onSelectLink, sitePurpose, startFolderName });
 
   // Auto-navigate into framework subfolder after initial load
-  // When start_folder_name is used, framework folders are at folderStack.length === 1
-  // When no start_folder_name (e.g., UNICORN is the drive root), framework folders are at folderStack.length === 0
-  const expectedDepth = startFolderName ? 1 : 0;
+  // When start_folder_name successfully navigated, framework folders are at folderStack.length === 1
+  // When start_folder_name not found or not set, framework folders are at root (folderStack.length === 0)
   useEffect(() => {
     if (autoNavDone || !autoNavigateFolder || isLoading || items.length === 0) return;
-    // For sitePurpose mode without startFolderName, navigate at root level
-    // For sitePurpose mode with startFolderName, navigate after start folder navigation
-    if (folderStack.length === expectedDepth) {
+    // Navigate into framework folder at whatever level we ended up at
+    // (either root if start folder wasn't found, or one level deep if it was)
+    if (folderStack.length <= 1) {
       const target = items.find(
         (item) => item.is_folder && item.name.toLowerCase() === autoNavigateFolder.toLowerCase()
       );
       if (target) {
         setAutoNavDone(true);
         navigateToFolder(target.id, target.name);
+      } else if (folderStack.length === 0 && startFolderName) {
+        // Still waiting for start folder navigation — don't give up yet
+        return;
       } else {
         // No matching folder found, stop trying
         setAutoNavDone(true);
       }
     }
-  }, [autoNavigateFolder, autoNavDone, isLoading, items, folderStack, navigateToFolder, expectedDepth]);
+  }, [autoNavigateFolder, autoNavDone, isLoading, items, folderStack, navigateToFolder, startFolderName]);
 
   // Filter items: always show folders, filter files by name
   const sortedItems = [...items]
