@@ -19,6 +19,7 @@ import { toast } from '@/hooks/use-toast';
 import { ClientBadge } from './ClientBadge';
 import { cn } from '@/lib/utils';
 import { useEosStatusTransitions, isValidStatusTransition, getAllowedStatusTransitions } from '@/hooks/useEosOptions';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import type { EosIssue } from '@/types/eos';
 
 interface IDSDialogProps {
@@ -48,21 +49,14 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
   // Load status transitions for validation
   const { data: statusTransitions } = useEosStatusTransitions();
 
-  // Fetch users for owner selection
-  const { data: users } = useQuery({
-    queryKey: ['users', profile?.tenant_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email')
-        .eq('tenant_id', profile?.tenant_id!)
-        .order('first_name');
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profile?.tenant_id && open,
-  });
+  // Fetch Vivacity Team users for owner selection (EOS is internal-only)
+  const { data: vivacityUsers } = useVivacityTeamUsers();
+  const users = vivacityUsers?.map(u => ({
+    user_uuid: u.user_uuid,
+    first_name: u.first_name,
+    last_name: u.last_name,
+    email: u.email,
+  }));
 
   // Map status to IDS tab - auto-sync tab with issue status
   const getTabFromStatus = (status: string): string => {
