@@ -325,6 +325,7 @@ export function PackageBuilderEditor() {
         full_text: packageData.full_text || '',
         details: packageData.details || '',
         package_type: packageData.package_type || 'project',
+        progress_mode: (packageData as any).progress_mode || 'stage_completion',
         duration_months: packageData.duration_months || 12,
         total_hours: packageData.total_hours || 0,
         status: packageData.status || 'inactive'
