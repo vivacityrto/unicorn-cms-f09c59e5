@@ -271,7 +271,7 @@ export default function SuggestionRegister() {
                                 {item.release_notes}
                               </p>
                             )}
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1 flex-wrap">
+                            <div className="flex items-center gap-5 text-xs text-muted-foreground pt-1 flex-wrap">
                               <span className="flex items-center gap-1">
                                 <User className="h-3 w-3" />
                                 {userName(item.reported_by_user)}
@@ -286,6 +286,10 @@ export default function SuggestionRegister() {
                                   Released {format(new Date(item.released_at), 'dd MMM yyyy')}
                                 </span>
                               )}
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {userName(item.assigned_to_user)}
+                              </span>
                             </div>
                           </div>
                         </div>
