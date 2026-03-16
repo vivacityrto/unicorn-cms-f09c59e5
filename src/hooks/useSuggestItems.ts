@@ -121,6 +121,22 @@ export function useCreateSuggestItem() {
   });
 }
 
+export function useReleasedSuggestItems() {
+  return useQuery({
+    queryKey: ['suggest-items-released'],
+    queryFn: async (): Promise<SuggestItem[]> => {
+      const { data, error } = await supabase
+        .from('suggest_items' as any)
+        .select(SUGGEST_ITEMS_SELECT)
+        .eq('is_deleted', false)
+        .not('released_at', 'is', null)
+        .order('released_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as unknown as SuggestItem[];
+    },
+  });
+}
+
 export function useUpdateSuggestItem() {
   const queryClient = useQueryClient();
   return useMutation({
