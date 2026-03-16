@@ -54,6 +54,7 @@ export default function SuggestionRegister() {
 
   const [search, setSearch] = useState('');
   const [releasedSearch, setReleasedSearch] = useState('');
+  const [releasedReporterFilter, setReleasedReporterFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
