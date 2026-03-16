@@ -420,8 +420,69 @@ serve(async (req) => {
       );
     }
 
+    // ===================== LIST DRIVES (temporary diagnostic — SuperAdmin only) =====================
+    if (action === "list_drives") {
+      const isSuperAdmin = userData.global_role === "SuperAdmin" || userData.unicorn_role === "Super Admin";
+      if (!isSuperAdmin) {
+        return new Response(
+          JSON.stringify({ error: "SuperAdmin access required" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!sitePurpose) {
+        return new Response(
+          JSON.stringify({ error: "site_purpose is required for list_drives" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Fetch graph_site_id from sharepoint_sites
+      const { data: siteRow } = await supabaseAdmin
+        .from("sharepoint_sites")
+        .select("graph_site_id, site_name")
+        .eq("purpose", sitePurpose)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!siteRow?.graph_site_id) {
+        return new Response(
+          JSON.stringify({ error: "No graph_site_id found for this site purpose" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const drivesRes = await fetch(
+        `https://graph.microsoft.com/v1.0/sites/${siteRow.graph_site_id}/drives?$select=id,name,webUrl`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      if (!drivesRes.ok) {
+        const errText = await drivesRes.text();
+        console.error("[browse-sp] list_drives failed:", drivesRes.status, errText);
+        return new Response(
+          JSON.stringify({ error: "Failed to list drives", status: drivesRes.status, detail: errText }),
+          { status: drivesRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const drivesData = await drivesRes.json();
+      const drives = (drivesData.value || []).map((d: Record<string, unknown>) => ({
+        id: d.id,
+        name: d.name,
+        webUrl: d.webUrl,
+      }));
+
+      console.log(`[browse-sp] list_drives for ${siteRow.site_name}: ${JSON.stringify(drives)}`);
+
+      return new Response(
+        JSON.stringify({ site_name: siteRow.site_name, drives }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ error: 'Invalid action. Use "list" or "download".' }),
+      JSON.stringify({ error: 'Invalid action. Use "list", "download", or "list_drives".' }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
