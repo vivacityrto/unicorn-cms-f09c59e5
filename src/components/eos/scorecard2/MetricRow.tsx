@@ -169,7 +169,7 @@ export function MetricRow({
 
         {/* Actions */}
         <div className="flex items-center gap-1 justify-end">
-          {metric.metric_source !== 'automatic' && !metric.is_archived && !hasThisWeekEntry && (
+          {metric.metric_source !== 'automatic' && !metric.is_archived && (
             <Button
               variant="ghost"
               size="icon"
