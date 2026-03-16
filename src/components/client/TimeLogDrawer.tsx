@@ -294,7 +294,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                       </Badge>
                       {(entry as any).work_sub_type && (
                         <Badge variant="secondary" className="text-xs">
-                          {(entry as any).work_sub_type}
+                          {getSubTypeLabel((entry as any).work_sub_type)}
                         </Badge>
                       )}
                     </div>

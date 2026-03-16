@@ -270,9 +270,16 @@ export function PackageTimeSection({
                       {formatDuration(entry.duration_minutes)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="capitalize">
-                        {entry.work_type.replace('_', ' ')}
-                      </Badge>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <Badge variant="secondary" className="capitalize">
+                          {entry.work_type.replace('_', ' ')}
+                        </Badge>
+                        {(entry as any).work_sub_type && (
+                          <Badge variant="outline" className="text-xs">
+                            {getSubTypeLabel((entry as any).work_sub_type)}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
