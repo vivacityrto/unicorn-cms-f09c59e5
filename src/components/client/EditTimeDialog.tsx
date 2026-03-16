@@ -98,6 +98,14 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
         .order('sort_order');
       if (data) setWorkTypes(data as WorkTypeOption[]);
     })();
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('dd_work_sub_type')
+        .select('code, label, category')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (data) setWorkSubTypes(data as WorkSubTypeOption[]);
+    })();
   }, []);
 
   // Fetch Vivacity staff and team members for selectors
