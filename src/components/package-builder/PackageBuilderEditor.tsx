@@ -280,6 +280,7 @@ export function PackageBuilderEditor() {
     full_text: '',
     details: '',
     package_type: 'project',
+    progress_mode: 'stage_completion',
     duration_months: 12,
     total_hours: 0,
     status: 'inactive'
