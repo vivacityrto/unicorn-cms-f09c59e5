@@ -57,6 +57,18 @@ export function useSuggestDropdowns() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const packageTypes = useQuery({
+    queryKey: ['suggest-dropdown', 'dd_package_type'],
+    queryFn: () => fetchDropdown('dd_package_type'),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const progressModes = useQuery({
+    queryKey: ['suggest-dropdown', 'dd_progress_mode'],
+    queryFn: () => fetchDropdown('dd_progress_mode'),
+    staleTime: 5 * 60 * 1000,
+  });
+
   return {
     itemTypes: itemTypes.data ?? [],
     statuses: statuses.data ?? [],
@@ -64,7 +76,10 @@ export function useSuggestDropdowns() {
     impactRatings: impactRatings.data ?? [],
     releaseStatuses: releaseStatuses.data ?? [],
     categories: categories.data ?? [],
+    packageTypes: packageTypes.data ?? [],
+    progressModes: progressModes.data ?? [],
     isLoading: itemTypes.isLoading || statuses.isLoading || priorities.isLoading ||
-      impactRatings.isLoading || releaseStatuses.isLoading || categories.isLoading,
+      impactRatings.isLoading || releaseStatuses.isLoading || categories.isLoading ||
+      packageTypes.isLoading || progressModes.isLoading,
   };
 }

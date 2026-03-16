@@ -365,7 +365,7 @@ export function PackageBuilderOverview() {
                       <div className="flex items-center gap-2">
                         {PACKAGE_TYPE_ICONS[pkg.package_type || 'project']}
                         <span className="text-sm">
-                          {PACKAGE_TYPE_LABELS[pkg.package_type || 'project'] || pkg.package_type}
+                          {packageTypes.find(pt => pt.code === pkg.package_type)?.label || pkg.package_type}
                         </span>
                       </div>
                     </TableCell>
