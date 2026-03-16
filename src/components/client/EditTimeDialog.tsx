@@ -224,6 +224,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           : format(new Date(entry.created_at), 'yyyy-MM-dd')
       );
       setWorkType(entry.work_type);
+      setWorkSubType((entry as any).work_sub_type || '');
       setNotes(entry.notes || '');
       setIsBillable(entry.is_billable);
       setScopeTag((entry.scope_tag as ScopeTag) || 'both');
