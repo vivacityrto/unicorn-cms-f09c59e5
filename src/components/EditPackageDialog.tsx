@@ -28,6 +28,7 @@ interface EditPackageDialogProps {
 
 export const EditPackageDialog = ({ open, onOpenChange, onSuccess, packageData }: EditPackageDialogProps) => {
   const { toast } = useToast();
+  const { packageTypes } = useSuggestDropdowns();
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
