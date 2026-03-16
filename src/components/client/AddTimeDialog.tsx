@@ -46,6 +46,12 @@ interface WorkTypeOption {
   label: string;
 }
 
+interface WorkSubTypeOption {
+  code: string;
+  label: string;
+  category: string;
+}
+
 interface TeamMember {
   user_uuid: string;
   first_name: string;
