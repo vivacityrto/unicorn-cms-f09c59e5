@@ -254,6 +254,7 @@ export function AddTimeDialog({
         duration_minutes: totalMinutes,
         start_at: `${date}T00:00:00`,
         work_type: workType,
+        work_sub_type: workSubType || null,
         notes: notes || null,
         is_billable: isBillable,
         scope_tag: scopeTag,
