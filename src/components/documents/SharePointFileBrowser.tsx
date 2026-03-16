@@ -161,13 +161,15 @@ function FileBrowserContent({
     refetch,
   } = useSharePointBrowser(tenantId, { useSharedFolder: !sitePurpose && !!onSelectLink, sitePurpose, startFolderName });
 
-  // Auto-navigate into framework subfolder after start_folder_name navigation completes
+  // Auto-navigate into framework subfolder after initial load
+  // When start_folder_name is used, framework folders are at folderStack.length === 1
+  // When no start_folder_name (e.g., UNICORN is the drive root), framework folders are at folderStack.length === 0
+  const expectedDepth = startFolderName ? 1 : 0;
   useEffect(() => {
     if (autoNavDone || !autoNavigateFolder || isLoading || items.length === 0) return;
-    // Only auto-navigate once we're past root (start_folder_name already navigated)
-    if (folderStack.length === 0) return;
-    // Check if we're at the level where framework folders exist (one level deep from start)
-    if (folderStack.length === 1) {
+    // For sitePurpose mode without startFolderName, navigate at root level
+    // For sitePurpose mode with startFolderName, navigate after start folder navigation
+    if (folderStack.length === expectedDepth) {
       const target = items.find(
         (item) => item.is_folder && item.name.toLowerCase() === autoNavigateFolder.toLowerCase()
       );
@@ -179,7 +181,7 @@ function FileBrowserContent({
         setAutoNavDone(true);
       }
     }
-  }, [autoNavigateFolder, autoNavDone, isLoading, items, folderStack, navigateToFolder]);
+  }, [autoNavigateFolder, autoNavDone, isLoading, items, folderStack, navigateToFolder, expectedDepth]);
 
   // Filter items: always show folders, filter files by name
   const sortedItems = [...items]
