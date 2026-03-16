@@ -1,0 +1,20 @@
+
+INSERT INTO public.dd_work_sub_type (code, label, category, sort_order) VALUES
+('compliance_health_check', 'Compliance Health Check', 'consultation', 1),
+('audit_support', 'Audit Support', 'consultation', 2),
+('rectification_support', 'Rectification Support', 'consultation', 3),
+('assessment_validation', 'Assessment Validation', 'consultation', 4),
+('government_funding_support', 'Government Funding Support', 'consultation', 5),
+('governance_meeting', 'Governance Meeting', 'consultation', 6),
+('annual_compliance_check', 'Annual Compliance Check', 'consultation', 7),
+('business_support', 'Business Support', 'consultation', 8),
+('scope_application_support', 'Scope Application Support', 'consultation', 9),
+('general_consulting', 'General Consulting', 'consultation', 10),
+('tas', 'TAS', 'document', 1),
+('trainer_matrix', 'Trainer Matrix', 'document', 2),
+('dap', 'DAP', 'document', 3),
+('policy_procedure', 'Policy & Procedure', 'document', 4),
+('forms_templates', 'Forms & Templates', 'document', 5),
+('register', 'Register', 'document', 6),
+('evidence', 'Evidence', 'document', 7),
+('other_document', 'Other Document', 'document', 8);

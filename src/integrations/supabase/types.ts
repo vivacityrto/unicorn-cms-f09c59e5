@@ -978,6 +978,7 @@ export type Database = {
           tenant_id: number
           updated_at: string
           user_id: string
+          work_sub_type: string | null
           work_type: string
         }
         Insert: {
@@ -992,6 +993,7 @@ export type Database = {
           tenant_id: number
           updated_at?: string
           user_id: string
+          work_sub_type?: string | null
           work_type?: string
         }
         Update: {
@@ -1006,6 +1008,7 @@ export type Database = {
           tenant_id?: number
           updated_at?: string
           user_id?: string
+          work_sub_type?: string | null
           work_type?: string
         }
         Relationships: [
@@ -5563,6 +5566,7 @@ export type Database = {
           tenant_id: number
           updated_at: string
           work_date: string
+          work_sub_type: string | null
           work_type: string | null
         }
         Insert: {
@@ -5590,6 +5594,7 @@ export type Database = {
           tenant_id: number
           updated_at?: string
           work_date: string
+          work_sub_type?: string | null
           work_type?: string | null
         }
         Update: {
@@ -5617,6 +5622,7 @@ export type Database = {
           tenant_id?: number
           updated_at?: string
           work_date?: string
+          work_sub_type?: string | null
           work_type?: string | null
         }
         Relationships: [
@@ -13033,6 +13039,39 @@ export type Database = {
           sort_order?: number
           updated_at?: string
           value?: string
+        }
+        Relationships: []
+      }
+      dd_work_sub_type: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -40567,6 +40606,7 @@ export type Database = {
           tenant_id: number
           updated_at: string
           user_id: string
+          work_sub_type: string | null
           work_type: string
         }
         Insert: {
@@ -40588,6 +40628,7 @@ export type Database = {
           tenant_id: number
           updated_at?: string
           user_id: string
+          work_sub_type?: string | null
           work_type?: string
         }
         Update: {
@@ -40609,6 +40650,7 @@ export type Database = {
           tenant_id?: number
           updated_at?: string
           user_id?: string
+          work_sub_type?: string | null
           work_type?: string
         }
         Relationships: [

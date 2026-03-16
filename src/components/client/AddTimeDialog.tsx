@@ -46,6 +46,12 @@ interface WorkTypeOption {
   label: string;
 }
 
+interface WorkSubTypeOption {
+  code: string;
+  label: string;
+  category: string;
+}
+
 interface TeamMember {
   user_uuid: string;
   first_name: string;
@@ -98,6 +104,8 @@ export function AddTimeDialog({
   const [activeInstances, setActiveInstances] = useState<PackageInstance[]>([]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
   const [workTypes, setWorkTypes] = useState<WorkTypeOption[]>([]);
+  const [workSubTypes, setWorkSubTypes] = useState<WorkSubTypeOption[]>([]);
+  const [workSubType, setWorkSubType] = useState<string>('');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [notifyUserId, setNotifyUserId] = useState<string>('');
   const [notifyClient, setNotifyClient] = useState(false);
@@ -114,6 +122,18 @@ export function AddTimeDialog({
         .eq('is_active', true)
         .order('sort_order');
       if (data) setWorkTypes(data as WorkTypeOption[]);
+    })();
+  }, []);
+
+  // Fetch work sub types from dd_work_sub_type lookup
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('dd_work_sub_type')
+        .select('code, label, category')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (data) setWorkSubTypes(data as WorkSubTypeOption[]);
     })();
   }, []);
 
@@ -234,6 +254,7 @@ export function AddTimeDialog({
         duration_minutes: totalMinutes,
         start_at: `${date}T00:00:00`,
         work_type: workType,
+        work_sub_type: workSubType || null,
         notes: notes || null,
         is_billable: isBillable,
         scope_tag: scopeTag,
@@ -297,6 +318,7 @@ export function AddTimeDialog({
     setMinutes('30');
     setDate(new Date().toISOString().split('T')[0]);
     setWorkType('general');
+    setWorkSubType('');
     setNotes('');
     setIsBillable(true);
     setScopeTag(defaultScopeTag);
@@ -424,7 +446,7 @@ export function AddTimeDialog({
           {/* Work Type — from dd_work_types lookup */}
           <div className="space-y-2">
             <Label htmlFor="work-type">Work Type</Label>
-            <Select value={workType} onValueChange={setWorkType}>
+            <Select value={workType} onValueChange={(v) => { setWorkType(v); setWorkSubType(''); }}>
               <SelectTrigger id="work-type">
                 <SelectValue />
               </SelectTrigger>
@@ -437,6 +459,33 @@ export function AddTimeDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Work Sub Type — filtered by category based on work type */}
+          {(() => {
+            const category = workType === 'consultation' ? 'consultation'
+              : (workType === 'document_review' || workType === 'document_development') ? 'document'
+              : null;
+            if (!category) return null;
+            const filtered = workSubTypes.filter(st => st.category === category);
+            if (filtered.length === 0) return null;
+            return (
+              <div className="space-y-2">
+                <Label htmlFor="work-sub-type">Work Sub Type</Label>
+                <Select value={workSubType} onValueChange={setWorkSubType}>
+                  <SelectTrigger id="work-sub-type">
+                    <SelectValue placeholder="Select sub type..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filtered.map((st) => (
+                      <SelectItem key={st.code} value={st.code}>
+                        {st.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })()}
 
           {/* Notes */}
           <div className="space-y-2">
