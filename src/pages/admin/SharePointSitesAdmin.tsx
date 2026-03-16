@@ -374,9 +374,16 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
         )}
 
         {editing && (
-          <SettingRow label="Active" editing={editing}>
-            <Switch checked={isActive} onCheckedChange={setIsActive} />
-          </SettingRow>
+          <>
+            {site.purpose === 'master_documents' && (
+              <SettingRow label="Start Folder" editing={editing}>
+                <Input value={startFolderName} onChange={(e) => setStartFolderName(e.target.value)} className="text-sm" placeholder="e.g. UNICORN (subfolder to auto-navigate into)" />
+              </SettingRow>
+            )}
+            <SettingRow label="Active" editing={editing}>
+              <Switch checked={isActive} onCheckedChange={setIsActive} />
+            </SettingRow>
+          </>
         )}
 
         {/* Test result */}
