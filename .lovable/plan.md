@@ -62,3 +62,26 @@
 
 ### Key Discovery: Orphaned Stage References
 478 of 554 documents have `stage` values pointing to IDs that don't exist in `documents_stages`. Only 76 have valid FK refs. This data quality issue should be investigated separately.
+
+---
+
+## Work Sub Type Implementation ✅ COMPLETE
+
+### Phase 1: Schema ✅
+- Created `dd_work_sub_type` table with `category` column (`consultation` / `document`)
+- RLS: authenticated read, Vivacity staff manage
+- Added `work_sub_type` (text, nullable) to `time_entries`, `active_timers`, `calendar_time_drafts`
+
+### Phase 2: Seed Data ✅
+- 10 consultation sub types (compliance_health_check → general_consulting)
+- 8 document sub types (tas → other_document)
+- Document sub types shared across both `document_review` and `document_development`
+
+### Phase 3: Frontend ✅
+- `AddTimeDialog.tsx` — Work Sub Type selector filters by category based on selected work type
+- `TimeLogDrawer.tsx` — Displays work sub type badge next to work type, added `document_development` to labels
+- `useTimeTracking.tsx` — Added `work_sub_type` to `TimeEntry` interface
+- `useSuggestDropdowns.ts` — Added `workSubTypes` query for `dd_work_sub_type`
+
+### Admin
+- `dd_work_sub_type` auto-appears in Code Tables Admin for label editing, active/inactive toggle, sort order
