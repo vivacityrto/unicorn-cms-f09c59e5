@@ -51,7 +51,7 @@ export default function SuggestionRegister() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [releaseStatusFilter, setReleaseStatusFilter] = useState('all');
+  const [releaseStatusFilter, setReleaseStatusFilter] = useState('not_released');
 
   const filtered = useMemo(() => {
     if (!items) return [];
