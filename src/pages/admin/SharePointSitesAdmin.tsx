@@ -25,6 +25,7 @@ import {
   HardDrive,
   ExternalLink,
   ShieldCheck,
+  ListTree,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
