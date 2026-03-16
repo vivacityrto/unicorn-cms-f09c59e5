@@ -78,6 +78,8 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   const [scopeTag, setScopeTag] = useState<ScopeTag>('both');
   const [saving, setSaving] = useState(false);
   const [workTypes, setWorkTypes] = useState<WorkTypeOption[]>([]);
+  const [workSubTypes, setWorkSubTypes] = useState<WorkSubTypeOption[]>([]);
+  const [workSubType, setWorkSubType] = useState<string>('');
   const [activeInstances, setActiveInstances] = useState<PackageInstance[]>([]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
