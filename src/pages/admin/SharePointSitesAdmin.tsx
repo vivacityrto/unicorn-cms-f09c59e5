@@ -25,6 +25,7 @@ import {
   HardDrive,
   ExternalLink,
   ShieldCheck,
+  ListTree,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -134,6 +135,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [resolving, setResolving] = useState(false);
+  const [listingDrives, setListingDrives] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const [graphSiteId, setGraphSiteId] = useState(site.graph_site_id || '');
@@ -254,6 +256,33 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
     setTestResult(null);
   };
 
+  const handleListDrives = async () => {
+    if (!site.purpose) return;
+    setListingDrives(true);
+    setTestResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('browse-sharepoint-folder', {
+        body: { action: 'list_drives', site_purpose: site.purpose },
+      });
+      if (error) {
+        setTestResult({ success: false, message: error.message || 'Edge function error.' });
+      } else if (data?.error) {
+        setTestResult({ success: false, message: data.error });
+      } else if (data?.drives?.length) {
+        const drivesList = data.drives
+          .map((d: { name: string; id: string; webUrl: string }) => `• ${d.name}\n  ID: ${d.id}\n  ${d.webUrl}`)
+          .join('\n\n');
+        setTestResult({ success: true, message: `${data.drives.length} drive(s) on ${data.site_name}:\n\n${drivesList}` });
+      } else {
+        setTestResult({ success: true, message: 'No drives found on this site.' });
+      }
+    } catch (err: any) {
+      setTestResult({ success: false, message: err.message });
+    } finally {
+      setListingDrives(false);
+    }
+  };
+
   return (
     <Card className={!site.is_active ? 'opacity-60' : ''}>
       <CardHeader className="pb-3">
@@ -299,13 +328,27 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
         </SettingRow>
 
         <SettingRow label="Graph Site ID" editing={editing}>
-          {editing ? (
-            <Input value={graphSiteId} onChange={(e) => setGraphSiteId(e.target.value)} className="text-xs font-mono" placeholder="e.g. contoso.sharepoint.com,abc123,def456" />
-          ) : site.graph_site_id ? (
-            <CopyableId>{site.graph_site_id}</CopyableId>
-          ) : (
-            <span className="text-muted-foreground italic text-xs">Not set</span>
-          )}
+          <div className="flex items-center gap-2">
+            {editing ? (
+              <Input value={graphSiteId} onChange={(e) => setGraphSiteId(e.target.value)} className="text-xs font-mono" placeholder="e.g. contoso.sharepoint.com,abc123,def456" />
+            ) : site.graph_site_id ? (
+              <CopyableId>{site.graph_site_id}</CopyableId>
+            ) : (
+              <span className="text-muted-foreground italic text-xs">Not set</span>
+            )}
+            {site.graph_site_id && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                onClick={handleListDrives}
+                disabled={listingDrives}
+                title="List all drives on this site"
+              >
+                {listingDrives ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListTree className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+          </div>
         </SettingRow>
 
         <SettingRow label="Drive ID" editing={editing}>
@@ -336,7 +379,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
         {testResult && (
           <Alert variant={testResult.success ? 'default' : 'destructive'}>
             {testResult.success ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-            <AlertDescription className="text-sm">{testResult.message}</AlertDescription>
+            <AlertDescription className="text-sm whitespace-pre-wrap">{testResult.message}</AlertDescription>
           </Alert>
         )}
 
