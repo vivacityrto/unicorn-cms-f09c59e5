@@ -64,7 +64,9 @@ export default function SuggestionRegister() {
       if (statusFilter !== 'all' && item.status?.code !== statusFilter) return false;
       if (priorityFilter !== 'all' && item.priority?.code !== priorityFilter) return false;
       if (categoryFilter !== 'all' && item.category?.code !== categoryFilter) return false;
-      if (releaseStatusFilter !== 'all' && item.release_status?.code !== releaseStatusFilter) return false;
+      if (releaseStatusFilter === 'not_released') {
+        if (item.release_status?.code === 'released') return false;
+      } else if (releaseStatusFilter !== 'all' && item.release_status?.code !== releaseStatusFilter) return false;
       return true;
     });
   }, [items, search, typeFilter, statusFilter, priorityFilter, categoryFilter, releaseStatusFilter]);
