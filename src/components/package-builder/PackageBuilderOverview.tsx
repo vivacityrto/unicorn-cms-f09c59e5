@@ -19,19 +19,14 @@ import {
 } from 'lucide-react';
 import { CreatePackageDialog } from './CreatePackageDialog';
 import { computePackageReadiness, PackageReadinessBadge, ReadinessResult } from './PackageReadinessIndicator';
+import { useSuggestDropdowns } from '@/hooks/useSuggestDropdowns';
 
 const PACKAGE_TYPE_ICONS: Record<string, React.ReactNode> = {
   'project': <Briefcase className="h-4 w-4" />,
   'membership': <Users className="h-4 w-4" />,
   'regulatory_submission': <Building2 className="h-4 w-4" />,
+  'audit': <Search className="h-4 w-4" />,
   'training': <GraduationCap className="h-4 w-4" />
-};
-
-const PACKAGE_TYPE_LABELS: Record<string, string> = {
-  'project': 'Project',
-  'membership': 'Membership',
-  'regulatory_submission': 'Regulatory',
-  'training': 'Training'
 };
 
 export function PackageBuilderOverview() {
