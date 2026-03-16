@@ -125,6 +125,18 @@ export function AddTimeDialog({
     })();
   }, []);
 
+  // Fetch work sub types from dd_work_sub_type lookup
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('dd_work_sub_type')
+        .select('code, label, category')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (data) setWorkSubTypes(data as WorkSubTypeOption[]);
+    })();
+  }, []);
+
   // Fetch team members for notify selector (Vivacity Team + tenant users)
   useEffect(() => {
     if (!open) return;
