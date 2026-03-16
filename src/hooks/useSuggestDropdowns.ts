@@ -10,14 +10,14 @@ export interface SuggestDropdownItem {
   is_active: boolean;
 }
 
-const fetchDropdown = async (table: string): Promise<SuggestDropdownItem[]> => {
+const fetchDropdown = async (table: string, columns = 'id, code, label, description, sort_order, is_active'): Promise<SuggestDropdownItem[]> => {
   const { data, error } = await supabase
     .from(table as any)
-    .select('id, code, label, description, sort_order, is_active')
+    .select(columns)
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
   if (error) throw error;
-  return (data || []) as unknown as SuggestDropdownItem[];
+  return (data || []).map((d: any) => ({ ...d, description: d.description ?? null })) as unknown as SuggestDropdownItem[];
 };
 
 export function useSuggestDropdowns() {
