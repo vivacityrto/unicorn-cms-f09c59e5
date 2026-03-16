@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Package } from 'lucide-react';
+import { useSuggestDropdowns } from '@/hooks/useSuggestDropdowns';
 
 interface CreatePackageDialogProps {
   open: boolean;
@@ -19,6 +20,7 @@ export function CreatePackageDialog({ open, onOpenChange }: CreatePackageDialogP
   const navigate = useNavigate();
   const { toast } = useToast();
   const { createPackage } = usePackageBuilder();
+  const { packageTypes } = useSuggestDropdowns();
   
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -123,9 +125,9 @@ export function CreatePackageDialog({ open, onOpenChange }: CreatePackageDialogP
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="project">Project</SelectItem>
-                  <SelectItem value="membership">Membership</SelectItem>
-                  <SelectItem value="regulatory_submission">Regulatory Submission</SelectItem>
+                  {packageTypes.map((pt) => (
+                    <SelectItem key={pt.id} value={pt.code}>{pt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
