@@ -80,6 +80,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
   const { entries, loading, deleteEntry, summary, refresh } = useTimeTracking(clientId);
   const { toast } = useToast();
   const [workTypeFilter, setWorkTypeFilter] = useState<string>('all');
+  const { getLabel: getSubTypeLabel } = useWorkSubTypeLabels();
   const [billableFilter, setBillableFilter] = useState<string>('all');
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editPackageInstanceId, setEditPackageInstanceId] = useState<string>('');

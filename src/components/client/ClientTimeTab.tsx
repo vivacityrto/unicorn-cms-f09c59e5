@@ -855,6 +855,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const membership = useTenantMemberships(tenantId);
+  const { getLabel: getSubTypeLabel } = useWorkSubTypeLabels();
   const [packageFilter, setPackageFilter] = useState('all');
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();

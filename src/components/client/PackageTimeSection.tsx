@@ -54,6 +54,7 @@ export function PackageTimeSection({
   packageInstanceId 
 }: PackageTimeSectionProps) {
   const { toast } = useToast();
+  const { getLabel: getSubTypeLabel } = useWorkSubTypeLabels();
   const { 
     entries, 
     activeTimer, 
