@@ -260,6 +260,8 @@ export function useDashboardTriage() {
   // ── Apply view + filters ──
   const filteredTenants = useMemo(() => {
     let list = rawTenants;
+    // Always filter to active tenants only – inactive/closed clients should not appear in the triage view
+    list = list.filter(t => t.tenant_status === 'active');
     if (savedView === 'my_tenants' && profile?.user_uuid) {
       list = list.filter(t => t.assigned_csc_user_id === profile.user_uuid);
     }
