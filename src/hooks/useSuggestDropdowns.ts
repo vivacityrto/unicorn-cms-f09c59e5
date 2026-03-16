@@ -90,9 +90,10 @@ export function useSuggestDropdowns() {
     categories: categories.data ?? [],
     packageTypes: packageTypes.data ?? [],
     progressModes: progressModes.data ?? [],
+    workTypes: workTypes.data ?? [],
     workSubTypes: workSubTypes.data ?? [],
     isLoading: itemTypes.isLoading || statuses.isLoading || priorities.isLoading ||
       impactRatings.isLoading || releaseStatuses.isLoading || categories.isLoading ||
-      packageTypes.isLoading || progressModes.isLoading || workSubTypes.isLoading,
+      packageTypes.isLoading || progressModes.isLoading || workTypes.isLoading || workSubTypes.isLoading,
   };
 }
