@@ -105,7 +105,7 @@ export default function SuggestionRegister() {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={resolvedTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="suggestions" className="gap-2">
               <Lightbulb className="h-4 w-4" />
