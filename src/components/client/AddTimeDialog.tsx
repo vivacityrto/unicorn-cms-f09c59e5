@@ -318,6 +318,7 @@ export function AddTimeDialog({
     setMinutes('30');
     setDate(new Date().toISOString().split('T')[0]);
     setWorkType('general');
+    setWorkSubType('');
     setNotes('');
     setIsBillable(true);
     setScopeTag(defaultScopeTag);
