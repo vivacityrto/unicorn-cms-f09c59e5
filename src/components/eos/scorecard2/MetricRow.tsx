@@ -212,10 +212,11 @@ export function MetricRow({
       </div>
 
       {/* Inline entry form */}
-      {showEntry && !hasThisWeekEntry && (
+      {showEntry && (
         <div className="mx-3 mb-2 flex gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
           <div className="text-xs text-muted-foreground self-center whitespace-nowrap">
             Week of {format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'MMM d')} · Target: {metric.target_value} {metric.unit}
+            {hasThisWeekEntry && <span className="ml-1 text-primary">(updating)</span>}
           </div>
           <Input
             type="number"
@@ -239,12 +240,6 @@ export function MetricRow({
           <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowEntry(false)}>
             Cancel
           </Button>
-        </div>
-      )}
-
-      {hasThisWeekEntry && showEntry && (
-        <div className="mx-3 mb-2 p-2 bg-green-500/5 rounded text-xs text-green-700 dark:text-green-400">
-          ✓ Result already recorded for this week
         </div>
       )}
 
