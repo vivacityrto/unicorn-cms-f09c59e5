@@ -162,6 +162,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
           graph_site_id: graphSiteId.trim() || null,
           drive_id: driveId.trim() || null,
           master_docs_url: masterDocsUrl.trim() || null,
+          start_folder_name: startFolderName.trim() || null,
           is_active: isActive,
           updated_at: new Date().toISOString(),
         })
