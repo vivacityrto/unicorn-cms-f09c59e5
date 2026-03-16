@@ -424,7 +424,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           {/* Work Type */}
           <div className="space-y-2">
             <Label htmlFor="edit-work-type">Work Type</Label>
-            <Select value={workType} onValueChange={setWorkType}>
+            <Select value={workType} onValueChange={(v) => { setWorkType(v); setWorkSubType(''); }}>
               <SelectTrigger id="edit-work-type">
                 <SelectValue />
               </SelectTrigger>
@@ -437,6 +437,33 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
               </SelectContent>
             </Select>
           </div>
+
+          {/* Work Sub Type — filtered by category */}
+          {(() => {
+            const category = workType === 'consultation' ? 'consultation'
+              : (workType === 'document_review' || workType === 'document_development') ? 'document'
+              : null;
+            if (!category) return null;
+            const filtered = workSubTypes.filter(st => st.category === category);
+            if (filtered.length === 0) return null;
+            return (
+              <div className="space-y-2">
+                <Label htmlFor="edit-work-sub-type">Work Sub Type</Label>
+                <Select value={workSubType} onValueChange={setWorkSubType}>
+                  <SelectTrigger id="edit-work-sub-type">
+                    <SelectValue placeholder="Select sub type..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filtered.map((st) => (
+                      <SelectItem key={st.code} value={st.code}>
+                        {st.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })()}
 
           {/* Notes with dictation */}
           <div className="space-y-2">
