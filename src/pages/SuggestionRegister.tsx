@@ -79,15 +79,28 @@ export default function SuggestionRegister() {
     });
   }, [items, search, typeFilter, statusFilter, priorityFilter, categoryFilter, releaseStatusFilter]);
 
+  const releasedReporters = useMemo(() => {
+    if (!releasedItems) return [];
+    const seen = new Map<string, string>();
+    releasedItems.forEach(item => {
+      if (item.reported_by && !seen.has(item.reported_by)) {
+        seen.set(item.reported_by, userName(item.reported_by_user));
+      }
+    });
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [releasedItems]);
+
   const filteredReleased = useMemo(() => {
     if (!releasedItems) return [];
-    if (!releasedSearch) return releasedItems;
-    const q = releasedSearch.toLowerCase();
-    return releasedItems.filter(item =>
-      item.title.toLowerCase().includes(q) ||
-      (item.release_notes ?? '').toLowerCase().includes(q)
-    );
-  }, [releasedItems, releasedSearch]);
+    return releasedItems.filter(item => {
+      if (releasedSearch) {
+        const q = releasedSearch.toLowerCase();
+        if (!item.title.toLowerCase().includes(q) && !(item.release_notes ?? '').toLowerCase().includes(q)) return false;
+      }
+      if (releasedReporterFilter !== 'all' && item.reported_by !== releasedReporterFilter) return false;
+      return true;
+    });
+  }, [releasedItems, releasedSearch, releasedReporterFilter]);
 
   return (
     <DashboardLayout>
