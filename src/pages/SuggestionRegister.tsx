@@ -251,14 +251,23 @@ export default function SuggestionRegister() {
 
           <TabsContent value="released">
             <div className="space-y-4">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search title or release notes…"
-                  value={releasedSearch}
-                  onChange={e => setReleasedSearch(e.target.value)}
-                  className="pl-9"
-                />
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[200px] max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search title or release notes…"
+                    value={releasedSearch}
+                    onChange={e => setReleasedSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={releasedReporterFilter} onValueChange={setReleasedReporterFilter}>
+                  <SelectTrigger className="w-[180px]"><SelectValue placeholder="Reported By" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Reporters</SelectItem>
+                    {releasedReporters.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
 
               {releasedLoading ? (
