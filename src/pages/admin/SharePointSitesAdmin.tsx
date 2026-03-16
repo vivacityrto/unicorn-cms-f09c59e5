@@ -256,6 +256,33 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
     setTestResult(null);
   };
 
+  const handleListDrives = async () => {
+    if (!site.purpose) return;
+    setListingDrives(true);
+    setTestResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('browse-sharepoint-folder', {
+        body: { action: 'list_drives', site_purpose: site.purpose },
+      });
+      if (error) {
+        setTestResult({ success: false, message: error.message || 'Edge function error.' });
+      } else if (data?.error) {
+        setTestResult({ success: false, message: data.error });
+      } else if (data?.drives?.length) {
+        const drivesList = data.drives
+          .map((d: { name: string; id: string; webUrl: string }) => `• ${d.name}\n  ID: ${d.id}\n  ${d.webUrl}`)
+          .join('\n\n');
+        setTestResult({ success: true, message: `${data.drives.length} drive(s) on ${data.site_name}:\n\n${drivesList}` });
+      } else {
+        setTestResult({ success: true, message: 'No drives found on this site.' });
+      }
+    } catch (err: any) {
+      setTestResult({ success: false, message: err.message });
+    } finally {
+      setListingDrives(false);
+    }
+  };
+
   return (
     <Card className={!site.is_active ? 'opacity-60' : ''}>
       <CardHeader className="pb-3">
