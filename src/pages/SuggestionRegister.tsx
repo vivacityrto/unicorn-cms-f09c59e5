@@ -155,6 +155,7 @@ export default function SuggestionRegister() {
                     <SelectTrigger className="w-[160px]"><SelectValue placeholder="Release" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Release</SelectItem>
+                      <SelectItem value="not_released">Not Released</SelectItem>
                       {dropdowns.releaseStatuses.map(r => <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
