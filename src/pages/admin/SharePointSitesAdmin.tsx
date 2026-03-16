@@ -135,6 +135,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [resolving, setResolving] = useState(false);
+  const [listingDrives, setListingDrives] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const [graphSiteId, setGraphSiteId] = useState(site.graph_site_id || '');
