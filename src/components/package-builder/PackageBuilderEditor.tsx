@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePackageDetail, usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
+import { useSuggestDropdowns } from '@/hooks/useSuggestDropdowns';
 import { useCheckpointPhasesEnabled } from '@/hooks/useCheckpointPhasesEnabled';
 import { PackagePhasesTab } from './PackagePhasesTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
