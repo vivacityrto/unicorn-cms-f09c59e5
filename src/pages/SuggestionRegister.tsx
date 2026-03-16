@@ -44,7 +44,14 @@ export default function SuggestionRegister() {
   const dropdowns = useSuggestDropdowns();
   const { data: teamUsers } = useVivacityTeamUsers();
 
-  const [activeTab, setActiveTab] = useState('suggestions');
+  const hasUnreleased = useMemo(() => {
+    if (!items) return true; // still loading, assume yes
+    return items.some(item => item.release_status?.code !== 'released');
+  }, [items]);
+
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const resolvedTab = activeTab ?? (isLoading ? 'suggestions' : hasUnreleased ? 'suggestions' : 'released');
+
   const [search, setSearch] = useState('');
   const [releasedSearch, setReleasedSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -98,7 +105,7 @@ export default function SuggestionRegister() {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={resolvedTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="suggestions" className="gap-2">
               <Lightbulb className="h-4 w-4" />
