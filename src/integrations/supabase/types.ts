@@ -19446,6 +19446,48 @@ export type Database = {
             referencedColumns: ["client_id"]
           },
           {
+            foreignKeyName: "eos_todos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "eos_todos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "eos_todos_meeting_id_fkey"
             columns: ["meeting_id"]
             isOneToOne: false
@@ -19479,6 +19521,48 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_client_decisions_approvals"
             referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "eos_todos_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "eos_todos_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
           },
           {
             foreignKeyName: "fk_eos_todos_workspace"
