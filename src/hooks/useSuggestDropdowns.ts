@@ -69,6 +69,12 @@ export function useSuggestDropdowns() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const workTypes = useQuery({
+    queryKey: ['suggest-dropdown', 'dd_work_types'],
+    queryFn: () => fetchDropdown('dd_work_types'),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const workSubTypes = useQuery({
     queryKey: ['suggest-dropdown', 'dd_work_sub_type'],
     queryFn: () => fetchDropdown('dd_work_sub_type'),
