@@ -33,6 +33,7 @@ export function PackageBuilderOverview() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { packages, loading, duplicatePackage, archivePackage, deletePackage } = usePackageBuilder();
+  const { packageTypes } = useSuggestDropdowns();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
