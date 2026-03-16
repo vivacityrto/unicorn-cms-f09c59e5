@@ -328,13 +328,27 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
         </SettingRow>
 
         <SettingRow label="Graph Site ID" editing={editing}>
-          {editing ? (
-            <Input value={graphSiteId} onChange={(e) => setGraphSiteId(e.target.value)} className="text-xs font-mono" placeholder="e.g. contoso.sharepoint.com,abc123,def456" />
-          ) : site.graph_site_id ? (
-            <CopyableId>{site.graph_site_id}</CopyableId>
-          ) : (
-            <span className="text-muted-foreground italic text-xs">Not set</span>
-          )}
+          <div className="flex items-center gap-2">
+            {editing ? (
+              <Input value={graphSiteId} onChange={(e) => setGraphSiteId(e.target.value)} className="text-xs font-mono" placeholder="e.g. contoso.sharepoint.com,abc123,def456" />
+            ) : site.graph_site_id ? (
+              <CopyableId>{site.graph_site_id}</CopyableId>
+            ) : (
+              <span className="text-muted-foreground italic text-xs">Not set</span>
+            )}
+            {site.graph_site_id && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                onClick={handleListDrives}
+                disabled={listingDrives}
+                title="List all drives on this site"
+              >
+                {listingDrives ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ListTree className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+          </div>
         </SettingRow>
 
         <SettingRow label="Drive ID" editing={editing}>
