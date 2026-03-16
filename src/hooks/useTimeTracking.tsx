@@ -13,6 +13,7 @@ export interface TimeEntry {
   task_id: string | null;
   user_id: string;
   work_type: string;
+  work_sub_type: string | null;
   is_billable: boolean;
   start_at: string | null;
   end_at: string | null;

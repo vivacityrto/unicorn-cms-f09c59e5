@@ -69,6 +69,12 @@ export function useSuggestDropdowns() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const workSubTypes = useQuery({
+    queryKey: ['suggest-dropdown', 'dd_work_sub_type'],
+    queryFn: () => fetchDropdown('dd_work_sub_type'),
+    staleTime: 5 * 60 * 1000,
+  });
+
   return {
     itemTypes: itemTypes.data ?? [],
     statuses: statuses.data ?? [],
@@ -78,8 +84,9 @@ export function useSuggestDropdowns() {
     categories: categories.data ?? [],
     packageTypes: packageTypes.data ?? [],
     progressModes: progressModes.data ?? [],
+    workSubTypes: workSubTypes.data ?? [],
     isLoading: itemTypes.isLoading || statuses.isLoading || priorities.isLoading ||
       impactRatings.isLoading || releaseStatuses.isLoading || categories.isLoading ||
-      packageTypes.isLoading || progressModes.isLoading,
+      packageTypes.isLoading || progressModes.isLoading || workSubTypes.isLoading,
   };
 }

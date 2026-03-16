@@ -104,6 +104,8 @@ export function AddTimeDialog({
   const [activeInstances, setActiveInstances] = useState<PackageInstance[]>([]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
   const [workTypes, setWorkTypes] = useState<WorkTypeOption[]>([]);
+  const [workSubTypes, setWorkSubTypes] = useState<WorkSubTypeOption[]>([]);
+  const [workSubType, setWorkSubType] = useState<string>('');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [notifyUserId, setNotifyUserId] = useState<string>('');
   const [notifyClient, setNotifyClient] = useState(false);
