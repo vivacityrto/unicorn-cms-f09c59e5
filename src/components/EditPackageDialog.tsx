@@ -104,7 +104,7 @@ export const EditPackageDialog = ({ open, onOpenChange, onSuccess, packageData }
         .from('package_instances')
         .update({ included_minutes: pendingTotalHours * 60 })
         .eq('package_id', packageData.id)
-        .eq('status', 'active');
+        .eq('is_active', true);
       if (error) throw error;
       toast({
         title: 'Instances Updated',
