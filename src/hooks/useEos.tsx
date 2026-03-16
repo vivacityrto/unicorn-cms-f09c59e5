@@ -154,10 +154,9 @@ export const useEosIssues = () => {
 
   const createIssue = useMutation({
     mutationFn: async (issue: Partial<EosIssue>) => {
-      const { tenant_id, ...issueData } = issue;
       const { data, error } = await supabase
         .from('eos_issues')
-        .insert(issueData as any)
+        .insert(issue as any)
         .select()
         .single();
       

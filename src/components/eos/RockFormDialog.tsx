@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -543,11 +544,17 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
               {milestones.map((milestone, index) => (
                 <div key={milestone.id} className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
+                  <input
+                    type="checkbox"
+                    checked={milestone.completed}
+                    onChange={(e) => setMilestones(milestones.map(m => m.id === milestone.id ? { ...m, completed: e.target.checked } : m))}
+                    className="h-4 w-4 rounded border-border accent-primary shrink-0"
+                  />
                   <Input
                     placeholder={`Milestone ${index + 1}`}
                     value={milestone.text}
                     onChange={(e) => updateMilestone(milestone.id, e.target.value)}
-                    className="flex-1"
+                    className={cn("flex-1", milestone.completed && "line-through text-muted-foreground")}
                   />
                   <Button
                     type="button"
