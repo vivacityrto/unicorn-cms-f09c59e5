@@ -119,12 +119,33 @@ export function MetricRow({
           {metric.target_value} {metric.unit}
         </div>
 
-        {/* Latest */}
+        {/* Latest - click to add/update */}
         <div className="text-sm font-semibold whitespace-nowrap">
-          {latestValue != null ? (
-            <span>{latestValue} <span className="text-xs font-normal text-muted-foreground">{metric.unit}</span></span>
+          {showEntry ? (
+            <span className="text-muted-foreground text-xs italic">↓ editing</span>
+          ) : metric.metric_source === 'automatic' ? (
+            latestValue != null ? (
+              <span>{latestValue} <span className="text-xs font-normal text-muted-foreground">{metric.unit}</span></span>
+            ) : (
+              <span className="text-muted-foreground text-xs italic">—</span>
+            )
           ) : (
-            <span className="text-muted-foreground text-xs italic">—</span>
+            <button
+              onClick={() => {
+                if (hasThisWeekEntry && latestValue != null) {
+                  setEntryValue(String(latestValue));
+                }
+                setShowEntry(true);
+              }}
+              className="hover:bg-primary/10 rounded px-1.5 py-0.5 -mx-1.5 transition-colors cursor-pointer text-left"
+              title={hasThisWeekEntry ? 'Update this week\'s entry' : 'Record this week\'s result'}
+            >
+              {latestValue != null ? (
+                <span>{latestValue} <span className="text-xs font-normal text-muted-foreground">{metric.unit}</span></span>
+              ) : (
+                <span className="text-muted-foreground text-xs italic hover:text-primary">+ Add</span>
+              )}
+            </button>
           )}
         </div>
 
