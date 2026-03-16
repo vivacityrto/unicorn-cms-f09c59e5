@@ -69,6 +69,12 @@ export function useSuggestDropdowns() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const workTypes = useQuery({
+    queryKey: ['suggest-dropdown', 'dd_work_types'],
+    queryFn: () => fetchDropdown('dd_work_types'),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const workSubTypes = useQuery({
     queryKey: ['suggest-dropdown', 'dd_work_sub_type'],
     queryFn: () => fetchDropdown('dd_work_sub_type'),
@@ -84,9 +90,10 @@ export function useSuggestDropdowns() {
     categories: categories.data ?? [],
     packageTypes: packageTypes.data ?? [],
     progressModes: progressModes.data ?? [],
+    workTypes: workTypes.data ?? [],
     workSubTypes: workSubTypes.data ?? [],
     isLoading: itemTypes.isLoading || statuses.isLoading || priorities.isLoading ||
       impactRatings.isLoading || releaseStatuses.isLoading || categories.isLoading ||
-      packageTypes.isLoading || progressModes.isLoading || workSubTypes.isLoading,
+      packageTypes.isLoading || progressModes.isLoading || workTypes.isLoading || workSubTypes.isLoading,
   };
 }

@@ -46,6 +46,7 @@ import { EditTimeDialog } from './EditTimeDialog';
 import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
 import { EditNoteDialog } from '@/components/notes/EditNoteDialog';
 import { useWorkSubTypeLabels } from '@/hooks/useWorkSubTypeLabels';
+import { useSuggestDropdowns } from '@/hooks/useSuggestDropdowns';
 
 interface ClientTimeTabProps {
   tenantId: number;
@@ -856,6 +857,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const queryClient = useQueryClient();
   const membership = useTenantMemberships(tenantId);
   const { getLabel: getSubTypeLabel } = useWorkSubTypeLabels();
+  const { workTypes: ddWorkTypes } = useSuggestDropdowns();
   const [packageFilter, setPackageFilter] = useState('all');
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
@@ -1194,11 +1196,9 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="general">General</SelectItem>
-                  <SelectItem value="consultation">Consultation</SelectItem>
-                  <SelectItem value="document_review">Document Review</SelectItem>
-                  <SelectItem value="training">Training</SelectItem>
-                  <SelectItem value="support">Support</SelectItem>
+                  {ddWorkTypes.map(wt => (
+                    <SelectItem key={wt.code} value={wt.code}>{wt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
