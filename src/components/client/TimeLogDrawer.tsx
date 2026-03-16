@@ -67,6 +67,7 @@ const WORK_TYPE_LABELS: Record<string, string> = {
   general: 'General',
   consultation: 'Consultation',
   document_review: 'Document Review',
+  document_development: 'Document Development',
   training: 'Training',
   meeting: 'Meeting',
   support: 'Support',
