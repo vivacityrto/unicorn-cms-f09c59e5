@@ -254,6 +254,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
     setGraphSiteId(site.graph_site_id || '');
     setDriveId(site.drive_id || '');
     setMasterDocsUrl(site.master_docs_url || '');
+    setStartFolderName(site.start_folder_name || '');
     setIsActive(site.is_active);
     setEditing(false);
     setTestResult(null);
