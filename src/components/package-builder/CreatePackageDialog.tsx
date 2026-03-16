@@ -20,6 +20,7 @@ export function CreatePackageDialog({ open, onOpenChange }: CreatePackageDialogP
   const navigate = useNavigate();
   const { toast } = useToast();
   const { createPackage } = usePackageBuilder();
+  const { packageTypes } = useSuggestDropdowns();
   
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
