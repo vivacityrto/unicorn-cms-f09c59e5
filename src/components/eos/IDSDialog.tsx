@@ -19,6 +19,7 @@ import { toast } from '@/hooks/use-toast';
 import { ClientBadge } from './ClientBadge';
 import { cn } from '@/lib/utils';
 import { useEosStatusTransitions, isValidStatusTransition, getAllowedStatusTransitions } from '@/hooks/useEosOptions';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import type { EosIssue } from '@/types/eos';
 
 interface IDSDialogProps {
