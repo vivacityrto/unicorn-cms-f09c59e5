@@ -150,6 +150,7 @@ interface PackageDetailsCardProps {
     full_text: string;
     details: string;
     package_type: string;
+    progress_mode: string;
     duration_months: number;
     total_hours: number;
     status: string;
@@ -158,6 +159,8 @@ interface PackageDetailsCardProps {
 }
 
 function PackageDetailsCard({ formData, setFormData }: PackageDetailsCardProps) {
+  const { packageTypes, progressModes } = useSuggestDropdowns();
+
   return (
     <Card>
       <CardHeader>
@@ -165,13 +168,21 @@ function PackageDetailsCard({ formData, setFormData }: PackageDetailsCardProps) 
         <CardDescription>Configure the basic information for this package.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div className="space-y-2">
             <Label>Package Code</Label>
             <Input
               value={formData.name}
               onChange={(e) => setFormData(f => ({ ...f, name: e.target.value }))}
               placeholder="e.g., KS-RTO"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Full Name</Label>
+            <Input
+              value={formData.full_text}
+              onChange={(e) => setFormData(f => ({ ...f, full_text: e.target.value }))}
+              placeholder="e.g., Kickstart RTO Package"
             />
           </div>
           <div className="space-y-2">
@@ -182,20 +193,26 @@ function PackageDetailsCard({ formData, setFormData }: PackageDetailsCardProps) 
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="project">Project</SelectItem>
-                <SelectItem value="membership">Membership</SelectItem>
-                <SelectItem value="regulatory_submission">Regulatory Submission</SelectItem>
+                {packageTypes.map((pt) => (
+                  <SelectItem key={pt.id} value={pt.code}>{pt.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Full Name</Label>
-          <Input
-            value={formData.full_text}
-            onChange={(e) => setFormData(f => ({ ...f, full_text: e.target.value }))}
-            placeholder="e.g., Kickstart RTO Package"
-          />
+          <div className="space-y-2">
+            <Label>Progress Mode</Label>
+            <Select
+              value={formData.progress_mode}
+              onValueChange={(value) => setFormData(f => ({ ...f, progress_mode: value }))}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {progressModes.map((pm) => (
+                  <SelectItem key={pm.id} value={pm.code}>{pm.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div className="space-y-2">
           <Label>Description</Label>
@@ -242,7 +259,6 @@ function PackageDetailsCard({ formData, setFormData }: PackageDetailsCardProps) 
     </Card>
   );
 }
-
 export function PackageBuilderEditor() {
   const { id } = useParams<{ id: string }>();
   const packageId = id ? parseInt(id) : null;
