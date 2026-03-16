@@ -45,6 +45,7 @@ import { cn } from '@/lib/utils';
 import { EditTimeDialog } from './EditTimeDialog';
 import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
 import { EditNoteDialog } from '@/components/notes/EditNoteDialog';
+import { useWorkSubTypeLabels } from '@/hooks/useWorkSubTypeLabels';
 
 interface ClientTimeTabProps {
   tenantId: number;
@@ -854,6 +855,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const membership = useTenantMemberships(tenantId);
+  const { getLabel: getSubTypeLabel } = useWorkSubTypeLabels();
   const [packageFilter, setPackageFilter] = useState('all');
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
@@ -1323,9 +1325,16 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                         {formatDuration(entry.duration_minutes)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="capitalize">
-                          {entry.work_type.replace('_', ' ')}
-                        </Badge>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <Badge variant="secondary" className="capitalize">
+                            {entry.work_type.replace('_', ' ')}
+                          </Badge>
+                          {(entry as any).work_sub_type && (
+                            <Badge variant="outline" className="text-xs">
+                              {getSubTypeLabel((entry as any).work_sub_type)}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">

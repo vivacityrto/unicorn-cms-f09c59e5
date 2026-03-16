@@ -47,6 +47,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useWorkSubTypeLabels } from '@/hooks/useWorkSubTypeLabels';
 
 interface TimeLogDrawerProps {
   open: boolean;
@@ -79,6 +80,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
   const { entries, loading, deleteEntry, summary, refresh } = useTimeTracking(clientId);
   const { toast } = useToast();
   const [workTypeFilter, setWorkTypeFilter] = useState<string>('all');
+  const { getLabel: getSubTypeLabel } = useWorkSubTypeLabels();
   const [billableFilter, setBillableFilter] = useState<string>('all');
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editPackageInstanceId, setEditPackageInstanceId] = useState<string>('');
@@ -294,7 +296,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                       </Badge>
                       {(entry as any).work_sub_type && (
                         <Badge variant="secondary" className="text-xs">
-                          {(entry as any).work_sub_type}
+                          {getSubTypeLabel((entry as any).work_sub_type)}
                         </Badge>
                       )}
                     </div>

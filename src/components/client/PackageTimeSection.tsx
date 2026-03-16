@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { useWorkSubTypeLabels } from '@/hooks/useWorkSubTypeLabels';
 
 interface PackageTimeSectionProps {
   tenantId: number;
@@ -53,6 +54,7 @@ export function PackageTimeSection({
   packageInstanceId 
 }: PackageTimeSectionProps) {
   const { toast } = useToast();
+  const { getLabel: getSubTypeLabel } = useWorkSubTypeLabels();
   const { 
     entries, 
     activeTimer, 
@@ -270,9 +272,16 @@ export function PackageTimeSection({
                       {formatDuration(entry.duration_minutes)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="capitalize">
-                        {entry.work_type.replace('_', ' ')}
-                      </Badge>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <Badge variant="secondary" className="capitalize">
+                          {entry.work_type.replace('_', ' ')}
+                        </Badge>
+                        {(entry as any).work_sub_type && (
+                          <Badge variant="outline" className="text-xs">
+                            {getSubTypeLabel((entry as any).work_sub_type)}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">
