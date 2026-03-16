@@ -379,7 +379,7 @@ function SiteCard({ site, onSaved }: { site: SharePointSite; onSaved: () => void
         {testResult && (
           <Alert variant={testResult.success ? 'default' : 'destructive'}>
             {testResult.success ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-            <AlertDescription className="text-sm">{testResult.message}</AlertDescription>
+            <AlertDescription className="text-sm whitespace-pre-wrap">{testResult.message}</AlertDescription>
           </Alert>
         )}
 
