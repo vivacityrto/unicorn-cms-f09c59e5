@@ -87,6 +87,9 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
       autoNavigated.current = true;
       setFolderStack([{ id: 'root', name: effectiveStartFolder }]);
       setCurrentFolderId(target.id);
+    } else {
+      // Folder not found (e.g., it's now the library root itself) — mark as done
+      autoNavigated.current = true;
     }
   }, [browseResult, effectiveStartFolder]);
 
