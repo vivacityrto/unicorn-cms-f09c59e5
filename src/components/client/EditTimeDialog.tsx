@@ -37,6 +37,12 @@ interface WorkTypeOption {
   label: string;
 }
 
+interface WorkSubTypeOption {
+  code: string;
+  label: string;
+  category: string;
+}
+
 interface TeamMember {
   user_uuid: string;
   first_name: string;
@@ -72,6 +78,8 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   const [scopeTag, setScopeTag] = useState<ScopeTag>('both');
   const [saving, setSaving] = useState(false);
   const [workTypes, setWorkTypes] = useState<WorkTypeOption[]>([]);
+  const [workSubTypes, setWorkSubTypes] = useState<WorkSubTypeOption[]>([]);
+  const [workSubType, setWorkSubType] = useState<string>('');
   const [activeInstances, setActiveInstances] = useState<PackageInstance[]>([]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -89,6 +97,14 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
         .eq('is_active', true)
         .order('sort_order');
       if (data) setWorkTypes(data as WorkTypeOption[]);
+    })();
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('dd_work_sub_type')
+        .select('code, label, category')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (data) setWorkSubTypes(data as WorkSubTypeOption[]);
     })();
   }, []);
 
@@ -208,6 +224,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           : format(new Date(entry.created_at), 'yyyy-MM-dd')
       );
       setWorkType(entry.work_type);
+      setWorkSubType((entry as any).work_sub_type || '');
       setNotes(entry.notes || '');
       setIsBillable(entry.is_billable);
       setScopeTag((entry.scope_tag as ScopeTag) || 'both');
@@ -237,6 +254,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           duration_minutes: totalMinutes,
           start_at: `${date}T00:00:00`,
           work_type: workType,
+          work_sub_type: workSubType || null,
           notes: notes || null,
           is_billable: isBillable,
           scope_tag: scopeTag,
@@ -406,7 +424,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           {/* Work Type */}
           <div className="space-y-2">
             <Label htmlFor="edit-work-type">Work Type</Label>
-            <Select value={workType} onValueChange={setWorkType}>
+            <Select value={workType} onValueChange={(v) => { setWorkType(v); setWorkSubType(''); }}>
               <SelectTrigger id="edit-work-type">
                 <SelectValue />
               </SelectTrigger>
@@ -419,6 +437,33 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
               </SelectContent>
             </Select>
           </div>
+
+          {/* Work Sub Type — filtered by category */}
+          {(() => {
+            const category = workType === 'consultation' ? 'consultation'
+              : (workType === 'document_review' || workType === 'document_development') ? 'document'
+              : null;
+            if (!category) return null;
+            const filtered = workSubTypes.filter(st => st.category === category);
+            if (filtered.length === 0) return null;
+            return (
+              <div className="space-y-2">
+                <Label htmlFor="edit-work-sub-type">Work Sub Type</Label>
+                <Select value={workSubType} onValueChange={setWorkSubType}>
+                  <SelectTrigger id="edit-work-sub-type">
+                    <SelectValue placeholder="Select sub type..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filtered.map((st) => (
+                      <SelectItem key={st.code} value={st.code}>
+                        {st.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })()}
 
           {/* Notes with dictation */}
           <div className="space-y-2">
