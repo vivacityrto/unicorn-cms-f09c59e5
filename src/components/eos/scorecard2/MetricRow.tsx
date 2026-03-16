@@ -119,12 +119,33 @@ export function MetricRow({
           {metric.target_value} {metric.unit}
         </div>
 
-        {/* Latest */}
+        {/* Latest - click to add/update */}
         <div className="text-sm font-semibold whitespace-nowrap">
-          {latestValue != null ? (
-            <span>{latestValue} <span className="text-xs font-normal text-muted-foreground">{metric.unit}</span></span>
+          {showEntry ? (
+            <span className="text-muted-foreground text-xs italic">↓ editing</span>
+          ) : metric.metric_source === 'automatic' ? (
+            latestValue != null ? (
+              <span>{latestValue} <span className="text-xs font-normal text-muted-foreground">{metric.unit}</span></span>
+            ) : (
+              <span className="text-muted-foreground text-xs italic">—</span>
+            )
           ) : (
-            <span className="text-muted-foreground text-xs italic">—</span>
+            <button
+              onClick={() => {
+                if (hasThisWeekEntry && latestValue != null) {
+                  setEntryValue(String(latestValue));
+                }
+                setShowEntry(true);
+              }}
+              className="hover:bg-primary/10 rounded px-1.5 py-0.5 -mx-1.5 transition-colors cursor-pointer text-left"
+              title={hasThisWeekEntry ? 'Update this week\'s entry' : 'Record this week\'s result'}
+            >
+              {latestValue != null ? (
+                <span>{latestValue} <span className="text-xs font-normal text-muted-foreground">{metric.unit}</span></span>
+              ) : (
+                <span className="text-muted-foreground text-xs italic hover:text-primary">+ Add</span>
+              )}
+            </button>
           )}
         </div>
 
@@ -148,7 +169,7 @@ export function MetricRow({
 
         {/* Actions */}
         <div className="flex items-center gap-1 justify-end">
-          {metric.metric_source !== 'automatic' && !metric.is_archived && !hasThisWeekEntry && (
+          {metric.metric_source !== 'automatic' && !metric.is_archived && (
             <Button
               variant="ghost"
               size="icon"
@@ -191,10 +212,11 @@ export function MetricRow({
       </div>
 
       {/* Inline entry form */}
-      {showEntry && !hasThisWeekEntry && (
+      {showEntry && (
         <div className="mx-3 mb-2 flex gap-2 p-3 bg-primary/5 rounded-lg border border-primary/20 animate-fade-in">
           <div className="text-xs text-muted-foreground self-center whitespace-nowrap">
             Week of {format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'MMM d')} · Target: {metric.target_value} {metric.unit}
+            {hasThisWeekEntry && <span className="ml-1 text-primary">(updating)</span>}
           </div>
           <Input
             type="number"
@@ -218,12 +240,6 @@ export function MetricRow({
           <Button variant="ghost" size="sm" className="h-8" onClick={() => setShowEntry(false)}>
             Cancel
           </Button>
-        </div>
-      )}
-
-      {hasThisWeekEntry && showEntry && (
-        <div className="mx-3 mb-2 p-2 bg-green-500/5 rounded text-xs text-green-700 dark:text-green-400">
-          ✓ Result already recorded for this week
         </div>
       )}
 
