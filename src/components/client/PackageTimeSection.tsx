@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { useWorkSubTypeLabels } from '@/hooks/useWorkSubTypeLabels';
 
 interface PackageTimeSectionProps {
   tenantId: number;
