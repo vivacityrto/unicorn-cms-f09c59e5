@@ -306,9 +306,9 @@ export function PackageBuilderOverview() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="project">Project</SelectItem>
-              <SelectItem value="membership">Membership</SelectItem>
-              <SelectItem value="regulatory_submission">Regulatory</SelectItem>
+              {packageTypes.map((pt) => (
+                <SelectItem key={pt.id} value={pt.code}>{pt.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
