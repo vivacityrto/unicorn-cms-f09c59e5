@@ -71,7 +71,7 @@ export function useSuggestDropdowns() {
 
   const workTypes = useQuery({
     queryKey: ['suggest-dropdown', 'dd_work_types'],
-    queryFn: () => fetchDropdown('dd_work_types'),
+    queryFn: () => fetchDropdown('dd_work_types', 'id, code, label, sort_order, is_active'),
     staleTime: 5 * 60 * 1000,
   });
 
