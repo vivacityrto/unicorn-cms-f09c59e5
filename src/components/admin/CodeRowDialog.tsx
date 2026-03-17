@@ -74,21 +74,6 @@ export function CodeRowDialog({
         updates.value = labelToValue(newLabel);
       }
       setFormData((prev) => ({ ...prev, ...updates }));
-
-      // Also call RPC for formatted label (optional polish)
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(async () => {
-        try {
-          const formatted = await codeTablesService.formatLabel(newLabel);
-          setFormData((prev) => ({
-            ...prev,
-            label: formatted,
-            ...(hasValueCol ? { value: labelToValue(formatted) } : {}),
-          }));
-        } catch {
-          // Silently fail — user can still edit manually
-        }
-      }, 500);
     },
     [hasValueCol]
   );
