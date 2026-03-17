@@ -83,7 +83,8 @@ const STATE_COLORS: Record<string, string> = {
   warning: 'bg-red-600/20 text-red-700 border-red-600 font-semibold',
   paused: 'bg-gray-500/10 text-gray-600 border-gray-500',
   exiting: 'bg-red-500/10 text-red-600 border-red-500',
-  complete: 'bg-muted text-muted-foreground border-border'
+  complete: 'bg-muted text-muted-foreground border-border',
+  cancelled: 'bg-red-500/10 text-red-600 border-red-500'
 };
 
 const STATE_ICONS: Record<string, React.ReactNode> = {
@@ -92,7 +93,8 @@ const STATE_ICONS: Record<string, React.ReactNode> = {
   warning: <AlertCircle className="h-3 w-3 animate-pulse" />,
   paused: <PauseCircle className="h-3 w-3" />,
   exiting: <AlertCircle className="h-3 w-3" />,
-  complete: <CheckCircle2 className="h-3 w-3" />
+  complete: <CheckCircle2 className="h-3 w-3" />,
+  cancelled: <XCircle className="h-3 w-3" />
 };
 
 export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, onRefresh, complyhubTier, autoExpandPackageInstanceId, autoExpandStageInstanceId }: ClientPackagesTabProps) {
