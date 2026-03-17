@@ -7,6 +7,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus, ClipboardList } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/modals";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import type { LifecycleTemplate } from "@/hooks/useLifecycleChecklists";
 
 export default function LifecycleChecklistsAdmin() {
