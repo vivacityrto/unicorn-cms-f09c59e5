@@ -48,7 +48,8 @@ import {
   Flag,
   Shield,
   RefreshCw,
-  MoreVertical
+  MoreVertical,
+  XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ClientPackage } from '@/hooks/useClientManagement';
