@@ -143,6 +143,38 @@ export default function LifecycleChecklistsAdmin() {
           isLoading={deleteTemplate.isPending}
           onConfirm={handleDeleteConfirm}
         />
+
+        <Dialog open={!!viewingTemplate} onOpenChange={(v) => !v && setViewingTemplate(null)}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{viewingTemplate?.step_title}</DialogTitle>
+              <DialogDescription>Step instructions and details</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {viewingTemplate?.description ? (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Instructions</p>
+                  <p className="text-sm whitespace-pre-wrap">{viewingTemplate.description}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No instructions provided for this step.</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {viewingTemplate?.category && (
+                  <Badge variant="secondary">{categoryLabels[viewingTemplate.category] || viewingTemplate.category}</Badge>
+                )}
+                {viewingTemplate?.responsible_role && (
+                  <Badge variant="outline">{roleLabels[viewingTemplate.responsible_role] || viewingTemplate.responsible_role}</Badge>
+                )}
+                {viewingTemplate?.external_link && (
+                  <Button variant="link" size="sm" className="h-auto p-0" onClick={() => window.open(viewingTemplate.external_link!, "_blank")}>
+                    Open external link ↗
+                  </Button>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
