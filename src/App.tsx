@@ -1004,6 +1004,7 @@ const App = () => (
             <Route path="/admin/risk-command" element={<ProtectedRoute requireSuperAdmin><RiskCommandCentre /></ProtectedRoute>} />
             <Route path="/admin/strategic-orchestration" element={<ProtectedRoute requireSuperAdmin><StrategicOrchestrationDashboard /></ProtectedRoute>} />
             <Route path="/admin/code-tables" element={<ProtectedRoute requireSuperAdmin><CodeTablesAdmin /></ProtectedRoute>} />
+            <Route path="/admin/lifecycle-checklists" element={<ProtectedRoute requireSuperAdmin><LifecycleChecklistsAdmin /></ProtectedRoute>} />
             {/* Suggestion & Issue Register */}
             <Route path="/suggestions" element={<ProtectedRoute><SuggestionRegister /></ProtectedRoute>} />
             <Route path="/suggestions/new" element={<ProtectedRoute><NewSuggestionForm /></ProtectedRoute>} />
