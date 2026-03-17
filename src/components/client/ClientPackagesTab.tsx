@@ -206,6 +206,28 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
     }
   };
 
+  const handleCancelPackage = async () => {
+    if (!cancelTarget || !cancelReason.trim()) return;
+    setCancelling(true);
+    try {
+      const { error } = await supabase.rpc('transition_membership_state', {
+        p_instance_id: parseInt(cancelTarget.id, 10),
+        p_new_state: 'cancelled',
+        p_reason: cancelReason.trim(),
+      });
+      if (error) throw error;
+      toast.success(`${cancelTarget.package_name} has been cancelled`);
+      const title = `** PACKAGE STATUS "CANCELLED" — ${cancelTarget.package_name} — ALL ACTIVITY HALTED **`;
+      setCancelTarget(null);
+      setCancelReason('');
+      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cancel package');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   // Renewal dialog state
   const [renewTarget, setRenewTarget] = useState<ClientPackage | null>(null);
   // Fetch note counts for all package instances
