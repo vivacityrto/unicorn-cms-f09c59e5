@@ -115,6 +115,7 @@ export default function LifecycleChecklistsAdmin() {
                 categoryLabels={categoryLabels}
                 roleLabels={roleLabels}
                 loading={loading || dropdownsLoading}
+                onView={setViewingTemplate}
                 onEdit={handleEdit}
                 onDelete={setDeleteTarget}
               />
