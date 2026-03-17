@@ -64,7 +64,7 @@ export function LifecycleTemplateDialog({
       step_title: stepTitle,
       description: description || null,
       category,
-      responsible_role: responsibleRole || null,
+      responsible_role: responsibleRole && responsibleRole !== "__none__" ? responsibleRole : null,
       external_link: externalLink || null,
       sort_order: sortOrder,
       is_default: isDefault,
@@ -127,7 +127,7 @@ export function LifecycleTemplateDialog({
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {responsibleRoles.map((r) => (
                     <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>
                   ))}
