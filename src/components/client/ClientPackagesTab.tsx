@@ -113,6 +113,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const [renewPackage, setRenewPackage] = useState(false);
   const [renewalPackageId, setRenewalPackageId] = useState<string>('');
   const [availablePackages, setAvailablePackages] = useState<{ id: number; name: string }[]>([]);
+  const [cancelTarget, setCancelTarget] = useState<ClientPackage | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
 
   const activePackages = packages.filter(p => !p.is_complete);
   const historyPackages = packages.filter(p => p.is_complete);
