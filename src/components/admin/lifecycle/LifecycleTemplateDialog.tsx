@@ -127,7 +127,7 @@ export function LifecycleTemplateDialog({
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {responsibleRoles.map((r) => (
                     <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>
                   ))}
