@@ -784,6 +784,40 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           }}
         />
       )}
+
+      {/* Cancel Package Dialog */}
+      <Dialog open={!!cancelTarget} onOpenChange={(open) => { if (!open) { setCancelTarget(null); setCancelReason(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Cancel Package</DialogTitle>
+            <DialogDescription>
+              Cancel <strong>{cancelTarget?.package_name}</strong>. This will mark the package as cancelled and halt all activity. A mandatory reason is required for the audit trail.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="cancel-reason">Reason for Cancellation *</Label>
+              <Textarea
+                id="cancel-reason"
+                placeholder="e.g., Client requested cancellation due to..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelTarget(null); setCancelReason(''); }} disabled={cancelling}>
+              Back
+            </Button>
+            <Button variant="destructive" onClick={handleCancelPackage} disabled={cancelling || !cancelReason.trim()}>
+              {cancelling ? 'Cancelling…' : 'Confirm Cancellation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
