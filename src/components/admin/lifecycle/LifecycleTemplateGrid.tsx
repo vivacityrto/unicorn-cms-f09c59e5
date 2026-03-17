@@ -74,7 +74,7 @@ export function LifecycleTemplateGrid({
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium truncate">{step.step_title}</span>
                         {step.is_default && (
-                          <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
+                          <Star className="h-3 w-3 text-primary fill-primary shrink-0" />
                         )}
                         {!step.is_active && (
                           <Badge variant="outline" className="text-xs text-muted-foreground">Inactive</Badge>

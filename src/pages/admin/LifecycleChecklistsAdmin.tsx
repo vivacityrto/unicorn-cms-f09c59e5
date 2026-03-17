@@ -134,9 +134,9 @@ export default function LifecycleChecklistsAdmin() {
           onOpenChange={(v) => !v && setDeleteTarget(null)}
           title="Deactivate Step"
           description="This will deactivate this checklist step. It won't appear in new checklists but existing instances are preserved."
-          confirmLabel="Deactivate"
+          confirmText="Deactivate"
           variant="destructive"
-          loading={deleteTemplate.isPending}
+          isLoading={deleteTemplate.isPending}
           onConfirm={handleDeleteConfirm}
         />
       </div>

@@ -79,8 +79,8 @@ export function LifecycleTemplateDialog({
       title={template ? "Edit Checklist Step" : "Add Checklist Step"}
       description={template ? "Update this checklist template step" : "Create a new checklist template step"}
       onSubmit={handleSubmit}
-      submitLabel={template ? "Save Changes" : "Create Step"}
-      loading={saving}
+      submitText={template ? "Save Changes" : "Create Step"}
+      isLoading={saving}
       size="lg"
     >
       <FormModalSection>
