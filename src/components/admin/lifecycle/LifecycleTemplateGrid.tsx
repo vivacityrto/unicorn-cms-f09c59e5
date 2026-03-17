@@ -10,6 +10,7 @@ interface Props {
   categoryLabels: Record<string, string>;
   roleLabels: Record<string, string>;
   loading: boolean;
+  onView: (t: LifecycleTemplate) => void;
   onEdit: (t: LifecycleTemplate) => void;
   onDelete: (t: LifecycleTemplate) => void;
 }
