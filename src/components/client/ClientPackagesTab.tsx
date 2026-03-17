@@ -540,13 +540,35 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                   {/* Right: Actions + Renewal date stacked */}
                    <div className="flex items-start gap-2">
                       {isSuperAdmin() && (
-                        <CollapsibleTrigger asChild>
-                          <Button variant="outline" size="sm" className="gap-1">
-                            <Settings className="h-4 w-4" />
-                            Manage
-                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                          </Button>
-                        </CollapsibleTrigger>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-1">
+                              <Settings className="h-4 w-4" />
+                              Manage
+                              <ChevronDown className="h-3 w-3 ml-0.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                            <CollapsibleTrigger asChild>
+                              <DropdownMenuItem>
+                                <Settings className="h-4 w-4 mr-2" />
+                                {isExpanded ? 'Collapse Stages' : 'Expand Stages'}
+                              </DropdownMenuItem>
+                            </CollapsibleTrigger>
+                            {!pkg.is_complete && (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCancelTarget(pkg);
+                                }}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancel Package
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       )}
                       {isSuperAdmin() && !pkg.is_complete && (() => {
                         const renewalDue = pkg.next_renewal_date ? parseISO(pkg.next_renewal_date) <= new Date() : false;
@@ -588,16 +610,6 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                               >
                                 <Flag className="h-4 w-4 mr-2" />
                                 Finalise
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCancelTarget(pkg);
-                                }}
-                              >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Cancel Package
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
