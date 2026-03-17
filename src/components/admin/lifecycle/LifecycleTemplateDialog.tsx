@@ -64,7 +64,7 @@ export function LifecycleTemplateDialog({
       step_title: stepTitle,
       description: description || null,
       category,
-      responsible_role: responsibleRole || null,
+      responsible_role: responsibleRole && responsibleRole !== "__none__" ? responsibleRole : null,
       external_link: externalLink || null,
       sort_order: sortOrder,
       is_default: isDefault,
