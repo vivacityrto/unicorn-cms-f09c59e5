@@ -408,9 +408,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                         </div>
                       </div>
                       {pkg.is_complete ? (
-                        <Badge variant="outline" className={STATE_COLORS['complete']}>
-                          {STATE_ICONS['complete']}
-                          <span className="ml-1 capitalize">Complete</span>
+                        <Badge variant="outline" className={STATE_COLORS[pkg.membership_state === 'cancelled' ? 'cancelled' : 'complete']}>
+                          {pkg.membership_state === 'cancelled' ? STATE_ICONS['cancelled'] : STATE_ICONS['complete']}
+                          <span className="ml-1 capitalize">{pkg.membership_state === 'cancelled' ? 'Cancelled' : 'Complete'}</span>
                         </Badge>
                       ) : (
                         <DropdownMenu>
