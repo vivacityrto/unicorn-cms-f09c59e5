@@ -588,6 +588,16 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                                 <Flag className="h-4 w-4 mr-2" />
                                 Finalise
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCancelTarget(pkg);
+                                }}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancel Package
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                           {pkg.next_renewal_date && (
