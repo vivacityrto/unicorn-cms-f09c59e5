@@ -23,6 +23,7 @@ export default function LifecycleChecklistsAdmin() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<LifecycleTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LifecycleTemplate | null>(null);
+  const [viewingTemplate, setViewingTemplate] = useState<LifecycleTemplate | null>(null);
 
   // Group templates by category
   const groupedTemplates = useMemo(() => {
