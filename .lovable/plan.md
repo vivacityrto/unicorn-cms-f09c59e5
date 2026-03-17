@@ -85,3 +85,25 @@
 
 ### Admin
 - `dd_work_sub_type` auto-appears in Code Tables Admin for label editing, active/inactive toggle, sort order
+
+---
+
+## Lifecycle Checklists — Client & Staff Onboarding/Offboarding ✅ Phase 1 COMPLETE
+
+### Phase 1: Schema + Admin Template Manager ✅
+- Created `dd_lifecycle_type` (client_onboarding, client_offboarding, staff_onboarding, staff_offboarding)
+- Created `dd_lifecycle_responsible_role` (super_admin, operations, csc, team_leader)
+- Created `dd_lifecycle_category` (staff_details, m365_groups, m365_licenses, software_logins, calendar_invitations, crm, training_portal, external_comms)
+- Created `lifecycle_checklist_templates` with `is_default` flag for selective step generation
+- Created `lifecycle_checklist_instances` for per-client/per-user execution tracking
+- RLS: Vivacity staff only (read + manage) on all tables; authenticated read on dd_ tables
+- Built admin template manager at `/admin/lifecycle-checklists` with tabbed UI, category grouping, CRUD
+- Added sidebar entry under SuperAdmin menu
+- All dd_ tables auto-appear in Code Tables Admin for self-service management
+
+### Phase 2: Pending
+- Step picker dialog for selective checklist generation
+- Checklist execution component (tick-off UI with progress bar)
+- Integration with Cancel Package flow (auto-generate client offboarding)
+- Integration with Manage Users (generate staff onboarding/offboarding)
+- Seed staff onboarding template steps from recruitment spreadsheet
