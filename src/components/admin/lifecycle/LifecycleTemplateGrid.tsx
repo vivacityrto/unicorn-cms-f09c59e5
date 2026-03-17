@@ -20,6 +20,7 @@ export function LifecycleTemplateGrid({
   categoryLabels,
   roleLabels,
   loading,
+  onView,
   onEdit,
   onDelete,
 }: Props) {
