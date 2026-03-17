@@ -103,7 +103,10 @@ export function LifecycleTemplateGrid({
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Button>
                     )}
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(step)}>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onView(step)} title="View instructions">
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(step)} title="Edit step">
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => onDelete(step)}>
