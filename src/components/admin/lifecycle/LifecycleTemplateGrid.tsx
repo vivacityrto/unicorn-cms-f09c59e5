@@ -2,7 +2,7 @@ import type { LifecycleTemplate } from "@/hooks/useLifecycleChecklists";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, ExternalLink, Star } from "lucide-react";
+import { Pencil, Trash2, ExternalLink, Star, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   categoryLabels: Record<string, string>;
   roleLabels: Record<string, string>;
   loading: boolean;
+  onView: (t: LifecycleTemplate) => void;
   onEdit: (t: LifecycleTemplate) => void;
   onDelete: (t: LifecycleTemplate) => void;
 }
@@ -19,6 +20,7 @@ export function LifecycleTemplateGrid({
   categoryLabels,
   roleLabels,
   loading,
+  onView,
   onEdit,
   onDelete,
 }: Props) {
@@ -101,7 +103,10 @@ export function LifecycleTemplateGrid({
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Button>
                     )}
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(step)}>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onView(step)} title="View instructions">
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(step)} title="Edit step">
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => onDelete(step)}>

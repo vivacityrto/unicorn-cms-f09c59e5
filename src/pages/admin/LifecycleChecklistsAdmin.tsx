@@ -7,6 +7,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus, ClipboardList } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/modals";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import type { LifecycleTemplate } from "@/hooks/useLifecycleChecklists";
 
 export default function LifecycleChecklistsAdmin() {
@@ -21,6 +23,7 @@ export default function LifecycleChecklistsAdmin() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<LifecycleTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LifecycleTemplate | null>(null);
+  const [viewingTemplate, setViewingTemplate] = useState<LifecycleTemplate | null>(null);
 
   // Group templates by category
   const groupedTemplates = useMemo(() => {
@@ -112,6 +115,7 @@ export default function LifecycleChecklistsAdmin() {
                 categoryLabels={categoryLabels}
                 roleLabels={roleLabels}
                 loading={loading || dropdownsLoading}
+                onView={setViewingTemplate}
                 onEdit={handleEdit}
                 onDelete={setDeleteTarget}
               />
@@ -139,6 +143,38 @@ export default function LifecycleChecklistsAdmin() {
           isLoading={deleteTemplate.isPending}
           onConfirm={handleDeleteConfirm}
         />
+
+        <Dialog open={!!viewingTemplate} onOpenChange={(v) => !v && setViewingTemplate(null)}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{viewingTemplate?.step_title}</DialogTitle>
+              <DialogDescription>Step instructions and details</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {viewingTemplate?.description ? (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Instructions</p>
+                  <p className="text-sm whitespace-pre-wrap">{viewingTemplate.description}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No instructions provided for this step.</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {viewingTemplate?.category && (
+                  <Badge variant="secondary">{categoryLabels[viewingTemplate.category] || viewingTemplate.category}</Badge>
+                )}
+                {viewingTemplate?.responsible_role && (
+                  <Badge variant="outline">{roleLabels[viewingTemplate.responsible_role] || viewingTemplate.responsible_role}</Badge>
+                )}
+                {viewingTemplate?.external_link && (
+                  <Button variant="link" size="sm" className="h-auto p-0" onClick={() => window.open(viewingTemplate.external_link!, "_blank")}>
+                    Open external link ↗
+                  </Button>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
