@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -48,7 +49,8 @@ import {
   Flag,
   Shield,
   RefreshCw,
-  MoreVertical
+  MoreVertical,
+  XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ClientPackage } from '@/hooks/useClientManagement';
@@ -82,7 +84,8 @@ const STATE_COLORS: Record<string, string> = {
   warning: 'bg-red-600/20 text-red-700 border-red-600 font-semibold',
   paused: 'bg-gray-500/10 text-gray-600 border-gray-500',
   exiting: 'bg-red-500/10 text-red-600 border-red-500',
-  complete: 'bg-muted text-muted-foreground border-border'
+  complete: 'bg-muted text-muted-foreground border-border',
+  cancelled: 'bg-red-500/10 text-red-600 border-red-500'
 };
 
 const STATE_ICONS: Record<string, React.ReactNode> = {
@@ -91,7 +94,8 @@ const STATE_ICONS: Record<string, React.ReactNode> = {
   warning: <AlertCircle className="h-3 w-3 animate-pulse" />,
   paused: <PauseCircle className="h-3 w-3" />,
   exiting: <AlertCircle className="h-3 w-3" />,
-  complete: <CheckCircle2 className="h-3 w-3" />
+  complete: <CheckCircle2 className="h-3 w-3" />,
+  cancelled: <XCircle className="h-3 w-3" />
 };
 
 export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, onRefresh, complyhubTier, autoExpandPackageInstanceId, autoExpandStageInstanceId }: ClientPackagesTabProps) {
@@ -110,6 +114,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const [renewPackage, setRenewPackage] = useState(false);
   const [renewalPackageId, setRenewalPackageId] = useState<string>('');
   const [availablePackages, setAvailablePackages] = useState<{ id: number; name: string }[]>([]);
+  const [cancelTarget, setCancelTarget] = useState<ClientPackage | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
 
   const activePackages = packages.filter(p => !p.is_complete);
   const historyPackages = packages.filter(p => p.is_complete);
@@ -197,6 +204,28 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
       toast.error(err.message || 'Failed to finalise package');
     } finally {
       setFinalising(false);
+    }
+  };
+
+  const handleCancelPackage = async () => {
+    if (!cancelTarget || !cancelReason.trim()) return;
+    setCancelling(true);
+    try {
+      const { error } = await supabase.rpc('transition_membership_state', {
+        p_instance_id: parseInt(cancelTarget.id, 10),
+        p_new_state: 'cancelled',
+        p_reason: cancelReason.trim(),
+      });
+      if (error) throw error;
+      toast.success(`${cancelTarget.package_name} has been cancelled`);
+      const title = `** PACKAGE STATUS "CANCELLED" — ${cancelTarget.package_name} — ALL ACTIVITY HALTED **`;
+      setCancelTarget(null);
+      setCancelReason('');
+      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cancel package');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -380,9 +409,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                         </div>
                       </div>
                       {pkg.is_complete ? (
-                        <Badge variant="outline" className={STATE_COLORS['complete']}>
-                          {STATE_ICONS['complete']}
-                          <span className="ml-1 capitalize">Complete</span>
+                        <Badge variant="outline" className={STATE_COLORS[pkg.membership_state === 'cancelled' ? 'cancelled' : 'complete']}>
+                          {pkg.membership_state === 'cancelled' ? STATE_ICONS['cancelled'] : STATE_ICONS['complete']}
+                          <span className="ml-1 capitalize">{pkg.membership_state === 'cancelled' ? 'Cancelled' : 'Complete'}</span>
                         </Badge>
                       ) : (
                         <DropdownMenu>
@@ -559,6 +588,16 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                               >
                                 <Flag className="h-4 w-4 mr-2" />
                                 Finalise
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCancelTarget(pkg);
+                                }}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancel Package
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -745,6 +784,40 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           }}
         />
       )}
+
+      {/* Cancel Package Dialog */}
+      <Dialog open={!!cancelTarget} onOpenChange={(open) => { if (!open) { setCancelTarget(null); setCancelReason(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Cancel Package</DialogTitle>
+            <DialogDescription>
+              Cancel <strong>{cancelTarget?.package_name}</strong>. This will mark the package as cancelled and halt all activity. A mandatory reason is required for the audit trail.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="cancel-reason">Reason for Cancellation *</Label>
+              <Textarea
+                id="cancel-reason"
+                placeholder="e.g., Client requested cancellation due to..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelTarget(null); setCancelReason(''); }} disabled={cancelling}>
+              Back
+            </Button>
+            <Button variant="destructive" onClick={handleCancelPackage} disabled={cancelling || !cancelReason.trim()}>
+              {cancelling ? 'Cancelling…' : 'Confirm Cancellation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
