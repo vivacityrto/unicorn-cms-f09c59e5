@@ -2,7 +2,7 @@ import type { LifecycleTemplate } from "@/hooks/useLifecycleChecklists";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, ExternalLink, Star } from "lucide-react";
+import { Pencil, Trash2, ExternalLink, Star, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Props {
