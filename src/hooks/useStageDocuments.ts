@@ -6,6 +6,7 @@ export interface StageDocument {
   document_id: number;
   title: string;
   description: string | null;
+  category: string | null;
   status: string;
   isgenerated: boolean;
   created_at: string;
