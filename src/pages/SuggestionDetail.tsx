@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, ArrowLeft, Upload, FileText, Image as ImageIcon } from 'lucide-react';
+import { Loader2, ArrowLeft, Upload, FileText, Image as ImageIcon, Wand2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
@@ -52,6 +52,7 @@ export default function SuggestionDetail() {
   const [sourceArea, setSourceArea] = useState('');
   const [sourceComponent, setSourceComponent] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Populate from loaded item
   useEffect(() => {
@@ -74,6 +75,122 @@ export default function SuggestionDetail() {
     setSourceComponent(item.source_component ?? '');
     setDirty(false);
   }, [item]);
+
+  // Helper to resolve dropdown ID to label
+  const resolveLabel = (list: { id: string; label: string }[], id: string) =>
+    list.find(x => x.id === id)?.label ?? '';
+
+  // Copy Lovable prompt to clipboard
+  const handleCopyPrompt = useCallback(() => {
+    if (!item) return;
+
+    const typeLabel = resolveLabel(dropdowns.itemTypes, typeId);
+    const priorityLabel = resolveLabel(dropdowns.priorities, priorityId);
+    const categoryLabel = resolveLabel(dropdowns.categories, categoryId);
+    const statusLabel = resolveLabel(dropdowns.statuses, statusId);
+    const impactLabel = resolveLabel(dropdowns.impactRatings, impactId);
+
+    const lines: string[] = [];
+    lines.push(`## Fix: ${title}`);
+    lines.push('');
+
+    const meta = [
+      typeLabel && `**Type:** ${typeLabel}`,
+      priorityLabel && `**Priority:** ${priorityLabel}`,
+      categoryLabel && `**Category:** ${categoryLabel}`,
+    ].filter(Boolean).join(' | ');
+    if (meta) lines.push(meta);
+
+    const meta2 = [
+      statusLabel && `**Status:** ${statusLabel}`,
+      impactLabel && `**Impact:** ${impactLabel}`,
+    ].filter(Boolean).join(' | ');
+    if (meta2) lines.push(meta2);
+
+    if (meta || meta2) lines.push('');
+
+    if (description) {
+      lines.push('### Description');
+      lines.push(description);
+      lines.push('');
+    }
+
+    const hasContext = sourcePageUrl || sourceArea || sourceComponent;
+    if (hasContext) {
+      lines.push('### Source Context');
+      if (sourcePageUrl) lines.push(`- Page: ${sourcePageUrl}${sourcePageLabel ? ` (${sourcePageLabel})` : ''}`);
+      if (sourceArea) lines.push(`- Area: ${sourceArea}`);
+      if (sourceComponent) lines.push(`- Component: ${sourceComponent}`);
+      lines.push('');
+    }
+
+    if (resolutionNotes) {
+      lines.push('### Resolution Notes');
+      lines.push(resolutionNotes);
+      lines.push('');
+    }
+
+    if (attachments && attachments.length > 0) {
+      lines.push('### Attachments');
+      attachments.forEach(a => lines.push(`- ${a.file_name}`));
+      lines.push('');
+    }
+
+    lines.push('Please fix this issue.');
+
+    navigator.clipboard.writeText(lines.join('\n')).then(() => {
+      toast({ title: 'Prompt copied to clipboard' });
+    });
+  }, [item, title, description, typeId, statusId, priorityId, impactId, categoryId, sourcePageUrl, sourcePageLabel, sourceArea, sourceComponent, resolutionNotes, attachments, dropdowns]);
+
+  // Paste screenshot handler
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    if (!id || !item || !user) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const clipItem of Array.from(items)) {
+      if (clipItem.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = clipItem.getAsFile();
+        if (!blob) continue;
+        const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
+        await uploadAttachment.mutateAsync({
+          file,
+          itemId: id,
+          tenantId: item.tenant_id,
+          userId: user.id,
+        });
+        toast({ title: 'Screenshot uploaded' });
+      }
+    }
+  }, [id, item, user, uploadAttachment]);
+
+  // Drag-and-drop handlers
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (!id || !item || !user) return;
+    const files = e.dataTransfer.files;
+    for (const file of Array.from(files)) {
+      await uploadAttachment.mutateAsync({
+        file,
+        itemId: id,
+        tenantId: item.tenant_id,
+        userId: user.id,
+      });
+    }
+  }, [id, item, user, uploadAttachment]);
 
   const handleSave = async () => {
     if (!id || !user) return;
@@ -152,12 +269,15 @@ export default function SuggestionDetail() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6" onPaste={handlePaste}>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate('/suggestions')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold text-foreground truncate">{item.title}</h1>
+          <h1 className="text-2xl font-bold text-foreground truncate flex-1">{item.title}</h1>
+          <Button variant="outline" size="icon" onClick={handleCopyPrompt} title="Copy Lovable prompt">
+            <Wand2 className="h-4 w-4" />
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -321,7 +441,12 @@ export default function SuggestionDetail() {
             </Card>
 
             {/* Attachments */}
-            <Card>
+            <Card
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={isDragging ? 'border-2 border-dashed border-primary' : ''}
+            >
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm">Attachments</CardTitle>
               </CardHeader>
@@ -343,7 +468,7 @@ export default function SuggestionDetail() {
                   </button>
                 ))}
                 {(attachments ?? []).length === 0 && !uploadAttachment.isPending && (
-                  <p className="text-xs text-muted-foreground">No attachments yet.</p>
+                  <p className="text-xs text-muted-foreground">Paste screenshot anywhere or drag files here.</p>
                 )}
               </CardContent>
             </Card>
