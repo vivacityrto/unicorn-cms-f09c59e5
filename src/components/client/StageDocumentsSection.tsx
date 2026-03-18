@@ -362,7 +362,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title })}
+                          onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title, category: doc.category })}
                         >
                           <RefreshCw className="h-3 w-3" />
                         </Button>
