@@ -105,6 +105,8 @@ export default function SuggestionDetail() {
     const actionWord = fixTypes.includes(typeCode.toLowerCase()) ? 'Fix' : 'Update';
 
     const lines: string[] = [];
+    lines.push('Item from Suggestions');
+    lines.push('');
     lines.push(`## ${title}`);
     lines.push('');
 
