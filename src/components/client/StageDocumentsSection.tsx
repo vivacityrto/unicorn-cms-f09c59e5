@@ -108,7 +108,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         body: {
           document_id: documentId,
           tenant_id: tenantId,
-          client_legacy_id: String(tenantId),
+          client_legacy_id: null,
           stage_id: stageInstanceId,
           package_id: packageId || 0,
         },
@@ -380,13 +380,17 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Badge
-                          variant={STATUS_BADGE[doc.status]?.variant || 'secondary'}
-                          className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                        <span
+                          className="inline-flex cursor-pointer"
                           onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title, category: doc.category })}
                         >
-                          {STATUS_BADGE[doc.status]?.label || doc.status}
-                        </Badge>
+                          <Badge
+                            variant={STATUS_BADGE[doc.status]?.variant || 'secondary'}
+                            className="text-xs hover:bg-primary hover:text-primary-foreground transition-colors"
+                          >
+                            {STATUS_BADGE[doc.status]?.label || doc.status}
+                          </Badge>
+                        </span>
                       </TooltipTrigger>
                       <TooltipContent><p className="text-xs">Click to generate this document</p></TooltipContent>
                     </Tooltip>

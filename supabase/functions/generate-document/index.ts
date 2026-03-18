@@ -118,20 +118,26 @@ Deno.serve(async (req: Request) => {
     const filePath = `generated/${tenant_id}/${package_id}/${stage_id}/${generatedFileName}`;
 
     // 6. Create the generated document record
+    const insertPayload: Record<string, unknown> = {
+      source_document_id: document_id,
+      tenant_id: tenant_id,
+      stage_id: stage_id,
+      package_id: package_id,
+      file_path: filePath,
+      file_name: generatedFileName,
+      generated_by: user.id,
+      status: 'generated',
+      merge_data: mergeData
+    };
+
+    // Only include client_legacy_id if it's a valid UUID
+    if (client_legacy_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(client_legacy_id)) {
+      insertPayload.client_legacy_id = client_legacy_id;
+    }
+
     const { data: generatedDoc, error: insertError } = await supabase
       .from('generated_documents')
-      .insert({
-        source_document_id: document_id,
-        tenant_id: tenant_id,
-        client_legacy_id: client_legacy_id,
-        stage_id: stage_id,
-        package_id: package_id,
-        file_path: filePath,
-        file_name: generatedFileName,
-        generated_by: user.id,
-        status: 'generated',
-        merge_data: mergeData
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
