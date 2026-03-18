@@ -71,7 +71,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const [tenantName, setTenantName] = useState<string | null>(null);
 
   // Fetch tenant name for the generation confirmation message
-  useMemo(() => {
+  useEffect(() => {
     supabase.from('tenants').select('name').eq('id', tenantId).single().then(({ data }) => {
       if (data?.name) setTenantName(data.name);
     });
