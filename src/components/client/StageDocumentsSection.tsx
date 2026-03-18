@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStageDocuments } from '@/hooks/useStageDocuments';
 import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { useBulkGeneration } from '@/hooks/useBulkGeneration';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -18,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { FileText, CheckCircle2, Clock, Sparkles, Loader2, AlertTriangle, ExternalLink, RefreshCw, UserCheck, XCircle } from 'lucide-react';
+import { FileText, CheckCircle2, Clock, Sparkles, Loader2, AlertTriangle, ExternalLink, RefreshCw, UserCheck, XCircle, Search } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface StageDocumentsSectionProps {
@@ -59,6 +61,21 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const { documents, loading, totalCount, refetch } = useStageDocuments({ stageInstanceId, tenantId, debug });
   const { bulkGenerate, generating, progress } = useBulkGeneration();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [nameFilter, setNameFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  const categories = useMemo(() => {
+    const cats = new Set(documents.map(d => d.category).filter(Boolean) as string[]);
+    return Array.from(cats).sort();
+  }, [documents]);
+
+  const filteredDocuments = useMemo(() => {
+    return documents.filter(doc => {
+      const matchesName = !nameFilter || doc.title.toLowerCase().includes(nameFilter.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || doc.category === categoryFilter;
+      return matchesName && matchesCategory;
+    });
+  }, [documents, nameFilter, categoryFilter]);
 
   const handleBulkGenerate = async () => {
     setConfirmOpen(false);
@@ -133,6 +150,37 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         </div>
       </div>
 
+      {/* Filters */}
+      {documents.length > 0 && (
+        <div className="px-4 py-2 border-b bg-muted/10 flex items-center gap-2">
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Filter by name..."
+              value={nameFilter}
+              onChange={(e) => setNameFilter(e.target.value)}
+              className="h-7 text-xs pl-7"
+            />
+          </div>
+          {categories.length > 1 && (
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="h-7 text-xs w-[160px]">
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {(nameFilter || categoryFilter !== 'all') && (
+            <span className="text-xs text-muted-foreground">{filteredDocuments.length} of {documents.length}</span>
+          )}
+        </div>
+      )}
+
       {generating && (
         <div className="px-4 py-2 border-b bg-primary/5">
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
@@ -152,7 +200,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
       )}
 
       <div className="divide-y">
-        {documents.map((doc) => {
+        {filteredDocuments.map((doc) => {
           const genConfig = GENERATION_STATUS_CONFIG[doc.generation_status || 'pending'] || GENERATION_STATUS_CONFIG.pending;
           const GenIcon = genConfig.icon;
           const errorInfo = doc.last_error ? categoriseError(doc.last_error) : null;
@@ -248,14 +296,12 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
             </div>
           );
         })}
+        {filteredDocuments.length === 0 && documents.length > 0 && (
+          <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+            No documents match your filters
+          </div>
+        )}
       </div>
-      {totalCount > 10 && (
-        <div className="px-4 py-2 border-t text-center">
-          <button className="text-xs text-primary hover:underline">
-            View all {totalCount} documents
-          </button>
-        </div>
-      )}
     </div>
   );
 }
