@@ -251,8 +251,12 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Generate Document</AlertDialogTitle>
-            <AlertDialogDescription>
-              Generate "{singleGenConfirm?.title}"? This will process the document template with the current client data.
+            <AlertDialogDescription className="space-y-2">
+              <span>Generate "{singleGenConfirm?.title}"? This will process the document template with the current client data.</span>
+              <span className="block text-xs text-muted-foreground mt-2">
+                The generated document will be placed in:<br />
+                <span className="font-medium text-foreground">Client Governance {'>'} Documents {'>'} Governance {'>'} {tenantName || 'Client'} {'>'} {singleGenConfirm?.category || 'Uncategorised'}</span>
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
