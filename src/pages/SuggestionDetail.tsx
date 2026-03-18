@@ -105,7 +105,7 @@ export default function SuggestionDetail() {
     const actionWord = fixTypes.includes(typeCode.toLowerCase()) ? 'Fix' : 'Update';
 
     const lines: string[] = [];
-    lines.push(`## ${actionWord}: ${title}`);
+    lines.push(`## ${title}`);
     lines.push('');
 
     const meta = [
@@ -116,7 +116,6 @@ export default function SuggestionDetail() {
     if (meta) lines.push(meta);
 
     const meta2 = [
-      statusLabel && `**Status:** ${statusLabel}`,
       impactLabel && `**Impact:** ${impactLabel}`,
     ].filter(Boolean).join(' | ');
     if (meta2) lines.push(meta2);
@@ -129,10 +128,12 @@ export default function SuggestionDetail() {
       lines.push('');
     }
 
-    const hasContext = sourcePageUrl || sourceArea || sourceComponent;
+    // Exclude /suggestions/new as a meaningful source page
+    const effectivePageUrl = sourcePageUrl && sourcePageUrl !== '/suggestions/new' ? sourcePageUrl : '';
+    const hasContext = effectivePageUrl || sourceArea || sourceComponent;
     if (hasContext) {
       lines.push('### Source Context');
-      if (sourcePageUrl) lines.push(`- Page: ${sourcePageUrl}${sourcePageLabel ? ` (${sourcePageLabel})` : ''}`);
+      if (effectivePageUrl) lines.push(`- Page: ${effectivePageUrl}${sourcePageLabel ? ` (${sourcePageLabel})` : ''}`);
       if (sourceArea) lines.push(`- Area: ${sourceArea}`);
       if (sourceComponent) lines.push(`- Component: ${sourceComponent}`);
       lines.push('');
