@@ -67,12 +67,15 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const [nameFilter, setNameFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [generatingSingleId, setGeneratingSingleId] = useState<number | null>(null);
-  const [singleGenConfirm, setSingleGenConfirm] = useState<{ id: number; documentId: number; title: string } | null>(null);
+  const [singleGenConfirm, setSingleGenConfirm] = useState<{ id: number; documentId: number; title: string; category: string | null } | null>(null);
+  const [tenantName, setTenantName] = useState<string | null>(null);
 
-  const categories = useMemo(() => {
-    const cats = new Set(documents.map(d => d.category).filter(Boolean) as string[]);
-    return Array.from(cats).sort();
-  }, [documents]);
+  // Fetch tenant name for the generation confirmation message
+  useMemo(() => {
+    supabase.from('tenants').select('name').eq('id', tenantId).single().then(({ data }) => {
+      if (data?.name) setTenantName(data.name);
+    });
+  }, [tenantId]);
 
   const filteredDocuments = useMemo(() => {
     return documents.filter(doc => {
