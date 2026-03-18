@@ -28,6 +28,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
+import { FloatingSuggestionsDialog } from "./FloatingSuggestionsDialog";
 import { FacilitatorModeToggle } from "@/components/eos/FacilitatorModeToggle";
 import { AskVivButton } from "@/components/ask-viv";
 import { useHelpCenter } from "@/components/help-center";
