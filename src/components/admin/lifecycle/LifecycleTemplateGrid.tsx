@@ -2,17 +2,20 @@ import type { LifecycleTemplate } from "@/hooks/useLifecycleChecklists";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, ExternalLink, Star, Eye } from "lucide-react";
+import { Pencil, Trash2, ExternalLink, Star, Eye, Copy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
   groupedTemplates: [string, LifecycleTemplate[]][];
   categoryLabels: Record<string, string>;
   roleLabels: Record<string, string>;
   loading: boolean;
+  counterpartLabel?: string;
   onView: (t: LifecycleTemplate) => void;
   onEdit: (t: LifecycleTemplate) => void;
   onDelete: (t: LifecycleTemplate) => void;
+  onCopyToCounterpart?: (t: LifecycleTemplate) => void;
 }
 
 export function LifecycleTemplateGrid({
