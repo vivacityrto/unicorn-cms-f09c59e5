@@ -15,6 +15,7 @@ export interface StageDocument {
   generationdate: string | null;
   last_error: string | null;
   is_manual_allocation: boolean;
+  has_sharepoint_link: boolean;
 }
 
 interface UseStageDocumentsOptions {
