@@ -383,7 +383,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                         <Badge
                           variant={STATUS_BADGE[doc.status]?.variant || 'secondary'}
                           className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                          onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title })}
+                          onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title, category: doc.category })}
                         >
                           {STATUS_BADGE[doc.status]?.label || doc.status}
                         </Badge>
