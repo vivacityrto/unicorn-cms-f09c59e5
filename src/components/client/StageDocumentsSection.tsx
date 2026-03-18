@@ -77,7 +77,11 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
     });
   }, [tenantId]);
 
-  const filteredDocuments = useMemo(() => {
+  const categories = useMemo(() => {
+    const cats = new Set(documents.map(d => d.category).filter(Boolean) as string[]);
+    return Array.from(cats).sort();
+  }, [documents]);
+
     return documents.filter(doc => {
       const matchesName = !nameFilter || doc.title.toLowerCase().includes(nameFilter.toLowerCase());
       const matchesCategory = categoryFilter === 'all' || doc.category === categoryFilter;
