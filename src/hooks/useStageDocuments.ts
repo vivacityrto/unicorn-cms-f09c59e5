@@ -65,18 +65,19 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
       const docIds = [...new Set(instances.map(i => i.document_id))];
       const { data: docs } = await supabase
         .from('documents')
-        .select('id, title, description')
+        .select('id, title, description, category')
         .in('id', docIds);
 
-      const docMap = new Map(docs?.map(d => [d.id, { title: d.title, description: d.description }]) || []);
+      const docMap = new Map(docs?.map(d => [d.id, { title: d.title, description: d.description, category: d.category }]) || []);
 
-      const result: StageDocument[] = instances.slice(0, 10).map(inst => {
+      const result: StageDocument[] = instances.map(inst => {
         const meta = docMap.get(inst.document_id);
         return {
           id: inst.id,
           document_id: inst.document_id,
           title: meta?.title || `Document #${inst.document_id}`,
           description: meta?.description || null,
+          category: meta?.category || null,
           status: inst.status || 'pending',
           isgenerated: inst.isgenerated ?? false,
           created_at: inst.created_at || '',
