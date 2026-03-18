@@ -61,6 +61,21 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const { documents, loading, totalCount, refetch } = useStageDocuments({ stageInstanceId, tenantId, debug });
   const { bulkGenerate, generating, progress } = useBulkGeneration();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [nameFilter, setNameFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  const categories = useMemo(() => {
+    const cats = new Set(documents.map(d => d.category).filter(Boolean) as string[]);
+    return Array.from(cats).sort();
+  }, [documents]);
+
+  const filteredDocuments = useMemo(() => {
+    return documents.filter(doc => {
+      const matchesName = !nameFilter || doc.title.toLowerCase().includes(nameFilter.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || doc.category === categoryFilter;
+      return matchesName && matchesCategory;
+    });
+  }, [documents, nameFilter, categoryFilter]);
 
   const handleBulkGenerate = async () => {
     setConfirmOpen(false);
