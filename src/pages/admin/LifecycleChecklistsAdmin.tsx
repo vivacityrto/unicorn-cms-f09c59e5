@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useLifecycleDropdowns, useLifecycleTemplates } from "@/hooks/useLifecycleChecklists";
 import { LifecycleTemplateDialog } from "@/components/admin/lifecycle/LifecycleTemplateDialog";
@@ -9,7 +9,15 @@ import { Plus, ClipboardList } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/modals";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
 import type { LifecycleTemplate } from "@/hooks/useLifecycleChecklists";
+
+const COUNTERPART_MAP: Record<string, string> = {
+  client_onboarding: "client_offboarding",
+  client_offboarding: "client_onboarding",
+  staff_onboarding: "staff_offboarding",
+  staff_offboarding: "staff_onboarding",
+};
 
 export default function LifecycleChecklistsAdmin() {
   const { lifecycleTypes, responsibleRoles, categories, isLoading: dropdownsLoading } = useLifecycleDropdowns();
@@ -50,6 +58,22 @@ export default function LifecycleChecklistsAdmin() {
     for (const r of responsibleRoles) map[r.code] = r.label;
     return map;
   }, [responsibleRoles]);
+
+  const counterpartCode = COUNTERPART_MAP[currentTab] ?? "";
+  const counterpartLabel = lifecycleTypes.find(lt => lt.code === counterpartCode)?.label ?? "";
+
+  const handleCopyToCounterpart = useCallback((step: LifecycleTemplate) => {
+    if (!counterpartCode) return;
+    const { id, lifecycle_type, created_at, updated_at, ...rest } = step;
+    createTemplate.mutate(
+      { ...rest, lifecycle_type: counterpartCode },
+      {
+        onSuccess: () => {
+          toast({ title: "Step copied", description: `Copied "${step.step_title}" to ${counterpartLabel}` });
+        },
+      }
+    );
+  }, [counterpartCode, counterpartLabel, createTemplate]);
 
   function handleAdd() {
     setEditingTemplate(null);
@@ -115,9 +139,11 @@ export default function LifecycleChecklistsAdmin() {
                 categoryLabels={categoryLabels}
                 roleLabels={roleLabels}
                 loading={loading || dropdownsLoading}
+                counterpartLabel={counterpartLabel}
                 onView={setViewingTemplate}
                 onEdit={handleEdit}
                 onDelete={setDeleteTarget}
+                onCopyToCounterpart={counterpartCode ? handleCopyToCounterpart : undefined}
               />
             </TabsContent>
           ))}

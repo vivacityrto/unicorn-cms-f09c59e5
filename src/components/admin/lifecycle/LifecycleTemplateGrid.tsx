@@ -2,17 +2,20 @@ import type { LifecycleTemplate } from "@/hooks/useLifecycleChecklists";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, ExternalLink, Star, Eye } from "lucide-react";
+import { Pencil, Trash2, ExternalLink, Star, Eye, Copy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
   groupedTemplates: [string, LifecycleTemplate[]][];
   categoryLabels: Record<string, string>;
   roleLabels: Record<string, string>;
   loading: boolean;
+  counterpartLabel?: string;
   onView: (t: LifecycleTemplate) => void;
   onEdit: (t: LifecycleTemplate) => void;
   onDelete: (t: LifecycleTemplate) => void;
+  onCopyToCounterpart?: (t: LifecycleTemplate) => void;
 }
 
 export function LifecycleTemplateGrid({
@@ -20,9 +23,11 @@ export function LifecycleTemplateGrid({
   categoryLabels,
   roleLabels,
   loading,
+  counterpartLabel,
   onView,
   onEdit,
   onDelete,
+  onCopyToCounterpart,
 }: Props) {
   if (loading) {
     return (
@@ -106,6 +111,16 @@ export function LifecycleTemplateGrid({
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onView(step)} title="View instructions">
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
+                    {onCopyToCounterpart && counterpartLabel && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onCopyToCounterpart(step)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copy to {counterpartLabel}</TooltipContent>
+                      </Tooltip>
+                    )}
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(step)} title="Edit step">
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
