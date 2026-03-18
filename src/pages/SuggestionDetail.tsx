@@ -294,7 +294,7 @@ export default function SuggestionDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold text-foreground truncate flex-1">{item.title}</h1>
-          <Button variant="outline" size="icon" onClick={handleCopyPrompt} title="Copy Lovable prompt">
+          <Button variant="outline" size="icon" onClick={handleShowPrompt} title="Generate Lovable prompt">
             <Wand2 className="h-4 w-4" />
           </Button>
         </div>
