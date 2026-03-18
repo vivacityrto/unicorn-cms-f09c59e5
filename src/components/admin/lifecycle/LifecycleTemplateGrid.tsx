@@ -111,6 +111,16 @@ export function LifecycleTemplateGrid({
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onView(step)} title="View instructions">
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
+                    {onCopyToCounterpart && counterpartLabel && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onCopyToCounterpart(step)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copy to {counterpartLabel}</TooltipContent>
+                      </Tooltip>
+                    )}
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(step)} title="Edit step">
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
