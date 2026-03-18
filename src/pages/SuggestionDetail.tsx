@@ -60,6 +60,8 @@ export default function SuggestionDetail() {
   const [sourceComponent, setSourceComponent] = useState('');
   const [dirty, setDirty] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [promptText, setPromptText] = useState('');
 
   // Populate from loaded item
   useEffect(() => {
