@@ -89,9 +89,9 @@ export default function SuggestionDetail() {
   const resolveLabel = (list: { id: string; label: string }[], id: string) =>
     list.find(x => x.id === id)?.label ?? '';
 
-  // Copy Lovable prompt to clipboard
-  const handleCopyPrompt = useCallback(() => {
-    if (!item) return;
+  // Build and show Lovable prompt in dialog
+  const buildPrompt = useCallback(() => {
+    if (!item) return '';
 
     const typeLabel = resolveLabel(dropdowns.itemTypes, typeId);
     const priorityLabel = resolveLabel(dropdowns.priorities, priorityId);
@@ -146,11 +146,21 @@ export default function SuggestionDetail() {
     }
 
     lines.push('Please fix this issue.');
+    return lines.join('\n');
+  }, [item, title, description, typeId, statusId, priorityId, impactId, categoryId, sourcePageUrl, sourcePageLabel, sourceArea, sourceComponent, resolutionNotes, attachments, dropdowns]);
 
-    navigator.clipboard.writeText(lines.join('\n')).then(() => {
+  const handleShowPrompt = useCallback(() => {
+    const text = buildPrompt();
+    if (!text) return;
+    setPromptText(text);
+    setPromptDialogOpen(true);
+  }, [buildPrompt]);
+
+  const handleCopyPromptToClipboard = useCallback(() => {
+    navigator.clipboard.writeText(promptText).then(() => {
       toast({ title: 'Prompt copied to clipboard' });
     });
-  }, [item, title, description, typeId, statusId, priorityId, impactId, categoryId, sourcePageUrl, sourcePageLabel, sourceArea, sourceComponent, resolutionNotes, attachments, dropdowns]);
+  }, [promptText]);
 
   // Paste screenshot handler
   const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
