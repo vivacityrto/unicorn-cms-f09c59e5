@@ -14,7 +14,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, ArrowLeft, Upload, FileText, Image as ImageIcon, Wand2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Upload, FileText, Image as ImageIcon, Wand2, Copy, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
