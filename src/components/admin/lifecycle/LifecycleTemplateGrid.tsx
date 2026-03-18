@@ -23,9 +23,11 @@ export function LifecycleTemplateGrid({
   categoryLabels,
   roleLabels,
   loading,
+  counterpartLabel,
   onView,
   onEdit,
   onDelete,
+  onCopyToCounterpart,
 }: Props) {
   if (loading) {
     return (
