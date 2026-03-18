@@ -92,6 +92,7 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
           generationdate: (inst as any).generationdate || null,
           last_error: (inst as any).last_error || null,
           is_manual_allocation: (inst as any).is_manual_allocation ?? false,
+          has_sharepoint_link: meta?.has_sharepoint_link ?? false,
         };
       });
 

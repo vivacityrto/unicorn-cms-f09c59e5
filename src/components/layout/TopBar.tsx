@@ -124,17 +124,20 @@ const getBreadcrumbs = (pathname: string) => {
 };
 
 function SuggestionsButton() {
-  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   return (
-    <Button
-      size="sm"
-      className="gap-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
-      onClick={() => navigate('/suggestions')}
-      title="Suggestion & Issue Register"
-    >
-      <Lightbulb className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">Suggestions</span>
-    </Button>
+    <>
+      <Button
+        size="sm"
+        className="gap-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        onClick={() => setOpen(prev => !prev)}
+        title="Suggestion & Issue Register"
+      >
+        <Lightbulb className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Suggestions</span>
+      </Button>
+      <FloatingSuggestionsDialog open={open} onClose={() => setOpen(false)} />
+    </>
   );
 }
 
