@@ -108,7 +108,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         body: {
           document_id: documentId,
           tenant_id: tenantId,
-          client_legacy_id: String(tenantId),
+          client_legacy_id: null,
           stage_id: stageInstanceId,
           package_id: packageId || 0,
         },
