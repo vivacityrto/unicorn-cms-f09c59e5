@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useStageDocuments } from '@/hooks/useStageDocuments';
 import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { useBulkGeneration } from '@/hooks/useBulkGeneration';
@@ -67,7 +67,15 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const [nameFilter, setNameFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [generatingSingleId, setGeneratingSingleId] = useState<number | null>(null);
-  const [singleGenConfirm, setSingleGenConfirm] = useState<{ id: number; documentId: number; title: string } | null>(null);
+  const [singleGenConfirm, setSingleGenConfirm] = useState<{ id: number; documentId: number; title: string; category: string | null } | null>(null);
+  const [tenantName, setTenantName] = useState<string | null>(null);
+
+  // Fetch tenant name for the generation confirmation message
+  useEffect(() => {
+    supabase.from('tenants').select('name').eq('id', tenantId).single().then(({ data }) => {
+      if (data?.name) setTenantName(data.name);
+    });
+  }, [tenantId]);
 
   const categories = useMemo(() => {
     const cats = new Set(documents.map(d => d.category).filter(Boolean) as string[]);
@@ -243,8 +251,12 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Generate Document</AlertDialogTitle>
-            <AlertDialogDescription>
-              Generate "{singleGenConfirm?.title}"? This will process the document template with the current client data.
+            <AlertDialogDescription className="space-y-2">
+              <span>Generate "{singleGenConfirm?.title}"? This will process the document template with the current client data.</span>
+              <span className="block text-xs text-muted-foreground mt-2">
+                The generated document will be placed in:<br />
+                <span className="font-medium text-foreground">Client Governance {'>'} Documents {'>'} Governance {'>'} {tenantName || 'Client'} {'>'} {singleGenConfirm?.category || 'Uncategorised'}</span>
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -350,7 +362,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title })}
+                          onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title, category: doc.category })}
                         >
                           <RefreshCw className="h-3 w-3" />
                         </Button>
@@ -371,7 +383,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                         <Badge
                           variant={STATUS_BADGE[doc.status]?.variant || 'secondary'}
                           className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                          onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title })}
+                          onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title, category: doc.category })}
                         >
                           {STATUS_BADGE[doc.status]?.label || doc.status}
                         </Badge>
