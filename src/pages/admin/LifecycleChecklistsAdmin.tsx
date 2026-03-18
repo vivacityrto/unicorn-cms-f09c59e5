@@ -59,6 +59,22 @@ export default function LifecycleChecklistsAdmin() {
     return map;
   }, [responsibleRoles]);
 
+  const counterpartCode = COUNTERPART_MAP[currentTab] ?? "";
+  const counterpartLabel = lifecycleTypes.find(lt => lt.code === counterpartCode)?.label ?? "";
+
+  const handleCopyToCounterpart = useCallback((step: LifecycleTemplate) => {
+    if (!counterpartCode) return;
+    const { id, lifecycle_type, created_at, updated_at, ...rest } = step;
+    createTemplate.mutate(
+      { ...rest, lifecycle_type: counterpartCode },
+      {
+        onSuccess: () => {
+          toast({ title: "Step copied", description: `Copied "${step.step_title}" to ${counterpartLabel}` });
+        },
+      }
+    );
+  }, [counterpartCode, counterpartLabel, createTemplate]);
+
   function handleAdd() {
     setEditingTemplate(null);
     setDialogOpen(true);
