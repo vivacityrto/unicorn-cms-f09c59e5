@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,7 +14,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, ArrowLeft, Upload, FileText, Image as ImageIcon, Wand2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Upload, FileText, Image as ImageIcon, Wand2, Copy, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
@@ -53,6 +60,8 @@ export default function SuggestionDetail() {
   const [sourceComponent, setSourceComponent] = useState('');
   const [dirty, setDirty] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [promptDialogOpen, setPromptDialogOpen] = useState(false);
+  const [promptText, setPromptText] = useState('');
 
   // Populate from loaded item
   useEffect(() => {
@@ -80,9 +89,9 @@ export default function SuggestionDetail() {
   const resolveLabel = (list: { id: string; label: string }[], id: string) =>
     list.find(x => x.id === id)?.label ?? '';
 
-  // Copy Lovable prompt to clipboard
-  const handleCopyPrompt = useCallback(() => {
-    if (!item) return;
+  // Build and show Lovable prompt in dialog
+  const buildPrompt = useCallback(() => {
+    if (!item) return '';
 
     const typeLabel = resolveLabel(dropdowns.itemTypes, typeId);
     const priorityLabel = resolveLabel(dropdowns.priorities, priorityId);
@@ -137,11 +146,21 @@ export default function SuggestionDetail() {
     }
 
     lines.push('Please fix this issue.');
+    return lines.join('\n');
+  }, [item, title, description, typeId, statusId, priorityId, impactId, categoryId, sourcePageUrl, sourcePageLabel, sourceArea, sourceComponent, resolutionNotes, attachments, dropdowns]);
 
-    navigator.clipboard.writeText(lines.join('\n')).then(() => {
+  const handleShowPrompt = useCallback(() => {
+    const text = buildPrompt();
+    if (!text) return;
+    setPromptText(text);
+    setPromptDialogOpen(true);
+  }, [buildPrompt]);
+
+  const handleCopyPromptToClipboard = useCallback(() => {
+    navigator.clipboard.writeText(promptText).then(() => {
       toast({ title: 'Prompt copied to clipboard' });
     });
-  }, [item, title, description, typeId, statusId, priorityId, impactId, categoryId, sourcePageUrl, sourcePageLabel, sourceArea, sourceComponent, resolutionNotes, attachments, dropdowns]);
+  }, [promptText]);
 
   // Paste screenshot handler
   const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
@@ -275,7 +294,7 @@ export default function SuggestionDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold text-foreground truncate flex-1">{item.title}</h1>
-          <Button variant="outline" size="icon" onClick={handleCopyPrompt} title="Copy Lovable prompt">
+          <Button variant="outline" size="icon" onClick={handleShowPrompt} title="Generate Lovable prompt">
             <Wand2 className="h-4 w-4" />
           </Button>
         </div>
@@ -475,6 +494,27 @@ export default function SuggestionDetail() {
           </div>
         </div>
       </div>
+
+      {/* Prompt Preview Dialog */}
+      <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>
+        <DialogContent size="lg" className="max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Lovable Prompt</DialogTitle>
+          </DialogHeader>
+          <pre className="flex-1 overflow-y-auto whitespace-pre-wrap text-sm font-mono bg-muted p-4 rounded-lg border text-foreground">
+            {promptText}
+          </pre>
+          <DialogFooter className="gap-2">
+            <Button variant="secondary" onClick={() => setPromptDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={handleCopyPromptToClipboard}>
+              <Copy className="h-4 w-4 mr-2" />
+              Copy to Clipboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
