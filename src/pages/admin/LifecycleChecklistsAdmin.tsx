@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useLifecycleDropdowns, useLifecycleTemplates } from "@/hooks/useLifecycleChecklists";
 import { LifecycleTemplateDialog } from "@/components/admin/lifecycle/LifecycleTemplateDialog";
@@ -9,7 +9,15 @@ import { Plus, ClipboardList } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/modals";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/hooks/use-toast";
 import type { LifecycleTemplate } from "@/hooks/useLifecycleChecklists";
+
+const COUNTERPART_MAP: Record<string, string> = {
+  client_onboarding: "client_offboarding",
+  client_offboarding: "client_onboarding",
+  staff_onboarding: "staff_offboarding",
+  staff_offboarding: "staff_onboarding",
+};
 
 export default function LifecycleChecklistsAdmin() {
   const { lifecycleTypes, responsibleRoles, categories, isLoading: dropdownsLoading } = useLifecycleDropdowns();
