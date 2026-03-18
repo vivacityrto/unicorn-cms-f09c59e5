@@ -94,13 +94,18 @@ export default function SuggestionDetail() {
     if (!item) return '';
 
     const typeLabel = resolveLabel(dropdowns.itemTypes, typeId);
+    const typeCode = dropdowns.itemTypes.find(x => x.id === typeId)?.code ?? '';
     const priorityLabel = resolveLabel(dropdowns.priorities, priorityId);
     const categoryLabel = resolveLabel(dropdowns.categories, categoryId);
     const statusLabel = resolveLabel(dropdowns.statuses, statusId);
     const impactLabel = resolveLabel(dropdowns.impactRatings, impactId);
 
+    // Use "Update" for non-bug types, "Fix" for bugs
+    const fixTypes = ['bug', 'defect', 'error'];
+    const actionWord = fixTypes.includes(typeCode.toLowerCase()) ? 'Fix' : 'Update';
+
     const lines: string[] = [];
-    lines.push(`## Fix: ${title}`);
+    lines.push(`## ${actionWord}: ${title}`);
     lines.push('');
 
     const meta = [
@@ -145,7 +150,7 @@ export default function SuggestionDetail() {
       lines.push('');
     }
 
-    lines.push('Please fix this issue.');
+    lines.push(fixTypes.includes(typeCode.toLowerCase()) ? 'Please fix this issue.' : 'Please implement this update.');
     return lines.join('\n');
   }, [item, title, description, typeId, statusId, priorityId, impactId, categoryId, sourcePageUrl, sourcePageLabel, sourceArea, sourceComponent, resolutionNotes, attachments, dropdowns]);
 
