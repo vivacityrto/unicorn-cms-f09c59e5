@@ -82,6 +82,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
     return Array.from(cats).sort();
   }, [documents]);
 
+  const filteredDocuments = useMemo(() => {
     return documents.filter(doc => {
       const matchesName = !nameFilter || doc.title.toLowerCase().includes(nameFilter.toLowerCase());
       const matchesCategory = categoryFilter === 'all' || doc.category === categoryFilter;
