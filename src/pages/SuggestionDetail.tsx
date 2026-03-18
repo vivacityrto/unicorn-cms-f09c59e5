@@ -494,6 +494,27 @@ export default function SuggestionDetail() {
           </div>
         </div>
       </div>
+
+      {/* Prompt Preview Dialog */}
+      <Dialog open={promptDialogOpen} onOpenChange={setPromptDialogOpen}>
+        <DialogContent size="lg" className="max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Lovable Prompt</DialogTitle>
+          </DialogHeader>
+          <pre className="flex-1 overflow-y-auto whitespace-pre-wrap text-sm font-mono bg-muted p-4 rounded-lg border text-foreground">
+            {promptText}
+          </pre>
+          <DialogFooter className="gap-2">
+            <Button variant="secondary" onClick={() => setPromptDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={handleCopyPromptToClipboard}>
+              <Copy className="h-4 w-4 mr-2" />
+              Copy to Clipboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
