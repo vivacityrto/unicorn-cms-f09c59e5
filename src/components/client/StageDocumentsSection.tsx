@@ -20,8 +20,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { FileText, CheckCircle2, Clock, Sparkles, Loader2, AlertTriangle, ExternalLink, RefreshCw, UserCheck, XCircle, Search } from 'lucide-react';
+import { FileText, CheckCircle2, Clock, Sparkles, Loader2, AlertTriangle, ExternalLink, RefreshCw, UserCheck, XCircle, Search, Link2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface StageDocumentsSectionProps {
   stageInstanceId: number;
@@ -60,9 +62,12 @@ function categoriseError(error: string | null): { label: string; description: st
 export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, debug, isVivacityStaff }: StageDocumentsSectionProps) {
   const { documents, loading, totalCount, refetch } = useStageDocuments({ stageInstanceId, tenantId, debug });
   const { bulkGenerate, generating, progress } = useBulkGeneration();
+  const { toast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [nameFilter, setNameFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [generatingSingleId, setGeneratingSingleId] = useState<number | null>(null);
+  const [singleGenConfirm, setSingleGenConfirm] = useState<{ id: number; documentId: number; title: string } | null>(null);
 
   const categories = useMemo(() => {
     const cats = new Set(documents.map(d => d.category).filter(Boolean) as string[]);
@@ -84,6 +89,40 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
       refetch();
     } catch {
       // Error handled by hook toast
+    }
+  };
+
+  const handleSingleGenerate = async (docInstanceId: number, documentId: number, title: string) => {
+    setSingleGenConfirm(null);
+    setGeneratingSingleId(docInstanceId);
+    try {
+      const response = await supabase.functions.invoke('generate-document', {
+        body: {
+          document_id: documentId,
+          tenant_id: tenantId,
+          client_legacy_id: String(tenantId),
+          stage_id: stageInstanceId,
+          package_id: packageId || 0,
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (!response.data?.success) throw new Error(response.data?.error || 'Generation failed');
+
+      toast({
+        title: 'Document Generated',
+        description: `"${title}" has been generated successfully.`,
+      });
+      refetch();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast({
+        title: 'Generation Failed',
+        description: msg,
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingSingleId(null);
     }
   };
 
@@ -199,11 +238,35 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         </div>
       )}
 
+      {/* Single generate confirmation */}
+      <AlertDialog open={!!singleGenConfirm} onOpenChange={(open) => { if (!open) setSingleGenConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generate Document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Generate "{singleGenConfirm?.title}"? This will process the document template with the current client data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (singleGenConfirm) {
+                handleSingleGenerate(singleGenConfirm.id, singleGenConfirm.documentId, singleGenConfirm.title);
+              }
+            }}>
+              Generate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="divide-y">
         {filteredDocuments.map((doc) => {
           const genConfig = GENERATION_STATUS_CONFIG[doc.generation_status || 'pending'] || GENERATION_STATUS_CONFIG.pending;
           const GenIcon = genConfig.icon;
           const errorInfo = doc.last_error ? categoriseError(doc.last_error) : null;
+          const isGeneratingSingle = generatingSingleId === doc.id;
+          const canGenerate = isVivacityStaff && (doc.status === 'pending' || doc.generation_status === 'pending' || doc.generation_status === 'failed');
 
           return (
             <div key={doc.id} className="flex items-center gap-3 px-4 py-2">
@@ -227,6 +290,16 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                 <div className="flex items-center gap-1">
                   <p className="text-sm truncate">{doc.title}</p>
                   <TaskDescriptionButton taskName={doc.title} description={doc.description} />
+                  {doc.has_sharepoint_link && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">Linked to SharePoint template</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                   {doc.is_manual_allocation && (
                     <TooltipProvider>
                       <Tooltip>
@@ -277,10 +350,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => {
-                            // Retry will be handled by bulk generation for now
-                            handleBulkGenerate();
-                          }}
+                          onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title })}
                         >
                           <RefreshCw className="h-3 w-3" />
                         </Button>
@@ -289,9 +359,31 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                <Badge variant={STATUS_BADGE[doc.status]?.variant || 'secondary'} className="text-xs">
-                  {STATUS_BADGE[doc.status]?.label || doc.status}
-                </Badge>
+                {isGeneratingSingle ? (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Generating…
+                  </Badge>
+                ) : canGenerate ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant={STATUS_BADGE[doc.status]?.variant || 'secondary'}
+                          className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                          onClick={() => setSingleGenConfirm({ id: doc.id, documentId: doc.document_id, title: doc.title })}
+                        >
+                          {STATUS_BADGE[doc.status]?.label || doc.status}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent><p className="text-xs">Click to generate this document</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <Badge variant={STATUS_BADGE[doc.status]?.variant || 'secondary'} className="text-xs">
+                    {STATUS_BADGE[doc.status]?.label || doc.status}
+                  </Badge>
+                )}
               </div>
             </div>
           );
