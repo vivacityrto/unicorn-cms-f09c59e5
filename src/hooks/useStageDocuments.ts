@@ -66,10 +66,15 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
       const docIds = [...new Set(instances.map(i => i.document_id))];
       const { data: docs } = await supabase
         .from('documents')
-        .select('id, title, description, category')
+        .select('id, title, description, category, source_template_url, uploaded_files')
         .in('id', docIds);
 
-      const docMap = new Map(docs?.map(d => [d.id, { title: d.title, description: d.description, category: d.category }]) || []);
+      const docMap = new Map(docs?.map(d => [d.id, {
+        title: d.title,
+        description: d.description,
+        category: d.category,
+        has_sharepoint_link: !!(d.source_template_url || (d.uploaded_files && d.uploaded_files.length > 0)),
+      }]) || []);
 
       const result: StageDocument[] = instances.map(inst => {
         const meta = docMap.get(inst.document_id);
