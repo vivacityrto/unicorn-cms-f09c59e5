@@ -150,7 +150,7 @@ export default function SuggestionDetail() {
       lines.push('');
     }
 
-    lines.push('Please fix this issue.');
+    lines.push(fixTypes.includes(typeCode.toLowerCase()) ? 'Please fix this issue.' : 'Please implement this update.');
     return lines.join('\n');
   }, [item, title, description, typeId, statusId, priorityId, impactId, categoryId, sourcePageUrl, sourcePageLabel, sourceArea, sourceComponent, resolutionNotes, attachments, dropdowns]);
 
