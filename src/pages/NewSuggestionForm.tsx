@@ -247,7 +247,7 @@ export default function NewSuggestionForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Page URL</Label>
-                  <Input value={sourcePageUrl} readOnly className="text-xs bg-muted" />
+                  <Input value={sourcePageUrl} onChange={e => setSourcePageUrl(e.target.value)} className="text-xs" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Page Label</Label>
