@@ -94,13 +94,18 @@ export default function SuggestionDetail() {
     if (!item) return '';
 
     const typeLabel = resolveLabel(dropdowns.itemTypes, typeId);
+    const typeCode = dropdowns.itemTypes.find(x => x.id === typeId)?.code ?? '';
     const priorityLabel = resolveLabel(dropdowns.priorities, priorityId);
     const categoryLabel = resolveLabel(dropdowns.categories, categoryId);
     const statusLabel = resolveLabel(dropdowns.statuses, statusId);
     const impactLabel = resolveLabel(dropdowns.impactRatings, impactId);
 
+    // Use "Update" for non-bug types, "Fix" for bugs
+    const fixTypes = ['bug', 'defect', 'error'];
+    const actionWord = fixTypes.includes(typeCode.toLowerCase()) ? 'Fix' : 'Update';
+
     const lines: string[] = [];
-    lines.push(`## Fix: ${title}`);
+    lines.push(`## ${actionWord}: ${title}`);
     lines.push('');
 
     const meta = [
