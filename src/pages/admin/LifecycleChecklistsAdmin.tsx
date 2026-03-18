@@ -139,9 +139,11 @@ export default function LifecycleChecklistsAdmin() {
                 categoryLabels={categoryLabels}
                 roleLabels={roleLabels}
                 loading={loading || dropdownsLoading}
+                counterpartLabel={counterpartLabel}
                 onView={setViewingTemplate}
                 onEdit={handleEdit}
                 onDelete={setDeleteTarget}
+                onCopyToCounterpart={counterpartCode ? handleCopyToCounterpart : undefined}
               />
             </TabsContent>
           ))}
