@@ -754,7 +754,7 @@ serve(async (req) => {
         sharepoint_web_url: driveItem.webUrl,
         delivered_file_name: deliveredFileName,
         category_subfolder: categorySubfolder,
-        delivered_by: user.id,
+        delivered_by: userId,
         tailoring_completeness_pct: completeness,
         missing_merge_fields: missingTags,
         invalid_merge_fields: invalidTags,
