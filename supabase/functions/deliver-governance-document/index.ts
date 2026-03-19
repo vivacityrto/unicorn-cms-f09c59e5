@@ -726,7 +726,7 @@ serve(async (req) => {
           isgenerated: true,
           generationdate: new Date().toISOString(),
           last_error: null,
-          updated_by: user.id,
+          updated_by: userId,
         })
         .eq("document_id", doc.id)
         .eq("tenant_id", tenant_id);
