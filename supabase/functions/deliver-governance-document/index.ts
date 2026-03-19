@@ -806,7 +806,7 @@ serve(async (req) => {
         if (failedInstances && failedInstances.length > 0) {
           await supabase
             .from("document_instances")
-            .update({ generation_status: "failed", last_error: msg, updated_by: user?.id || null })
+            .update({ generation_status: "failed", last_error: msg, updated_by: userId || null })
             .eq("document_id", doc.id)
             .eq("tenant_id", tenant_id);
 
