@@ -430,86 +430,237 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
           />
         )}
 
-        {/* Governance Folder Status — independent of client root folder */}
-        {settings && (
-          <div className="rounded-lg border p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Governance Document Folder</p>
-                <p className="text-xs text-muted-foreground">
-                  Destination folder for generated governance documents. Created automatically on the Governance SharePoint site.
-                </p>
-              </div>
-            </div>
-
-            {settings.governance_folder_item_id ? (
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                <span className="text-sm">
-                  {settings.governance_folder_name ? (
-                    <strong>{settings.governance_folder_name}</strong>
-                  ) : (
-                    'Configured'
-                  )}
-                </span>
-                {settings.governance_folder_url && (
-                  <a
-                    href={settings.governance_folder_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary hover:underline flex items-center gap-1 ml-auto"
-                  >
-                    Open in SharePoint
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-4 w-4 text-destructive" />
-                <span className="text-sm text-muted-foreground">Not configured — required for document generation</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="ml-auto"
-                  onClick={async () => {
-                    setVerifyingGovernance(true);
-                    try {
-                      const { data, error } = await supabase.functions.invoke('verify-compliance-folder', {
-                        body: { tenant_id: tenantId, create_category_subfolders: true },
-                      });
-                      if (error || !data?.success) {
-                        toast({ title: 'Verification failed', description: data?.error || 'Could not verify governance folder.', variant: 'destructive' });
-                      } else {
-                        const msg = data.already_exists ? 'Governance folder verified' : 'Governance folder created';
-                        const subs = data.category_subfolders;
-                        toast({
-                          title: msg,
-                          description: subs?.created?.length ? `Created ${subs.created.length} category subfolders.` : undefined,
-                        });
-                        await fetchSettings();
-                      }
-                    } catch (err) {
-                      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to verify governance folder', variant: 'destructive' });
-                    } finally {
-                      setVerifyingGovernance(false);
-                    }
-                  }}
-                  disabled={verifyingGovernance}
-                >
-                  {verifyingGovernance ? (
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                  ) : (
-                    <FolderPlus className="h-3 w-3 mr-1" />
-                  )}
-                  Verify & Create
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+        <GovernanceFolderSection
+          settings={settings}
+          tenantId={tenantId}
+          onSaved={fetchSettings}
+          toast={toast}
+        />
       </CardContent>
     </Card>
+  );
+}
+
+/* ─── Governance Folder Picker Section ─── */
+
+function GovernanceFolderSection({
+  settings,
+  tenantId,
+  onSaved,
+  toast,
+}: {
+  settings: SharePointSettings | null;
+  tenantId: number;
+  onSaved: () => Promise<void>;
+  toast: ReturnType<typeof useToast>['toast'];
+}) {
+  const [browsingGovernanceFolder, setBrowsingGovernanceFolder] = useState(false);
+  const [governanceBrowseItems, setGovernanceBrowseItems] = useState<Array<{ id: string; name: string; is_folder: boolean }>>([]);
+  const [governanceBrowseStack, setGovernanceBrowseStack] = useState<Array<{ id: string; name: string }>>([]);
+  const [governanceBrowseLoading, setGovernanceBrowseLoading] = useState(false);
+  const [savingGovernanceFolder, setSavingGovernanceFolder] = useState(false);
+  const [verifyingGovernance, setVerifyingGovernance] = useState(false);
+
+  const loadFolder = async (folderId?: string) => {
+    setGovernanceBrowseLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('browse-sharepoint-folder', {
+        body: {
+          action: 'list',
+          tenant_id: tenantId,
+          site_purpose: 'governance_client_files',
+          folder_id: folderId || undefined,
+        },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message);
+      const folders = (data.items || []).filter((i: any) => i.is_folder);
+      setGovernanceBrowseItems(folders);
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to load folders', variant: 'destructive' });
+    } finally {
+      setGovernanceBrowseLoading(false);
+    }
+  };
+
+  const startBrowsing = () => {
+    setBrowsingGovernanceFolder(true);
+    setGovernanceBrowseStack([]);
+    loadFolder();
+  };
+
+  const navigateInto = (folderId: string, folderName: string) => {
+    setGovernanceBrowseStack([...governanceBrowseStack, { id: folderId, name: folderName }]);
+    loadFolder(folderId);
+  };
+
+  const navigateBack = () => {
+    const newStack = [...governanceBrowseStack];
+    newStack.pop();
+    setGovernanceBrowseStack(newStack);
+    const parentId = newStack.length > 0 ? newStack[newStack.length - 1].id : undefined;
+    loadFolder(parentId);
+  };
+
+  const selectGovernanceFolder = async (folderId: string, folderName: string) => {
+    setSavingGovernanceFolder(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resolve-tenant-folder', {
+        body: {
+          tenant_id: tenantId,
+          action: 'confirm',
+          folder_item_id: folderId,
+          site_purpose: 'governance_client_files',
+        },
+      });
+      if (error || data?.error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Failed to save governance folder');
+      }
+      toast({ title: 'Governance folder set', description: `"${folderName}" is now the governance document folder.` });
+      setBrowsingGovernanceFolder(false);
+      await onSaved();
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to save governance folder', variant: 'destructive' });
+    } finally {
+      setSavingGovernanceFolder(false);
+    }
+  };
+
+  const verifyAndCreateDefault = async () => {
+    setVerifyingGovernance(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-compliance-folder', {
+        body: { tenant_id: tenantId, create_category_subfolders: true },
+      });
+      if (error || !data?.success) {
+        toast({ title: 'Verification failed', description: data?.error || 'Could not verify governance folder.', variant: 'destructive' });
+      } else {
+        const msg = data.already_exists ? 'Governance folder verified' : 'Governance folder created';
+        const subs = data.category_subfolders;
+        toast({
+          title: msg,
+          description: subs?.created?.length ? `Created ${subs.created.length} category subfolders.` : undefined,
+        });
+        await onSaved();
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to verify governance folder', variant: 'destructive' });
+    } finally {
+      setVerifyingGovernance(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border p-4 space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium">Governance Document Folder</p>
+          <p className="text-xs text-muted-foreground">
+            Select an existing governance folder or create the default folder for generated governance documents.
+          </p>
+        </div>
+      </div>
+
+      {settings?.governance_folder_item_id && !browsingGovernanceFolder && (
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">{settings.governance_folder_name || 'Configured'}</span>
+          {settings.governance_folder_url && (
+            <a
+              href={settings.governance_folder_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline flex items-center gap-1"
+            >
+              Open in SharePoint
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+          <Button variant="outline" size="sm" onClick={startBrowsing} className="ml-auto">
+            Change
+          </Button>
+        </div>
+      )}
+
+      {!settings?.governance_folder_item_id && !browsingGovernanceFolder && (
+        <div className="flex flex-wrap items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-destructive" />
+          <span className="text-sm text-muted-foreground mr-auto">Not configured — required for document generation</span>
+          <Button variant="outline" size="sm" onClick={startBrowsing}>
+            <FolderOpen className="h-4 w-4 mr-2" />
+            Select Folder
+          </Button>
+          <Button variant="outline" size="sm" onClick={verifyAndCreateDefault} disabled={verifyingGovernance}>
+            {verifyingGovernance ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <FolderPlus className="h-4 w-4 mr-2" />
+            )}
+            Verify & Create Default
+          </Button>
+        </div>
+      )}
+
+      {browsingGovernanceFolder && (
+        <div className="space-y-2 border rounded-md p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-medium">Governance Site</span>
+            {governanceBrowseStack.map((item, idx) => (
+              <span key={idx} className="flex items-center gap-1">
+                <ChevronRight className="h-3 w-3" />
+                <span>{item.name}</span>
+              </span>
+            ))}
+          </div>
+
+          {governanceBrowseStack.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={navigateBack} className="h-7 text-xs">
+                <ArrowLeft className="h-3 w-3 mr-1" />
+                Back
+              </Button>
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  const current = governanceBrowseStack[governanceBrowseStack.length - 1];
+                  selectGovernanceFolder(current.id, current.name);
+                }}
+                disabled={savingGovernanceFolder}
+              >
+                {savingGovernanceFolder && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                Use "{governanceBrowseStack[governanceBrowseStack.length - 1]?.name}"
+              </Button>
+            </div>
+          )}
+
+          {governanceBrowseLoading ? (
+            <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading folders...
+            </div>
+          ) : governanceBrowseItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2 text-center">No subfolders found</p>
+          ) : (
+            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              {governanceBrowseItems.map((item) => (
+                <button
+                  key={item.id}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted/50 text-left"
+                  onClick={() => navigateInto(item.id, item.name)}
+                >
+                  <FolderOpen className="h-4 w-4 text-primary flex-shrink-0" />
+                  {item.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <Button variant="ghost" size="sm" onClick={() => setBrowsingGovernanceFolder(false)} className="text-xs">
+            Cancel
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 

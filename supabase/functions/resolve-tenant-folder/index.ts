@@ -105,24 +105,28 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'confirm' && folder_item_id) {
       // ── CONFIRM a folder mapping ──
-      let governanceSiteConfig: { drive_id: string | null; graph_site_id: string | null } | null = null;
-      if (effectivePurpose === 'governance_client_files') {
-        const { data: govSite } = await supabase
-          .from('sharepoint_sites')
-          .select('drive_id, graph_site_id')
-          .eq('purpose', 'governance_client_files')
-          .eq('is_active', true)
-          .limit(1)
-          .maybeSingle();
-        governanceSiteConfig = govSite;
-      }
+      const sitePurposeForLookup = effectivePurpose === 'governance_client_files'
+        ? 'governance_client_files'
+        : 'client_files';
+
+      const { data: purposeSiteConfig } = await supabase
+        .from('sharepoint_sites')
+        .select('drive_id, graph_site_id')
+        .eq('purpose', sitePurposeForLookup)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
 
       const confirmDriveId = effectivePurpose === 'governance_client_files'
-        ? (spSettings?.governance_drive_id || governanceSiteConfig?.drive_id || undefined)
-        : spSettings?.drive_id;
+        ? (spSettings?.governance_drive_id || purposeSiteConfig?.drive_id || undefined)
+        : (spSettings?.drive_id || purposeSiteConfig?.drive_id || undefined);
 
       if (!confirmDriveId) {
-        return new Response(JSON.stringify({ error: effectivePurpose === 'governance_client_files' ? 'No governance SharePoint drive configured' : 'No drive_id configured for this tenant' }), {
+        return new Response(JSON.stringify({
+          error: effectivePurpose === 'governance_client_files'
+            ? 'No governance SharePoint drive configured'
+            : 'No client SharePoint drive configured',
+        }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -150,11 +154,13 @@ Deno.serve(async (req: Request) => {
 
       if (effectivePurpose === 'governance_client_files') {
         updateFields.governance_drive_id = confirmDriveId;
-        updateFields.governance_site_id = governanceSiteConfig?.graph_site_id || spSettings?.governance_site_id || null;
+        updateFields.governance_site_id = purposeSiteConfig?.graph_site_id || spSettings?.governance_site_id || null;
         updateFields.governance_folder_item_id = folder.id;
         updateFields.governance_folder_name = folder.name;
         updateFields.governance_folder_url = folder.webUrl;
       } else {
+        updateFields.drive_id = confirmDriveId;
+        updateFields.site_id = purposeSiteConfig?.graph_site_id || spSettings?.site_id || null;
         updateFields.root_item_id = folder.id;
         updateFields.root_name = folder.name;
         updateFields.root_folder_url = folder.webUrl;
@@ -165,10 +171,26 @@ Deno.serve(async (req: Request) => {
         updateFields.last_validated_at = new Date().toISOString();
       }
 
-      await supabase
-        .from('tenant_sharepoint_settings')
-        .update(updateFields)
-        .eq('tenant_id', tenant_id);
+      const persistResult = spSettings
+        ? await supabase
+            .from('tenant_sharepoint_settings')
+            .update(updateFields)
+            .eq('tenant_id', tenant_id)
+        : await supabase
+            .from('tenant_sharepoint_settings')
+            .insert({
+              tenant_id,
+              created_by: user.id,
+              is_enabled: true,
+              ...updateFields,
+            });
+
+      if (persistResult.error) {
+        return new Response(JSON.stringify({ error: persistResult.error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       // Audit log
       await supabase.from('document_activity_log').insert({
