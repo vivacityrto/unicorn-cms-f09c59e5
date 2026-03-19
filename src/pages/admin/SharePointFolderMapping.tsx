@@ -129,6 +129,7 @@ export default function SharePointFolderMapping() {
 
   const mappedCount = tenants.filter(t => t.sp_root_item_id).length;
   const complianceCount = tenants.filter(t => t.sp_compliance_item_id).length;
+  const governanceCount = tenants.filter(t => t.sp_governance_item_id).length;
 
   // ── Resolve folder search ──
   const handleResolve = async (tenant: TenantRow) => {
