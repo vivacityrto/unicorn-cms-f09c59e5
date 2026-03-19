@@ -61,6 +61,10 @@ export default function SharePointFolderMapping() {
   const [complianceTenant, setComplianceTenant] = useState<TenantRow | null>(null);
   const [creatingCompliance, setCreatingCompliance] = useState(false);
 
+  // Governance folder state
+  const [governanceTenant, setGovernanceTenant] = useState<TenantRow | null>(null);
+  const [creatingGovernance, setCreatingGovernance] = useState(false);
+
   const fetchTenants = useCallback(async () => {
     setLoading(true);
     try {
