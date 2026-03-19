@@ -409,6 +409,39 @@ export default function SharePointFolderMapping() {
                         <span className="text-sm text-muted-foreground">—</span>
                       )}
                     </TableCell>
+                    <TableCell>
+                      {t.sp_governance_item_id ? (
+                        <a
+                          href={t.sp_governance_folder_url || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex"
+                        >
+                          <Badge variant="secondary" className="gap-1 cursor-pointer hover:bg-secondary/30">
+                            <CheckCircle2 className="h-3 w-3 text-primary" />
+                            Ready
+                            <ExternalLink className="h-3 w-3 ml-0.5" />
+                          </Badge>
+                        </a>
+                      ) : t.sp_root_item_id ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => handleVerifyGovernance(t)}
+                          disabled={creatingGovernance && governanceTenant?.id === t.id}
+                        >
+                          {creatingGovernance && governanceTenant?.id === t.id ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <FolderPlus className="h-3 w-3 mr-1" />
+                          )}
+                          Verify
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="outline"
