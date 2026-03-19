@@ -75,7 +75,7 @@ export default function SharePointFolderMapping() {
       // Fetch SP settings separately
       const { data: spData } = await supabase
         .from('tenant_sharepoint_settings')
-        .select('tenant_id, drive_id, root_item_id, root_name, root_folder_url, compliance_docs_folder_item_id, match_method, verified_at');
+        .select('tenant_id, drive_id, root_item_id, root_name, root_folder_url, compliance_docs_folder_item_id, governance_folder_item_id, governance_folder_url, match_method, verified_at');
 
       const spMap = new Map(
         (spData || []).map((s: Record<string, unknown>) => [s.tenant_id as number, s])
