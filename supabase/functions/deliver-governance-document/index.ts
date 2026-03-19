@@ -823,7 +823,7 @@ serve(async (req) => {
             tenant_id,
             activity_type: "governance_generation_failed",
             document_id: doc.id,
-            actor_user_id: user?.id || null,
+            actor_user_id: userId || null,
             metadata: { error: msg, document_version_id },
           });
         }
