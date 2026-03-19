@@ -431,14 +431,14 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
           />
         )}
 
-        {/* Governance Folder Status */}
-        {settings && settings.validation_status === 'valid' && (
+        {/* Governance Folder Status — independent of client root folder */}
+        {settings && (
           <div className="rounded-lg border p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">Governance Document Folder</p>
                 <p className="text-xs text-muted-foreground">
-                  Destination folder for generated governance documents in SharePoint.
+                  Destination folder for generated governance documents. Created automatically on the Governance SharePoint site.
                 </p>
               </div>
             </div>
