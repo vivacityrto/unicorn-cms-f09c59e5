@@ -107,3 +107,19 @@
 - Integration with Cancel Package flow (auto-generate client offboarding)
 - Integration with Manage Users (generate staff onboarding/offboarding)
 - Seed staff onboarding template steps from recruitment spreadsheet
+
+---
+
+## Governance Folder Notifications ✅ COMPLETE
+
+### SharePoint Folder Mapping UI
+- Added "Governance Docs" column to the folder mapping table
+- Shows "Ready" badge with SharePoint link when configured
+- Shows "Verify" button (calls `verify-compliance-folder`) when root folder is mapped but governance folder missing
+- Added `governanceTenant` + `creatingGovernance` state for loading UX
+
+### Edge Function Error Improvement
+- `deliver-governance-document` now returns `error_code: "GOVERNANCE_FOLDER_MISSING"` with actionable message directing staff to SharePoint Folder Mapping page
+
+### Frontend Error Detection
+- `StageDocumentsSection` detects `GOVERNANCE_FOLDER_MISSING` errors and shows a specific destructive toast: "Governance Folder Not Configured" with instructions to verify via Admin → SharePoint Folder Mapping
