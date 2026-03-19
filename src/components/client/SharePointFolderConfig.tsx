@@ -430,6 +430,85 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
             toast={toast}
           />
         )}
+
+        {/* Governance Folder Status */}
+        {settings && settings.validation_status === 'valid' && (
+          <div className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Governance Document Folder</p>
+                <p className="text-xs text-muted-foreground">
+                  Destination folder for generated governance documents in SharePoint.
+                </p>
+              </div>
+            </div>
+
+            {settings.governance_folder_item_id ? (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span className="text-sm">
+                  {settings.governance_folder_name ? (
+                    <strong>{settings.governance_folder_name}</strong>
+                  ) : (
+                    'Configured'
+                  )}
+                </span>
+                {settings.governance_folder_url && (
+                  <a
+                    href={settings.governance_folder_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline flex items-center gap-1 ml-auto"
+                  >
+                    Open in SharePoint
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-4 w-4 text-destructive" />
+                <span className="text-sm text-muted-foreground">Not configured — required for document generation</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto"
+                  onClick={async () => {
+                    setVerifyingGovernance(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke('verify-compliance-folder', {
+                        body: { tenant_id: tenantId, create_category_subfolders: true },
+                      });
+                      if (error || !data?.success) {
+                        toast({ title: 'Verification failed', description: data?.error || 'Could not verify governance folder.', variant: 'destructive' });
+                      } else {
+                        const msg = data.already_exists ? 'Governance folder verified' : 'Governance folder created';
+                        const subs = data.category_subfolders;
+                        toast({
+                          title: msg,
+                          description: subs?.created?.length ? `Created ${subs.created.length} category subfolders.` : undefined,
+                        });
+                        await fetchSettings();
+                      }
+                    } catch (err) {
+                      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to verify governance folder', variant: 'destructive' });
+                    } finally {
+                      setVerifyingGovernance(false);
+                    }
+                  }}
+                  disabled={verifyingGovernance}
+                >
+                  {verifyingGovernance ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <FolderPlus className="h-3 w-3 mr-1" />
+                  )}
+                  Verify & Create
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
