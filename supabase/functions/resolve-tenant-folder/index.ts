@@ -105,12 +105,24 @@ Deno.serve(async (req: Request) => {
 
     if (action === 'confirm' && folder_item_id) {
       // ── CONFIRM a folder mapping ──
+      let governanceSiteConfig: { drive_id: string | null; graph_site_id: string | null } | null = null;
+      if (effectivePurpose === 'governance_client_files') {
+        const { data: govSite } = await supabase
+          .from('sharepoint_sites')
+          .select('drive_id, graph_site_id')
+          .eq('purpose', 'governance_client_files')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+        governanceSiteConfig = govSite;
+      }
+
       const confirmDriveId = effectivePurpose === 'governance_client_files'
-        ? (spSettings?.governance_drive_id || spSettings?.drive_id)
+        ? (spSettings?.governance_drive_id || governanceSiteConfig?.drive_id || undefined)
         : spSettings?.drive_id;
 
       if (!confirmDriveId) {
-        return new Response(JSON.stringify({ error: 'No drive_id configured for this tenant' }), {
+        return new Response(JSON.stringify({ error: effectivePurpose === 'governance_client_files' ? 'No governance SharePoint drive configured' : 'No drive_id configured for this tenant' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -137,6 +149,8 @@ Deno.serve(async (req: Request) => {
       };
 
       if (effectivePurpose === 'governance_client_files') {
+        updateFields.governance_drive_id = confirmDriveId;
+        updateFields.governance_site_id = governanceSiteConfig?.graph_site_id || spSettings?.governance_site_id || null;
         updateFields.governance_folder_item_id = folder.id;
         updateFields.governance_folder_name = folder.name;
         updateFields.governance_folder_url = folder.webUrl;
