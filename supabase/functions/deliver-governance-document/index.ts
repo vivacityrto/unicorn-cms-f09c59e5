@@ -735,7 +735,7 @@ serve(async (req) => {
       for (const instId of instanceIds) {
         await supabase
           .from("document_generation_errors")
-          .update({ resolved_at: new Date().toISOString(), resolved_by: user.id })
+          .update({ resolved_at: new Date().toISOString(), resolved_by: userId })
           .eq("documentinstance_id", instId)
           .is("resolved_at", null);
       }
