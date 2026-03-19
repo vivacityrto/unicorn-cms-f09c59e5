@@ -345,7 +345,7 @@ serve(async (req) => {
 
     // Auth check — Vivacity staff only
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -353,10 +353,15 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(token);
+
+    // Use a user-context client to validate the JWT
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const userClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+    const { data: { user }, error: authError } = await userClient.auth.getUser(token);
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -364,13 +369,17 @@ serve(async (req) => {
       });
     }
 
+    // Check staff status using service client (bypasses RLS)
     const { data: userData } = await supabase
       .from("users")
       .select("unicorn_role, is_team")
       .eq("user_uuid", user.id)
       .single();
 
-    if (!userData?.is_team) {
+    const isStaff = userData?.is_team === true ||
+      ['Super Admin', 'Team Leader', 'Team Member'].includes(userData?.unicorn_role || '');
+
+    if (!isStaff) {
       return new Response(JSON.stringify({ error: "Permission denied — Vivacity staff only" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
