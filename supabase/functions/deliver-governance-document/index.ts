@@ -431,12 +431,14 @@ serve(async (req) => {
     // ── Load version + document ────────────────────────────────────────────
     const { data: version, error: vErr } = await supabase
       .from("document_versions")
-      .select("*, document:documents(id, title, category, format)")
+      .select("*, document:documents!document_versions_document_id_fkey(id, title, category, format)")
       .eq("id", document_version_id)
       .single();
 
+    console.log("[deliver] version lookup", { found: !!version, error: vErr?.message ?? null, document_version_id });
+
     if (vErr || !version) {
-      return new Response(JSON.stringify({ error: "Document version not found" }), {
+      return new Response(JSON.stringify({ error: "Document version not found", detail: vErr?.message }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
