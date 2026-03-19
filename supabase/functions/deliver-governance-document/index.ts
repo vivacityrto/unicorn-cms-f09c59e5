@@ -354,30 +354,59 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
 
-    // Use a user-context client to validate the JWT
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
     const userClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
+      {
+        global: { headers: { Authorization: authHeader } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      },
     );
-    const { data: { user }, error: authError } = await userClient.auth.getUser(token);
-    if (authError || !user) {
+
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    const claims = claimsData?.claims;
+    const userId = claims?.sub;
+
+    if (claimsError || !userId) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check staff status using service client (bypasses RLS)
     const { data: userData } = await supabase
       .from("users")
-      .select("unicorn_role, is_team")
-      .eq("user_uuid", user.id)
-      .single();
+      .select("unicorn_role, global_role, is_team")
+      .eq("user_uuid", userId)
+      .maybeSingle();
+
+    const normaliseRole = (value: unknown) =>
+      typeof value === "string" ? value.toLowerCase().replace(/\s+/g, " ").trim() : "";
+
+    const staffRoles = new Set(["super admin", "superadmin", "team leader", "team member"]);
+    const claimRole = normaliseRole((claims as Record<string, unknown>)?.["unicorn_role"]);
+    const metadataRole = normaliseRole(
+      ((claims as Record<string, unknown>)?.["user_metadata"] as Record<string, unknown> | undefined)?.["unicorn_role"],
+    );
+    const dbRole = normaliseRole(userData?.unicorn_role);
+    const globalRole = normaliseRole(userData?.global_role);
 
     const isStaff = userData?.is_team === true ||
-      ['Super Admin', 'Team Leader', 'Team Member'].includes(userData?.unicorn_role || '');
+      staffRoles.has(dbRole) ||
+      staffRoles.has(globalRole) ||
+      staffRoles.has(claimRole) ||
+      staffRoles.has(metadataRole);
+
+    console.log("[deliver] auth", {
+      userId,
+      isTeam: userData?.is_team ?? null,
+      dbRole: userData?.unicorn_role ?? null,
+      globalRole: userData?.global_role ?? null,
+      claimRole,
+      metadataRole,
+      isStaff,
+    });
 
     if (!isStaff) {
       return new Response(JSON.stringify({ error: "Permission denied — Vivacity staff only" }), {
@@ -385,6 +414,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // Parse request
     const body = await req.json();
