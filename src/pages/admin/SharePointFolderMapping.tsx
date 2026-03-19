@@ -92,6 +92,8 @@ export default function SharePointFolderMapping() {
           sp_root_name: (sp?.root_name as string) || null,
           sp_root_folder_url: (sp?.root_folder_url as string) || null,
           sp_compliance_item_id: (sp?.compliance_docs_folder_item_id as string) || null,
+          sp_governance_item_id: (sp?.governance_folder_item_id as string) || null,
+          sp_governance_folder_url: (sp?.governance_folder_url as string) || null,
           sp_match_method: (sp?.match_method as string) || null,
           sp_verified_at: (sp?.verified_at as string) || null,
         };
