@@ -652,7 +652,7 @@ serve(async (req) => {
         snapshot_id: snapshotId,
         status: "failed",
         delivered_file_name: deliveredFileName,
-        delivered_by: user.id,
+        delivered_by: userId,
         error_message: "No governance folder configured for this tenant",
         tailoring_completeness_pct: completeness,
         missing_merge_fields: missingTags,
@@ -726,7 +726,7 @@ serve(async (req) => {
           isgenerated: true,
           generationdate: new Date().toISOString(),
           last_error: null,
-          updated_by: user.id,
+          updated_by: userId,
         })
         .eq("document_id", doc.id)
         .eq("tenant_id", tenant_id);
@@ -735,7 +735,7 @@ serve(async (req) => {
       for (const instId of instanceIds) {
         await supabase
           .from("document_generation_errors")
-          .update({ resolved_at: new Date().toISOString(), resolved_by: user.id })
+          .update({ resolved_at: new Date().toISOString(), resolved_by: userId })
           .eq("documentinstance_id", instId)
           .is("resolved_at", null);
       }
@@ -754,7 +754,7 @@ serve(async (req) => {
         sharepoint_web_url: driveItem.webUrl,
         delivered_file_name: deliveredFileName,
         category_subfolder: categorySubfolder,
-        delivered_by: user.id,
+        delivered_by: userId,
         tailoring_completeness_pct: completeness,
         missing_merge_fields: missingTags,
         invalid_merge_fields: invalidTags,
@@ -772,7 +772,7 @@ serve(async (req) => {
       tenant_id,
       activity_type: "governance_document_delivered",
       document_id: doc.id,
-      actor_user_id: user.id,
+      actor_user_id: userId,
       metadata: {
         document_version_id,
         delivery_id: delivery.id,
@@ -806,7 +806,7 @@ serve(async (req) => {
         if (failedInstances && failedInstances.length > 0) {
           await supabase
             .from("document_instances")
-            .update({ generation_status: "failed", last_error: msg, updated_by: user?.id || null })
+            .update({ generation_status: "failed", last_error: msg, updated_by: userId || null })
             .eq("document_id", doc.id)
             .eq("tenant_id", tenant_id);
 
@@ -823,7 +823,7 @@ serve(async (req) => {
             tenant_id,
             activity_type: "governance_generation_failed",
             document_id: doc.id,
-            actor_user_id: user?.id || null,
+            actor_user_id: userId || null,
             metadata: { error: msg, document_version_id },
           });
         }
