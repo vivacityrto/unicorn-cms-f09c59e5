@@ -218,6 +218,38 @@ export default function SharePointFolderMapping() {
     }
   };
 
+  // ── Verify/create governance folder ──
+  const handleVerifyGovernance = async (tenant: TenantRow) => {
+    setGovernanceTenant(tenant);
+    setCreatingGovernance(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-compliance-folder', {
+        body: { tenant_id: tenant.id, create_category_subfolders: true },
+      });
+
+      if (error || !data?.success) {
+        toast.error(data?.error || 'Failed to verify governance folder');
+      } else {
+        const msg = data.already_exists
+          ? 'Governance folder verified'
+          : 'Governance folder created';
+        const subs = data.category_subfolders;
+        if (subs?.created?.length) {
+          toast.success(`${msg}. Created ${subs.created.length} category subfolders.`);
+        } else {
+          toast.success(msg);
+        }
+        fetchTenants();
+      }
+    } catch (err) {
+      toast.error('Failed to verify governance folder');
+    } finally {
+      setCreatingGovernance(false);
+      setGovernanceTenant(null);
+    }
+  };
+
   const getStatusBadge = (tenant: TenantRow) => {
     if (!tenant.sp_root_item_id) {
       return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Unmapped</Badge>;
