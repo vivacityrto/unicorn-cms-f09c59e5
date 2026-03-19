@@ -772,7 +772,7 @@ serve(async (req) => {
       tenant_id,
       activity_type: "governance_document_delivered",
       document_id: doc.id,
-      actor_user_id: user.id,
+      actor_user_id: userId,
       metadata: {
         document_version_id,
         delivery_id: delivery.id,
