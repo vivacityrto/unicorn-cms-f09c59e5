@@ -652,7 +652,7 @@ serve(async (req) => {
         snapshot_id: snapshotId,
         status: "failed",
         delivered_file_name: deliveredFileName,
-        delivered_by: user.id,
+        delivered_by: userId,
         error_message: "No governance folder configured for this tenant",
         tailoring_completeness_pct: completeness,
         missing_merge_fields: missingTags,
