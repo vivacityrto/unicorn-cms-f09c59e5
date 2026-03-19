@@ -104,22 +104,49 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
     setSingleGenConfirm(null);
     setGeneratingSingleId(docInstanceId);
     try {
-      const response = await supabase.functions.invoke('generate-document', {
+      // 1. Look up the latest published document_version_id
+      const { data: versionData, error: versionError } = await supabase
+        .from('document_versions')
+        .select('id')
+        .eq('document_id', documentId)
+        .eq('status', 'published')
+        .order('version_number', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (versionError || !versionData) {
+        throw new Error('No published version available for this document. Please publish a version first.');
+      }
+
+      // 2. Call the real delivery pipeline
+      const response = await supabase.functions.invoke('deliver-governance-document', {
         body: {
-          document_id: documentId,
           tenant_id: tenantId,
-          client_legacy_id: null,
-          stage_id: stageInstanceId,
-          package_id: packageId || 0,
+          document_version_id: versionData.id,
+          allow_incomplete: true,
         },
       });
 
       if (response.error) throw new Error(response.error.message);
+
+      // Handle 422 — tailoring incomplete
+      if (response.data?.error && response.data?.tailoring) {
+        toast({
+          title: 'Tailoring Incomplete',
+          description: response.data.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       if (!response.data?.success) throw new Error(response.data?.error || 'Generation failed');
 
+      const sharepointUrl = response.data?.delivery?.sharepoint_url;
       toast({
         title: 'Document Generated',
-        description: `"${title}" has been generated successfully.`,
+        description: sharepointUrl
+          ? `"${title}" has been generated and uploaded to SharePoint.`
+          : `"${title}" has been generated successfully.`,
       });
       refetch();
     } catch (err) {
