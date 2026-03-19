@@ -344,6 +344,7 @@ export default function SharePointFolderMapping() {
                   <TableHead>Folder Status</TableHead>
                   <TableHead>SharePoint Folder</TableHead>
                   <TableHead>Compliance Docs</TableHead>
+                  <TableHead>Governance Docs</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
