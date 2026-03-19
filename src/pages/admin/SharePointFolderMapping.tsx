@@ -26,6 +26,8 @@ interface TenantRow {
   sp_root_name: string | null;
   sp_root_folder_url: string | null;
   sp_compliance_item_id: string | null;
+  sp_governance_item_id: string | null;
+  sp_governance_folder_url: string | null;
   sp_match_method: string | null;
   sp_verified_at: string | null;
 }
