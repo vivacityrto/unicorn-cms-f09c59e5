@@ -151,9 +151,12 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
       refetch();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
+      const isGovernanceMissing = msg.includes('GOVERNANCE_FOLDER_MISSING') || msg.includes('governance folder configured');
       toast({
-        title: 'Generation Failed',
-        description: msg,
+        title: isGovernanceMissing ? 'Governance Folder Not Configured' : 'Generation Failed',
+        description: isGovernanceMissing
+          ? 'Please verify the governance folder for this tenant before generating documents. Go to Admin → SharePoint Folder Mapping to run folder verification.'
+          : msg,
         variant: 'destructive',
       });
     } finally {

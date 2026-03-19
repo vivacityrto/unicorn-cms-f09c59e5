@@ -26,6 +26,8 @@ interface TenantRow {
   sp_root_name: string | null;
   sp_root_folder_url: string | null;
   sp_compliance_item_id: string | null;
+  sp_governance_item_id: string | null;
+  sp_governance_folder_url: string | null;
   sp_match_method: string | null;
   sp_verified_at: string | null;
 }
@@ -59,6 +61,10 @@ export default function SharePointFolderMapping() {
   const [complianceTenant, setComplianceTenant] = useState<TenantRow | null>(null);
   const [creatingCompliance, setCreatingCompliance] = useState(false);
 
+  // Governance folder state
+  const [governanceTenant, setGovernanceTenant] = useState<TenantRow | null>(null);
+  const [creatingGovernance, setCreatingGovernance] = useState(false);
+
   const fetchTenants = useCallback(async () => {
     setLoading(true);
     try {
@@ -73,7 +79,7 @@ export default function SharePointFolderMapping() {
       // Fetch SP settings separately
       const { data: spData } = await supabase
         .from('tenant_sharepoint_settings')
-        .select('tenant_id, drive_id, root_item_id, root_name, root_folder_url, compliance_docs_folder_item_id, match_method, verified_at');
+        .select('tenant_id, drive_id, root_item_id, root_name, root_folder_url, compliance_docs_folder_item_id, governance_folder_item_id, governance_folder_url, match_method, verified_at');
 
       const spMap = new Map(
         (spData || []).map((s: Record<string, unknown>) => [s.tenant_id as number, s])
@@ -90,6 +96,8 @@ export default function SharePointFolderMapping() {
           sp_root_name: (sp?.root_name as string) || null,
           sp_root_folder_url: (sp?.root_folder_url as string) || null,
           sp_compliance_item_id: (sp?.compliance_docs_folder_item_id as string) || null,
+          sp_governance_item_id: (sp?.governance_folder_item_id as string) || null,
+          sp_governance_folder_url: (sp?.governance_folder_url as string) || null,
           sp_match_method: (sp?.match_method as string) || null,
           sp_verified_at: (sp?.verified_at as string) || null,
         };
@@ -121,6 +129,7 @@ export default function SharePointFolderMapping() {
 
   const mappedCount = tenants.filter(t => t.sp_root_item_id).length;
   const complianceCount = tenants.filter(t => t.sp_compliance_item_id).length;
+  const governanceCount = tenants.filter(t => t.sp_governance_item_id).length;
 
   // ── Resolve folder search ──
   const handleResolve = async (tenant: TenantRow) => {
@@ -206,6 +215,38 @@ export default function SharePointFolderMapping() {
     } finally {
       setCreatingCompliance(false);
       setComplianceTenant(null);
+    }
+  };
+
+  // ── Verify/create governance folder ──
+  const handleVerifyGovernance = async (tenant: TenantRow) => {
+    setGovernanceTenant(tenant);
+    setCreatingGovernance(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-compliance-folder', {
+        body: { tenant_id: tenant.id, create_category_subfolders: true },
+      });
+
+      if (error || !data?.success) {
+        toast.error(data?.error || 'Failed to verify governance folder');
+      } else {
+        const msg = data.already_exists
+          ? 'Governance folder verified'
+          : 'Governance folder created';
+        const subs = data.category_subfolders;
+        if (subs?.created?.length) {
+          toast.success(`${msg}. Created ${subs.created.length} category subfolders.`);
+        } else {
+          toast.success(msg);
+        }
+        fetchTenants();
+      }
+    } catch (err) {
+      toast.error('Failed to verify governance folder');
+    } finally {
+      setCreatingGovernance(false);
+      setGovernanceTenant(null);
     }
   };
 
@@ -303,6 +344,7 @@ export default function SharePointFolderMapping() {
                   <TableHead>Folder Status</TableHead>
                   <TableHead>SharePoint Folder</TableHead>
                   <TableHead>Compliance Docs</TableHead>
+                  <TableHead>Governance Docs</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -310,14 +352,14 @@ export default function SharePointFolderMapping() {
                 {loading ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
+                      {Array.from({ length: 8 }).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : pageData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No tenants found
                     </TableCell>
                   </TableRow>
@@ -362,6 +404,39 @@ export default function SharePointFolderMapping() {
                             <FolderPlus className="h-3 w-3 mr-1" />
                           )}
                           Create
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {t.sp_governance_item_id ? (
+                        <a
+                          href={t.sp_governance_folder_url || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex"
+                        >
+                          <Badge variant="secondary" className="gap-1 cursor-pointer hover:bg-secondary/30">
+                            <CheckCircle2 className="h-3 w-3 text-primary" />
+                            Ready
+                            <ExternalLink className="h-3 w-3 ml-0.5" />
+                          </Badge>
+                        </a>
+                      ) : t.sp_root_item_id ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => handleVerifyGovernance(t)}
+                          disabled={creatingGovernance && governanceTenant?.id === t.id}
+                        >
+                          {creatingGovernance && governanceTenant?.id === t.id ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <FolderPlus className="h-3 w-3 mr-1" />
+                          )}
+                          Verify
                         </Button>
                       ) : (
                         <span className="text-sm text-muted-foreground">—</span>
