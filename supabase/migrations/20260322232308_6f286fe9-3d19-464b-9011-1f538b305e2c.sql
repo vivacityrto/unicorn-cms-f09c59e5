@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.start_client_package(integer, integer, uuid);
