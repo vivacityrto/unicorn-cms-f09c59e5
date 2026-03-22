@@ -389,6 +389,7 @@ function MeetingsContent() {
                 canSchedule={canScheduleMeetings()} 
                 onSchedule={() => setSchedulerOpen(true)}
                 message="No upcoming meetings scheduled"
+                hasUnfilteredItems={upcomingList.length > 0}
               />
             )}
           </div>
