@@ -57,7 +57,7 @@ export function ScorecardEntryGrid({ metric, onEdit, onArchive, onDelete, isArch
   const weeks = Array.from({ length: 13 }, (_, i) => {
     const weekDate = startOfWeek(subWeeks(new Date(), i), { weekStartsOn: 1 });
     return format(weekDate, 'yyyy-MM-dd');
-  }).reverse();
+  });
 
   const getEntryForWeek = (weekDate: string) => {
     return entries?.find(e => e.week_ending === weekDate);

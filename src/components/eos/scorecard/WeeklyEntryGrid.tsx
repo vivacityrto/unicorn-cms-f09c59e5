@@ -27,7 +27,7 @@ export function WeeklyEntryGrid({
   const weeks = Array.from({ length: 13 }, (_, i) => {
     const weekDate = startOfWeek(subWeeks(new Date(), i), { weekStartsOn: 1 });
     return format(weekDate, 'yyyy-MM-dd');
-  }).reverse();
+  });
 
   const getEntryForWeek = (weekDate: string) => {
     return measurable.entries.find(e => e.week_start_date === weekDate);
