@@ -345,15 +345,15 @@ function MeetingsContent() {
           <TabsList>
             <TabsTrigger value="upcoming" className="gap-2">
               <PlayCircle className="w-4 h-4" />
-              Upcoming ({upcomingList.length})
+              Upcoming ({filterByType(upcomingList).length})
             </TabsTrigger>
             <TabsTrigger value="in_progress" className="gap-2">
               <Loader2 className="w-4 h-4" />
-              In Progress ({inProgressList.length})
+              In Progress ({filterByType(inProgressList).length})
             </TabsTrigger>
             <TabsTrigger value="completed" className="gap-2">
               <CheckCircle className="w-4 h-4" />
-              Completed ({completedList.length})
+              Completed ({filterByType(completedList).length})
             </TabsTrigger>
           </TabsList>
 
