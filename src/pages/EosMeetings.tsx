@@ -610,21 +610,23 @@ interface EmptyMeetingsProps {
   message: string;
 }
 
-function EmptyMeetings({ canSchedule, onSchedule, message }: EmptyMeetingsProps) {
+function EmptyMeetings({ canSchedule, onSchedule, message, hasUnfilteredItems }: EmptyMeetingsProps & { hasUnfilteredItems?: boolean }) {
   return (
     <Card>
       <CardContent className="p-12 text-center">
         <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
         <h3 className="text-lg font-semibold mb-2">{message}</h3>
         <p className="text-muted-foreground mb-4">
-          {canSchedule
-            ? "Schedule your first EOS Meeting to get started"
-            : "No EOS meetings have been scheduled yet."}
+          {hasUnfilteredItems
+            ? "No meetings match the selected type filter."
+            : canSchedule
+              ? "Schedule your first EOS Meeting to get started"
+              : "No EOS meetings have been scheduled yet."}
         </p>
-        {canSchedule && (
+        {canSchedule && !hasUnfilteredItems && (
           <Button onClick={onSchedule}>
             <Plus className="w-4 h-4 mr-2" />
-            Schedule First Meeting
+            Schedule Meeting
           </Button>
         )}
       </CardContent>
