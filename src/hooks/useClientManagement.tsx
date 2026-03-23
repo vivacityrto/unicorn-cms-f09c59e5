@@ -422,6 +422,12 @@ export function useClientProfile(tenantId: number | null) {
       const profileUpdates: Record<string, any> = {};
       if ('phone1' in updates) profileUpdates.phone1 = updates.phone1;
       if ('org_type' in updates) profileUpdates.org_type = updates.org_type;
+      if ('rto_email' in updates) profileUpdates.rto_email = updates.rto_email;
+      if ('gto_name' in updates) profileUpdates.gto_name = updates.gto_name;
+      if ('country' in updates) profileUpdates.country = updates.country;
+      if ('primary_contact_name' in updates) profileUpdates.primary_contact_name = updates.primary_contact_name;
+      if ('primary_contact_email' in updates) profileUpdates.primary_contact_email = updates.primary_contact_email;
+      if ('primary_contact_phone' in updates) profileUpdates.primary_contact_phone = updates.primary_contact_phone;
       if (Object.keys(profileUpdates).length > 0) {
         const { error: profileError } = await supabase
           .from('tenant_profile')
