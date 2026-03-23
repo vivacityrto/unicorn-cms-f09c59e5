@@ -101,10 +101,10 @@ Deno.serve(async (req: Request) => {
 
     const driveId = govSite.drive_id;
 
-    // Load existing governance settings
+    // Load existing governance settings (include root_name for folder naming)
     const { data: spSettings } = await supabase
       .from('tenant_sharepoint_settings')
-      .select('governance_folder_item_id, governance_drive_id')
+      .select('governance_folder_item_id, governance_drive_id, root_name')
       .eq('tenant_id', tenant_id)
       .maybeSingle();
 
