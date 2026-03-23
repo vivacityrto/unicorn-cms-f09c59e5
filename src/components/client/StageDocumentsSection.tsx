@@ -517,6 +517,20 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Generating…
                   </Badge>
+                ) : canGenerate && !doc.has_sharepoint_link ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="outline" className="text-xs text-muted-foreground cursor-default gap-1">
+                          <Link2 className="h-3 w-3" />
+                          Not linked
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[220px]">
+                        <p className="text-xs">This document has no SharePoint template linked. Link a template in the document library before generating.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ) : canGenerate ? (
                   <TooltipProvider>
                     <Tooltip>
