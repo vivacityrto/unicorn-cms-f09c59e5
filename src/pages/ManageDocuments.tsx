@@ -1537,6 +1537,9 @@ export default function ManageDocuments() {
                       <TableCell className="text-muted-foreground text-sm whitespace-nowrap py-6 border-r border-border/50">
                         <div className="truncate max-w-[230px]">{doc.description || "—"}</div>
                       </TableCell>
+                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
+                        <span className="text-xs font-mono">{doc.format || '—'}</span>
+                      </TableCell>
                       {/* Framework */}
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
                         <span className="text-xs font-medium">{doc.framework_type || '—'}</span>
