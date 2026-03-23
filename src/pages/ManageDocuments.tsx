@@ -60,6 +60,9 @@ export default function ManageDocuments() {
   const [searchQuery, setSearchQuery] = useState("");
   const [formatFilter, setFormatFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+  const [deleteImpact, setDeleteImpact] = useState<{ instances: number; stageDocs: number } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [sortField, setSortField] = useState<"title" | "id" | "versiondate">("id");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
