@@ -1610,29 +1610,6 @@ export default function ManageDocuments() {
                           </Badge>
                         ) : '—'}
                       </TableCell>
-                      {/* SP Link */}
-                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center" onClick={e => e.stopPropagation()}>
-                        {doc.source_template_url ? (
-                          <a
-                            href={doc.source_template_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline inline-flex items-center gap-1"
-                            title={doc.source_template_url}
-                          >
-                            <Link2 className="h-3.5 w-3.5" />
-                            <span className="text-xs">SP</span>
-                          </a>
-                        ) : (
-                          <button
-                            onClick={() => setSharepointBrowseDocId(doc.id)}
-                            className="text-muted-foreground hover:text-primary cursor-pointer inline-flex items-center gap-1"
-                            title="Click to set SharePoint URL"
-                          >
-                            <Link2Off className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </TableCell>
                       {/* Updated */}
                       <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
                         {doc.updated_at ? format(new Date(doc.updated_at), "dd MMM yyyy") : "—"}
