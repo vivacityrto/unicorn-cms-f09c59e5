@@ -1,54 +1,65 @@
 
 
-## Fix: Informative error messages for governance document generation failures
+## Fix: RTO ID prefix search for folder resolution
 
 ### Problem
-When `supabase.functions.invoke` receives a non-2xx response, the SDK sets `response.error` to a generic `FunctionsHttpError` with message "Edge Function returned a non-2xx status code". Line 130 throws this generic message **before** line 142 ever checks the response body (which contains the actual error like `GOVERNANCE_FOLDER_MISSING`). The governance-specific error handling at line 154 then never matches because the message is generic.
+The `resolve-tenant-folder` edge function uses Graph's full-text `search(q='91020')` API. This can return noisy results and doesn't reliably do prefix matching. Folders are named like `91020 - Company Name`, so searching by RTO ID prefix (e.g., `91020`) should list root-level children and filter by name prefix.
 
-### Root cause
-```typescript
-// Line 130 — throws GENERIC message, skips body parsing
-if (response.error) throw new Error(response.error.message);
+### Changes
 
-// Line 142 — never reached when error is set
-if (!response.data?.success) throw new Error(response.data?.error || 'Generation failed');
-```
+#### 1. `supabase/functions/resolve-tenant-folder/index.ts` — Replace Graph search with children listing + prefix filter
 
-### Fix
-
-**File: `src/components/client/StageDocumentsSection.tsx`** (lines 130-142)
-
-Replace the error handling to parse the response body even on non-2xx status codes:
+**Priority 2 block (lines 280-298):** Instead of `search(q='{rto_id}')`, list root children and filter folders whose name starts with the RTO ID:
 
 ```typescript
-// When functions.invoke returns non-2xx, response.error is set BUT
-// response.data still contains the JSON body with error_code/error details.
-// Check the body first for structured errors before falling back to generic.
-if (response.error) {
-  const body = response.data;
-  const errorCode = body?.error_code || '';
-  const errorMsg = body?.error || response.error.message;
-
-  if (errorCode === 'GOVERNANCE_FOLDER_MISSING') {
-    toast({
-      title: 'Governance Folder Not Configured',
-      description: 'This tenant does not have a governance folder mapped in SharePoint. Go to Admin → SharePoint Folder Mapping, select this tenant, and click "Verify & Create Default" or "Select Folder" to configure it.',
-      variant: 'destructive',
-    });
-    return;
+// Priority 2: List root children and filter by RTO ID prefix
+if (tenant.rto_id && candidates.length === 0) {
+  const rtoPrefix = tenant.rto_id.trim();
+  let nextUrl: string | null = `/drives/${driveId}/root/children?$select=id,name,webUrl,folder&$top=200&$filter=startsWith(name,'${rtoPrefix}')`;
+  
+  while (nextUrl && candidates.length < 10) {
+    const resp = await graphGet<{ value: DriveItem[]; '@odata.nextLink'?: string }>(nextUrl);
+    if (!resp.ok) break;
+    for (const item of (resp.data.value || [])) {
+      if (item.folder && !candidates.some(c => c.item_id === item.id)) {
+        candidates.push({
+          item_id: item.id,
+          name: item.name,
+          web_url: item.webUrl,
+          match_type: 'rtoid',
+          confidence: 'high',
+        });
+      }
+    }
+    nextUrl = resp.data['@odata.nextLink'] || null;
   }
-
-  throw new Error(errorMsg);
 }
 ```
 
-This ensures:
-1. The `GOVERNANCE_FOLDER_MISSING` code is detected from the response body
-2. The user sees a clear, actionable message telling them exactly what to do
-3. Other structured errors from the edge function body are surfaced instead of the generic SDK message
+Note: Graph's `$filter=startsWith(name,'91020')` on drive children is the correct way to do prefix matching. If the Graph API doesn't support `$filter` on children (some drives don't), we fall back to listing all children and filtering in code:
+
+```typescript
+// Fallback: list children, filter in-memory by prefix
+const resp = await graphGet<{ value: DriveItem[] }>(
+  `/drives/${driveId}/root/children?$select=id,name,webUrl,folder&$top=500`
+);
+if (resp.ok) {
+  for (const item of (resp.data.value || [])) {
+    if (item.folder && item.name.startsWith(rtoPrefix) && !candidates.some(c => c.item_id === item.id)) {
+      candidates.push({ ... });
+    }
+  }
+}
+```
+
+We'll implement the `$filter` approach first, with a try/catch fallback to the in-memory filter if the API rejects the filter.
+
+#### 2. Redeploy the edge function
+
+After updating the code, redeploy `resolve-tenant-folder`.
 
 ### Files
 | File | Change |
 |------|--------|
-| `src/components/client/StageDocumentsSection.tsx` | Parse response body on non-2xx to detect `GOVERNANCE_FOLDER_MISSING` and show actionable toast |
+| `supabase/functions/resolve-tenant-folder/index.ts` | Replace search API with children listing + RTO prefix filter |
 
