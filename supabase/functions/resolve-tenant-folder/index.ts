@@ -218,32 +218,40 @@ Deno.serve(async (req: Request) => {
     // ── SEARCH for candidate folders ──
     // Need a drive_id to search. Try from settings, or from sharepoint_sites registry.
     let driveId: string | undefined;
+    let startFolderName: string | undefined;
 
     if (effectivePurpose === 'governance_client_files') {
       driveId = spSettings?.governance_drive_id ?? undefined;
       if (!driveId) {
         const { data: govSite } = await supabase
           .from('sharepoint_sites')
-          .select('drive_id')
+          .select('drive_id, start_folder_name')
           .eq('purpose', 'governance_client_files')
           .eq('is_active', true)
           .limit(1)
           .maybeSingle();
         driveId = govSite?.drive_id ?? undefined;
+        startFolderName = govSite?.start_folder_name ?? undefined;
       }
     } else {
       driveId = spSettings?.drive_id ?? undefined;
       if (!driveId) {
         const { data: clientSite } = await supabase
           .from('sharepoint_sites')
-          .select('drive_id')
+          .select('drive_id, start_folder_name')
           .eq('purpose', 'client_files')
           .eq('is_active', true)
           .limit(1)
           .maybeSingle();
         driveId = clientSite?.drive_id ?? undefined;
+        startFolderName = clientSite?.start_folder_name ?? undefined;
       }
     }
+
+    // Build the base path — if a start_folder_name is configured, search inside it
+    const basePath = startFolderName
+      ? `/drives/${driveId}/root:/${encodeURIComponent(startFolderName)}:/children`
+      : `/drives/${driveId}/root/children`;
 
     if (!driveId) {
       return new Response(JSON.stringify({
@@ -277,12 +285,14 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Priority 2: List root children and filter by RTO ID prefix
+    // Priority 2: List children of start folder and filter by RTO ID prefix
     if (tenant.rto_id && candidates.length === 0) {
       const rtoPrefix = tenant.rto_id.trim();
+      console.log(`[resolve-tenant-folder] Searching for RTO prefix '${rtoPrefix}' in basePath: ${basePath}`);
       try {
         // Try $filter=startsWith first (most efficient)
-        let nextUrl: string | null = `/drives/${driveId}/root/children?$select=id,name,webUrl,folder&$top=200&$filter=startsWith(name,'${rtoPrefix}')`;
+        // Note: $filter may not work with path-based children endpoints, so we fall back
+        let nextUrl: string | null = `${basePath}?$select=id,name,webUrl,folder&$top=200&$filter=startsWith(name,'${rtoPrefix}')`;
         while (nextUrl && candidates.length < 10) {
           const resp = await graphGet<{ value: DriveItem[]; '@odata.nextLink'?: string }>(nextUrl);
           if (!resp.ok) throw new Error('filter_not_supported');
@@ -303,7 +313,7 @@ Deno.serve(async (req: Request) => {
         // Fallback: list all children and filter in-memory by prefix
         console.log('[resolve-tenant-folder] $filter not supported, falling back to in-memory prefix filter');
         const resp = await graphGet<{ value: DriveItem[] }>(
-          `/drives/${driveId}/root/children?$select=id,name,webUrl,folder&$top=500`
+          `${basePath}?$select=id,name,webUrl,folder&$top=500`
         );
         if (resp.ok) {
           for (const item of (resp.data.value || [])) {
