@@ -92,7 +92,59 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const [sharedFolderBrowseLoading, setSharedFolderBrowseLoading] = useState(false);
   const [savingSharedFolder, setSavingSharedFolder] = useState(false);
 
-  // Fetch global SharePoint site URL
+  // Find Folder (resolve-tenant-folder) state
+  const [findingFolder, setFindingFolder] = useState(false);
+  const [findFolderCandidates, setFindFolderCandidates] = useState<Array<{ item_id: string; name: string; web_url: string; match_type: string; confidence: string }>>([]);
+  const [findFolderSearching, setFindFolderSearching] = useState(false);
+  const [findFolderConfirming, setFindFolderConfirming] = useState(false);
+
+  const handleFindFolder = async () => {
+    setFindingFolder(true);
+    setFindFolderCandidates([]);
+    setFindFolderSearching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resolve-tenant-folder', {
+        body: { tenant_id: tenantId, action: 'search' },
+      });
+      if (error || !data?.success) {
+        toast({ title: 'Search failed', description: data?.error || 'Could not search SharePoint', variant: 'destructive' });
+        setFindFolderCandidates([]);
+      } else {
+        setFindFolderCandidates(data.candidates || []);
+        if ((data.candidates || []).length === 0) {
+          toast({ title: 'No folders found', description: 'No matching folders found in SharePoint for this client.' });
+        }
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to search SharePoint', variant: 'destructive' });
+    } finally {
+      setFindFolderSearching(false);
+    }
+  };
+
+  const handleConfirmFoundFolder = async (candidate: { item_id: string; name: string; web_url: string }) => {
+    setFindFolderConfirming(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resolve-tenant-folder', {
+        body: { tenant_id: tenantId, action: 'confirm', folder_item_id: candidate.item_id },
+      });
+      if (error || !data?.success) {
+        toast({ title: 'Mapping failed', description: data?.error || 'Failed to confirm folder mapping', variant: 'destructive' });
+      } else {
+        toast({ title: 'Folder mapped', description: `Connected to: ${candidate.name}` });
+        setFindingFolder(false);
+        setFindFolderCandidates([]);
+        await fetchSettings();
+        // Also update the URL input with the folder's web URL
+        if (candidate.web_url) setUrlInput(candidate.web_url);
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to confirm folder mapping', variant: 'destructive' });
+    } finally {
+      setFindFolderConfirming(false);
+    }
+  };
+
   const { data: globalSiteUrl } = useQuery({
     queryKey: ['app-settings-sharepoint-site-url'],
     queryFn: async () => {
