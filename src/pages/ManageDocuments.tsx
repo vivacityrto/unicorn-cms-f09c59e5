@@ -1481,12 +1481,16 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-40 h-14 whitespace-nowrap border-r">Version Updated</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Client Doc</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Category</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Framework</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r text-center">Gov Ver</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-20 h-14 whitespace-nowrap border-r text-center">SP</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Updated</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 12 : 11} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 16 : 15} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
@@ -1494,11 +1498,11 @@ export default function ManageDocuments() {
             const categoryIds = doc.category ? doc.category.split(',') : [];
             const categoryBadges = categoryIds.map(id => categories.find(c => c.id === parseInt(id.trim()))?.name).filter(Boolean);
             const isSelected = selectedDocuments.includes(doc.id);
+            const currentVersion = getCurrentVersion(doc);
             return <TableRow key={doc.id} className={cn("group hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 hover:border-primary/20 animate-fade-in", isSelected && "bg-primary/5")} style={{
               animationDelay: `${index * 30}ms`
             }} onClick={() => {
-              setEditingDocumentId(doc.id);
-              setIsCreateDialogOpen(true);
+              setSelectedDocId(doc.id);
             }}>
                       {isSuperAdmin && (
                         <TableCell className="py-6 border-r border-border/50" style={{ paddingRight: '19px' }} onClick={e => e.stopPropagation()}>
