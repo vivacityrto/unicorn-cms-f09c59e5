@@ -98,6 +98,8 @@ async function processDocxTemplate(
   let imageCounter = 100;
   let relsContent: string | null = null;
   let relsFilename: string | null = null;
+  let contentTypesContent: string | null = null;
+  let contentTypesFilename: string | null = null;
 
   // Collect all detected {{...}} tags across all XML entries
   const detectedTagsSet = new Set<string>();
