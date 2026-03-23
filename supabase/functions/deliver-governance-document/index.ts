@@ -642,8 +642,18 @@ serve(async (req) => {
       detectedTags = result.detectedTags;
     }
 
-    // 4. Detect invalid tags
+    // 4. Detect invalid tags (not in dd_fields at all)
     const invalidTags = detectedTags.filter((tag) => !knownTags.has(tag));
+
+    // 4b. Detect unreplaced tags — tags found in template but with empty/missing values
+    const allMergeKeys = new Set(Object.keys(mergeData));
+    const imageFieldSet = new Set(imageFields);
+    const unreplacedTags = detectedTags.filter((tag) => {
+      if (invalidTags.includes(tag)) return false; // already tracked as invalid
+      if (imageFieldSet.has(tag)) return false; // image fields handled separately
+      if (allMergeKeys.has(tag) && mergeData[tag]?.trim()) return false; // has a value
+      return true; // known tag but empty/missing value
+    });
 
     // 5. Calculate risk level
     const totalRequired = requiredTags.length;
@@ -651,7 +661,7 @@ serve(async (req) => {
     const completeness = totalRequired > 0 ? Math.round((populatedCount / totalRequired) * 100) : 100;
 
     let riskLevel: string;
-    if (completeness === 100 && invalidTags.length === 0) {
+    if (completeness === 100 && invalidTags.length === 0 && unreplacedTags.length === 0) {
       riskLevel = "complete";
     } else if (completeness >= 75) {
       riskLevel = "partial";
@@ -659,7 +669,7 @@ serve(async (req) => {
       riskLevel = "incomplete";
     }
 
-    console.log(`[deliver] Tailoring: ${completeness}% complete, ${missingTags.length} missing, ${invalidTags.length} invalid, risk=${riskLevel}`);
+    console.log(`[deliver] Tailoring: ${completeness}% complete, ${missingTags.length} missing, ${invalidTags.length} invalid, ${unreplacedTags.length} unreplaced, risk=${riskLevel}`);
 
     // 6. Block if incomplete unless overridden
     if (riskLevel === "incomplete" && !allow_incomplete) {
