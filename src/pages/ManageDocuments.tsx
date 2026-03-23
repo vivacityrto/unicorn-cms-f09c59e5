@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy } from "lucide-react";
+import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy, Link2, Link2Off } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { Combobox } from "@/components/ui/combobox";
@@ -26,6 +26,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
+import { useDocumentCategories } from '@/hooks/useDocumentCategories';
+import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
+import { toast as sonnerToast } from 'sonner';
 interface Document {
   id: number;
   title: string;
