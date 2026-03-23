@@ -1,65 +1,32 @@
 
 
-## Fix: RTO ID prefix search for folder resolution
+## Fix: Governance folder creation should respect `start_folder_name` and use existing client root folder name
 
 ### Problem
-The `resolve-tenant-folder` edge function uses Graph's full-text `search(q='91020')` API. This can return noisy results and doesn't reliably do prefix matching. Folders are named like `91020 - Company Name`, so searching by RTO ID prefix (e.g., `91020`) should list root-level children and filter by name prefix.
+The `verify-compliance-folder` edge function has two issues:
+
+1. **Wrong parent path**: It creates the governance folder at the drive root (`ensureFolder(driveId, '', tenantFolderName)`), but the governance site likely has a `start_folder_name` configured (e.g., "Client Folder") — same pattern the `resolve-tenant-folder` function already handles.
+
+2. **Name mismatch**: It builds the folder name from scratch using `buildClientFolderName(rto_id, legal_name, name)`, but the user wants it to match the **existing client root folder name** stored in `tenant_sharepoint_settings.root_name`. This ensures the governance folder and client folder share the same name.
 
 ### Changes
 
-#### 1. `supabase/functions/resolve-tenant-folder/index.ts` — Replace Graph search with children listing + prefix filter
+**File: `supabase/functions/verify-compliance-folder/index.ts`**
 
-**Priority 2 block (lines 280-298):** Instead of `search(q='{rto_id}')`, list root children and filter folders whose name starts with the RTO ID:
+1. **Fetch `start_folder_name`** from the `sharepoint_sites` table alongside `graph_site_id` and `drive_id` (line ~86).
 
-```typescript
-// Priority 2: List root children and filter by RTO ID prefix
-if (tenant.rto_id && candidates.length === 0) {
-  const rtoPrefix = tenant.rto_id.trim();
-  let nextUrl: string | null = `/drives/${driveId}/root/children?$select=id,name,webUrl,folder&$top=200&$filter=startsWith(name,'${rtoPrefix}')`;
-  
-  while (nextUrl && candidates.length < 10) {
-    const resp = await graphGet<{ value: DriveItem[]; '@odata.nextLink'?: string }>(nextUrl);
-    if (!resp.ok) break;
-    for (const item of (resp.data.value || [])) {
-      if (item.folder && !candidates.some(c => c.item_id === item.id)) {
-        candidates.push({
-          item_id: item.id,
-          name: item.name,
-          web_url: item.webUrl,
-          match_type: 'rtoid',
-          confidence: 'high',
-        });
-      }
-    }
-    nextUrl = resp.data['@odata.nextLink'] || null;
-  }
-}
+2. **Use existing client root folder name** when available: query `tenant_sharepoint_settings.root_name` for the tenant. If it exists, use that as the governance folder name instead of `buildClientFolderName`. Fall back to `buildClientFolderName` if `root_name` is not set.
+
+3. **Pass `start_folder_name` as the parent path** to `ensureFolder` (line ~141) instead of empty string, so the folder is created inside the correct subdirectory (e.g., `Client Folder/91020 - AHMRC of NSW`).
+
+### Technical detail
+
+```text
+Before:  ensureFolder(driveId, '',               buildClientFolderName(...))
+After:   ensureFolder(driveId, startFolderName,   rootName || buildClientFolderName(...))
 ```
 
-Note: Graph's `$filter=startsWith(name,'91020')` on drive children is the correct way to do prefix matching. If the Graph API doesn't support `$filter` on children (some drives don't), we fall back to listing all children and filtering in code:
-
-```typescript
-// Fallback: list children, filter in-memory by prefix
-const resp = await graphGet<{ value: DriveItem[] }>(
-  `/drives/${driveId}/root/children?$select=id,name,webUrl,folder&$top=500`
-);
-if (resp.ok) {
-  for (const item of (resp.data.value || [])) {
-    if (item.folder && item.name.startsWith(rtoPrefix) && !candidates.some(c => c.item_id === item.id)) {
-      candidates.push({ ... });
-    }
-  }
-}
-```
-
-We'll implement the `$filter` approach first, with a try/catch fallback to the in-memory filter if the API rejects the filter.
-
-#### 2. Redeploy the edge function
-
-After updating the code, redeploy `resolve-tenant-folder`.
-
-### Files
 | File | Change |
 |------|--------|
-| `supabase/functions/resolve-tenant-folder/index.ts` | Replace search API with children listing + RTO prefix filter |
+| `supabase/functions/verify-compliance-folder/index.ts` | Fetch `start_folder_name` from site config; prefer `root_name` from tenant settings; create folder under start folder path |
 
