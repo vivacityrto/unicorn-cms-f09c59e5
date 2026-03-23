@@ -49160,6 +49160,7 @@ export type Database = {
       current_user_role: { Args: never; Returns: string }
       current_user_tenant: { Args: never; Returns: number }
       current_user_tenant_ids: { Args: never; Returns: string[] }
+      delete_document_cascade: { Args: { p_doc_id: number }; Returns: Json }
       derive_org_type_for_tenant: {
         Args: { p_tenant_id: number }
         Returns: undefined
