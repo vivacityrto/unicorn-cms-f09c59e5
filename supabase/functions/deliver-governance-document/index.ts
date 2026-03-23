@@ -651,7 +651,7 @@ serve(async (req) => {
     }
 
     // ── Download image assets (e.g. Logo) ──────────────────────────────────
-    const imageData: Record<string, Uint8Array> = {};
+    const imageData: Record<string, ImageAsset> = {};
     for (const tag of imageFields) {
       const imageValue = mergeFieldRows?.find((r) => r.field_tag === tag)?.value;
       if (imageValue) {
@@ -660,7 +660,11 @@ serve(async (req) => {
             .from("client-logos")
             .download(imageValue);
           if (imgBlob) {
-            imageData[tag] = new Uint8Array(await imgBlob.arrayBuffer());
+            const ext = inferImageExt(imageValue);
+            imageData[tag] = {
+              bytes: new Uint8Array(await imgBlob.arrayBuffer()),
+              ext,
+            };
           }
         } catch (e) {
           console.warn(`[deliver] Could not download image for ${tag}: ${e}`);
