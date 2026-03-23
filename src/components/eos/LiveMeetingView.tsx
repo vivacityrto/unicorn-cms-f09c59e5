@@ -51,6 +51,7 @@ export const LiveMeetingView = () => {
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [facilitatorDialogOpen, setFacilitatorDialogOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
+  const [cascadingMessages, setCascadingMessages] = useState('');
   const [isNavigating, setIsNavigating] = useState(false);
 
   // Fetch meeting details first (needed for tenant_id)
@@ -69,7 +70,7 @@ export const LiveMeetingView = () => {
   });
 
   // Use custom hooks
-  const { segments, isLoading: segmentsLoading, isFetching: segmentsFetching, advanceSegment, goToPreviousSegment } = useEosMeetingSegments(meetingId);
+  const { segments, isLoading: segmentsLoading, isFetching: segmentsFetching, advanceSegment, goToPreviousSegment, updateSegmentNotes } = useEosMeetingSegments(meetingId);
   const { headlines, createHeadline, deleteHeadline } = useEosHeadlines(meetingId);
   const { issues } = useMeetingIssues(meetingId, meeting?.tenant_id);
   const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId);
@@ -193,6 +194,47 @@ export const LiveMeetingView = () => {
       });
     }
   }, [profile?.user_uuid, attendees, meetingStarted, meetingId]);
+
+  // Hydrate segment notes from DB on load
+  useEffect(() => {
+    if (!segments) return;
+    setSegmentNotes(prev => {
+      const hydrated: Record<string, string> = { ...prev };
+      segments.forEach(seg => {
+        if (seg.notes && !(seg.id in hydrated)) {
+          hydrated[seg.id] = seg.notes;
+        }
+      });
+      return hydrated;
+    });
+  }, [segments]);
+
+  // Hydrate cascading messages from meeting.notes on load
+  useEffect(() => {
+    if (meeting?.notes && !cascadingMessages) {
+      setCascadingMessages(meeting.notes);
+    }
+  }, [meeting?.notes]);
+
+  // Save segment notes on blur
+  const handleSegmentNoteBlur = (segmentId: string) => {
+    const note = segmentNotes[segmentId];
+    if (note !== undefined) {
+      updateSegmentNotes.mutate({ segmentId, notes: note });
+    }
+  };
+
+  // Save cascading messages on blur
+  const saveCascadingMessages = async () => {
+    if (!meetingId) return;
+    const { error } = await supabase
+      .from('eos_meetings')
+      .update({ notes: cascadingMessages })
+      .eq('id', meetingId);
+    if (error) {
+      toast({ title: 'Error saving cascading messages', description: error.message, variant: 'destructive' });
+    }
+  };
 
   const isFacilitator = participants?.some(
     p => p.user_id === profile?.user_uuid && p.role === 'Leader'
@@ -332,8 +374,9 @@ export const LiveMeetingView = () => {
               </p>
               <Textarea 
                 placeholder="Meeting notes for this segment..."
-                value={segmentNotes[segment.id] || segment.notes || ''}
+                value={segmentNotes[segment.id] || ''}
                 onChange={(e) => setSegmentNotes(prev => ({ ...prev, [segment.id]: e.target.value }))}
+                onBlur={() => handleSegmentNoteBlur(segment.id)}
                 rows={4}
               />
             </div>
@@ -637,6 +680,9 @@ export const LiveMeetingView = () => {
                 <p className="font-medium text-sm mb-2">Cascading Messages:</p>
                 <Textarea 
                   placeholder="Key messages to cascade to the organization..."
+                  value={cascadingMessages}
+                  onChange={(e) => setCascadingMessages(e.target.value)}
+                  onBlur={saveCascadingMessages}
                   rows={3}
                 />
               </div>
@@ -650,8 +696,9 @@ export const LiveMeetingView = () => {
             <h3 className="text-lg font-semibold mb-4">{segment.segment_name}</h3>
             <Textarea 
               placeholder="Notes for this segment..."
-              value={segmentNotes[segment.id] || segment.notes || ''}
+              value={segmentNotes[segment.id] || ''}
               onChange={(e) => setSegmentNotes(prev => ({ ...prev, [segment.id]: e.target.value }))}
+              onBlur={() => handleSegmentNoteBlur(segment.id)}
               rows={4}
             />
           </Card>

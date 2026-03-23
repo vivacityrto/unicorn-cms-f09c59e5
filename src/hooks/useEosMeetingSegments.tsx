@@ -60,11 +60,28 @@ export const useEosMeetingSegments = (meetingId: string | undefined) => {
     },
   });
 
+  const updateSegmentNotes = useMutation({
+    mutationFn: async ({ segmentId, notes }: { segmentId: string; notes: string }) => {
+      const { error } = await supabase
+        .from('eos_meeting_segments')
+        .update({ notes })
+        .eq('id', segmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error saving segment notes', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     segments,
     isLoading,
     isFetching,
     advanceSegment,
     goToPreviousSegment,
+    updateSegmentNotes,
   };
 };
