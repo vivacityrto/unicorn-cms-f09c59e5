@@ -277,21 +277,45 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Priority 2: Search by RTO ID
+    // Priority 2: List root children and filter by RTO ID prefix
     if (tenant.rto_id && candidates.length === 0) {
-      const searchResp = await graphGet<{ value: DriveItem[] }>(
-        `/drives/${driveId}/root/search(q='${encodeURIComponent(tenant.rto_id)}')`
-      );
-      if (searchResp.ok) {
-        for (const item of (searchResp.data.value || [])) {
-          if (item.folder && !candidates.some(c => c.item_id === item.id)) {
-            candidates.push({
-              item_id: item.id,
-              name: item.name,
-              web_url: item.webUrl,
-              match_type: 'rtoid',
-              confidence: 'high',
-            });
+      const rtoPrefix = tenant.rto_id.trim();
+      try {
+        // Try $filter=startsWith first (most efficient)
+        let nextUrl: string | null = `/drives/${driveId}/root/children?$select=id,name,webUrl,folder&$top=200&$filter=startsWith(name,'${rtoPrefix}')`;
+        while (nextUrl && candidates.length < 10) {
+          const resp = await graphGet<{ value: DriveItem[]; '@odata.nextLink'?: string }>(nextUrl);
+          if (!resp.ok) throw new Error('filter_not_supported');
+          for (const item of (resp.data.value || [])) {
+            if (item.folder && !candidates.some(c => c.item_id === item.id)) {
+              candidates.push({
+                item_id: item.id,
+                name: item.name,
+                web_url: item.webUrl,
+                match_type: 'rtoid',
+                confidence: 'high',
+              });
+            }
+          }
+          nextUrl = resp.data['@odata.nextLink'] || null;
+        }
+      } catch {
+        // Fallback: list all children and filter in-memory by prefix
+        console.log('[resolve-tenant-folder] $filter not supported, falling back to in-memory prefix filter');
+        const resp = await graphGet<{ value: DriveItem[] }>(
+          `/drives/${driveId}/root/children?$select=id,name,webUrl,folder&$top=500`
+        );
+        if (resp.ok) {
+          for (const item of (resp.data.value || [])) {
+            if (item.folder && item.name.startsWith(rtoPrefix) && !candidates.some(c => c.item_id === item.id)) {
+              candidates.push({
+                item_id: item.id,
+                name: item.name,
+                web_url: item.webUrl,
+                match_type: 'rtoid',
+                confidence: 'high',
+              });
+            }
           }
         }
       }
