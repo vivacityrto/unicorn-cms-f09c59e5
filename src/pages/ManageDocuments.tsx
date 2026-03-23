@@ -1536,42 +1536,19 @@ export default function ManageDocuments() {
                       <TableCell className="text-muted-foreground text-sm whitespace-nowrap py-6 border-r border-border/50">
                         <div className="truncate max-w-[230px]">{doc.description || "—"}</div>
                       </TableCell>
+                      {/* Framework */}
+                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
+                        <span className="text-xs font-medium">{doc.framework_type || '—'}</span>
+                      </TableCell>
+                      {/* Category */}
+                      <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
+                        <span className="text-xs text-muted-foreground">{valueLabelMap.get(doc.category ?? '') || doc.category || '—'}</span>
+                      </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center" onClick={e => e.stopPropagation()}>
                         {doc.uploaded_files && doc.uploaded_files.length > 0 ? <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium cursor-pointer">
                             <FileText className="h-3 w-3 mr-1" />
                             {doc.uploaded_files.length} {doc.uploaded_files.length === 1 ? 'File' : 'Files'}
                           </Badge> : <span className="text-sm text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
-                        <div className="flex items-center justify-center">
-                          {doc.creator ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="h-8 w-8 rounded-full overflow-hidden bg-muted flex items-center justify-center cursor-pointer border border-border">
-                                    {doc.creator.avatar_url ? (
-                                      <img 
-                                        src={doc.creator.avatar_url} 
-                                        alt={`${doc.creator.first_name || ''} ${doc.creator.last_name || ''}`}
-                                        className="h-full w-full object-cover"
-                                      />
-                                    ) : (
-                                      <span className="text-xs font-medium text-muted-foreground">
-                                        {(doc.creator.first_name?.[0] || '').toUpperCase()}
-                                        {(doc.creator.last_name?.[0] || '').toUpperCase()}
-                                      </span>
-                                    )}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{doc.creator.first_name} {doc.creator.last_name}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
-                          )}
-                        </div>
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
                         {doc.versiondate ? format(new Date(doc.versiondate), "dd MMM yyyy") : "—"}
@@ -1596,13 +1573,6 @@ export default function ManageDocuments() {
                 } : {}}>
                           {doc.isclientdoc ? "Yes" : "No"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
-                        <span className="text-xs text-muted-foreground">{valueLabelMap.get(doc.category ?? '') || doc.category || '—'}</span>
-                      </TableCell>
-                      {/* Framework */}
-                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
-                        <span className="text-xs font-medium">{doc.framework_type || '—'}</span>
                       </TableCell>
                       {/* Updated */}
                       <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
