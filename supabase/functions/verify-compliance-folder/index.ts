@@ -83,7 +83,7 @@ Deno.serve(async (req: Request) => {
     // Look up the Governance site drive from sharepoint_sites
     const { data: govSite } = await supabase
       .from('sharepoint_sites')
-      .select('graph_site_id, drive_id')
+      .select('graph_site_id, drive_id, start_folder_name')
       .eq('purpose', 'governance_client_files')
       .eq('is_active', true)
       .limit(1)
@@ -96,6 +96,8 @@ Deno.serve(async (req: Request) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const startFolderName = (govSite.start_folder_name as string | null) || '';
 
     const driveId = govSite.drive_id;
 
