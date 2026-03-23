@@ -91,7 +91,7 @@ export interface GraphResponse<T = unknown> {
 }
 
 /** Retry-eligible status codes */
-const RETRYABLE_STATUSES = new Set([429, 503, 504]);
+const RETRYABLE_STATUSES = new Set([423, 429, 503, 504]);
 const MAX_RETRIES = 3;
 
 /** Wait helper honouring Retry-After header with exponential backoff fallback */
