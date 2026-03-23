@@ -687,6 +687,7 @@ function GovernanceFolderSection({
           title: msg,
           description: subs?.created?.length ? `Created ${subs.created.length} category subfolders.` : undefined,
         });
+        setBrowsingGovernanceFolder(false);
         await onSaved();
       }
     } catch (err) {
