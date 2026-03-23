@@ -688,11 +688,13 @@ serve(async (req) => {
     if (doc.category) {
       const { data: catRow } = await supabase
         .from("dd_document_categories")
-        .select("sharepoint_folder_name")
+        .select("label")
         .eq("value", doc.category)
         .maybeSingle();
 
-      if (catRow?.sharepoint_folder_name) {
+      const folderName = catRow?.label || null;
+
+      if (folderName) {
         try {
           const parentInfo = await graphGet<DriveItem>(
             `/drives/${driveId}/items/${parentItemId}`,
@@ -703,9 +705,9 @@ serve(async (req) => {
               ? `${parentRef.path.replace(/^\/drives\/[^/]+\/root:/, '')}/${parentInfo.data.name}`
               : parentInfo.data.name;
             const cleanPath = fullPath.replace(/^\//, '');
-            const sub = await ensureFolder(driveId, cleanPath, catRow.sharepoint_folder_name);
+            const sub = await ensureFolder(driveId, cleanPath, folderName);
             parentItemId = sub.itemId;
-            categorySubfolder = catRow.sharepoint_folder_name;
+            categorySubfolder = folderName;
           }
         } catch (e) {
           console.warn(`[deliver] Could not resolve category subfolder: ${e}`);
