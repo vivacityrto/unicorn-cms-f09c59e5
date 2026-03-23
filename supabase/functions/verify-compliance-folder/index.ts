@@ -135,12 +135,11 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Build tenant folder name using unified convention
-    const tenantFolderName = buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name);
+    // Use existing client root folder name if available, otherwise build from tenant data
+    const tenantFolderName = (spSettings?.root_name as string | null) || buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name);
 
-    // Create tenant folder under Shared Documents root
-    // The governance site structure is: Shared Documents / {tenant folder}
-    const { itemId, webUrl } = await ensureFolder(driveId, '', tenantFolderName);
+    // Create tenant folder under start_folder_name (e.g., "Client Folder/{tenant}")
+    const { itemId, webUrl } = await ensureFolder(driveId, startFolderName, tenantFolderName);
 
     // Update tenant_sharepoint_settings with governance columns
     const { data: existingSettings } = await supabase
