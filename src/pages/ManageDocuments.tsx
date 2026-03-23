@@ -1227,69 +1227,6 @@ export default function ManageDocuments() {
                   </div>
 
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="files">Files</Label>
-                    <Input id="files" type="file" multiple onChange={handleFileUpload} className="cursor-pointer" />
-                    
-                    {/* Display existing files (edit mode) */}
-                    {existingFiles.length > 0 && <div className="space-y-1 mt-2">
-                        {existingFiles.map((file, index) => <div key={`existing-${index}`} className="flex items-center justify-between border border-input rounded-md px-3 py-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm truncate">{file.name}</span>
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                              <Button type="button" variant="ghost" size="sm" onClick={async () => {
-                          try {
-                            if (file.url.startsWith("http")) {
-                              const url = new URL(file.url);
-                              const segments = url.pathname.split("/").filter(Boolean);
-                              const publicIndex = segments.indexOf("public");
-                              if (publicIndex !== -1 && segments.length > publicIndex + 2) {
-                                const bucket = segments[publicIndex + 1];
-                                const objectPath = segments.slice(publicIndex + 2).join("/");
-                                const { data } = await supabase.storage.from(bucket).createSignedUrl(objectPath, 3600);
-                                if (data?.signedUrl) {
-                                  window.open(data.signedUrl, "_blank");
-                                } else {
-                                  window.open(file.url, "_blank");
-                                }
-                              } else {
-                                window.open(file.url, "_blank");
-                              }
-                            } else {
-                              const { data } = await supabase.storage.from("document-files").createSignedUrl(file.url, 3600);
-                              if (data?.signedUrl) {
-                                window.open(data.signedUrl, "_blank");
-                              }
-                            }
-                          } catch {
-                            window.open(file.url, "_blank");
-                          }
-                        }} className="h-6 w-6 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button type="button" variant="ghost" size="sm" onClick={() => setExistingFiles(prev => prev.filter((_, i) => i !== index))} className="h-6 w-6 p-0 text-destructive/60 hover:text-destructive hover:bg-destructive/10 rounded">
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>)}
-                      </div>}
-
-                    {/* Display new uploaded files */}
-                    {uploadedFiles.length > 0 && <div className="space-y-1 mt-2">
-                        {uploadedFiles.map((file, index) => <div key={`new-${index}`} className="flex items-center justify-between border border-input rounded-md px-3 py-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm truncate">{file.name}</span>
-                            </div>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFile(index)} className="h-6 w-6 p-0 text-destructive/60 hover:text-destructive hover:bg-destructive/10 rounded flex-shrink-0 ml-2">
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>)}
-                      </div>}
-
-                  </div>
                   </div>
                 </div>
 
