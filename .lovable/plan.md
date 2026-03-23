@@ -1,82 +1,54 @@
 
 
-## Fix: Persist segment notes and cascading messages in EOS L10 meetings
+## Fix: Informative error messages for governance document generation failures
 
 ### Problem
-Three `<Textarea>` fields in `LiveMeetingView` write to local React state only and are never saved to the database:
-1. **Segue notes** (segue segment) — writes to `segmentNotes[segment.id]` state
-2. **General segment notes** (default case) — same local state
-3. **Cascading Messages** (conclude segment) — no state binding at all
+When `supabase.functions.invoke` receives a non-2xx response, the SDK sets `response.error` to a generic `FunctionsHttpError` with message "Edge Function returned a non-2xx status code". Line 130 throws this generic message **before** line 142 ever checks the response body (which contains the actual error like `GOVERNANCE_FOLDER_MISSING`). The governance-specific error handling at line 154 then never matches because the message is generic.
 
-On page refresh or dialog close, all content is lost.
-
-### No migration required
-- `eos_meeting_segments.notes` (text, nullable) already exists — use for segment notes
-- `eos_meetings.notes` (text, nullable) already exists — use for cascading messages
-
-### Changes
-
-#### 1. `src/hooks/useEosMeetingSegments.tsx` — add `updateSegmentNotes` mutation
-Add a new mutation that updates the `notes` column on `eos_meeting_segments`:
+### Root cause
 ```typescript
-const updateSegmentNotes = useMutation({
-  mutationFn: async ({ segmentId, notes }: { segmentId: string; notes: string }) => {
-    const { error } = await supabase
-      .from('eos_meeting_segments')
-      .update({ notes })
-      .eq('id', segmentId);
-    if (error) throw error;
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
-  },
-});
+// Line 130 — throws GENERIC message, skips body parsing
+if (response.error) throw new Error(response.error.message);
+
+// Line 142 — never reached when error is set
+if (!response.data?.success) throw new Error(response.data?.error || 'Generation failed');
 ```
-Return it from the hook.
 
-#### 2. `src/components/eos/LiveMeetingView.tsx` — wire up persistence
+### Fix
 
-**a) Add cascading messages state + hydration:**
-- New state: `const [cascadingMessages, setCascadingMessages] = useState('')`
-- Hydrate from `meeting?.notes` via `useEffect`
-- Initialize `segmentNotes` from `segments` data on load (populate from `segment.notes` for each segment)
+**File: `src/components/client/StageDocumentsSection.tsx`** (lines 130-142)
 
-**b) Add save-on-blur handler for segment notes:**
+Replace the error handling to parse the response body even on non-2xx status codes:
+
 ```typescript
-const handleSegmentNoteBlur = (segmentId: string) => {
-  const note = segmentNotes[segmentId];
-  if (note !== undefined) {
-    updateSegmentNotes.mutate({ segmentId, notes: note });
+// When functions.invoke returns non-2xx, response.error is set BUT
+// response.data still contains the JSON body with error_code/error details.
+// Check the body first for structured errors before falling back to generic.
+if (response.error) {
+  const body = response.data;
+  const errorCode = body?.error_code || '';
+  const errorMsg = body?.error || response.error.message;
+
+  if (errorCode === 'GOVERNANCE_FOLDER_MISSING') {
+    toast({
+      title: 'Governance Folder Not Configured',
+      description: 'This tenant does not have a governance folder mapped in SharePoint. Go to Admin → SharePoint Folder Mapping, select this tenant, and click "Verify & Create Default" or "Select Folder" to configure it.',
+      variant: 'destructive',
+    });
+    return;
   }
-};
+
+  throw new Error(errorMsg);
+}
 ```
 
-**c) Add save-on-blur for cascading messages:**
-Save to `eos_meetings.notes` via a new inline mutation or direct supabase update:
-```typescript
-const saveCascadingMessages = async (value: string) => {
-  await supabase.from('eos_meetings').update({ notes: value }).eq('id', meetingId!);
-};
-```
+This ensures:
+1. The `GOVERNANCE_FOLDER_MISSING` code is detected from the response body
+2. The user sees a clear, actionable message telling them exactly what to do
+3. Other structured errors from the edge function body are surfaced instead of the generic SDK message
 
-**d) Bind `onBlur` to all three textarea locations:**
-- Segue textarea: add `onBlur={() => handleSegmentNoteBlur(segment.id)}`
-- Default/general textarea: add `onBlur={() => handleSegmentNoteBlur(segment.id)}`
-- Cascading Messages textarea: bind `value={cascadingMessages}`, `onChange`, and `onBlur={saveCascadingMessages}`
-
-**e) Hydration `useEffect`s:**
-- Populate `segmentNotes` from fetched `segments` data (only set keys not already dirty)
-- Populate `cascadingMessages` from `meeting?.notes`
-
-### Files touched
+### Files
 | File | Change |
 |------|--------|
-| `src/hooks/useEosMeetingSegments.tsx` | Add `updateSegmentNotes` mutation, return it |
-| `src/components/eos/LiveMeetingView.tsx` | Add cascading state, hydration effects, onBlur save handlers on all 3 textareas |
-
-### What is NOT changed
-- IDS dialog (already fixed)
-- TodoInlineForm (already fixed)
-- Meeting close logic (already fixed)
-- No new DB columns or migrations
+| `src/components/client/StageDocumentsSection.tsx` | Parse response body on non-2xx to detect `GOVERNANCE_FOLDER_MISSING` and show actionable toast |
 
