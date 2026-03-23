@@ -762,13 +762,36 @@ serve(async (req) => {
       }
     }
 
-    // ── Upload to SharePoint ───────────────────────────────────────────────
+    // ── Upload to SharePoint (with retry for locked files) ───────────────
     const FOUR_MB = 4 * 1024 * 1024;
     let driveItem: DriveItem;
-    if (processedBytes.byteLength < FOUR_MB) {
-      driveItem = await graphUploadSmall(driveId, parentItemId, deliveredFileName, processedBytes);
-    } else {
-      driveItem = await graphUploadSession(driveId, parentItemId, deliveredFileName, processedBytes);
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        if (processedBytes.byteLength < FOUR_MB) {
+          driveItem = await graphUploadSmall(driveId, parentItemId, deliveredFileName, processedBytes);
+        } else {
+          driveItem = await graphUploadSession(driveId, parentItemId, deliveredFileName, processedBytes);
+        }
+        break; // success
+      } catch (uploadErr: unknown) {
+        const errMsg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+        const isLocked = errMsg.includes('resourceLocked') || errMsg.includes('423') || errMsg.includes('locked');
+        
+        if (isLocked && attempt < maxRetries) {
+          console.warn(`[deliver] File locked on attempt ${attempt}, retrying in ${attempt * 2}s...`);
+          await new Promise((r) => setTimeout(r, attempt * 2000));
+          continue;
+        }
+
+        if (isLocked) {
+          throw new Error(
+            `The file "${deliveredFileName}" is currently locked in SharePoint (likely open by another user or checked out). ` +
+            `Please close the file in SharePoint/Word and try again.`
+          );
+        }
+        throw uploadErr;
+      }
     }
 
     console.log(`[deliver] Uploaded to SharePoint: ${driveItem.webUrl}`);
