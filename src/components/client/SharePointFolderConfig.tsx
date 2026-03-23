@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   FolderOpen,
   CheckCircle2,
@@ -26,6 +27,8 @@ import {
   ArrowLeft,
   ChevronRight,
   FolderPlus,
+  Search,
+  XCircle,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -89,7 +92,59 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const [sharedFolderBrowseLoading, setSharedFolderBrowseLoading] = useState(false);
   const [savingSharedFolder, setSavingSharedFolder] = useState(false);
 
-  // Fetch global SharePoint site URL
+  // Find Folder (resolve-tenant-folder) state
+  const [findingFolder, setFindingFolder] = useState(false);
+  const [findFolderCandidates, setFindFolderCandidates] = useState<Array<{ item_id: string; name: string; web_url: string; match_type: string; confidence: string }>>([]);
+  const [findFolderSearching, setFindFolderSearching] = useState(false);
+  const [findFolderConfirming, setFindFolderConfirming] = useState(false);
+
+  const handleFindFolder = async () => {
+    setFindingFolder(true);
+    setFindFolderCandidates([]);
+    setFindFolderSearching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resolve-tenant-folder', {
+        body: { tenant_id: tenantId, action: 'search' },
+      });
+      if (error || !data?.success) {
+        toast({ title: 'Search failed', description: data?.error || 'Could not search SharePoint', variant: 'destructive' });
+        setFindFolderCandidates([]);
+      } else {
+        setFindFolderCandidates(data.candidates || []);
+        if ((data.candidates || []).length === 0) {
+          toast({ title: 'No folders found', description: 'No matching folders found in SharePoint for this client.' });
+        }
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to search SharePoint', variant: 'destructive' });
+    } finally {
+      setFindFolderSearching(false);
+    }
+  };
+
+  const handleConfirmFoundFolder = async (candidate: { item_id: string; name: string; web_url: string }) => {
+    setFindFolderConfirming(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resolve-tenant-folder', {
+        body: { tenant_id: tenantId, action: 'confirm', folder_item_id: candidate.item_id },
+      });
+      if (error || !data?.success) {
+        toast({ title: 'Mapping failed', description: data?.error || 'Failed to confirm folder mapping', variant: 'destructive' });
+      } else {
+        toast({ title: 'Folder mapped', description: `Connected to: ${candidate.name}` });
+        setFindingFolder(false);
+        setFindFolderCandidates([]);
+        await fetchSettings();
+        // Also update the URL input with the folder's web URL
+        if (candidate.web_url) setUrlInput(candidate.web_url);
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to confirm folder mapping', variant: 'destructive' });
+    } finally {
+      setFindFolderConfirming(false);
+    }
+  };
+
   const { data: globalSiteUrl } = useQuery({
     queryKey: ['app-settings-sharepoint-site-url'],
     queryFn: async () => {
@@ -392,14 +447,106 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
               Validate & Save
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground flex items-start gap-1">
-            <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-            Use &quot;Copy link&quot; from SharePoint to get a sharing link for the folder.
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-muted-foreground flex items-start gap-1 flex-1">
+              <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+              Use &quot;Copy link&quot; from SharePoint to get a sharing link for the folder.
+            </p>
+            {!settings?.root_item_id && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleFindFolder}
+                disabled={findFolderSearching}
+                className="shrink-0 gap-1.5"
+              >
+                {findFolderSearching ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Search className="h-3.5 w-3.5" />
+                )}
+                Find by RTO ID
+              </Button>
+            )}
+          </div>
           {settings?.drive_id && (
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               Drive ID: <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{settings.drive_id.substring(0, 20)}...</code>
             </p>
+          )}
+
+          {/* Find Folder Results */}
+          {findingFolder && (
+            <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">SharePoint Folder Matches</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setFindingFolder(false); setFindFolderCandidates([]); }}
+                  className="h-7 px-2 text-xs"
+                >
+                  Close
+                </Button>
+              </div>
+              {findFolderSearching ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+                  <span className="text-sm text-muted-foreground">Searching SharePoint by RTO ID...</span>
+                </div>
+              ) : findFolderCandidates.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  <XCircle className="h-6 w-6 mx-auto mb-1.5 opacity-50" />
+                  <p className="text-sm">No matching folders found.</p>
+                  <p className="text-xs mt-0.5">You can paste the SharePoint URL manually above.</p>
+                </div>
+              ) : (
+                <ScrollArea className="max-h-[250px]">
+                  <div className="space-y-2">
+                    {findFolderCandidates.map((c) => (
+                      <div key={c.item_id} className="flex items-center justify-between p-2.5 border rounded-md bg-background hover:border-primary/50 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <FolderOpen className="h-4 w-4 text-primary shrink-0" />
+                            <span className="font-medium text-sm truncate">{c.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {c.match_type === 'stored' ? 'Stored' : c.match_type === 'rtoid' ? 'RTO ID' : 'Name'}
+                            </Badge>
+                            <Badge
+                              variant={c.confidence === 'high' ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {c.confidence}
+                            </Badge>
+                            {c.web_url && (
+                              <a
+                                href={c.web_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                View
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleConfirmFoundFolder(c)}
+                          disabled={findFolderConfirming}
+                        >
+                          {findFolderConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                          Use This
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
           )}
         </div>
 
