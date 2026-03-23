@@ -1424,7 +1424,7 @@ export default function ManageDocuments() {
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 12 : 11} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 11 : 10} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
