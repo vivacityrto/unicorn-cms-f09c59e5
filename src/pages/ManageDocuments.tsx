@@ -1550,12 +1550,6 @@ export default function ManageDocuments() {
                       <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
                         <span className="text-xs text-muted-foreground">{valueLabelMap.get(doc.category ?? '') || doc.category || '—'}</span>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center" onClick={e => e.stopPropagation()}>
-                        {doc.uploaded_files && doc.uploaded_files.length > 0 ? <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium cursor-pointer">
-                            <FileText className="h-3 w-3 mr-1" />
-                            {doc.uploaded_files.length} {doc.uploaded_files.length === 1 ? 'File' : 'Files'}
-                          </Badge> : <span className="text-sm text-muted-foreground">—</span>}
-                      </TableCell>
                       <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
                         {doc.versiondate ? format(new Date(doc.versiondate), "dd MMM yyyy") : "—"}
                       </TableCell>
