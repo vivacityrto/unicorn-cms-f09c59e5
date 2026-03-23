@@ -211,6 +211,9 @@ async function processPptxTemplate(
       const decoder = new TextDecoder();
       let content = decoder.decode(arrayBuffer);
 
+      // Normalize split merge field tokens BEFORE detection and replacement
+      content = normalizeMergeTokens(content);
+
       // Detect merge field tags in text content
       const textOnly = content.replace(/<[^>]+>/g, "");
       const tagPattern = /\{\{\s*([^}]+?)\s*\}\}/g;
@@ -222,7 +225,7 @@ async function processPptxTemplate(
         }
       }
 
-      // Replace text merge fields (simple token replacement)
+      // Replace text merge fields (tokens are now normalized)
       for (const [field, value] of Object.entries(mergeData)) {
         const token = `{{${field}}}`;
         const escapedValue = escapeXml(value || "");
