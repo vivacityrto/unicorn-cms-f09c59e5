@@ -673,13 +673,12 @@ export default function ManageDocuments() {
   const handleDeleteDocument = async (docId: number) => {
     if (!confirm("Are you sure you want to delete this document?")) return;
     try {
-      const {
-        error
-      } = await supabase.from("documents").delete().eq("id", docId);
+      const { data, error } = await supabase.rpc('delete_document_cascade', { p_doc_id: docId });
       if (error) throw error;
+      const result = data as any;
       toast({
-        title: "Success",
-        description: "Document deleted successfully"
+        title: "Document deleted",
+        description: `Removed "${result.title}" along with ${result.instances_deleted} instance(s), ${result.stage_docs_deleted} stage link(s), and ${result.tenant_docs_deleted} tenant link(s).`
       });
       fetchDocuments();
     } catch (error: any) {
