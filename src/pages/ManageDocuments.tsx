@@ -1581,9 +1581,15 @@ export default function ManageDocuments() {
                         {doc.versiondate ? format(new Date(doc.versiondate), "dd MMM yyyy") : "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
-                        {doc.versionnumber ? <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
+                        {currentVersion ? (
+                          <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
+                            v{currentVersion.version_number}
+                          </Badge>
+                        ) : doc.versionnumber ? (
+                          <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
                             v{doc.versionnumber}
-                          </Badge> : "—"}
+                          </Badge>
+                        ) : '—'}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
                         <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px]" style={doc.isclientdoc ? {
