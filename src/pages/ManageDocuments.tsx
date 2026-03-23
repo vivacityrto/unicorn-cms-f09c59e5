@@ -1596,7 +1596,7 @@ export default function ManageDocuments() {
                         </Badge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
-                        {categoryBadges.length > 0 ? categoryBadges.length > 1 ? `${categoryBadges[0]} +${categoryBadges.length - 1}` : categoryBadges[0] : "—"}
+                        <span className="text-xs text-muted-foreground">{valueLabelMap.get(doc.category ?? '') || doc.category || '—'}</span>
                       </TableCell>
                       {/* Framework */}
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
