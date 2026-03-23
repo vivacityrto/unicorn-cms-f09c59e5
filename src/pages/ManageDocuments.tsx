@@ -1270,6 +1270,21 @@ export default function ManageDocuments() {
           <Input placeholder="Search by ID, name, or description..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12 h-12 bg-card border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-lg font-medium placeholder:text-muted-foreground/50" />
         </div>
 
+        {/* Duplicates Filter */}
+        {isSuperAdmin && duplicateDocCount > 0 && (
+          <Button
+            variant={showDuplicatesOnly ? "default" : "outline"}
+            className={cn(
+              "h-12 gap-2 rounded-lg font-semibold whitespace-nowrap",
+              showDuplicatesOnly && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            )}
+            onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+          >
+            <Copy className="h-4 w-4" />
+            Duplicates ({duplicateDocCount})
+          </Button>
+        )}
+
         <div className="w-full md:w-[200px]">
           <Popover>
             <PopoverTrigger asChild>
