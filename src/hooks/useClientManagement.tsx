@@ -74,6 +74,12 @@ export interface ClientProfile {
   risk_level: string | null;
   updated_at: string | null;
   phone1: string | null;
+  rto_email: string | null;
+  gto_name: string | null;
+  country: string | null;
+  primary_contact_name: string | null;
+  primary_contact_email: string | null;
+  primary_contact_phone: string | null;
 }
 
 export interface RegistryLink {
@@ -294,7 +300,7 @@ export function useClientProfile(tenantId: number | null) {
           .maybeSingle(),
         supabase
           .from('tenant_profile')
-          .select('phone1, org_type')
+          .select('phone1, org_type, rto_email, gto_name, country, primary_contact_name, primary_contact_email, primary_contact_phone')
           .eq('tenant_id', tenantId)
           .maybeSingle()
       ]);
@@ -362,7 +368,13 @@ export function useClientProfile(tenantId: number | null) {
         accounting_system: tenant.accounting_system,
         risk_level: tenant.risk_level,
         updated_at: tenant.updated_at,
-        phone1: tpResult.data?.phone1 || null
+        phone1: tpResult.data?.phone1 || null,
+        rto_email: tpResult.data?.rto_email || null,
+        gto_name: tpResult.data?.gto_name || null,
+        country: tpResult.data?.country || null,
+        primary_contact_name: tpResult.data?.primary_contact_name || null,
+        primary_contact_email: tpResult.data?.primary_contact_email || null,
+        primary_contact_phone: tpResult.data?.primary_contact_phone || null,
       };
 
       setProfile(profileData);
@@ -410,6 +422,12 @@ export function useClientProfile(tenantId: number | null) {
       const profileUpdates: Record<string, any> = {};
       if ('phone1' in updates) profileUpdates.phone1 = updates.phone1;
       if ('org_type' in updates) profileUpdates.org_type = updates.org_type;
+      if ('rto_email' in updates) profileUpdates.rto_email = updates.rto_email;
+      if ('gto_name' in updates) profileUpdates.gto_name = updates.gto_name;
+      if ('country' in updates) profileUpdates.country = updates.country;
+      if ('primary_contact_name' in updates) profileUpdates.primary_contact_name = updates.primary_contact_name;
+      if ('primary_contact_email' in updates) profileUpdates.primary_contact_email = updates.primary_contact_email;
+      if ('primary_contact_phone' in updates) profileUpdates.primary_contact_phone = updates.primary_contact_phone;
       if (Object.keys(profileUpdates).length > 0) {
         const { error: profileError } = await supabase
           .from('tenant_profile')

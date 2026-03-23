@@ -324,6 +324,82 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
         </CardContent>
       </Card>
 
+      {/* Contact & Profile */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Contact & Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="rto_email">Organisation Email</Label>
+            <Input
+              id="rto_email"
+              type="email"
+              value={formData.rto_email || ''}
+              onChange={(e) => handleChange('rto_email', e.target.value)}
+              placeholder="info@organisation.com.au"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="country">Country</Label>
+            <Input
+              id="country"
+              value={formData.country || ''}
+              onChange={(e) => handleChange('country', e.target.value)}
+              placeholder="e.g. Australia"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gto_name">GTO Name</Label>
+            <Input
+              id="gto_name"
+              value={formData.gto_name || ''}
+              onChange={(e) => handleChange('gto_name', e.target.value)}
+              placeholder="Group Training Organisation name"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="primary_contact_name">Accountable Person</Label>
+            <Input
+              id="primary_contact_name"
+              value={formData.primary_contact_name || ''}
+              onChange={(e) => handleChange('primary_contact_name', e.target.value)}
+              placeholder="Full name"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="primary_contact_email">Contact Email</Label>
+            <Input
+              id="primary_contact_email"
+              type="email"
+              value={formData.primary_contact_email || ''}
+              onChange={(e) => handleChange('primary_contact_email', e.target.value)}
+              placeholder="contact@organisation.com.au"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="primary_contact_phone">Contact Phone</Label>
+            <Input
+              id="primary_contact_phone"
+              value={formData.primary_contact_phone || ''}
+              onChange={(e) => handleChange('primary_contact_phone', e.target.value)}
+              placeholder="e.g. 0412 345 678"
+              disabled={loading}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
