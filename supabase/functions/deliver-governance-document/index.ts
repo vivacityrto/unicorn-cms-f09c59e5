@@ -321,7 +321,9 @@ async function processPptxTemplate(
         } else {
           slideRelsMap.set(entry.filename, { content, injections: [] });
         }
-        // Don't add to writer yet — we'll handle rels files after
+      } else if (entry.filename === '[Content_Types].xml') {
+        contentTypesContent = content;
+        contentTypesFilename = entry.filename;
       } else {
         const encoder = new TextEncoder();
         await writer.add(
