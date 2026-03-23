@@ -1514,7 +1514,8 @@ export default function ManageDocuments() {
                         <span className="font-semibold text-foreground">{doc.id}</span>
                       </TableCell>
                       <TableCell className="py-6 border-r border-border/50" style={{
-                minWidth: '200px'
+                minWidth: '200px',
+                maxWidth: '300px'
               }}>
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2 whitespace-nowrap">
