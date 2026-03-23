@@ -1453,7 +1453,7 @@ export default function ManageDocuments() {
 
       {/* Documents Table */}
       <div className="rounded-lg border-0 bg-card shadow-lg overflow-x-auto">
-          <Table className="min-w-[2200px]">
+          <Table className="min-w-[1800px]">
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
                 {isSuperAdmin && (
@@ -1478,19 +1478,19 @@ export default function ManageDocuments() {
                   Version Date
                 </TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Version #</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-40 h-14 whitespace-nowrap border-r">Version Updated</TableHead>
+                
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Client Doc</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Category</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Framework</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r text-center">Gov Ver</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-20 h-14 whitespace-nowrap border-r text-center">SP</TableHead>
+                
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Updated</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 16 : 15} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 14 : 13} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
@@ -1585,9 +1585,6 @@ export default function ManageDocuments() {
                             v{doc.versionnumber}
                           </Badge> : "—"}
                       </TableCell>
-                      <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
-                        {doc.versionlastupdated ? format(new Date(doc.versionlastupdated), "dd MMM yyyy") : "—"}
-                      </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
                         <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px]" style={doc.isclientdoc ? {
                   borderColor: "#3B82F6",
@@ -1599,7 +1596,7 @@ export default function ManageDocuments() {
                         </Badge>
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
-                        {categoryBadges.length > 0 ? categoryBadges.length > 1 ? `${categoryBadges[0]} +${categoryBadges.length - 1}` : categoryBadges[0] : "—"}
+                        <span className="text-xs text-muted-foreground">{valueLabelMap.get(doc.category ?? '') || doc.category || '—'}</span>
                       </TableCell>
                       {/* Framework */}
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
@@ -1613,44 +1610,34 @@ export default function ManageDocuments() {
                           </Badge>
                         ) : '—'}
                       </TableCell>
-                      {/* SP Link */}
-                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center" onClick={e => e.stopPropagation()}>
-                        {doc.source_template_url ? (
-                          <a
-                            href={doc.source_template_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline inline-flex items-center gap-1"
-                            title={doc.source_template_url}
-                          >
-                            <Link2 className="h-3.5 w-3.5" />
-                            <span className="text-xs">SP</span>
-                          </a>
-                        ) : (
-                          <button
-                            onClick={() => setSharepointBrowseDocId(doc.id)}
-                            className="text-muted-foreground hover:text-primary cursor-pointer inline-flex items-center gap-1"
-                            title="Click to set SharePoint URL"
-                          >
-                            <Link2Off className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </TableCell>
                       {/* Updated */}
                       <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
                         {doc.updated_at ? format(new Date(doc.updated_at), "dd MMM yyyy") : "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={e => {
-                    e.stopPropagation();
+                        <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
+                          {doc.source_template_url ? (
+                            <a
+                              href={doc.source_template_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline inline-flex items-center justify-center h-8 w-8"
+                              title={doc.source_template_url}
+                            >
+                              <Link2 className="h-4 w-4" />
+                            </a>
+                          ) : (
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setSharepointBrowseDocId(doc.id)} title="Set SharePoint URL">
+                              <Link2Off className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => {
                     setEditingDocumentId(doc.id);
                     setIsCreateDialogOpen(true);
                   }}>
                             <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={e => {
-                    e.stopPropagation();
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={() => {
                     setDocumentToDelete(doc.id);
                     setIsDeleteDialogOpen(true);
                   }}>
