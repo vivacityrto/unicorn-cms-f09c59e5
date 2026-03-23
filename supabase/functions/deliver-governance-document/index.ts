@@ -646,7 +646,8 @@ serve(async (req) => {
 
     if (!spSettings?.governance_drive_id || !spSettings?.governance_folder_item_id) {
       const errorMsg = "No governance folder configured for this tenant. Please verify the governance folder from the SharePoint Folder Mapping page (Admin → SharePoint Folder Mapping) before generating documents.";
-      await supabase.from("governance_document_deliveries").insert({
+      // Upsert failed delivery so retries don't hit unique constraint
+      await supabase.from("governance_document_deliveries").upsert({
         tenant_id,
         document_id: doc.id,
         document_version_id,
@@ -659,7 +660,7 @@ serve(async (req) => {
         missing_merge_fields: missingTags,
         invalid_merge_fields: invalidTags,
         tailoring_risk_level: riskLevel,
-      });
+      }, { onConflict: "tenant_id,document_version_id,snapshot_id", ignoreDuplicates: false });
       return new Response(
         JSON.stringify({ error: errorMsg, error_code: "GOVERNANCE_FOLDER_MISSING" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
