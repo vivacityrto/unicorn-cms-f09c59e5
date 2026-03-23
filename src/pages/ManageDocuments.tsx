@@ -150,10 +150,29 @@ export default function ManageDocuments() {
     profile
   } = useAuth();
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';
+  const queryClient = useQueryClient();
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  // Governance features state
+  const [frameworkFilter, setFrameworkFilter] = useState<string>("all");
+  const [sharepointFilter, setSharepointFilter] = useState<string>("all");
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
+  const [sharepointBrowseDocId, setSharepointBrowseDocId] = useState<number | null>(null);
+
+  // Fetch frameworks for filter
+  const { data: frameworks } = useQuery({
+    queryKey: ['dd_governance_framework'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('dd_governance_framework')
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      return data || [];
+    },
+  });
+
+  // Document categories from dd_ lookup table
+  const { categories: ddCategories, valueLabelMap } = useDocumentCategories();
 
   // Individual document actions
   const [editingDocumentId, setEditingDocumentId] = useState<number | null>(null);
