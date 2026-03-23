@@ -256,6 +256,7 @@ async function processPptxTemplate(
 
   const detectedTagsSet = new Set<string>();
 
+  for (const entry of entries) {
     if (!entry.getData) continue;
     const data = await entry.getData(new zip.BlobWriter());
     const arrayBuffer = await data.arrayBuffer();
