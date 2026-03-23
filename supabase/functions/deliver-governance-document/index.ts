@@ -853,7 +853,16 @@ serve(async (req) => {
     });
 
     return new Response(
-      JSON.stringify({ success: true, skipped: false, delivery }),
+      JSON.stringify({
+        success: true,
+        skipped: false,
+        delivery,
+        warnings: {
+          unreplaced_fields: unreplacedTags,
+          invalid_fields: invalidTags,
+          missing_fields: missingTags,
+        },
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
