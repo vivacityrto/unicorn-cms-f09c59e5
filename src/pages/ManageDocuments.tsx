@@ -1608,14 +1608,6 @@ export default function ManageDocuments() {
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
                         <span className="text-xs font-medium">{doc.framework_type || '—'}</span>
                       </TableCell>
-                      {/* Gov Version */}
-                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
-                        {currentVersion ? (
-                          <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
-                            v{currentVersion.version_number}
-                          </Badge>
-                        ) : '—'}
-                      </TableCell>
                       {/* Updated */}
                       <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
                         {doc.updated_at ? format(new Date(doc.updated_at), "dd MMM yyyy") : "—"}
