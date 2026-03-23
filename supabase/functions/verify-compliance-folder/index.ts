@@ -108,35 +108,43 @@ Deno.serve(async (req: Request) => {
       .eq('tenant_id', tenant_id)
       .maybeSingle();
 
-    // Check if governance folder already exists
+    // Use existing client root folder name if available, otherwise build from tenant data
+    const tenantFolderName = (spSettings?.root_name as string | null) || buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name);
+
+    // Check if governance folder already exists AND is actually the client folder (not the start folder container)
     if (spSettings?.governance_folder_item_id) {
       const check = await graphGet<DriveItem>(
         `/drives/${driveId}/items/${spSettings.governance_folder_item_id}`
       );
       if (check.ok && check.data.folder) {
-        const result: Record<string, unknown> = {
-          success: true,
-          already_exists: true,
-          governance_folder: {
-            item_id: check.data.id,
-            name: check.data.name,
-            web_url: check.data.webUrl,
-          },
-        };
+        // If the stored folder is the start_folder_name container (e.g., "Governance"),
+        // it's pointing to the parent, not the actual client folder — proceed to create
+        const isStartFolderContainer = startFolderName && check.data.name === startFolderName;
 
-        if (create_category_subfolders) {
-          const subs = await createCategorySubfolders(supabase, driveId, check.data.id);
-          result.category_subfolders = subs;
+        if (!isStartFolderContainer) {
+          const result: Record<string, unknown> = {
+            success: true,
+            already_exists: true,
+            governance_folder: {
+              item_id: check.data.id,
+              name: check.data.name,
+              web_url: check.data.webUrl,
+            },
+          };
+
+          if (create_category_subfolders) {
+            const subs = await createCategorySubfolders(supabase, driveId, check.data.id);
+            result.category_subfolders = subs;
+          }
+
+          return new Response(JSON.stringify(result), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
-
-        return new Response(JSON.stringify(result), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        // Otherwise fall through to create the actual client folder inside the container
+        console.log(`[verify-compliance-folder] Existing folder "${check.data.name}" is the start folder container — creating client folder "${tenantFolderName}" inside it`);
       }
     }
-
-    // Use existing client root folder name if available, otherwise build from tenant data
-    const tenantFolderName = (spSettings?.root_name as string | null) || buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name);
 
     // Create tenant folder under start_folder_name (e.g., "Client Folder/{tenant}")
     const { itemId, webUrl } = await ensureFolder(driveId, startFolderName, tenantFolderName);
