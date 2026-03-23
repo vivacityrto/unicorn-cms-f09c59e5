@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { FileText, CheckCircle2, Clock, Sparkles, Loader2, AlertTriangle, ExternalLink, RefreshCw, UserCheck, XCircle, Search, Link2 } from 'lucide-react';
+import { FileText, CheckCircle2, Clock, Sparkles, Loader2, AlertTriangle, ExternalLink, RefreshCw, UserCheck, XCircle, Search, Link2, Copy, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -69,6 +69,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const [generatingSingleId, setGeneratingSingleId] = useState<number | null>(null);
   const [singleGenConfirm, setSingleGenConfirm] = useState<{ id: number; documentId: number; title: string; category: string | null } | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
+  const [mergeWarnings, setMergeWarnings] = useState<{ title: string; unreplaced: string[]; missing: string[]; invalid: string[] } | null>(null);
 
   // Fetch tenant name for the generation confirmation message
   useEffect(() => {
@@ -182,17 +183,11 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         });
       }
 
-      // Show a second warning toast if there were unreplaced/missing merge fields
+      // Show persistent warning banner if there were unreplaced/missing merge fields
       if (hasWarnings) {
-        const parts: string[] = [];
-        if (unreplaced.length > 0) parts.push(`Unreplaced: ${unreplaced.join(', ')}`);
-        if (missing.length > 0) parts.push(`Missing data: ${missing.join(', ')}`);
-        if (invalid.length > 0) parts.push(`Unknown tags: ${invalid.join(', ')}`);
-        toast({
-          title: 'Merge Field Warnings',
-          description: parts.join(' | '),
-          variant: 'destructive',
-        });
+        setMergeWarnings({ title, unreplaced, missing, invalid });
+      } else {
+        setMergeWarnings(null);
       }
 
       refetch();
@@ -320,6 +315,77 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
           <span className="text-green-600 font-medium">{progress.generated} generated</span>
           {progress.skipped > 0 && <span>{progress.skipped} skipped</span>}
           {progress.failed > 0 && <span className="text-destructive">{progress.failed} failed</span>}
+        </div>
+      )}
+
+      {/* Persistent merge field warning banner */}
+      {mergeWarnings && (
+        <div className="mx-4 my-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+              <span className="text-sm font-semibold text-destructive">
+                Merge Field Warnings — "{mergeWarnings.title}"
+              </span>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  const lines: string[] = [`Merge Field Warnings — "${mergeWarnings.title}"`];
+                  if (mergeWarnings.unreplaced.length > 0) lines.push(`\nUnreplaced fields:\n${mergeWarnings.unreplaced.map(f => `  • ${f}`).join('\n')}`);
+                  if (mergeWarnings.missing.length > 0) lines.push(`\nMissing data:\n${mergeWarnings.missing.map(f => `  • ${f}`).join('\n')}`);
+                  if (mergeWarnings.invalid.length > 0) lines.push(`\nUnknown tags:\n${mergeWarnings.invalid.map(f => `  • ${f}`).join('\n')}`);
+                  navigator.clipboard.writeText(lines.join('\n'));
+                  toast({ title: 'Copied to clipboard', description: 'Warning details copied.' });
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                onClick={() => setMergeWarnings(null)}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+          <div className="pl-6 space-y-1.5 text-xs">
+            {mergeWarnings.unreplaced.length > 0 && (
+              <div>
+                <span className="font-medium text-foreground">Unreplaced fields ({mergeWarnings.unreplaced.length}):</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {mergeWarnings.unreplaced.map(f => (
+                    <Badge key={f} variant="outline" className="text-xs font-mono border-destructive/30 text-destructive">{`{{${f}}}`}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {mergeWarnings.missing.length > 0 && (
+              <div>
+                <span className="font-medium text-foreground">Missing data ({mergeWarnings.missing.length}):</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {mergeWarnings.missing.map(f => (
+                    <Badge key={f} variant="outline" className="text-xs font-mono border-amber-500/30 text-amber-600">{`{{${f}}}`}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {mergeWarnings.invalid.length > 0 && (
+              <div>
+                <span className="font-medium text-foreground">Unknown tags ({mergeWarnings.invalid.length}):</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {mergeWarnings.invalid.map(f => (
+                    <Badge key={f} variant="destructive" className="text-xs font-mono">{`{{${f}}}`}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
