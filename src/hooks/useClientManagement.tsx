@@ -74,6 +74,12 @@ export interface ClientProfile {
   risk_level: string | null;
   updated_at: string | null;
   phone1: string | null;
+  rto_email: string | null;
+  gto_name: string | null;
+  country: string | null;
+  primary_contact_name: string | null;
+  primary_contact_email: string | null;
+  primary_contact_phone: string | null;
 }
 
 export interface RegistryLink {
