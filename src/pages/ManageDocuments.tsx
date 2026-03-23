@@ -1911,5 +1911,37 @@ export default function ManageDocuments() {
       <div className="text-sm text-muted-foreground text-center">
         Showing {filteredDocuments.length} of {totalDocuments} documents
       </div>
+
+      {/* Master Documents SharePoint Browser Dialog */}
+      {sharepointBrowseDocId && (() => {
+        const browseDoc = documents.find(d => d.id === sharepointBrowseDocId);
+        const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
+        const autoFolder = browseDoc?.framework_type
+          ? frameworkFolderMap[browseDoc.framework_type.toLowerCase()] || 'Other'
+          : 'Other';
+        return (
+          <Dialog open={true} onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}>
+            <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  Master Documents — Select Template File
+                </DialogTitle>
+              </DialogHeader>
+              {profile?.tenant_id && (
+                <SharePointFileBrowser
+                  tenantId={profile.tenant_id}
+                  sitePurpose="master_documents"
+                  onSelectLink={(url, fileName) => {
+                    handleSharePointLinkSelected(url);
+                  }}
+                  defaultFilter={browseDoc?.title || ''}
+                  autoNavigateFolder={autoFolder}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>;
 }
