@@ -22,6 +22,32 @@ function escapeXml(text: string): string {
 }
 
 /**
+ * Normalize merge field tokens that Word has split across XML runs.
+ * Word often breaks {{FieldName}} into multiple <w:r> elements like:
+ *   <w:t>{</w:t></w:r><w:r><w:t>{FieldName}}</w:t>
+ * or even splits the field name itself across runs.
+ * 
+ * This function reassembles them by:
+ * 1. Fixing split {{ and }} delimiters (XML tags between the braces)
+ * 2. Removing XML tags from within the field name portion
+ */
+function normalizeMergeTokens(content: string): string {
+  // Step 1: Fix split {{ delimiters — e.g. {<xml>{ → {{
+  let result = content.replace(/\{(?:<[^>]*>)+\{/g, '{{');
+  // Step 2: Fix split }} delimiters — e.g. }<xml>} → }}
+  result = result.replace(/\}(?:<[^>]*>)+\}/g, '}}');
+  
+  // Step 3: Clean XML tags from within merge field tokens
+  // Match {{...}} that may contain XML tags within the field name
+  result = result.replace(/\{\{((?:[^}]|\}(?!\}))+)\}\}/g, (_match, inner) => {
+    const cleanField = inner.replace(/<[^>]*>/g, '').trim();
+    return `{{${cleanField}}}`;
+  });
+  
+  return result;
+}
+
+/**
  * Process a DOCX template by replacing {{Tag}} merge fields with resolved values.
  * Supports both text and image injection (Logo field).
  * Returns processed bytes AND a list of all {{...}} tags found in the template.
@@ -58,9 +84,10 @@ async function processDocxTemplate(
       const decoder = new TextDecoder();
       let content = decoder.decode(arrayBuffer);
 
-      // First strip XML tags within potential merge field tokens to handle Word split-runs
-      // e.g. {{RTO</w:t></w:r><w:r><w:t>Name}} → {{RTOName}}
-      // We do this by extracting text content, scanning, then doing replacements on original
+      // Normalize split merge field tokens BEFORE detection and replacement
+      content = normalizeMergeTokens(content);
+
+      // Detect merge field tags from normalized content
       const textOnly = content.replace(/<[^>]+>/g, "");
       const tagPattern = /\{\{\s*([^}]+?)\s*\}\}/g;
       let match;
@@ -71,7 +98,7 @@ async function processDocxTemplate(
         }
       }
 
-      // Replace text merge fields
+      // Replace text merge fields (tokens are now normalized, so simple split/join works)
       for (const [field, value] of Object.entries(mergeData)) {
         const token = `{{${field}}}`;
         const escapedValue = escapeXml(value || "");
@@ -184,6 +211,9 @@ async function processPptxTemplate(
       const decoder = new TextDecoder();
       let content = decoder.decode(arrayBuffer);
 
+      // Normalize split merge field tokens BEFORE detection and replacement
+      content = normalizeMergeTokens(content);
+
       // Detect merge field tags in text content
       const textOnly = content.replace(/<[^>]+>/g, "");
       const tagPattern = /\{\{\s*([^}]+?)\s*\}\}/g;
@@ -195,7 +225,7 @@ async function processPptxTemplate(
         }
       }
 
-      // Replace text merge fields (simple token replacement)
+      // Replace text merge fields (tokens are now normalized)
       for (const [field, value] of Object.entries(mergeData)) {
         const token = `{{${field}}}`;
         const escapedValue = escapeXml(value || "");
@@ -612,8 +642,18 @@ serve(async (req) => {
       detectedTags = result.detectedTags;
     }
 
-    // 4. Detect invalid tags
+    // 4. Detect invalid tags (not in dd_fields at all)
     const invalidTags = detectedTags.filter((tag) => !knownTags.has(tag));
+
+    // 4b. Detect unreplaced tags — tags found in template but with empty/missing values
+    const allMergeKeys = new Set(Object.keys(mergeData));
+    const imageFieldSet = new Set(imageFields);
+    const unreplacedTags = detectedTags.filter((tag) => {
+      if (invalidTags.includes(tag)) return false; // already tracked as invalid
+      if (imageFieldSet.has(tag)) return false; // image fields handled separately
+      if (allMergeKeys.has(tag) && mergeData[tag]?.trim()) return false; // has a value
+      return true; // known tag but empty/missing value
+    });
 
     // 5. Calculate risk level
     const totalRequired = requiredTags.length;
@@ -621,7 +661,7 @@ serve(async (req) => {
     const completeness = totalRequired > 0 ? Math.round((populatedCount / totalRequired) * 100) : 100;
 
     let riskLevel: string;
-    if (completeness === 100 && invalidTags.length === 0) {
+    if (completeness === 100 && invalidTags.length === 0 && unreplacedTags.length === 0) {
       riskLevel = "complete";
     } else if (completeness >= 75) {
       riskLevel = "partial";
@@ -629,7 +669,7 @@ serve(async (req) => {
       riskLevel = "incomplete";
     }
 
-    console.log(`[deliver] Tailoring: ${completeness}% complete, ${missingTags.length} missing, ${invalidTags.length} invalid, risk=${riskLevel}`);
+    console.log(`[deliver] Tailoring: ${completeness}% complete, ${missingTags.length} missing, ${invalidTags.length} invalid, ${unreplacedTags.length} unreplaced, risk=${riskLevel}`);
 
     // 6. Block if incomplete unless overridden
     if (riskLevel === "incomplete" && !allow_incomplete) {
@@ -813,7 +853,16 @@ serve(async (req) => {
     });
 
     return new Response(
-      JSON.stringify({ success: true, skipped: false, delivery }),
+      JSON.stringify({
+        success: true,
+        skipped: false,
+        delivery,
+        warnings: {
+          unreplaced_fields: unreplacedTags,
+          invalid_fields: invalidTags,
+          missing_fields: missingTags,
+        },
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
