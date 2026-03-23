@@ -1688,11 +1688,23 @@ export default function ManageDocuments() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document?</AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p>Are you sure you want to delete this document? This will cascade-remove all related records and cannot be undone.</p>
                 {documentToDelete && (
                   <div className="rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground">
                     {documents.find(d => d.id === documentToDelete)?.title}
+                  </div>
+                )}
+                {deleteImpact && (
+                  <div className="rounded-md border border-border bg-muted/50 px-3 py-2 text-sm space-y-1">
+                    <p className="font-semibold text-foreground mb-1">Impact Summary</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground">
+                      <span>Active Instances</span><span className="font-medium text-foreground">{deleteImpact.instances}</span>
+                      <span>Stage Links</span><span className="font-medium text-foreground">{deleteImpact.stageDocs}</span>
+                      <span>Data Sources</span><span className="font-medium text-foreground">{deleteImpact.dataSources}</span>
+                      <span>Source Mappings</span><span className="font-medium text-foreground">{deleteImpact.sourceMappings}</span>
+                      <span>Versions</span><span className="font-medium text-foreground">{deleteImpact.versions}</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1709,9 +1721,10 @@ export default function ManageDocuments() {
               const result = data as any;
               toast({
                 title: "Document deleted",
-                description: `Removed "${result.title}" along with ${result.instances_deleted} instance(s), ${result.stage_docs_deleted} stage link(s), and ${result.tenant_docs_deleted} tenant link(s).`
+                description: `Removed "${result.title}" along with ${result.instances_deleted} instance(s), ${result.stage_docs_deleted} stage link(s).`
               });
               setDocumentToDelete(null);
+              setDeleteImpact(null);
               setIsDeleteDialogOpen(false);
               fetchDocuments();
             } catch (error: any) {
