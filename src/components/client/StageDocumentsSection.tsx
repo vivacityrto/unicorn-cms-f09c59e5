@@ -318,76 +318,74 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         </div>
       )}
 
-      {/* Persistent merge field warning banner */}
-      {mergeWarnings && (
-        <div className="mx-4 my-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-              <span className="text-sm font-semibold text-destructive">
-                Merge Field Warnings — "{mergeWarnings.title}"
-              </span>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                onClick={() => {
-                  const lines: string[] = [`Merge Field Warnings — "${mergeWarnings.title}"`];
-                  if (mergeWarnings.unreplaced.length > 0) lines.push(`\nUnreplaced fields:\n${mergeWarnings.unreplaced.map(f => `  • ${f}`).join('\n')}`);
-                  if (mergeWarnings.missing.length > 0) lines.push(`\nMissing data:\n${mergeWarnings.missing.map(f => `  • ${f}`).join('\n')}`);
-                  if (mergeWarnings.invalid.length > 0) lines.push(`\nUnknown tags:\n${mergeWarnings.invalid.map(f => `  • ${f}`).join('\n')}`);
-                  navigator.clipboard.writeText(lines.join('\n'));
-                  toast({ title: 'Copied to clipboard', description: 'Warning details copied.' });
-                }}
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                onClick={() => setMergeWarnings(null)}
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-          <div className="pl-6 space-y-1.5 text-xs">
-            {mergeWarnings.unreplaced.length > 0 && (
-              <div>
-                <span className="font-medium text-foreground">Unreplaced fields ({mergeWarnings.unreplaced.length}):</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {mergeWarnings.unreplaced.map(f => (
-                    <Badge key={f} variant="outline" className="text-xs font-mono border-destructive/30 text-destructive">{`{{${f}}}`}</Badge>
-                  ))}
-                </div>
+      {/* Merge field warnings dialog */}
+      <AlertDialog open={!!mergeWarnings} onOpenChange={(open) => { if (!open) setMergeWarnings(null); }}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Merge Field Warnings
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-1">
+                <p className="text-sm text-muted-foreground">
+                  The following merge fields could not be resolved when generating "<span className="font-medium text-foreground">{mergeWarnings?.title}</span>".
+                </p>
+                {mergeWarnings?.unreplaced && mergeWarnings.unreplaced.length > 0 && (
+                  <div>
+                    <span className="text-xs font-medium text-foreground">Unreplaced fields ({mergeWarnings.unreplaced.length}):</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {mergeWarnings.unreplaced.map(f => (
+                        <Badge key={f} variant="outline" className="text-xs font-mono border-destructive/30 text-destructive">{`{{${f}}}`}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {mergeWarnings?.missing && mergeWarnings.missing.length > 0 && (
+                  <div>
+                    <span className="text-xs font-medium text-foreground">Missing data ({mergeWarnings.missing.length}):</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {mergeWarnings.missing.map(f => (
+                        <Badge key={f} variant="outline" className="text-xs font-mono border-amber-500/30 text-amber-600">{`{{${f}}}`}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {mergeWarnings?.invalid && mergeWarnings.invalid.length > 0 && (
+                  <div>
+                    <span className="text-xs font-medium text-foreground">Unknown tags ({mergeWarnings.invalid.length}):</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {mergeWarnings.invalid.map(f => (
+                        <Badge key={f} variant="destructive" className="text-xs font-mono">{`{{${f}}}`}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            {mergeWarnings.missing.length > 0 && (
-              <div>
-                <span className="font-medium text-foreground">Missing data ({mergeWarnings.missing.length}):</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {mergeWarnings.missing.map(f => (
-                    <Badge key={f} variant="outline" className="text-xs font-mono border-amber-500/30 text-amber-600">{`{{${f}}}`}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-            {mergeWarnings.invalid.length > 0 && (
-              <div>
-                <span className="font-medium text-foreground">Unknown tags ({mergeWarnings.invalid.length}):</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {mergeWarnings.invalid.map(f => (
-                    <Badge key={f} variant="destructive" className="text-xs font-mono">{`{{${f}}}`}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                if (!mergeWarnings) return;
+                const lines: string[] = [`Merge Field Warnings — "${mergeWarnings.title}"`];
+                if (mergeWarnings.unreplaced.length > 0) lines.push(`\nUnreplaced fields:\n${mergeWarnings.unreplaced.map(f => `  • ${f}`).join('\n')}`);
+                if (mergeWarnings.missing.length > 0) lines.push(`\nMissing data:\n${mergeWarnings.missing.map(f => `  • ${f}`).join('\n')}`);
+                if (mergeWarnings.invalid.length > 0) lines.push(`\nUnknown tags:\n${mergeWarnings.invalid.map(f => `  • ${f}`).join('\n')}`);
+                navigator.clipboard.writeText(lines.join('\n'));
+                toast({ title: 'Copied to clipboard', description: 'Warning details copied.' });
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy All
+            </Button>
+            <AlertDialogAction>Close</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Single generate confirmation */}
       <AlertDialog open={!!singleGenConfirm} onOpenChange={(open) => { if (!open) setSingleGenConfirm(null); }}>
