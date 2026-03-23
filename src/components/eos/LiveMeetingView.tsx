@@ -70,7 +70,7 @@ export const LiveMeetingView = () => {
   });
 
   // Use custom hooks
-  const { segments, isLoading: segmentsLoading, isFetching: segmentsFetching, advanceSegment, goToPreviousSegment } = useEosMeetingSegments(meetingId);
+  const { segments, isLoading: segmentsLoading, isFetching: segmentsFetching, advanceSegment, goToPreviousSegment, updateSegmentNotes } = useEosMeetingSegments(meetingId);
   const { headlines, createHeadline, deleteHeadline } = useEosHeadlines(meetingId);
   const { issues } = useMeetingIssues(meetingId, meeting?.tenant_id);
   const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId);
