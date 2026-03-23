@@ -680,6 +680,9 @@ export const LiveMeetingView = () => {
                 <p className="font-medium text-sm mb-2">Cascading Messages:</p>
                 <Textarea 
                   placeholder="Key messages to cascade to the organization..."
+                  value={cascadingMessages}
+                  onChange={(e) => setCascadingMessages(e.target.value)}
+                  onBlur={saveCascadingMessages}
                   rows={3}
                 />
               </div>
