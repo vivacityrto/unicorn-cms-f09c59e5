@@ -84,9 +84,10 @@ async function processDocxTemplate(
       const decoder = new TextDecoder();
       let content = decoder.decode(arrayBuffer);
 
-      // First strip XML tags within potential merge field tokens to handle Word split-runs
-      // e.g. {{RTO</w:t></w:r><w:r><w:t>Name}} → {{RTOName}}
-      // We do this by extracting text content, scanning, then doing replacements on original
+      // Normalize split merge field tokens BEFORE detection and replacement
+      content = normalizeMergeTokens(content);
+
+      // Detect merge field tags from normalized content
       const textOnly = content.replace(/<[^>]+>/g, "");
       const tagPattern = /\{\{\s*([^}]+?)\s*\}\}/g;
       let match;
@@ -97,7 +98,7 @@ async function processDocxTemplate(
         }
       }
 
-      // Replace text merge fields
+      // Replace text merge fields (tokens are now normalized, so simple split/join works)
       for (const [field, value] of Object.entries(mergeData)) {
         const token = `{{${field}}}`;
         const escapedValue = escapeXml(value || "");
