@@ -1453,7 +1453,7 @@ export default function ManageDocuments() {
 
       {/* Documents Table */}
       <div className="rounded-lg border-0 bg-card shadow-lg overflow-x-auto">
-          <Table className="min-w-[1800px]">
+          <Table className="min-w-[2200px]">
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
                 {isSuperAdmin && (
