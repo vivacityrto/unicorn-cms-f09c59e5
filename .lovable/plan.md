@@ -1,49 +1,38 @@
 
 
-# Duplicate Document Detection & Cleanup
+# Merge Governance Features into Manage Documents (Keep Both Pages)
 
-## Problem
-The `documents` table contains duplicate entries with the same or near-identical titles (e.g., 3x "Student Handbook", 7x "CEO Guide for STAT DEC"). Each duplicate spawns its own `document_instances`, `stage_documents`, etc., causing multiplication in the UI.
+## What we're doing
+Adding the unique Governance Documents features into the Manage Documents page, while **keeping the Governance Documents page intact** until you're satisfied everything works.
 
-## Plan
+## Features to add to Manage Documents
 
-### 1. Add "Duplicates" filter to Manage Documents page
-Add a new filter option alongside the existing Category filter — a "Show Duplicates Only" toggle/badge button. When active, it filters the document list to only show titles that appear more than once (case-insensitive match).
+1. **Framework filter** — New dropdown (RTO / GTO / CRICOS / No Framework) fetched from `dd_governance_framework`
+2. **SharePoint status filter** — New dropdown (All / Has SP URL / No SP URL)
+3. **Framework column** — Show `framework_type` in the table
+4. **Version column** — Join `document_versions` to show current version number
+5. **SharePoint link/unlink column** — Link icon to open SP URL or browse to set one (reuses `SharePointFileBrowser`)
+6. **Document detail drill-down** — Clicking a row opens `GovernanceDocumentDetail` (version history, publishing, mapping editor, delivery history, tailoring health, package assignments) with a back button
+7. **Updated date column** — Show `updated_at` formatted date
 
-- Compute duplicate title groups from the loaded `documents` array using a case-insensitive title frequency map
-- Add a filter button (e.g., `<Badge>` styled toggle) next to the search bar: "Duplicates (N)" where N is the count of documents with duplicate titles
-- When active, `applyFiltersAndSort` filters to only documents whose title appears 2+ times
-- Sort duplicate groups together by title for easy comparison
+## Technical approach
 
-### 2. Cascade-aware delete via a Supabase RPC
-The current delete just does `supabase.from("documents").delete().eq("id", docId)` — this may fail or leave orphans depending on FK constraints. Create an RPC `delete_document_cascade` that:
+### `src/pages/ManageDocuments.tsx`
+- Add new state: `frameworkFilter`, `sharepointFilter`, `selectedDocId`, `sharepointBrowseDocId`
+- Extend `fetchDocuments` query to also select `framework_type`, `source_template_url`, `updated_at`, `current_published_version_id`, and join `document_versions`
+- Extend the `Document` interface with these new fields
+- Add Framework and SharePoint filter dropdowns alongside existing filters
+- Add Framework, Version, and SP link columns to the table
+- Add row click → `setSelectedDocId` to open `GovernanceDocumentDetail`
+- When `selectedDocId` is set, render `GovernanceDocumentDetail` with back button (early return, same pattern as GovernanceDocuments)
+- Add the SharePoint file browser dialog (copy from GovernanceDocuments)
+- Wire filters into `applyFiltersAndSort`
 
-1. Deletes from `document_instances` where `document_id = p_doc_id`
-2. Deletes from `stage_documents` where `document_id = p_doc_id`
-3. Deletes from `document_data_sources` where `document_id = p_doc_id` (has CASCADE but explicit is safer)
-4. Deletes from `document_source_mappings` where `document_id = p_doc_id`
-5. Deletes from `documents_tenants` where matching document
-6. Deletes the `documents` row itself
-7. Returns a summary of what was cleaned up
+### No changes to
+- `src/pages/admin/GovernanceDocuments.tsx` — kept as-is
+- Navigation/routing — both menu items remain
+- All governance sub-components — already standalone
 
-### 3. Update delete handlers to use cascade RPC
-Replace both the single-delete and bulk-delete handlers to call the new RPC. Show the user a summary of what will be removed (instance count, stage links) in the confirmation dialog before proceeding.
-
-### 4. Enhanced delete confirmation for duplicates
-When deleting a document that has active `document_instances` or `stage_documents` links, the confirm dialog should show:
-- Number of document instances that will be removed
-- Number of stage template links that will be removed
-- Use the existing `ConfirmDialog` component with `variant="destructive"`
-
-## Files to Change
-
-| File | Change |
-|------|--------|
-| `src/pages/ManageDocuments.tsx` | Add duplicate filter state, toggle button, filter logic, update delete to use RPC |
-| New migration | Create `delete_document_cascade` RPC |
-
-## Technical Notes
-- Duplicate detection is client-side on the already-loaded documents array (no extra query needed)
-- The RPC uses `SECURITY DEFINER` to ensure it can clean all related tables regardless of RLS
-- Existing FK `ON DELETE CASCADE` on `document_data_sources` and `document_source_mappings` means those are auto-cleaned, but `document_instances` and `stage_documents` may not have cascades, so explicit deletes are needed
+## File changes
+- **`src/pages/ManageDocuments.tsx`** — extend with governance features (filters, columns, drill-down, SP browser)
 
