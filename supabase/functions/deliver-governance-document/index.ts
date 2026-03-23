@@ -82,7 +82,7 @@ function normalizeMergeTokens(content: string): string {
 async function processDocxTemplate(
   templateBytes: Uint8Array,
   mergeData: Record<string, string>,
-  imageData: Record<string, Uint8Array>,
+  imageData: Record<string, ImageAsset>,
 ): Promise<{ bytes: Uint8Array; detectedTags: string[] }> {
   const blob = new Blob([templateBytes.slice().buffer]);
   const reader = new zip.ZipReader(new zip.BlobReader(blob));
