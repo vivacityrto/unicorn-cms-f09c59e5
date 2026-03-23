@@ -152,6 +152,10 @@ async function processDocxTemplate(
       if (entry.filename === 'word/_rels/document.xml.rels') {
         relsContent = content;
         relsFilename = entry.filename;
+      } else if (entry.filename === '[Content_Types].xml') {
+        // Defer — we'll patch it after to include image content types
+        contentTypesContent = content;
+        contentTypesFilename = entry.filename;
       } else {
         const encoder = new TextEncoder();
         await writer.add(
