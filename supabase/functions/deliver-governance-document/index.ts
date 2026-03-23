@@ -12,6 +12,33 @@ import {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+interface ImageAsset {
+  bytes: Uint8Array;
+  ext: string; // e.g. "jpg", "png"
+}
+
+function inferImageExt(storagePath: string): string {
+  const lower = storagePath.split('?')[0].split('#')[0].toLowerCase();
+  const m = lower.match(/\.([a-z0-9]+)$/);
+  if (!m) return 'png';
+  const e = m[1];
+  if (e === 'jpeg' || e === 'jpg') return 'jpeg';
+  if (e === 'gif') return 'gif';
+  if (e === 'bmp') return 'bmp';
+  if (e === 'tiff' || e === 'tif') return 'tiff';
+  return e === 'png' ? 'png' : 'png';
+}
+
+function imageContentType(ext: string): string {
+  switch (ext) {
+    case 'jpeg': case 'jpg': return 'image/jpeg';
+    case 'gif': return 'image/gif';
+    case 'bmp': return 'image/bmp';
+    case 'tiff': return 'image/tiff';
+    default: return 'image/png';
+  }
+}
+
 function escapeXml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
@@ -55,7 +82,7 @@ function normalizeMergeTokens(content: string): string {
 async function processDocxTemplate(
   templateBytes: Uint8Array,
   mergeData: Record<string, string>,
-  imageData: Record<string, Uint8Array>,
+  imageData: Record<string, ImageAsset>,
 ): Promise<{ bytes: Uint8Array; detectedTags: string[] }> {
   const blob = new Blob([templateBytes.slice().buffer]);
   const reader = new zip.ZipReader(new zip.BlobReader(blob));
@@ -71,6 +98,8 @@ async function processDocxTemplate(
   let imageCounter = 100;
   let relsContent: string | null = null;
   let relsFilename: string | null = null;
+  let contentTypesContent: string | null = null;
+  let contentTypesFilename: string | null = null;
 
   // Collect all detected {{...}} tags across all XML entries
   const detectedTagsSet = new Set<string>();
@@ -113,8 +142,9 @@ async function processDocxTemplate(
           return escapeXml(mergeData[cleanField] || "");
         }
         if (imageData[cleanField]) {
+          const imgAsset = imageData[cleanField];
           const rId = `rIdImg${imageCounter++}`;
-          const imgFileName = `image_${cleanField}.png`;
+          const imgFileName = `image_${cleanField}.${imgAsset.ext}`;
           imageInjections.push({ rId, fileName: imgFileName });
           return `</w:t></w:r><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="1800000" cy="900000"/><wp:docPr id="${imageCounter}" name="${cleanField}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${imageCounter}" name="${imgFileName}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1800000" cy="900000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r><w:r><w:t>`;
         }
@@ -124,6 +154,10 @@ async function processDocxTemplate(
       if (entry.filename === 'word/_rels/document.xml.rels') {
         relsContent = content;
         relsFilename = entry.filename;
+      } else if (entry.filename === '[Content_Types].xml') {
+        // Defer — we'll patch it after to include image content types
+        contentTypesContent = content;
+        contentTypesFilename = entry.filename;
       } else {
         const encoder = new TextEncoder();
         await writer.add(
@@ -154,11 +188,29 @@ async function processDocxTemplate(
     );
   }
 
-  for (const [field, imgBytes] of Object.entries(imageData)) {
-    const imgFileName = `image_${field}.png`;
+  // Patch [Content_Types].xml with image extensions
+  if (contentTypesContent !== null && contentTypesFilename !== null) {
+    const requiredExts = new Set(Object.values(imageData).map(a => a.ext));
+    for (const ext of requiredExts) {
+      if (!new RegExp(`Extension="${ext}"`, 'i').test(contentTypesContent)) {
+        contentTypesContent = contentTypesContent.replace(
+          '</Types>',
+          `<Default Extension="${ext}" ContentType="${imageContentType(ext)}"/></Types>`
+        );
+      }
+    }
+    const encoder = new TextEncoder();
+    await writer.add(
+      contentTypesFilename,
+      new zip.BlobReader(new Blob([encoder.encode(contentTypesContent)])),
+    );
+  }
+
+  for (const [field, imgAsset] of Object.entries(imageData)) {
+    const imgFileName = `image_${field}.${imgAsset.ext}`;
     await writer.add(
       `word/media/${imgFileName}`,
-      new zip.BlobReader(new Blob([imgBytes])),
+      new zip.BlobReader(new Blob([imgAsset.bytes])),
     );
   }
 
@@ -184,7 +236,7 @@ async function processDocxTemplate(
 async function processPptxTemplate(
   templateBytes: Uint8Array,
   mergeData: Record<string, string>,
-  imageData: Record<string, Uint8Array>,
+  imageData: Record<string, ImageAsset>,
 ): Promise<{ bytes: Uint8Array; detectedTags: string[] }> {
   const blob = new Blob([templateBytes.slice().buffer]);
   const reader = new zip.ZipReader(new zip.BlobReader(blob));
@@ -199,6 +251,8 @@ async function processPptxTemplate(
   // Track image injections per slide rels file
   const slideRelsMap = new Map<string, { content: string; injections: Array<{ rId: string; fileName: string }> }>();
   let imageCounter = 100;
+  let contentTypesContent: string | null = null;
+  let contentTypesFilename: string | null = null;
 
   const detectedTagsSet = new Set<string>();
 
@@ -240,8 +294,9 @@ async function processPptxTemplate(
           return escapeXml(mergeData[cleanField] || "");
         }
         if (imageData[cleanField]) {
+          const imgAsset = imageData[cleanField];
           const rId = `rIdImg${imageCounter++}`;
-          const imgFileName = `image_${cleanField}.png`;
+          const imgFileName = `image_${cleanField}.${imgAsset.ext}`;
 
           // Track the relationship for the slide's .rels file
           const slideMatch = entry.filename.match(/^ppt\/slides\/(slide\d+)\.xml$/);
@@ -268,7 +323,9 @@ async function processPptxTemplate(
         } else {
           slideRelsMap.set(entry.filename, { content, injections: [] });
         }
-        // Don't add to writer yet — we'll handle rels files after
+      } else if (entry.filename === '[Content_Types].xml') {
+        contentTypesContent = content;
+        contentTypesFilename = entry.filename;
       } else {
         const encoder = new TextEncoder();
         await writer.add(
@@ -303,12 +360,30 @@ async function processPptxTemplate(
     }
   }
 
+  // Patch [Content_Types].xml with image extensions
+  if (contentTypesContent !== null && contentTypesFilename !== null) {
+    const requiredExts = new Set(Object.values(imageData).map(a => a.ext));
+    for (const ext of requiredExts) {
+      if (!new RegExp(`Extension="${ext}"`, 'i').test(contentTypesContent)) {
+        contentTypesContent = contentTypesContent.replace(
+          '</Types>',
+          `<Default Extension="${ext}" ContentType="${imageContentType(ext)}"/></Types>`
+        );
+      }
+    }
+    const encoder = new TextEncoder();
+    await writer.add(
+      contentTypesFilename,
+      new zip.BlobReader(new Blob([encoder.encode(contentTypesContent)])),
+    );
+  }
+
   // Add image files to ppt/media/
-  for (const [field, imgBytes] of Object.entries(imageData)) {
-    const imgFileName = `image_${field}.png`;
+  for (const [field, imgAsset] of Object.entries(imageData)) {
+    const imgFileName = `image_${field}.${imgAsset.ext}`;
     await writer.add(
       `ppt/media/${imgFileName}`,
-      new zip.BlobReader(new Blob([imgBytes])),
+      new zip.BlobReader(new Blob([imgAsset.bytes])),
     );
   }
 
@@ -577,7 +652,7 @@ serve(async (req) => {
     }
 
     // ── Download image assets (e.g. Logo) ──────────────────────────────────
-    const imageData: Record<string, Uint8Array> = {};
+    const imageData: Record<string, ImageAsset> = {};
     for (const tag of imageFields) {
       const imageValue = mergeFieldRows?.find((r) => r.field_tag === tag)?.value;
       if (imageValue) {
@@ -586,7 +661,11 @@ serve(async (req) => {
             .from("client-logos")
             .download(imageValue);
           if (imgBlob) {
-            imageData[tag] = new Uint8Array(await imgBlob.arrayBuffer());
+            const ext = inferImageExt(imageValue);
+            imageData[tag] = {
+              bytes: new Uint8Array(await imgBlob.arrayBuffer()),
+              ext,
+            };
           }
         } catch (e) {
           console.warn(`[deliver] Could not download image for ${tag}: ${e}`);
