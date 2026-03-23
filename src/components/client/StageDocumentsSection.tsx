@@ -160,6 +160,12 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
       if (!response.data?.success) throw new Error(response.data?.error || 'Generation failed');
 
       const sharepointUrl = response.data?.delivery?.sharepoint_web_url;
+      const warnings = response.data?.warnings;
+      const unreplaced = warnings?.unreplaced_fields || [];
+      const invalid = warnings?.invalid_fields || [];
+      const missing = warnings?.missing_fields || [];
+      const hasWarnings = unreplaced.length > 0 || invalid.length > 0 || missing.length > 0;
+
       if (response.data?.skipped) {
         toast({
           title: 'Already Generated',
@@ -175,6 +181,20 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
             : `"${title}" has been generated successfully.`,
         });
       }
+
+      // Show a second warning toast if there were unreplaced/missing merge fields
+      if (hasWarnings) {
+        const parts: string[] = [];
+        if (unreplaced.length > 0) parts.push(`Unreplaced: ${unreplaced.join(', ')}`);
+        if (missing.length > 0) parts.push(`Missing data: ${missing.join(', ')}`);
+        if (invalid.length > 0) parts.push(`Unknown tags: ${invalid.join(', ')}`);
+        toast({
+          title: 'Merge Field Warnings',
+          description: parts.join(' | '),
+          variant: 'destructive',
+        });
+      }
+
       refetch();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
