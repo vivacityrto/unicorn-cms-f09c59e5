@@ -300,7 +300,7 @@ export function useClientProfile(tenantId: number | null) {
           .maybeSingle(),
         supabase
           .from('tenant_profile')
-          .select('phone1, org_type')
+          .select('phone1, org_type, rto_email, gto_name, country, primary_contact_name, primary_contact_email, primary_contact_phone')
           .eq('tenant_id', tenantId)
           .maybeSingle()
       ]);
