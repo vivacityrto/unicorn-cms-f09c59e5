@@ -465,10 +465,18 @@ export function StageDocumentsPanel({
               <div className="space-y-2">
                 {documents
                   .filter(doc => {
-                    if (aiStatusFilter === 'all') return true;
                     const docData = getDocumentData(doc);
-                    const docAiStatus = docData?.ai_status || 'pending';
-                    return docAiStatus === aiStatusFilter;
+                    // Name filter
+                    if (nameFilter) {
+                      const title = (docData?.title || '').toLowerCase();
+                      if (!title.includes(nameFilter.toLowerCase())) return false;
+                    }
+                    // AI status filter
+                    if (aiStatusFilter !== 'all') {
+                      const docAiStatus = docData?.ai_status || 'pending';
+                      if (docAiStatus !== aiStatusFilter) return false;
+                    }
+                    return true;
                   })
                   .map((doc) => {
                   const docData = getDocumentData(doc);
