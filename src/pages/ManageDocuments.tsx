@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen } from "lucide-react";
+import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { Combobox } from "@/components/ui/combobox";
@@ -60,6 +60,9 @@ export default function ManageDocuments() {
   const [searchQuery, setSearchQuery] = useState("");
   const [formatFilter, setFormatFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [showDuplicatesOnly, setShowDuplicatesOnly] = useState(false);
+  const [deleteImpact, setDeleteImpact] = useState<{ instances: number; stageDocs: number } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [sortField, setSortField] = useState<"title" | "id" | "versiondate">("id");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -301,7 +304,7 @@ export default function ManageDocuments() {
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1); // Reset to first page when filters change
-  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection]);
+  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly]);
   useEffect(() => {
     if (bulkSendSearchQuery) {
       const filtered = bulkSendUsers.filter(user => user.email.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()) || `${user.first_name} ${user.last_name}`.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()));
@@ -416,6 +419,17 @@ export default function ManageDocuments() {
       setLoading(false);
     }
   };
+  // Compute duplicate title counts
+  const duplicateTitleCounts = (() => {
+    const counts: Record<string, number> = {};
+    documents.forEach(doc => {
+      const key = (doc.title || '').toLowerCase().trim();
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  })();
+  const duplicateDocCount = documents.filter(doc => duplicateTitleCounts[(doc.title || '').toLowerCase().trim()] > 1).length;
+
   const applyFiltersAndSort = () => {
     let filtered = [...documents];
 
@@ -434,8 +448,17 @@ export default function ManageDocuments() {
       filtered = filtered.filter(doc => doc.category?.toString() === categoryFilter);
     }
 
-    // Sort
+    // Duplicates filter
+    if (showDuplicatesOnly) {
+      filtered = filtered.filter(doc => duplicateTitleCounts[(doc.title || '').toLowerCase().trim()] > 1);
+    }
+
+    // Sort - when showing duplicates, group by title first
     filtered.sort((a, b) => {
+      if (showDuplicatesOnly) {
+        const titleCompare = (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
+        if (titleCompare !== 0) return titleCompare;
+      }
       let aVal: any, bVal: any;
       switch (sortField) {
         case "title":
@@ -650,13 +673,12 @@ export default function ManageDocuments() {
   const handleDeleteDocument = async (docId: number) => {
     if (!confirm("Are you sure you want to delete this document?")) return;
     try {
-      const {
-        error
-      } = await supabase.from("documents").delete().eq("id", docId);
+      const { data, error } = await supabase.rpc('delete_document_cascade', { p_doc_id: docId });
       if (error) throw error;
+      const result = data as any;
       toast({
-        title: "Success",
-        description: "Document deleted successfully"
+        title: "Document deleted",
+        description: `Removed "${result.title}" along with ${result.instances_deleted} instance(s), ${result.stage_docs_deleted} stage link(s), and ${result.tenant_docs_deleted} tenant link(s).`
       });
       fetchDocuments();
     } catch (error: any) {
@@ -682,13 +704,18 @@ export default function ManageDocuments() {
   };
   const handleBulkDelete = async () => {
     try {
-      const {
-        error
-      } = await supabase.from("documents").delete().in("id", selectedDocuments);
-      if (error) throw error;
+      setIsDeleting(true);
+      const results = [];
+      for (const docId of selectedDocuments) {
+        const { data, error } = await supabase.rpc('delete_document_cascade', { p_doc_id: docId });
+        if (error) throw error;
+        results.push(data);
+      }
+      const totalInstances = results.reduce((sum: number, r: any) => sum + (r?.instances_deleted || 0), 0);
+      const totalStage = results.reduce((sum: number, r: any) => sum + (r?.stage_docs_deleted || 0), 0);
       toast({
         title: "Success",
-        description: `${selectedDocuments.length} document(s) deleted successfully`
+        description: `${selectedDocuments.length} document(s) deleted with ${totalInstances} instance(s) and ${totalStage} stage link(s) removed.`
       });
       setSelectedDocuments([]);
       setIsBulkDeleteDialogOpen(false);
@@ -699,6 +726,8 @@ export default function ManageDocuments() {
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
   const handleBulkSend = async () => {
@@ -1241,6 +1270,21 @@ export default function ManageDocuments() {
           <Input placeholder="Search by ID, name, or description..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-12 h-12 bg-card border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-lg font-medium placeholder:text-muted-foreground/50" />
         </div>
 
+        {/* Duplicates Filter */}
+        {isSuperAdmin && duplicateDocCount > 0 && (
+          <Button
+            variant={showDuplicatesOnly ? "default" : "outline"}
+            className={cn(
+              "h-12 gap-2 rounded-lg font-semibold whitespace-nowrap",
+              showDuplicatesOnly && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            )}
+            onClick={() => setShowDuplicatesOnly(!showDuplicatesOnly)}
+          >
+            <Copy className="h-4 w-4" />
+            Duplicates ({duplicateDocCount})
+          </Button>
+        )}
+
         <div className="w-full md:w-[200px]">
           <Popover>
             <PopoverTrigger asChild>
@@ -1504,39 +1548,49 @@ export default function ManageDocuments() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Selected Documents?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {selectedDocuments.length} document(s)? This action cannot be undone.
+              Are you sure you want to delete {selectedDocuments.length} document(s)? This will also remove all related instances, stage links, and tenant distributions. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isDeleting ? "Deleting..." : "Delete All"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Single Document Delete Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+        setIsDeleteDialogOpen(open);
+        if (!open) { setDocumentToDelete(null); setDeleteImpact(null); }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this document? This action cannot be undone.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Are you sure you want to delete this document? This will cascade-remove all related records and cannot be undone.</p>
+                {documentToDelete && (
+                  <div className="rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground">
+                    {documents.find(d => d.id === documentToDelete)?.title}
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="hover:bg-muted hover:text-foreground">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={async () => {
+            <AlertDialogCancel disabled={isDeleting} className="hover:bg-muted hover:text-foreground">Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={isDeleting} onClick={async () => {
             if (!documentToDelete) return;
             try {
-              const {
-                error
-              } = await supabase.from("documents").delete().eq("id", documentToDelete);
+              setIsDeleting(true);
+              const { data, error } = await supabase.rpc('delete_document_cascade', { p_doc_id: documentToDelete });
               if (error) throw error;
+              const result = data as any;
               toast({
-                title: "Success",
-                description: "Document deleted successfully"
+                title: "Document deleted",
+                description: `Removed "${result.title}" along with ${result.instances_deleted} instance(s), ${result.stage_docs_deleted} stage link(s), and ${result.tenant_docs_deleted} tenant link(s).`
               });
               setDocumentToDelete(null);
               setIsDeleteDialogOpen(false);
@@ -1547,9 +1601,11 @@ export default function ManageDocuments() {
                 description: error.message,
                 variant: "destructive"
               });
+            } finally {
+              setIsDeleting(false);
             }
           }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
