@@ -1482,7 +1482,7 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Client Doc</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Category</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Framework</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r text-center">Gov Ver</TableHead>
+                
                 
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Updated</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap text-center">Actions</TableHead>
