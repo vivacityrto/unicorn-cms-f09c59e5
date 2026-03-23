@@ -251,8 +251,8 @@ async function processPptxTemplate(
   // Track image injections per slide rels file
   const slideRelsMap = new Map<string, { content: string; injections: Array<{ rId: string; fileName: string }> }>();
   let imageCounter = 100;
-
-  const detectedTagsSet = new Set<string>();
+  let contentTypesContent: string | null = null;
+  let contentTypesFilename: string | null = null;
 
   for (const entry of entries) {
     if (!entry.getData) continue;
