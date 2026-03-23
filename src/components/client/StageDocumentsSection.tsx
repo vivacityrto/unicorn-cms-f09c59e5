@@ -118,12 +118,13 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         throw new Error('No published version available for this document. Please publish a version first.');
       }
 
-      // 2. Call the real delivery pipeline
+      // 2. Call the real delivery pipeline (force=true to bypass idempotency)
       const response = await supabase.functions.invoke('deliver-governance-document', {
         body: {
           tenant_id: tenantId,
           document_version_id: versionData.id,
           allow_incomplete: true,
+          force: true,
         },
       });
 
@@ -158,13 +159,22 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
 
       if (!response.data?.success) throw new Error(response.data?.error || 'Generation failed');
 
-      const sharepointUrl = response.data?.delivery?.sharepoint_url;
-      toast({
-        title: 'Document Generated',
-        description: sharepointUrl
-          ? `"${title}" has been generated and uploaded to SharePoint.`
-          : `"${title}" has been generated successfully.`,
-      });
+      const sharepointUrl = response.data?.delivery?.sharepoint_web_url;
+      if (response.data?.skipped) {
+        toast({
+          title: 'Already Generated',
+          description: sharepointUrl
+            ? `"${title}" was already generated. View it in SharePoint.`
+            : `"${title}" was already generated for this version.`,
+        });
+      } else {
+        toast({
+          title: 'Document Generated',
+          description: sharepointUrl
+            ? `"${title}" has been generated and uploaded to SharePoint.`
+            : `"${title}" has been generated successfully.`,
+        });
+      }
       refetch();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';

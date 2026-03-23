@@ -418,7 +418,7 @@ serve(async (req) => {
 
     // Parse request
     const body = await req.json();
-    const { tenant_id, document_version_id, allow_incomplete, snapshot_id: pinned_snapshot_id } = body;
+    const { tenant_id, document_version_id, allow_incomplete, snapshot_id: pinned_snapshot_id, force } = body;
     if (!tenant_id || !document_version_id) {
       return new Response(
         JSON.stringify({ error: "tenant_id and document_version_id are required" }),
@@ -426,7 +426,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[deliver] Starting delivery: tenant=${tenant_id}, version=${document_version_id}`);
+    console.log(`[deliver] Starting delivery: tenant=${tenant_id}, version=${document_version_id}, force=${!!force}`);
 
     // ── Load version + document ────────────────────────────────────────────
     const { data: version, error: vErr } = await supabase
@@ -467,41 +467,48 @@ serve(async (req) => {
       snapshotId = latestSnapshot?.id || null;
     }
 
-    // ── Idempotency check ──────────────────────────────────────────────────
-    const idempotencyQuery = supabase
-      .from("governance_document_deliveries")
-      .select("*")
-      .eq("tenant_id", tenant_id)
-      .eq("document_version_id", document_version_id)
-      .eq("status", "success");
-
-    if (snapshotId) {
-      idempotencyQuery.eq("snapshot_id", snapshotId);
-    }
-
-    const { data: existing } = await idempotencyQuery.maybeSingle();
-
-    if (existing) {
-      console.log(`[deliver] Already delivered — returning existing record ${existing.id}`);
-      return new Response(
-        JSON.stringify({ success: true, skipped: true, delivery: existing }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // ── Clean up any previous failed delivery for this combo ──────────────
-    // Prevents unique constraint violation on retry
-    {
-      const delQuery = supabase
+    // ── Idempotency check (skip if force=true) ─────────────────────────────
+    if (!force) {
+      const idempotencyQuery = supabase
         .from("governance_document_deliveries")
-        .delete()
+        .select("*")
         .eq("tenant_id", tenant_id)
         .eq("document_version_id", document_version_id)
-        .eq("status", "failed");
+        .eq("status", "success");
+
       if (snapshotId) {
-        delQuery.eq("snapshot_id", snapshotId);
+        idempotencyQuery.eq("snapshot_id", snapshotId);
       }
-      await delQuery;
+
+      const { data: existing } = await idempotencyQuery.maybeSingle();
+
+      if (existing) {
+        console.log(`[deliver] Already delivered — returning existing record ${existing.id}`);
+        return new Response(
+          JSON.stringify({ success: true, skipped: true, delivery: existing }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else {
+      console.log("[deliver] Force flag set — skipping idempotency check");
+    }
+
+    // ── Clean up previous delivery records for this combo ──────────────
+    // Prevents unique constraint violation on retry or force re-generation
+    {
+      const statusesToClean = force ? ["failed", "success"] : ["failed"];
+      for (const cleanStatus of statusesToClean) {
+        const delQuery = supabase
+          .from("governance_document_deliveries")
+          .delete()
+          .eq("tenant_id", tenant_id)
+          .eq("document_version_id", document_version_id)
+          .eq("status", cleanStatus);
+        if (snapshotId) {
+          delQuery.eq("snapshot_id", snapshotId);
+        }
+        await delQuery;
+      }
     }
 
     // ── Download template from storage ─────────────────────────────────────
