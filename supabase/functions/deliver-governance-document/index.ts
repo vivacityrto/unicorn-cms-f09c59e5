@@ -489,6 +489,21 @@ serve(async (req) => {
       );
     }
 
+    // ── Clean up any previous failed delivery for this combo ──────────────
+    // Prevents unique constraint violation on retry
+    {
+      const delQuery = supabase
+        .from("governance_document_deliveries")
+        .delete()
+        .eq("tenant_id", tenant_id)
+        .eq("document_version_id", document_version_id)
+        .eq("status", "failed");
+      if (snapshotId) {
+        delQuery.eq("snapshot_id", snapshotId);
+      }
+      await delQuery;
+    }
+
     // ── Download template from storage ─────────────────────────────────────
     const storagePath = version.storage_path || version.file_path;
     if (!storagePath) {
