@@ -759,7 +759,7 @@ function GovernanceFolderSection({
             ))}
           </div>
 
-          {governanceBrowseStack.length > 0 && (
+          {governanceBrowseStack.length >= 2 && (
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={navigateBack} className="h-7 text-xs">
                 <ArrowLeft className="h-3 w-3 mr-1" />
