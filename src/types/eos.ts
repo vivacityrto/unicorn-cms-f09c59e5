@@ -185,6 +185,7 @@ export interface EosIssue {
   solution?: string;
   resolved_at?: string;
   resolved_by?: string;
+  outcome_note?: string;
   created_at: string;
   updated_at: string;
 }
