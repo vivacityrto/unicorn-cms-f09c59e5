@@ -22,6 +22,32 @@ function escapeXml(text: string): string {
 }
 
 /**
+ * Normalize merge field tokens that Word has split across XML runs.
+ * Word often breaks {{FieldName}} into multiple <w:r> elements like:
+ *   <w:t>{</w:t></w:r><w:r><w:t>{FieldName}}</w:t>
+ * or even splits the field name itself across runs.
+ * 
+ * This function reassembles them by:
+ * 1. Fixing split {{ and }} delimiters (XML tags between the braces)
+ * 2. Removing XML tags from within the field name portion
+ */
+function normalizeMergeTokens(content: string): string {
+  // Step 1: Fix split {{ delimiters — e.g. {<xml>{ → {{
+  let result = content.replace(/\{(?:<[^>]*>)+\{/g, '{{');
+  // Step 2: Fix split }} delimiters — e.g. }<xml>} → }}
+  result = result.replace(/\}(?:<[^>]*>)+\}/g, '}}');
+  
+  // Step 3: Clean XML tags from within merge field tokens
+  // Match {{...}} that may contain XML tags within the field name
+  result = result.replace(/\{\{((?:[^}]|\}(?!\}))+)\}\}/g, (_match, inner) => {
+    const cleanField = inner.replace(/<[^>]*>/g, '').trim();
+    return `{{${cleanField}}}`;
+  });
+  
+  return result;
+}
+
+/**
  * Process a DOCX template by replacing {{Tag}} merge fields with resolved values.
  * Supports both text and image injection (Logo field).
  * Returns processed bytes AND a list of all {{...}} tags found in the template.
