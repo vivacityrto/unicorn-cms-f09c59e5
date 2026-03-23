@@ -1548,39 +1548,49 @@ export default function ManageDocuments() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Selected Documents?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {selectedDocuments.length} document(s)? This action cannot be undone.
+              Are you sure you want to delete {selectedDocuments.length} document(s)? This will also remove all related instances, stage links, and tenant distributions. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isDeleting ? "Deleting..." : "Delete All"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Single Document Delete Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+        setIsDeleteDialogOpen(open);
+        if (!open) { setDocumentToDelete(null); setDeleteImpact(null); }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Document?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this document? This action cannot be undone.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>Are you sure you want to delete this document? This will cascade-remove all related records and cannot be undone.</p>
+                {documentToDelete && (
+                  <div className="rounded-md bg-muted px-3 py-2 text-sm font-medium text-foreground">
+                    {documents.find(d => d.id === documentToDelete)?.title}
+                  </div>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="hover:bg-muted hover:text-foreground">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={async () => {
+            <AlertDialogCancel disabled={isDeleting} className="hover:bg-muted hover:text-foreground">Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={isDeleting} onClick={async () => {
             if (!documentToDelete) return;
             try {
-              const {
-                error
-              } = await supabase.from("documents").delete().eq("id", documentToDelete);
+              setIsDeleting(true);
+              const { data, error } = await supabase.rpc('delete_document_cascade', { p_doc_id: documentToDelete });
               if (error) throw error;
+              const result = data as any;
               toast({
-                title: "Success",
-                description: "Document deleted successfully"
+                title: "Document deleted",
+                description: `Removed "${result.title}" along with ${result.instances_deleted} instance(s), ${result.stage_docs_deleted} stage link(s), and ${result.tenant_docs_deleted} tenant link(s).`
               });
               setDocumentToDelete(null);
               setIsDeleteDialogOpen(false);
@@ -1591,9 +1601,11 @@ export default function ManageDocuments() {
                 description: error.message,
                 variant: "destructive"
               });
+            } finally {
+              setIsDeleting(false);
             }
           }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
