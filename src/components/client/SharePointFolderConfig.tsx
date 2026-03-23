@@ -759,38 +759,42 @@ function GovernanceFolderSection({
             ))}
           </div>
 
-          {governanceBrowseStack.length >= 2 && (
+          {governanceBrowseStack.length > 0 && (
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={navigateBack} className="h-7 text-xs">
                 <ArrowLeft className="h-3 w-3 mr-1" />
                 Back
               </Button>
-              <Button
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => {
-                  const current = governanceBrowseStack[governanceBrowseStack.length - 1];
-                  selectGovernanceFolder(current.id, current.name);
-                }}
-                disabled={savingGovernanceFolder}
-              >
-                {savingGovernanceFolder && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-                Use "{governanceBrowseStack[governanceBrowseStack.length - 1]?.name}"
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={verifyAndCreateDefault}
-                disabled={verifyingGovernance}
-              >
-                {verifyingGovernance ? (
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                ) : (
-                  <FolderPlus className="h-3 w-3 mr-1" />
-                )}
-                Create Default
-              </Button>
+              {governanceBrowseStack.length >= 2 && (
+                <>
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      const current = governanceBrowseStack[governanceBrowseStack.length - 1];
+                      selectGovernanceFolder(current.id, current.name);
+                    }}
+                    disabled={savingGovernanceFolder}
+                  >
+                    {savingGovernanceFolder && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+                    Use "{governanceBrowseStack[governanceBrowseStack.length - 1]?.name}"
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={verifyAndCreateDefault}
+                    disabled={verifyingGovernance}
+                  >
+                    {verifyingGovernance ? (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    ) : (
+                      <FolderPlus className="h-3 w-3 mr-1" />
+                    )}
+                    Create Default
+                  </Button>
+                </>
+              )}
             </div>
           )}
 
