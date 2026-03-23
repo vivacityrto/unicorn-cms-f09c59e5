@@ -386,8 +386,17 @@ export function StageDocumentsPanel({
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-base">Documents</CardTitle>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <CardTitle className="text-base shrink-0">Documents</CardTitle>
+              <div className="relative flex-1 max-w-[200px]">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Filter by name..."
+                  value={nameFilter}
+                  onChange={(e) => setNameFilter(e.target.value)}
+                  className="h-7 text-xs pl-7"
+                />
+              </div>
               <Select value={aiStatusFilter} onValueChange={setAiStatusFilter}>
                 <SelectTrigger className="h-7 w-[140px] text-xs">
                   <Filter className="h-3 w-3 mr-1" />
