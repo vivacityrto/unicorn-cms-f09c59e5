@@ -285,12 +285,14 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Priority 2: List root children and filter by RTO ID prefix
+    // Priority 2: List children of start folder and filter by RTO ID prefix
     if (tenant.rto_id && candidates.length === 0) {
       const rtoPrefix = tenant.rto_id.trim();
+      console.log(`[resolve-tenant-folder] Searching for RTO prefix '${rtoPrefix}' in basePath: ${basePath}`);
       try {
         // Try $filter=startsWith first (most efficient)
-        let nextUrl: string | null = `/drives/${driveId}/root/children?$select=id,name,webUrl,folder&$top=200&$filter=startsWith(name,'${rtoPrefix}')`;
+        // Note: $filter may not work with path-based children endpoints, so we fall back
+        let nextUrl: string | null = `${basePath}?$select=id,name,webUrl,folder&$top=200&$filter=startsWith(name,'${rtoPrefix}')`;
         while (nextUrl && candidates.length < 10) {
           const resp = await graphGet<{ value: DriveItem[]; '@odata.nextLink'?: string }>(nextUrl);
           if (!resp.ok) throw new Error('filter_not_supported');
@@ -311,7 +313,7 @@ Deno.serve(async (req: Request) => {
         // Fallback: list all children and filter in-memory by prefix
         console.log('[resolve-tenant-folder] $filter not supported, falling back to in-memory prefix filter');
         const resp = await graphGet<{ value: DriveItem[] }>(
-          `/drives/${driveId}/root/children?$select=id,name,webUrl,folder&$top=500`
+          `${basePath}?$select=id,name,webUrl,folder&$top=500`
         );
         if (resp.ok) {
           for (const item of (resp.data.value || [])) {
