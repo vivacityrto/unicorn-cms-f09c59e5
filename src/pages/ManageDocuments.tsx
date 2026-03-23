@@ -1585,9 +1585,6 @@ export default function ManageDocuments() {
                             v{doc.versionnumber}
                           </Badge> : "—"}
                       </TableCell>
-                      <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
-                        {doc.versionlastupdated ? format(new Date(doc.versionlastupdated), "dd MMM yyyy") : "—"}
-                      </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
                         <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px]" style={doc.isclientdoc ? {
                   borderColor: "#3B82F6",
