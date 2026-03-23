@@ -987,6 +987,29 @@ export default function ManageDocuments() {
   // Filtered categories based on search
   const filteredCategoriesForDropdown = categories.filter(cat => cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase()));
 
+  // Get current version from document_versions join
+  const getCurrentVersion = (doc: Document) => {
+    if (!doc.document_versions || doc.document_versions.length === 0) return null;
+    const sorted = [...doc.document_versions].sort((a, b) => b.version_number - a.version_number);
+    return sorted[0];
+  };
+
+  // SharePoint link handler
+  const handleSharePointLinkSelected = async (url: string) => {
+    if (!sharepointBrowseDocId) return;
+    const { error } = await supabase
+      .from('documents')
+      .update({ source_template_url: url })
+      .eq('id', sharepointBrowseDocId);
+    if (error) {
+      sonnerToast.error('Failed to update SharePoint URL');
+    } else {
+      sonnerToast.success('SharePoint URL saved');
+      fetchDocuments();
+    }
+    setSharepointBrowseDocId(null);
+  };
+
   if (loading) {
     return <div className="space-y-4 p-6">
         <div className="flex items-center gap-2">
@@ -997,6 +1020,16 @@ export default function ManageDocuments() {
           {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       </div>;
+  }
+
+  // Drill-down: show GovernanceDocumentDetail when a doc is selected
+  if (selectedDocId) {
+    return <div className="space-y-4 p-6 animate-fade-in">
+      <GovernanceDocumentDetail
+        documentId={selectedDocId}
+        onBack={() => setSelectedDocId(null)}
+      />
+    </div>;
   }
   const isSuperAdmin = currentUserRole === "Super Admin" || currentUserRole === "SuperAdmin";
   return <div className="space-y-6 p-6 animate-fade-in">
