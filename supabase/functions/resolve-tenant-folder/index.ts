@@ -218,32 +218,40 @@ Deno.serve(async (req: Request) => {
     // ── SEARCH for candidate folders ──
     // Need a drive_id to search. Try from settings, or from sharepoint_sites registry.
     let driveId: string | undefined;
+    let startFolderName: string | undefined;
 
     if (effectivePurpose === 'governance_client_files') {
       driveId = spSettings?.governance_drive_id ?? undefined;
       if (!driveId) {
         const { data: govSite } = await supabase
           .from('sharepoint_sites')
-          .select('drive_id')
+          .select('drive_id, start_folder_name')
           .eq('purpose', 'governance_client_files')
           .eq('is_active', true)
           .limit(1)
           .maybeSingle();
         driveId = govSite?.drive_id ?? undefined;
+        startFolderName = govSite?.start_folder_name ?? undefined;
       }
     } else {
       driveId = spSettings?.drive_id ?? undefined;
       if (!driveId) {
         const { data: clientSite } = await supabase
           .from('sharepoint_sites')
-          .select('drive_id')
+          .select('drive_id, start_folder_name')
           .eq('purpose', 'client_files')
           .eq('is_active', true)
           .limit(1)
           .maybeSingle();
         driveId = clientSite?.drive_id ?? undefined;
+        startFolderName = clientSite?.start_folder_name ?? undefined;
       }
     }
+
+    // Build the base path — if a start_folder_name is configured, search inside it
+    const basePath = startFolderName
+      ? `/drives/${driveId}/root:/${encodeURIComponent(startFolderName)}:/children`
+      : `/drives/${driveId}/root/children`;
 
     if (!driveId) {
       return new Response(JSON.stringify({
