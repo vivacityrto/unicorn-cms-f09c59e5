@@ -53,6 +53,17 @@ interface Document {
     last_name: string | null;
     avatar_url: string | null;
   } | null;
+  framework_type?: string | null;
+  source_template_url?: string | null;
+  updated_at?: string | null;
+  current_published_version_id?: string | null;
+  document_versions?: Array<{
+    id: string;
+    version_number: number;
+    status: string;
+    created_at: string;
+    published_at: string | null;
+  }> | null;
 }
 export default function ManageDocuments() {
   const {
