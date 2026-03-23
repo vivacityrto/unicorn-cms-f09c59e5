@@ -49922,6 +49922,19 @@ export type Database = {
         Returns: Json
       }
       resolve_tenant_for_task: { Args: { p_task_id: string }; Returns: number }
+      resolve_tenant_merge_fields: {
+        Args: { p_tenant_id: number }
+        Returns: {
+          field_id: number
+          field_name: string
+          field_tag: string
+          field_type: string
+          source: string
+          source_reference: string
+          tenant_id: number
+          value: string
+        }[]
+      }
       restore_minutes_version: {
         Args: { p_reason: string; p_version_id: string }
         Returns: string
