@@ -254,7 +254,8 @@ async function processPptxTemplate(
   let contentTypesContent: string | null = null;
   let contentTypesFilename: string | null = null;
 
-  for (const entry of entries) {
+  const detectedTagsSet = new Set<string>();
+
     if (!entry.getData) continue;
     const data = await entry.getData(new zip.BlobWriter());
     const arrayBuffer = await data.arrayBuffer();
