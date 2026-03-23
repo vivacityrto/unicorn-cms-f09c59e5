@@ -140,8 +140,9 @@ async function processDocxTemplate(
           return escapeXml(mergeData[cleanField] || "");
         }
         if (imageData[cleanField]) {
+          const imgAsset = imageData[cleanField];
           const rId = `rIdImg${imageCounter++}`;
-          const imgFileName = `image_${cleanField}.png`;
+          const imgFileName = `image_${cleanField}.${imgAsset.ext}`;
           imageInjections.push({ rId, fileName: imgFileName });
           return `</w:t></w:r><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="1800000" cy="900000"/><wp:docPr id="${imageCounter}" name="${cleanField}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${imageCounter}" name="${imgFileName}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1800000" cy="900000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r><w:r><w:t>`;
         }
