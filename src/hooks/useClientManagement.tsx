@@ -368,7 +368,13 @@ export function useClientProfile(tenantId: number | null) {
         accounting_system: tenant.accounting_system,
         risk_level: tenant.risk_level,
         updated_at: tenant.updated_at,
-        phone1: tpResult.data?.phone1 || null
+        phone1: tpResult.data?.phone1 || null,
+        rto_email: tpResult.data?.rto_email || null,
+        gto_name: tpResult.data?.gto_name || null,
+        country: tpResult.data?.country || null,
+        primary_contact_name: tpResult.data?.primary_contact_name || null,
+        primary_contact_email: tpResult.data?.primary_contact_email || null,
+        primary_contact_phone: tpResult.data?.primary_contact_phone || null,
       };
 
       setProfile(profileData);
