@@ -1478,7 +1478,7 @@ export default function ManageDocuments() {
                   Version Date
                 </TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Version #</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-40 h-14 whitespace-nowrap border-r">Version Updated</TableHead>
+                
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Client Doc</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Category</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Framework</TableHead>
