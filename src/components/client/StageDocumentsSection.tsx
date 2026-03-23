@@ -355,7 +355,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
           const GenIcon = genConfig.icon;
           const errorInfo = doc.last_error ? categoriseError(doc.last_error) : null;
           const isGeneratingSingle = generatingSingleId === doc.id;
-          const canGenerate = isVivacityStaff && (doc.status === 'pending' || doc.generation_status === 'pending' || doc.generation_status === 'failed');
+          const canGenerate = isVivacityStaff && doc.generation_status !== 'generating';
 
           return (
             <div key={doc.id} className="flex items-center gap-3 px-4 py-2">
