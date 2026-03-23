@@ -383,7 +383,10 @@ export default function ManageDocuments() {
         const {
           data: documentsData,
           error: documentsError
-        } = await supabase.from("documents").select("*").order("id", {
+        } = await supabase.from("documents").select(`
+          *, 
+          document_versions!document_versions_document_id_fkey(id, version_number, status, created_at, published_at)
+        `).order("id", {
           ascending: true
         });
         if (documentsError) {
