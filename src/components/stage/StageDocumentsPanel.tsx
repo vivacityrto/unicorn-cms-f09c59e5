@@ -101,8 +101,9 @@ export function StageDocumentsPanel({
   // Stage counts for documents
   const [documentStageCounts, setDocumentStageCounts] = useState<Map<number, { count: number; names: string[] }>>(new Map());
   
-  // AI status filter
+  // Filters
   const [aiStatusFilter, setAiStatusFilter] = useState<string>('all');
+  const [nameFilter, setNameFilter] = useState('');
 
   // Get file type badge color
   const getFileTypeBadge = (format: string | null) => {
@@ -385,8 +386,17 @@ export function StageDocumentsPanel({
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-base">Documents</CardTitle>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <CardTitle className="text-base shrink-0">Documents</CardTitle>
+              <div className="relative flex-1 max-w-[200px]">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input
+                  placeholder="Filter by name..."
+                  value={nameFilter}
+                  onChange={(e) => setNameFilter(e.target.value)}
+                  className="h-7 text-xs pl-7"
+                />
+              </div>
               <Select value={aiStatusFilter} onValueChange={setAiStatusFilter}>
                 <SelectTrigger className="h-7 w-[140px] text-xs">
                   <Filter className="h-3 w-3 mr-1" />
@@ -455,10 +465,18 @@ export function StageDocumentsPanel({
               <div className="space-y-2">
                 {documents
                   .filter(doc => {
-                    if (aiStatusFilter === 'all') return true;
                     const docData = getDocumentData(doc);
-                    const docAiStatus = docData?.ai_status || 'pending';
-                    return docAiStatus === aiStatusFilter;
+                    // Name filter
+                    if (nameFilter) {
+                      const title = (docData?.title || '').toLowerCase();
+                      if (!title.includes(nameFilter.toLowerCase())) return false;
+                    }
+                    // AI status filter
+                    if (aiStatusFilter !== 'all') {
+                      const docAiStatus = docData?.ai_status || 'pending';
+                      if (docAiStatus !== aiStatusFilter) return false;
+                    }
+                    return true;
                   })
                   .map((doc) => {
                   const docData = getDocumentData(doc);
