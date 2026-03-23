@@ -195,6 +195,47 @@ export const LiveMeetingView = () => {
     }
   }, [profile?.user_uuid, attendees, meetingStarted, meetingId]);
 
+  // Hydrate segment notes from DB on load
+  useEffect(() => {
+    if (!segments) return;
+    setSegmentNotes(prev => {
+      const hydrated: Record<string, string> = { ...prev };
+      segments.forEach(seg => {
+        if (seg.notes && !(seg.id in hydrated)) {
+          hydrated[seg.id] = seg.notes;
+        }
+      });
+      return hydrated;
+    });
+  }, [segments]);
+
+  // Hydrate cascading messages from meeting.notes on load
+  useEffect(() => {
+    if (meeting?.notes && !cascadingMessages) {
+      setCascadingMessages(meeting.notes);
+    }
+  }, [meeting?.notes]);
+
+  // Save segment notes on blur
+  const handleSegmentNoteBlur = (segmentId: string) => {
+    const note = segmentNotes[segmentId];
+    if (note !== undefined) {
+      updateSegmentNotes.mutate({ segmentId, notes: note });
+    }
+  };
+
+  // Save cascading messages on blur
+  const saveCascadingMessages = async () => {
+    if (!meetingId) return;
+    const { error } = await supabase
+      .from('eos_meetings')
+      .update({ notes: cascadingMessages })
+      .eq('id', meetingId);
+    if (error) {
+      toast({ title: 'Error saving cascading messages', description: error.message, variant: 'destructive' });
+    }
+  };
+
   const isFacilitator = participants?.some(
     p => p.user_id === profile?.user_uuid && p.role === 'Leader'
   ) ?? true; // Default to true if no participants set yet
