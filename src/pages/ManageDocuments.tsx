@@ -1419,6 +1419,36 @@ export default function ManageDocuments() {
             </PopoverContent>
           </Popover>
         </div>
+
+        {/* Framework Filter */}
+        {isSuperAdmin && (
+          <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
+            <SelectTrigger className="w-full md:w-[180px] h-12 bg-card border-border/50 rounded-lg font-semibold">
+              <SelectValue placeholder="Framework" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Frameworks</SelectItem>
+              <SelectItem value="__none__">No Framework</SelectItem>
+              {frameworks?.map((f) => (
+                <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* SharePoint Status Filter */}
+        {isSuperAdmin && (
+          <Select value={sharepointFilter} onValueChange={setSharepointFilter}>
+            <SelectTrigger className="w-full md:w-[170px] h-12 bg-card border-border/50 rounded-lg font-semibold">
+              <SelectValue placeholder="SP Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All SP Status</SelectItem>
+              <SelectItem value="has_url">Has SP URL</SelectItem>
+              <SelectItem value="no_url">No SP URL</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Documents Table */}
