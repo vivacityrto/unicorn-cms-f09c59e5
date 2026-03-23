@@ -419,6 +419,17 @@ export default function ManageDocuments() {
       setLoading(false);
     }
   };
+  // Compute duplicate title counts
+  const duplicateTitleCounts = (() => {
+    const counts: Record<string, number> = {};
+    documents.forEach(doc => {
+      const key = (doc.title || '').toLowerCase().trim();
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    return counts;
+  })();
+  const duplicateDocCount = documents.filter(doc => duplicateTitleCounts[(doc.title || '').toLowerCase().trim()] > 1).length;
+
   const applyFiltersAndSort = () => {
     let filtered = [...documents];
 
@@ -437,8 +448,17 @@ export default function ManageDocuments() {
       filtered = filtered.filter(doc => doc.category?.toString() === categoryFilter);
     }
 
-    // Sort
+    // Duplicates filter
+    if (showDuplicatesOnly) {
+      filtered = filtered.filter(doc => duplicateTitleCounts[(doc.title || '').toLowerCase().trim()] > 1);
+    }
+
+    // Sort - when showing duplicates, group by title first
     filtered.sort((a, b) => {
+      if (showDuplicatesOnly) {
+        const titleCompare = (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
+        if (titleCompare !== 0) return titleCompare;
+      }
       let aVal: any, bVal: any;
       switch (sortField) {
         case "title":
