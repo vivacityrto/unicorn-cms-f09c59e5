@@ -1532,6 +1532,7 @@ export default function ManageDocuments() {
                           <span className="text-xs text-muted-foreground flex items-center gap-1 pt-[5px]">
                             <CalendarIcon className="h-3 w-3" />
                             Created: {doc.createdat ? format(new Date(doc.createdat), "MM/dd/yyyy") : "—"}
+                            {doc.creator?.first_name && <span className="ml-2">by: {doc.creator.first_name}{doc.creator.last_name ? ` ${doc.creator.last_name}` : ''}</span>}
                           </span>
                         </div>
                       </TableCell>
