@@ -157,6 +157,8 @@ export function StageDocumentsTab({
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [linkedSearchTerm, setLinkedSearchTerm] = useState('');
+  const [linkedCategoryFilter, setLinkedCategoryFilter] = useState<string>('all');
   const [availableDocuments, setAvailableDocuments] = useState<Document[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
