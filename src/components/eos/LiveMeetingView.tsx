@@ -996,7 +996,7 @@ export const LiveMeetingView = () => {
         meetingId={meetingId!}
         meetingType={(meeting?.meeting_type as MeetingType) || 'L10'}
         todosCount={todos?.length || 0}
-        issuesDiscussed={meeting?.issues_discussed?.length || 0}
+        issuesDiscussed={issues?.filter(i => i.status === 'Solved' || i.status === 'Discussing' || i.status === 'Closed').length || 0}
       />
 
       <FacilitatorSelectDialog

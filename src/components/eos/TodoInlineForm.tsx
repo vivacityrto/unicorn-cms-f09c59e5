@@ -9,8 +9,7 @@ import { CalendarIcon, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 
 interface TodoInlineFormProps {
   meetingId: string;
@@ -24,20 +23,13 @@ export function TodoInlineForm({ meetingId, onTodoCreated }: TodoInlineFormProps
   const [dueDate, setDueDate] = useState<Date>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: users } = useQuery({
-    queryKey: ['users', profile?.tenant_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email')
-        .eq('tenant_id', profile?.tenant_id!)
-        .order('first_name');
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profile?.tenant_id,
-  });
+  // Use Vivacity Team users per L10 standard (EOS is internal-only)
+  const { data: vivacityUsers } = useVivacityTeamUsers();
+  const users = vivacityUsers?.map(u => ({
+    user_uuid: u.user_uuid,
+    first_name: u.first_name,
+    last_name: u.last_name,
+  }));
 
   const handleSubmit = async () => {
     if (!title.trim() || !ownerId || !dueDate) return;

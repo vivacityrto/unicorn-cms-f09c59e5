@@ -41,6 +41,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('identify');
   const [solution, setSolution] = useState(issue?.solution || '');
+  const [discussionNotes, setDiscussionNotes] = useState('');
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoOwner, setNewTodoOwner] = useState('');
@@ -77,8 +78,30 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
       const appropriateTab = getTabFromStatus(issue.status);
       setActiveTab(appropriateTab);
       setSolution(issue.solution || '');
+      // Load existing discussion notes from outcome_note field
+      setDiscussionNotes(issue.outcome_note || '');
     }
   }, [issue?.id, issue?.status, open]);
+
+  // Save discussion notes mutation
+  const saveDiscussionNotes = useMutation({
+    mutationFn: async (notes: string) => {
+      const { error } = await supabase
+        .from('eos_issues')
+        .update({ outcome_note: notes })
+        .eq('id', issue!.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-issues'] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-issues'] });
+      toast({ title: 'Discussion notes saved' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error saving notes', description: error.message, variant: 'destructive' });
+    },
+  });
 
   // Set issue status mutation with auto-tab-advance
   const setStatus = useMutation({
@@ -176,6 +199,13 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
     setTodos(todos.filter((_, i) => i !== index));
   };
 
+  // Auto-save discussion notes on blur
+  const handleDiscussionNotesBlur = () => {
+    if (issue && discussionNotes !== (issue.outcome_note || '')) {
+      saveDiscussionNotes.mutate(discussionNotes);
+    }
+  };
+
   const handleSolve = async () => {
     if (!solution.trim()) {
       toast({ title: 'Please enter a solution', variant: 'destructive' });
@@ -183,6 +213,11 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
     }
 
     try {
+      // Save discussion notes first if changed
+      if (discussionNotes && discussionNotes !== (issue.outcome_note || '')) {
+        await saveDiscussionNotes.mutateAsync(discussionNotes);
+      }
+
       const currentStatus = issue?.status || 'Open';
       
       // If status is Open, we need to transition through Discussing first
@@ -274,15 +309,30 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
               <Label>Discussion Notes</Label>
               <Textarea
                 placeholder="Add discussion notes..."
+                value={discussionNotes}
+                onChange={(e) => setDiscussionNotes(e.target.value)}
+                onBlur={handleDiscussionNotesBlur}
                 rows={8}
-                className="resize-none"
                 disabled={!isFacilitator && issue.status !== 'Discussing'}
               />
+              {saveDiscussionNotes.isPending && (
+                <p className="text-xs text-muted-foreground">Saving...</p>
+              )}
             </div>
 
-            {isFacilitator && issue.status === 'Discussing' && (
+            {isFacilitator && (issue.status === 'Discussing' || issue.status === 'Open') && (
               <Button
-                onClick={() => setActiveTab('solve')}
+                onClick={() => {
+                  // Save notes before moving to solve
+                  if (discussionNotes && discussionNotes !== (issue.outcome_note || '')) {
+                    saveDiscussionNotes.mutate(discussionNotes);
+                  }
+                  // Transition to Discussing if still Open
+                  if (issue.status === 'Open') {
+                    setStatus.mutate({ status: 'Discussing', fromStatus: 'Open', autoAdvanceTab: false });
+                  }
+                  setActiveTab('solve');
+                }}
                 className="w-full"
               >
                 Move to Solve
