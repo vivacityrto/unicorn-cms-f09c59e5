@@ -69,6 +69,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const [generatingSingleId, setGeneratingSingleId] = useState<number | null>(null);
   const [singleGenConfirm, setSingleGenConfirm] = useState<{ id: number; documentId: number; title: string; category: string | null } | null>(null);
   const [tenantName, setTenantName] = useState<string | null>(null);
+  const [mergeWarnings, setMergeWarnings] = useState<{ title: string; unreplaced: string[]; missing: string[]; invalid: string[] } | null>(null);
 
   // Fetch tenant name for the generation confirmation message
   useEffect(() => {
