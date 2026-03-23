@@ -696,8 +696,9 @@ export const LiveMeetingView = () => {
             <h3 className="text-lg font-semibold mb-4">{segment.segment_name}</h3>
             <Textarea 
               placeholder="Notes for this segment..."
-              value={segmentNotes[segment.id] || segment.notes || ''}
+              value={segmentNotes[segment.id] || ''}
               onChange={(e) => setSegmentNotes(prev => ({ ...prev, [segment.id]: e.target.value }))}
+              onBlur={() => handleSegmentNoteBlur(segment.id)}
               rows={4}
             />
           </Card>
