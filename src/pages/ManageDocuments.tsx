@@ -1482,7 +1482,7 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Client Doc</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Category</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Framework</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r text-center">Gov Ver</TableHead>
+                
                 
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Updated</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap text-center">Actions</TableHead>
@@ -1490,7 +1490,7 @@ export default function ManageDocuments() {
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 14 : 13} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 13 : 12} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
@@ -1581,9 +1581,15 @@ export default function ManageDocuments() {
                         {doc.versiondate ? format(new Date(doc.versiondate), "dd MMM yyyy") : "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
-                        {doc.versionnumber ? <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
+                        {currentVersion ? (
+                          <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
+                            v{currentVersion.version_number}
+                          </Badge>
+                        ) : doc.versionnumber ? (
+                          <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
                             v{doc.versionnumber}
-                          </Badge> : "—"}
+                          </Badge>
+                        ) : '—'}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
                         <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px]" style={doc.isclientdoc ? {
@@ -1601,14 +1607,6 @@ export default function ManageDocuments() {
                       {/* Framework */}
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
                         <span className="text-xs font-medium">{doc.framework_type || '—'}</span>
-                      </TableCell>
-                      {/* Gov Version */}
-                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
-                        {currentVersion ? (
-                          <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
-                            v{currentVersion.version_number}
-                          </Badge>
-                        ) : '—'}
                       </TableCell>
                       {/* Updated */}
                       <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
