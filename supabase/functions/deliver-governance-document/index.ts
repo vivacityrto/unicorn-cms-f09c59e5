@@ -94,10 +94,11 @@ async function processDocxTemplate(
     ),
   );
 
-  const imageInjections: Array<{ rId: string; fileName: string }> = [];
+  // Track image injections PER source XML file so relationships go to the correct .rels
+  const imageInjectionsByFile = new Map<string, Array<{ rId: string; fileName: string }>>();
   let imageCounter = 100;
-  let relsContent: string | null = null;
-  let relsFilename: string | null = null;
+  // Collect ALL word rels files (deferred for patching)
+  const deferredRels = new Map<string, string>();
   let contentTypesContent: string | null = null;
   let contentTypesFilename: string | null = null;
 
@@ -145,17 +146,19 @@ async function processDocxTemplate(
           const imgAsset = imageData[cleanField];
           const rId = `rIdImg${imageCounter++}`;
           const imgFileName = `image_${cleanField}.${imgAsset.ext}`;
-          imageInjections.push({ rId, fileName: imgFileName });
-          return `</w:t></w:r><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="1800000" cy="900000"/><wp:docPr id="${imageCounter}" name="${cleanField}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${imageCounter}" name="${imgFileName}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1800000" cy="900000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r><w:r><w:t>`;
+          if (!imageInjectionsByFile.has(entry.filename)) {
+            imageInjectionsByFile.set(entry.filename, []);
+          }
+          imageInjectionsByFile.get(entry.filename)!.push({ rId, fileName: imgFileName });
+          console.log(`[deliver] Image injection: tag=${cleanField}, rId=${rId}, sourceFile=${entry.filename}`);
+          return `</w:t></w:r><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><wp:extent cx="1800000" cy="900000"/><wp:docPr id="${imageCounter}" name="${cleanField}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${imageCounter}" name="${imgFileName}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1800000" cy="900000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r><w:r><w:t>`;
         }
         return match;
       });
 
-      if (entry.filename === 'word/_rels/document.xml.rels') {
-        relsContent = content;
-        relsFilename = entry.filename;
+      if (entry.filename.startsWith('word/_rels/') && entry.filename.endsWith('.rels')) {
+        deferredRels.set(entry.filename, content);
       } else if (entry.filename === '[Content_Types].xml') {
-        // Defer — we'll patch it after to include image content types
         contentTypesContent = content;
         contentTypesFilename = entry.filename;
       } else {
@@ -173,18 +176,33 @@ async function processDocxTemplate(
     }
   }
 
-  if (relsContent !== null && relsFilename !== null) {
-    if (imageInjections.length > 0) {
-      const relEntries = imageInjections.map(
-        (img) =>
-          `<Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${img.fileName}"/>`
-      ).join('');
-      relsContent = relsContent.replace('</Relationships>', relEntries + '</Relationships>');
+  // Inject image relationships into the correct rels file for each source XML
+  for (const [sourceFile, injections] of imageInjectionsByFile) {
+    const parts = sourceFile.split('/');
+    const fileName = parts.pop()!;
+    const dir = parts.join('/');
+    const relsPath = `${dir}/_rels/${fileName}.rels`;
+
+    let rc = deferredRels.get(relsPath);
+    if (!rc) {
+      rc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+      console.log(`[deliver] Creating rels file: ${relsPath} for image injections from ${sourceFile}`);
     }
+
+    const relEntries = injections.map(
+      (img) =>
+        `<Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${img.fileName}"/>`
+    ).join('');
+    rc = rc.replace('</Relationships>', relEntries + '</Relationships>');
+    deferredRels.set(relsPath, rc);
+  }
+
+  // Write all deferred rels files
+  for (const [relsPath, rc] of deferredRels) {
     const encoder = new TextEncoder();
     await writer.add(
-      relsFilename,
-      new zip.BlobReader(new Blob([encoder.encode(relsContent)])),
+      relsPath,
+      new zip.BlobReader(new Blob([encoder.encode(rc)])),
     );
   }
 
