@@ -495,6 +495,22 @@ export default function ManageDocuments() {
       filtered = filtered.filter(doc => duplicateTitleCounts[(doc.title || '').toLowerCase().trim()] > 1);
     }
 
+    // Framework filter
+    if (frameworkFilter !== "all") {
+      if (frameworkFilter === "__none__") {
+        filtered = filtered.filter(doc => !doc.framework_type);
+      } else {
+        filtered = filtered.filter(doc => doc.framework_type === frameworkFilter);
+      }
+    }
+
+    // SharePoint filter
+    if (sharepointFilter === "has_url") {
+      filtered = filtered.filter(doc => !!doc.source_template_url);
+    } else if (sharepointFilter === "no_url") {
+      filtered = filtered.filter(doc => !doc.source_template_url);
+    }
+
     // Sort - when showing duplicates, group by title first
     filtered.sort((a, b) => {
       if (showDuplicatesOnly) {
