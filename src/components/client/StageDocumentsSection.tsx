@@ -127,7 +127,24 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         },
       });
 
-      if (response.error) throw new Error(response.error.message);
+      // When functions.invoke returns non-2xx, response.error is set BUT
+      // response.data still contains the JSON body with error_code/error details.
+      if (response.error) {
+        const body = response.data;
+        const errorCode = body?.error_code || '';
+        const errorMsg = body?.error || response.error.message;
+
+        if (errorCode === 'GOVERNANCE_FOLDER_MISSING') {
+          toast({
+            title: 'Governance Folder Not Configured',
+            description: 'This tenant does not have a governance folder mapped in SharePoint. Go to Admin → SharePoint Folder Mapping, select this tenant, and click "Verify & Create Default" or "Select Folder" to configure it.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        throw new Error(errorMsg);
+      }
 
       // Handle 422 — tailoring incomplete
       if (response.data?.error && response.data?.tailoring) {
