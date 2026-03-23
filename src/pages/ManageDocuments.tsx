@@ -1468,7 +1468,7 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-24">
                   ID
                 </TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground min-w-[200px] h-14 whitespace-nowrap border-r">
+                <TableHead className="font-semibold bg-muted/30 text-foreground min-w-[200px] max-w-[300px] h-14 whitespace-nowrap border-r">
                   Name
                 </TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground min-w-[250px] h-14 whitespace-nowrap border-r">Description</TableHead>
@@ -1514,7 +1514,8 @@ export default function ManageDocuments() {
                         <span className="font-semibold text-foreground">{doc.id}</span>
                       </TableCell>
                       <TableCell className="py-6 border-r border-border/50" style={{
-                minWidth: '200px'
+                minWidth: '200px',
+                maxWidth: '300px'
               }}>
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2 whitespace-nowrap">
