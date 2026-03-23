@@ -359,12 +359,30 @@ async function processPptxTemplate(
     }
   }
 
+  // Patch [Content_Types].xml with image extensions
+  if (contentTypesContent !== null && contentTypesFilename !== null) {
+    const requiredExts = new Set(Object.values(imageData).map(a => a.ext));
+    for (const ext of requiredExts) {
+      if (!new RegExp(`Extension="${ext}"`, 'i').test(contentTypesContent)) {
+        contentTypesContent = contentTypesContent.replace(
+          '</Types>',
+          `<Default Extension="${ext}" ContentType="${imageContentType(ext)}"/></Types>`
+        );
+      }
+    }
+    const encoder = new TextEncoder();
+    await writer.add(
+      contentTypesFilename,
+      new zip.BlobReader(new Blob([encoder.encode(contentTypesContent)])),
+    );
+  }
+
   // Add image files to ppt/media/
-  for (const [field, imgBytes] of Object.entries(imageData)) {
-    const imgFileName = `image_${field}.png`;
+  for (const [field, imgAsset] of Object.entries(imageData)) {
+    const imgFileName = `image_${field}.${imgAsset.ext}`;
     await writer.add(
       `ppt/media/${imgFileName}`,
-      new zip.BlobReader(new Blob([imgBytes])),
+      new zip.BlobReader(new Blob([imgAsset.bytes])),
     );
   }
 
