@@ -292,8 +292,9 @@ async function processPptxTemplate(
           return escapeXml(mergeData[cleanField] || "");
         }
         if (imageData[cleanField]) {
+          const imgAsset = imageData[cleanField];
           const rId = `rIdImg${imageCounter++}`;
-          const imgFileName = `image_${cleanField}.png`;
+          const imgFileName = `image_${cleanField}.${imgAsset.ext}`;
 
           // Track the relationship for the slide's .rels file
           const slideMatch = entry.filename.match(/^ppt\/slides\/(slide\d+)\.xml$/);
