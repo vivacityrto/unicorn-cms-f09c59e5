@@ -704,13 +704,18 @@ export default function ManageDocuments() {
   };
   const handleBulkDelete = async () => {
     try {
-      const {
-        error
-      } = await supabase.from("documents").delete().in("id", selectedDocuments);
-      if (error) throw error;
+      setIsDeleting(true);
+      const results = [];
+      for (const docId of selectedDocuments) {
+        const { data, error } = await supabase.rpc('delete_document_cascade', { p_doc_id: docId });
+        if (error) throw error;
+        results.push(data);
+      }
+      const totalInstances = results.reduce((sum: number, r: any) => sum + (r?.instances_deleted || 0), 0);
+      const totalStage = results.reduce((sum: number, r: any) => sum + (r?.stage_docs_deleted || 0), 0);
       toast({
         title: "Success",
-        description: `${selectedDocuments.length} document(s) deleted successfully`
+        description: `${selectedDocuments.length} document(s) deleted with ${totalInstances} instance(s) and ${totalStage} stage link(s) removed.`
       });
       setSelectedDocuments([]);
       setIsBulkDeleteDialogOpen(false);
@@ -721,6 +726,8 @@ export default function ManageDocuments() {
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
   const handleBulkSend = async () => {
