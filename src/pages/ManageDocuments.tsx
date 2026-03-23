@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy } from "lucide-react";
+import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy, Link2, Link2Off } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { Combobox } from "@/components/ui/combobox";
@@ -26,6 +26,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
+import { useDocumentCategories } from '@/hooks/useDocumentCategories';
+import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
+import { toast as sonnerToast } from 'sonner';
 interface Document {
   id: number;
   title: string;
@@ -48,6 +53,17 @@ interface Document {
     last_name: string | null;
     avatar_url: string | null;
   } | null;
+  framework_type?: string | null;
+  source_template_url?: string | null;
+  updated_at?: string | null;
+  current_published_version_id?: string | null;
+  document_versions?: Array<{
+    id: string;
+    version_number: number;
+    status: string;
+    created_at: string;
+    published_at: string | null;
+  }> | null;
 }
 export default function ManageDocuments() {
   const {
@@ -134,6 +150,29 @@ export default function ManageDocuments() {
     profile
   } = useAuth();
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';
+  const queryClient = useQueryClient();
+
+  // Governance features state
+  const [frameworkFilter, setFrameworkFilter] = useState<string>("all");
+  const [sharepointFilter, setSharepointFilter] = useState<string>("all");
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
+  const [sharepointBrowseDocId, setSharepointBrowseDocId] = useState<number | null>(null);
+
+  // Fetch frameworks for filter
+  const { data: frameworks } = useQuery({
+    queryKey: ['dd_governance_framework'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('dd_governance_framework')
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      return data || [];
+    },
+  });
+
+  // Document categories from dd_ lookup table
+  const { categories: ddCategories, valueLabelMap } = useDocumentCategories();
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -304,7 +343,7 @@ export default function ManageDocuments() {
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1); // Reset to first page when filters change
-  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly]);
+  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly, frameworkFilter, sharepointFilter]);
   useEffect(() => {
     if (bulkSendSearchQuery) {
       const filtered = bulkSendUsers.filter(user => user.email.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()) || `${user.first_name} ${user.last_name}`.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()));
@@ -344,7 +383,10 @@ export default function ManageDocuments() {
         const {
           data: documentsData,
           error: documentsError
-        } = await supabase.from("documents").select("*").order("id", {
+        } = await supabase.from("documents").select(`
+          *, 
+          document_versions!document_versions_document_id_fkey(id, version_number, status, created_at, published_at)
+        `).order("id", {
           ascending: true
         });
         if (documentsError) {
@@ -451,6 +493,22 @@ export default function ManageDocuments() {
     // Duplicates filter
     if (showDuplicatesOnly) {
       filtered = filtered.filter(doc => duplicateTitleCounts[(doc.title || '').toLowerCase().trim()] > 1);
+    }
+
+    // Framework filter
+    if (frameworkFilter !== "all") {
+      if (frameworkFilter === "__none__") {
+        filtered = filtered.filter(doc => !doc.framework_type);
+      } else {
+        filtered = filtered.filter(doc => doc.framework_type === frameworkFilter);
+      }
+    }
+
+    // SharePoint filter
+    if (sharepointFilter === "has_url") {
+      filtered = filtered.filter(doc => !!doc.source_template_url);
+    } else if (sharepointFilter === "no_url") {
+      filtered = filtered.filter(doc => !doc.source_template_url);
     }
 
     // Sort - when showing duplicates, group by title first
@@ -929,6 +987,29 @@ export default function ManageDocuments() {
   // Filtered categories based on search
   const filteredCategoriesForDropdown = categories.filter(cat => cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase()));
 
+  // Get current version from document_versions join
+  const getCurrentVersion = (doc: Document) => {
+    if (!doc.document_versions || doc.document_versions.length === 0) return null;
+    const sorted = [...doc.document_versions].sort((a, b) => b.version_number - a.version_number);
+    return sorted[0];
+  };
+
+  // SharePoint link handler
+  const handleSharePointLinkSelected = async (url: string) => {
+    if (!sharepointBrowseDocId) return;
+    const { error } = await supabase
+      .from('documents')
+      .update({ source_template_url: url })
+      .eq('id', sharepointBrowseDocId);
+    if (error) {
+      sonnerToast.error('Failed to update SharePoint URL');
+    } else {
+      sonnerToast.success('SharePoint URL saved');
+      fetchDocuments();
+    }
+    setSharepointBrowseDocId(null);
+  };
+
   if (loading) {
     return <div className="space-y-4 p-6">
         <div className="flex items-center gap-2">
@@ -939,6 +1020,16 @@ export default function ManageDocuments() {
           {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
         </div>
       </div>;
+  }
+
+  // Drill-down: show GovernanceDocumentDetail when a doc is selected
+  if (selectedDocId) {
+    return <div className="space-y-4 p-6 animate-fade-in">
+      <GovernanceDocumentDetail
+        documentId={selectedDocId}
+        onBack={() => setSelectedDocId(null)}
+      />
+    </div>;
   }
   const isSuperAdmin = currentUserRole === "Super Admin" || currentUserRole === "SuperAdmin";
   return <div className="space-y-6 p-6 animate-fade-in">
@@ -1328,11 +1419,41 @@ export default function ManageDocuments() {
             </PopoverContent>
           </Popover>
         </div>
+
+        {/* Framework Filter */}
+        {isSuperAdmin && (
+          <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
+            <SelectTrigger className="w-full md:w-[180px] h-12 bg-card border-border/50 rounded-lg font-semibold">
+              <SelectValue placeholder="Framework" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Frameworks</SelectItem>
+              <SelectItem value="__none__">No Framework</SelectItem>
+              {frameworks?.map((f) => (
+                <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* SharePoint Status Filter */}
+        {isSuperAdmin && (
+          <Select value={sharepointFilter} onValueChange={setSharepointFilter}>
+            <SelectTrigger className="w-full md:w-[170px] h-12 bg-card border-border/50 rounded-lg font-semibold">
+              <SelectValue placeholder="SP Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All SP Status</SelectItem>
+              <SelectItem value="has_url">Has SP URL</SelectItem>
+              <SelectItem value="no_url">No SP URL</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Documents Table */}
       <div className="rounded-lg border-0 bg-card shadow-lg overflow-x-auto">
-          <Table className="min-w-[1800px]">
+          <Table className="min-w-[2200px]">
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
                 {isSuperAdmin && (
@@ -1360,12 +1481,16 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-40 h-14 whitespace-nowrap border-r">Version Updated</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Client Doc</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Category</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Framework</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r text-center">Gov Ver</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-20 h-14 whitespace-nowrap border-r text-center">SP</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Updated</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 12 : 11} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 16 : 15} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
@@ -1373,11 +1498,11 @@ export default function ManageDocuments() {
             const categoryIds = doc.category ? doc.category.split(',') : [];
             const categoryBadges = categoryIds.map(id => categories.find(c => c.id === parseInt(id.trim()))?.name).filter(Boolean);
             const isSelected = selectedDocuments.includes(doc.id);
+            const currentVersion = getCurrentVersion(doc);
             return <TableRow key={doc.id} className={cn("group hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 hover:border-primary/20 animate-fade-in", isSelected && "bg-primary/5")} style={{
               animationDelay: `${index * 30}ms`
             }} onClick={() => {
-              setEditingDocumentId(doc.id);
-              setIsCreateDialogOpen(true);
+              setSelectedDocId(doc.id);
             }}>
                       {isSuperAdmin && (
                         <TableCell className="py-6 border-r border-border/50" style={{ paddingRight: '19px' }} onClick={e => e.stopPropagation()}>
@@ -1475,6 +1600,45 @@ export default function ManageDocuments() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
                         {categoryBadges.length > 0 ? categoryBadges.length > 1 ? `${categoryBadges[0]} +${categoryBadges.length - 1}` : categoryBadges[0] : "—"}
+                      </TableCell>
+                      {/* Framework */}
+                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
+                        <span className="text-xs font-medium">{doc.framework_type || '—'}</span>
+                      </TableCell>
+                      {/* Gov Version */}
+                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
+                        {currentVersion ? (
+                          <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
+                            v{currentVersion.version_number}
+                          </Badge>
+                        ) : '—'}
+                      </TableCell>
+                      {/* SP Link */}
+                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center" onClick={e => e.stopPropagation()}>
+                        {doc.source_template_url ? (
+                          <a
+                            href={doc.source_template_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline inline-flex items-center gap-1"
+                            title={doc.source_template_url}
+                          >
+                            <Link2 className="h-3.5 w-3.5" />
+                            <span className="text-xs">SP</span>
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => setSharepointBrowseDocId(doc.id)}
+                            className="text-muted-foreground hover:text-primary cursor-pointer inline-flex items-center gap-1"
+                            title="Click to set SharePoint URL"
+                          >
+                            <Link2Off className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </TableCell>
+                      {/* Updated */}
+                      <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
+                        {doc.updated_at ? format(new Date(doc.updated_at), "dd MMM yyyy") : "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6">
                         <div className="flex items-center justify-center gap-1">
@@ -1747,5 +1911,37 @@ export default function ManageDocuments() {
       <div className="text-sm text-muted-foreground text-center">
         Showing {filteredDocuments.length} of {totalDocuments} documents
       </div>
+
+      {/* Master Documents SharePoint Browser Dialog */}
+      {sharepointBrowseDocId && (() => {
+        const browseDoc = documents.find(d => d.id === sharepointBrowseDocId);
+        const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
+        const autoFolder = browseDoc?.framework_type
+          ? frameworkFolderMap[browseDoc.framework_type.toLowerCase()] || 'Other'
+          : 'Other';
+        return (
+          <Dialog open={true} onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}>
+            <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  Master Documents — Select Template File
+                </DialogTitle>
+              </DialogHeader>
+              {profile?.tenant_id && (
+                <SharePointFileBrowser
+                  tenantId={profile.tenant_id}
+                  sitePurpose="master_documents"
+                  onSelectLink={(url, fileName) => {
+                    handleSharePointLinkSelected(url);
+                  }}
+                  defaultFilter={browseDoc?.title || ''}
+                  autoNavigateFolder={autoFolder}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>;
 }
