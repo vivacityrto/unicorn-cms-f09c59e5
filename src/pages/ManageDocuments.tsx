@@ -1227,69 +1227,6 @@ export default function ManageDocuments() {
                   </div>
 
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="files">Files</Label>
-                    <Input id="files" type="file" multiple onChange={handleFileUpload} className="cursor-pointer" />
-                    
-                    {/* Display existing files (edit mode) */}
-                    {existingFiles.length > 0 && <div className="space-y-1 mt-2">
-                        {existingFiles.map((file, index) => <div key={`existing-${index}`} className="flex items-center justify-between border border-input rounded-md px-3 py-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm truncate">{file.name}</span>
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                              <Button type="button" variant="ghost" size="sm" onClick={async () => {
-                          try {
-                            if (file.url.startsWith("http")) {
-                              const url = new URL(file.url);
-                              const segments = url.pathname.split("/").filter(Boolean);
-                              const publicIndex = segments.indexOf("public");
-                              if (publicIndex !== -1 && segments.length > publicIndex + 2) {
-                                const bucket = segments[publicIndex + 1];
-                                const objectPath = segments.slice(publicIndex + 2).join("/");
-                                const { data } = await supabase.storage.from(bucket).createSignedUrl(objectPath, 3600);
-                                if (data?.signedUrl) {
-                                  window.open(data.signedUrl, "_blank");
-                                } else {
-                                  window.open(file.url, "_blank");
-                                }
-                              } else {
-                                window.open(file.url, "_blank");
-                              }
-                            } else {
-                              const { data } = await supabase.storage.from("document-files").createSignedUrl(file.url, 3600);
-                              if (data?.signedUrl) {
-                                window.open(data.signedUrl, "_blank");
-                              }
-                            }
-                          } catch {
-                            window.open(file.url, "_blank");
-                          }
-                        }} className="h-6 w-6 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button type="button" variant="ghost" size="sm" onClick={() => setExistingFiles(prev => prev.filter((_, i) => i !== index))} className="h-6 w-6 p-0 text-destructive/60 hover:text-destructive hover:bg-destructive/10 rounded">
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>)}
-                      </div>}
-
-                    {/* Display new uploaded files */}
-                    {uploadedFiles.length > 0 && <div className="space-y-1 mt-2">
-                        {uploadedFiles.map((file, index) => <div key={`new-${index}`} className="flex items-center justify-between border border-input rounded-md px-3 py-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm truncate">{file.name}</span>
-                            </div>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFile(index)} className="h-6 w-6 p-0 text-destructive/60 hover:text-destructive hover:bg-destructive/10 rounded flex-shrink-0 ml-2">
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>)}
-                      </div>}
-
-                  </div>
                   </div>
                 </div>
 
@@ -1475,7 +1412,7 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Format</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Framework</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Category</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r text-center">Files</TableHead>
+                
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">
                   Version Date
                 </TableHead>
@@ -1487,7 +1424,7 @@ export default function ManageDocuments() {
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 12 : 11} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 11 : 10} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
@@ -1549,12 +1486,6 @@ export default function ManageDocuments() {
                       {/* Category */}
                       <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
                         <span className="text-xs text-muted-foreground">{valueLabelMap.get(doc.category ?? '') || doc.category || '—'}</span>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center" onClick={e => e.stopPropagation()}>
-                        {doc.uploaded_files && doc.uploaded_files.length > 0 ? <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium cursor-pointer">
-                            <FileText className="h-3 w-3 mr-1" />
-                            {doc.uploaded_files.length} {doc.uploaded_files.length === 1 ? 'File' : 'Files'}
-                          </Badge> : <span className="text-sm text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
                         {doc.versiondate ? format(new Date(doc.versiondate), "dd MMM yyyy") : "—"}
