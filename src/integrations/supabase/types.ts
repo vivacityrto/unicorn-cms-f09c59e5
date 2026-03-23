@@ -49791,6 +49791,7 @@ export type Database = {
         }
         Returns: Json
       }
+      preview_document_delete: { Args: { p_doc_id: number }; Returns: Json }
       propose_chart_change: {
         Args: { p_draft_json: Json; p_meeting_id: string }
         Returns: string
