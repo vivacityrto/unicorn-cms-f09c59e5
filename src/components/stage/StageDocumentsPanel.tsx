@@ -101,8 +101,9 @@ export function StageDocumentsPanel({
   // Stage counts for documents
   const [documentStageCounts, setDocumentStageCounts] = useState<Map<number, { count: number; names: string[] }>>(new Map());
   
-  // AI status filter
+  // Filters
   const [aiStatusFilter, setAiStatusFilter] = useState<string>('all');
+  const [nameFilter, setNameFilter] = useState('');
 
   // Get file type badge color
   const getFileTypeBadge = (format: string | null) => {
