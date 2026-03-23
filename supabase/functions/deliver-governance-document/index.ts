@@ -12,6 +12,33 @@ import {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+interface ImageAsset {
+  bytes: Uint8Array;
+  ext: string; // e.g. "jpg", "png"
+}
+
+function inferImageExt(storagePath: string): string {
+  const lower = storagePath.split('?')[0].split('#')[0].toLowerCase();
+  const m = lower.match(/\.([a-z0-9]+)$/);
+  if (!m) return 'png';
+  const e = m[1];
+  if (e === 'jpeg' || e === 'jpg') return 'jpeg';
+  if (e === 'gif') return 'gif';
+  if (e === 'bmp') return 'bmp';
+  if (e === 'tiff' || e === 'tif') return 'tiff';
+  return e === 'png' ? 'png' : 'png';
+}
+
+function imageContentType(ext: string): string {
+  switch (ext) {
+    case 'jpeg': case 'jpg': return 'image/jpeg';
+    case 'gif': return 'image/gif';
+    case 'bmp': return 'image/bmp';
+    case 'tiff': return 'image/tiff';
+    default: return 'image/png';
+  }
+}
+
 function escapeXml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
