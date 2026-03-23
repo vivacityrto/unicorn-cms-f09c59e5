@@ -79,7 +79,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
       setActiveTab(appropriateTab);
       setSolution(issue.solution || '');
       // Load existing discussion notes from outcome_note field
-      setDiscussionNotes((issue as any).outcome_note || '');
+      setDiscussionNotes(issue.outcome_note || '');
     }
   }, [issue?.id, issue?.status, open]);
 
@@ -201,7 +201,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
 
   // Auto-save discussion notes on blur
   const handleDiscussionNotesBlur = () => {
-    if (issue && discussionNotes !== ((issue as any).outcome_note || '')) {
+    if (issue && discussionNotes !== (issue.outcome_note || '')) {
       saveDiscussionNotes.mutate(discussionNotes);
     }
   };
@@ -214,7 +214,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
 
     try {
       // Save discussion notes first if changed
-      if (discussionNotes && discussionNotes !== ((issue as any).outcome_note || '')) {
+      if (discussionNotes && discussionNotes !== (issue.outcome_note || '')) {
         await saveDiscussionNotes.mutateAsync(discussionNotes);
       }
 
@@ -324,7 +324,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
               <Button
                 onClick={() => {
                   // Save notes before moving to solve
-                  if (discussionNotes && discussionNotes !== ((issue as any).outcome_note || '')) {
+                  if (discussionNotes && discussionNotes !== (issue.outcome_note || '')) {
                     saveDiscussionNotes.mutate(discussionNotes);
                   }
                   // Transition to Discussing if still Open
