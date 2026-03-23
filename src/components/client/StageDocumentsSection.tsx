@@ -183,17 +183,11 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         });
       }
 
-      // Show a second warning toast if there were unreplaced/missing merge fields
+      // Show persistent warning banner if there were unreplaced/missing merge fields
       if (hasWarnings) {
-        const parts: string[] = [];
-        if (unreplaced.length > 0) parts.push(`Unreplaced: ${unreplaced.join(', ')}`);
-        if (missing.length > 0) parts.push(`Missing data: ${missing.join(', ')}`);
-        if (invalid.length > 0) parts.push(`Unknown tags: ${invalid.join(', ')}`);
-        toast({
-          title: 'Merge Field Warnings',
-          description: parts.join(' | '),
-          variant: 'destructive',
-        });
+        setMergeWarnings({ title, unreplaced, missing, invalid });
+      } else {
+        setMergeWarnings(null);
       }
 
       refetch();
