@@ -327,6 +327,17 @@ export function StageDocumentsTab({
     return matchesSearch && matchesCategory && notAlreadyLinked;
   });
 
+  // Linked documents filtering
+  const linkedCategories = [...new Set(
+    stageDocuments.map(d => d.document.category).filter(Boolean)
+  )] as string[];
+
+  const filteredLinkedDocuments = stageDocuments.filter(doc => {
+    const matchesSearch = !linkedSearchTerm || doc.document.title.toLowerCase().includes(linkedSearchTerm.toLowerCase());
+    const matchesCategory = linkedCategoryFilter === 'all' || doc.document.category === linkedCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
   return (
     <>
       <Card>
