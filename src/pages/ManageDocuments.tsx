@@ -1601,6 +1601,45 @@ export default function ManageDocuments() {
                       <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
                         {categoryBadges.length > 0 ? categoryBadges.length > 1 ? `${categoryBadges[0]} +${categoryBadges.length - 1}` : categoryBadges[0] : "—"}
                       </TableCell>
+                      {/* Framework */}
+                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
+                        <span className="text-xs font-medium">{doc.framework_type || '—'}</span>
+                      </TableCell>
+                      {/* Gov Version */}
+                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
+                        {currentVersion ? (
+                          <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
+                            v{currentVersion.version_number}
+                          </Badge>
+                        ) : '—'}
+                      </TableCell>
+                      {/* SP Link */}
+                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center" onClick={e => e.stopPropagation()}>
+                        {doc.source_template_url ? (
+                          <a
+                            href={doc.source_template_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline inline-flex items-center gap-1"
+                            title={doc.source_template_url}
+                          >
+                            <Link2 className="h-3.5 w-3.5" />
+                            <span className="text-xs">SP</span>
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => setSharepointBrowseDocId(doc.id)}
+                            className="text-muted-foreground hover:text-primary cursor-pointer inline-flex items-center gap-1"
+                            title="Click to set SharePoint URL"
+                          >
+                            <Link2Off className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </TableCell>
+                      {/* Updated */}
+                      <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
+                        {doc.updated_at ? format(new Date(doc.updated_at), "dd MMM yyyy") : "—"}
+                      </TableCell>
                       <TableCell className="whitespace-nowrap py-6">
                         <div className="flex items-center justify-center gap-1">
                           <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={e => {
