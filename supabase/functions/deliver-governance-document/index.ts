@@ -493,19 +493,22 @@ serve(async (req) => {
       console.log("[deliver] Force flag set — skipping idempotency check");
     }
 
-    // ── Clean up any previous failed delivery for this combo ──────────────
-    // Prevents unique constraint violation on retry
+    // ── Clean up previous delivery records for this combo ──────────────
+    // Prevents unique constraint violation on retry or force re-generation
     {
-      const delQuery = supabase
-        .from("governance_document_deliveries")
-        .delete()
-        .eq("tenant_id", tenant_id)
-        .eq("document_version_id", document_version_id)
-        .eq("status", "failed");
-      if (snapshotId) {
-        delQuery.eq("snapshot_id", snapshotId);
+      const statusesToClean = force ? ["failed", "success"] : ["failed"];
+      for (const cleanStatus of statusesToClean) {
+        const delQuery = supabase
+          .from("governance_document_deliveries")
+          .delete()
+          .eq("tenant_id", tenant_id)
+          .eq("document_version_id", document_version_id)
+          .eq("status", cleanStatus);
+        if (snapshotId) {
+          delQuery.eq("snapshot_id", snapshotId);
+        }
+        await delQuery;
       }
-      await delQuery;
     }
 
     // ── Download template from storage ─────────────────────────────────────
