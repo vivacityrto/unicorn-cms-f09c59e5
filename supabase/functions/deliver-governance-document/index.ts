@@ -736,6 +736,7 @@ serve(async (req) => {
       await supabase
         .from("document_instances")
         .update({
+          status: "generated",
           generation_status: "generated",
           generated_file_url: driveItem.webUrl,
           generated_item_id: driveItem.id,
