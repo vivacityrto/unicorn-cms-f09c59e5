@@ -325,17 +325,6 @@ export function StageDocumentsTab({
     return matchesSearch && matchesCategory && notAlreadyLinked;
   });
 
-  // Linked documents filtering
-  const linkedCategories = [...new Set(
-    stageDocuments.map(d => d.document.category).filter(Boolean)
-  )] as string[];
-
-  const filteredLinkedDocuments = stageDocuments.filter(doc => {
-    const matchesSearch = !linkedSearchTerm || doc.document.title.toLowerCase().includes(linkedSearchTerm.toLowerCase());
-    const matchesCategory = linkedCategoryFilter === 'all' || doc.document.category === linkedCategoryFilter;
-    return matchesSearch && matchesCategory;
-  });
-
   return (
     <>
       <Card>
@@ -358,37 +347,6 @@ export function StageDocumentsTab({
               </Button>
             </div>
           </div>
-          {stageDocuments.length > 5 && (
-            <div className="flex gap-2 mt-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Filter documents..."
-                  value={linkedSearchTerm}
-                  onChange={(e) => setLinkedSearchTerm(e.target.value)}
-                  className="h-8 text-sm pl-8"
-                />
-              </div>
-              {linkedCategories.length > 1 && (
-                <Select value={linkedCategoryFilter} onValueChange={setLinkedCategoryFilter}>
-                  <SelectTrigger className="h-8 text-sm w-[180px]">
-                    <SelectValue placeholder="All categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All categories</SelectItem>
-                    {linkedCategories.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              {(linkedSearchTerm || linkedCategoryFilter !== 'all') && (
-                <span className="text-xs text-muted-foreground self-center whitespace-nowrap">
-                  {filteredLinkedDocuments.length} of {stageDocuments.length}
-                </span>
-              )}
-            </div>
-          )}
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[350px]">
@@ -400,10 +358,6 @@ export function StageDocumentsTab({
                   Click "Link Documents" to add documents from the library.
                 </p>
               </div>
-            ) : filteredLinkedDocuments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <p className="text-sm text-muted-foreground">No documents match your filter</p>
-              </div>
             ) : (
               <DndContext
                 sensors={sensors}
@@ -411,11 +365,11 @@ export function StageDocumentsTab({
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={filteredLinkedDocuments.map(d => d.id)}
+                  items={stageDocuments.map(d => d.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="space-y-2">
-                    {filteredLinkedDocuments.map((doc) => (
+                    {stageDocuments.map((doc) => (
                       <SortableDocumentRow
                         key={doc.id}
                         doc={doc}
