@@ -374,8 +374,9 @@ export const LiveMeetingView = () => {
               </p>
               <Textarea 
                 placeholder="Meeting notes for this segment..."
-                value={segmentNotes[segment.id] || segment.notes || ''}
+                value={segmentNotes[segment.id] || ''}
                 onChange={(e) => setSegmentNotes(prev => ({ ...prev, [segment.id]: e.target.value }))}
+                onBlur={() => handleSegmentNoteBlur(segment.id)}
                 rows={4}
               />
             </div>
