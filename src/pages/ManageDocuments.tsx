@@ -1605,9 +1605,17 @@ export default function ManageDocuments() {
                   }}>
                             <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={() => {
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={async () => {
                     setDocumentToDelete(doc.id);
+                    setDeleteImpact(null);
                     setIsDeleteDialogOpen(true);
+                    try {
+                      const { data } = await supabase.rpc('preview_document_delete', { p_doc_id: doc.id });
+                      if (data && (data as any).found) {
+                        const d = data as any;
+                        setDeleteImpact({ instances: d.instances, stageDocs: d.stage_docs, dataSources: d.data_sources, sourceMappings: d.source_mappings, versions: d.versions });
+                      }
+                    } catch {}
                   }}>
                             <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                           </Button>
