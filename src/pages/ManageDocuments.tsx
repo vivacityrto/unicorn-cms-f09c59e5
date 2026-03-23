@@ -174,6 +174,10 @@ export default function ManageDocuments() {
   // Document categories from dd_ lookup table
   const { categories: ddCategories, valueLabelMap } = useDocumentCategories();
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
   // Individual document actions
   const [editingDocumentId, setEditingDocumentId] = useState<number | null>(null);
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
