@@ -746,7 +746,7 @@ serve(async (req) => {
     // ── Insert delivery record with tailoring data ─────────────────────────
     const { data: delivery, error: insErr } = await supabase
       .from("governance_document_deliveries")
-      .insert({
+      .upsert({
         tenant_id,
         document_id: doc.id,
         document_version_id,
@@ -761,7 +761,8 @@ serve(async (req) => {
         missing_merge_fields: missingTags,
         invalid_merge_fields: invalidTags,
         tailoring_risk_level: riskLevel,
-      })
+        error_message: null,
+      }, { onConflict: "tenant_id,document_version_id,snapshot_id", ignoreDuplicates: false })
       .select()
       .single();
 
