@@ -54,7 +54,7 @@ function useDocuments() {
       // Fetch documents and categories in parallel
       const [docsResult, categoriesResult] = await Promise.all([
         supabase.from('documents').select('id, title, category, createdat').order('category').order('title'),
-        supabase.from('documents_categories').select('id, name')
+        supabase.from('_documents_categories').select('id, name')
       ]);
       
       if (docsResult.error) throw docsResult.error;
@@ -62,7 +62,7 @@ function useDocuments() {
       
       // Create a map of category id to name
       const categoryMap = new Map<string, string>();
-      (categoriesResult.data || []).forEach(cat => {
+      ((categoriesResult.data || []) as { id: number; name: string }[]).forEach(cat => {
         categoryMap.set(String(cat.id), cat.name);
       });
       

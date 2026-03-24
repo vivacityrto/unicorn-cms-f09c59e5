@@ -107,11 +107,11 @@ export function ClientDocumentsTab({ tenantId, packages }: ClientDocumentsTabPro
 
   const fetchCategories = useCallback(async () => {
     const { data } = await supabase
-      .from('documents_categories')
+      .from('_documents_categories')
       .select('id, name')
       .order('name');
     
-    if (data) setCategories(data);
+    if (data) setCategories(data as { id: number; name: string }[]);
   }, []);
 
   useEffect(() => {

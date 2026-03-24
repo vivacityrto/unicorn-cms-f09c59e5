@@ -179,7 +179,7 @@ export default function ManageCategories() {
 
     try {
       const { error } = await supabase
-        .from('documents_categories')
+        .from('_documents_categories')
         .delete()
         .eq('id', categoryId);
 
