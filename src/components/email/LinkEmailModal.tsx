@@ -99,16 +99,16 @@ export function LinkEmailModal({
     setLoadingPackages(true);
     try {
       const { data, error } = await untypedClient
-        .from("packages")
-        .select("id, name")
-        .eq("client_id", parseInt(clientId))
-        .order("name");
+        .from("package_instances")
+        .select("id, package_name")
+        .eq("tenant_id", parseInt(clientId))
+        .order("package_name");
 
       if (error) throw error;
       
-      const options: SelectOption[] = (data || []).map((row: { id: number; name: string }) => ({
+      const options: SelectOption[] = (data || []).map((row: { id: number; package_name: string }) => ({
         id: String(row.id),
-        label: row.name || "Unnamed Package",
+        label: row.package_name || "Unnamed Package",
       }));
       setPackages(options);
     } catch (err) {
