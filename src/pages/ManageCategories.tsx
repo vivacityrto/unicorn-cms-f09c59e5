@@ -148,7 +148,7 @@ export default function ManageCategories() {
 
     try {
       const { error } = await supabase
-        .from('documents_categories')
+        .from('_documents_categories')
         .update({ name: formData.name.trim() })
         .eq('id', editingCategory.id);
 
