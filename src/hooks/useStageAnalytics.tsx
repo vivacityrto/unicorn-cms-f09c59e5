@@ -111,8 +111,8 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
     queryFn: async (): Promise<TopStageByUsage[]> => {
       // Get all non-archived stages
       let query = supabase
-        .from('documents_stages')
-        .select('id, title, stage_type, is_certified, frameworks, updated_at')
+        .from('stages')
+        .select('id, name, stage_type, is_certified, frameworks, updated_at')
         .eq('is_archived', false);
 
       if (stageTypeFilter) {
