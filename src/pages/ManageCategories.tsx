@@ -91,14 +91,18 @@ export default function ManageCategories() {
     }
 
     try {
-      // Get max ID to determine next ID
-      const maxId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) : 0;
+      // Generate value from label
+      const generatedValue = formData.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      const maxSort = categories.length > 0 ? Math.max(...categories.map(c => c.sort_order || 0)) : 0;
       
       const { error } = await supabase
-        .from('_documents_categories')
+        .from('dd_document_categories')
         .insert({
-          id: maxId + 1,
-          name: formData.name.trim(),
+          value: generatedValue,
+          label: formData.name.trim(),
+          description: formData.description.trim() || null,
+          is_active: true,
+          sort_order: maxSort + 1,
         });
 
       if (error) throw error;
