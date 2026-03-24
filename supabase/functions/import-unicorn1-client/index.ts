@@ -159,6 +159,7 @@ serve(async (req) => {
           );
         }
         const c = clients[0];
+        const companyName = c.CompanyName ?? c.company_name ?? c.companyname ?? `Client ${client_id}`;
 
         // Get RTO ID from clientfields (field_id = 14)
         let rtoId: string | null = null;
