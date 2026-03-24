@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Connection, Request as TdsRequest, TYPES } from "npm:tedious@18.6.1";
 
+type SvcClient = ReturnType<typeof createClient>;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -62,136 +64,138 @@ function execQuery(
   });
 }
 
-function normalizeStageLabel(value: unknown): string {
-  return String(value ?? "")
-    .normalize("NFKD")
-    .replace(/&/g, " and ")
-    .replace(/[^a-zA-Z0-9]+/g, " ")
-    .trim()
-    .toLowerCase();
+/**
+ * Clear ALL instance data for a tenant so we can re-import cleanly.
+ * Deletion order respects FK constraints (children first).
+ */
+async function clearTenantInstanceData(svcClient: SvcClient, tenantId: number): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+
+  // Get package instance IDs for this tenant
+  const { data: pkgRows } = await svcClient
+    .from("package_instances")
+    .select("id")
+    .eq("tenant_id", tenantId);
+  const piIds = (pkgRows ?? []).map((r: any) => Number(r.id));
+
+  if (piIds.length === 0) return counts;
+
+  // Get stage instance IDs
+  const { data: siRows } = await svcClient
+    .from("stage_instances")
+    .select("id")
+    .in("packageinstance_id", piIds);
+  const siIds = (siRows ?? []).map((r: any) => Number(r.id));
+
+  if (siIds.length > 0) {
+    // Delete children of stage instances in batches (Supabase .in() limit)
+    for (let i = 0; i < siIds.length; i += 100) {
+      const batch = siIds.slice(i, i + 100);
+
+      const { count: c1 } = await svcClient
+        .from("staff_task_instances").delete({ count: "exact" }).in("stageinstance_id", batch);
+      counts.staff_task_instances = (counts.staff_task_instances ?? 0) + (c1 ?? 0);
+
+      const { count: c2 } = await svcClient
+        .from("client_task_instances").delete({ count: "exact" }).in("stageinstance_id", batch);
+      counts.client_task_instances = (counts.client_task_instances ?? 0) + (c2 ?? 0);
+
+      const { count: c3 } = await svcClient
+        .from("email_instances").delete({ count: "exact" }).in("stageinstance_id", batch);
+      counts.email_instances = (counts.email_instances ?? 0) + (c3 ?? 0);
+
+      const { count: c4 } = await svcClient
+        .from("document_instances").delete({ count: "exact" }).in("stageinstance_id", batch);
+      counts.document_instances = (counts.document_instances ?? 0) + (c4 ?? 0);
+    }
+
+    // Delete stage instances
+    for (let i = 0; i < siIds.length; i += 100) {
+      const batch = siIds.slice(i, i + 100);
+      const { count: c5 } = await svcClient
+        .from("stage_instances").delete({ count: "exact" }).in("id", batch);
+      counts.stage_instances = (counts.stage_instances ?? 0) + (c5 ?? 0);
+    }
+  }
+
+  // Delete package instances
+  const { count: piCount } = await svcClient
+    .from("package_instances").delete({ count: "exact" }).eq("tenant_id", tenantId);
+  counts.package_instances = piCount ?? 0;
+
+  console.log(`Cleared tenant ${tenantId} instance data:`, counts);
+  return counts;
 }
 
-type TargetStageMaps = {
-  directStageIds: Set<number>;
-  globalStageByLabel: Map<string, number>;
-  packageStageByLabel: Map<number, Map<string, { stageId: number; sortOrder: number | null }>>;
-  packageStageSortOrder: Map<number, Map<number, number | null>>;
-};
+/**
+ * Seed child instances from Unicorn 2 templates for a given stage instance.
+ */
+async function seedChildInstances(
+  svcClient: SvcClient,
+  stageInstanceId: number,
+  stageId: number,
+  tenantId: number,
+  opts: { staff: boolean; client: boolean; emails: boolean; documents: boolean }
+): Promise<{ staff: number; client: number; emails: number; documents: number }> {
+  const seeded = { staff: 0, client: 0, emails: 0, documents: 0 };
 
-async function buildTargetStageMaps(
-  svcClient: ReturnType<typeof createClient>,
-  packageIds: number[]
-): Promise<TargetStageMaps> {
-  const uniquePackageIds = [...new Set(packageIds.filter((value) => Number.isFinite(value)))];
-
-  const { data: targetStages, error: targetStagesError } = await svcClient
-    .from("stages")
-    .select("id, name, shortname");
-  if (targetStagesError) {
-    throw new Error(`Failed to load target stages: ${targetStagesError.message}`);
-  }
-
-  const stageMetaById = new Map<number, { name: string | null; shortname: string | null }>();
-  const directStageIds = new Set<number>();
-  const globalStageByLabel = new Map<string, number>();
-
-  for (const stage of targetStages ?? []) {
-    const stageId = Number(stage.id);
-    if (!Number.isFinite(stageId)) continue;
-
-    directStageIds.add(stageId);
-    stageMetaById.set(stageId, {
-      name: stage.name ?? null,
-      shortname: stage.shortname ?? null,
-    });
-
-    for (const label of [stage.name, stage.shortname]) {
-      const normalized = normalizeStageLabel(label);
-      if (normalized && !globalStageByLabel.has(normalized)) {
-        globalStageByLabel.set(normalized, stageId);
-      }
+  if (opts.staff) {
+    const { data: templates } = await svcClient
+      .from("staff_tasks").select("id").eq("stage_id", stageId);
+    for (const t of templates ?? []) {
+      const { error } = await svcClient.from("staff_task_instances").insert({
+        stafftask_id: t.id,
+        stageinstance_id: stageInstanceId,
+      });
+      if (!error) seeded.staff++;
+      else console.error(`STI seed err (task ${t.id}, si ${stageInstanceId}):`, error.message);
     }
   }
 
-  const packageStageByLabel = new Map<number, Map<string, { stageId: number; sortOrder: number | null }>>();
-  const packageStageSortOrder = new Map<number, Map<number, number | null>>();
-
-  if (uniquePackageIds.length > 0) {
-    const { data: packageStages, error: packageStagesError } = await svcClient
-      .from("package_stages")
-      .select("package_id, stage_id, sort_order")
-      .in("package_id", uniquePackageIds);
-    if (packageStagesError) {
-      throw new Error(`Failed to load package stage mappings: ${packageStagesError.message}`);
-    }
-
-    for (const packageStage of packageStages ?? []) {
-      const packageId = Number(packageStage.package_id);
-      const stageId = Number(packageStage.stage_id);
-      const sortOrder = packageStage.sort_order == null ? null : Number(packageStage.sort_order);
-      if (!Number.isFinite(packageId) || !Number.isFinite(stageId)) continue;
-
-      if (!packageStageByLabel.has(packageId)) {
-        packageStageByLabel.set(packageId, new Map());
-      }
-      if (!packageStageSortOrder.has(packageId)) {
-        packageStageSortOrder.set(packageId, new Map());
-      }
-
-      packageStageSortOrder.get(packageId)!.set(stageId, sortOrder);
-
-      const stageMeta = stageMetaById.get(stageId);
-      for (const label of [stageMeta?.name, stageMeta?.shortname]) {
-        const normalized = normalizeStageLabel(label);
-        if (!normalized) continue;
-        packageStageByLabel.get(packageId)!.set(normalized, { stageId, sortOrder });
-      }
+  if (opts.client) {
+    const { data: templates } = await svcClient
+      .from("client_tasks").select("id").eq("stage_id", stageId);
+    for (const t of templates ?? []) {
+      const { error } = await svcClient.from("client_task_instances").insert({
+        clienttask_id: t.id,
+        stageinstance_id: stageInstanceId,
+      });
+      if (!error) seeded.client++;
+      else console.error(`CTI seed err (task ${t.id}, si ${stageInstanceId}):`, error.message);
     }
   }
 
-  return {
-    directStageIds,
-    globalStageByLabel,
-    packageStageByLabel,
-    packageStageSortOrder,
-  };
-}
-
-function resolveTargetStage(
-  sourceRow: Record<string, any>,
-  stageMaps: TargetStageMaps
-): { stageId: number; sortOrder: number | null } | null {
-  const sourceStageId = Number(sourceRow.Stage_Id ?? sourceRow.stage_id);
-  const packageId = Number(sourceRow.PackageId ?? sourceRow.Package_Id ?? sourceRow.package_id);
-
-  if (Number.isFinite(sourceStageId) && stageMaps.directStageIds.has(sourceStageId)) {
-    const sortOrder = stageMaps.packageStageSortOrder.get(packageId)?.get(sourceStageId) ?? null;
-    return { stageId: sourceStageId, sortOrder };
-  }
-
-  const packageLabelMap = stageMaps.packageStageByLabel.get(packageId);
-  const sourceLabels = [
-    sourceRow.SourceStageName,
-    sourceRow.SourceStageShortName,
-    sourceRow.StageTitle,
-    sourceRow.StageShortName,
-  ];
-
-  for (const label of sourceLabels) {
-    const normalized = normalizeStageLabel(label);
-    if (!normalized) continue;
-
-    const packageMatch = packageLabelMap?.get(normalized);
-    if (packageMatch) return packageMatch;
-
-    const globalStageId = stageMaps.globalStageByLabel.get(normalized);
-    if (globalStageId != null) {
-      const sortOrder = stageMaps.packageStageSortOrder.get(packageId)?.get(globalStageId) ?? null;
-      return { stageId: globalStageId, sortOrder };
+  if (opts.emails) {
+    const { data: templates } = await svcClient
+      .from("emails").select("id, subject, content").eq("stage_id", stageId);
+    for (const e of templates ?? []) {
+      const { error } = await svcClient.from("email_instances").insert({
+        email_id: e.id,
+        stageinstance_id: stageInstanceId,
+        subject: e.subject ?? null,
+        content: e.content ?? null,
+        is_sent: false,
+      });
+      if (!error) seeded.emails++;
+      else console.error(`EI seed err (email ${e.id}, si ${stageInstanceId}):`, error.message);
     }
   }
 
-  return null;
+  if (opts.documents) {
+    const { data: templates } = await svcClient
+      .from("documents").select("id").eq("stage", stageId);
+    for (const d of templates ?? []) {
+      const { error } = await svcClient.from("document_instances").insert({
+        document_id: d.id,
+        stageinstance_id: stageInstanceId,
+        tenant_id: tenantId,
+      });
+      if (!error) seeded.documents++;
+      else console.error(`DI seed err (doc ${d.id}, si ${stageInstanceId}):`, error.message);
+    }
+  }
+
+  return seeded;
 }
 
 serve(async (req) => {
@@ -264,6 +268,10 @@ serve(async (req) => {
     const conn = await connectMssql();
 
     try {
+      // ---- 0. Clear existing instance data for clean re-import ----
+      const cleared = await clearTenantInstanceData(svcClient, client_id);
+      results.cleared = cleared;
+
       // ---- 1. Tenant ----
       if (opts.tenant) {
         const clients = await execQuery(
@@ -324,7 +332,7 @@ serve(async (req) => {
         }
       }
 
-      // Helper: get package instance IDs for this client
+      // Helper: get package instance IDs for this client from MSSQL
       async function getPackageInstanceIds(): Promise<number[]> {
         const pkgs = await execQuery(
           conn,
@@ -334,19 +342,7 @@ serve(async (req) => {
         return pkgs.map((r) => r.Id ?? r.id);
       }
 
-      // Helper: get stage instance IDs from package instance IDs
-      async function getStageInstanceIds(piIds: number[]): Promise<number[]> {
-        if (piIds.length === 0) return [];
-        const idList = piIds.join(",");
-        const rows = await execQuery(
-          conn,
-          `SELECT [Id] FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
-          []
-        );
-        return rows.map((r) => r.Id ?? r.id);
-      }
-
-      // ---- 2. Package Instances (IDs only) ----
+      // ---- 2. Package Instances ----
       if (opts.package_instances) {
         const pkgs = await execQuery(
           conn,
@@ -356,8 +352,6 @@ serve(async (req) => {
         let created = 0, skipped = 0;
         for (const p of pkgs) {
           const pid = p.Id ?? p.id;
-          const { data: ex } = await svcClient.from("package_instances").select("id").eq("id", pid).maybeSingle();
-          if (ex) { skipped++; continue; }
           const startDate = p.StartDate ?? p.startdate ?? new Date().toISOString().split('T')[0];
           const endDate = p.EndDate ?? p.enddate ?? null;
           const cloId = p.CLO_Id ?? p.Clo_Id ?? p.clo_id ?? null;
@@ -372,19 +366,23 @@ serve(async (req) => {
             clo_id: cloId ? Number(cloId) : null,
             u1_packageid: p.Package_Id ?? p.package_id,
           });
-          if (error) { console.error(`PI ${pid}:`, error.message); skipped++; } else { created++; }
+          if (error) {
+            console.error(`PI ${pid}:`, error.message);
+            skipped++;
+          } else {
+            created++;
+          }
         }
         results.imported.package_instances = { created, skipped, total: pkgs.length };
       }
 
-      // ---- 3. Stage Instances (IDs only) ----
+      // ---- 3. Stage Instances ----
       if (opts.stage_instances) {
         const piIds = await getPackageInstanceIds();
         let created = 0, skipped = 0, total = 0;
         if (piIds.length > 0) {
           const idList = piIds.join(",");
 
-          // Fetch stage instances with package info
           const stages = await execQuery(
             conn,
             `SELECT si.[Id], si.[Stage_Id], si.[PackageInstance_Id], pi.[Package_Id] AS [PackageId]
@@ -393,74 +391,46 @@ serve(async (req) => {
              WHERE si.[PackageInstance_Id] IN (${idList})`,
             []
           );
-
-          // Try to fetch source stage names from MSSQL (table name varies)
-          const sourceStageNames = new Map<number, { name: string | null; shortName: string | null }>();
-          const uniqueStageIds = [...new Set(stages.map((s) => Number(s.Stage_Id ?? s.stage_id)).filter(Number.isFinite))];
-          if (uniqueStageIds.length > 0) {
-            const stageIdList = uniqueStageIds.join(",");
-            const tableAttempts = ["Stages", "Documents_Stages"];
-            for (const tableName of tableAttempts) {
-              try {
-                const sourceStages = await execQuery(
-                  conn,
-                  `SELECT [Id], [Title], [ShortName] FROM [dbo].[${tableName}] WHERE [Id] IN (${stageIdList})`,
-                  []
-                );
-                for (const row of sourceStages) {
-                  sourceStageNames.set(Number(row.Id), {
-                    name: row.Title ? String(row.Title) : null,
-                    shortName: row.ShortName ? String(row.ShortName) : null,
-                  });
-                }
-                console.log(`Loaded ${sourceStages.length} source stage names from [${tableName}]`);
-                break; // success, stop trying
-              } catch (e) {
-                console.warn(`Table [${tableName}] not available: ${e.message}`);
-              }
-            }
-          }
-
-          // Enrich stage rows with source names
-          for (const s of stages) {
-            const srcId = Number(s.Stage_Id ?? s.stage_id);
-            const meta = sourceStageNames.get(srcId);
-            s.SourceStageName = meta?.name ?? null;
-            s.SourceStageShortName = meta?.shortName ?? null;
-          }
           total = stages.length;
-          const targetStageMaps = await buildTargetStageMaps(
-            svcClient,
-            stages
-              .map((stage) => Number(stage.PackageId ?? stage.Package_Id ?? stage.package_id))
-              .filter((value) => Number.isFinite(value))
-          );
+
+          // Build sort order lookup from package_stages
+          const uniquePkgIds = [...new Set(stages.map((s) => Number(s.PackageId)).filter(Number.isFinite))];
+          const { data: pkgStages } = await svcClient
+            .from("package_stages")
+            .select("package_id, stage_id, sort_order")
+            .in("package_id", uniquePkgIds);
+          const sortOrderMap = new Map<string, number>();
+          for (const ps of pkgStages ?? []) {
+            sortOrderMap.set(`${ps.package_id}-${ps.stage_id}`, ps.sort_order ?? 0);
+          }
+
+          // Verify which stage IDs exist in U2
+          const { data: allStages } = await svcClient.from("stages").select("id");
+          const validStageIds = new Set((allStages ?? []).map((s: any) => Number(s.id)));
 
           for (const s of stages) {
             const sid = s.Id ?? s.id;
-            const resolvedStage = resolveTargetStage(s, targetStageMaps);
-            if (!resolvedStage) {
-              console.error(`SI ${sid}: unable to map stage`, {
-                source_stage_id: s.Stage_Id ?? s.stage_id,
-                package_id: s.PackageId ?? s.Package_Id ?? s.package_id,
-                source_stage_name: s.SourceStageName ?? null,
-                source_stage_shortname: s.SourceStageShortName ?? null,
-              });
+            const stageId = Number(s.Stage_Id ?? s.stage_id);
+            const packageId = Number(s.PackageId);
+
+            if (!validStageIds.has(stageId)) {
+              console.error(`SI ${sid}: stage_id ${stageId} not found in U2 stages table`);
               skipped++;
               continue;
             }
 
-            const { data: ex } = await svcClient.from("stage_instances").select("id").eq("id", sid).maybeSingle();
-            const { error } = await svcClient.from("stage_instances").upsert({
+            const sortOrder = sortOrderMap.get(`${packageId}-${stageId}`) ?? null;
+
+            const { error } = await svcClient.from("stage_instances").insert({
               id: sid,
-              stage_id: resolvedStage.stageId,
+              stage_id: stageId,
               packageinstance_id: s.PackageInstance_Id ?? s.packageinstance_id,
-              stage_sortorder: resolvedStage.sortOrder,
-            }, { onConflict: "id" });
+              stage_sortorder: sortOrder,
+            });
             if (error) {
               console.error(`SI ${sid}:`, error.message);
               skipped++;
-            } else if (!ex) {
+            } else {
               created++;
             }
           }
@@ -468,117 +438,58 @@ serve(async (req) => {
         results.imported.stage_instances = { created, skipped, total };
       }
 
-      // ---- 4. Document Instances (IDs only) ----
-      if (opts.document_instances) {
-        const piIds = await getPackageInstanceIds();
-        const siIds = await getStageInstanceIds(piIds);
-        let created = 0, skipped = 0, total = 0;
-        if (siIds.length > 0) {
-          const siList = siIds.join(",");
-          const docs = await execQuery(
-            conn,
-            `SELECT [Id], [Document_Id], [StageInstance_Id] FROM [dbo].[DocumentInstances] WHERE [StageInstance_Id] IN (${siList})`,
-            []
-          );
-          total = docs.length;
-          for (const d of docs) {
-            const did = d.Id ?? d.id;
-            const { data: ex } = await svcClient.from("document_instances").select("id").eq("id", did).maybeSingle();
-            if (ex) { skipped++; continue; }
-            const { error } = await svcClient.from("document_instances").insert({
-              id: did,
-              document_id: d.Document_Id ?? d.document_id,
-              stageinstance_id: d.StageInstance_Id ?? d.stageinstance_id,
-              tenant_id: client_id,
-            });
-            if (error) { console.error(`DI ${did}:`, error.message); skipped++; } else { created++; }
-          }
-        }
-        results.imported.document_instances = { created, skipped, total };
-      }
+      // ---- 4-7. Seed child instances from Unicorn 2 templates ----
+      const needsSeed = opts.staff_task_instances || opts.client_task_instances || opts.email_instances || opts.document_instances;
+      if (needsSeed) {
+        // Get all stage instances for this tenant
+        const { data: piRows } = await svcClient
+          .from("package_instances").select("id").eq("tenant_id", client_id);
+        const localPiIds = (piRows ?? []).map((r: any) => r.id);
 
-      // ---- 5. Staff Task Instances (IDs only) ----
-      if (opts.staff_task_instances) {
-        const piIds = await getPackageInstanceIds();
-        const siIds = await getStageInstanceIds(piIds);
-        let created = 0, skipped = 0, total = 0;
-        if (siIds.length > 0) {
-          const siList = siIds.join(",");
-          const tasks = await execQuery(
-            conn,
-            `SELECT [Id], [StaffTask_Id], [StageInstance_Id] FROM [dbo].[StaffTaskInstances] WHERE [StageInstance_Id] IN (${siList})`,
-            []
-          );
-          total = tasks.length;
-          for (const t of tasks) {
-            const tid = t.Id ?? t.id;
-            const { data: ex } = await svcClient.from("staff_task_instances").select("id").eq("id", tid).maybeSingle();
-            if (ex) { skipped++; continue; }
-            const { error } = await svcClient.from("staff_task_instances").insert({
-              id: tid,
-              stafftask_id: t.StaffTask_Id ?? t.stafftask_id,
-              stageinstance_id: t.StageInstance_Id ?? t.stageinstance_id,
-            });
-            if (error) { console.error(`STI ${tid}:`, error.message); skipped++; } else { created++; }
-          }
+        let newSiRows: any[] = [];
+        if (localPiIds.length > 0) {
+          const { data } = await svcClient
+            .from("stage_instances")
+            .select("id, stage_id, packageinstance_id")
+            .in("packageinstance_id", localPiIds);
+          newSiRows = data ?? [];
         }
-        results.imported.staff_task_instances = { created, skipped, total };
-      }
 
-      // ---- 6. Client Task Instances (IDs only) ----
-      if (opts.client_task_instances) {
-        const piIds = await getPackageInstanceIds();
-        const siIds = await getStageInstanceIds(piIds);
-        let created = 0, skipped = 0, total = 0;
-        if (siIds.length > 0) {
-          const siList = siIds.join(",");
-          const tasks = await execQuery(
-            conn,
-            `SELECT [Id], [ClientTask_Id], [StageInstance_Id] FROM [dbo].[ClientTaskInstances] WHERE [StageInstance_Id] IN (${siList})`,
-            []
-          );
-          total = tasks.length;
-          for (const t of tasks) {
-            const tid = t.Id ?? t.id;
-            const { data: ex } = await svcClient.from("client_task_instances").select("id").eq("id", tid).maybeSingle();
-            if (ex) { skipped++; continue; }
-            const { error } = await svcClient.from("client_task_instances").insert({
-              id: tid,
-              clienttask_id: t.ClientTask_Id ?? t.clienttask_id,
-              stageinstance_id: t.StageInstance_Id ?? t.stageinstance_id,
-            });
-            if (error) { console.error(`CTI ${tid}:`, error.message); skipped++; } else { created++; }
-          }
-        }
-        results.imported.client_task_instances = { created, skipped, total };
-      }
+        const totals = { staff: 0, client: 0, emails: 0, documents: 0 };
 
-      // ---- 7. Email Instances (IDs only) ----
-      if (opts.email_instances) {
-        const piIds = await getPackageInstanceIds();
-        const siIds = await getStageInstanceIds(piIds);
-        let created = 0, skipped = 0, total = 0;
-        if (siIds.length > 0) {
-          const siList = siIds.join(",");
-          const emails = await execQuery(
-            conn,
-            `SELECT [Id], [Email_Id], [StageInstance_Id] FROM [dbo].[EmailInstances] WHERE [StageInstance_Id] IN (${siList})`,
-            []
+        for (const si of newSiRows) {
+          const seeded = await seedChildInstances(
+            svcClient,
+            Number(si.id),
+            Number(si.stage_id),
+            client_id,
+            {
+              staff: opts.staff_task_instances,
+              client: opts.client_task_instances,
+              emails: opts.email_instances,
+              documents: opts.document_instances,
+            }
           );
-          total = emails.length;
-          for (const e of emails) {
-            const eid = e.Id ?? e.id;
-            const { data: ex } = await svcClient.from("email_instances").select("id").eq("id", eid).maybeSingle();
-            if (ex) { skipped++; continue; }
-            const { error } = await svcClient.from("email_instances").insert({
-              id: eid,
-              email_id: e.Email_Id ?? e.email_id ?? null,
-              stageinstance_id: e.StageInstance_Id ?? e.stageinstance_id,
-            });
-            if (error) { console.error(`EI ${eid}:`, error.message); skipped++; } else { created++; }
-          }
+          totals.staff += seeded.staff;
+          totals.client += seeded.client;
+          totals.emails += seeded.emails;
+          totals.documents += seeded.documents;
         }
-        results.imported.email_instances = { created, skipped, total };
+
+        console.log(`Seeded child instances for tenant ${client_id}:`, totals);
+
+        if (opts.staff_task_instances) {
+          results.imported.staff_task_instances = { seeded: totals.staff };
+        }
+        if (opts.client_task_instances) {
+          results.imported.client_task_instances = { seeded: totals.client };
+        }
+        if (opts.email_instances) {
+          results.imported.email_instances = { seeded: totals.emails };
+        }
+        if (opts.document_instances) {
+          results.imported.document_instances = { seeded: totals.documents };
+        }
       }
 
       return new Response(JSON.stringify(results), {
