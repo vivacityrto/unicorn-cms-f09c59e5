@@ -268,25 +268,26 @@ serve(async (req) => {
           const idList = piIds.join(",");
           const stages = await execQuery(
             conn,
-            `SELECT [id], [stage_id], [packageinstance_id], [completion_date], [status_id], [status], [stage_sortorder]
-             FROM [dbo].[stage_instances] WHERE [packageinstance_id] IN (${idList})`,
+            `SELECT [Id], [Stage_Id], [PackageInstance_Id], [CompletionDate], [Status_Id], [Status], [StageSortOrder]
+             FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
             []
           );
           total = stages.length;
 
           for (const s of stages) {
-            const { data: ex } = await svcClient.from("stage_instances").select("id").eq("id", s.id).maybeSingle();
+            const sid = s.Id ?? s.id;
+            const { data: ex } = await svcClient.from("stage_instances").select("id").eq("id", sid).maybeSingle();
             if (ex) { skipped++; continue; }
             const { error } = await svcClient.from("stage_instances").insert({
-              id: s.id,
-              stage_id: s.stage_id,
-              packageinstance_id: s.packageinstance_id,
-              completion_date: toTimestamp(s.completion_date),
-              status_id: s.status_id ?? 0,
-              status: s.status || "Not Started",
-              stage_sortorder: s.stage_sortorder || null,
+              id: sid,
+              stage_id: s.Stage_Id ?? s.stage_id,
+              packageinstance_id: s.PackageInstance_Id ?? s.packageinstance_id,
+              completion_date: toTimestamp(s.CompletionDate ?? s.completion_date),
+              status_id: s.Status_Id ?? s.status_id ?? 0,
+              status: s.Status ?? s.status ?? "Not Started",
+              stage_sortorder: s.StageSortOrder ?? s.stage_sortorder ?? null,
             });
-            if (error) { console.error(`SI ${s.id}:`, error.message); skipped++; } else { created++; }
+            if (error) { console.error(`SI ${sid}:`, error.message); skipped++; } else { created++; }
           }
         }
         results.imported.stage_instances = { created, skipped, total };
