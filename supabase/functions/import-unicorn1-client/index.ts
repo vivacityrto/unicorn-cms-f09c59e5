@@ -237,7 +237,7 @@ serve(async (req) => {
             is_complete: Boolean(isComplete),
             start_date: startDate,
             end_date: endDate,
-            clo_id: Number(cloId) || 0,
+            clo_id: cloId ? Number(cloId) : null,
             u1_packageid: p.Package_Id ?? p.package_id,
           });
           if (error) { console.error(`PI ${pid}:`, error.message); skipped++; } else { created++; }
