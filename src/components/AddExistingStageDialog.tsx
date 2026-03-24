@@ -68,11 +68,12 @@ export function AddExistingStageDialog({
     try {
       setLoading(true);
       
-      // Fetch all stages from documents_stages
+      // Fetch all stages from stages registry
       const { data: stagesData, error } = await supabase
-        .from('documents_stages')
-        .select('*')
-        .order('title');
+        .from('stages')
+        .select('id, name, shortname, description, videourl, dateimported')
+        .eq('is_archived', false)
+        .order('name');
 
       if (error) throw error;
 
