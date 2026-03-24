@@ -167,7 +167,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       let results = (stages || []).map(stage => ({
         id: stage.id,
-        title: stage.title,
+        title: stage.name,
         stage_type: stage.stage_type,
         is_certified: stage.is_certified,
         frameworks: (stage as any).frameworks || null,
