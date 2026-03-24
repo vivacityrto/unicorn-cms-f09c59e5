@@ -5,6 +5,7 @@ import { NoteFormDialog, NoteFormData } from '@/components/notes/NoteFormDialog'
 import { useNotes, Note } from '@/hooks/useNotes';
 import { useNoteTags } from '@/hooks/useNoteTags';
 import { useClientActionItems } from '@/hooks/useClientManagementData';
+import { useLinkedEmails, LinkedEmail } from '@/hooks/useLinkedEmails';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
