@@ -15,6 +15,7 @@ export interface LinkedEmail {
   package_id: number | null;
   task_id: string | null;
   created_at: string;
+  external_message_id: string | null;
 }
 
 export interface EmailAttachment {

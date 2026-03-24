@@ -29,13 +29,14 @@ import {
   Plus, StickyNote, Pin, MoreHorizontal, Edit, Trash2, 
   ArrowRight, Tag, Clock, MessageSquare, AlertTriangle, 
   CheckCircle, Users, FileText, Loader2, Filter, Package,
-  ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink, Mail, CalendarIcon, X
+  ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink, Mail, CalendarIcon, X, Eye
 } from 'lucide-react';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { NotifyClientCheckbox } from './NotifyClientCheckbox';
 import { notifyClientPrimaryContact } from '@/lib/notifyClient';
 import { ComposeEmailDialog } from './ComposeEmailDialog';
+import { EmailViewDialog } from '@/components/email/EmailViewDialog';
 import { SelectSeparator } from '@/components/ui/select';
 import { formatDistanceToNow, format, fromUnixTime, isValid, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -155,6 +156,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [saving, setSaving] = useState(false);
   const [selectedPackageInfo, setSelectedPackageInfo] = useState<PackageInfo | null>(null);
   const [packageNameMap, setPackageNameMap] = useState<Record<number, string>>({});
+  const [emailViewOpen, setEmailViewOpen] = useState(false);
+  const [emailViewTarget, setEmailViewTarget] = useState<LinkedEmail | null>(null);
   
   // Note type options from dd_note_types
   const [noteTypeOptions, setNoteTypeOptions] = useState<{ code: string; label: string }[]>([]);
@@ -1365,7 +1368,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                     return (
                       <div
                         key={`email-${email.id}`}
-                        className="p-4 rounded-lg border transition-colors bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/40"
+                        className="p-4 rounded-lg border transition-colors bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/40 cursor-pointer"
+                        onClick={() => { setEmailViewTarget(email); setEmailViewOpen(true); }}
                       >
                         <div className="flex items-start gap-3">
                           <div className="p-2 rounded-lg shrink-0 bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
@@ -1402,6 +1406,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                                   Attachments
                                 </span>
                               )}
+                              <span className="flex items-center gap-1 text-teal-600">
+                                <Eye className="h-3 w-3" />
+                                Click to view
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -1758,6 +1766,17 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           });
           toast({ title: 'Email sent', description: 'An email note has been logged automatically.' });
         }}
+      />
+      <EmailViewDialog
+        open={emailViewOpen}
+        onOpenChange={setEmailViewOpen}
+        externalMessageId={emailViewTarget?.external_message_id}
+        subject={emailViewTarget?.subject}
+        senderName={emailViewTarget?.sender_name}
+        senderEmail={emailViewTarget?.sender_email}
+        receivedAt={emailViewTarget?.received_at}
+        bodyPreview={emailViewTarget?.body_preview}
+        hasAttachments={emailViewTarget?.has_attachments}
       />
     </>
   );

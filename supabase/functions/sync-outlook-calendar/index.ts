@@ -273,6 +273,45 @@ serve(async (req) => {
       );
     }
 
+    // Handle get-email-body action - fetch full email body from Graph API
+    if (action === 'get-email-body') {
+      const messageId = filterEmail; // reuse filterEmail param for messageId
+      if (!messageId) {
+        return new Response(
+          JSON.stringify({ error: 'Missing messageId' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      try {
+        const res = await fetch(
+          `https://graph.microsoft.com/v1.0/me/messages/${messageId}?$select=subject,body,from,receivedDateTime,hasAttachments`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error('[sync-outlook] Graph email body error:', errText);
+          throw new Error(`Graph API error: ${res.status}`);
+        }
+        const emailData = await res.json();
+        return new Response(
+          JSON.stringify({ 
+            subject: emailData.subject,
+            body: emailData.body,
+            from: emailData.from,
+            receivedDateTime: emailData.receivedDateTime,
+            hasAttachments: emailData.hasAttachments,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (err) {
+        console.error('[sync-outlook] Email body fetch error:', err);
+        return new Response(
+          JSON.stringify({ error: err instanceof Error ? err.message : 'Failed to fetch email body' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Handle get-emails action
     if (action === 'get-emails') {
       console.log('[sync-outlook] Fetching emails, folder:', folder, 'top:', top, 'filterEmail:', filterEmail);
