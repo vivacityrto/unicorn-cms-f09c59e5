@@ -1767,6 +1767,17 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           toast({ title: 'Email sent', description: 'An email note has been logged automatically.' });
         }}
       />
+      <EmailViewDialog
+        open={emailViewOpen}
+        onOpenChange={setEmailViewOpen}
+        externalMessageId={emailViewTarget?.external_message_id}
+        subject={emailViewTarget?.subject}
+        senderName={emailViewTarget?.sender_name}
+        senderEmail={emailViewTarget?.sender_email}
+        receivedAt={emailViewTarget?.received_at}
+        bodyPreview={emailViewTarget?.body_preview}
+        hasAttachments={emailViewTarget?.has_attachments}
+      />
     </>
   );
 }
