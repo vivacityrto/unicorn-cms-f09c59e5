@@ -234,26 +234,27 @@ serve(async (req) => {
       if (opts.package_instances) {
         const pkgs = await execQuery(
           conn,
-          `SELECT [id], [package_id], [start_date], [end_date], [is_complete], [clo_id]
-           FROM [dbo].[package_instances] WHERE [client_id] = @cid`,
+          `SELECT [Id], [Package_Id], [StartDate], [EndDate], [IsComplete], [Clo_Id]
+           FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
 
         let created = 0, skipped = 0;
         for (const p of pkgs) {
-          const { data: ex } = await svcClient.from("package_instances").select("id").eq("id", p.id).maybeSingle();
+          const pid = p.Id ?? p.id;
+          const { data: ex } = await svcClient.from("package_instances").select("id").eq("id", pid).maybeSingle();
           if (ex) { skipped++; continue; }
           const { error } = await svcClient.from("package_instances").insert({
-            id: p.id,
+            id: pid,
             tenant_id: client_id,
-            package_id: p.package_id,
-            start_date: toDateStr(p.start_date) || new Date().toISOString().split("T")[0],
-            end_date: toDateStr(p.end_date),
-            is_complete: p.is_complete || false,
-            clo_id: p.clo_id || 0,
-            is_active: !(p.is_complete || false),
+            package_id: p.Package_Id ?? p.package_id,
+            start_date: toDateStr(p.StartDate ?? p.start_date) || new Date().toISOString().split("T")[0],
+            end_date: toDateStr(p.EndDate ?? p.end_date),
+            is_complete: p.IsComplete ?? p.is_complete ?? false,
+            clo_id: p.Clo_Id ?? p.clo_id ?? 0,
+            is_active: !(p.IsComplete ?? p.is_complete ?? false),
           });
-          if (error) { console.error(`PI ${p.id}:`, error.message); skipped++; } else { created++; }
+          if (error) { console.error(`PI ${pid}:`, error.message); skipped++; } else { created++; }
         }
         results.imported.package_instances = { created, skipped, total: pkgs.length };
       }
