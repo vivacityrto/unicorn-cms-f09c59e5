@@ -5,6 +5,8 @@ import { LinkedEmailsList } from '@/components/email/LinkedEmailsList';
 import { OutlookInboxBrowser } from '@/components/email/OutlookInboxBrowser';
 import { useLinkedEmails } from '@/hooks/useLinkedEmails';
 import { Mail, Plus, RefreshCw, Inbox } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientEmailsTabProps {
   tenantId: number;
@@ -15,6 +17,23 @@ export function ClientEmailsTab({ tenantId, clientName }: ClientEmailsTabProps) 
   const [showInboxBrowser, setShowInboxBrowser] = useState(false);
 
   const { refetch } = useLinkedEmails({ clientId: tenantId });
+
+  // Fetch primary contact email for this tenant
+  const { data: primaryContactEmail } = useQuery({
+    queryKey: ['primary-contact-email', tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('tenant_users')
+        .select('users!inner(email)')
+        .eq('tenant_id', tenantId)
+        .eq('primary_contact', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      return (data?.users as any)?.email as string | undefined;
+    },
+    enabled: showInboxBrowser,
+  });
 
   const handleEmailLinked = () => {
     setShowInboxBrowser(false);
@@ -54,11 +73,19 @@ export function ClientEmailsTab({ tenantId, clientName }: ClientEmailsTabProps) 
 
       {/* Inbox Browser */}
       {showInboxBrowser && (
-        <OutlookInboxBrowser
-          tenantId={String(tenantId)}
-          defaultClientId={tenantId}
-          onEmailLinked={handleEmailLinked}
-        />
+        <div className="space-y-2">
+          {primaryContactEmail && (
+            <p className="text-sm text-muted-foreground px-1">
+              Showing emails matching primary contact: <span className="font-medium text-foreground">{primaryContactEmail}</span>
+            </p>
+          )}
+          <OutlookInboxBrowser
+            tenantId={String(tenantId)}
+            defaultClientId={tenantId}
+            onEmailLinked={handleEmailLinked}
+            filterEmail={primaryContactEmail}
+          />
+        </div>
       )}
 
       {/* Linked Emails List */}
