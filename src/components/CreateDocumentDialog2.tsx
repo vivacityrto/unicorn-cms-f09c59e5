@@ -410,8 +410,8 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
           <div className="space-y-2">
             <Label htmlFor="document-category-2">Category</Label>
             <Select 
-              value={formData.category_id?.toString() || ""} 
-              onValueChange={(value) => setFormData({ ...formData, category_id: value ? Number(value) : null })}
+              value={formData.category_value || ""} 
+              onValueChange={(value) => setFormData({ ...formData, category_value: value || null })}
             >
               <SelectTrigger id="document-category-2" className="bg-background focus:z-10">
                 <SelectValue placeholder="Select a category" />
@@ -421,8 +421,8 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
                   <SelectItem value="no-categories" disabled>No categories available</SelectItem>
                 ) : (
                   categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      {category.name}
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
                     </SelectItem>
                   ))
                 )}
