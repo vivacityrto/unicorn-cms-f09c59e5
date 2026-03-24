@@ -212,10 +212,10 @@ serve(async (req) => {
       async function getPackageInstanceIds(): Promise<number[]> {
         const pkgs = await execQuery(
           conn,
-          `SELECT [id] FROM [dbo].[package_instances] WHERE [client_id] = @cid`,
+          `SELECT [Id] FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
-        return pkgs.map((r) => r.id);
+        return pkgs.map((r) => r.Id ?? r.id);
       }
 
       // Helper: get stage instance IDs from package instance IDs
@@ -224,36 +224,37 @@ serve(async (req) => {
         const idList = piIds.join(",");
         const rows = await execQuery(
           conn,
-          `SELECT [id] FROM [dbo].[stage_instances] WHERE [packageinstance_id] IN (${idList})`,
+          `SELECT [Id] FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
           []
         );
-        return rows.map((r) => r.id);
+        return rows.map((r) => r.Id ?? r.id);
       }
 
       // ---- 2. Package Instances ----
       if (opts.package_instances) {
         const pkgs = await execQuery(
           conn,
-          `SELECT [id], [package_id], [start_date], [end_date], [is_complete], [clo_id]
-           FROM [dbo].[package_instances] WHERE [client_id] = @cid`,
+          `SELECT [Id], [Package_Id], [StartDate], [EndDate], [IsComplete], [Clo_Id]
+           FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
 
         let created = 0, skipped = 0;
         for (const p of pkgs) {
-          const { data: ex } = await svcClient.from("package_instances").select("id").eq("id", p.id).maybeSingle();
+          const pid = p.Id ?? p.id;
+          const { data: ex } = await svcClient.from("package_instances").select("id").eq("id", pid).maybeSingle();
           if (ex) { skipped++; continue; }
           const { error } = await svcClient.from("package_instances").insert({
-            id: p.id,
+            id: pid,
             tenant_id: client_id,
-            package_id: p.package_id,
-            start_date: toDateStr(p.start_date) || new Date().toISOString().split("T")[0],
-            end_date: toDateStr(p.end_date),
-            is_complete: p.is_complete || false,
-            clo_id: p.clo_id || 0,
-            is_active: !(p.is_complete || false),
+            package_id: p.Package_Id ?? p.package_id,
+            start_date: toDateStr(p.StartDate ?? p.start_date) || new Date().toISOString().split("T")[0],
+            end_date: toDateStr(p.EndDate ?? p.end_date),
+            is_complete: p.IsComplete ?? p.is_complete ?? false,
+            clo_id: p.Clo_Id ?? p.clo_id ?? 0,
+            is_active: !(p.IsComplete ?? p.is_complete ?? false),
           });
-          if (error) { console.error(`PI ${p.id}:`, error.message); skipped++; } else { created++; }
+          if (error) { console.error(`PI ${pid}:`, error.message); skipped++; } else { created++; }
         }
         results.imported.package_instances = { created, skipped, total: pkgs.length };
       }
@@ -267,25 +268,26 @@ serve(async (req) => {
           const idList = piIds.join(",");
           const stages = await execQuery(
             conn,
-            `SELECT [id], [stage_id], [packageinstance_id], [completion_date], [status_id], [status], [stage_sortorder]
-             FROM [dbo].[stage_instances] WHERE [packageinstance_id] IN (${idList})`,
+            `SELECT [Id], [Stage_Id], [PackageInstance_Id], [CompletionDate], [Status_Id], [Status], [StageSortOrder]
+             FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
             []
           );
           total = stages.length;
 
           for (const s of stages) {
-            const { data: ex } = await svcClient.from("stage_instances").select("id").eq("id", s.id).maybeSingle();
+            const sid = s.Id ?? s.id;
+            const { data: ex } = await svcClient.from("stage_instances").select("id").eq("id", sid).maybeSingle();
             if (ex) { skipped++; continue; }
             const { error } = await svcClient.from("stage_instances").insert({
-              id: s.id,
-              stage_id: s.stage_id,
-              packageinstance_id: s.packageinstance_id,
-              completion_date: toTimestamp(s.completion_date),
-              status_id: s.status_id ?? 0,
-              status: s.status || "Not Started",
-              stage_sortorder: s.stage_sortorder || null,
+              id: sid,
+              stage_id: s.Stage_Id ?? s.stage_id,
+              packageinstance_id: s.PackageInstance_Id ?? s.packageinstance_id,
+              completion_date: toTimestamp(s.CompletionDate ?? s.completion_date),
+              status_id: s.Status_Id ?? s.status_id ?? 0,
+              status: s.Status ?? s.status ?? "Not Started",
+              stage_sortorder: s.StageSortOrder ?? s.stage_sortorder ?? null,
             });
-            if (error) { console.error(`SI ${s.id}:`, error.message); skipped++; } else { created++; }
+            if (error) { console.error(`SI ${sid}:`, error.message); skipped++; } else { created++; }
           }
         }
         results.imported.stage_instances = { created, skipped, total };
@@ -301,24 +303,25 @@ serve(async (req) => {
           const siList = siIds.join(",");
           const docs = await execQuery(
             conn,
-            `SELECT [id], [document_id], [stageinstance_id], [tenant_id], [isgenerated], [generationdate]
-             FROM [dbo].[document_instances] WHERE [stageinstance_id] IN (${siList})`,
+            `SELECT [Id], [Document_Id], [StageInstance_Id], [Tenant_Id], [IsGenerated], [GenerationDate]
+             FROM [dbo].[DocumentInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = docs.length;
 
           for (const d of docs) {
-            const { data: ex } = await svcClient.from("document_instances").select("id").eq("id", d.id).maybeSingle();
+            const did = d.Id ?? d.id;
+            const { data: ex } = await svcClient.from("document_instances").select("id").eq("id", did).maybeSingle();
             if (ex) { skipped++; continue; }
             const { error } = await svcClient.from("document_instances").insert({
-              id: d.id,
-              document_id: d.document_id,
-              stageinstance_id: d.stageinstance_id,
-              tenant_id: d.tenant_id || client_id,
-              isgenerated: d.isgenerated || false,
-              generationdate: d.generationdate || null,
+              id: did,
+              document_id: d.Document_Id ?? d.document_id,
+              stageinstance_id: d.StageInstance_Id ?? d.stageinstance_id,
+              tenant_id: d.Tenant_Id ?? d.tenant_id ?? client_id,
+              isgenerated: d.IsGenerated ?? d.isgenerated ?? false,
+              generationdate: d.GenerationDate ?? d.generationdate ?? null,
             });
-            if (error) { console.error(`DI ${d.id}:`, error.message); skipped++; } else { created++; }
+            if (error) { console.error(`DI ${did}:`, error.message); skipped++; } else { created++; }
           }
         }
         results.imported.document_instances = { created, skipped, total };
@@ -334,30 +337,31 @@ serve(async (req) => {
           const siList = siIds.join(",");
           const tasks = await execQuery(
             conn,
-            `SELECT [id], [stafftask_id], [stageinstance_id], [status_id], [status],
-                    [completion_date], [due_date], [assigned_date], [notes], [assignee_id], [is_core]
-             FROM [dbo].[staff_task_instances] WHERE [stageinstance_id] IN (${siList})`,
+            `SELECT [Id], [StaffTask_Id], [StageInstance_Id], [Status_Id], [Status],
+                    [CompletionDate], [DueDate], [AssignedDate], [Notes], [Assignee_Id], [IsCore]
+             FROM [dbo].[StaffTaskInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = tasks.length;
 
           for (const t of tasks) {
-            const { data: ex } = await svcClient.from("staff_task_instances").select("id").eq("id", t.id).maybeSingle();
+            const tid = t.Id ?? t.id;
+            const { data: ex } = await svcClient.from("staff_task_instances").select("id").eq("id", tid).maybeSingle();
             if (ex) { skipped++; continue; }
             const { error } = await svcClient.from("staff_task_instances").insert({
-              id: t.id,
-              stafftask_id: t.stafftask_id,
-              stageinstance_id: t.stageinstance_id,
-              status_id: t.status_id ?? 0,
-              status: t.status || "Not Started",
-              completion_date: toTimestamp(t.completion_date),
-              due_date: toTimestamp(t.due_date),
-              assigned_date: toTimestamp(t.assigned_date),
-              notes: t.notes || null,
-              u1_assignee_id: t.assignee_id || null,
-              is_core: t.is_core || false,
+              id: tid,
+              stafftask_id: t.StaffTask_Id ?? t.stafftask_id,
+              stageinstance_id: t.StageInstance_Id ?? t.stageinstance_id,
+              status_id: t.Status_Id ?? t.status_id ?? 0,
+              status: t.Status ?? t.status ?? "Not Started",
+              completion_date: toTimestamp(t.CompletionDate ?? t.completion_date),
+              due_date: toTimestamp(t.DueDate ?? t.due_date),
+              assigned_date: toTimestamp(t.AssignedDate ?? t.assigned_date),
+              notes: t.Notes ?? t.notes ?? null,
+              u1_assignee_id: t.Assignee_Id ?? t.assignee_id ?? null,
+              is_core: t.IsCore ?? t.is_core ?? false,
             });
-            if (error) { console.error(`STI ${t.id}:`, error.message); skipped++; } else { created++; }
+            if (error) { console.error(`STI ${tid}:`, error.message); skipped++; } else { created++; }
           }
         }
         results.imported.staff_task_instances = { created, skipped, total };
@@ -373,24 +377,25 @@ serve(async (req) => {
           const siList = siIds.join(",");
           const tasks = await execQuery(
             conn,
-            `SELECT [id], [clienttask_id], [stageinstance_id], [status], [due_date], [completion_date]
-             FROM [dbo].[client_task_instances] WHERE [stageinstance_id] IN (${siList})`,
+            `SELECT [Id], [ClientTask_Id], [StageInstance_Id], [Status], [DueDate], [CompletionDate]
+             FROM [dbo].[ClientTaskInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = tasks.length;
 
           for (const t of tasks) {
-            const { data: ex } = await svcClient.from("client_task_instances").select("id").eq("id", t.id).maybeSingle();
+            const tid = t.Id ?? t.id;
+            const { data: ex } = await svcClient.from("client_task_instances").select("id").eq("id", tid).maybeSingle();
             if (ex) { skipped++; continue; }
             const { error } = await svcClient.from("client_task_instances").insert({
-              id: t.id,
-              clienttask_id: t.clienttask_id,
-              stageinstance_id: t.stageinstance_id,
-              status: t.status ?? 0,
-              due_date: toTimestamp(t.due_date),
-              completion_date: toTimestamp(t.completion_date),
+              id: tid,
+              clienttask_id: t.ClientTask_Id ?? t.clienttask_id,
+              stageinstance_id: t.StageInstance_Id ?? t.stageinstance_id,
+              status: t.Status ?? t.status ?? 0,
+              due_date: toTimestamp(t.DueDate ?? t.due_date),
+              completion_date: toTimestamp(t.CompletionDate ?? t.completion_date),
             });
-            if (error) { console.error(`CTI ${t.id}:`, error.message); skipped++; } else { created++; }
+            if (error) { console.error(`CTI ${tid}:`, error.message); skipped++; } else { created++; }
           }
         }
         results.imported.client_task_instances = { created, skipped, total };
@@ -406,33 +411,34 @@ serve(async (req) => {
           const siList = siIds.join(",");
           const emails = await execQuery(
             conn,
-            `SELECT [id], [email_id], [stageinstance_id], [content], [is_sent], [sent_date],
-                    [to], [cc], [bcc], [subject], [sender_id], [sender], [is_core], [user_attachments]
-             FROM [dbo].[email_instances] WHERE [stageinstance_id] IN (${siList})`,
+            `SELECT [Id], [Email_Id], [StageInstance_Id], [Content], [IsSent], [SentDate],
+                    [To], [Cc], [Bcc], [Subject], [Sender_Id], [Sender], [IsCore], [UserAttachments]
+             FROM [dbo].[EmailInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = emails.length;
 
           for (const e of emails) {
-            const { data: ex } = await svcClient.from("email_instances").select("id").eq("id", e.id).maybeSingle();
+            const eid = e.Id ?? e.id;
+            const { data: ex } = await svcClient.from("email_instances").select("id").eq("id", eid).maybeSingle();
             if (ex) { skipped++; continue; }
             const { error } = await svcClient.from("email_instances").insert({
-              id: e.id,
-              email_id: e.email_id || null,
-              stageinstance_id: e.stageinstance_id,
-              content: e.content || null,
-              is_sent: e.is_sent || false,
-              sent_date: toTimestamp(e.sent_date),
-              to: e.to || null,
-              cc: e.cc || null,
-              bcc: e.bcc || null,
-              subject: e.subject || null,
-              sender_id: e.sender_id || null,
-              sender: e.sender || null,
-              is_core: e.is_core || false,
-              user_attachments: e.user_attachments || "",
+              id: eid,
+              email_id: e.Email_Id ?? e.email_id ?? null,
+              stageinstance_id: e.StageInstance_Id ?? e.stageinstance_id,
+              content: e.Content ?? e.content ?? null,
+              is_sent: e.IsSent ?? e.is_sent ?? false,
+              sent_date: toTimestamp(e.SentDate ?? e.sent_date),
+              to: e.To ?? e.to ?? null,
+              cc: e.Cc ?? e.cc ?? null,
+              bcc: e.Bcc ?? e.bcc ?? null,
+              subject: e.Subject ?? e.subject ?? null,
+              sender_id: e.Sender_Id ?? e.sender_id ?? null,
+              sender: e.Sender ?? e.sender ?? null,
+              is_core: e.IsCore ?? e.is_core ?? false,
+              user_attachments: e.UserAttachments ?? e.user_attachments ?? "",
             });
-            if (error) { console.error(`EI ${e.id}:`, error.message); skipped++; } else { created++; }
+            if (error) { console.error(`EI ${eid}:`, error.message); skipped++; } else { created++; }
           }
         }
         results.imported.email_instances = { created, skipped, total };
