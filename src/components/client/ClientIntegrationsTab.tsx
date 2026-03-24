@@ -1818,6 +1818,17 @@ export function ClientIntegrationsTab({
         confirmText="Transfer"
         isLoading={isTransferringContact}
       />
+
+      {/* TGA Contacts as Users Confirmation */}
+      <ConfirmDialog
+        open={showTransferUsersConfirm}
+        onOpenChange={setShowTransferUsersConfirm}
+        title="Add TGA Contacts as Users"
+        description="This will create user accounts for all unique TGA contacts and add them to this tenant. Chief Executives will be assigned the Admin role, others will be Users. No invitation emails will be sent. Existing users will be skipped."
+        onConfirm={handleTransferUsers}
+        confirmText="Add Users"
+        isLoading={isTransferringUsers}
+      />
     </div>
   );
 }
