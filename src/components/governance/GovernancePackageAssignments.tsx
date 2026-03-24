@@ -11,6 +11,7 @@ interface Props {
 interface PackageAssignment {
   package_id: number;
   package_name: string;
+  stage_id: number;
   stage_title: string;
   delivery_type: string;
 }
@@ -40,14 +41,14 @@ export function GovernancePackageAssignments({ documentId }: Props) {
 
       const pkgIds = [...new Set(pkgStages.map(r => r.package_id))];
 
-      // 3. Fetch names
+      // 3. Fetch names — use documents_stages (correct FK target) not stages
       const [pkgRes, stageRes] = await Promise.all([
         supabase.from('packages').select('id, name').in('id', pkgIds),
-        supabase.from('stages').select('id, name').in('id', stageIds),
+        supabase.from('documents_stages').select('id, title').in('id', stageIds),
       ]);
 
       const pkgMap = new Map((pkgRes.data || []).map((p: any) => [p.id, p.name]));
-      const stageMap = new Map((stageRes.data || []).map((s: any) => [s.id, s.name]));
+      const stageMap = new Map((stageRes.data || []).map((s: any) => [s.id, s.title]));
 
       // 4. Build delivery_type lookup from stage_documents
       const deliveryMap = new Map(stageDocs.map(r => [r.stage_id, r.delivery_type]));
@@ -56,6 +57,7 @@ export function GovernancePackageAssignments({ documentId }: Props) {
       return pkgStages.map((ps) => ({
         package_id: ps.package_id,
         package_name: pkgMap.get(ps.package_id) ?? 'Unknown',
+        stage_id: ps.stage_id,
         stage_title: stageMap.get(ps.stage_id) ?? 'Unknown',
         delivery_type: deliveryMap.get(ps.stage_id) ?? 'standard',
       })) as PackageAssignment[];
@@ -63,12 +65,14 @@ export function GovernancePackageAssignments({ documentId }: Props) {
     staleTime: 2 * 60_000,
   });
 
-  // Group by package
-  const grouped = (assignments || []).reduce<Record<number, { name: string; stages: { title: string; delivery_type: string }[] }>>((acc, a) => {
-    if (!acc[a.package_id]) {
-      acc[a.package_id] = { name: a.package_name, stages: [] };
+  // Group by stage (primary), with packages as secondary
+  const grouped = (assignments || []).reduce<Record<number, { title: string; delivery_type: string; packages: string[] }>>((acc, a) => {
+    if (!acc[a.stage_id]) {
+      acc[a.stage_id] = { title: a.stage_title, delivery_type: a.delivery_type, packages: [] };
     }
-    acc[a.package_id].stages.push({ title: a.stage_title, delivery_type: a.delivery_type });
+    if (!acc[a.stage_id].packages.includes(a.package_name)) {
+      acc[a.stage_id].packages.push(a.package_name);
+    }
     return acc;
   }, {});
 
@@ -78,28 +82,27 @@ export function GovernancePackageAssignments({ documentId }: Props) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <Package className="h-4 w-4" /> Package Assignments
+          <Package className="h-4 w-4" /> Stage & Package Assignments
         </CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">This document has not been assigned to any packages.</p>
+          <p className="text-sm text-muted-foreground">This document has not been assigned to any stages or packages.</p>
         ) : (
           <div className="space-y-3">
-            {entries.map(([pkgId, pkg]) => (
-              <div key={pkgId} className="flex items-start gap-3">
-                <Badge variant="outline" className="shrink-0 mt-0.5">{pkg.name}</Badge>
+            {entries.map(([stageId, stage]) => (
+              <div key={stageId} className="flex items-start gap-3">
+                <div className="shrink-0">
+                  <span className="text-sm font-medium">{stage.title}</span>
+                  {stage.delivery_type !== 'standard' && (
+                    <span className="ml-1 text-xs text-muted-foreground opacity-60">({stage.delivery_type})</span>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {pkg.stages.map((s, i) => (
-                    <span key={i} className="text-xs text-muted-foreground">
-                      {s.title}
-                      {s.delivery_type !== 'standard' && (
-                        <span className="ml-1 text-xs opacity-60">({s.delivery_type})</span>
-                      )}
-                      {i < pkg.stages.length - 1 && ', '}
-                    </span>
+                  {stage.packages.map((pkg) => (
+                    <Badge key={pkg} variant="outline" className="text-xs">{pkg}</Badge>
                   ))}
                 </div>
               </div>
