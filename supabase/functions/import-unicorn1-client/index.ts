@@ -283,9 +283,7 @@ serve(async (req) => {
               stage_id: s.Stage_Id ?? s.stage_id,
               packageinstance_id: s.PackageInstance_Id ?? s.packageinstance_id,
               completion_date: toTimestamp(s.CompletionDate ?? s.completion_date),
-              status_id: s.Status_Id ?? s.status_id ?? 0,
               status: s.Status ?? s.status ?? "Not Started",
-              stage_sortorder: s.StageSortOrder ?? s.stage_sortorder ?? null,
             });
             if (error) { console.error(`SI ${sid}:`, error.message); skipped++; } else { created++; }
           }
