@@ -626,6 +626,82 @@ export function ClientIntegrationsTab({
     }
   };
 
+  // Handle transfer all TGA contacts as users to tenant_users
+  const handleTransferUsers = async () => {
+    if (!profile?.tenant_id || !user?.id || !tgaData.contacts.length) return;
+    setIsTransferringUsers(true);
+    try {
+      // Deduplicate contacts by email
+      const uniqueByEmail = new Map<string, any>();
+      for (const contact of tgaData.contacts) {
+        if (contact.email && !uniqueByEmail.has(contact.email.toLowerCase())) {
+          uniqueByEmail.set(contact.email.toLowerCase(), contact);
+        }
+      }
+
+      const contacts = Array.from(uniqueByEmail.values());
+      let created = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      for (const contact of contacts) {
+        // Parse first/last name from contact name (e.g. "Mr Brenton Myatt")
+        const nameParts = (contact.name || '').replace(/^(Mr|Mrs|Ms|Miss|Dr|Prof)\.?\s*/i, '').trim().split(/\s+/);
+        const firstName = nameParts[0] || 'Unknown';
+        const lastName = nameParts.slice(1).join(' ') || 'Unknown';
+        
+        // Chief executive gets Admin role, others get User
+        const isChief = contact.contact_type?.toLowerCase().includes('chief executive') || 
+                        contact.contact_type === 'ChiefExecutive';
+        const role = isChief ? 'Admin' : 'User';
+
+        try {
+          const { data, error } = await supabase.functions.invoke('invite-user', {
+            body: {
+              email: contact.email.toLowerCase().trim(),
+              first_name: firstName,
+              last_name: lastName,
+              invite_as: 'CLIENT',
+              tenant_id: profile.tenant_id,
+              unicorn_role: role,
+              skip_email: true,
+              job_title: contact.position || null,
+              phone_number: contact.phone || null,
+            },
+          });
+
+          if (error) throw error;
+          if (data?.ok === false && data?.code === 'ALREADY_MEMBER') {
+            skipped++;
+          } else {
+            created++;
+          }
+        } catch (err: any) {
+          const msg = err?.message || JSON.stringify(err);
+          if (msg.includes('ALREADY_MEMBER') || msg.includes('already')) {
+            skipped++;
+          } else {
+            errors.push(`${contact.email}: ${msg}`);
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        toast.warning(`Created ${created}, skipped ${skipped}, errors: ${errors.length}`, {
+          description: errors.join('; '),
+        });
+      } else {
+        toast.success(`${created} user(s) created, ${skipped} already existed`);
+      }
+    } catch (err: any) {
+      console.error('Transfer users error:', err);
+      toast.error('Failed to transfer users: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsTransferringUsers(false);
+      setShowTransferUsersConfirm(false);
+    }
+  };
+
   const handleLinkToTGA = async () => {
     if (!profile?.rto_number) return;
     setUpdating(true);
