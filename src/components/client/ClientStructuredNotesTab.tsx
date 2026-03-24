@@ -156,6 +156,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [saving, setSaving] = useState(false);
   const [selectedPackageInfo, setSelectedPackageInfo] = useState<PackageInfo | null>(null);
   const [packageNameMap, setPackageNameMap] = useState<Record<number, string>>({});
+  const [emailViewOpen, setEmailViewOpen] = useState(false);
+  const [emailViewTarget, setEmailViewTarget] = useState<LinkedEmail | null>(null);
   
   // Note type options from dd_note_types
   const [noteTypeOptions, setNoteTypeOptions] = useState<{ code: string; label: string }[]>([]);
