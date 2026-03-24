@@ -278,11 +278,31 @@ serve(async (req) => {
       console.log('[sync-outlook] Fetching emails, folder:', folder, 'top:', top, 'filterEmail:', filterEmail);
       
       try {
-        const emails = await fetchEmails(accessToken, folder, top, filterEmail);
-        return new Response(
-          JSON.stringify({ emails }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        if (filterEmail) {
+          // When filtering by contact, search both inbox and sent items
+          const [inboxEmails, sentEmails] = await Promise.all([
+            fetchEmails(accessToken, 'inbox', top, filterEmail),
+            fetchEmails(accessToken, 'sent', top, filterEmail),
+          ]);
+          // Merge and deduplicate by id, then sort by date descending
+          const emailMap = new Map<string, OutlookEmail>();
+          for (const e of [...inboxEmails, ...sentEmails]) {
+            if (!emailMap.has(e.id)) emailMap.set(e.id, e);
+          }
+          const merged = Array.from(emailMap.values()).sort(
+            (a, b) => new Date(b.receivedDateTime).getTime() - new Date(a.receivedDateTime).getTime()
+          ).slice(0, top);
+          return new Response(
+            JSON.stringify({ emails: merged }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } else {
+          const emails = await fetchEmails(accessToken, folder, top);
+          return new Response(
+            JSON.stringify({ emails }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       } catch (emailError) {
         console.error('[sync-outlook] Email fetch error:', emailError);
         return new Response(
