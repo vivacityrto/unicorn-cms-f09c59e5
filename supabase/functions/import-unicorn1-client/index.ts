@@ -230,6 +230,7 @@ serve(async (req) => {
             id: pid,
             tenant_id: client_id,
             package_id: p.Package_Id ?? p.package_id,
+            is_complete: false,
           });
           if (error) { console.error(`PI ${pid}:`, error.message); skipped++; } else { created++; }
         }
