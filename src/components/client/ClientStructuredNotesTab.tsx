@@ -1353,9 +1353,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-3">
-                              {note.note_details}
-                            </p>
+                            <div
+                              className="text-sm text-muted-foreground mt-1 line-clamp-3 prose prose-sm dark:prose-invert max-w-none [&>p]:m-0"
+                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.note_details) }}
+                            />
                             
                             {/* Tags */}
                             {note.tags.length > 0 && (
