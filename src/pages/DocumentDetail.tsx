@@ -569,7 +569,7 @@ export default function DocumentDetail() {
   const handleEditClick = () => {
     if (!document) return;
     
-    const categoryIds = document.category ? document.category.split(',').map(id => id.trim()) : [];
+    const categoryIds = document.category ? document.category.split(',').map(v => v.trim()) : [];
     
     // Populate edit form with current document data
     setEditFormData({
