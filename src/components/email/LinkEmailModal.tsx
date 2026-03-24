@@ -273,7 +273,7 @@ export function LinkEmailModal({
                 )}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="__none__">None</SelectItem>
                 {packages.map((pkg) => (
                   <SelectItem key={pkg.id} value={pkg.id}>
                     {pkg.label}
@@ -302,7 +302,7 @@ export function LinkEmailModal({
                 )}
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="__none__">None</SelectItem>
                 {tasks.map((task) => (
                   <SelectItem key={task.id} value={task.id}>
                     {task.label}
