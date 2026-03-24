@@ -218,7 +218,7 @@ serve(async (req) => {
       if (opts.package_instances) {
         const pkgs = await execQuery(
           conn,
-          `SELECT [Id], [Package_Id], [StartDate] FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
+          `SELECT [Id], [Package_Id], [StartDate], [EndDate], [IsComplete], [CLO_Id] FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
         let created = 0, skipped = 0;
@@ -226,13 +226,19 @@ serve(async (req) => {
           const pid = p.Id ?? p.id;
           const { data: ex } = await svcClient.from("package_instances").select("id").eq("id", pid).maybeSingle();
           if (ex) { skipped++; continue; }
-          const startDate = p.StartDate ?? p.startdate ?? new Date().toISOString();
+          const startDate = p.StartDate ?? p.startdate ?? new Date().toISOString().split('T')[0];
+          const endDate = p.EndDate ?? p.enddate ?? null;
+          const cloId = p.CLO_Id ?? p.Clo_Id ?? p.clo_id ?? 0;
+          const isComplete = p.IsComplete ?? p.iscomplete ?? false;
           const { error } = await svcClient.from("package_instances").insert({
             id: pid,
             tenant_id: client_id,
             package_id: p.Package_Id ?? p.package_id,
-            is_complete: false,
+            is_complete: Boolean(isComplete),
             start_date: startDate,
+            end_date: endDate,
+            clo_id: Number(cloId) || 0,
+            u1_packageid: p.Package_Id ?? p.package_id,
           });
           if (error) { console.error(`PI ${pid}:`, error.message); skipped++; } else { created++; }
         }
