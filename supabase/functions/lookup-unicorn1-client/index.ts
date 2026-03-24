@@ -23,7 +23,7 @@ function connectMssql(): Promise<Connection> {
       options: {
         database: Deno.env.get("MSSQL_DATABASE")!,
         port: parseInt(Deno.env.get("MSSQL_PORT") || "1433"),
-        encrypt: true,
+        encrypt: false,
         trustServerCertificate: true,
         connectTimeout: 15000,
         requestTimeout: 30000,
