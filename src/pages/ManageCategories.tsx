@@ -62,7 +62,7 @@ export default function ManageCategories() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('documents_categories')
+        .from('_documents_categories')
         .select(`
           *,
           creator:created_by (
@@ -111,7 +111,7 @@ export default function ManageCategories() {
       const maxId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) : 0;
       
       const { error } = await supabase
-        .from('documents_categories')
+        .from('_documents_categories')
         .insert({
           id: maxId + 1,
           name: formData.name.trim(),
@@ -148,7 +148,7 @@ export default function ManageCategories() {
 
     try {
       const { error } = await supabase
-        .from('documents_categories')
+        .from('_documents_categories')
         .update({ name: formData.name.trim() })
         .eq('id', editingCategory.id);
 
@@ -179,7 +179,7 @@ export default function ManageCategories() {
 
     try {
       const { error } = await supabase
-        .from('documents_categories')
+        .from('_documents_categories')
         .delete()
         .eq('id', categoryId);
 

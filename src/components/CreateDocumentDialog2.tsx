@@ -77,12 +77,12 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
   const fetchCategories = async () => {
     try {
       const { data, error } = await supabase
-        .from('documents_categories')
+        .from('_documents_categories')
         .select('id, name')
         .order('name');
       
       if (error) throw error;
-      setCategories(data || []);
+      setCategories((data || []) as { id: number; name: string }[]);
     } catch (error: any) {
       console.error('Error fetching categories:', error);
     }

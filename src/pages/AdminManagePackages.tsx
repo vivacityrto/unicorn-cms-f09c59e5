@@ -227,11 +227,11 @@ export default function AdminManagePackages() {
   const fetchCategories = async () => {
     try {
       const { data, error } = await supabase
-        .from("documents_categories")
+        .from("_documents_categories")
         .select("id, name")
         .order("id", { ascending: true });
       if (error) throw error;
-      setCategories(data || []);
+      setCategories((data || []) as { id: number; name: string }[]);
     } catch (error: any) {
       console.error("Error fetching categories:", error);
     }
