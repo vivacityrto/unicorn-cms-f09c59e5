@@ -150,10 +150,8 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
         fileUrls.push(...uploadedPaths);
       }
 
-      // Get category name from ID
-      const categoryName = formData.category_id 
-        ? categories.find(c => c.id === formData.category_id)?.name || null
-        : null;
+      // Category value is stored directly
+      const categoryValue = formData.category_value || null;
 
       // Store document in public.documents table
       const documentData = {
