@@ -166,11 +166,11 @@ serve(async (req) => {
         try {
           const fields = await execQuery(
             conn,
-            `SELECT [value] FROM [dbo].[clientfields] WHERE [user_id] = @uid AND [field_id] = 14`,
+            `SELECT [Value] FROM [dbo].[ClientFields] WHERE [User_Id] = @uid AND [Field_Id] = 14`,
             [{ name: "uid", type: TYPES.Int, value: client_id }]
           );
-          if (fields.length > 0 && fields[0].value) {
-            rtoId = String(fields[0].value);
+          if (fields.length > 0 && (fields[0].Value ?? fields[0].value)) {
+            rtoId = String(fields[0].Value ?? fields[0].value);
           }
         } catch (_) { /* clientfields may not exist */ }
 
