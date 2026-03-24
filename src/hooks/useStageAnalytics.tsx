@@ -66,7 +66,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
     queryFn: async (): Promise<StageAnalyticsKPIs> => {
       // Get all stages
       const { data: stages, error: stagesError } = await supabase
-        .from('documents_stages')
+        .from('stages')
         .select('id, is_certified, is_archived');
       
       if (stagesError) throw stagesError;
