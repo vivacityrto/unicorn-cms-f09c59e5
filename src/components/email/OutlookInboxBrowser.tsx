@@ -14,6 +14,7 @@ interface OutlookInboxBrowserProps {
   tenantId: string;
   defaultClientId?: number;
   onEmailLinked?: () => void;
+  filterEmail?: string;
 }
 
 interface OutlookEmail {
@@ -35,9 +36,10 @@ export function OutlookInboxBrowser({
   tenantId,
   defaultClientId,
   onEmailLinked,
+  filterEmail,
 }: OutlookInboxBrowserProps) {
   const navigate = useNavigate();
-  const { emails, isLoading, error, hasConnection, fetchEmails, checkConnection } = useOutlookInbox();
+  const { emails, isLoading, error, hasConnection, fetchEmails, checkConnection } = useOutlookInbox({ filterEmail });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEmail, setSelectedEmail] = useState<OutlookEmail | null>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
