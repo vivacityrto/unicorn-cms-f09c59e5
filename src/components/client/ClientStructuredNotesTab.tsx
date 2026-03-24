@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { NoteFormDialog, NoteFormData } from '@/components/notes/NoteFormDialog';
 import { useNotes, Note } from '@/hooks/useNotes';
 import { useNoteTags } from '@/hooks/useNoteTags';
@@ -40,6 +41,26 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { TenantClickUpAISearch } from '@/components/tenant/TenantClickUpAISearch';
+
+/** Detects if content is markdown (vs HTML) and renders accordingly */
+function NoteContentRenderer({ content, className }: { content: string; className?: string }) {
+  const isMarkdown = /(?:^|\n)#{1,6}\s|(?:\*\*|__).+?(?:\*\*|__)|(?:^|\n)[*-]\s/m.test(content) && !/<[a-z][\s\S]*>/i.test(content);
+  
+  if (isMarkdown) {
+    return (
+      <div className={cn("prose prose-sm dark:prose-invert max-w-none", className)}>
+        <ReactMarkdown>{content}</ReactMarkdown>
+      </div>
+    );
+  }
+  
+  return (
+    <div
+      className={cn("prose prose-sm dark:prose-invert max-w-none", className)}
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
+    />
+  );
+}
 
 interface PackageInfo {
   id: number;
@@ -1353,10 +1374,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                                 </Badge>
                               )}
                             </div>
-                            <div
-                              className="text-sm text-muted-foreground mt-1 line-clamp-3 prose prose-sm dark:prose-invert max-w-none [&>p]:m-0"
-                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(note.note_details) }}
-                            />
+                            <NoteContentRenderer content={note.note_details} className="text-sm text-muted-foreground mt-1 line-clamp-3 [&>p]:m-0" />
                             
                             {/* Tags */}
                             {note.tags.length > 0 && (
@@ -1490,10 +1508,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 )}
                 
                 {/* Full note content */}
-                <div
-                  className="prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedNote.note_details) }}
-                />
+                <NoteContentRenderer content={selectedNote.note_details} />
               </div>
             </div>
           )}
