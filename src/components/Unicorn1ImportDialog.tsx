@@ -92,6 +92,8 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
       setResult(data as ImportResult);
       toast({ title: 'Import complete', description: `Client ${selected.company_name} imported successfully.` });
       onSuccess?.();
+      onOpenChange(false);
+      navigate(`/tenant/${selected.id}`);
     } catch (err: any) {
       toast({ title: 'Import failed', description: err.message || 'Import error', variant: 'destructive' });
     } finally {
