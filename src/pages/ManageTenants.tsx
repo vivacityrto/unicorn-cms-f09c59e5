@@ -11,10 +11,11 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, User, Package2, UserPlus, Archive, Pause, MessageSquare, Database } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddTenantDialog } from "@/components/AddTenantDialog";
+import { Unicorn1ImportDialog } from "@/components/Unicorn1ImportDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
@@ -86,6 +87,7 @@ export default function ManageTenants() {
   const [connectAllDialog, setConnectAllDialog] = useState(false);
   const [addTenantDialog, setAddTenantDialog] = useState(false);
   const [cscAssignDialog, setCscAssignDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
+  const [u1ImportOpen, setU1ImportOpen] = useState(false);
   const [stats, setStats] = useState({ total: 0, active: 0, suspended: 0, closed: 0, totalMembers: 0 });
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -635,6 +637,12 @@ export default function ManageTenants() {
                 {isTeamLeader && <TooltipContent><p>Please contact Super Admins.</p></TooltipContent>}
               </Tooltip>
             </TooltipProvider>
+            {isSuperAdmin && (
+              <Button variant="outline" onClick={() => setU1ImportOpen(true)}>
+                <Database className="h-4 w-4 mr-2" />
+                Import from U1
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -1165,6 +1173,9 @@ export default function ManageTenants() {
 
       {/* Add Tenant Dialog */}
       <AddTenantDialog open={addTenantDialog} onOpenChange={setAddTenantDialog} onSuccess={fetchTenants} />
+
+      {/* Unicorn 1 Import Dialog */}
+      <Unicorn1ImportDialog open={u1ImportOpen} onOpenChange={setU1ImportOpen} onSuccess={fetchTenants} />
 
       {/* CSC Quick Assign Dialog */}
       {cscAssignDialog.tenant && (
