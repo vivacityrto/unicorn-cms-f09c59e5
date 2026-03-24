@@ -62,6 +62,138 @@ function execQuery(
   });
 }
 
+function normalizeStageLabel(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFKD")
+    .replace(/&/g, " and ")
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+type TargetStageMaps = {
+  directStageIds: Set<number>;
+  globalStageByLabel: Map<string, number>;
+  packageStageByLabel: Map<number, Map<string, { stageId: number; sortOrder: number | null }>>;
+  packageStageSortOrder: Map<number, Map<number, number | null>>;
+};
+
+async function buildTargetStageMaps(
+  svcClient: ReturnType<typeof createClient>,
+  packageIds: number[]
+): Promise<TargetStageMaps> {
+  const uniquePackageIds = [...new Set(packageIds.filter((value) => Number.isFinite(value)))];
+
+  const { data: targetStages, error: targetStagesError } = await svcClient
+    .from("stages")
+    .select("id, name, shortname");
+  if (targetStagesError) {
+    throw new Error(`Failed to load target stages: ${targetStagesError.message}`);
+  }
+
+  const stageMetaById = new Map<number, { name: string | null; shortname: string | null }>();
+  const directStageIds = new Set<number>();
+  const globalStageByLabel = new Map<string, number>();
+
+  for (const stage of targetStages ?? []) {
+    const stageId = Number(stage.id);
+    if (!Number.isFinite(stageId)) continue;
+
+    directStageIds.add(stageId);
+    stageMetaById.set(stageId, {
+      name: stage.name ?? null,
+      shortname: stage.shortname ?? null,
+    });
+
+    for (const label of [stage.name, stage.shortname]) {
+      const normalized = normalizeStageLabel(label);
+      if (normalized && !globalStageByLabel.has(normalized)) {
+        globalStageByLabel.set(normalized, stageId);
+      }
+    }
+  }
+
+  const packageStageByLabel = new Map<number, Map<string, { stageId: number; sortOrder: number | null }>>();
+  const packageStageSortOrder = new Map<number, Map<number, number | null>>();
+
+  if (uniquePackageIds.length > 0) {
+    const { data: packageStages, error: packageStagesError } = await svcClient
+      .from("package_stages")
+      .select("package_id, stage_id, sort_order")
+      .in("package_id", uniquePackageIds);
+    if (packageStagesError) {
+      throw new Error(`Failed to load package stage mappings: ${packageStagesError.message}`);
+    }
+
+    for (const packageStage of packageStages ?? []) {
+      const packageId = Number(packageStage.package_id);
+      const stageId = Number(packageStage.stage_id);
+      const sortOrder = packageStage.sort_order == null ? null : Number(packageStage.sort_order);
+      if (!Number.isFinite(packageId) || !Number.isFinite(stageId)) continue;
+
+      if (!packageStageByLabel.has(packageId)) {
+        packageStageByLabel.set(packageId, new Map());
+      }
+      if (!packageStageSortOrder.has(packageId)) {
+        packageStageSortOrder.set(packageId, new Map());
+      }
+
+      packageStageSortOrder.get(packageId)!.set(stageId, sortOrder);
+
+      const stageMeta = stageMetaById.get(stageId);
+      for (const label of [stageMeta?.name, stageMeta?.shortname]) {
+        const normalized = normalizeStageLabel(label);
+        if (!normalized) continue;
+        packageStageByLabel.get(packageId)!.set(normalized, { stageId, sortOrder });
+      }
+    }
+  }
+
+  return {
+    directStageIds,
+    globalStageByLabel,
+    packageStageByLabel,
+    packageStageSortOrder,
+  };
+}
+
+function resolveTargetStage(
+  sourceRow: Record<string, any>,
+  stageMaps: TargetStageMaps
+): { stageId: number; sortOrder: number | null } | null {
+  const sourceStageId = Number(sourceRow.Stage_Id ?? sourceRow.stage_id);
+  const packageId = Number(sourceRow.PackageId ?? sourceRow.Package_Id ?? sourceRow.package_id);
+
+  if (Number.isFinite(sourceStageId) && stageMaps.directStageIds.has(sourceStageId)) {
+    const sortOrder = stageMaps.packageStageSortOrder.get(packageId)?.get(sourceStageId) ?? null;
+    return { stageId: sourceStageId, sortOrder };
+  }
+
+  const packageLabelMap = stageMaps.packageStageByLabel.get(packageId);
+  const sourceLabels = [
+    sourceRow.SourceStageName,
+    sourceRow.SourceStageShortName,
+    sourceRow.StageTitle,
+    sourceRow.StageShortName,
+  ];
+
+  for (const label of sourceLabels) {
+    const normalized = normalizeStageLabel(label);
+    if (!normalized) continue;
+
+    const packageMatch = packageLabelMap?.get(normalized);
+    if (packageMatch) return packageMatch;
+
+    const globalStageId = stageMaps.globalStageByLabel.get(normalized);
+    if (globalStageId != null) {
+      const sortOrder = stageMaps.packageStageSortOrder.get(packageId)?.get(globalStageId) ?? null;
+      return { stageId: globalStageId, sortOrder };
+    }
+  }
+
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -253,21 +385,48 @@ serve(async (req) => {
           const idList = piIds.join(",");
           const stages = await execQuery(
             conn,
-            `SELECT [Id], [Stage_Id], [PackageInstance_Id] FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
+            `SELECT si.[Id], si.[Stage_Id], si.[PackageInstance_Id], pi.[Package_Id] AS [PackageId], ds.[Title] AS [SourceStageName], ds.[ShortName] AS [SourceStageShortName]
+             FROM [dbo].[StageInstances] si
+             INNER JOIN [dbo].[PackageInstances] pi ON pi.[Id] = si.[PackageInstance_Id]
+             LEFT JOIN [dbo].[Documents_Stages] ds ON ds.[Id] = si.[Stage_Id]
+             WHERE si.[PackageInstance_Id] IN (${idList})`,
             []
           );
           total = stages.length;
+          const targetStageMaps = await buildTargetStageMaps(
+            svcClient,
+            stages
+              .map((stage) => Number(stage.PackageId ?? stage.Package_Id ?? stage.package_id))
+              .filter((value) => Number.isFinite(value))
+          );
+
           for (const s of stages) {
             const sid = s.Id ?? s.id;
+            const resolvedStage = resolveTargetStage(s, targetStageMaps);
+            if (!resolvedStage) {
+              console.error(`SI ${sid}: unable to map stage`, {
+                source_stage_id: s.Stage_Id ?? s.stage_id,
+                package_id: s.PackageId ?? s.Package_Id ?? s.package_id,
+                source_stage_name: s.SourceStageName ?? null,
+                source_stage_shortname: s.SourceStageShortName ?? null,
+              });
+              skipped++;
+              continue;
+            }
+
             const { data: ex } = await svcClient.from("stage_instances").select("id").eq("id", sid).maybeSingle();
-            if (ex) { skipped++; continue; }
-            const { error } = await svcClient.from("stage_instances").insert({
+            const { error } = await svcClient.from("stage_instances").upsert({
               id: sid,
-              stage_id: s.Stage_Id ?? s.stage_id,
+              stage_id: resolvedStage.stageId,
               packageinstance_id: s.PackageInstance_Id ?? s.packageinstance_id,
-              stage_sortorder: null,
-            });
-            if (error) { console.error(`SI ${sid}:`, error.message); skipped++; } else { created++; }
+              stage_sortorder: resolvedStage.sortOrder,
+            }, { onConflict: "id" });
+            if (error) {
+              console.error(`SI ${sid}:`, error.message);
+              skipped++;
+            } else if (!ex) {
+              created++;
+            }
           }
         }
         results.imported.stage_instances = { created, skipped, total };
