@@ -1,38 +1,41 @@
 
 
-# Merge Governance Features into Manage Documents (Keep Both Pages)
+# Fix: Package Assignments Showing Wrong Stage Names
 
-## What we're doing
-Adding the unique Governance Documents features into the Manage Documents page, while **keeping the Governance Documents page intact** until you're satisfied everything works.
+## Problem
 
-## Features to add to Manage Documents
+The `GovernancePackageAssignments` component queries the **wrong table** for stage names.
 
-1. **Framework filter** — New dropdown (RTO / GTO / CRICOS / No Framework) fetched from `dd_governance_framework`
-2. **SharePoint status filter** — New dropdown (All / Has SP URL / No SP URL)
-3. **Framework column** — Show `framework_type` in the table
-4. **Version column** — Join `document_versions` to show current version number
-5. **SharePoint link/unlink column** — Link icon to open SP URL or browse to set one (reuses `SharePointFileBrowser`)
-6. **Document detail drill-down** — Clicking a row opens `GovernanceDocumentDetail` (version history, publishing, mapping editor, delivery history, tailoring health, package assignments) with a back button
-7. **Updated date column** — Show `updated_at` formatted date
+- `stage_documents.stage_id` references `documents_stages.id` (per the foreign key)
+- But the component fetches names from the `stages` table instead
+- `documents_stages` and `stages` are **separate tables** with different IDs and column names (`title` vs `name`)
+- This causes stage IDs to match wrong rows, displaying incorrect stage names
 
-## Technical approach
+## Fix
 
-### `src/pages/ManageDocuments.tsx`
-- Add new state: `frameworkFilter`, `sharepointFilter`, `selectedDocId`, `sharepointBrowseDocId`
-- Extend `fetchDocuments` query to also select `framework_type`, `source_template_url`, `updated_at`, `current_published_version_id`, and join `document_versions`
-- Extend the `Document` interface with these new fields
-- Add Framework and SharePoint filter dropdowns alongside existing filters
-- Add Framework, Version, and SP link columns to the table
-- Add row click → `setSelectedDocId` to open `GovernanceDocumentDetail`
-- When `selectedDocId` is set, render `GovernanceDocumentDetail` with back button (early return, same pattern as GovernanceDocuments)
-- Add the SharePoint file browser dialog (copy from GovernanceDocuments)
-- Wire filters into `applyFiltersAndSort`
+**File: `src/components/governance/GovernancePackageAssignments.tsx`**
 
-### No changes to
-- `src/pages/admin/GovernanceDocuments.tsx` — kept as-is
-- Navigation/routing — both menu items remain
-- All governance sub-components — already standalone
+1. Change stage name query from `stages` to `documents_stages`
+2. Change the column from `name` to `title` (which is what `documents_stages` uses)
+3. Also update the `package_stages` query — its `stage_id` FK also references `documents_stages`
 
-## File changes
-- **`src/pages/ManageDocuments.tsx`** — extend with governance features (filters, columns, drill-down, SP browser)
+Additionally, restructure the display to group by **stage first** (with packages as secondary), as previously discussed:
+
+- Each row shows the **stage name** as primary text
+- Associated **packages** shown as badges next to the stage
+- Rename card title to "Stage & Package Assignments"
+
+## Technical detail
+
+```text
+Current (broken):
+  stage_documents.stage_id → documents_stages.id
+  but queries: stages.id, stages.name  ← WRONG TABLE
+
+Fixed:
+  stage_documents.stage_id → documents_stages.id
+  queries: documents_stages.id, documents_stages.title  ← CORRECT
+```
+
+Single file change: `src/components/governance/GovernancePackageAssignments.tsx`
 
