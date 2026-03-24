@@ -133,7 +133,7 @@ serve(async (req) => {
         sql = `SELECT TOP 20 id, companyname, rto_id, rto_name, legal_name,
                  abn, acn, cricos_id, email, phone, website,
                  address, suburb, state_code, postcode, lms, accounting_system
-               FROM users_clientlegals
+               FROM users
                WHERE id = @searchId OR rto_id = @searchStr
                ORDER BY companyname`;
         params = [
