@@ -62,18 +62,6 @@ function execQuery(
   });
 }
 
-function toDateStr(val: any): string | null {
-  if (!val) return null;
-  if (val instanceof Date) return val.toISOString().split("T")[0];
-  return String(val).split("T")[0];
-}
-
-function toTimestamp(val: any): string | null {
-  if (!val) return null;
-  if (val instanceof Date) return val.toISOString();
-  return String(val);
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -146,7 +134,6 @@ serve(async (req) => {
     try {
       // ---- 1. Tenant ----
       if (opts.tenant) {
-        // Get company_name from Users
         const clients = await execQuery(
           conn,
           `SELECT [Id], [CompanyName] FROM [dbo].[Users] WHERE [Discriminator] = 'Client' AND [Id] = @cid`,
@@ -161,7 +148,6 @@ serve(async (req) => {
         const c = clients[0];
         const companyName = c.CompanyName ?? c.company_name ?? c.companyname ?? `Client ${client_id}`;
 
-        // Get RTO ID from clientfields (field_id = 14)
         let rtoId: string | null = null;
         try {
           const fields = await execQuery(
@@ -174,7 +160,6 @@ serve(async (req) => {
           }
         } catch (_) { /* clientfields may not exist */ }
 
-        // Check if tenant already exists
         const { data: existing } = await svcClient
           .from("tenants")
           .select("id")
@@ -184,7 +169,6 @@ serve(async (req) => {
         if (existing) {
           results.imported.tenant = { status: "skipped", reason: "already exists" };
         } else {
-          const companyName = c.company_name || `Client ${client_id}`;
           const slug = companyName
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
@@ -230,14 +214,13 @@ serve(async (req) => {
         return rows.map((r) => r.Id ?? r.id);
       }
 
-      // ---- 2. Package Instances ----
+      // ---- 2. Package Instances (IDs only) ----
       if (opts.package_instances) {
         const pkgs = await execQuery(
           conn,
           `SELECT [Id], [Package_Id] FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
-
         let created = 0, skipped = 0;
         for (const p of pkgs) {
           const pid = p.Id ?? p.id;
@@ -253,21 +236,18 @@ serve(async (req) => {
         results.imported.package_instances = { created, skipped, total: pkgs.length };
       }
 
-      // ---- 3. Stage Instances ----
+      // ---- 3. Stage Instances (IDs only) ----
       if (opts.stage_instances) {
         const piIds = await getPackageInstanceIds();
         let created = 0, skipped = 0, total = 0;
-
         if (piIds.length > 0) {
           const idList = piIds.join(",");
           const stages = await execQuery(
             conn,
-            `SELECT [Id], [Stage_Id], [PackageInstance_Id], [CompletionDate], [Status]
-             FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
+            `SELECT [Id], [Stage_Id], [PackageInstance_Id] FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
             []
           );
           total = stages.length;
-
           for (const s of stages) {
             const sid = s.Id ?? s.id;
             const { data: ex } = await svcClient.from("stage_instances").select("id").eq("id", sid).maybeSingle();
@@ -276,8 +256,6 @@ serve(async (req) => {
               id: sid,
               stage_id: s.Stage_Id ?? s.stage_id,
               packageinstance_id: s.PackageInstance_Id ?? s.packageinstance_id,
-              completion_date: toTimestamp(s.CompletionDate ?? s.completion_date),
-              status: s.Status ?? s.status ?? "Not Started",
             });
             if (error) { console.error(`SI ${sid}:`, error.message); skipped++; } else { created++; }
           }
@@ -285,22 +263,19 @@ serve(async (req) => {
         results.imported.stage_instances = { created, skipped, total };
       }
 
-      // ---- 4. Document Instances ----
+      // ---- 4. Document Instances (IDs only) ----
       if (opts.document_instances) {
         const piIds = await getPackageInstanceIds();
         const siIds = await getStageInstanceIds(piIds);
         let created = 0, skipped = 0, total = 0;
-
         if (siIds.length > 0) {
           const siList = siIds.join(",");
           const docs = await execQuery(
             conn,
-            `SELECT [Id], [Document_Id], [StageInstance_Id], [Tenant_Id], [IsGenerated], [GenerationDate]
-             FROM [dbo].[DocumentInstances] WHERE [StageInstance_Id] IN (${siList})`,
+            `SELECT [Id], [Document_Id], [StageInstance_Id] FROM [dbo].[DocumentInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = docs.length;
-
           for (const d of docs) {
             const did = d.Id ?? d.id;
             const { data: ex } = await svcClient.from("document_instances").select("id").eq("id", did).maybeSingle();
@@ -309,9 +284,7 @@ serve(async (req) => {
               id: did,
               document_id: d.Document_Id ?? d.document_id,
               stageinstance_id: d.StageInstance_Id ?? d.stageinstance_id,
-              tenant_id: d.Tenant_Id ?? d.tenant_id ?? client_id,
-              isgenerated: d.IsGenerated ?? d.isgenerated ?? false,
-              generationdate: d.GenerationDate ?? d.generationdate ?? null,
+              tenant_id: client_id,
             });
             if (error) { console.error(`DI ${did}:`, error.message); skipped++; } else { created++; }
           }
@@ -319,23 +292,19 @@ serve(async (req) => {
         results.imported.document_instances = { created, skipped, total };
       }
 
-      // ---- 5. Staff Task Instances ----
+      // ---- 5. Staff Task Instances (IDs only) ----
       if (opts.staff_task_instances) {
         const piIds = await getPackageInstanceIds();
         const siIds = await getStageInstanceIds(piIds);
         let created = 0, skipped = 0, total = 0;
-
         if (siIds.length > 0) {
           const siList = siIds.join(",");
           const tasks = await execQuery(
             conn,
-            `SELECT [Id], [StaffTask_Id], [StageInstance_Id], [Status_Id], [Status],
-                    [CompletionDate], [DueDate], [AssignedDate], [Notes], [Assignee_Id], [IsCore]
-             FROM [dbo].[StaffTaskInstances] WHERE [StageInstance_Id] IN (${siList})`,
+            `SELECT [Id], [StaffTask_Id], [StageInstance_Id] FROM [dbo].[StaffTaskInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = tasks.length;
-
           for (const t of tasks) {
             const tid = t.Id ?? t.id;
             const { data: ex } = await svcClient.from("staff_task_instances").select("id").eq("id", tid).maybeSingle();
@@ -344,14 +313,6 @@ serve(async (req) => {
               id: tid,
               stafftask_id: t.StaffTask_Id ?? t.stafftask_id,
               stageinstance_id: t.StageInstance_Id ?? t.stageinstance_id,
-              status_id: t.Status_Id ?? t.status_id ?? 0,
-              status: t.Status ?? t.status ?? "Not Started",
-              completion_date: toTimestamp(t.CompletionDate ?? t.completion_date),
-              due_date: toTimestamp(t.DueDate ?? t.due_date),
-              assigned_date: toTimestamp(t.AssignedDate ?? t.assigned_date),
-              notes: t.Notes ?? t.notes ?? null,
-              u1_assignee_id: t.Assignee_Id ?? t.assignee_id ?? null,
-              is_core: t.IsCore ?? t.is_core ?? false,
             });
             if (error) { console.error(`STI ${tid}:`, error.message); skipped++; } else { created++; }
           }
@@ -359,22 +320,19 @@ serve(async (req) => {
         results.imported.staff_task_instances = { created, skipped, total };
       }
 
-      // ---- 6. Client Task Instances ----
+      // ---- 6. Client Task Instances (IDs only) ----
       if (opts.client_task_instances) {
         const piIds = await getPackageInstanceIds();
         const siIds = await getStageInstanceIds(piIds);
         let created = 0, skipped = 0, total = 0;
-
         if (siIds.length > 0) {
           const siList = siIds.join(",");
           const tasks = await execQuery(
             conn,
-            `SELECT [Id], [ClientTask_Id], [StageInstance_Id], [Status], [DueDate], [CompletionDate]
-             FROM [dbo].[ClientTaskInstances] WHERE [StageInstance_Id] IN (${siList})`,
+            `SELECT [Id], [ClientTask_Id], [StageInstance_Id] FROM [dbo].[ClientTaskInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = tasks.length;
-
           for (const t of tasks) {
             const tid = t.Id ?? t.id;
             const { data: ex } = await svcClient.from("client_task_instances").select("id").eq("id", tid).maybeSingle();
@@ -383,9 +341,6 @@ serve(async (req) => {
               id: tid,
               clienttask_id: t.ClientTask_Id ?? t.clienttask_id,
               stageinstance_id: t.StageInstance_Id ?? t.stageinstance_id,
-              status: t.Status ?? t.status ?? 0,
-              due_date: toTimestamp(t.DueDate ?? t.due_date),
-              completion_date: toTimestamp(t.CompletionDate ?? t.completion_date),
             });
             if (error) { console.error(`CTI ${tid}:`, error.message); skipped++; } else { created++; }
           }
@@ -393,23 +348,19 @@ serve(async (req) => {
         results.imported.client_task_instances = { created, skipped, total };
       }
 
-      // ---- 7. Email Instances ----
+      // ---- 7. Email Instances (IDs only) ----
       if (opts.email_instances) {
         const piIds = await getPackageInstanceIds();
         const siIds = await getStageInstanceIds(piIds);
         let created = 0, skipped = 0, total = 0;
-
         if (siIds.length > 0) {
           const siList = siIds.join(",");
           const emails = await execQuery(
             conn,
-            `SELECT [Id], [Email_Id], [StageInstance_Id], [Content], [IsSent], [SentDate],
-                    [To], [Cc], [Bcc], [Subject], [Sender_Id], [Sender], [IsCore], [UserAttachments]
-             FROM [dbo].[EmailInstances] WHERE [StageInstance_Id] IN (${siList})`,
+            `SELECT [Id], [Email_Id], [StageInstance_Id] FROM [dbo].[EmailInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = emails.length;
-
           for (const e of emails) {
             const eid = e.Id ?? e.id;
             const { data: ex } = await svcClient.from("email_instances").select("id").eq("id", eid).maybeSingle();
@@ -418,17 +369,6 @@ serve(async (req) => {
               id: eid,
               email_id: e.Email_Id ?? e.email_id ?? null,
               stageinstance_id: e.StageInstance_Id ?? e.stageinstance_id,
-              content: e.Content ?? e.content ?? null,
-              is_sent: e.IsSent ?? e.is_sent ?? false,
-              sent_date: toTimestamp(e.SentDate ?? e.sent_date),
-              to: e.To ?? e.to ?? null,
-              cc: e.Cc ?? e.cc ?? null,
-              bcc: e.Bcc ?? e.bcc ?? null,
-              subject: e.Subject ?? e.subject ?? null,
-              sender_id: e.Sender_Id ?? e.sender_id ?? null,
-              sender: e.Sender ?? e.sender ?? null,
-              is_core: e.IsCore ?? e.is_core ?? false,
-              user_attachments: e.UserAttachments ?? e.user_attachments ?? "",
             });
             if (error) { console.error(`EI ${eid}:`, error.message); skipped++; } else { created++; }
           }
