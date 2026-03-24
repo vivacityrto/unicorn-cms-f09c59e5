@@ -197,8 +197,8 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
     queryFn: async (): Promise<CertifiedUnusedStage[]> => {
       // Get certified non-archived stages
       const { data: certifiedStages, error: stagesError } = await supabase
-        .from('documents_stages')
-        .select('id, title, version_label, updated_at')
+        .from('stages')
+        .select('id, name, version_label, updated_at')
         .eq('is_certified', true)
         .eq('is_archived', false);
       
