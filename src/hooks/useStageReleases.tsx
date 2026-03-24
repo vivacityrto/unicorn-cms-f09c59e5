@@ -19,7 +19,7 @@ export interface StageRelease {
   created_by: string | null;
   stage?: {
     id: number;
-    title: string;
+    name: string;
   };
   items?: StageReleaseItem[];
 }
