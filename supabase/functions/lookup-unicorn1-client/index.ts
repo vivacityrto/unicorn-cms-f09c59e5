@@ -154,7 +154,7 @@ serve(async (req) => {
         try {
           const fields = await execQuery(
             conn,
-            `SELECT [Value] FROM [dbo].[ClientFields] WHERE [User_Id] = @uid AND [Field_Id] = 14`,
+            `SELECT [Value] FROM [dbo].[ClientFields] WHERE [UserId] = @uid AND [FieldId] = 14`,
             [{ name: "uid", type: TYPES.Int, value: u.Id ?? u.id }]
           );
           if (fields.length > 0 && (fields[0].Value ?? fields[0].value)) {

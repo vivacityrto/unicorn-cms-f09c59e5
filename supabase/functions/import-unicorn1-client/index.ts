@@ -166,7 +166,7 @@ serve(async (req) => {
         try {
           const fields = await execQuery(
             conn,
-            `SELECT [Value] FROM [dbo].[ClientFields] WHERE [User_Id] = @uid AND [Field_Id] = 14`,
+            `SELECT [Value] FROM [dbo].[ClientFields] WHERE [UserId] = @uid AND [FieldId] = 14`,
             [{ name: "uid", type: TYPES.Int, value: client_id }]
           );
           if (fields.length > 0 && (fields[0].Value ?? fields[0].value)) {
@@ -268,7 +268,7 @@ serve(async (req) => {
           const idList = piIds.join(",");
           const stages = await execQuery(
             conn,
-            `SELECT [Id], [Stage_Id], [PackageInstance_Id], [CompletionDate], [Status_Id], [Status], [StageSortOrder]
+            `SELECT [Id], [Stage_Id], [PackageInstance_Id], [CompletionDate], [Status]
              FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
             []
           );
@@ -283,9 +283,7 @@ serve(async (req) => {
               stage_id: s.Stage_Id ?? s.stage_id,
               packageinstance_id: s.PackageInstance_Id ?? s.packageinstance_id,
               completion_date: toTimestamp(s.CompletionDate ?? s.completion_date),
-              status_id: s.Status_Id ?? s.status_id ?? 0,
               status: s.Status ?? s.status ?? "Not Started",
-              stage_sortorder: s.StageSortOrder ?? s.stage_sortorder ?? null,
             });
             if (error) { console.error(`SI ${sid}:`, error.message); skipped++; } else { created++; }
           }
