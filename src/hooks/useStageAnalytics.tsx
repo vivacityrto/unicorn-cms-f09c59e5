@@ -238,7 +238,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       return unusedStages.map(s => ({
         id: s.id,
-        title: s.title,
+        title: s.name,
         version_label: (s as any).version_label || null,
         certified_at: certifiedAtMap.get(s.id.toString()) || null,
         updated_at: s.updated_at
