@@ -30,6 +30,7 @@ interface ImportResult {
 
 export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1ImportDialogProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
   const [clients, setClients] = useState<U1Client[]>([]);
