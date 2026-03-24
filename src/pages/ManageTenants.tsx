@@ -637,7 +637,7 @@ export default function ManageTenants() {
                 {isTeamLeader && <TooltipContent><p>Please contact Super Admins.</p></TooltipContent>}
               </Tooltip>
             </TooltipProvider>
-            {isSuperAdmin() && (
+            {isSuperAdmin && (
               <Button variant="outline" onClick={() => setU1ImportOpen(true)}>
                 <Database className="h-4 w-4 mr-2" />
                 Import from U1
