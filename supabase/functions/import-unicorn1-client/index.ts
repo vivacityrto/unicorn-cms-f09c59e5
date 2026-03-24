@@ -268,7 +268,7 @@ serve(async (req) => {
           const idList = piIds.join(",");
           const stages = await execQuery(
             conn,
-            `SELECT [Id], [Stage_Id], [PackageInstance_Id], [CompletionDate], [Status_Id], [Status], [StageSortOrder]
+            `SELECT [Id], [Stage_Id], [PackageInstance_Id], [CompletionDate], [Status]
              FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
             []
           );
