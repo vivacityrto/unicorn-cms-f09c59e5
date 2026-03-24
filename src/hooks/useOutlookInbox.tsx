@@ -21,10 +21,11 @@ interface OutlookEmail {
 interface UseOutlookInboxOptions {
   folder?: string;
   top?: number;
+  filterEmail?: string;
 }
 
 export function useOutlookInbox(options: UseOutlookInboxOptions = {}) {
-  const { folder = "inbox", top = 50 } = options;
+  const { folder = "inbox", top = 50, filterEmail } = options;
   const { user } = useAuth();
   const [emails, setEmails] = useState<OutlookEmail[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +68,7 @@ export function useOutlookInbox(options: UseOutlookInboxOptions = {}) {
     try {
       // Get the access token from the edge function
       const { data, error: funcError } = await supabase.functions.invoke("sync-outlook-calendar", {
-        body: { action: "get-emails", folder, top },
+        body: { action: "get-emails", folder, top, filterEmail },
       });
 
       if (funcError) throw funcError;
@@ -85,7 +86,7 @@ export function useOutlookInbox(options: UseOutlookInboxOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id, folder, top]);
+  }, [user?.id, folder, top, filterEmail]);
 
   // Initial load
   useEffect(() => {
