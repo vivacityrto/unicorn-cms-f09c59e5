@@ -29,7 +29,7 @@ import {
   Plus, StickyNote, Pin, MoreHorizontal, Edit, Trash2, 
   ArrowRight, Tag, Clock, MessageSquare, AlertTriangle, 
   CheckCircle, Users, FileText, Loader2, Filter, Package,
-  ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink, Mail, CalendarIcon, X
+  ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink, Mail, CalendarIcon, X, Eye
 } from 'lucide-react';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
