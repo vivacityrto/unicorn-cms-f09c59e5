@@ -160,16 +160,16 @@ export default function ManageCategories() {
     }
   };
 
-  const handleDeleteCategory = async (categoryId: number) => {
+  const handleDeleteCategory = async (categoryValue: string) => {
     if (!confirm('Are you sure you want to delete this category? Documents with this category will need to be reassigned.')) {
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('_documents_categories')
+        .from('dd_document_categories')
         .delete()
-        .eq('id', categoryId);
+        .eq('value', categoryValue);
 
       if (error) throw error;
 
