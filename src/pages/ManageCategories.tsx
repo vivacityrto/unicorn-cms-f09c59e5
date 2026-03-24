@@ -312,12 +312,12 @@ export default function ManageCategories() {
         <Table>
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center w-24">ID</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Name</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Description</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Created</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center">Created By</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap text-right">Actions</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center w-24">Value</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Label</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Description</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center">Active</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center">Order</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
