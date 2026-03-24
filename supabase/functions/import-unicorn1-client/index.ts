@@ -411,33 +411,34 @@ serve(async (req) => {
           const siList = siIds.join(",");
           const emails = await execQuery(
             conn,
-            `SELECT [id], [email_id], [stageinstance_id], [content], [is_sent], [sent_date],
-                    [to], [cc], [bcc], [subject], [sender_id], [sender], [is_core], [user_attachments]
-             FROM [dbo].[email_instances] WHERE [stageinstance_id] IN (${siList})`,
+            `SELECT [Id], [Email_Id], [StageInstance_Id], [Content], [IsSent], [SentDate],
+                    [To], [Cc], [Bcc], [Subject], [Sender_Id], [Sender], [IsCore], [UserAttachments]
+             FROM [dbo].[EmailInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = emails.length;
 
           for (const e of emails) {
-            const { data: ex } = await svcClient.from("email_instances").select("id").eq("id", e.id).maybeSingle();
+            const eid = e.Id ?? e.id;
+            const { data: ex } = await svcClient.from("email_instances").select("id").eq("id", eid).maybeSingle();
             if (ex) { skipped++; continue; }
             const { error } = await svcClient.from("email_instances").insert({
-              id: e.id,
-              email_id: e.email_id || null,
-              stageinstance_id: e.stageinstance_id,
-              content: e.content || null,
-              is_sent: e.is_sent || false,
-              sent_date: toTimestamp(e.sent_date),
-              to: e.to || null,
-              cc: e.cc || null,
-              bcc: e.bcc || null,
-              subject: e.subject || null,
-              sender_id: e.sender_id || null,
-              sender: e.sender || null,
-              is_core: e.is_core || false,
-              user_attachments: e.user_attachments || "",
+              id: eid,
+              email_id: e.Email_Id ?? e.email_id ?? null,
+              stageinstance_id: e.StageInstance_Id ?? e.stageinstance_id,
+              content: e.Content ?? e.content ?? null,
+              is_sent: e.IsSent ?? e.is_sent ?? false,
+              sent_date: toTimestamp(e.SentDate ?? e.sent_date),
+              to: e.To ?? e.to ?? null,
+              cc: e.Cc ?? e.cc ?? null,
+              bcc: e.Bcc ?? e.bcc ?? null,
+              subject: e.Subject ?? e.subject ?? null,
+              sender_id: e.Sender_Id ?? e.sender_id ?? null,
+              sender: e.Sender ?? e.sender ?? null,
+              is_core: e.IsCore ?? e.is_core ?? false,
+              user_attachments: e.UserAttachments ?? e.user_attachments ?? "",
             });
-            if (error) { console.error(`EI ${e.id}:`, error.message); skipped++; } else { created++; }
+            if (error) { console.error(`EI ${eid}:`, error.message); skipped++; } else { created++; }
           }
         }
         results.imported.email_instances = { created, skipped, total };
