@@ -26,13 +26,13 @@ interface CreateDocumentDialog2Props {
 export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId, stageId, editDocument, tenantId }: CreateDocumentDialog2Props) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
   const [formData, setFormData] = useState({
     document_name: "",
     description: "",
     watermark: false,
     release_to_client: false,
-    category_id: null as number | null,
+    category_value: null as string | null,
     is_active: true
   });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
