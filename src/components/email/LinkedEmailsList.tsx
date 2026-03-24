@@ -92,6 +92,7 @@ interface EmailCardProps {
 
 function EmailCard({ email, fetchAttachments, getAttachmentUrl }: EmailCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
 
@@ -123,98 +124,134 @@ function EmailCard({ email, fetchAttachments, getAttachmentUrl }: EmailCardProps
   };
 
   return (
-    <Collapsible open={isOpen} onOpenChange={handleToggle}>
-      <div className="rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-        <CollapsibleTrigger asChild>
-          <button className="w-full text-left p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="font-medium line-clamp-1">{email.subject || "(No subject)"}</div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <User className="h-3.5 w-3.5" />
-                    <span className="truncate max-w-[200px]">
-                      {email.sender_name || email.sender_email}
-                    </span>
-                  </div>
-                  {email.received_at && (
+    <>
+      <Collapsible open={isOpen} onOpenChange={handleToggle}>
+        <div className="rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+          <CollapsibleTrigger asChild>
+            <button className="w-full text-left p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium line-clamp-1">{email.subject || "(No subject)"}</div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>{format(new Date(email.received_at), "MMM d, yyyy")}</span>
+                      <User className="h-3.5 w-3.5" />
+                      <span className="truncate max-w-[200px]">
+                        {email.sender_name || email.sender_email}
+                      </span>
                     </div>
-                  )}
-                  {email.has_attachments && (
-                    <div className="flex items-center gap-1">
-                      <Paperclip className="h-3.5 w-3.5" />
-                      <span>Attachments</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {isOpen ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
-            </div>
-          </button>
-        </CollapsibleTrigger>
-
-        <CollapsibleContent>
-          <div className="px-4 pb-4 pt-0 border-t">
-            {/* Body preview */}
-            {email.body_preview && (
-              <div className="mt-3">
-                <p className="text-sm text-muted-foreground line-clamp-3">{email.body_preview}</p>
-              </div>
-            )}
-
-            {/* Attachments */}
-            {email.has_attachments && (
-              <div className="mt-4">
-                <div className="text-sm font-medium mb-2 flex items-center gap-1">
-                  <Paperclip className="h-4 w-4" />
-                  Attachments
-                </div>
-                {loadingAttachments ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                  </div>
-                ) : attachments.length > 0 ? (
-                  <div className="space-y-2">
-                    {attachments.map((attachment) => (
-                      <div
-                        key={attachment.id}
-                        className="flex items-center justify-between p-2 rounded bg-muted/50"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm truncate">{attachment.file_name}</span>
-                          <span className="text-xs text-muted-foreground flex-shrink-0">
-                            {formatFileSize(attachment.file_size)}
-                          </span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownload(attachment)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
+                    {email.received_at && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>{format(new Date(email.received_at), "MMM d, yyyy")}</span>
                       </div>
-                    ))}
+                    )}
+                    {email.has_attachments && (
+                      <div className="flex items-center gap-1">
+                        <Paperclip className="h-3.5 w-3.5" />
+                        <span>Attachments</span>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No attachments found</p>
-                )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setViewDialogOpen(true);
+                    }}
+                    title="View full email"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {isOpen ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </CollapsibleContent>
-      </div>
-    </Collapsible>
+            </button>
+          </CollapsibleTrigger>
+
+          <CollapsibleContent>
+            <div className="px-4 pb-4 pt-0 border-t">
+              {/* Body preview */}
+              {email.body_preview && (
+                <div className="mt-3">
+                  <p className="text-sm text-muted-foreground line-clamp-3">{email.body_preview}</p>
+                </div>
+              )}
+
+              {/* View full email button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => setViewDialogOpen(true)}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                View Full Email
+              </Button>
+
+              {/* Attachments */}
+              {email.has_attachments && (
+                <div className="mt-4">
+                  <div className="text-sm font-medium mb-2 flex items-center gap-1">
+                    <Paperclip className="h-4 w-4" />
+                    Attachments
+                  </div>
+                  {loadingAttachments ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-8 w-full" />
+                      <Skeleton className="h-8 w-full" />
+                    </div>
+                  ) : attachments.length > 0 ? (
+                    <div className="space-y-2">
+                      {attachments.map((attachment) => (
+                        <div
+                          key={attachment.id}
+                          className="flex items-center justify-between p-2 rounded bg-muted/50"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-sm truncate">{attachment.file_name}</span>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              {formatFileSize(attachment.file_size)}
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownload(attachment)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No attachments found</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+
+      <EmailViewDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        externalMessageId={email.external_message_id}
+        subject={email.subject}
+        senderName={email.sender_name}
+        senderEmail={email.sender_email}
+        receivedAt={email.received_at}
+        bodyPreview={email.body_preview}
+        hasAttachments={email.has_attachments}
+      />
+    </>
   );
 }
