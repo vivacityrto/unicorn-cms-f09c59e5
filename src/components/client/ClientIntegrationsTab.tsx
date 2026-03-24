@@ -549,6 +549,78 @@ export function ClientIntegrationsTab({
     }
   };
 
+  // Handle TGA summary details transfer to tenant_profile
+  const handleTransferDetails = async () => {
+    if (!profile?.tenant_id || !user?.id || !tgaData.summary) return;
+    setIsTransferringDetails(true);
+    try {
+      const s = tgaData.summary;
+      const updates: Record<string, any> = {
+        tenant_id: profile.tenant_id,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      };
+      if (s.legal_name) updates.legal_name = decodeHtmlEntities(s.legal_name);
+      if (s.trading_name) updates.trading_name = decodeHtmlEntities(s.trading_name);
+      if (s.abn) updates.abn = s.abn;
+      if (s.acn) updates.acn = s.acn;
+      if (s.web_address) updates.website = s.web_address;
+      if (s.organisation_type) updates.org_type = s.organisation_type.toLowerCase().replace(/\s+/g, '_');
+
+      const { error } = await supabase
+        .from('tenant_profile')
+        .upsert(updates as any, { onConflict: 'tenant_id' });
+      if (error) throw error;
+
+      // Also update tenant name to match legal name
+      if (s.legal_name) {
+        await supabase
+          .from('tenants')
+          .update({ name: decodeHtmlEntities(s.legal_name), updated_at: new Date().toISOString() })
+          .eq('id', profile.tenant_id);
+      }
+
+      toast.success('TGA details transferred to tenant profile');
+    } catch (err: any) {
+      console.error('Transfer details error:', err);
+      toast.error('Failed to transfer details: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsTransferringDetails(false);
+      setShowTransferDetailsConfirm(false);
+    }
+  };
+
+  // Handle TGA contact transfer to tenant_profile primary contact
+  const handleTransferContact = async () => {
+    if (!profile?.tenant_id || !user?.id || !tgaData.contacts.length) return;
+    setIsTransferringContact(true);
+    try {
+      // Prefer ChiefExecutive, fallback to first contact
+      const contact = tgaData.contacts.find((c: any) => c.contact_type === 'ChiefExecutive') || tgaData.contacts[0];
+      const updates: Record<string, any> = {
+        tenant_id: profile.tenant_id,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+        primary_contact_name: contact.name || null,
+        primary_contact_email: contact.email || null,
+        primary_contact_phone: contact.phone || null,
+      };
+
+      const { error } = await supabase
+        .from('tenant_profile')
+        .upsert(updates as any, { onConflict: 'tenant_id' });
+      if (error) throw error;
+
+      toast.success(`Contact "${contact.name}" transferred as primary contact`);
+    } catch (err: any) {
+      console.error('Transfer contact error:', err);
+      toast.error('Failed to transfer contact: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsTransferringContact(false);
+      setShowTransferContactConfirm(false);
+    }
+  };
+
   const handleLinkToTGA = async () => {
     if (!profile?.rto_number) return;
     setUpdating(true);
