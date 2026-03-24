@@ -8,7 +8,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/** Connect to MSSQL via tedious, returning a promise-based wrapper. */
 function connectMssql(): Promise<Connection> {
   return new Promise((resolve, reject) => {
     const cfg = {
@@ -38,7 +37,6 @@ function connectMssql(): Promise<Connection> {
   });
 }
 
-/** Execute a parameterised query and return rows as objects. */
 function execQuery(
   conn: Connection,
   sql: string,
@@ -109,16 +107,16 @@ function buildTenantSelect(columns: Set<string>) {
     return matched ? `[${matched}] AS [${alias}]` : `NULL AS [${alias}]`;
   });
 
-  return { 
+  return {
     selectClause: selectParts.join(",\n                 "),
     searchIdColumn: firstMatchingColumn(columns, ["id", "user_id", "tenant_id", "client_id"]),
+    searchRtoColumn: firstMatchingColumn(columns, ["rto_id", "rtoid", "rtocode", "rto_code"]),
     searchNameColumns: [
       firstMatchingColumn(columns, ["companyname", "company_name", "business_name", "name"]),
       firstMatchingColumn(columns, ["rto_name", "rtoname", "trading_name", "rto"]),
       firstMatchingColumn(columns, ["legal_name", "legalname", "entity_name"]),
       firstMatchingColumn(columns, ["rto_id", "rtoid", "rtocode", "rto_code"]),
     ].filter(Boolean) as string[],
-    searchRtoColumn: firstMatchingColumn(columns, ["rto_id", "rtoid", "rtocode", "rto_code"]),
   };
 }
 
@@ -128,7 +126,6 @@ serve(async (req) => {
   }
 
   try {
-    // --- Auth: SuperAdmin only ---
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -136,11 +133,13 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
+
     const { data: claimsData, error: claimsErr } = await supabase.auth.getClaims(
       authHeader.replace("Bearer ", "")
     );
@@ -150,8 +149,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
     const userId = claimsData.claims.sub;
-    // Verify SuperAdmin
     const svcClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -161,6 +160,7 @@ serve(async (req) => {
       .select("global_role, unicorn_role")
       .eq("user_uuid", userId)
       .maybeSingle();
+
     const isSA =
       profile?.global_role === "SuperAdmin" ||
       profile?.unicorn_role === "Super Admin";
@@ -171,7 +171,6 @@ serve(async (req) => {
       });
     }
 
-    // --- Parse body ---
     const { search } = await req.json();
     if (!search || typeof search !== "string" || search.trim().length < 2) {
       return new Response(
@@ -180,36 +179,54 @@ serve(async (req) => {
       );
     }
 
-    // --- Query MSSQL ---
     const conn = await connectMssql();
     try {
-      const isNumeric = /^\d+$/.test(search.trim());
+      const columns = await getTableColumns(conn, "Users", "dbo");
+      if (columns.size === 0) {
+        throw new Error("Could not inspect dbo.Users columns");
+      }
+
+      const tenantSelect = buildTenantSelect(columns);
+      if (!tenantSelect.searchIdColumn) {
+        throw new Error("Could not find an ID column on dbo.Users");
+      }
+
+      const trimmedSearch = search.trim();
+      const isNumeric = /^\d+$/.test(trimmedSearch);
       let sql: string;
       let params: { name: string; type: any; value: any }[];
 
       if (isNumeric) {
-        sql = `SELECT TOP 20 id, companyname, rto_id, rto_name, legal_name,
-                 abn, acn, cricos_id, email, phone, website,
-                 address, suburb, state_code, postcode, lms, accounting_system
-               FROM Users
-               WHERE id = @searchId OR rto_id = @searchStr
-               ORDER BY companyname`;
-        params = [
-          { name: "searchId", type: TYPES.Int, value: parseInt(search.trim()) },
-          { name: "searchStr", type: TYPES.NVarChar, value: search.trim() },
-        ];
+        const whereClauses = [`[${tenantSelect.searchIdColumn}] = @searchId`];
+        params = [{ name: "searchId", type: TYPES.Int, value: parseInt(trimmedSearch) }];
+
+        if (
+          tenantSelect.searchRtoColumn &&
+          tenantSelect.searchRtoColumn !== tenantSelect.searchIdColumn
+        ) {
+          whereClauses.push(`[${tenantSelect.searchRtoColumn}] = @searchStr`);
+          params.push({ name: "searchStr", type: TYPES.NVarChar, value: trimmedSearch });
+        }
+
+        sql = `SELECT TOP 20 ${tenantSelect.selectClause}
+               FROM [dbo].[Users]
+               WHERE ${whereClauses.join(" OR ")}
+               ORDER BY [companyname], [id]`;
       } else {
-        sql = `SELECT TOP 20 id, companyname, rto_id, rto_name, legal_name,
-                 abn, acn, cricos_id, email, phone, website,
-                 address, suburb, state_code, postcode, lms, accounting_system
-               FROM Users
-               WHERE companyname LIKE @searchPattern
-                  OR rto_name LIKE @searchPattern
-                  OR legal_name LIKE @searchPattern
-                  OR rto_id LIKE @searchPattern
-               ORDER BY companyname`;
+        if (tenantSelect.searchNameColumns.length === 0) {
+          return new Response(JSON.stringify({ clients: [] }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        sql = `SELECT TOP 20 ${tenantSelect.selectClause}
+               FROM [dbo].[Users]
+               WHERE ${tenantSelect.searchNameColumns
+                 .map((column) => `[${column}] LIKE @searchPattern`)
+                 .join(" OR ")}
+               ORDER BY [companyname], [id]`;
         params = [
-          { name: "searchPattern", type: TYPES.NVarChar, value: `%${search.trim()}%` },
+          { name: "searchPattern", type: TYPES.NVarChar, value: `%${trimmedSearch}%` },
         ];
       }
 

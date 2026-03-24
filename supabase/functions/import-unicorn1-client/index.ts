@@ -179,11 +179,16 @@ serve(async (req) => {
     try {
       // ---- 1. Tenant ----
       if (opts.tenant) {
+        const tenantColumns = await getTableColumns(conn, "Users", "dbo");
+        const tenantIdColumn = firstMatchingColumn(tenantColumns, ["id", "user_id", "tenant_id", "client_id"]);
+        if (!tenantIdColumn) {
+          throw new Error("Could not find an ID column on dbo.Users");
+        }
+
         const clients = await execQuery(
           conn,
-          `SELECT id, companyname, rto_id, rto_name, legal_name,
-                  abn, acn, cricos_id, website, lms, accounting_system
-           FROM Users WHERE id = @cid`,
+          `SELECT ${buildTenantSelect(tenantColumns)}
+           FROM [dbo].[Users] WHERE [${tenantIdColumn}] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
         if (clients.length === 0) {
