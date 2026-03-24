@@ -1368,7 +1368,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                     return (
                       <div
                         key={`email-${email.id}`}
-                        className="p-4 rounded-lg border transition-colors bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/40"
+                        className="p-4 rounded-lg border transition-colors bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/40 cursor-pointer"
+                        onClick={() => { setEmailViewTarget(email); setEmailViewOpen(true); }}
                       >
                         <div className="flex items-start gap-3">
                           <div className="p-2 rounded-lg shrink-0 bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
@@ -1405,6 +1406,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                                   Attachments
                                 </span>
                               )}
+                              <span className="flex items-center gap-1 text-teal-600">
+                                <Eye className="h-3 w-3" />
+                                Click to view
+                              </span>
                             </div>
                           </div>
                         </div>
