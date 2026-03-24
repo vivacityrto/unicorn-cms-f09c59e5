@@ -149,7 +149,7 @@ serve(async (req) => {
         // Get company_name from Users
         const clients = await execQuery(
           conn,
-          `SELECT [id], [company_name] FROM [dbo].[Users] WHERE [discriminator] = 'client' AND [id] = @cid`,
+          `SELECT [Id], [CompanyName] FROM [dbo].[Users] WHERE [Discriminator] = 'Client' AND [Id] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
         if (clients.length === 0) {
