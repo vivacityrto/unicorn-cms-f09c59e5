@@ -42,6 +42,26 @@ import { cn } from '@/lib/utils';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { TenantClickUpAISearch } from '@/components/tenant/TenantClickUpAISearch';
 
+/** Detects if content is markdown (vs HTML) and renders accordingly */
+function NoteContentRenderer({ content, className }: { content: string; className?: string }) {
+  const isMarkdown = /(?:^|\n)#{1,6}\s|(?:\*\*|__).+?(?:\*\*|__)|(?:^|\n)[*-]\s/m.test(content) && !/<[a-z][\s\S]*>/i.test(content);
+  
+  if (isMarkdown) {
+    return (
+      <div className={cn("prose prose-sm dark:prose-invert max-w-none", className)}>
+        <ReactMarkdown>{content}</ReactMarkdown>
+      </div>
+    );
+  }
+  
+  return (
+    <div
+      className={cn("prose prose-sm dark:prose-invert max-w-none", className)}
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
+    />
+  );
+}
+
 interface PackageInfo {
   id: number;
   name: string;
