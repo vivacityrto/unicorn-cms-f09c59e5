@@ -212,10 +212,10 @@ serve(async (req) => {
       async function getPackageInstanceIds(): Promise<number[]> {
         const pkgs = await execQuery(
           conn,
-          `SELECT [id] FROM [dbo].[package_instances] WHERE [client_id] = @cid`,
+          `SELECT [Id] FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
-        return pkgs.map((r) => r.id);
+        return pkgs.map((r) => r.Id ?? r.id);
       }
 
       // Helper: get stage instance IDs from package instance IDs
@@ -224,10 +224,10 @@ serve(async (req) => {
         const idList = piIds.join(",");
         const rows = await execQuery(
           conn,
-          `SELECT [id] FROM [dbo].[stage_instances] WHERE [packageinstance_id] IN (${idList})`,
+          `SELECT [Id] FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
           []
         );
-        return rows.map((r) => r.id);
+        return rows.map((r) => r.Id ?? r.id);
       }
 
       // ---- 2. Package Instances ----
