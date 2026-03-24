@@ -152,12 +152,11 @@ async function fetchEmails(accessToken: string, folder: string, top: number, fil
   url.searchParams.set('$orderby', 'receivedDateTime desc');
   url.searchParams.set('$top', String(top));
 
-  // Filter by specific email address (from OR to)
+  // Filter by specific email address using $search (participants covers from and to)
   if (filterEmail) {
-    const sanitized = filterEmail.replace(/'/g, "''");
-    url.searchParams.set('$filter',
-      `from/emailAddress/address eq '${sanitized}' or (toRecipients/any(r: r/emailAddress/address eq '${sanitized}'))`
-    );
+    url.searchParams.set('$search', `"participants:${filterEmail}"`);
+    // $search and $orderby can't be combined in Graph API, remove orderby
+    url.searchParams.delete('$orderby');
   }
 
   console.log('[sync-outlook] Fetching emails from folder:', folderPath);
