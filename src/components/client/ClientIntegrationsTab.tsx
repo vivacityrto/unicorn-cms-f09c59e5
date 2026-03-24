@@ -595,8 +595,11 @@ export function ClientIntegrationsTab({
     if (!profile?.tenant_id || !user?.id || !tgaData.contacts.length) return;
     setIsTransferringContact(true);
     try {
-      // Prefer ChiefExecutive, fallback to first contact
-      const contact = tgaData.contacts.find((c: any) => c.contact_type === 'ChiefExecutive') || tgaData.contacts[0];
+      // Prefer Chief executive contact, fallback to first contact
+      const contact = tgaData.contacts.find((c: any) => 
+        c.contact_type?.toLowerCase().includes('chief executive') || 
+        c.contact_type === 'ChiefExecutive'
+      ) || tgaData.contacts[0];
       const updates: Record<string, any> = {
         tenant_id: profile.tenant_id,
         updated_by: user.id,
