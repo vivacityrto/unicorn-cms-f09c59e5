@@ -96,7 +96,7 @@ export default function DocumentDetail() {
   const itemsPerPage = 20;
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
+  const [categories, setCategories] = useState<Array<{ value: string; label: string }>>([]);
   const [stages, setStages] = useState<Array<{ id: number; title: string }>>([]);
   
   // Edit form state
@@ -116,12 +116,13 @@ export default function DocumentDetail() {
   const fetchCategories = async () => {
     try {
       const { data, error } = await supabase
-        .from('_documents_categories')
-        .select('id, name')
-        .order('name', { ascending: true });
+        .from('dd_document_categories')
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
 
       if (error) throw error;
-      setCategories((data || []) as { id: number; name: string }[]);
+      setCategories((data || []) as { value: string; label: string }[]);
     } catch (error: any) {
       console.error('Error fetching categories:', error);
     }
@@ -568,7 +569,7 @@ export default function DocumentDetail() {
   const handleEditClick = () => {
     if (!document) return;
     
-    const categoryIds = document.category ? document.category.split(',').map(id => id.trim()) : [];
+    const categoryIds = document.category ? document.category.split(',').map(v => v.trim()) : [];
     
     // Populate edit form with current document data
     setEditFormData({
@@ -1515,22 +1516,22 @@ export default function DocumentDetail() {
                       <span className="text-muted-foreground">Select categories...</span>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
-                        {editFormData.categories.map((catId) => {
-                          const category = categories.find((c) => c.id.toString() === catId);
+                        {editFormData.categories.map((catVal) => {
+                          const category = categories.find((c) => c.value === catVal);
                           return category ? (
                             <Badge
-                              key={catId}
+                              key={catVal}
                               variant="secondary"
                               className="text-xs px-2 py-0.5"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditFormData({
                                   ...editFormData,
-                                  categories: editFormData.categories.filter((id) => id !== catId),
+                                  categories: editFormData.categories.filter((v) => v !== catVal),
                                 });
                               }}
                             >
-                              {category.name}
+                              {category.label}
                               <X className="ml-1 h-3 w-3" />
                             </Badge>
                           ) : null;
@@ -1542,10 +1543,10 @@ export default function DocumentDetail() {
                 <PopoverContent className="w-full p-2 bg-background z-50" align="start">
                   <div className="space-y-1">
                     {categories.map((cat) => {
-                      const isSelected = editFormData.categories.includes(cat.id.toString());
+                      const isSelected = editFormData.categories.includes(cat.value);
                       return (
                         <div
-                          key={cat.id}
+                          key={cat.value}
                           className={cn(
                             "flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-accent",
                             isSelected && "bg-accent"
@@ -1554,18 +1555,18 @@ export default function DocumentDetail() {
                             if (isSelected) {
                               setEditFormData({
                                 ...editFormData,
-                                categories: editFormData.categories.filter((id) => id !== cat.id.toString()),
+                                categories: editFormData.categories.filter((v) => v !== cat.value),
                               });
                             } else {
                               setEditFormData({
                                 ...editFormData,
-                                categories: [...editFormData.categories, cat.id.toString()],
+                                categories: [...editFormData.categories, cat.value],
                               });
                             }
                           }}
                         >
                           <Checkbox checked={isSelected} />
-                          <span className="text-sm">{cat.name}</span>
+                          <span className="text-sm">{cat.label}</span>
                         </div>
                       );
                     })}

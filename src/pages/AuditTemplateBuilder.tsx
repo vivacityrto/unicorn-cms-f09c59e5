@@ -54,16 +54,16 @@ function useDocuments() {
       // Fetch documents and categories in parallel
       const [docsResult, categoriesResult] = await Promise.all([
         supabase.from('documents').select('id, title, category, createdat').order('category').order('title'),
-        supabase.from('_documents_categories').select('id, name')
+        supabase.from('dd_document_categories').select('value, label').eq('is_active', true).order('sort_order')
       ]);
       
       if (docsResult.error) throw docsResult.error;
       if (categoriesResult.error) throw categoriesResult.error;
       
-      // Create a map of category id to name
+      // Create a map of category value to label
       const categoryMap = new Map<string, string>();
-      ((categoriesResult.data || []) as { id: number; name: string }[]).forEach(cat => {
-        categoryMap.set(String(cat.id), cat.name);
+      ((categoriesResult.data || []) as { value: string; label: string }[]).forEach(cat => {
+        categoryMap.set(cat.value, cat.label);
       });
       
       // Map documents with category names

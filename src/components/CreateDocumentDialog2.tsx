@@ -26,13 +26,13 @@ interface CreateDocumentDialog2Props {
 export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId, stageId, editDocument, tenantId }: CreateDocumentDialog2Props) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
   const [formData, setFormData] = useState({
     document_name: "",
     description: "",
     watermark: false,
     release_to_client: false,
-    category_id: null as number | null,
+    category_value: null as string | null,
     is_active: true
   });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -47,14 +47,13 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
   // Separate effect to populate form when editDocument or categories change
   useEffect(() => {
     if (open && editDocument) {
-      // Map category name to category ID
-      const matchingCategory = categories.find(c => c.name === editDocument.category);
+      // Map category value directly (documents store dd_document_categories.value)
       setFormData({
         document_name: editDocument.title || "",
         description: editDocument.description || "",
         watermark: editDocument.watermark || false,
         release_to_client: editDocument.isclientdoc || editDocument.is_released || false,
-        category_id: matchingCategory?.id || null,
+        category_value: editDocument.category || null,
         is_active: editDocument.is_active !== undefined ? editDocument.is_active : true
       });
       setExistingFiles(editDocument.uploaded_files || []);
@@ -66,7 +65,7 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
         description: "",
         watermark: false,
         release_to_client: false,
-        category_id: null,
+        category_value: null,
         is_active: true
       });
       setUploadedFiles([]);
@@ -77,12 +76,13 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
   const fetchCategories = async () => {
     try {
       const { data, error } = await supabase
-        .from('_documents_categories')
-        .select('id, name')
-        .order('name');
+        .from('dd_document_categories')
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
       
       if (error) throw error;
-      setCategories((data || []) as { id: number; name: string }[]);
+      setCategories((data || []) as { value: string; label: string }[]);
     } catch (error: any) {
       console.error('Error fetching categories:', error);
     }
@@ -150,10 +150,8 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
         fileUrls.push(...uploadedPaths);
       }
 
-      // Get category name from ID
-      const categoryName = formData.category_id 
-        ? categories.find(c => c.id === formData.category_id)?.name || null
-        : null;
+      // Category value is stored directly
+      const categoryValue = formData.category_value || null;
 
       // Store document in public.documents table
       const documentData = {
@@ -166,7 +164,7 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
         stage: stageId || null,
         package_id: packageId,
         tenant_id: tenantId || null,
-        category: categoryName,
+        category: categoryValue,
         uploaded_files: fileUrls.length > 0 ? fileUrls : null,
         file_names: uploadedFiles.length > 0 ? uploadedFiles.map(f => f.name) : (editDocument?.file_names || null),
       };
@@ -200,7 +198,7 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
         description: "",
         watermark: false,
         release_to_client: false,
-        category_id: null,
+        category_value: null,
         is_active: true
       });
       setUploadedFiles([]);
@@ -412,8 +410,8 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
           <div className="space-y-2">
             <Label htmlFor="document-category-2">Category</Label>
             <Select 
-              value={formData.category_id?.toString() || ""} 
-              onValueChange={(value) => setFormData({ ...formData, category_id: value ? Number(value) : null })}
+              value={formData.category_value || ""} 
+              onValueChange={(value) => setFormData({ ...formData, category_value: value || null })}
             >
               <SelectTrigger id="document-category-2" className="bg-background focus:z-10">
                 <SelectValue placeholder="Select a category" />
@@ -423,8 +421,8 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
                   <SelectItem value="no-categories" disabled>No categories available</SelectItem>
                 ) : (
                   categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      {category.name}
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
                     </SelectItem>
                   ))
                 )}

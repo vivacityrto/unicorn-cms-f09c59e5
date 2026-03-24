@@ -31,12 +31,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Category {
-  id: number;
-  name: string;
+  value: string;
+  label: string;
   description: string | null;
-  created_at: string;
-  updated_at: string;
-  created_by: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at?: string;
   creator_name?: string;
   creator_avatar?: string | null;
 }
@@ -62,28 +62,12 @@ export default function ManageCategories() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('_documents_categories')
-        .select(`
-          *,
-          creator:created_by (
-            first_name,
-            last_name,
-            avatar_url
-          )
-        `)
-        .order('id', { ascending: true });
+        .from('dd_document_categories')
+        .select('*')
+        .order('sort_order');
 
       if (error) throw error;
-      
-      // Map the data to include creator_name and avatar
-      const categoriesWithCreator = (data || []).map((cat: any) => ({
-        ...cat,
-        creator_name: cat.creator ? `${cat.creator.first_name} ${cat.creator.last_name}` : 'Unknown',
-        creator_avatar: cat.creator?.avatar_url || null,
-        creator: undefined // Remove the nested object
-      }));
-      
-      setCategories(categoriesWithCreator);
+      setCategories((data || []) as unknown as Category[]);
     } catch (error: any) {
       console.error('Error fetching categories:', error);
       toast({
@@ -107,14 +91,18 @@ export default function ManageCategories() {
     }
 
     try {
-      // Get max ID to determine next ID
-      const maxId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) : 0;
+      // Generate value from label
+      const generatedValue = formData.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      const maxSort = categories.length > 0 ? Math.max(...categories.map(c => c.sort_order || 0)) : 0;
       
       const { error } = await supabase
-        .from('_documents_categories')
+        .from('dd_document_categories')
         .insert({
-          id: maxId + 1,
-          name: formData.name.trim(),
+          value: generatedValue,
+          label: formData.name.trim(),
+          description: formData.description.trim() || null,
+          is_active: true,
+          sort_order: maxSort + 1,
         });
 
       if (error) throw error;
@@ -148,9 +136,9 @@ export default function ManageCategories() {
 
     try {
       const { error } = await supabase
-        .from('_documents_categories')
-        .update({ name: formData.name.trim() })
-        .eq('id', editingCategory.id);
+        .from('dd_document_categories')
+        .update({ label: formData.name.trim(), description: formData.description.trim() || null })
+        .eq('value', editingCategory.value);
 
       if (error) throw error;
 
@@ -172,16 +160,16 @@ export default function ManageCategories() {
     }
   };
 
-  const handleDeleteCategory = async (categoryId: number) => {
+  const handleDeleteCategory = async (categoryValue: string) => {
     if (!confirm('Are you sure you want to delete this category? Documents with this category will need to be reassigned.')) {
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('_documents_categories')
+        .from('dd_document_categories')
         .delete()
-        .eq('id', categoryId);
+        .eq('value', categoryValue);
 
       if (error) throw error;
 
@@ -202,12 +190,12 @@ export default function ManageCategories() {
 
   const openEditDialog = (category: Category) => {
     setEditingCategory(category);
-    setFormData({ name: category.name, description: '' });
+    setFormData({ name: category.label, description: category.description || '' });
     setIsEditDialogOpen(true);
   };
 
   const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchQuery.toLowerCase())
+    category.label.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   useEffect(() => {
@@ -324,12 +312,12 @@ export default function ManageCategories() {
         <Table>
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center w-24">ID</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Name</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Description</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Created</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center">Created By</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap text-right">Actions</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center w-24">Value</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Label</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Description</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center">Active</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center">Order</TableHead>
+                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -341,37 +329,21 @@ export default function ManageCategories() {
                 </TableRow>
               ) : (
                 filteredCategories.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((category, index) => (
-                  <TableRow key={category.id} className="group hover:bg-primary/5 transition-all duration-200 border-b border-border/50 hover:border-primary/20 animate-fade-in" style={{ animationDelay: `${index * 30}ms` }}>
+                  <TableRow key={category.value} className="group hover:bg-primary/5 transition-all duration-200 border-b border-border/50 hover:border-primary/20 animate-fade-in" style={{ animationDelay: `${index * 30}ms` }}>
                   <TableCell className="py-6 border-r border-border/50 text-center w-24">
-                    <span className="font-semibold text-foreground">{category.id}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{category.value}</span>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
-                    <span className="font-semibold text-foreground">{category.name}</span>
+                    <span className="font-semibold text-foreground">{category.label}</span>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm">
                     {category.description || 'No description added'}
                   </TableCell>
-                  <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm">
-                    {new Date(category.created_at).toLocaleDateString()}
+                  <TableCell className="py-6 border-r border-border/50 text-center">
+                    <span className={category.is_active ? 'text-green-600' : 'text-muted-foreground'}>{category.is_active ? 'Yes' : 'No'}</span>
                   </TableCell>
-                  <TableCell className="py-6 border-r border-border/50">
-                    <div className="flex justify-center">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Avatar className="h-8 w-8 cursor-pointer">
-                              <AvatarImage src={category.creator_avatar || undefined} alt={category.creator_name} />
-                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                {category.creator_name ? category.creator_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'UN'}
-                              </AvatarFallback>
-                            </Avatar>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{category.creator_name || 'Unknown'}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                  <TableCell className="py-6 border-r border-border/50 text-center text-sm text-muted-foreground">
+                    {category.sort_order}
                   </TableCell>
                   <TableCell className="text-right py-6">
                     <div className="flex justify-end gap-2">
@@ -386,7 +358,7 @@ export default function ManageCategories() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteCategory(category.id)}
+                        onClick={() => handleDeleteCategory(category.value)}
                         className="hover:bg-red-500/20 hover:text-black"
                       >
                         <Trash2 className="h-4 w-4" />
