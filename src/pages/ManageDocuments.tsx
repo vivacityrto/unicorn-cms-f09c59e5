@@ -262,7 +262,7 @@ export default function ManageDocuments() {
       const {
         count,
         error
-      } = await supabase.from("documents_stages").select("*", { count: "exact", head: true });
+      } = await supabase.from("stages").select("*", { count: "exact", head: true });
       if (error) throw error;
       setStagesCount(count || 0);
     } catch (error: any) {
