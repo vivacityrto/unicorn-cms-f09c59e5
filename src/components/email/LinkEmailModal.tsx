@@ -72,7 +72,7 @@ export function LinkEmailModal({
       const { data, error } = await untypedClient
         .from("tenants")
         .select("id, name")
-        .eq("type", "client")
+        .neq("is_system_tenant", true)
         .order("name");
 
       if (error) throw error;
