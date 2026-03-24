@@ -126,6 +126,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     parentId: tenantId,
     tenantId
   });
+  const { emails: linkedEmails } = useLinkedEmails({ clientId: tenantId });
   const { toast } = useToast();
   const { createItem: createActionItem } = useClientActionItems(tenantId, clientId);
   const [searchParams, setSearchParams] = useSearchParams();
