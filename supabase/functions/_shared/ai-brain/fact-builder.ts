@@ -276,7 +276,7 @@ export function buildPhaseFacts(phases: PhaseData[]): Fact[] {
       { total: phases.length, completed, blocked },
       `${phases.length} phases (${completed} complete, ${blocked} blocked)`,
       null,
-      "documents_stages",
+      "stages",
       phases.map(p => p.id.toString()),
       1.0
     ));

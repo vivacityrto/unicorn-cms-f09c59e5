@@ -183,14 +183,13 @@ const handler = async (req: Request): Promise<Response> => {
     // Fetch stage data if provided
     if (stage_id) {
       const { data: stage } = await supabase
-        .from("documents_stages")
-        .select("id, title")
+        .from("stages")
+        .select("id, name")
         .eq("id", stage_id)
         .single();
 
       if (stage) {
-        const typedStage = stage as StageRow;
-        mergeData["StageName"] = typedStage.title || "";
+        mergeData["StageName"] = (stage as any).name || "";
       }
     }
 

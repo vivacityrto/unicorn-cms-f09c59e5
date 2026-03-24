@@ -79,7 +79,7 @@ export function useStageReleases(tenantId?: number) {
         .from('stage_releases')
         .select(`
           *,
-          stage:documents_stages(id, title)
+          stage:stages(id, name)
         `)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });

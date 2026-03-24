@@ -313,7 +313,7 @@ async function fetchPhaseSummaries(supabase: any, tenantId: number) {
 
   return data.map((p: any) => ({
     id: p.id,
-    label: p.title,
+    label: p.name,
     text: buildPhaseSummary(p),
     mode: "compliance" as const,
     metadata: { stage_type: p.stage_type, status: p.status },

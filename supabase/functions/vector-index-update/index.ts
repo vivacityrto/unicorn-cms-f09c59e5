@@ -222,7 +222,7 @@ async function fetchRecord(
         if (!data) return null;
         return {
           id: String(data.id),
-          label: data.title,
+          label: data.name,
           text: buildPhaseSummary(data),
           mode: "compliance",
           metadata: { stage_type: data.stage_type, status: data.status },

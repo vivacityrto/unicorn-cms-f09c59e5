@@ -111,7 +111,7 @@ serve(async (req) => {
       .from("stage_releases")
       .select(`
         *,
-        stage:documents_stages(id, title)
+        stage:stages(id, name)
       `)
       .eq("id", exportRecord.stage_release_id)
       .single();

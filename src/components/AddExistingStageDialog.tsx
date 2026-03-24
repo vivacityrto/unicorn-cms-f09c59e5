@@ -75,7 +75,12 @@ export function AddExistingStageDialog({
 
       if (error) throw error;
 
-      setStages(stagesData || []);
+      setStages((stagesData || []).map(s => ({
+        id: s.id,
+        title: s.name,
+        short_name: s.shortname,
+        description: s.description,
+      })));
     } catch (error: any) {
       toast({
         title: 'Error',

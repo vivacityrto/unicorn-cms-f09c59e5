@@ -83,7 +83,7 @@ export function useOperationsDashboard() {
           ...item,
           tenant_name: tenantRes.data?.name,
           document_title: docRes.data?.title,
-          stage_title: stageRes.data?.title
+          stage_title: stageRes.data?.name
         } as FailedGeneration;
       }));
 

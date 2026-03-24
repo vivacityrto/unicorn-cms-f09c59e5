@@ -412,11 +412,11 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
       let stageTitleMap = new Map<number, string>();
       if (stageIds.length > 0) {
         const { data: stages } = await supabase
-          .from('documents_stages')
-          .select('id, title')
+          .from('stages')
+          .select('id, name')
           .in('id', stageIds);
         
-        (stages || []).forEach(s => stageTitleMap.set(s.id, s.title));
+        (stages || []).forEach(s => stageTitleMap.set(s.id, s.name));
       }
 
       // Get user emails

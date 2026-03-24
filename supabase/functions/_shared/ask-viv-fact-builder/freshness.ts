@@ -66,7 +66,7 @@ export function collectActivityTimestamps(data: {
     if (phase.updated_at) {
       timestamps.push({
         timestamp: phase.updated_at,
-        source_table: "documents_stages",
+        source_table: "stages",
         source_id: phase.id.toString(),
         label: `Phase "${phase.title}" updated`,
       });
