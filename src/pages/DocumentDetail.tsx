@@ -96,7 +96,7 @@ export default function DocumentDetail() {
   const itemsPerPage = 20;
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
+  const [categories, setCategories] = useState<Array<{ value: string; label: string }>>([]);
   const [stages, setStages] = useState<Array<{ id: number; title: string }>>([]);
   
   // Edit form state
