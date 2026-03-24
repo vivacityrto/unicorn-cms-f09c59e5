@@ -199,7 +199,7 @@ serve(async (req) => {
             access_status: "enabled",
             rto_id: rtoId,
             import_id: client_id,
-            tenant_type: "client",
+            tenant_type: "compliance_system",
             billing_status: "active",
             is_system_tenant: false,
           });
