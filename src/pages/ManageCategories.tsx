@@ -195,7 +195,7 @@ export default function ManageCategories() {
   };
 
   const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchQuery.toLowerCase())
+    category.label.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   useEffect(() => {
