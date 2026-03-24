@@ -132,16 +132,16 @@ serve(async (req) => {
       let params: { name: string; type: any; value: any }[];
 
       if (isNumeric) {
-        sql = `SELECT TOP 20 u.[id], u.[company_name]
+        sql = `SELECT TOP 20 u.[Id], u.[CompanyName]
                FROM [dbo].[Users] u
-               WHERE u.[discriminator] = 'client'
-                 AND u.[id] = @searchId`;
+               WHERE u.[Discriminator] = 'Client'
+                 AND u.[Id] = @searchId`;
         params = [{ name: "searchId", type: TYPES.Int, value: parseInt(trimmedSearch) }];
       } else {
-        sql = `SELECT TOP 20 u.[id], u.[company_name]
+        sql = `SELECT TOP 20 u.[Id], u.[CompanyName]
                FROM [dbo].[Users] u
-               WHERE u.[discriminator] = 'client'
-                 AND u.[company_name] LIKE @searchPattern`;
+               WHERE u.[Discriminator] = 'Client'
+                 AND u.[CompanyName] LIKE @searchPattern`;
         params = [{ name: "searchPattern", type: TYPES.NVarChar, value: `%${trimmedSearch}%` }];
       }
 
@@ -154,19 +154,19 @@ serve(async (req) => {
         try {
           const fields = await execQuery(
             conn,
-            `SELECT [value] FROM [dbo].[clientfields] WHERE [user_id] = @uid AND [field_id] = 14`,
-            [{ name: "uid", type: TYPES.Int, value: u.id }]
+            `SELECT [Value] FROM [dbo].[ClientFields] WHERE [User_Id] = @uid AND [Field_Id] = 14`,
+            [{ name: "uid", type: TYPES.Int, value: u.Id ?? u.id }]
           );
-          if (fields.length > 0 && fields[0].value) {
-            rtoId = String(fields[0].value);
+          if (fields.length > 0 && (fields[0].Value ?? fields[0].value)) {
+            rtoId = String(fields[0].Value ?? fields[0].value);
           }
         } catch (e) {
           console.error(`Failed to fetch clientfields for user ${u.id}:`, e);
         }
 
         clients.push({
-          id: u.id,
-          company_name: u.company_name,
+          id: u.Id ?? u.id,
+          company_name: u.CompanyName ?? u.company_name ?? u.companyname,
           rto_id: rtoId,
         });
       }

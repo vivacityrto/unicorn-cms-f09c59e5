@@ -149,7 +149,7 @@ serve(async (req) => {
         // Get company_name from Users
         const clients = await execQuery(
           conn,
-          `SELECT [id], [company_name] FROM [dbo].[Users] WHERE [discriminator] = 'client' AND [id] = @cid`,
+          `SELECT [Id], [CompanyName] FROM [dbo].[Users] WHERE [Discriminator] = 'Client' AND [Id] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
         if (clients.length === 0) {
@@ -159,17 +159,18 @@ serve(async (req) => {
           );
         }
         const c = clients[0];
+        const companyName = c.CompanyName ?? c.company_name ?? c.companyname ?? `Client ${client_id}`;
 
         // Get RTO ID from clientfields (field_id = 14)
         let rtoId: string | null = null;
         try {
           const fields = await execQuery(
             conn,
-            `SELECT [value] FROM [dbo].[clientfields] WHERE [user_id] = @uid AND [field_id] = 14`,
+            `SELECT [Value] FROM [dbo].[ClientFields] WHERE [User_Id] = @uid AND [Field_Id] = 14`,
             [{ name: "uid", type: TYPES.Int, value: client_id }]
           );
-          if (fields.length > 0 && fields[0].value) {
-            rtoId = String(fields[0].value);
+          if (fields.length > 0 && (fields[0].Value ?? fields[0].value)) {
+            rtoId = String(fields[0].Value ?? fields[0].value);
           }
         } catch (_) { /* clientfields may not exist */ }
 
