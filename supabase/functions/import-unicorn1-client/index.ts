@@ -234,8 +234,7 @@ serve(async (req) => {
       if (opts.package_instances) {
         const pkgs = await execQuery(
           conn,
-          `SELECT [Id], [Package_Id], [StartDate], [EndDate], [IsComplete], [Clo_Id]
-           FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
+          `SELECT [Id], [Package_Id] FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
 
@@ -248,11 +247,6 @@ serve(async (req) => {
             id: pid,
             tenant_id: client_id,
             package_id: p.Package_Id ?? p.package_id,
-            start_date: toDateStr(p.StartDate ?? p.start_date) || new Date().toISOString().split("T")[0],
-            end_date: toDateStr(p.EndDate ?? p.end_date),
-            is_complete: p.IsComplete ?? p.is_complete ?? false,
-            clo_id: p.Clo_Id ?? p.clo_id ?? 0,
-            is_active: !(p.IsComplete ?? p.is_complete ?? false),
           });
           if (error) { console.error(`PI ${pid}:`, error.message); skipped++; } else { created++; }
         }
