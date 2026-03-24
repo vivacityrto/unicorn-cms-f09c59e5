@@ -305,9 +305,8 @@ async function fetchClientSummaries(supabase: any, tenantId: number) {
 
 async function fetchPhaseSummaries(supabase: any, tenantId: number) {
   const { data } = await supabase
-    .from("documents_stages")
-    .select("id, title, status, stage_type")
-    .eq("tenant_id", tenantId)
+    .from("stages")
+    .select("id, name, status, stage_type")
     .limit(100);
 
   if (!data) return [];
