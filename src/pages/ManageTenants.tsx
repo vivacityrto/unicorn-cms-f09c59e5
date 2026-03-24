@@ -643,11 +643,6 @@ export default function ManageTenants() {
                 Import from U1
               </Button>
             )}
-                  </span>
-                </TooltipTrigger>
-                {isTeamLeader && <TooltipContent><p>Please contact Super Admins.</p></TooltipContent>}
-              </Tooltip>
-            </TooltipProvider>
           </div>
         )}
       </div>
