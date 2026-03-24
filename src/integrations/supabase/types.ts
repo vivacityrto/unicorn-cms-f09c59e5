@@ -25920,7 +25920,7 @@ export type Database = {
         Row: {
           billing_category: string | null
           billing_type: string
-          clo_id: number
+          clo_id: number | null
           comments: string | null
           created_at: string | null
           duration: number | null
@@ -25949,7 +25949,7 @@ export type Database = {
         Insert: {
           billing_category?: string | null
           billing_type?: string
-          clo_id: number
+          clo_id?: number | null
           comments?: string | null
           created_at?: string | null
           duration?: number | null
@@ -25960,7 +25960,7 @@ export type Database = {
           id?: number
           included_minutes?: number
           is_active?: boolean
-          is_complete: boolean
+          is_complete?: boolean
           last_document_update_email?: string | null
           last_renewed_date?: string | null
           manager_id?: string | null
@@ -25978,7 +25978,7 @@ export type Database = {
         Update: {
           billing_category?: string | null
           billing_type?: string
-          clo_id?: number
+          clo_id?: number | null
           comments?: string | null
           created_at?: string | null
           duration?: number | null

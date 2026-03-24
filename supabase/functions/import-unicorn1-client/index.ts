@@ -228,7 +228,7 @@ serve(async (req) => {
           if (ex) { skipped++; continue; }
           const startDate = p.StartDate ?? p.startdate ?? new Date().toISOString().split('T')[0];
           const endDate = p.EndDate ?? p.enddate ?? null;
-          const cloId = p.CLO_Id ?? p.Clo_Id ?? p.clo_id ?? 0;
+          const cloId = p.CLO_Id ?? p.Clo_Id ?? p.clo_id ?? null;
           const isComplete = p.IsComplete ?? p.iscomplete ?? false;
           const { error } = await svcClient.from("package_instances").insert({
             id: pid,
