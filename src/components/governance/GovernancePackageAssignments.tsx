@@ -112,9 +112,11 @@ export function GovernancePackageAssignments({ documentId }: Props) {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {stage.packages.map((pkg) => (
+                  {stage.packages.length > 0 ? stage.packages.map((pkg) => (
                     <Badge key={pkg} variant="outline" className="text-xs">{pkg}</Badge>
-                  ))}
+                  )) : (
+                    <span className="text-xs text-muted-foreground italic">No packages linked</span>
+                  )}
                 </div>
               </div>
             ))}
