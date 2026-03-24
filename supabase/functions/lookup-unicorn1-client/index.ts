@@ -64,6 +64,64 @@ function execQuery(
   });
 }
 
+async function getTableColumns(conn: Connection, tableName: string, schema = "dbo") {
+  const rows = await execQuery(
+    conn,
+    `SELECT COLUMN_NAME
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @tableName`,
+    [
+      { name: "schema", type: TYPES.NVarChar, value: schema },
+      { name: "tableName", type: TYPES.NVarChar, value: tableName },
+    ]
+  );
+
+  return new Set(rows.map((row) => String(row.COLUMN_NAME || row.column_name || "").toLowerCase()));
+}
+
+function firstMatchingColumn(columns: Set<string>, candidates: string[]) {
+  return candidates.find((candidate) => columns.has(candidate.toLowerCase())) ?? null;
+}
+
+function buildTenantSelect(columns: Set<string>) {
+  const mappings = [
+    { alias: "id", candidates: ["id", "user_id", "tenant_id", "client_id"] },
+    { alias: "companyname", candidates: ["companyname", "company_name", "business_name", "name"] },
+    { alias: "rto_id", candidates: ["rto_id", "rtoid", "rtocode", "rto_code"] },
+    { alias: "rto_name", candidates: ["rto_name", "rtoname", "trading_name", "rto"] },
+    { alias: "legal_name", candidates: ["legal_name", "legalname", "entity_name"] },
+    { alias: "abn", candidates: ["abn"] },
+    { alias: "acn", candidates: ["acn"] },
+    { alias: "cricos_id", candidates: ["cricos_id", "cricosid", "cricos_code"] },
+    { alias: "email", candidates: ["email", "email_address"] },
+    { alias: "phone", candidates: ["phone", "phone_number", "telephone", "mobile"] },
+    { alias: "website", candidates: ["website", "web_site", "url"] },
+    { alias: "address", candidates: ["address", "street_address", "address1"] },
+    { alias: "suburb", candidates: ["suburb", "city", "town"] },
+    { alias: "state_code", candidates: ["state_code", "state", "province"] },
+    { alias: "postcode", candidates: ["postcode", "post_code", "zip", "zipcode"] },
+    { alias: "lms", candidates: ["lms", "lms_name"] },
+    { alias: "accounting_system", candidates: ["accounting_system", "accountingsystem"] },
+  ];
+
+  const selectParts = mappings.map(({ alias, candidates }) => {
+    const matched = firstMatchingColumn(columns, candidates);
+    return matched ? `[${matched}] AS [${alias}]` : `NULL AS [${alias}]`;
+  });
+
+  return { 
+    selectClause: selectParts.join(",\n                 "),
+    searchIdColumn: firstMatchingColumn(columns, ["id", "user_id", "tenant_id", "client_id"]),
+    searchNameColumns: [
+      firstMatchingColumn(columns, ["companyname", "company_name", "business_name", "name"]),
+      firstMatchingColumn(columns, ["rto_name", "rtoname", "trading_name", "rto"]),
+      firstMatchingColumn(columns, ["legal_name", "legalname", "entity_name"]),
+      firstMatchingColumn(columns, ["rto_id", "rtoid", "rtocode", "rto_code"]),
+    ].filter(Boolean) as string[],
+    searchRtoColumn: firstMatchingColumn(columns, ["rto_id", "rtoid", "rtocode", "rto_code"]),
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
