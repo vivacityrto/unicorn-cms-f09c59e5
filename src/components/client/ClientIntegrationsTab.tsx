@@ -356,6 +356,8 @@ export function ClientIntegrationsTab({
   const [isTransferringDetails, setIsTransferringDetails] = useState(false);
   const [showTransferContactConfirm, setShowTransferContactConfirm] = useState(false);
   const [isTransferringContact, setIsTransferringContact] = useState(false);
+  const [showTransferUsersConfirm, setShowTransferUsersConfirm] = useState(false);
+  const [isTransferringUsers, setIsTransferringUsers] = useState(false);
   const { isSuperAdmin, user } = useAuth();
 
   const hasRtoNumber = !!profile?.rto_number;
@@ -621,6 +623,82 @@ export function ClientIntegrationsTab({
     } finally {
       setIsTransferringContact(false);
       setShowTransferContactConfirm(false);
+    }
+  };
+
+  // Handle transfer all TGA contacts as users to tenant_users
+  const handleTransferUsers = async () => {
+    if (!profile?.tenant_id || !user?.id || !tgaData.contacts.length) return;
+    setIsTransferringUsers(true);
+    try {
+      // Deduplicate contacts by email
+      const uniqueByEmail = new Map<string, any>();
+      for (const contact of tgaData.contacts) {
+        if (contact.email && !uniqueByEmail.has(contact.email.toLowerCase())) {
+          uniqueByEmail.set(contact.email.toLowerCase(), contact);
+        }
+      }
+
+      const contacts = Array.from(uniqueByEmail.values());
+      let created = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      for (const contact of contacts) {
+        // Parse first/last name from contact name (e.g. "Mr Brenton Myatt")
+        const nameParts = (contact.name || '').replace(/^(Mr|Mrs|Ms|Miss|Dr|Prof)\.?\s*/i, '').trim().split(/\s+/);
+        const firstName = nameParts[0] || 'Unknown';
+        const lastName = nameParts.slice(1).join(' ') || 'Unknown';
+        
+        // Chief executive gets Admin role, others get User
+        const isChief = contact.contact_type?.toLowerCase().includes('chief executive') || 
+                        contact.contact_type === 'ChiefExecutive';
+        const role = isChief ? 'Admin' : 'User';
+
+        try {
+          const { data, error } = await supabase.functions.invoke('invite-user', {
+            body: {
+              email: contact.email.toLowerCase().trim(),
+              first_name: firstName,
+              last_name: lastName,
+              invite_as: 'CLIENT',
+              tenant_id: profile.tenant_id,
+              unicorn_role: role,
+              skip_email: true,
+              job_title: contact.position || null,
+              phone_number: contact.phone || null,
+            },
+          });
+
+          if (error) throw error;
+          if (data?.ok === false && data?.code === 'ALREADY_MEMBER') {
+            skipped++;
+          } else {
+            created++;
+          }
+        } catch (err: any) {
+          const msg = err?.message || JSON.stringify(err);
+          if (msg.includes('ALREADY_MEMBER') || msg.includes('already')) {
+            skipped++;
+          } else {
+            errors.push(`${contact.email}: ${msg}`);
+          }
+        }
+      }
+
+      if (errors.length > 0) {
+        toast.warning(`Created ${created}, skipped ${skipped}, errors: ${errors.length}`, {
+          description: errors.join('; '),
+        });
+      } else {
+        toast.success(`${created} user(s) created, ${skipped} already existed`);
+      }
+    } catch (err: any) {
+      console.error('Transfer users error:', err);
+      toast.error('Failed to transfer users: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsTransferringUsers(false);
+      setShowTransferUsersConfirm(false);
     }
   };
 
@@ -931,7 +1009,20 @@ export function ClientIntegrationsTab({
 
                 <TabsContent value="contacts" className="mt-4">
                   {tgaData.contacts.length > 0 && (
-                    <div className="flex justify-end mb-3">
+                    <div className="flex justify-end gap-2 mb-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTransferUsersConfirm(true)}
+                        disabled={isTransferringUsers}
+                      >
+                        {isTransferringUsers ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Users className="h-4 w-4 mr-1" />
+                        )}
+                        Add All as Users
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -943,7 +1034,7 @@ export function ClientIntegrationsTab({
                         ) : (
                           <ArrowRightLeft className="h-4 w-4 mr-1" />
                         )}
-                        Transfer Contact to Tenant
+                        Transfer Primary Contact
                       </Button>
                     </div>
                   )}
@@ -1726,6 +1817,17 @@ export function ClientIntegrationsTab({
         onConfirm={handleTransferContact}
         confirmText="Transfer"
         isLoading={isTransferringContact}
+      />
+
+      {/* TGA Contacts as Users Confirmation */}
+      <ConfirmDialog
+        open={showTransferUsersConfirm}
+        onOpenChange={setShowTransferUsersConfirm}
+        title="Add TGA Contacts as Users"
+        description="This will create user accounts for all unique TGA contacts and add them to this tenant. Chief Executives will be assigned the Admin role, others will be Users. No invitation emails will be sent. Existing users will be skipped."
+        onConfirm={handleTransferUsers}
+        confirmText="Add Users"
+        isLoading={isTransferringUsers}
       />
     </div>
   );
