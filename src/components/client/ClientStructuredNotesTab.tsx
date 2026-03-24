@@ -36,6 +36,7 @@ import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { NotifyClientCheckbox } from './NotifyClientCheckbox';
 import { notifyClientPrimaryContact } from '@/lib/notifyClient';
 import { ComposeEmailDialog } from './ComposeEmailDialog';
+import { EmailViewDialog } from '@/components/email/EmailViewDialog';
 import { SelectSeparator } from '@/components/ui/select';
 import { formatDistanceToNow, format, fromUnixTime, isValid, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
