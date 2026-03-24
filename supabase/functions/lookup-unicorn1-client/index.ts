@@ -132,16 +132,16 @@ serve(async (req) => {
       let params: { name: string; type: any; value: any }[];
 
       if (isNumeric) {
-        sql = `SELECT TOP 20 u.[id], u.[company_name]
+        sql = `SELECT TOP 20 u.[Id], u.[CompanyName]
                FROM [dbo].[Users] u
-               WHERE u.[discriminator] = 'client'
-                 AND u.[id] = @searchId`;
+               WHERE u.[Discriminator] = 'Client'
+                 AND u.[Id] = @searchId`;
         params = [{ name: "searchId", type: TYPES.Int, value: parseInt(trimmedSearch) }];
       } else {
-        sql = `SELECT TOP 20 u.[id], u.[company_name]
+        sql = `SELECT TOP 20 u.[Id], u.[CompanyName]
                FROM [dbo].[Users] u
-               WHERE u.[discriminator] = 'client'
-                 AND u.[company_name] LIKE @searchPattern`;
+               WHERE u.[Discriminator] = 'Client'
+                 AND u.[CompanyName] LIKE @searchPattern`;
         params = [{ name: "searchPattern", type: TYPES.NVarChar, value: `%${trimmedSearch}%` }];
       }
 
