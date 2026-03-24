@@ -900,6 +900,47 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       return true;
     });
 
+  // Convert linked emails to a unified list item format and merge with notes
+  type UnifiedItem = { kind: 'note'; note: Note; sortDate: Date } | { kind: 'email'; email: LinkedEmail; sortDate: Date };
+
+  const unifiedItems = useMemo(() => {
+    const items: UnifiedItem[] = filteredNotes.map(n => ({
+      kind: 'note' as const,
+      note: n,
+      sortDate: new Date(n.created_at),
+    }));
+
+    // Only merge emails when not filtering by a specific note parent type or clickup
+    if (parentTypeFilter === 'all') {
+      const filteredEmails = linkedEmails.filter(email => {
+        if (!dateFrom && !dateTo) return true;
+        const emailDate = email.received_at ? new Date(email.received_at) : email.created_at ? new Date(email.created_at) : null;
+        if (!emailDate || !isValid(emailDate)) return true;
+        if (dateFrom && emailDate < startOfDay(dateFrom)) return false;
+        if (dateTo && emailDate > endOfDay(dateTo)) return false;
+        return true;
+      });
+      filteredEmails.forEach(email => {
+        items.push({
+          kind: 'email' as const,
+          email,
+          sortDate: new Date(email.received_at || email.created_at),
+        });
+      });
+    }
+
+    // Sort by date descending (newest first), pinned notes always on top
+    items.sort((a, b) => {
+      const aPinned = a.kind === 'note' && a.note.is_pinned;
+      const bPinned = b.kind === 'note' && b.note.is_pinned;
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return b.sortDate.getTime() - a.sortDate.getTime();
+    });
+
+    return items;
+  }, [filteredNotes, linkedEmails, parentTypeFilter, dateFrom, dateTo]);
+
   // Filter ClickUp tasks by date range — prefer date_of_last_contact, fall back to date_created
   const filteredClickupTasks = clickupTasks.filter(task => {
     if (!dateFrom && !dateTo) return true;
