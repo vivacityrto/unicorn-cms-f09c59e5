@@ -1516,22 +1516,22 @@ export default function DocumentDetail() {
                       <span className="text-muted-foreground">Select categories...</span>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
-                        {editFormData.categories.map((catId) => {
-                          const category = categories.find((c) => c.id.toString() === catId);
+                        {editFormData.categories.map((catVal) => {
+                          const category = categories.find((c) => c.value === catVal);
                           return category ? (
                             <Badge
-                              key={catId}
+                              key={catVal}
                               variant="secondary"
                               className="text-xs px-2 py-0.5"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditFormData({
                                   ...editFormData,
-                                  categories: editFormData.categories.filter((id) => id !== catId),
+                                  categories: editFormData.categories.filter((v) => v !== catVal),
                                 });
                               }}
                             >
-                              {category.name}
+                              {category.label}
                               <X className="ml-1 h-3 w-3" />
                             </Badge>
                           ) : null;
