@@ -76,12 +76,13 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
   const fetchCategories = async () => {
     try {
       const { data, error } = await supabase
-        .from('_documents_categories')
-        .select('id, name')
-        .order('name');
+        .from('dd_document_categories')
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
       
       if (error) throw error;
-      setCategories((data || []) as { id: number; name: string }[]);
+      setCategories((data || []) as { value: string; label: string }[]);
     } catch (error: any) {
       console.error('Error fetching categories:', error);
     }
