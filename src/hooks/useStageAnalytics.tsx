@@ -338,11 +338,11 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
       if (stageIdsWithEdits.length === 0) return [];
 
       const { data: stages } = await supabase
-        .from('documents_stages')
-        .select('id, title')
+        .from('stages')
+        .select('id, name')
         .in('id', stageIdsWithEdits);
 
-      const stageTitleMap = new Map((stages || []).map(s => [s.id, s.title]));
+      const stageTitleMap = new Map((stages || []).map(s => [s.id, s.name]));
 
       // Get user emails for top editors
       const allUserIds = new Set<string>();
