@@ -280,3 +280,9 @@ verify_jwt = false
 
 [functions.extract-suggest-title]
 verify_jwt = false
+
+[functions.lookup-unicorn1-client]
+verify_jwt = false
+
+[functions.import-unicorn1-client]
+verify_jwt = false
