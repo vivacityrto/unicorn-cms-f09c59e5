@@ -337,30 +337,31 @@ serve(async (req) => {
           const siList = siIds.join(",");
           const tasks = await execQuery(
             conn,
-            `SELECT [id], [stafftask_id], [stageinstance_id], [status_id], [status],
-                    [completion_date], [due_date], [assigned_date], [notes], [assignee_id], [is_core]
-             FROM [dbo].[staff_task_instances] WHERE [stageinstance_id] IN (${siList})`,
+            `SELECT [Id], [StaffTask_Id], [StageInstance_Id], [Status_Id], [Status],
+                    [CompletionDate], [DueDate], [AssignedDate], [Notes], [Assignee_Id], [IsCore]
+             FROM [dbo].[StaffTaskInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = tasks.length;
 
           for (const t of tasks) {
-            const { data: ex } = await svcClient.from("staff_task_instances").select("id").eq("id", t.id).maybeSingle();
+            const tid = t.Id ?? t.id;
+            const { data: ex } = await svcClient.from("staff_task_instances").select("id").eq("id", tid).maybeSingle();
             if (ex) { skipped++; continue; }
             const { error } = await svcClient.from("staff_task_instances").insert({
-              id: t.id,
-              stafftask_id: t.stafftask_id,
-              stageinstance_id: t.stageinstance_id,
-              status_id: t.status_id ?? 0,
-              status: t.status || "Not Started",
-              completion_date: toTimestamp(t.completion_date),
-              due_date: toTimestamp(t.due_date),
-              assigned_date: toTimestamp(t.assigned_date),
-              notes: t.notes || null,
-              u1_assignee_id: t.assignee_id || null,
-              is_core: t.is_core || false,
+              id: tid,
+              stafftask_id: t.StaffTask_Id ?? t.stafftask_id,
+              stageinstance_id: t.StageInstance_Id ?? t.stageinstance_id,
+              status_id: t.Status_Id ?? t.status_id ?? 0,
+              status: t.Status ?? t.status ?? "Not Started",
+              completion_date: toTimestamp(t.CompletionDate ?? t.completion_date),
+              due_date: toTimestamp(t.DueDate ?? t.due_date),
+              assigned_date: toTimestamp(t.AssignedDate ?? t.assigned_date),
+              notes: t.Notes ?? t.notes ?? null,
+              u1_assignee_id: t.Assignee_Id ?? t.assignee_id ?? null,
+              is_core: t.IsCore ?? t.is_core ?? false,
             });
-            if (error) { console.error(`STI ${t.id}:`, error.message); skipped++; } else { created++; }
+            if (error) { console.error(`STI ${tid}:`, error.message); skipped++; } else { created++; }
           }
         }
         results.imported.staff_task_instances = { created, skipped, total };
