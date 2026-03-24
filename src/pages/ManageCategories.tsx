@@ -111,7 +111,7 @@ export default function ManageCategories() {
       const maxId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) : 0;
       
       const { error } = await supabase
-        .from('documents_categories')
+        .from('_documents_categories')
         .insert({
           id: maxId + 1,
           name: formData.name.trim(),
