@@ -244,7 +244,7 @@ serve(async (req) => {
           const idList = piIds.join(",");
           const stages = await execQuery(
             conn,
-            `SELECT [Id], [Stage_Id], [PackageInstance_Id] FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
+            `SELECT [Id], [Stage_Id], [PackageInstance_Id], [SortOrder] FROM [dbo].[StageInstances] WHERE [PackageInstance_Id] IN (${idList})`,
             []
           );
           total = stages.length;
@@ -256,6 +256,7 @@ serve(async (req) => {
               id: sid,
               stage_id: s.Stage_Id ?? s.stage_id,
               packageinstance_id: s.PackageInstance_Id ?? s.packageinstance_id,
+              stage_sortorder: s.SortOrder ?? s.sortorder ?? null,
             });
             if (error) { console.error(`SI ${sid}:`, error.message); skipped++; } else { created++; }
           }
