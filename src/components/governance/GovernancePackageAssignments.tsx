@@ -31,35 +31,42 @@ export function GovernancePackageAssignments({ documentId }: Props) {
 
       const stageIds = [...new Set(stageDocs.map(r => r.stage_id))];
 
-      // 2. Get packages linked to those stages
-      const { data: pkgStages, error: psError } = await supabase
+      // 2. Get packages linked to those stages (may be empty)
+      const { data: pkgStages } = await supabase
         .from('package_stages')
         .select('stage_id, package_id')
         .in('stage_id', stageIds);
-      if (psError) throw psError;
-      if (!pkgStages || pkgStages.length === 0) return [] as PackageAssignment[];
 
-      const pkgIds = [...new Set(pkgStages.map(r => r.package_id))];
+      const pkgIds = [...new Set((pkgStages || []).map(r => r.package_id))];
 
-      // 3. Fetch names — use documents_stages (correct FK target) not stages
+      // 3. Fetch names — use documents_stages (correct FK target)
       const [pkgRes, stageRes] = await Promise.all([
-        supabase.from('packages').select('id, name').in('id', pkgIds),
+        pkgIds.length > 0
+          ? supabase.from('packages').select('id, name').in('id', pkgIds)
+          : { data: [] },
         supabase.from('documents_stages').select('id, title').in('id', stageIds),
       ]);
 
       const pkgMap = new Map((pkgRes.data || []).map((p: any) => [p.id, p.name]));
       const stageMap = new Map((stageRes.data || []).map((s: any) => [s.id, s.title]));
 
-      // 4. Build delivery_type lookup from stage_documents
+      // 4. Build delivery_type lookup and package-per-stage lookup
       const deliveryMap = new Map(stageDocs.map(r => [r.stage_id, r.delivery_type]));
+      const stagePkgMap = new Map<number, string[]>();
+      for (const ps of (pkgStages || [])) {
+        const list = stagePkgMap.get(ps.stage_id) || [];
+        const name = pkgMap.get(ps.package_id) ?? 'Unknown';
+        if (!list.includes(name)) list.push(name);
+        stagePkgMap.set(ps.stage_id, list);
+      }
 
-      // 5. Map: for each package_stage combo, create an assignment
-      return pkgStages.map((ps) => ({
-        package_id: ps.package_id,
-        package_name: pkgMap.get(ps.package_id) ?? 'Unknown',
-        stage_id: ps.stage_id,
-        stage_title: stageMap.get(ps.stage_id) ?? 'Unknown',
-        delivery_type: deliveryMap.get(ps.stage_id) ?? 'standard',
+      // 5. Build one entry per stage (packages may be empty)
+      return stageIds.map((sid) => ({
+        package_id: 0,
+        package_name: (stagePkgMap.get(sid) || []).join(', ') || '',
+        stage_id: sid,
+        stage_title: stageMap.get(sid) ?? 'Unknown',
+        delivery_type: deliveryMap.get(sid) ?? 'standard',
       })) as PackageAssignment[];
     },
     staleTime: 2 * 60_000,
@@ -70,8 +77,12 @@ export function GovernancePackageAssignments({ documentId }: Props) {
     if (!acc[a.stage_id]) {
       acc[a.stage_id] = { title: a.stage_title, delivery_type: a.delivery_type, packages: [] };
     }
-    if (!acc[a.stage_id].packages.includes(a.package_name)) {
-      acc[a.stage_id].packages.push(a.package_name);
+    // package_name may contain comma-separated names or be empty
+    const names = a.package_name ? a.package_name.split(', ') : [];
+    for (const name of names) {
+      if (name && !acc[a.stage_id].packages.includes(name)) {
+        acc[a.stage_id].packages.push(name);
+      }
     }
     return acc;
   }, {});
@@ -101,9 +112,11 @@ export function GovernancePackageAssignments({ documentId }: Props) {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {stage.packages.map((pkg) => (
+                  {stage.packages.length > 0 ? stage.packages.map((pkg) => (
                     <Badge key={pkg} variant="outline" className="text-xs">{pkg}</Badge>
-                  ))}
+                  )) : (
+                    <span className="text-xs text-muted-foreground italic">No packages linked</span>
+                  )}
                 </div>
               </div>
             ))}
