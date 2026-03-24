@@ -164,7 +164,7 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
         stage: stageId || null,
         package_id: packageId,
         tenant_id: tenantId || null,
-        category: categoryName,
+        category: categoryValue,
         uploaded_files: fileUrls.length > 0 ? fileUrls : null,
         file_names: uploadedFiles.length > 0 ? uploadedFiles.map(f => f.name) : (editDocument?.file_names || null),
       };
