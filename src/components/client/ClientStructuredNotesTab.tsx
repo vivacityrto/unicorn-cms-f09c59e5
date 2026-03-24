@@ -1332,7 +1332,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 </ScrollArea>
               )}
             </div>
-          ) : filteredNotes.length === 0 ? (
+          ) : unifiedItems.length === 0 ? (
             <div className="space-y-3">
               <TenantClickUpAISearch tenantId={tenantId} />
               <div className="text-center py-12 text-muted-foreground">
@@ -1358,7 +1358,59 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               <TenantClickUpAISearch tenantId={tenantId} />
               <ScrollArea className="h-[500px]">
               <div className="space-y-3">
-                {filteredNotes.map(note => {
+                {unifiedItems.map(item => {
+                  if (item.kind === 'email') {
+                    const email = item.email;
+                    const emailDate = email.received_at ? format(new Date(email.received_at), 'dd MMM yyyy, h:mm a') : '';
+                    return (
+                      <div
+                        key={`email-${email.id}`}
+                        className="p-4 rounded-lg border transition-colors bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/40"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-lg shrink-0 bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
+                            <Mail className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium">
+                                EMAIL: {email.subject || '(No subject)'} – {emailDate}
+                              </span>
+                              <Badge variant="outline" className="text-xs bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-900/50 dark:text-teal-300">
+                                Linked Email
+                              </Badge>
+                            </div>
+                            {email.body_preview && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{email.body_preview}</p>
+                            )}
+                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                              {email.sender_name && (
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {email.sender_name}
+                                </span>
+                              )}
+                              {email.received_at && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {formatDistanceToNow(new Date(email.received_at), { addSuffix: true })}
+                                </span>
+                              )}
+                              {email.has_attachments && (
+                                <span className="flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  Attachments
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Regular note rendering
+                  const note = item.note;
                   const typeConfig = getNoteTypeConfig(note.note_type);
                   const TypeIcon = typeConfig.icon;
                   
