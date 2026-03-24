@@ -352,6 +352,10 @@ export function ClientIntegrationsTab({
   const [showTransferConfirm, setShowTransferConfirm] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [lastTransferDate, setLastTransferDate] = useState<string | null>(null);
+  const [showTransferDetailsConfirm, setShowTransferDetailsConfirm] = useState(false);
+  const [isTransferringDetails, setIsTransferringDetails] = useState(false);
+  const [showTransferContactConfirm, setShowTransferContactConfirm] = useState(false);
+  const [isTransferringContact, setIsTransferringContact] = useState(false);
   const { isSuperAdmin, user } = useAuth();
 
   const hasRtoNumber = !!profile?.rto_number;
