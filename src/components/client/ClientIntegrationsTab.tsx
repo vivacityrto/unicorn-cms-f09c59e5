@@ -927,6 +927,23 @@ export function ClientIntegrationsTab({
                 </TabsContent>
 
                 <TabsContent value="contacts" className="mt-4">
+                  {tgaData.contacts.length > 0 && (
+                    <div className="flex justify-end mb-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTransferContactConfirm(true)}
+                        disabled={isTransferringContact}
+                      >
+                        {isTransferringContact ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <ArrowRightLeft className="h-4 w-4 mr-1" />
+                        )}
+                        Transfer Contact to Tenant
+                      </Button>
+                    </div>
+                  )}
                   {tgaData.contacts.length > 0 ? (
                     <Table>
                       <TableHeader>
