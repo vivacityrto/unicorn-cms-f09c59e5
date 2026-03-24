@@ -754,7 +754,7 @@ export default function TenantDetail() {
                 <TableBody>
                     {recentDocuments && recentDocuments.length > 0 ? recentDocuments.map((doc: any) => {
                     const docTitle = doc.title || doc.document_name || 'Untitled Document';
-                    const categoryName = doc.documents_categories?.name || doc.category || 'Document';
+                    const categoryName = doc.category || 'Document';
                     const fileCount = doc.file_names?.length || doc.uploaded_files?.length || doc.file_paths?.length || 0;
                     const isReleased = doc.source === 'tenant' ? true : (doc.is_released ?? false);
                     const packageName = doc.packages?.name || null;
