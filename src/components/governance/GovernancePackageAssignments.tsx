@@ -77,8 +77,12 @@ export function GovernancePackageAssignments({ documentId }: Props) {
     if (!acc[a.stage_id]) {
       acc[a.stage_id] = { title: a.stage_title, delivery_type: a.delivery_type, packages: [] };
     }
-    if (!acc[a.stage_id].packages.includes(a.package_name)) {
-      acc[a.stage_id].packages.push(a.package_name);
+    // package_name may contain comma-separated names or be empty
+    const names = a.package_name ? a.package_name.split(', ') : [];
+    for (const name of names) {
+      if (name && !acc[a.stage_id].packages.includes(name)) {
+        acc[a.stage_id].packages.push(name);
+      }
     }
     return acc;
   }, {});
