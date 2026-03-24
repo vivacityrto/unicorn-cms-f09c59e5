@@ -1702,6 +1702,28 @@ export function ClientIntegrationsTab({
         isLoading={isTransferring}
         variant="destructive"
       />
+
+      {/* TGA Details Transfer Confirmation */}
+      <ConfirmDialog
+        open={showTransferDetailsConfirm}
+        onOpenChange={setShowTransferDetailsConfirm}
+        title="Transfer TGA Details"
+        description="This will update the tenant profile with ABN, ACN, Legal Name, Trading Name, Website, and Organisation Type from TGA. Existing values will be overwritten."
+        onConfirm={handleTransferDetails}
+        confirmText="Transfer"
+        isLoading={isTransferringDetails}
+      />
+
+      {/* TGA Contact Transfer Confirmation */}
+      <ConfirmDialog
+        open={showTransferContactConfirm}
+        onOpenChange={setShowTransferContactConfirm}
+        title="Transfer TGA Contact"
+        description="This will set the primary contact on the tenant profile using the Chief Executive contact from TGA (or first contact if no Chief Executive). Existing primary contact details will be overwritten."
+        onConfirm={handleTransferContact}
+        confirmText="Transfer"
+        isLoading={isTransferringContact}
+      />
     </div>
   );
 }
