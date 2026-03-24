@@ -101,7 +101,7 @@ export function LinkEmailModal({
       const { data, error } = await untypedClient
         .from("packages")
         .select("id, name")
-        .eq("tenant_id", parseInt(clientId))
+        .eq("client_id", parseInt(clientId))
         .order("name");
 
       if (error) throw error;
@@ -128,11 +128,11 @@ export function LinkEmailModal({
     setLoadingTasks(true);
     try {
       const { data, error } = await untypedClient
-        .from("tasks")
+        .from("tasks_tenants")
         .select("id, task_name")
         .eq("tenant_id", parseInt(clientId))
         .eq("status", "open")
-        .order("date_created_ms", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(50);
 
       if (error) throw error;
