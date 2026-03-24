@@ -1179,6 +1179,9 @@ export default function ManageTenants() {
       {/* Add Tenant Dialog */}
       <AddTenantDialog open={addTenantDialog} onOpenChange={setAddTenantDialog} onSuccess={fetchTenants} />
 
+      {/* Unicorn 1 Import Dialog */}
+      <Unicorn1ImportDialog open={u1ImportOpen} onOpenChange={setU1ImportOpen} onSuccess={fetchTenants} />
+
       {/* CSC Quick Assign Dialog */}
       {cscAssignDialog.tenant && (
         <CSCQuickAssignDialog
