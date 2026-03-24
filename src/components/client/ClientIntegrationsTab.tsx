@@ -352,6 +352,10 @@ export function ClientIntegrationsTab({
   const [showTransferConfirm, setShowTransferConfirm] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [lastTransferDate, setLastTransferDate] = useState<string | null>(null);
+  const [showTransferDetailsConfirm, setShowTransferDetailsConfirm] = useState(false);
+  const [isTransferringDetails, setIsTransferringDetails] = useState(false);
+  const [showTransferContactConfirm, setShowTransferContactConfirm] = useState(false);
+  const [isTransferringContact, setIsTransferringContact] = useState(false);
   const { isSuperAdmin, user } = useAuth();
 
   const hasRtoNumber = !!profile?.rto_number;
@@ -542,6 +546,78 @@ export function ClientIntegrationsTab({
     } finally {
       setIsTransferring(false);
       setShowTransferConfirm(false);
+    }
+  };
+
+  // Handle TGA summary details transfer to tenant_profile
+  const handleTransferDetails = async () => {
+    if (!profile?.tenant_id || !user?.id || !tgaData.summary) return;
+    setIsTransferringDetails(true);
+    try {
+      const s = tgaData.summary;
+      const updates: Record<string, any> = {
+        tenant_id: profile.tenant_id,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      };
+      if (s.legal_name) updates.legal_name = decodeHtmlEntities(s.legal_name);
+      if (s.trading_name) updates.trading_name = decodeHtmlEntities(s.trading_name);
+      if (s.abn) updates.abn = s.abn;
+      if (s.acn) updates.acn = s.acn;
+      if (s.web_address) updates.website = s.web_address;
+      if (s.organisation_type) updates.org_type = s.organisation_type.toLowerCase().replace(/\s+/g, '_');
+
+      const { error } = await supabase
+        .from('tenant_profile')
+        .upsert(updates as any, { onConflict: 'tenant_id' });
+      if (error) throw error;
+
+      // Also update tenant name to match legal name
+      if (s.legal_name) {
+        await supabase
+          .from('tenants')
+          .update({ name: decodeHtmlEntities(s.legal_name), updated_at: new Date().toISOString() })
+          .eq('id', profile.tenant_id);
+      }
+
+      toast.success('TGA details transferred to tenant profile');
+    } catch (err: any) {
+      console.error('Transfer details error:', err);
+      toast.error('Failed to transfer details: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsTransferringDetails(false);
+      setShowTransferDetailsConfirm(false);
+    }
+  };
+
+  // Handle TGA contact transfer to tenant_profile primary contact
+  const handleTransferContact = async () => {
+    if (!profile?.tenant_id || !user?.id || !tgaData.contacts.length) return;
+    setIsTransferringContact(true);
+    try {
+      // Prefer ChiefExecutive, fallback to first contact
+      const contact = tgaData.contacts.find((c: any) => c.contact_type === 'ChiefExecutive') || tgaData.contacts[0];
+      const updates: Record<string, any> = {
+        tenant_id: profile.tenant_id,
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+        primary_contact_name: contact.name || null,
+        primary_contact_email: contact.email || null,
+        primary_contact_phone: contact.phone || null,
+      };
+
+      const { error } = await supabase
+        .from('tenant_profile')
+        .upsert(updates as any, { onConflict: 'tenant_id' });
+      if (error) throw error;
+
+      toast.success(`Contact "${contact.name}" transferred as primary contact`);
+    } catch (err: any) {
+      console.error('Transfer contact error:', err);
+      toast.error('Failed to transfer contact: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsTransferringContact(false);
+      setShowTransferContactConfirm(false);
     }
   };
 
@@ -829,6 +905,21 @@ export function ClientIntegrationsTab({
                 )}
 
                 <TabsContent value="summary" className="mt-4">
+                  <div className="flex justify-end mb-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowTransferDetailsConfirm(true)}
+                      disabled={isTransferringDetails || !tgaData.summary}
+                    >
+                      {isTransferringDetails ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <ArrowRightLeft className="h-4 w-4 mr-1" />
+                      )}
+                      Transfer Details to Tenant
+                    </Button>
+                  </div>
                   <SummaryTab 
                     summary={tgaData.summary} 
                     debugPayload={debugInfo?.debugPayload?.payload}
@@ -836,6 +927,23 @@ export function ClientIntegrationsTab({
                 </TabsContent>
 
                 <TabsContent value="contacts" className="mt-4">
+                  {tgaData.contacts.length > 0 && (
+                    <div className="flex justify-end mb-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTransferContactConfirm(true)}
+                        disabled={isTransferringContact}
+                      >
+                        {isTransferringContact ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <ArrowRightLeft className="h-4 w-4 mr-1" />
+                        )}
+                        Transfer Contact to Tenant
+                      </Button>
+                    </div>
+                  )}
                   {tgaData.contacts.length > 0 ? (
                     <Table>
                       <TableHeader>
@@ -1593,6 +1701,28 @@ export function ClientIntegrationsTab({
         confirmText="Transfer"
         isLoading={isTransferring}
         variant="destructive"
+      />
+
+      {/* TGA Details Transfer Confirmation */}
+      <ConfirmDialog
+        open={showTransferDetailsConfirm}
+        onOpenChange={setShowTransferDetailsConfirm}
+        title="Transfer TGA Details"
+        description="This will update the tenant profile with ABN, ACN, Legal Name, Trading Name, Website, and Organisation Type from TGA. Existing values will be overwritten."
+        onConfirm={handleTransferDetails}
+        confirmText="Transfer"
+        isLoading={isTransferringDetails}
+      />
+
+      {/* TGA Contact Transfer Confirmation */}
+      <ConfirmDialog
+        open={showTransferContactConfirm}
+        onOpenChange={setShowTransferContactConfirm}
+        title="Transfer TGA Contact"
+        description="This will set the primary contact on the tenant profile using the Chief Executive contact from TGA (or first contact if no Chief Executive). Existing primary contact details will be overwritten."
+        onConfirm={handleTransferContact}
+        confirmText="Transfer"
+        isLoading={isTransferringContact}
       />
     </div>
   );
