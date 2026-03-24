@@ -985,7 +985,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             <CardTitle className="flex items-center gap-2">
               <StickyNote className="h-5 w-5" />
               Structured Notes
-              <Badge variant="secondary" className="ml-2">{filteredNotes.length}</Badge>
+              <Badge variant="secondary" className="ml-2">{unifiedItems.length}</Badge>
             </CardTitle>
             <div className="flex items-center gap-2">
               <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
