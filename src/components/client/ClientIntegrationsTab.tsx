@@ -1009,7 +1009,20 @@ export function ClientIntegrationsTab({
 
                 <TabsContent value="contacts" className="mt-4">
                   {tgaData.contacts.length > 0 && (
-                    <div className="flex justify-end mb-3">
+                    <div className="flex justify-end gap-2 mb-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTransferUsersConfirm(true)}
+                        disabled={isTransferringUsers}
+                      >
+                        {isTransferringUsers ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Users className="h-4 w-4 mr-1" />
+                        )}
+                        Add All as Users
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -1021,7 +1034,7 @@ export function ClientIntegrationsTab({
                         ) : (
                           <ArrowRightLeft className="h-4 w-4 mr-1" />
                         )}
-                        Transfer Contact to Tenant
+                        Transfer Primary Contact
                       </Button>
                     </div>
                   )}
