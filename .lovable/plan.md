@@ -1,41 +1,32 @@
 
 
-# Fix: Package Assignments Showing Wrong Stage Names
+# Fix: Package Assignments — Use Instance Tables
 
 ## Problem
 
-The `GovernancePackageAssignments` component queries the **wrong table** for stage names.
+The component queries deprecated tables (`stage_documents`, `documents_stages`). The correct data path is through the **instance tables**:
 
-- `stage_documents.stage_id` references `documents_stages.id` (per the foreign key)
-- But the component fetches names from the `stages` table instead
-- `documents_stages` and `stages` are **separate tables** with different IDs and column names (`title` vs `name`)
-- This causes stage IDs to match wrong rows, displaying incorrect stage names
+```text
+document_instances (document_id)
+  → stage_instances (id = stageinstance_id)
+    → stages (id = stage_id)              ← stage name
+    → package_instances (id = packageinstance_id)
+      → packages (id = package_id)        ← package name
+```
+
+Database verification confirms this chain returns correct results — e.g., document 7592 ("Student Handbook") maps to stages "Financial Viability & ASQAnet RTO" and "RTO Documentation - 2025" across packages KS-RTO, KS-CRI, PP, DOC-R, M-DR, etc.
 
 ## Fix
 
 **File: `src/components/governance/GovernancePackageAssignments.tsx`**
 
-1. Change stage name query from `stages` to `documents_stages`
-2. Change the column from `name` to `title` (which is what `documents_stages` uses)
-3. Also update the `package_stages` query — its `stage_id` FK also references `documents_stages`
+Rewrite the `queryFn` to:
 
-Additionally, restructure the display to group by **stage first** (with packages as secondary), as previously discussed:
+1. Query `document_instances` for the given `document_id` → get `stageinstance_id` list
+2. Query `stage_instances` for those IDs → get `stage_id` + `packageinstance_id`
+3. Query `stages` and `packages` (via `package_instances`) for display names
+4. Deduplicate by unique (stage_id, package_id) combinations
+5. Group by stage, show packages as badges — same UI layout
 
-- Each row shows the **stage name** as primary text
-- Associated **packages** shown as badges next to the stage
-- Rename card title to "Stage & Package Assignments"
-
-## Technical detail
-
-```text
-Current (broken):
-  stage_documents.stage_id → documents_stages.id
-  but queries: stages.id, stages.name  ← WRONG TABLE
-
-Fixed:
-  stage_documents.stage_id → documents_stages.id
-  queries: documents_stages.id, documents_stages.title  ← CORRECT
-```
-
-Single file change: `src/components/governance/GovernancePackageAssignments.tsx`
+No database changes needed. Single file change.
 
