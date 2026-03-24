@@ -383,15 +383,51 @@ serve(async (req) => {
         let created = 0, skipped = 0, total = 0;
         if (piIds.length > 0) {
           const idList = piIds.join(",");
+
+          // Fetch stage instances with package info
           const stages = await execQuery(
             conn,
-            `SELECT si.[Id], si.[Stage_Id], si.[PackageInstance_Id], pi.[Package_Id] AS [PackageId], ds.[Title] AS [SourceStageName], ds.[ShortName] AS [SourceStageShortName]
+            `SELECT si.[Id], si.[Stage_Id], si.[PackageInstance_Id], pi.[Package_Id] AS [PackageId]
              FROM [dbo].[StageInstances] si
              INNER JOIN [dbo].[PackageInstances] pi ON pi.[Id] = si.[PackageInstance_Id]
-             LEFT JOIN [dbo].[Documents_Stages] ds ON ds.[Id] = si.[Stage_Id]
              WHERE si.[PackageInstance_Id] IN (${idList})`,
             []
           );
+
+          // Try to fetch source stage names from MSSQL (table name varies)
+          const sourceStageNames = new Map<number, { name: string | null; shortName: string | null }>();
+          const uniqueStageIds = [...new Set(stages.map((s) => Number(s.Stage_Id ?? s.stage_id)).filter(Number.isFinite))];
+          if (uniqueStageIds.length > 0) {
+            const stageIdList = uniqueStageIds.join(",");
+            const tableAttempts = ["Stages", "Documents_Stages"];
+            for (const tableName of tableAttempts) {
+              try {
+                const sourceStages = await execQuery(
+                  conn,
+                  `SELECT [Id], [Title], [ShortName] FROM [dbo].[${tableName}] WHERE [Id] IN (${stageIdList})`,
+                  []
+                );
+                for (const row of sourceStages) {
+                  sourceStageNames.set(Number(row.Id), {
+                    name: row.Title ? String(row.Title) : null,
+                    shortName: row.ShortName ? String(row.ShortName) : null,
+                  });
+                }
+                console.log(`Loaded ${sourceStages.length} source stage names from [${tableName}]`);
+                break; // success, stop trying
+              } catch (e) {
+                console.warn(`Table [${tableName}] not available: ${e.message}`);
+              }
+            }
+          }
+
+          // Enrich stage rows with source names
+          for (const s of stages) {
+            const srcId = Number(s.Stage_Id ?? s.stage_id);
+            const meta = sourceStageNames.get(srcId);
+            s.SourceStageName = meta?.name ?? null;
+            s.SourceStageShortName = meta?.shortName ?? null;
+          }
           total = stages.length;
           const targetStageMaps = await buildTargetStageMaps(
             svcClient,
