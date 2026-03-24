@@ -165,8 +165,8 @@ serve(async (req) => {
         }
 
         clients.push({
-          id: u.id,
-          company_name: u.company_name,
+          id: u.Id ?? u.id,
+          company_name: u.CompanyName ?? u.company_name ?? u.companyname,
           rto_id: rtoId,
         });
       }
