@@ -106,12 +106,8 @@ export function ClientDocumentsTab({ tenantId, packages }: ClientDocumentsTabPro
   }, [tenantId, packageIds.join(','), toast]);
 
   const fetchCategories = useCallback(async () => {
-    const { data } = await supabase
-      .from('_documents_categories')
-      .select('id, name')
-      .order('name');
-    
-    if (data) setCategories(data as { id: number; name: string }[]);
+    // Categories now handled by useDocumentCategories hook (already imported)
+    // This function kept for backwards compatibility but is no longer needed
   }, []);
 
   useEffect(() => {

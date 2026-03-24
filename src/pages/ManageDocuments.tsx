@@ -248,12 +248,11 @@ export default function ManageDocuments() {
       const {
         data,
         error
-      } = await supabase.from("_documents_categories").select("id, name").order("id", {
-        ascending: true
-      });
+      } = await supabase.from("dd_document_categories").select("value, label").eq("is_active", true).order("sort_order");
       if (error) throw error;
-      setCategories((data || []) as { id: number; name: string }[]);
-      setCategoriesCount((data || []).length);
+      const mapped = (data || []).map(d => ({ id: d.value, name: d.label }));
+      setCategories(mapped as any);
+      setCategoriesCount(mapped.length);
     } catch (error: any) {
       console.error("Error fetching categories:", error);
     }

@@ -1543,10 +1543,10 @@ export default function DocumentDetail() {
                 <PopoverContent className="w-full p-2 bg-background z-50" align="start">
                   <div className="space-y-1">
                     {categories.map((cat) => {
-                      const isSelected = editFormData.categories.includes(cat.id.toString());
+                      const isSelected = editFormData.categories.includes(cat.value);
                       return (
                         <div
-                          key={cat.id}
+                          key={cat.value}
                           className={cn(
                             "flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-accent",
                             isSelected && "bg-accent"
@@ -1555,18 +1555,18 @@ export default function DocumentDetail() {
                             if (isSelected) {
                               setEditFormData({
                                 ...editFormData,
-                                categories: editFormData.categories.filter((id) => id !== cat.id.toString()),
+                                categories: editFormData.categories.filter((v) => v !== cat.value),
                               });
                             } else {
                               setEditFormData({
                                 ...editFormData,
-                                categories: [...editFormData.categories, cat.id.toString()],
+                                categories: [...editFormData.categories, cat.value],
                               });
                             }
                           }}
                         >
                           <Checkbox checked={isSelected} />
-                          <span className="text-sm">{cat.name}</span>
+                          <span className="text-sm">{cat.label}</span>
                         </div>
                       );
                     })}
