@@ -905,6 +905,21 @@ export function ClientIntegrationsTab({
                 )}
 
                 <TabsContent value="summary" className="mt-4">
+                  <div className="flex justify-end mb-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowTransferDetailsConfirm(true)}
+                      disabled={isTransferringDetails || !tgaData.summary}
+                    >
+                      {isTransferringDetails ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <ArrowRightLeft className="h-4 w-4 mr-1" />
+                      )}
+                      Transfer Details to Tenant
+                    </Button>
+                  </div>
                   <SummaryTab 
                     summary={tgaData.summary} 
                     debugPayload={debugInfo?.debugPayload?.payload}
