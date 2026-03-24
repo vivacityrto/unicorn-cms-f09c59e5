@@ -62,28 +62,12 @@ export default function ManageCategories() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('_documents_categories')
-        .select(`
-          *,
-          creator:created_by (
-            first_name,
-            last_name,
-            avatar_url
-          )
-        `)
-        .order('id', { ascending: true });
+        .from('dd_document_categories')
+        .select('*')
+        .order('sort_order');
 
       if (error) throw error;
-      
-      // Map the data to include creator_name and avatar
-      const categoriesWithCreator = (data || []).map((cat: any) => ({
-        ...cat,
-        creator_name: cat.creator ? `${cat.creator.first_name} ${cat.creator.last_name}` : 'Unknown',
-        creator_avatar: cat.creator?.avatar_url || null,
-        creator: undefined // Remove the nested object
-      }));
-      
-      setCategories(categoriesWithCreator);
+      setCategories((data || []) as unknown as Category[]);
     } catch (error: any) {
       console.error('Error fetching categories:', error);
       toast({
