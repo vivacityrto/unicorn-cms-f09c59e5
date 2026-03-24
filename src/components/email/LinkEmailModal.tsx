@@ -261,8 +261,8 @@ export function LinkEmailModal({
               Package <span className="text-muted-foreground text-xs">(optional)</span>
             </Label>
             <Select
-              value={selectedPackageId}
-              onValueChange={setSelectedPackageId}
+              value={selectedPackageId || "__none__"}
+              onValueChange={(v) => setSelectedPackageId(v === "__none__" ? "" : v)}
               disabled={!selectedClientId}
             >
               <SelectTrigger>
@@ -290,8 +290,8 @@ export function LinkEmailModal({
               Task <span className="text-muted-foreground text-xs">(optional)</span>
             </Label>
             <Select
-              value={selectedTaskId}
-              onValueChange={setSelectedTaskId}
+              value={selectedTaskId || "__none__"}
+              onValueChange={(v) => setSelectedTaskId(v === "__none__" ? "" : v)}
               disabled={!selectedClientId}
             >
               <SelectTrigger>
