@@ -646,7 +646,7 @@ export function ClientIntegrationsTab({
 
       for (const contact of contacts) {
         // Parse first/last name from contact name (e.g. "Mr Brenton Myatt")
-        const nameParts = (contact.name || '').replace(/^(Mr|Mrs|Ms|Miss|Dr|Prof)\.?\s*/i, '').trim().split(/\s+/);
+        const nameParts = (contact.name || '').replace(/^(Mrs|Miss|Ms|Mr|Dr|Prof)\.?\s*/i, '').trim().split(/\s+/);
         const firstName = nameParts[0] || 'Unknown';
         const lastName = nameParts.slice(1).join(' ') || 'Unknown';
         
