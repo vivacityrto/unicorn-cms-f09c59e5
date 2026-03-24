@@ -141,7 +141,7 @@ serve(async (req) => {
           conn,
           `SELECT id, companyname, rto_id, rto_name, legal_name,
                   abn, acn, cricos_id, website, lms, accounting_system
-           FROM users WHERE id = @cid`,
+           FROM Users WHERE id = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
         if (clients.length === 0) {
