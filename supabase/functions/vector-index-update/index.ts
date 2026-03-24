@@ -214,10 +214,9 @@ async function fetchRecord(
 
       case "phase_summary": {
         const { data } = await supabase
-          .from("documents_stages")
-          .select("id, title, status, stage_type")
+          .from("stages")
+          .select("id, name, status, stage_type")
           .eq("id", parseInt(recordId))
-          .eq("tenant_id", tenantId)
           .single();
         
         if (!data) return null;
