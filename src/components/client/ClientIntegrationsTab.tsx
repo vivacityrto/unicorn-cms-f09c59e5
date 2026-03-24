@@ -356,6 +356,8 @@ export function ClientIntegrationsTab({
   const [isTransferringDetails, setIsTransferringDetails] = useState(false);
   const [showTransferContactConfirm, setShowTransferContactConfirm] = useState(false);
   const [isTransferringContact, setIsTransferringContact] = useState(false);
+  const [showTransferUsersConfirm, setShowTransferUsersConfirm] = useState(false);
+  const [isTransferringUsers, setIsTransferringUsers] = useState(false);
   const { isSuperAdmin, user } = useAuth();
 
   const hasRtoNumber = !!profile?.rto_number;
