@@ -190,7 +190,7 @@ export default function ManageCategories() {
 
   const openEditDialog = (category: Category) => {
     setEditingCategory(category);
-    setFormData({ name: category.name, description: '' });
+    setFormData({ name: category.label, description: category.description || '' });
     setIsEditDialogOpen(true);
   };
 
