@@ -256,7 +256,7 @@ serve(async (req) => {
               id: sid,
               stage_id: s.Stage_Id ?? s.stage_id,
               packageinstance_id: s.PackageInstance_Id ?? s.packageinstance_id,
-              stage_sortorder: s.SortOrder ?? s.sortorder ?? null,
+              stage_sortorder: null,
             });
             if (error) { console.error(`SI ${sid}:`, error.message); skipped++; } else { created++; }
           }
