@@ -109,23 +109,23 @@ export async function retrieveFactData(
     : (tenant?.stage_ids || []);
 
   if (stageIdsToFetch.length > 0) {
-    tablesQueried.push("documents_stages");
+    tablesQueried.push("stages");
     const { data: stagesData } = await supabase
-      .from("documents_stages")
-      .select("id, title, status, stage_type, updated_at")
+      .from("stages")
+      .select("id, name, status, stage_type, updated_at")
       .in("id", stageIdsToFetch)
       .limit(30);
 
     phases = (stagesData || []).map((s) => ({
       id: s.id,
-      title: s.title,
+      title: s.name,
       status: s.status || "unknown",
       stage_type: s.stage_type,
       updated_at: s.updated_at,
     }));
 
     if (phases.length > 0) {
-      recordIds.push({ table: "documents_stages", ids: phases.map(p => p.id.toString()) });
+      recordIds.push({ table: "stages", ids: phases.map(p => p.id.toString()) });
     }
   }
 

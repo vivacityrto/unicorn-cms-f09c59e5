@@ -26,7 +26,7 @@ const VALID_COMPLIANCE_RESPONSE = `## Answer
 
 ## Key records used
 - Package: Health Check 2024 (packages:123)
-- Phase: Assessment Prep (documents_stages:456)
+- Phase: Assessment Prep (stages:456)
 
 ## Confidence
 **High**
@@ -60,7 +60,7 @@ const COMPLIANCE_META: ValidationInputMeta = {
   gaps_in: ["Consult hours not tracked"],
   records_accessed_in: [
     { table: "packages", id: "123", label: "Health Check 2024" },
-    { table: "documents_stages", id: "456", label: "Assessment Prep" },
+    { table: "stages", id: "456", label: "Assessment Prep" },
   ],
 };
 

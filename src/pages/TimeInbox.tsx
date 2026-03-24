@@ -207,12 +207,12 @@ export default function TimeInbox() {
   const fetchStagesForPackage = async (packageId: number) => {
     const { data } = await (supabase as any)
       .from('package_stages')
-      .select('stage_id, documents_stages(title)')
+      .select('stage_id, stages(name)')
       .eq('package_id', packageId);
     if (data) {
       setStages(data.map(s => ({ 
         id: s.stage_id, 
-        name: (s.documents_stages as unknown as { title: string })?.title || 'Unknown' 
+        name: (s.stages as unknown as { name: string })?.name || 'Unknown' 
       })));
     }
   };

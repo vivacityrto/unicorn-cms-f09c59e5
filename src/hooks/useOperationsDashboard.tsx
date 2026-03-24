@@ -76,14 +76,14 @@ export function useOperationsDashboard() {
         const [tenantRes, docRes, stageRes] = await Promise.all([
           supabase.from('tenants').select('name').eq('id', item.tenant_id).single(),
           supabase.from('documents').select('title').eq('id', item.source_document_id).single(),
-          supabase.from('documents_stages').select('title').eq('id', item.stage_id).single()
+          supabase.from('stages').select('name').eq('id', item.stage_id).single()
         ]);
 
         return {
           ...item,
           tenant_name: tenantRes.data?.name,
           document_title: docRes.data?.title,
-          stage_title: stageRes.data?.title
+          stage_title: stageRes.data?.name
         } as FailedGeneration;
       }));
 

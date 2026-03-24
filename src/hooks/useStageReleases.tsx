@@ -19,7 +19,7 @@ export interface StageRelease {
   created_by: string | null;
   stage?: {
     id: number;
-    title: string;
+    name: string;
   };
   items?: StageReleaseItem[];
 }
@@ -75,11 +75,11 @@ export function useStageReleases(tenantId?: number) {
     if (!tenantId) return;
     setLoading(true);
     try {
-      let query = supabase
+      let query = (supabase as any)
         .from('stage_releases')
         .select(`
           *,
-          stage:documents_stages(id, title)
+          stage:stages(id, name)
         `)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });

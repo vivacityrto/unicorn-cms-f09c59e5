@@ -6,18 +6,18 @@ The Stage Registry is the authoritative source for all stages (individual workfl
 
 ## Database Table
 
-**Table Name:** `documents_stages` (legacy name retained for backwards compatibility)
+**Table Name:** `stages`
 
-**TypeScript Alias:** `StageRegistry` (see `src/types/stage-registry.ts`)
+> **Note:** The legacy table `documents_stages` is deprecated and must NOT be used. All code should reference `stages` only.
 
 ## Schema
 
 | Column | Type | Required | Description |
 |--------|------|----------|-------------|
 | `id` | `integer` | ✓ | Auto-generated primary key |
-| `stage_key` | `string` | ✓ | Unique stage code (e.g., "TAS", "HC-PREP", "MEMBERSHIP-ONBOARD") |
-| `title` | `string` | ✓ | Display name shown in UI |
-| `short_name` | `string` | | Abbreviated name for compact displays |
+| `stage_key` | `string` | | Unique stage code (e.g., "TAS", "HC-PREP", "MEMBERSHIP-ONBOARD") |
+| `name` | `string` | ✓ | Display name shown in UI |
+| `shortname` | `string` | | Abbreviated name for compact displays |
 | `description` | `string` | | Detailed stage description |
 | `stage_type` | `string` | | Stage classification: "delivery", "internal", "milestone", etc. |
 | `frameworks` | `string[]` | | Supported compliance frameworks: "RTO2015", "RTO2025", "CRICOS", "GTO" |
@@ -33,11 +33,22 @@ The Stage Registry is the authoritative source for all stages (individual workfl
 | `effective_date` | `date` | | Date stage became/becomes effective |
 | `deprecated_at` | `timestamp` | | When stage was deprecated (null if active) |
 | `dashboard_visible` | `boolean` | | Whether to show on dashboards |
-| `video_url` | `string` | | Training/explainer video URL |
+| `videourl` | `string` | | Training/explainer video URL |
 | `ai_hint` | `string` | | Hints for AI-assisted workflows |
 | `created_by` | `uuid` | | User who created the stage |
-| `created_at` | `timestamp` | ✓ | Creation timestamp |
+| `dateimported` | `timestamp` | ✓ | Creation timestamp |
 | `updated_at` | `timestamp` | ✓ | Last update timestamp |
+
+## Column Mapping (Legacy → Current)
+
+When migrating code from the deprecated `documents_stages` table:
+
+| Legacy column (`documents_stages`) | Current column (`stages`) |
+|-------------------------------------|---------------------------|
+| `title` | `name` |
+| `short_name` | `shortname` |
+| `video_url` | `videourl` |
+| `created_at` | `dateimported` |
 
 ## Stage Classifications
 
@@ -76,18 +87,18 @@ draft → active → deprecated
 
 ```typescript
 const { data } = await supabase
-  .from('documents_stages')
+  .from('stages')
   .select('*')
   .eq('is_archived', false)
   .eq('status', 'active')
-  .order('title');
+  .order('name');
 ```
 
 ### Finding Stages by Framework
 
 ```typescript
 const { data } = await supabase
-  .from('documents_stages')
+  .from('stages')
   .select('*')
   .contains('frameworks', ['RTO2025'])
   .eq('is_certified', true);
@@ -97,7 +108,7 @@ const { data } = await supabase
 
 ```typescript
 const { data } = await supabase
-  .from('documents_stages')
+  .from('stages')
   .select('stage_key, requires_stage_keys')
   .not('requires_stage_keys', 'is', null);
 ```
@@ -112,10 +123,22 @@ All changes to the Stage Registry are logged in `audit_events` with:
 ## Related Tables
 
 - `package_stages`: Links stages to packages with sort order
-- `client_package_stages`: Tracks stage progress for clients
-- `stage_documents`: Documents attached to stages
-- `stage_tasks`: Task templates for stages
-- `stage_versions`: Version history snapshots
+- `stage_documents`: Documents attached to stages (template-level junction table)
+- `stage_instances`: Operational instances of stages for client engagements
+- `document_instances`: Operational document-to-stage-instance links
+- `package_instances`: Operational package instances
+
+## Instance Tables (Operational Data)
+
+For client-specific data, use the instance chain:
+
+```
+document_instances (document_id)
+  → stage_instances (id = stageinstance_id)
+    → stages (id = stage_id)              ← stage name
+    → package_instances (id = packageinstance_id)
+      → packages (id = package_id)        ← package name
+```
 
 ## Terminology
 
@@ -128,3 +151,10 @@ Per the [Stage Naming Conventions](./stage-naming-conventions.md):
 - UI displays "Stage" for individual workflow steps
 - "Phase" is reserved for the new Checkpoint Phases grouping feature
 - Database/code retains legacy `stage` field names for backwards compatibility
+
+## Deprecated Tables
+
+| Table | Status | Replacement |
+|-------|--------|-------------|
+| `documents_stages` | **DEPRECATED** — do not use | `stages` |
+| `stage_documents` is NOT deprecated | Active junction table | N/A |

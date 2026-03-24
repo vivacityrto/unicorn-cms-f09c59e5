@@ -21,8 +21,6 @@ interface ExistingStage {
   title: string;
   short_name: string | null;
   description: string | null;
-  video_url: string | null;
-  created_at: string;
 }
 
 export function AddExistingStageDialog({
@@ -68,15 +66,21 @@ export function AddExistingStageDialog({
     try {
       setLoading(true);
       
-      // Fetch all stages from documents_stages
+      // Fetch all stages from stages registry
       const { data: stagesData, error } = await supabase
-        .from('documents_stages')
-        .select('*')
-        .order('title');
+        .from('stages')
+        .select('id, name, shortname, description, videourl, dateimported')
+        .eq('is_archived', false)
+        .order('name');
 
       if (error) throw error;
 
-      setStages(stagesData || []);
+      setStages((stagesData || []).map(s => ({
+        id: s.id,
+        title: s.name,
+        short_name: s.shortname,
+        description: s.description,
+      })));
     } catch (error: any) {
       toast({
         title: 'Error',

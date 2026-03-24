@@ -3,13 +3,17 @@ import { Database } from "@/integrations/supabase/types";
 /**
  * Stage Registry Type
  * 
- * The Stage Registry (stored in `documents_stages` table) is the authoritative
+ * The Stage Registry (stored in the `stages` table) is the authoritative
  * source for all workflow stages in Unicorn 2.0.
  * 
- * Note: The underlying table retains the legacy "stage" naming for backwards
- * compatibility. All UI and documentation refers to these as "Stages".
- * Individual workflow steps. The new "Phase" concept (Checkpoint Phases)
- * is a grouping layer above Stages, introduced separately.
+ * The deprecated `documents_stages` table must NOT be used — it contains
+ * stale data with mismatched IDs.
+ * 
+ * Note: Column naming differs from legacy conventions:
+ *   - `name` (not `title`)
+ *   - `shortname` (not `short_name`)
+ *   - `videourl` (not `video_url`)
+ *   - `dateimported` (not `created_at`)
  */
 export type StageRegistry = Database["public"]["Tables"]["stages"]["Row"];
 

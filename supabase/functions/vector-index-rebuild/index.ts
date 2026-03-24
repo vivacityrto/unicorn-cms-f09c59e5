@@ -305,16 +305,15 @@ async function fetchClientSummaries(supabase: any, tenantId: number) {
 
 async function fetchPhaseSummaries(supabase: any, tenantId: number) {
   const { data } = await supabase
-    .from("documents_stages")
-    .select("id, title, status, stage_type")
-    .eq("tenant_id", tenantId)
+    .from("stages")
+    .select("id, name, status, stage_type")
     .limit(100);
 
   if (!data) return [];
 
   return data.map((p: any) => ({
     id: p.id,
-    label: p.title,
+    label: p.name,
     text: buildPhaseSummary(p),
     mode: "compliance" as const,
     metadata: { stage_type: p.stage_type, status: p.status },

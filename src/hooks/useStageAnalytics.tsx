@@ -66,7 +66,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
     queryFn: async (): Promise<StageAnalyticsKPIs> => {
       // Get all stages
       const { data: stages, error: stagesError } = await supabase
-        .from('documents_stages')
+        .from('stages')
         .select('id, is_certified, is_archived');
       
       if (stagesError) throw stagesError;
@@ -111,8 +111,8 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
     queryFn: async (): Promise<TopStageByUsage[]> => {
       // Get all non-archived stages
       let query = supabase
-        .from('documents_stages')
-        .select('id, title, stage_type, is_certified, frameworks, updated_at')
+        .from('stages')
+        .select('id, name, stage_type, is_certified, frameworks, updated_at')
         .eq('is_archived', false);
 
       if (stageTypeFilter) {
@@ -167,7 +167,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       let results = (stages || []).map(stage => ({
         id: stage.id,
-        title: stage.title,
+        title: stage.name,
         stage_type: stage.stage_type,
         is_certified: stage.is_certified,
         frameworks: (stage as any).frameworks || null,
@@ -197,8 +197,8 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
     queryFn: async (): Promise<CertifiedUnusedStage[]> => {
       // Get certified non-archived stages
       const { data: certifiedStages, error: stagesError } = await supabase
-        .from('documents_stages')
-        .select('id, title, version_label, updated_at')
+        .from('stages')
+        .select('id, name, version_label, updated_at')
         .eq('is_certified', true)
         .eq('is_archived', false);
       
@@ -238,7 +238,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       return unusedStages.map(s => ({
         id: s.id,
-        title: s.title,
+        title: s.name,
         version_label: (s as any).version_label || null,
         certified_at: certifiedAtMap.get(s.id.toString()) || null,
         updated_at: s.updated_at
@@ -338,11 +338,11 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
       if (stageIdsWithEdits.length === 0) return [];
 
       const { data: stages } = await supabase
-        .from('documents_stages')
-        .select('id, title')
+        .from('stages')
+        .select('id, name')
         .in('id', stageIdsWithEdits);
 
-      const stageTitleMap = new Map((stages || []).map(s => [s.id, s.title]));
+      const stageTitleMap = new Map((stages || []).map(s => [s.id, s.name]));
 
       // Get user emails for top editors
       const allUserIds = new Set<string>();
@@ -412,11 +412,11 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
       let stageTitleMap = new Map<number, string>();
       if (stageIds.length > 0) {
         const { data: stages } = await supabase
-          .from('documents_stages')
-          .select('id, title')
+          .from('stages')
+          .select('id, name')
           .in('id', stageIds);
         
-        (stages || []).forEach(s => stageTitleMap.set(s.id, s.title));
+        (stages || []).forEach(s => stageTitleMap.set(s.id, s.name));
       }
 
       // Get user emails

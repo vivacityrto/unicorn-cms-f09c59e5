@@ -183,7 +183,7 @@ export function derivePhaseFacts(
         stage_type: phase.stage_type,
       },
       reason: null,
-      source_table: "documents_stages",
+      source_table: "stages",
       source_ids: [phase.id.toString()],
       derived_at: nowIso,
     });
@@ -204,7 +204,7 @@ export function derivePhaseFacts(
         completion_percent: completionPercent,
       },
       reason: completionPercent < 50 ? "Less than 50% complete" : null,
-      source_table: "documents_stages",
+      source_table: "stages",
       source_ids: [phase.id.toString()],
       derived_at: nowIso,
     });
@@ -215,7 +215,7 @@ export function derivePhaseFacts(
         key: "phase_last_activity",
         value: phase.updated_at,
         reason: null,
-        source_table: "documents_stages",
+        source_table: "stages",
         source_ids: [phase.id.toString()],
         derived_at: nowIso,
       });

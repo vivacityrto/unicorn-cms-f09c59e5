@@ -168,15 +168,15 @@ export function AskVivScopeSelectorModal({
         
         if (tenantData?.stage_ids && tenantData.stage_ids.length > 0) {
           const { data: stagesData } = await supabase
-            .from("documents_stages")
-            .select("id, title")
+            .from("stages")
+            .select("id, name")
             .in("id", tenantData.stage_ids)
-            .order("title");
+            .order("name");
           
           if (stagesData) {
             setPhases(stagesData.map(s => ({ 
               id: s.id.toString(), 
-              label: s.title 
+              label: s.name 
             })));
           }
         }

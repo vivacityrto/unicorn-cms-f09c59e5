@@ -55,7 +55,7 @@ export const COMPLIANCE_RESPONSE_EXAMPLE = `## Answer
 
 ## Key records used
 - Package: Health Check 2024 (packages:123) - /clients/456/packages/123
-- Phase: Assessment Preparation (documents_stages:789) - /clients/456/packages/123/phases/789
+- Phase: Assessment Preparation (stages:789) - /clients/456/packages/123/phases/789
 
 ## Confidence
 **Medium**

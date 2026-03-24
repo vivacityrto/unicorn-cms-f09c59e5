@@ -78,9 +78,9 @@ function createRecordLink(
         path: `/tenant/${clientId}/packages/${id}`,
       };
 
-    case "documents_stages":
+    case "stages":
       return {
-        table: "documents_stages",
+        table: "stages",
         id,
         label: `Phase ${id}`,
         path: `/tenant/${clientId}/packages/${packageId}/phases/${id}`,

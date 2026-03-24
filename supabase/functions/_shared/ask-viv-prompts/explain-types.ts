@@ -125,7 +125,7 @@ function inferSourceTable(factKey: string): string {
     "tenant_": "tenants",
     "client_": "clients",
     "package_": "packages",
-    "phase_": "documents_stages",
+    "phase_": "stages",
     "task_": "phase_tasks",
     "document_": "documents",
     "consult_": "consult_logs",
