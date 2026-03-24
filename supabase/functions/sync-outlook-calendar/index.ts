@@ -138,7 +138,7 @@ async function fetchCalendarEvents(accessToken: string): Promise<CalendarEvent[]
   return data.value || [];
 }
 
-async function fetchEmails(accessToken: string, folder: string, top: number): Promise<OutlookEmail[]> {
+async function fetchEmails(accessToken: string, folder: string, top: number, filterEmail?: string): Promise<OutlookEmail[]> {
   // Determine the folder path
   let folderPath = 'inbox';
   if (folder.toLowerCase() === 'sent') {
@@ -148,9 +148,17 @@ async function fetchEmails(accessToken: string, folder: string, top: number): Pr
   }
 
   const url = new URL(`https://graph.microsoft.com/v1.0/me/mailFolders/${folderPath}/messages`);
-  url.searchParams.set('$select', 'id,subject,from,receivedDateTime,hasAttachments,bodyPreview,isRead');
+  url.searchParams.set('$select', 'id,subject,from,toRecipients,receivedDateTime,hasAttachments,bodyPreview,isRead');
   url.searchParams.set('$orderby', 'receivedDateTime desc');
   url.searchParams.set('$top', String(top));
+
+  // Filter by specific email address (from OR to)
+  if (filterEmail) {
+    const sanitized = filterEmail.replace(/'/g, "''");
+    url.searchParams.set('$filter',
+      `from/emailAddress/address eq '${sanitized}' or (toRecipients/any(r: r/emailAddress/address eq '${sanitized}'))`
+    );
+  }
 
   console.log('[sync-outlook] Fetching emails from folder:', folderPath);
 
@@ -195,12 +203,15 @@ serve(async (req) => {
     let folder = 'inbox';
     let top = 50;
     
+    let filterEmail: string | undefined;
+    
     try {
       const body = await req.json();
       action = body?.action || 'sync-calendar';
       includeMeetings = body?.includeMeetings === true;
       folder = body?.folder || 'inbox';
       top = body?.top || 50;
+      filterEmail = body?.filterEmail;
     } catch {
       // No body or invalid JSON, use defaults
     }
@@ -265,10 +276,10 @@ serve(async (req) => {
 
     // Handle get-emails action
     if (action === 'get-emails') {
-      console.log('[sync-outlook] Fetching emails, folder:', folder, 'top:', top);
+      console.log('[sync-outlook] Fetching emails, folder:', folder, 'top:', top, 'filterEmail:', filterEmail);
       
       try {
-        const emails = await fetchEmails(accessToken, folder, top);
+        const emails = await fetchEmails(accessToken, folder, top, filterEmail);
         return new Response(
           JSON.stringify({ emails }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
