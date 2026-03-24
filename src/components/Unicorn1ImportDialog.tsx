@@ -19,31 +19,12 @@ interface Unicorn1ImportDialogProps {
 
 interface U1Client {
   id: number;
-  companyname: string;
+  company_name: string;
   rto_id: string | null;
-  rto_name: string | null;
-  legal_name: string | null;
-  abn: string | null;
-  acn: string | null;
-  cricos_id: string | null;
-  email: string | null;
-  phone: string | null;
-  website: string | null;
-  address: string | null;
-  suburb: string | null;
-  state_code: string | null;
-  postcode: string | null;
-  lms: string | null;
-  accounting_system: string | null;
 }
 
 interface ImportResult {
-  imported: {
-    tenant?: { status: string; id?: number; reason?: string };
-    package_instances?: { created: number; skipped: number; total: number };
-    stage_instances?: { created: number; skipped: number; total: number };
-    document_instances?: { created: number; skipped: number; total: number };
-  };
+  imported: Record<string, { status?: string; id?: number; reason?: string; created?: number; skipped?: number; total?: number }>;
 }
 
 export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1ImportDialogProps) {
@@ -60,6 +41,9 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
   const [importPackages, setImportPackages] = useState(true);
   const [importStages, setImportStages] = useState(true);
   const [importDocuments, setImportDocuments] = useState(true);
+  const [importStaffTasks, setImportStaffTasks] = useState(true);
+  const [importClientTasks, setImportClientTasks] = useState(true);
+  const [importEmails, setImportEmails] = useState(true);
 
   const handleSearch = async () => {
     if (search.trim().length < 2) return;
@@ -96,12 +80,15 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
             package_instances: importPackages,
             stage_instances: importStages,
             document_instances: importDocuments,
+            staff_task_instances: importStaffTasks,
+            client_task_instances: importClientTasks,
+            email_instances: importEmails,
           },
         },
       });
       if (error) throw error;
       setResult(data as ImportResult);
-      toast({ title: 'Import complete', description: `Client ${selected.companyname} imported successfully.` });
+      toast({ title: 'Import complete', description: `Client ${selected.company_name} imported successfully.` });
       onSuccess?.();
     } catch (err: any) {
       toast({ title: 'Import failed', description: err.message || 'Import error', variant: 'destructive' });
@@ -119,19 +106,24 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
     setImportPackages(true);
     setImportStages(true);
     setImportDocuments(true);
+    setImportStaffTasks(true);
+    setImportClientTasks(true);
+    setImportEmails(true);
     onOpenChange(false);
   };
 
+  const instancesDisabled = !importPackages || !importStages;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent size="lg" className="max-h-[90vh]">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="h-5 w-5 text-primary" />
             Import from Unicorn 1
           </DialogTitle>
           <DialogDescription>
-            Search the live Unicorn 1 database by client ID, RTO ID, or name. Select a client and choose what to import.
+            Search the live Unicorn 1 database by client ID or name. Select a client and choose what to import.
           </DialogDescription>
         </DialogHeader>
 
@@ -140,7 +132,7 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by ID, RTO ID, or name..."
+              placeholder="Search by ID or company name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -165,16 +157,12 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-sm">{c.companyname}</p>
+                        <p className="font-medium text-sm">{c.company_name}</p>
                         <div className="flex gap-2 mt-1">
                           <Badge variant="outline" className="text-xs">ID: {c.id}</Badge>
                           {c.rto_id && <Badge variant="secondary" className="text-xs">RTO: {c.rto_id}</Badge>}
-                          {c.abn && <Badge variant="outline" className="text-xs">ABN: {c.abn}</Badge>}
                         </div>
                       </div>
-                      {c.state_code && (
-                        <span className="text-xs text-muted-foreground">{c.state_code}</span>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -189,22 +177,22 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
             <Card className="bg-muted/30">
               <CardContent className="p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-base">{selected.companyname}</h3>
+                  <h3 className="font-semibold text-base">{selected.company_name}</h3>
                   <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
                     Change
                   </Button>
                 </div>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                  <Detail label="Unicorn 1 ID" value={selected.id} />
-                  <Detail label="RTO ID" value={selected.rto_id} />
-                  <Detail label="RTO Name" value={selected.rto_name} />
-                  <Detail label="Legal Name" value={selected.legal_name} />
-                  <Detail label="ABN" value={selected.abn} />
-                  <Detail label="ACN" value={selected.acn} />
-                  <Detail label="CRICOS" value={selected.cricos_id} />
-                  <Detail label="Website" value={selected.website} />
-                  <Detail label="LMS" value={selected.lms} />
-                  <Detail label="State" value={selected.state_code} />
+                <div className="flex gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Unicorn 1 ID:</span>{' '}
+                    <span className="font-medium">{selected.id}</span>
+                  </div>
+                  {selected.rto_id && (
+                    <div>
+                      <span className="text-muted-foreground">RTO ID:</span>{' '}
+                      <span className="font-medium">{selected.rto_id}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="mt-2 p-2 bg-primary/5 rounded-md border border-primary/20">
                   <p className="text-xs text-primary font-medium">
@@ -221,7 +209,7 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
                 <ImportOption
                   id="tenant"
                   label="Tenant details"
-                  description="Company name, RTO ID, ABN, ACN, CRICOS, website, LMS"
+                  description="Company name and RTO ID"
                   checked={importTenant}
                   onCheckedChange={setImportTenant}
                 />
@@ -246,7 +234,31 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
                   description="Document allocations linked to stages"
                   checked={importDocuments}
                   onCheckedChange={setImportDocuments}
-                  disabled={!importStages}
+                  disabled={instancesDisabled}
+                />
+                <ImportOption
+                  id="staff-tasks"
+                  label="Staff task instances"
+                  description="Staff task allocations linked to stages"
+                  checked={importStaffTasks}
+                  onCheckedChange={setImportStaffTasks}
+                  disabled={instancesDisabled}
+                />
+                <ImportOption
+                  id="client-tasks"
+                  label="Client task instances"
+                  description="Client task allocations linked to stages"
+                  checked={importClientTasks}
+                  onCheckedChange={setImportClientTasks}
+                  disabled={instancesDisabled}
+                />
+                <ImportOption
+                  id="emails"
+                  label="Email instances"
+                  description="Email allocations linked to stages"
+                  checked={importEmails}
+                  onCheckedChange={setImportEmails}
+                  disabled={instancesDisabled}
                 />
               </div>
             </div>
@@ -261,34 +273,22 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
               <h4 className="font-semibold">Import Complete</h4>
             </div>
             <div className="space-y-2 text-sm">
-              {result.imported.tenant && (
+              {Object.entries(result.imported).map(([key, val]) => (
                 <ResultRow
-                  label="Tenant"
-                  status={result.imported.tenant.status}
-                  detail={result.imported.tenant.reason || `ID: ${result.imported.tenant.id}`}
+                  key={key}
+                  label={key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                  status={val.status === 'skipped' ? 'skipped' : 'done'}
+                  detail={
+                    val.reason
+                      ? val.reason
+                      : val.total !== undefined
+                        ? `${val.created} created, ${val.skipped} skipped of ${val.total}`
+                        : val.id
+                          ? `ID: ${val.id}`
+                          : val.status || ''
+                  }
                 />
-              )}
-              {result.imported.package_instances && (
-                <ResultRow
-                  label="Package Instances"
-                  status="done"
-                  detail={`${result.imported.package_instances.created} created, ${result.imported.package_instances.skipped} skipped of ${result.imported.package_instances.total}`}
-                />
-              )}
-              {result.imported.stage_instances && (
-                <ResultRow
-                  label="Stage Instances"
-                  status="done"
-                  detail={`${result.imported.stage_instances.created} created, ${result.imported.stage_instances.skipped} skipped of ${result.imported.stage_instances.total}`}
-                />
-              )}
-              {result.imported.document_instances && (
-                <ResultRow
-                  label="Document Instances"
-                  status="done"
-                  detail={`${result.imported.document_instances.created} created, ${result.imported.document_instances.skipped} skipped of ${result.imported.document_instances.total}`}
-                />
-              )}
+              ))}
             </div>
           </div>
         )}
@@ -319,16 +319,6 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function Detail({ label, value }: { label: string; value: any }) {
-  if (!value) return null;
-  return (
-    <div>
-      <span className="text-muted-foreground">{label}:</span>{' '}
-      <span className="font-medium">{String(value)}</span>
-    </div>
   );
 }
 
