@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,7 @@ interface ImportResult {
 
 export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1ImportDialogProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
   const [clients, setClients] = useState<U1Client[]>([]);
@@ -90,6 +92,8 @@ export function Unicorn1ImportDialog({ open, onOpenChange, onSuccess }: Unicorn1
       setResult(data as ImportResult);
       toast({ title: 'Import complete', description: `Client ${selected.company_name} imported successfully.` });
       onSuccess?.();
+      onOpenChange(false);
+      navigate(`/tenant/${selected.id}`);
     } catch (err: any) {
       toast({ title: 'Import failed', description: err.message || 'Import error', variant: 'destructive' });
     } finally {
