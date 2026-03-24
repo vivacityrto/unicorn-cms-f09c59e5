@@ -31,12 +31,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Category {
-  id: number;
-  name: string;
+  value: string;
+  label: string;
   description: string | null;
-  created_at: string;
-  updated_at: string;
-  created_by: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at?: string;
   creator_name?: string;
   creator_avatar?: string | null;
 }
