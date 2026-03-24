@@ -193,7 +193,7 @@ export function buildPhaseFacts(phases: PhaseData[]): Fact[] {
       phase.completion_percent !== undefined 
         ? `${phase.completion_percent}% complete` 
         : null,
-      "documents_stages",
+      "stages",
       [phase.id.toString()],
       freshness
     ));
@@ -206,7 +206,7 @@ export function buildPhaseFacts(phases: PhaseData[]): Fact[] {
         { blocked: true, blockers: phase.blockers },
         `Phase "${phase.title}" is blocked`,
         `Blockers: ${phase.blockers.join(", ")}`,
-        "documents_stages",
+        "stages",
         [phase.id.toString()],
         freshness
       ));
@@ -227,7 +227,7 @@ export function buildPhaseFacts(phases: PhaseData[]): Fact[] {
           },
           `Phase "${phase.title}" missing ${missing} evidence items`,
           `${phase.submitted_evidence_count}/${phase.required_evidence_count} submitted`,
-          "documents_stages",
+          "stages",
           [phase.id.toString()],
           freshness
         ));
@@ -247,7 +247,7 @@ export function buildPhaseFacts(phases: PhaseData[]): Fact[] {
           { days_remaining: Math.ceil(daysUntilDue), due_date: phase.due_date },
           `Phase "${phase.title}" due in ${Math.ceil(daysUntilDue)} days`,
           `Due date: ${phase.due_date}`,
-          "documents_stages",
+          "stages",
           [phase.id.toString()],
           freshness
         ));
@@ -258,7 +258,7 @@ export function buildPhaseFacts(phases: PhaseData[]): Fact[] {
           { days_overdue: Math.abs(Math.floor(daysUntilDue)), due_date: phase.due_date },
           `Phase "${phase.title}" is OVERDUE`,
           `Was due: ${phase.due_date}`,
-          "documents_stages",
+          "stages",
           [phase.id.toString()],
           1.0 // Overdue is always fresh/relevant
         ));
