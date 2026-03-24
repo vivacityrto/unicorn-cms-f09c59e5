@@ -377,24 +377,25 @@ serve(async (req) => {
           const siList = siIds.join(",");
           const tasks = await execQuery(
             conn,
-            `SELECT [id], [clienttask_id], [stageinstance_id], [status], [due_date], [completion_date]
-             FROM [dbo].[client_task_instances] WHERE [stageinstance_id] IN (${siList})`,
+            `SELECT [Id], [ClientTask_Id], [StageInstance_Id], [Status], [DueDate], [CompletionDate]
+             FROM [dbo].[ClientTaskInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = tasks.length;
 
           for (const t of tasks) {
-            const { data: ex } = await svcClient.from("client_task_instances").select("id").eq("id", t.id).maybeSingle();
+            const tid = t.Id ?? t.id;
+            const { data: ex } = await svcClient.from("client_task_instances").select("id").eq("id", tid).maybeSingle();
             if (ex) { skipped++; continue; }
             const { error } = await svcClient.from("client_task_instances").insert({
-              id: t.id,
-              clienttask_id: t.clienttask_id,
-              stageinstance_id: t.stageinstance_id,
-              status: t.status ?? 0,
-              due_date: toTimestamp(t.due_date),
-              completion_date: toTimestamp(t.completion_date),
+              id: tid,
+              clienttask_id: t.ClientTask_Id ?? t.clienttask_id,
+              stageinstance_id: t.StageInstance_Id ?? t.stageinstance_id,
+              status: t.Status ?? t.status ?? 0,
+              due_date: toTimestamp(t.DueDate ?? t.due_date),
+              completion_date: toTimestamp(t.CompletionDate ?? t.completion_date),
             });
-            if (error) { console.error(`CTI ${t.id}:`, error.message); skipped++; } else { created++; }
+            if (error) { console.error(`CTI ${tid}:`, error.message); skipped++; } else { created++; }
           }
         }
         results.imported.client_task_instances = { created, skipped, total };
