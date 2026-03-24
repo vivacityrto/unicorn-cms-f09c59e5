@@ -62,70 +62,13 @@ function execQuery(
   });
 }
 
-async function getTableColumns(conn: Connection, tableName: string, schema = "dbo") {
-  const rows = await execQuery(
-    conn,
-    `SELECT COLUMN_NAME
-     FROM INFORMATION_SCHEMA.COLUMNS
-     WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @tableName`,
-    [
-      { name: "schema", type: TYPES.NVarChar, value: schema },
-      { name: "tableName", type: TYPES.NVarChar, value: tableName },
-    ]
-  );
-
-  return new Set(rows.map((row) => String(row.COLUMN_NAME || row.column_name || "").toLowerCase()));
-}
-
-function firstMatchingColumn(columns: Set<string>, candidates: string[]) {
-  return candidates.find((candidate) => columns.has(candidate.toLowerCase())) ?? null;
-}
-
-function buildTenantSelect(columns: Set<string>) {
-  const mappings = [
-    { alias: "id", candidates: ["id", "user_id", "tenant_id", "client_id"] },
-    { alias: "companyname", candidates: ["companyname", "company_name", "business_name", "name"] },
-    { alias: "rto_id", candidates: ["rto_id", "rtoid", "rtocode", "rto_code"] },
-    { alias: "rto_name", candidates: ["rto_name", "rtoname", "trading_name", "rto"] },
-    { alias: "legal_name", candidates: ["legal_name", "legalname", "entity_name"] },
-    { alias: "abn", candidates: ["abn"] },
-    { alias: "acn", candidates: ["acn"] },
-    { alias: "cricos_id", candidates: ["cricos_id", "cricosid", "cricos_code"] },
-    { alias: "email", candidates: ["email", "email_address"] },
-    { alias: "phone", candidates: ["phone", "phone_number", "telephone", "mobile"] },
-    { alias: "website", candidates: ["website", "web_site", "url"] },
-    { alias: "address", candidates: ["address", "street_address", "address1"] },
-    { alias: "suburb", candidates: ["suburb", "city", "town"] },
-    { alias: "state_code", candidates: ["state_code", "state", "province"] },
-    { alias: "postcode", candidates: ["postcode", "post_code", "zip", "zipcode"] },
-    { alias: "lms", candidates: ["lms", "lms_name"] },
-    { alias: "accounting_system", candidates: ["accounting_system", "accountingsystem"] },
-  ];
-
-  const selectParts = mappings.map(({ alias, candidates }) => {
-    const matched = firstMatchingColumn(columns, candidates);
-    return matched ? `[${matched}] AS [${alias}]` : `NULL AS [${alias}]`;
-  });
-
-  return {
-    selectClause: selectParts.join(",\n                 "),
-    searchIdColumn: firstMatchingColumn(columns, ["id", "user_id", "tenant_id", "client_id"]),
-    searchRtoColumn: firstMatchingColumn(columns, ["rto_id", "rtoid", "rtocode", "rto_code"]),
-    searchNameColumns: [
-      firstMatchingColumn(columns, ["companyname", "company_name", "business_name", "name"]),
-      firstMatchingColumn(columns, ["rto_name", "rtoname", "trading_name", "rto"]),
-      firstMatchingColumn(columns, ["legal_name", "legalname", "entity_name"]),
-      firstMatchingColumn(columns, ["rto_id", "rtoid", "rtocode", "rto_code"]),
-    ].filter(Boolean) as string[],
-  };
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // --- Auth: SuperAdmin only ---
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -181,57 +124,54 @@ serve(async (req) => {
 
     const conn = await connectMssql();
     try {
-      const columns = await getTableColumns(conn, "Users", "dbo");
-      if (columns.size === 0) {
-        throw new Error("Could not inspect dbo.Users columns");
-      }
-
-      const tenantSelect = buildTenantSelect(columns);
-      if (!tenantSelect.searchIdColumn) {
-        throw new Error("Could not find an ID column on dbo.Users");
-      }
-
       const trimmedSearch = search.trim();
       const isNumeric = /^\d+$/.test(trimmedSearch);
+
+      // Search dbo.Users where discriminator = 'client'
       let sql: string;
       let params: { name: string; type: any; value: any }[];
 
       if (isNumeric) {
-        const whereClauses = [`[${tenantSelect.searchIdColumn}] = @searchId`];
+        sql = `SELECT TOP 20 u.[id], u.[company_name]
+               FROM [dbo].[Users] u
+               WHERE u.[discriminator] = 'client'
+                 AND u.[id] = @searchId`;
         params = [{ name: "searchId", type: TYPES.Int, value: parseInt(trimmedSearch) }];
-
-        if (
-          tenantSelect.searchRtoColumn &&
-          tenantSelect.searchRtoColumn !== tenantSelect.searchIdColumn
-        ) {
-          whereClauses.push(`[${tenantSelect.searchRtoColumn}] = @searchStr`);
-          params.push({ name: "searchStr", type: TYPES.NVarChar, value: trimmedSearch });
-        }
-
-        sql = `SELECT TOP 20 ${tenantSelect.selectClause}
-               FROM [dbo].[Users]
-               WHERE ${whereClauses.join(" OR ")}
-               ORDER BY [companyname], [id]`;
       } else {
-        if (tenantSelect.searchNameColumns.length === 0) {
-          return new Response(JSON.stringify({ clients: [] }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        sql = `SELECT TOP 20 ${tenantSelect.selectClause}
-               FROM [dbo].[Users]
-               WHERE ${tenantSelect.searchNameColumns
-                 .map((column) => `[${column}] LIKE @searchPattern`)
-                 .join(" OR ")}
-               ORDER BY [companyname], [id]`;
-        params = [
-          { name: "searchPattern", type: TYPES.NVarChar, value: `%${trimmedSearch}%` },
-        ];
+        sql = `SELECT TOP 20 u.[id], u.[company_name]
+               FROM [dbo].[Users] u
+               WHERE u.[discriminator] = 'client'
+                 AND u.[company_name] LIKE @searchPattern`;
+        params = [{ name: "searchPattern", type: TYPES.NVarChar, value: `%${trimmedSearch}%` }];
       }
 
-      const rows = await execQuery(conn, sql, params);
-      return new Response(JSON.stringify({ clients: rows }), {
+      const users = await execQuery(conn, sql, params);
+
+      // For each result, fetch RTO ID from clientfields (field_id = 14)
+      const clients = [];
+      for (const u of users) {
+        let rtoId: string | null = null;
+        try {
+          const fields = await execQuery(
+            conn,
+            `SELECT [value] FROM [dbo].[clientfields] WHERE [user_id] = @uid AND [field_id] = 14`,
+            [{ name: "uid", type: TYPES.Int, value: u.id }]
+          );
+          if (fields.length > 0 && fields[0].value) {
+            rtoId = String(fields[0].value);
+          }
+        } catch (e) {
+          console.error(`Failed to fetch clientfields for user ${u.id}:`, e);
+        }
+
+        clients.push({
+          id: u.id,
+          company_name: u.company_name,
+          rto_id: rtoId,
+        });
+      }
+
+      return new Response(JSON.stringify({ clients }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } finally {
