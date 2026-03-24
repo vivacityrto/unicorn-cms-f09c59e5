@@ -65,7 +65,7 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
         description: "",
         watermark: false,
         release_to_client: false,
-        category_id: null,
+        category_value: null,
         is_active: true
       });
       setUploadedFiles([]);
