@@ -368,9 +368,9 @@ function ResultRow({ label, status, detail }: { label: string; status: string; d
     <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
       <div className="flex items-center gap-2">
         {status === 'skipped' ? (
-          <AlertCircle className="h-4 w-4 text-amber-500" />
+          <AlertCircle className="h-4 w-4 text-warning" />
         ) : (
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <CheckCircle2 className="h-4 w-4 text-primary" />
         )}
         <span className="font-medium">{label}</span>
       </div>
