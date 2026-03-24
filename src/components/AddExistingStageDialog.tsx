@@ -21,8 +21,6 @@ interface ExistingStage {
   title: string;
   short_name: string | null;
   description: string | null;
-  video_url: string | null;
-  created_at: string;
 }
 
 export function AddExistingStageDialog({
