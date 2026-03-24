@@ -303,24 +303,25 @@ serve(async (req) => {
           const siList = siIds.join(",");
           const docs = await execQuery(
             conn,
-            `SELECT [id], [document_id], [stageinstance_id], [tenant_id], [isgenerated], [generationdate]
-             FROM [dbo].[document_instances] WHERE [stageinstance_id] IN (${siList})`,
+            `SELECT [Id], [Document_Id], [StageInstance_Id], [Tenant_Id], [IsGenerated], [GenerationDate]
+             FROM [dbo].[DocumentInstances] WHERE [StageInstance_Id] IN (${siList})`,
             []
           );
           total = docs.length;
 
           for (const d of docs) {
-            const { data: ex } = await svcClient.from("document_instances").select("id").eq("id", d.id).maybeSingle();
+            const did = d.Id ?? d.id;
+            const { data: ex } = await svcClient.from("document_instances").select("id").eq("id", did).maybeSingle();
             if (ex) { skipped++; continue; }
             const { error } = await svcClient.from("document_instances").insert({
-              id: d.id,
-              document_id: d.document_id,
-              stageinstance_id: d.stageinstance_id,
-              tenant_id: d.tenant_id || client_id,
-              isgenerated: d.isgenerated || false,
-              generationdate: d.generationdate || null,
+              id: did,
+              document_id: d.Document_Id ?? d.document_id,
+              stageinstance_id: d.StageInstance_Id ?? d.stageinstance_id,
+              tenant_id: d.Tenant_Id ?? d.tenant_id ?? client_id,
+              isgenerated: d.IsGenerated ?? d.isgenerated ?? false,
+              generationdate: d.GenerationDate ?? d.generationdate ?? null,
             });
-            if (error) { console.error(`DI ${d.id}:`, error.message); skipped++; } else { created++; }
+            if (error) { console.error(`DI ${did}:`, error.message); skipped++; } else { created++; }
           }
         }
         results.imported.document_instances = { created, skipped, total };
