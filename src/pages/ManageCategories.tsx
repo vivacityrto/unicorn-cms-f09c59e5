@@ -62,7 +62,7 @@ export default function ManageCategories() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('documents_categories')
+        .from('_documents_categories')
         .select(`
           *,
           creator:created_by (
