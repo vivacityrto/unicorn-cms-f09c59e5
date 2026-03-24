@@ -75,7 +75,7 @@ export function useStageReleases(tenantId?: number) {
     if (!tenantId) return;
     setLoading(true);
     try {
-      let query = supabase
+      let query = (supabase as any)
         .from('stage_releases')
         .select(`
           *,
