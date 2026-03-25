@@ -92,7 +92,7 @@ export async function sendNoteNotifications({
     const deepLink = `/tenant/${tenantId}`;
 
     // Fetch tenant name + CSC + all notified user names in parallel
-    const allUserIds = [...new Set([...notifyUserIds.filter(uid => uid !== currentUserId)])];
+    const allUserIds = [...new Set(notifyUserIds)];
     const [clientName, cscUserId, userNamesResult] = await Promise.all([
       getTenantName(tenantId),
       getTenantCsc(tenantId),
@@ -107,7 +107,7 @@ export async function sendNoteNotifications({
     });
 
     // ── 1. Notify selected team members ("Notify" section) ──
-    const filteredNotifyIds = notifyUserIds.filter(uid => uid !== currentUserId);
+    const filteredNotifyIds = [...notifyUserIds];
     if (filteredNotifyIds.length > 0) {
       // In-app notifications
       const notifRows = filteredNotifyIds.map(uid => ({
