@@ -231,7 +231,52 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Create audit log entry
+    // Generate AI summary of the email (non-blocking - don't fail if this fails)
+    try {
+      const previewText = emailData.bodyPreview || emailData.subject || "";
+      if (previewText.length > 20) {
+        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+        if (LOVABLE_API_KEY) {
+          console.log("Generating AI summary for email...");
+          const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash-lite",
+              messages: [
+                {
+                  role: "system",
+                  content: "You are a concise email summariser. Produce a 1-2 sentence summary capturing the key point, any action items, and the tone. No preamble."
+                },
+                {
+                  role: "user",
+                  content: `Subject: ${emailData.subject || "(No subject)"}\nFrom: ${emailData.from?.emailAddress?.name || emailData.from?.emailAddress?.address || "Unknown"}\nPreview: ${previewText}`
+                }
+              ],
+            }),
+          });
+
+          if (aiResponse.ok) {
+            const aiData = await aiResponse.json();
+            const summary = aiData.choices?.[0]?.message?.content?.trim();
+            if (summary) {
+              await serviceClient
+                .from("email_messages")
+                .update({ ai_summary: summary })
+                .eq("id", emailRecord.id);
+              console.log("AI summary saved");
+            }
+          } else {
+            console.warn("AI summary generation failed:", aiResponse.status);
+          }
+        }
+      }
+    } catch (aiErr) {
+      console.warn("AI summary error (non-critical):", aiErr);
+    }
     const linkedType = client_id ? "client" : package_id ? "package" : task_id ? "task" : null;
     const linkedId = client_id || package_id || task_id || null;
 

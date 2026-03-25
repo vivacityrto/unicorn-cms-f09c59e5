@@ -1,0 +1,1 @@
+ALTER TABLE public.email_messages ADD COLUMN IF NOT EXISTS ai_summary text;

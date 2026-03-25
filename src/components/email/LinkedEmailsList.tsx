@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Mail, Paperclip, ExternalLink, User, Calendar, ChevronDown, ChevronUp, Download, Eye } from "lucide-react";
+import { Mail, Paperclip, User, Calendar, Eye, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useLinkedEmails, LinkedEmail, EmailAttachment } from "@/hooks/useLinkedEmails";
 import { EmailViewDialog } from "./EmailViewDialog";
 
@@ -159,6 +158,12 @@ function EmailCard({ email, fetchAttachments, getAttachmentUrl }: EmailCardProps
             <Eye className="h-4 w-4" />
           </Button>
         </div>
+        {email.ai_summary && (
+          <div className="flex items-start gap-1.5 mt-2 text-sm text-primary/80 bg-primary/5 rounded-md px-2.5 py-1.5">
+            <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>{email.ai_summary}</span>
+          </div>
+        )}
         {email.body_preview && (
           <p className="text-sm text-muted-foreground mt-2 line-clamp-3">{email.body_preview}</p>
         )}

@@ -15381,6 +15381,7 @@ export type Database = {
       }
       email_messages: {
         Row: {
+          ai_summary: string | null
           body_preview: string | null
           client_id: number | null
           created_at: string
@@ -15400,6 +15401,7 @@ export type Database = {
           user_uuid: string
         }
         Insert: {
+          ai_summary?: string | null
           body_preview?: string | null
           client_id?: number | null
           created_at?: string
@@ -15419,6 +15421,7 @@ export type Database = {
           user_uuid: string
         }
         Update: {
+          ai_summary?: string | null
           body_preview?: string | null
           client_id?: number | null
           created_at?: string

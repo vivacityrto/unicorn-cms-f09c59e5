@@ -11,6 +11,7 @@ export interface LinkedEmail {
   received_at: string | null;
   has_attachments: boolean;
   body_preview: string | null;
+  ai_summary: string | null;
   client_id: number | null;
   package_id: number | null;
   task_id: string | null;
