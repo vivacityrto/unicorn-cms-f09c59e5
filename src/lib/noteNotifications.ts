@@ -80,20 +80,30 @@ export async function sendNoteNotifications({
   noteTitle,
   noteContent,
   notifyUserIds,
-}: NoteNotificationParams): Promise<void> {
+}: NoteNotificationParams): Promise<string[]> {
+  const notifiedNames: string[] = [];
   try {
     const author = await getCurrentAuthor();
-    if (!author) return;
+    if (!author) return notifiedNames;
 
     const { currentUserId, authorName } = author;
     const displayTitle = truncateText(noteTitle || noteContent);
     const deepLink = `/tenant/${tenantId}`;
 
-    // Fetch tenant name + CSC in parallel
-    const [clientName, cscUserId] = await Promise.all([
+    // Fetch tenant name + CSC + all notified user names in parallel
+    const allUserIds = [...new Set([...notifyUserIds.filter(uid => uid !== currentUserId)])];
+    const [clientName, cscUserId, userNamesResult] = await Promise.all([
       getTenantName(tenantId),
       getTenantCsc(tenantId),
+      allUserIds.length > 0
+        ? supabase.from('users').select('user_uuid, first_name').in('user_uuid', allUserIds)
+        : Promise.resolve({ data: [] }),
     ]);
+
+    const nameMap = new Map<string, string>();
+    (userNamesResult.data || []).forEach((u: any) => {
+      nameMap.set(u.user_uuid, u.first_name || 'User');
+    });
 
     // ── 1. Notify selected team members ("Notify" section) ──
     const filteredNotifyIds = notifyUserIds.filter(uid => uid !== currentUserId);
