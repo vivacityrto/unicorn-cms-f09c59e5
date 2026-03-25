@@ -50700,6 +50700,8 @@ export type Database = {
         | "package_threshold_100"
         | "meeting_action_created"
         | "document_request_created"
+        | "note_shared"
+        | "note_added"
       notification_integration_status: "connected" | "disconnected" | "error"
       notification_status: "queued" | "sent" | "failed" | "skipped"
       rock_type: "company" | "team" | "individual"
@@ -50976,6 +50978,8 @@ export const Constants = {
         "package_threshold_100",
         "meeting_action_created",
         "document_request_created",
+        "note_shared",
+        "note_added",
       ],
       notification_integration_status: ["connected", "disconnected", "error"],
       notification_status: ["queued", "sent", "failed", "skipped"],
