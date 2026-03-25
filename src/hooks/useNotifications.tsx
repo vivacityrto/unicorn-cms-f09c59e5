@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface Notification {
+export interface Notification {
   id: string;
   title: string;
   message: string;
@@ -11,6 +11,7 @@ interface Notification {
   created_at: string;
   tenant_id: number | null;
   tenant_name: string | null;
+  source_id: string | null;
 }
 
 export const useNotifications = () => {
@@ -29,7 +30,7 @@ export const useNotifications = () => {
 
       const { data, error } = await supabase
         .from('user_notifications')
-        .select('id, title, message, type, is_read, link, created_at, tenant_id')
+        .select('id, title, message, type, is_read, link, created_at, tenant_id, source_id')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(100);

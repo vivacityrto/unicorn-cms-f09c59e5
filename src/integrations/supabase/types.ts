@@ -42070,6 +42070,7 @@ export type Database = {
           is_read: boolean
           link: string | null
           message: string
+          source_id: string | null
           tenant_id: number | null
           title: string
           type: string
@@ -42084,6 +42085,7 @@ export type Database = {
           is_read?: boolean
           link?: string | null
           message: string
+          source_id?: string | null
           tenant_id?: number | null
           title: string
           type?: string
@@ -42098,6 +42100,7 @@ export type Database = {
           is_read?: boolean
           link?: string | null
           message?: string
+          source_id?: string | null
           tenant_id?: number | null
           title?: string
           type?: string
