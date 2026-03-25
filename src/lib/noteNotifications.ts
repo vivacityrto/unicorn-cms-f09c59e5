@@ -149,11 +149,19 @@ export async function sendNoteNotifications({
 
     // ── 2. Auto-notify CSC if creator is not the CSC ──
     if (cscUserId && cscUserId !== currentUserId) {
-      // Only if CSC isn't already in the notify list
       const alreadyNotified = filteredNotifyIds.includes(cscUserId);
 
+      // Get CSC name for the return list
+      let cscName = nameMap.get(cscUserId);
+      if (!cscName) {
+        const { data: cscUser } = await supabase.from('users').select('first_name').eq('user_uuid', cscUserId).single();
+        cscName = cscUser?.first_name || 'CSC';
+      }
       if (!alreadyNotified) {
-        // In-app notification
+        notifiedNames.push(`${cscName} (CSC)`);
+      }
+
+      if (!alreadyNotified) {
         await supabase.from('user_notifications').insert({
           user_id: cscUserId,
           tenant_id: tenantId,
@@ -165,7 +173,6 @@ export async function sendNoteNotifications({
         });
       }
 
-      // Teams notification for CSC (always, even if in-app was skipped because they were in notify list)
       try {
         await supabase.rpc('emit_notification', {
           p_event_type: alreadyNotified ? 'note_shared' as any : 'note_added' as any,
@@ -188,4 +195,5 @@ export async function sendNoteNotifications({
   } catch (err) {
     console.error('Note notification error:', err);
   }
+  return notifiedNames;
 }
