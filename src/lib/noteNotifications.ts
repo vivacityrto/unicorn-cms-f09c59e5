@@ -118,8 +118,9 @@ export async function sendNoteNotifications({
         type: 'note_shared',
         link: deepLink,
         created_by: currentUserId,
+        source_id: noteId,
       }));
-      await supabase.from('user_notifications').insert(notifRows);
+      await supabase.from('user_notifications').insert(notifRows as any);
       filteredNotifyIds.forEach(uid => {
         const name = nameMap.get(uid);
         if (name) notifiedNames.push(name);
@@ -171,7 +172,8 @@ export async function sendNoteNotifications({
           type: 'note_added',
           link: deepLink,
           created_by: currentUserId,
-        });
+          source_id: noteId,
+        } as any);
       }
 
       try {
