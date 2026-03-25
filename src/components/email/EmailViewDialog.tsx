@@ -113,9 +113,9 @@ export function EmailViewDialog({
             </div>
           )}
           {hasAttachments && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs text-muted-foreground">
               <Paperclip className="h-3 w-3 mr-1" />
-              Attachments
+              Has Attachments (view in Outlook)
             </Badge>
           )}
         </div>
