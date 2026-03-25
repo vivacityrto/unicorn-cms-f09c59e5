@@ -197,48 +197,6 @@ function EmailCard({ email, fetchAttachments, getAttachmentUrl }: EmailCardProps
                 <Eye className="h-4 w-4 mr-2" />
                 View Full Email
               </Button>
-
-              {/* Attachments */}
-              {email.has_attachments && (
-                <div className="mt-4">
-                  <div className="text-sm font-medium mb-2 flex items-center gap-1">
-                    <Paperclip className="h-4 w-4" />
-                    Attachments
-                  </div>
-                  {loadingAttachments ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-8 w-full" />
-                      <Skeleton className="h-8 w-full" />
-                    </div>
-                  ) : attachments.length > 0 ? (
-                    <div className="space-y-2">
-                      {attachments.map((attachment) => (
-                        <div
-                          key={attachment.id}
-                          className="flex items-center justify-between p-2 rounded bg-muted/50"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-sm truncate">{attachment.file_name}</span>
-                            <span className="text-xs text-muted-foreground flex-shrink-0">
-                              {formatFileSize(attachment.file_size)}
-                            </span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownload(attachment)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No attachments found</p>
-                  )}
-                </div>
-              )}
             </div>
           </CollapsibleContent>
         </div>
