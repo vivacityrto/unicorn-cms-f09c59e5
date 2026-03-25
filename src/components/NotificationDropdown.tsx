@@ -1,4 +1,5 @@
-import { Bell, Check, X } from 'lucide-react';
+import { useState } from 'react';
+import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -9,12 +10,33 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/hooks/useNotifications';
 import { format } from 'date-fns';
-import { Separator } from '@/components/ui/separator';
 import { useNavigate } from 'react-router-dom';
+
+/** Strip HTML tags from a string for clean display */
+function stripHtml(text: string): string {
+  if (!text) return '';
+  return text.replace(/<[^>]*>/g, '').trim();
+}
+
+/** Format type keys for display: note_shared → Note shared */
+function formatType(type: string): string {
+  return type.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+}
 
 export const NotificationDropdown = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
   const navigate = useNavigate();
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+
+  // Count by type
+  const typeCounts: Record<string, number> = {};
+  notifications.forEach(n => {
+    typeCounts[n.type] = (typeCounts[n.type] || 0) + 1;
+  });
+
+  const filteredNotifications = activeFilter
+    ? notifications.filter(n => n.type === activeFilter)
+    : notifications;
 
   return (
     <Popover>
@@ -27,44 +49,77 @@ export const NotificationDropdown = () => {
         >
           <Bell className="w-5 h-5 text-foreground" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+            <span className="absolute -top-1 -right-1 h-5 w-5 bg-destructive rounded-full flex items-center justify-center text-destructive-foreground text-xs font-bold">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="end">
+      <PopoverContent className="w-[480px] p-0" align="end">
+        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold text-base">Notifications</h3>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={markAllAsRead}
+              onClick={(e) => {
+                e.stopPropagation();
+                markAllAsRead();
+              }}
               className="text-xs h-7"
             >
-              Mark all as read
+              Mark all read
             </Button>
           )}
         </div>
-        <ScrollArea className="h-[400px]">
+
+        {/* Type filter badges */}
+        {Object.keys(typeCounts).length > 0 && (
+          <div className="flex flex-wrap gap-1.5 px-4 py-2 border-b bg-muted/30">
+            {Object.entries(typeCounts)
+              .sort(([, a], [, b]) => b - a)
+              .map(([type, count]) => (
+                <Badge
+                  key={type}
+                  variant={activeFilter === type ? 'default' : 'outline'}
+                  className="cursor-pointer text-xs select-none"
+                  onClick={() => setActiveFilter(activeFilter === type ? null : type)}
+                >
+                  {formatType(type)}: {count}
+                </Badge>
+              ))}
+            {activeFilter && (
+              <Badge
+                variant="secondary"
+                className="cursor-pointer text-xs select-none"
+                onClick={() => setActiveFilter(null)}
+              >
+                Clear
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Notification list */}
+        <ScrollArea className="h-[520px]">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <p className="text-sm text-muted-foreground">Loading...</p>
             </div>
-          ) : notifications.length === 0 ? (
+          ) : filteredNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 px-4">
               <Bell className="h-12 w-12 text-muted-foreground/50 mb-2" />
               <p className="text-sm text-muted-foreground text-center">
-                No notifications yet
+                {activeFilter ? 'No notifications of this type' : 'No notifications yet'}
               </p>
             </div>
           ) : (
             <div className="divide-y">
-              {notifications.map((notification) => (
+              {filteredNotifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 hover:bg-accent/50 transition-colors cursor-pointer ${
+                  className={`p-3 px-4 hover:bg-accent/50 transition-colors cursor-pointer ${
                     !notification.is_read ? 'bg-accent/20' : ''
                   }`}
                   onClick={() => {
@@ -73,18 +128,25 @@ export const NotificationDropdown = () => {
                   }}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 space-y-1">
+                    <div className="flex-1 space-y-0.5 min-w-0">
+                      {/* Client name if available */}
+                      {notification.tenant_name && (
+                        <p className="text-xs font-medium text-primary truncate">
+                          {notification.tenant_name}
+                        </p>
+                      )}
                       <p className="text-sm font-medium leading-tight">
-                        {notification.message}
+                        {notification.title || formatType(notification.type)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {stripHtml(notification.message)}
+                      </p>
+                      <p className="text-xs text-muted-foreground/70">
                         {format(new Date(notification.created_at), 'MMM d, yyyy h:mm a')}
                       </p>
                     </div>
                     {!notification.is_read && (
-                      <Badge variant="default" className="h-5 px-1.5 text-xs">
-                        New
-                      </Badge>
+                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-destructive flex-shrink-0" />
                     )}
                   </div>
                 </div>
