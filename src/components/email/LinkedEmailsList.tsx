@@ -159,6 +159,12 @@ function EmailCard({ email, fetchAttachments, getAttachmentUrl }: EmailCardProps
             <Eye className="h-4 w-4" />
           </Button>
         </div>
+        {email.ai_summary && (
+          <div className="flex items-start gap-1.5 mt-2 text-sm text-primary/80 bg-primary/5 rounded-md px-2.5 py-1.5">
+            <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>{email.ai_summary}</span>
+          </div>
+        )}
         {email.body_preview && (
           <p className="text-sm text-muted-foreground mt-2 line-clamp-3">{email.body_preview}</p>
         )}
