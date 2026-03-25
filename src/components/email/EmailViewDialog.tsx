@@ -43,6 +43,13 @@ export function EmailViewDialog({
 
   const messageId = outlookMessageId || externalMessageId;
 
+  // Trigger fetch when dialog opens
+  useEffect(() => {
+    if (open && !fetched && messageId) {
+      fetchBody();
+    }
+  }, [open]);
+
   const fetchBody = async () => {
     if (!messageId || fetched) return;
     setLoading(true);
