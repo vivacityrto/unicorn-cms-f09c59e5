@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, MailOpen, Mail, Eye, EyeOff } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import type { Notification } from "@/hooks/useNotifications";
 import { NotePreviewDialog } from "@/components/notifications/NotePreviewDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 
 function stripHtml(text: string): string {
@@ -24,15 +26,20 @@ export default function MyNotificationsPage() {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [previewNotif, setPreviewNotif] = useState<Notification | null>(null);
+  const [hideRead, setHideRead] = useState(false);
 
   const typeCounts: Record<string, number> = {};
   notifications.forEach((n) => {
     typeCounts[n.type] = (typeCounts[n.type] || 0) + 1;
   });
 
-  const filtered = activeFilter
+  let filtered = activeFilter
     ? notifications.filter((n) => n.type === activeFilter)
     : notifications;
+
+  if (hideRead) {
+    filtered = filtered.filter((n) => !n.is_read);
+  }
 
   const handleNotifClick = (notification: Notification) => {
     if (!notification.is_read) markAsRead(notification.id);
@@ -42,6 +49,11 @@ export default function MyNotificationsPage() {
     } else if (notification.link) {
       navigate(notification.link);
     }
+  };
+
+  const handleToggleRead = (e: React.MouseEvent, notification: Notification) => {
+    e.stopPropagation();
+    markAsRead(notification.id);
   };
 
   return (
@@ -55,12 +67,20 @@ export default function MyNotificationsPage() {
               <Badge variant="destructive" className="text-xs">{unreadCount} unread</Badge>
             )}
           </div>
-          {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={markAllAsRead}>
-              <CheckCheck className="h-4 w-4 mr-1" />
-              Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Switch id="hide-read" checked={hideRead} onCheckedChange={setHideRead} />
+              <Label htmlFor="hide-read" className="text-xs cursor-pointer">
+                {hideRead ? <><EyeOff className="h-3 w-3 inline mr-1" />Unread only</> : <><Eye className="h-3 w-3 inline mr-1" />Show all</>}
+              </Label>
+            </div>
+            {unreadCount > 0 && (
+              <Button variant="outline" size="sm" onClick={markAllAsRead}>
+                <CheckCheck className="h-4 w-4 mr-1" />
+                Mark all read
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Type filter badges */}
@@ -95,14 +115,14 @@ export default function MyNotificationsPage() {
             <div className="p-8 text-center text-muted-foreground text-sm">Loading notifications…</div>
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground text-sm">
-              {activeFilter ? "No notifications of this type" : "No notifications yet"}
+              {hideRead ? "No unread notifications" : activeFilter ? "No notifications of this type" : "No notifications yet"}
             </div>
           ) : (
             <div className="divide-y divide-border">
               {filtered.map((n) => (
                 <div
                   key={n.id}
-                  className={`p-3 px-4 hover:bg-accent/50 transition-colors cursor-pointer ${
+                  className={`p-3 px-4 hover:bg-accent/50 transition-colors cursor-pointer group ${
                     !n.is_read ? "bg-accent/20" : ""
                   }`}
                   onClick={() => handleNotifClick(n)}
@@ -122,9 +142,20 @@ export default function MyNotificationsPage() {
                         {format(new Date(n.created_at), "MMM d, yyyy h:mm a")}
                       </p>
                     </div>
-                    {!n.is_read && (
-                      <span className="mt-1 h-2.5 w-2.5 rounded-full bg-destructive flex-shrink-0" />
-                    )}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {!n.is_read && (
+                        <button
+                          onClick={(e) => handleToggleRead(e, n)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted"
+                          title="Mark as read"
+                        >
+                          <MailOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+                      )}
+                      {!n.is_read && (
+                        <span className="h-2.5 w-2.5 rounded-full bg-destructive" />
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
