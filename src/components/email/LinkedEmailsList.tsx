@@ -89,8 +89,14 @@ interface EmailCardProps {
   getAttachmentUrl: (storagePath: string) => Promise<string | null>;
 }
 
+function normalizeEmailText(text?: string | null) {
+  return text?.replace(/\s+/g, " ").trim() ?? "";
+}
+
 function EmailCard({ email }: EmailCardProps) {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const summaryText = normalizeEmailText(email.ai_summary);
+  const previewText = normalizeEmailText(email.body_preview);
 
   return (
     <>
@@ -128,16 +134,16 @@ function EmailCard({ email }: EmailCardProps) {
           </Button>
 
           <div className="col-span-2 flex w-full min-w-0 flex-col gap-2 pt-1">
-            {email.ai_summary && (
+            {summaryText && (
               <div className="flex w-full items-start gap-1.5 rounded-md bg-primary/5 px-2.5 py-1.5 text-sm text-primary/80">
                 <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span className="whitespace-normal break-words">{email.ai_summary}</span>
+                <span className="whitespace-normal break-words leading-6">{summaryText}</span>
               </div>
             )}
 
-            {email.body_preview && (
-              <p className="w-full whitespace-normal break-words text-sm text-muted-foreground line-clamp-3">
-                {email.body_preview}
+            {previewText && (
+              <p className="w-full whitespace-normal break-words text-sm leading-6 text-muted-foreground line-clamp-3">
+                {previewText}
               </p>
             )}
           </div>
