@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Mail, Paperclip, User, Calendar, Eye, Sparkles } from "lucide-react";
+import { Mail, User, Calendar, Eye, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,8 +62,8 @@ export function LinkedEmailsList({
       </CardHeader>
       <CardContent>
         {emails.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Mail className="h-10 w-10 mx-auto mb-3 opacity-50" />
+          <div className="py-8 text-center text-muted-foreground">
+            <Mail className="mx-auto mb-3 h-10 w-10 opacity-50" />
             <p>{emptyMessage}</p>
           </div>
         ) : (
@@ -89,85 +89,59 @@ interface EmailCardProps {
   getAttachmentUrl: (storagePath: string) => Promise<string | null>;
 }
 
-function EmailCard({ email, fetchAttachments, getAttachmentUrl }: EmailCardProps) {
-  const [isOpen, setIsOpen] = useState(false);
+function EmailCard({ email }: EmailCardProps) {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
-  const [loadingAttachments, setLoadingAttachments] = useState(false);
-
-  const handleToggle = async () => {
-    if (!isOpen && email.has_attachments && attachments.length === 0) {
-      setLoadingAttachments(true);
-      try {
-        const data = await fetchAttachments(email.id);
-        setAttachments(data);
-      } finally {
-        setLoadingAttachments(false);
-      }
-    }
-    setIsOpen(!isOpen);
-  };
-
-  const handleDownload = async (attachment: EmailAttachment) => {
-    const url = await getAttachmentUrl(attachment.storage_path);
-    if (url) {
-      window.open(url, "_blank");
-    }
-  };
-
-  const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return "";
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
 
   return (
     <>
-      <div className="rounded-lg border bg-card hover:bg-muted/50 transition-colors p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="font-medium line-clamp-1">{email.subject || "(No subject)"}</div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <User className="h-3.5 w-3.5" />
-                <span className="truncate max-w-[200px]">
+      <div className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2">
+          <div className="min-w-0">
+            <div className="whitespace-normal break-words font-medium">
+              {email.subject || "(No subject)"}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <div className="flex min-w-0 items-center gap-1">
+                <User className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate max-w-[200px]" title={email.sender_name || email.sender_email || undefined}>
                   {email.sender_name || email.sender_email}
                 </span>
               </div>
               {email.received_at && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 whitespace-nowrap">
                   <Calendar className="h-3.5 w-3.5" />
                   <span>{format(new Date(email.received_at), "MMM d, yyyy")}</span>
                 </div>
               )}
-              {email.has_attachments && (
-                <div className="flex items-center gap-1">
-                  <Paperclip className="h-3.5 w-3.5" />
-                  <span>Attachments</span>
-                </div>
-              )}
+              {email.has_attachments && <Badge variant="outline">Attachments</Badge>}
             </div>
           </div>
+
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setViewDialogOpen(true)}
             title="View full email"
-            className="shrink-0"
+            className="shrink-0 self-start"
           >
             <Eye className="h-4 w-4" />
           </Button>
-        </div>
-        {email.ai_summary && (
-          <div className="flex items-start gap-1.5 mt-2 text-sm text-primary/80 bg-primary/5 rounded-md px-2.5 py-1.5">
-            <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span>{email.ai_summary}</span>
+
+          <div className="col-span-2 flex w-full min-w-0 flex-col gap-2 pt-1">
+            {email.ai_summary && (
+              <div className="flex w-full items-start gap-1.5 rounded-md bg-primary/5 px-2.5 py-1.5 text-sm text-primary/80">
+                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span className="whitespace-normal break-words">{email.ai_summary}</span>
+              </div>
+            )}
+
+            {email.body_preview && (
+              <p className="w-full whitespace-normal break-words text-sm text-muted-foreground line-clamp-3">
+                {email.body_preview}
+              </p>
+            )}
           </div>
-        )}
-        {email.body_preview && (
-          <p className="text-sm text-muted-foreground mt-2 line-clamp-3">{email.body_preview}</p>
-        )}
+        </div>
       </div>
 
       <EmailViewDialog
