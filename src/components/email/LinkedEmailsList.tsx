@@ -154,6 +154,7 @@ function EmailCard({ email, fetchAttachments, getAttachmentUrl }: EmailCardProps
             size="sm"
             onClick={() => setViewDialogOpen(true)}
             title="View full email"
+            className="shrink-0"
           >
             <Eye className="h-4 w-4" />
           </Button>
