@@ -77,7 +77,7 @@ export const NotificationDropdown = () => {
               variant="link"
               size="sm"
               className="text-xs h-7 px-1"
-              onClick={() => navigate('/notifications')}
+              onClick={() => navigate('/inbox')}
             >
               Show All
             </Button>
