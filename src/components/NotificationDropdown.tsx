@@ -67,7 +67,10 @@ export const NotificationDropdown = () => {
                   className={`p-4 hover:bg-accent/50 transition-colors cursor-pointer ${
                     !notification.is_read ? 'bg-accent/20' : ''
                   }`}
-                  onClick={() => !notification.is_read && markAsRead(notification.id)}
+                  onClick={() => {
+                    if (!notification.is_read) markAsRead(notification.id);
+                    if (notification.link) navigate(notification.link);
+                  }}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 space-y-1">
