@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Mail, Paperclip, ExternalLink, User, Calendar, ChevronDown, ChevronUp, Download, Eye } from "lucide-react";
+import { Mail, Paperclip, User, Calendar, Eye, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
