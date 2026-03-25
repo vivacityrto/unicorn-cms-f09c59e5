@@ -59,19 +59,29 @@ export const NotificationDropdown = () => {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-semibold text-base">Notifications</h3>
-          {unreadCount > 0 && (
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  markAllAsRead();
+                }}
+                className="text-xs h-7"
+              >
+                Mark all read
+              </Button>
+            )}
             <Button
-              variant="ghost"
+              variant="link"
               size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                markAllAsRead();
-              }}
-              className="text-xs h-7"
+              className="text-xs h-7 px-1"
+              onClick={() => navigate('/notifications')}
             >
-              Mark all read
+              Show All
             </Button>
-          )}
+          </div>
         </div>
 
         {/* Type filter badges */}
