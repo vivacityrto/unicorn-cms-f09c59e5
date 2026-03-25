@@ -152,6 +152,9 @@ function EmailCard({ email, fetchAttachments, getAttachmentUrl }: EmailCardProps
                       </div>
                     )}
                   </div>
+                  {email.body_preview && (
+                    <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{email.body_preview}</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
