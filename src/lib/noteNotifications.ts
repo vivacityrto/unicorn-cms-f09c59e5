@@ -80,20 +80,30 @@ export async function sendNoteNotifications({
   noteTitle,
   noteContent,
   notifyUserIds,
-}: NoteNotificationParams): Promise<void> {
+}: NoteNotificationParams): Promise<string[]> {
+  const notifiedNames: string[] = [];
   try {
     const author = await getCurrentAuthor();
-    if (!author) return;
+    if (!author) return notifiedNames;
 
     const { currentUserId, authorName } = author;
     const displayTitle = truncateText(noteTitle || noteContent);
     const deepLink = `/tenant/${tenantId}`;
 
-    // Fetch tenant name + CSC in parallel
-    const [clientName, cscUserId] = await Promise.all([
+    // Fetch tenant name + CSC + all notified user names in parallel
+    const allUserIds = [...new Set([...notifyUserIds.filter(uid => uid !== currentUserId)])];
+    const [clientName, cscUserId, userNamesResult] = await Promise.all([
       getTenantName(tenantId),
       getTenantCsc(tenantId),
+      allUserIds.length > 0
+        ? supabase.from('users').select('user_uuid, first_name').in('user_uuid', allUserIds)
+        : Promise.resolve({ data: [] }),
     ]);
+
+    const nameMap = new Map<string, string>();
+    (userNamesResult.data || []).forEach((u: any) => {
+      nameMap.set(u.user_uuid, u.first_name || 'User');
+    });
 
     // ── 1. Notify selected team members ("Notify" section) ──
     const filteredNotifyIds = notifyUserIds.filter(uid => uid !== currentUserId);
@@ -109,6 +119,10 @@ export async function sendNoteNotifications({
         created_by: currentUserId,
       }));
       await supabase.from('user_notifications').insert(notifRows);
+      filteredNotifyIds.forEach(uid => {
+        const name = nameMap.get(uid);
+        if (name) notifiedNames.push(name);
+      });
 
       // Teams notifications
       for (const uid of filteredNotifyIds) {
@@ -135,11 +149,19 @@ export async function sendNoteNotifications({
 
     // ── 2. Auto-notify CSC if creator is not the CSC ──
     if (cscUserId && cscUserId !== currentUserId) {
-      // Only if CSC isn't already in the notify list
       const alreadyNotified = filteredNotifyIds.includes(cscUserId);
 
+      // Get CSC name for the return list
+      let cscName = nameMap.get(cscUserId);
+      if (!cscName) {
+        const { data: cscUser } = await supabase.from('users').select('first_name').eq('user_uuid', cscUserId).single();
+        cscName = cscUser?.first_name || 'CSC';
+      }
       if (!alreadyNotified) {
-        // In-app notification
+        notifiedNames.push(`${cscName} (CSC)`);
+      }
+
+      if (!alreadyNotified) {
         await supabase.from('user_notifications').insert({
           user_id: cscUserId,
           tenant_id: tenantId,
@@ -151,7 +173,6 @@ export async function sendNoteNotifications({
         });
       }
 
-      // Teams notification for CSC (always, even if in-app was skipped because they were in notify list)
       try {
         await supabase.rpc('emit_notification', {
           p_event_type: alreadyNotified ? 'note_shared' as any : 'note_added' as any,
@@ -174,4 +195,5 @@ export async function sendNoteNotifications({
   } catch (err) {
     console.error('Note notification error:', err);
   }
+  return notifiedNames;
 }
