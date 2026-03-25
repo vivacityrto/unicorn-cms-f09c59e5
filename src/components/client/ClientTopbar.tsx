@@ -109,12 +109,10 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
               />
               {unreadCount > 0 && (
                 <>
-                  {/* Red action dot */}
                   <span
                     className="absolute top-0 right-0 h-2 w-2 rounded-full"
                     style={{ backgroundColor: "hsl(0 72% 51%)" }}
                   />
-                  {/* Count badge */}
                   <span
                     className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center text-white animate-pulse"
                     style={{ backgroundColor: "hsl(330 86% 51%)" }}
@@ -125,7 +123,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 p-0">
+          <PopoverContent align="end" className="w-[480px] p-0">
             <div className="p-3 border-b border-border flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">
                 Notifications
@@ -136,32 +134,60 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
                 </Button>
               )}
             </div>
-            {/* Grouped counts */}
-            {unreadCount > 0 && (
-              <div className="px-3 py-2 border-b border-border flex gap-2 flex-wrap">
+            {/* Type filter badges */}
+            {Object.keys(unreadByType).length > 0 && (
+              <div className="px-3 py-2 border-b border-border flex gap-1.5 flex-wrap bg-muted/30">
                 {Object.entries(unreadByType).map(([type, count]) => (
-                  <span key={type} className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">
-                    {type}: {count}
+                  <span
+                    key={type}
+                    className={`text-[11px] px-2 py-0.5 rounded-full capitalize cursor-pointer select-none transition-colors ${
+                      notifFilter === type
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    }`}
+                    onClick={() => setNotifFilter(notifFilter === type ? null : type)}
+                  >
+                    {type.replace(/_/g, ' ')}: {count}
                   </span>
                 ))}
+                {notifFilter && (
+                  <span
+                    className="text-[11px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground cursor-pointer select-none"
+                    onClick={() => setNotifFilter(null)}
+                  >
+                    Clear
+                  </span>
+                )}
               </div>
             )}
-            <div className="max-h-64 overflow-y-auto">
-              {notifications.length === 0 ? (
+            <div className="max-h-[480px] overflow-y-auto">
+              {filteredClientNotifications.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-4 text-center">
-                  No unread notifications
+                  {notifFilter ? 'No notifications of this type' : 'No notifications'}
                 </p>
               ) : (
-                notifications.slice(0, 5).map((n: any) => (
-                  <div key={n.id} className="px-3 py-2 border-b last:border-0 hover:bg-muted/50 transition-colors border-border">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm text-foreground">{n.title}</p>
+                filteredClientNotifications.map((n: any) => (
+                  <Link
+                    key={n.id}
+                    to={n.link || '/client/notifications'}
+                    onClick={() => { if (!n.is_read) markAsRead(n.id); }}
+                    className="block px-3 py-2.5 border-b last:border-0 hover:bg-muted/50 transition-colors border-border"
+                  >
+                    <div className="flex items-start gap-1.5">
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <p className="text-sm font-medium text-foreground leading-tight">{n.title}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {(n.message || '').replace(/<[^>]*>/g, '').slice(0, 100)}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/60">
+                          {new Date(n.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
                       {!n.is_read && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-destructive flex-shrink-0" />
+                        <span className="mt-1 h-2.5 w-2.5 rounded-full bg-destructive flex-shrink-0" />
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{n.message?.slice(0, 60)}</p>
-                  </div>
+                  </Link>
                 ))
               )}
             </div>
