@@ -119,6 +119,10 @@ export async function sendNoteNotifications({
         created_by: currentUserId,
       }));
       await supabase.from('user_notifications').insert(notifRows);
+      filteredNotifyIds.forEach(uid => {
+        const name = nameMap.get(uid);
+        if (name) notifiedNames.push(name);
+      });
 
       // Teams notifications
       for (const uid of filteredNotifyIds) {
