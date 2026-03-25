@@ -36,11 +36,16 @@ interface ClientTopbarProps {
 
 export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [notifFilter, setNotifFilter] = useState<string | null>(null);
   const { profile, signOut } = useAuth();
   const { openHelpCenter } = useHelpCenter();
-  const { unreadCount, unreadByType, notifications, markAllAsRead } = useClientNotifications();
+  const { unreadCount, unreadByType, notifications, markAllAsRead, markAsRead } = useClientNotifications();
   const { activeTenantId, logoUrl } = useClientTenant();
   const { actingUser, isLoading: actingUserLoading } = useClientActingUser();
+
+  const filteredClientNotifications = notifFilter
+    ? notifications.filter((n) => n.type === notifFilter)
+    : notifications;
 
   // In preview/impersonation mode, always show the parent account — never fall back to the SuperAdmin profile
   const displayUser = isPreview ? actingUser : (actingUser || profile);
