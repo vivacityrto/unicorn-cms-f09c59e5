@@ -125,82 +125,44 @@ function EmailCard({ email, fetchAttachments, getAttachmentUrl }: EmailCardProps
 
   return (
     <>
-      <Collapsible open={isOpen} onOpenChange={handleToggle}>
-        <div className="rounded-lg border bg-card hover:bg-muted/50 transition-colors">
-          <CollapsibleTrigger asChild>
-            <button className="w-full text-left p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium line-clamp-1">{email.subject || "(No subject)"}</div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <User className="h-3.5 w-3.5" />
-                      <span className="truncate max-w-[200px]">
-                        {email.sender_name || email.sender_email}
-                      </span>
-                    </div>
-                    {email.received_at && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>{format(new Date(email.received_at), "MMM d, yyyy")}</span>
-                      </div>
-                    )}
-                    {email.has_attachments && (
-                      <div className="flex items-center gap-1">
-                        <Paperclip className="h-3.5 w-3.5" />
-                        <span>Attachments</span>
-                      </div>
-                    )}
-                  </div>
-                  {email.body_preview && (
-                    <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{email.body_preview}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setViewDialogOpen(true);
-                    }}
-                    title="View full email"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  {isOpen ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
+      <div className="rounded-lg border bg-card hover:bg-muted/50 transition-colors p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="font-medium line-clamp-1">{email.subject || "(No subject)"}</div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <User className="h-3.5 w-3.5" />
+                <span className="truncate max-w-[200px]">
+                  {email.sender_name || email.sender_email}
+                </span>
               </div>
-            </button>
-          </CollapsibleTrigger>
-
-          <CollapsibleContent>
-            <div className="px-4 pb-4 pt-0 border-t">
-              {/* Body preview */}
-              {email.body_preview && (
-                <div className="mt-3">
-                  <p className="text-sm text-muted-foreground line-clamp-3">{email.body_preview}</p>
+              {email.received_at && (
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>{format(new Date(email.received_at), "MMM d, yyyy")}</span>
                 </div>
               )}
-
-              {/* View full email button */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={() => setViewDialogOpen(true)}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                View Full Email
-              </Button>
+              {email.has_attachments && (
+                <div className="flex items-center gap-1">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  <span>Attachments</span>
+                </div>
+              )}
             </div>
-          </CollapsibleContent>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setViewDialogOpen(true)}
+            title="View full email"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
         </div>
-      </Collapsible>
+        {email.body_preview && (
+          <p className="text-sm text-muted-foreground mt-2 line-clamp-3">{email.body_preview}</p>
+        )}
+      </div>
 
       <EmailViewDialog
         open={viewDialogOpen}
