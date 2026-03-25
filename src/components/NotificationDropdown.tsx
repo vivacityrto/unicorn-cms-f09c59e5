@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 
 export const NotificationDropdown = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, loading } = useNotifications();
+  const navigate = useNavigate();
 
   return (
     <Popover>
