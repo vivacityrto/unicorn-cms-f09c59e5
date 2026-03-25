@@ -49,15 +49,16 @@ async function getTenantName(tenantId: number): Promise<string> {
 }
 
 /**
- * Get the canonical CSC (assigned_consultant_user_id) for a tenant
+ * Get the primary CSC for a tenant from tenant_csc_assignments
  */
 async function getTenantCsc(tenantId: number): Promise<string | null> {
   const { data } = await supabase
-    .from('tenants')
-    .select('assigned_consultant_user_id')
-    .eq('id', tenantId)
-    .single();
-  return data?.assigned_consultant_user_id || null;
+    .from('tenant_csc_assignments')
+    .select('csc_user_id')
+    .eq('tenant_id', tenantId)
+    .eq('is_primary', true)
+    .maybeSingle();
+  return data?.csc_user_id || null;
 }
 
 /**
