@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { sendNoteNotifications } from '@/lib/noteNotifications';
 import { useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { NoteFormDialog, NoteFormData } from '@/components/notes/NoteFormDialog';
