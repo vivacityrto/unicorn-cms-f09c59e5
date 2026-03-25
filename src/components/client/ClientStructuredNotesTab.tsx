@@ -585,6 +585,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             noteTitle: title,
             noteContent: content,
             notifyUserIds,
+          }).then(names => {
+            if (names.length > 0) {
+              toast({ title: 'Notification sent to:', description: names.join(', ') });
+            }
           });
         }
 
