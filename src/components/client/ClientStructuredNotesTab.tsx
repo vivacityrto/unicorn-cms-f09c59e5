@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { sendNoteNotifications } from '@/lib/noteNotifications';
 import { useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { NoteFormDialog, NoteFormData } from '@/components/notes/NoteFormDialog';
@@ -576,81 +577,15 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           parent_id_override: selectedPkg ? selectedPkg.instance_id : undefined
         });
 
-        // Notify CSC if note was created by someone else
+        // Send in-app + Teams notifications
         if (noteId) {
-          try {
-            const { data: userData } = await supabase.auth.getUser();
-            const currentUserId = userData.user?.id;
-            if (currentUserId) {
-              const { data: cscData } = await supabase
-                .from('client_packages')
-                .select('assigned_csc_user_id')
-                .eq('tenant_id', tenantId)
-                .not('assigned_csc_user_id', 'is', null)
-                .limit(1);
-
-              const cscUserId = cscData?.[0]?.assigned_csc_user_id;
-              if (cscUserId && cscUserId !== currentUserId) {
-                // Get current user's name for the notification
-                const { data: authorUser } = await supabase
-                  .from('users')
-                  .select('first_name, last_name')
-                  .eq('user_uuid', currentUserId)
-                  .single();
-
-                const authorName = authorUser
-                  ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim()
-                  : 'A team member';
-
-                await supabase.from('user_notifications').insert({
-                  user_id: cscUserId,
-                  tenant_id: tenantId,
-                  title: 'New note added to your client',
-                  message: `${authorName} added a note: "${(title || content.substring(0, 60)).trim()}${!title && content.length > 60 ? '...' : ''}"`,
-                  type: 'note_added',
-                  link: `/tenant/${tenantId}`,
-                  created_by: currentUserId
-                });
-              }
-            }
-          } catch (notifErr) {
-            console.error('Failed to send CSC notification:', notifErr);
-          }
-        }
-
-        // Send notifications to selected "Notify" users
-        if (noteId && notifyUserIds.length > 0) {
-          try {
-            const { data: userData } = await supabase.auth.getUser();
-            const currentUserId = userData.user?.id;
-            if (currentUserId) {
-              const { data: authorUser } = await supabase
-                .from('users')
-                .select('first_name, last_name')
-                .eq('user_uuid', currentUserId)
-                .single();
-              const authorName = authorUser
-                ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim()
-                : 'A team member';
-
-              const notifRows = notifyUserIds
-                .filter(uid => uid !== currentUserId)
-                .map(uid => ({
-                  user_id: uid,
-                  tenant_id: tenantId,
-                  title: 'Note shared with you',
-                  message: `${authorName} shared a note: "${(title || content.substring(0, 60)).trim()}${!title && content.length > 60 ? '...' : ''}"`,
-                  type: 'note_shared',
-                  link: `/tenant/${tenantId}`,
-                  created_by: currentUserId
-                }));
-
-              if (notifRows.length > 0) {
-                await supabase.from('user_notifications').insert(notifRows);
-              }
-            }
-          } catch (notifyErr) {
-            console.error('Failed to send notify notifications:', notifyErr);
+          sendNoteNotifications({
+            noteId,
+            tenantId,
+            noteTitle: title,
+            noteContent: content,
+            notifyUserIds,
+          });
         }
 
         // Send client notification email if requested
@@ -678,7 +613,6 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           } catch (e) {
             console.error('Client notify error:', e);
           }
-        }
         }
       }
       setIsAddDialogOpen(false);
@@ -736,50 +670,15 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           parent_id_override: selectedPkg ? selectedPkg.instance_id : undefined,
         });
 
-        // CSC notification
+        // Send in-app + Teams notifications
         if (createdNoteId) {
-          try {
-            const { data: userData } = await supabase.auth.getUser();
-            const currentUserId = userData.user?.id;
-            if (currentUserId) {
-              const { data: cscData } = await supabase
-                .from('client_packages')
-                .select('assigned_csc_user_id')
-                .eq('tenant_id', tenantId)
-                .not('assigned_csc_user_id', 'is', null)
-                .limit(1);
-              const cscUserId = cscData?.[0]?.assigned_csc_user_id;
-              if (cscUserId && cscUserId !== currentUserId) {
-                const { data: authorUser } = await supabase.from('users').select('first_name, last_name').eq('user_uuid', currentUserId).single();
-                const authorName = authorUser ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim() : 'A team member';
-                await supabase.from('user_notifications').insert({
-                  user_id: cscUserId, tenant_id: tenantId,
-                  title: 'New note added to your client',
-                  message: `${authorName} added a note: "${(data.title || data.content.substring(0, 60)).trim()}"`,
-                  type: 'note_added', link: `/tenant/${tenantId}`, created_by: currentUserId,
-                });
-              }
-            }
-          } catch (e) { console.error('CSC notification failed:', e); }
-        }
-
-        // Team notifications
-        if (createdNoteId && data.notifyUserIds.length > 0) {
-          try {
-            const { data: userData } = await supabase.auth.getUser();
-            const currentUserId = userData.user?.id;
-            if (currentUserId) {
-              const { data: authorUser } = await supabase.from('users').select('first_name, last_name').eq('user_uuid', currentUserId).single();
-              const authorName = authorUser ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim() : 'A team member';
-              const notifRows = data.notifyUserIds.filter(uid => uid !== currentUserId).map(uid => ({
-                user_id: uid, tenant_id: tenantId,
-                title: 'Note shared with you',
-                message: `${authorName} shared a note: "${(data.title || data.content.substring(0, 60)).trim()}"`,
-                type: 'note_shared', link: `/tenant/${tenantId}`, created_by: currentUserId,
-              }));
-              if (notifRows.length > 0) await supabase.from('user_notifications').insert(notifRows);
-            }
-          } catch (e) { console.error('Notify notifications failed:', e); }
+          sendNoteNotifications({
+            noteId: createdNoteId,
+            tenantId,
+            noteTitle: data.title,
+            noteContent: data.content,
+            notifyUserIds: data.notifyUserIds,
+          });
         }
 
         // Client notification
