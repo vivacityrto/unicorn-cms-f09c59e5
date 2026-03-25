@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ export interface LinkedEmail {
   has_attachments: boolean;
   body_preview: string | null;
   ai_summary: string | null;
+  tenant_id: number | null;
   client_id: number | null;
   package_id: number | null;
   task_id: string | null;
@@ -41,6 +42,7 @@ export function useLinkedEmails(options?: {
   taskId?: string;
 }) {
   const queryClient = useQueryClient();
+  const enrichmentInFlight = useRef<Set<string>>(new Set());
 
   // Fetch linked emails with optional filters
   const {
@@ -157,6 +159,41 @@ export function useLinkedEmails(options?: {
 
     return data.signedUrl;
   }, []);
+
+  useEffect(() => {
+    const emailsToEnrich = (emails || [])
+      .filter(
+        (email) =>
+          !!email.external_message_id &&
+          !!email.tenant_id &&
+          !enrichmentInFlight.current.has(email.id) &&
+          (!email.ai_summary || !email.body_preview || email.body_preview.length < 320 || /[\r\n]/.test(email.body_preview))
+      )
+      .slice(0, 5);
+
+    if (emailsToEnrich.length === 0) return;
+
+    emailsToEnrich.forEach((email) => enrichmentInFlight.current.add(email.id));
+
+    void Promise.allSettled(
+      emailsToEnrich.map((email) =>
+        supabase.functions.invoke("capture-outlook-email", {
+          body: {
+            action: "refresh-linked-email-metadata",
+            email_id: email.id,
+            message_id: email.external_message_id,
+            tenant_id: String(email.tenant_id),
+          },
+        })
+      )
+    ).then((results) => {
+      emailsToEnrich.forEach((email) => enrichmentInFlight.current.delete(email.id));
+
+      if (results.some((result) => result.status === "fulfilled" && !result.value.error && !result.value.data?.error)) {
+        queryClient.invalidateQueries({ queryKey: ["linked-emails"] });
+      }
+    });
+  }, [emails, queryClient]);
 
   return {
     emails: emails || [],
