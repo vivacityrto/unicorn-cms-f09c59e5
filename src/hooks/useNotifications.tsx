@@ -1,47 +1,59 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  link: string | null;
+  created_at: string;
+  tenant_id: number | null;
+}
 
 export const useNotifications = () => {
   const { profile } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
-      if (!profile?.tenant_id) {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) {
         setLoading(false);
         return;
       }
 
       const { data, error } = await supabase
-        .from('notification_tenants')
-        .select('*')
-        .eq('tenant_id', profile.tenant_id)
-        .order('created_at', { ascending: false });
+        .from('user_notifications')
+        .select('id, title, message, type, is_read, link, created_at, tenant_id')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       if (error) throw error;
 
-      setNotifications(data || []);
+      setNotifications((data || []) as Notification[]);
       setUnreadCount(data?.filter(n => !n.is_read).length || 0);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const markAsRead = async (notificationId: string) => {
     try {
       const { error } = await supabase
-        .from('notification_tenants')
+        .from('user_notifications')
         .update({ is_read: true })
         .eq('id', notificationId);
 
       if (error) throw error;
-
-      // Refresh notifications
       fetchNotifications();
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -50,17 +62,17 @@ export const useNotifications = () => {
 
   const markAllAsRead = async () => {
     try {
-      if (!profile?.tenant_id) return;
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) return;
 
       const { error } = await supabase
-        .from('notification_tenants')
+        .from('user_notifications')
         .update({ is_read: true })
-        .eq('tenant_id', profile.tenant_id)
+        .eq('user_id', userId)
         .eq('is_read', false);
 
       if (error) throw error;
-
-      // Refresh notifications
       fetchNotifications();
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
@@ -68,35 +80,37 @@ export const useNotifications = () => {
   };
 
   useEffect(() => {
-    if (!profile?.tenant_id) {
-      setLoading(false);
-      return;
-    }
+    const init = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
 
-    fetchNotifications();
+      fetchNotifications();
 
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('notifications-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notification_tenants',
-          filter: `tenant_id=eq.${profile.tenant_id}`,
-        },
-        (payload) => {
-          console.log('Notification change detected:', payload);
-          fetchNotifications();
-        }
-      )
-      .subscribe();
+      const channel = supabase
+        .channel('user-notifications-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => fetchNotifications()
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
+      return () => {
+        supabase.removeChannel(channel);
+      };
     };
-  }, [profile?.tenant_id]);
+
+    init();
+  }, [fetchNotifications]);
 
   return {
     notifications,
