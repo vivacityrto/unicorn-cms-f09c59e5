@@ -50,6 +50,7 @@ import { EditStageEmailDialog } from '@/components/stage/EditStageEmailDialog';
 import { StageImpactPanel } from '@/components/package-builder/StageImpactPanel';
 import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
+import { SortableStaffTaskList } from '@/components/stage/SortableStaffTaskList';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
@@ -98,6 +99,7 @@ export default function AdminStageDetail() {
     updateDocument,
     deleteDocument,
     reorderDocuments,
+    reorderTeamTasks,
     fetchContent: refetchTemplateContent
   } = useStageTemplateContent(stageIdNum);
 
@@ -1414,64 +1416,18 @@ export default function AdminStageDetail() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {teamTasks.map((task) => (
-                          <div key={task.id} className={cn("flex items-start gap-2 p-3 rounded-lg border", task.is_key_event ? "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800" : "bg-muted/30")}>
-                            <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{task.name}</span>
-                                {task.is_key_event && (
-                                  <Badge variant="outline" className="text-xs border-amber-300 bg-amber-50 text-amber-700 gap-0.5">
-                                    <KeyRound className="h-2.5 w-2.5" />
-                                    Key Event
-                                  </Badge>
-                                )}
-                                {task.is_mandatory && (
-                                  <Badge variant="secondary" className="text-xs">Required</Badge>
-                                )}
-                              </div>
-                              {task.description && (
-                                <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
-                                  {task.description.replace(/<[^>]*>/g, '').slice(0, 120)}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  {task.owner_role}
-                                </span>
-                                {task.estimated_hours && (
-                                  <span className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    {task.estimated_hours}h
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            {/* Key Event toggle - only for recurring stages */}
-                            {(stage as any)?.is_recurring && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn("h-7 w-7", task.is_key_event && "text-primary")}
-                                onClick={() => wrapCertifiedAction(async () => {
-                                  const newVal = !task.is_key_event;
-                                  await updateTeamTask(task.id, { is_key_event: newVal } as any);
-                                  toast({ title: newVal ? 'Marked as key event' : 'Removed key event flag' });
-                                })}
-                                title={task.is_key_event ? 'Remove key event flag' : 'Mark as key event (drives milestone date)'}
-                              >
-                                <KeyRound className="h-3 w-3" />
-                              </Button>
-                            )}
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => openEditTeamTask(task))}>
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => handleDeleteStaffTask(task.id))}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
+                        <SortableStaffTaskList
+                          tasks={teamTasks}
+                          isRecurring={!!(stage as any)?.is_recurring}
+                          onReorder={(ids) => reorderTeamTasks(ids)}
+                          onEdit={(task) => wrapCertifiedAction(() => openEditTeamTask(task))}
+                          onDelete={(taskId) => wrapCertifiedAction(() => handleDeleteStaffTask(taskId))}
+                          onToggleKeyEvent={(task) => wrapCertifiedAction(async () => {
+                            const newVal = !task.is_key_event;
+                            await updateTeamTask(task.id, { is_key_event: newVal } as any);
+                            toast({ title: newVal ? 'Marked as key event' : 'Removed key event flag' });
+                          })}
+                        />
                       </div>
                     )}
                   </ScrollArea>

@@ -458,6 +458,28 @@ export function useStageTemplateContent(stageId: number | null) {
     return;
   };
 
+  const reorderTeamTasks = async (orderedIds: number[]) => {
+    // Optimistic local update
+    const reordered = orderedIds.map((id, idx) => {
+      const task = teamTasks.find(t => t.id === id)!;
+      return { ...task, sort_order: idx };
+    }).filter(Boolean);
+    setTeamTasks(reordered);
+
+    try {
+      // Batch update order_number in staff_tasks
+      await Promise.all(
+        orderedIds.map((id, idx) =>
+          supabase.from('staff_tasks').update({ order_number: idx } as any).eq('id', id)
+        )
+      );
+    } catch (error: any) {
+      console.error('Failed to reorder team tasks:', error);
+      toast({ title: 'Error', description: 'Failed to save task order', variant: 'destructive' });
+      await fetchContent(); // rollback
+    }
+  };
+
   return {
     teamTasks,
     clientTasks,
@@ -469,6 +491,7 @@ export function useStageTemplateContent(stageId: number | null) {
     addTeamTask,
     updateTeamTask,
     deleteTeamTask,
+    reorderTeamTasks,
     // Client tasks
     addClientTask,
     updateClientTask,
