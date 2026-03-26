@@ -1165,6 +1165,9 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       {/* Stale Drafts */}
       <StaleDraftsWarning tenantId={tenantId} />
 
+      {/* Tenant-wide billable summary */}
+      <TenantTimeSummaryStrip tenantId={tenantId} />
+
       {/* Burndown + Weights side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
         <div>
