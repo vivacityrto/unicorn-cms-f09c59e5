@@ -1175,6 +1175,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
             Package Burndown
           </h3>
           <PackageBurndownCards tenantId={tenantId} />
+          <ClosedPackageSummaries tenantId={tenantId} />
         </div>
         <MembershipWeightsPanel tenantId={tenantId} />
       </div>
