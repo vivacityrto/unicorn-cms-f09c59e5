@@ -33,11 +33,11 @@ export function ReRegistrationBadge({
     queryKey: ["tenant-registration-end", tenantId],
     queryFn: async () => {
       const { data } = await supabase
-        .from("tenant_profile")
+        .from("tga_rto_summary")
         .select("registration_end_date")
         .eq("tenant_id", tenantId)
         .maybeSingle();
-      return (data?.registration_end_date as string) ?? null;
+      return data?.registration_end_date ?? null;
     },
     staleTime: 60_000,
   });
