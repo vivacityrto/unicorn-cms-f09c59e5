@@ -208,9 +208,11 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
             {membershipUsage?.membership_year_start && membershipUsage?.membership_year_end && (
               <div className="mt-4 pt-3 border-t">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    Membership year: {new Date(membershipUsage.membership_year_start).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} — {new Date(membershipUsage.membership_year_end).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
+                  <ReRegistrationMembershipTooltip tenantId={clientId}>
+                    <p className="text-xs text-muted-foreground cursor-default">
+                      Membership year: {new Date(membershipUsage.membership_year_start).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} — {new Date(membershipUsage.membership_year_end).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </ReRegistrationMembershipTooltip>
                   <ReRegistrationBadge tenantId={clientId} />
                 </div>
               </div>
