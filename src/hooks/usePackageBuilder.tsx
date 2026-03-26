@@ -26,6 +26,7 @@ export interface Stage {
   stage_type: string;
   is_reusable: boolean;
   ai_hint: string | null;
+  is_recurring: boolean;
   dashboard_visible: boolean;
   created_at: string;
   usage_count?: number;
@@ -157,6 +158,7 @@ export function usePackageBuilder() {
         stage_type: s.stage_type || 'delivery',
         is_reusable: s.is_reusable ?? true,
         ai_hint: s.ai_hint,
+        is_recurring: s.is_recurring ?? false,
         dashboard_visible: s.dashboard_visible ?? true,
         created_at: s.dateimported || new Date().toISOString(),
         is_certified: s.is_certified ?? false,
@@ -473,6 +475,7 @@ export function usePackageDetail(packageId: number | null) {
             stage_type: s.stage_type || 'delivery',
             is_reusable: s.is_reusable ?? true,
             ai_hint: s.ai_hint,
+            is_recurring: s.is_recurring ?? false,
             dashboard_visible: s.dashboard_visible ?? true,
             created_at: s.dateimported || new Date().toISOString(),
             is_certified: s.is_certified ?? false,

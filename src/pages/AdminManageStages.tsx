@@ -388,6 +388,7 @@ export default function AdminManageStages() {
       usage_count: stage.usage_count,
       is_reusable: true,
       ai_hint: null,
+      is_recurring: stage.is_recurring ?? false,
       dashboard_visible: true,
     });
     setIsPreviewOpen(true);
