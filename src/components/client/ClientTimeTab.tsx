@@ -108,6 +108,52 @@ function formatLifecycle(start: string | null, end: string | null) {
   return `${s} – ${e}`;
 }
 
+// ── Tenant-wide Billable / Non-billable summary (always visible) ─────
+function TenantTimeSummaryStrip({ tenantId }: { tenantId: number }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['tenant-time-summary-strip', tenantId],
+    queryFn: async () => {
+      const { data: rows, error } = await (supabase as any)
+        .from('time_entries')
+        .select('duration_minutes, is_billable')
+        .eq('tenant_id', tenantId);
+      if (error) throw error;
+      let billable = 0;
+      let nonBillable = 0;
+      (rows || []).forEach((r: any) => {
+        const mins = r.duration_minutes || 0;
+        if (r.is_billable) billable += mins; else nonBillable += mins;
+      });
+      return { billable, nonBillable, total: billable + nonBillable };
+    },
+    staleTime: 30_000,
+  });
+
+  if (isLoading || !data) return null;
+
+  const billPct = data.total > 0 ? Math.round((data.billable / data.total) * 100) : 0;
+
+  return (
+    <div className="flex items-center gap-6 text-sm">
+      <div className="flex items-center gap-1.5">
+        <DollarSign className="h-4 w-4 text-green-600" />
+        <span className="font-medium">Billable:</span>
+        <span className="font-semibold">{formatDuration(data.billable)}</span>
+        <span className="text-muted-foreground">({billPct}%)</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="font-medium">Non-billable:</span>
+        <span className="font-semibold">{formatDuration(data.nonBillable)}</span>
+        <span className="text-muted-foreground">({100 - billPct}%)</span>
+      </div>
+      <div className="flex items-center gap-1.5 text-muted-foreground">
+        <Clock className="h-4 w-4" />
+        <span>Total: {formatDuration(data.total)}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Combined Burndown + Monthly Summary per package ─────────────────
 function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   const { data: combined, isLoading } = useQuery({
