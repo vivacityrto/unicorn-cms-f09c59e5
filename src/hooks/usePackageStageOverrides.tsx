@@ -408,21 +408,43 @@ export function useStageImpact(stageId: number | null) {
     }
 
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('package_stages')
-        .select(`
-          package_id,
-          use_overrides,
-          packages(id, name)
-        `)
+        .select('package_id, use_overrides')
         .eq('stage_id', stageId);
 
       if (error) throw error;
 
-      const packages = (data || []).map(ps => ({
-        id: ps.package_id,
-        name: (ps.packages as any)?.name || 'Unknown',
-        hasOverrides: ps.use_overrides ?? false
+      const packageStageRows = data || [];
+      const packageUsageMap = new Map<number, { id: number; hasOverrides: boolean }>();
+
+      packageStageRows.forEach((row) => {
+        if (row.package_id == null) return;
+
+        const existing = packageUsageMap.get(row.package_id);
+        packageUsageMap.set(row.package_id, {
+          id: row.package_id,
+          hasOverrides: existing?.hasOverrides || (row.use_overrides ?? false),
+        });
+      });
+
+      const packageIds = Array.from(packageUsageMap.keys());
+      const { data: packageRecords, error: packageError } = packageIds.length
+        ? await supabase
+            .from('packages')
+            .select('id, name')
+            .in('id', packageIds)
+            .order('name', { ascending: true })
+        : { data: [], error: null };
+
+      if (packageError) throw packageError;
+
+      const packageNameMap = new Map((packageRecords || []).map((pkg) => [pkg.id, pkg.name]));
+
+      const packages = packageIds.map((packageId) => ({
+        id: packageId,
+        name: packageNameMap.get(packageId) || 'Unknown',
+        hasOverrides: packageUsageMap.get(packageId)?.hasOverrides ?? false,
       }));
 
       setImpact({
