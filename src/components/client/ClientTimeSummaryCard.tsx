@@ -434,3 +434,33 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
     </>
   );
 }
+
+/** Small tooltip wrapper that shows re-registration days remaining on hover */
+function ReRegistrationMembershipTooltip({ tenantId, children }: { tenantId: number; children: React.ReactNode }) {
+  const { data: registrationEndDate } = useQuery({
+    queryKey: ["tenant-registration-end", tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tga_rto_summary")
+        .select("registration_end_date")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      return data?.registration_end_date ?? null;
+    },
+    staleTime: 60_000,
+  });
+
+  const dueDate = getReRegistrationDueDate(registrationEndDate);
+  if (!dueDate) return <>{children}</>;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent>
+          <p>Re-registration due in {formatDaysRemaining(dueDate)}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
