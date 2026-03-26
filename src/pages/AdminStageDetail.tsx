@@ -98,6 +98,7 @@ export default function AdminStageDetail() {
     updateDocument,
     deleteDocument,
     reorderDocuments,
+    reorderTeamTasks,
     fetchContent: refetchTemplateContent
   } = useStageTemplateContent(stageIdNum);
 
