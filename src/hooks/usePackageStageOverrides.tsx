@@ -408,7 +408,7 @@ export function useStageImpact(stageId: number | null) {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('package_stages')
         .select(`
           package_id,
