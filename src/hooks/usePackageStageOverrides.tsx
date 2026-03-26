@@ -408,12 +408,12 @@ export function useStageImpact(stageId: number | null) {
     }
 
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('package_stages')
         .select(`
           package_id,
           use_overrides,
-          packages:package_id(id, name)
+          packages(id, name)
         `)
         .eq('stage_id', stageId);
 
