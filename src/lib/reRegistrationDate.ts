@@ -29,5 +29,15 @@ export function getReRegistrationUrgency(dueDate: Date): ReRegistrationUrgency {
  * Format the due date as "DDD DD-MMM-YYYY", e.g. "Tue 15-Jul-2026".
  */
 export function formatReRegistrationLabel(dueDate: Date): string {
-  return format(dueDate, "EEE dd-MMM-yyyy");
+  const days = differenceInDays(dueDate, new Date());
+  const daysPart = days >= 0 ? `(${days} days)` : `(${Math.abs(days)} days overdue)`;
+  return `${format(dueDate, "EEE dd-MMM-yyyy")} ${daysPart}`;
+}
+
+/**
+ * Return just the "xxx days" string for tooltip usage.
+ */
+export function formatDaysRemaining(dueDate: Date): string {
+  const days = differenceInDays(dueDate, new Date());
+  return days >= 0 ? `${days} days` : `${Math.abs(days)} days overdue`;
 }

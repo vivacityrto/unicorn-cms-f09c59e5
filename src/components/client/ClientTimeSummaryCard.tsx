@@ -14,6 +14,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ReRegistrationBadge } from '@/components/shared/ReRegistrationBadge';
+import { useQuery } from '@tanstack/react-query';
+import { getReRegistrationDueDate, formatDaysRemaining } from '@/lib/reRegistrationDate';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 interface ClientTimeSummaryCardProps {
   clientId: number;
@@ -205,9 +208,11 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
             {membershipUsage?.membership_year_start && membershipUsage?.membership_year_end && (
               <div className="mt-4 pt-3 border-t">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    Membership year: {new Date(membershipUsage.membership_year_start).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} — {new Date(membershipUsage.membership_year_end).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
+                  <ReRegistrationMembershipTooltip tenantId={clientId}>
+                    <p className="text-xs text-muted-foreground cursor-default">
+                      Membership year: {new Date(membershipUsage.membership_year_start).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} — {new Date(membershipUsage.membership_year_end).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  </ReRegistrationMembershipTooltip>
                   <ReRegistrationBadge tenantId={clientId} />
                 </div>
               </div>
@@ -427,5 +432,35 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
         clientId={clientId}
       />
     </>
+  );
+}
+
+/** Small tooltip wrapper that shows re-registration days remaining on hover */
+function ReRegistrationMembershipTooltip({ tenantId, children }: { tenantId: number; children: React.ReactNode }) {
+  const { data: registrationEndDate } = useQuery({
+    queryKey: ["tenant-registration-end", tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tga_rto_summary")
+        .select("registration_end_date")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      return data?.registration_end_date ?? null;
+    },
+    staleTime: 60_000,
+  });
+
+  const dueDate = getReRegistrationDueDate(registrationEndDate);
+  if (!dueDate) return <>{children}</>;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent>
+          <p>Re-registration due in {formatDaysRemaining(dueDate)}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
