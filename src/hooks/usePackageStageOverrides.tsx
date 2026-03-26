@@ -413,7 +413,7 @@ export function useStageImpact(stageId: number | null) {
         .select(`
           package_id,
           use_overrides,
-          packages:package_id(id, name)
+          packages(id, name)
         `)
         .eq('stage_id', stageId);
 
