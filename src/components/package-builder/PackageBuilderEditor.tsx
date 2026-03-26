@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, Save, Layers, Plus, GripVertical, Trash2, 
   ChevronRight, AlertTriangle, Copy, Archive,
-  Lightbulb, Sparkles, PanelRightClose, PanelRightOpen, Wand2
+  Lightbulb, Sparkles, PanelRightClose, PanelRightOpen, Wand2, RefreshCw
 } from 'lucide-react';
 import { StageLibraryDialog } from './StageLibraryDialog';
 import { StageDetailPanel } from './StageDetailPanel';
@@ -123,6 +123,10 @@ function SortableStageItem({
               {stage.stage.stage_type}
             </Badge>
           )}
+          <Badge variant="outline" className={`text-xs ${stage.stage?.is_recurring ? 'border-primary/30 bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
+            <RefreshCw className="h-3 w-3 mr-1" />
+            {stage.stage?.is_recurring ? 'Recurring' : 'Once-off'}
+          </Badge>
           <PackageStageVersionBadge 
             packageId={packageId} 
             stageId={stage.stage_id} 
