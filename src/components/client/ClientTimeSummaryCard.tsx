@@ -13,6 +13,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { ReRegistrationBadge } from '@/components/shared/ReRegistrationBadge';
 
 interface ClientTimeSummaryCardProps {
   clientId: number;
@@ -203,9 +204,12 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
             {/* Membership year */}
             {membershipUsage?.membership_year_start && membershipUsage?.membership_year_end && (
               <div className="mt-4 pt-3 border-t">
-                <p className="text-xs text-muted-foreground">
-                  Membership year: {new Date(membershipUsage.membership_year_start).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} — {new Date(membershipUsage.membership_year_end).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Membership year: {new Date(membershipUsage.membership_year_start).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} — {new Date(membershipUsage.membership_year_end).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                  <ReRegistrationBadge tenantId={clientId} />
+                </div>
               </div>
             )}
 

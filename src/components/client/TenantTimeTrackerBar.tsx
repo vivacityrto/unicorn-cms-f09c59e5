@@ -50,6 +50,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { timeTrackingKeys } from '@/hooks/useTimeTrackingQuery';
 import { packageUsageKeys } from '@/hooks/usePackageUsageQuery';
+import { ReRegistrationBadge } from '@/components/shared/ReRegistrationBadge';
 
 interface TenantTimeTrackerBarProps {
   tenantId: number;
@@ -220,6 +221,9 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
           >
             Unicorn 1.0
           </a>
+
+          {/* Re-registration due (amber/red only) */}
+          <ReRegistrationBadge tenantId={tenantId} prominent hideGreen />
 
           {/* Spacer */}
           <div className="flex-1" />
