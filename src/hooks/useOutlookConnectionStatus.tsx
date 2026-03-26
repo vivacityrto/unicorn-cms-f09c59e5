@@ -73,9 +73,10 @@ export function useOutlookConnectionStatus() {
   // Connect to Outlook
   const connectMutation = useMutation({
     mutationFn: async () => {
-      if (!profile?.tenant_id) {
-        throw new Error('No tenant ID available');
-      }
+      // Vivacity Team members may not have a tenant_id on their profile;
+      // fall back to the system tenant (Vivacity Coaching & Consulting).
+      const VIVACITY_SYSTEM_TENANT_ID = 6372;
+      const effectiveTenantId = profile?.tenant_id ?? VIVACITY_SYSTEM_TENANT_ID;
 
       const redirectUri = `${window.location.origin}/calendar/outlook-callback`;
       
@@ -85,7 +86,7 @@ export function useOutlookConnectionStatus() {
         body: { 
           action: 'get-auth-url',
           redirect_uri: redirectUri,
-          tenant_id: profile.tenant_id,
+          tenant_id: effectiveTenantId,
           surfaces: {
             mail: flags.addin_outlook_mail_enabled,
             calendar: flags.addin_meetings_enabled,

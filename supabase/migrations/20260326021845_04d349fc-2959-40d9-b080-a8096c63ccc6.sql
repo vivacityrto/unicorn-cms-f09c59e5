@@ -1,0 +1,1 @@
+ALTER TABLE public.oauth_tokens ALTER COLUMN tenant_id DROP NOT NULL;

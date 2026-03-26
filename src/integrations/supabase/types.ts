@@ -25169,7 +25169,7 @@ export type Database = {
           provider: string
           refresh_token: string
           scope: string | null
-          tenant_id: number
+          tenant_id: number | null
           updated_at: string
           user_id: string
         }
@@ -25184,7 +25184,7 @@ export type Database = {
           provider?: string
           refresh_token: string
           scope?: string | null
-          tenant_id: number
+          tenant_id?: number | null
           updated_at?: string
           user_id: string
         }
@@ -25199,7 +25199,7 @@ export type Database = {
           provider?: string
           refresh_token?: string
           scope?: string | null
-          tenant_id?: number
+          tenant_id?: number | null
           updated_at?: string
           user_id?: string
         }
