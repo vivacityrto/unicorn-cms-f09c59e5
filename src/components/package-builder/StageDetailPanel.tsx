@@ -783,10 +783,10 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                             <span className="font-medium block">{templateName}</span>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline" className="text-xs capitalize">
-                                {email.trigger_type.replace('_', ' ')}
+                              {email.trigger_type?.replace('_', ' ') ?? 'Unknown'}
                               </Badge>
                               <Badge variant="secondary" className="text-xs capitalize">
-                                {email.recipient_type}
+                                {email.recipient_type ?? 'Unknown'}
                               </Badge>
                             </div>
                           </div>
