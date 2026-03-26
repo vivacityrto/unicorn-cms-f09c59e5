@@ -14,6 +14,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ReRegistrationBadge } from '@/components/shared/ReRegistrationBadge';
+import { useQuery } from '@tanstack/react-query';
+import { getReRegistrationDueDate, formatDaysRemaining } from '@/lib/reRegistrationDate';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 interface ClientTimeSummaryCardProps {
   clientId: number;
