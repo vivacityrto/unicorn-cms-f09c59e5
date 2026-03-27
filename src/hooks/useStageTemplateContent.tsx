@@ -628,7 +628,7 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
         supabase.from('staff_tasks').select('*').eq('stage_id', stageId),
         supabase.from('client_tasks').select('*').eq('stage_id', stageId),
         supabase.from('emails').select('*').eq('stage_id', stageId),
-        supabase.from('stage_documents').select('document_id, sort_order').eq('stage_id', stageId)
+        supabase.from('documents').select('id, title').eq('stage', stageId)
       ]);
 
       // Copy team tasks
@@ -677,8 +677,8 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
         const inserts = docs.data.map((d: any) => ({
           package_id: packageId,
           stage_id: stageId,
-          document_id: d.document_id,
-          sort_order: d.sort_order ?? 0
+          document_id: d.id,
+          sort_order: 0
         }));
         await supabase.from('package_stage_documents').insert(inserts);
       }
