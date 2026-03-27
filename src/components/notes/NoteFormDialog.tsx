@@ -98,6 +98,46 @@ export interface NoteFormDialogProps {
 }
 
 const DURATION_TYPES = ['phone-call', 'meeting', 'action'];
+const DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const DRAFT_SAVE_INTERVAL_MS = 3000;
+
+function getDraftKey(tenantId: number, noteId?: string) {
+  return `note-draft-${tenantId}-${noteId || 'new'}`;
+}
+
+interface DraftData {
+  title: string;
+  content: string;
+  noteType: string;
+  priority: string;
+  status: string;
+  duration: string;
+  isPinned: boolean;
+  packageInstanceId: string;
+  assignees: string[];
+  savedAt: number;
+}
+
+function saveDraft(key: string, data: DraftData) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+}
+
+function loadDraft(key: string): DraftData | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as DraftData;
+    if (Date.now() - data.savedAt > DRAFT_MAX_AGE_MS) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return data;
+  } catch { return null; }
+}
+
+function clearDraft(key: string) {
+  try { localStorage.removeItem(key); } catch {}
+}
 
 export function NoteFormDialog({
   open,
