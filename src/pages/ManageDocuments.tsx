@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -155,7 +155,11 @@ export default function ManageDocuments() {
   // Governance features state
   const [frameworkFilter, setFrameworkFilter] = useState<string>("all");
   const [sharepointFilter, setSharepointFilter] = useState<string>("all");
-  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(() => {
+    const docParam = searchParams.get('doc');
+    return docParam ? Number(docParam) : null;
+  });
   const [sharepointBrowseDocId, setSharepointBrowseDocId] = useState<number | null>(null);
 
   // Fetch frameworks for filter
@@ -1026,7 +1030,10 @@ export default function ManageDocuments() {
     return <div className="space-y-4 p-6 animate-fade-in">
       <GovernanceDocumentDetail
         documentId={selectedDocId}
-        onBack={() => setSelectedDocId(null)}
+        onBack={() => {
+          setSelectedDocId(null);
+          setSearchParams(prev => { prev.delete('doc'); return prev; });
+        }}
       />
     </div>;
   }
