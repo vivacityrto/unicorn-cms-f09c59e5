@@ -371,6 +371,7 @@ export function StageDocumentsPanel({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <CardTitle className="text-base shrink-0">Documents</CardTitle>
+              <Badge variant="secondary" className="text-xs">{documents.length}</Badge>
               <div className="relative flex-1 max-w-[200px]">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
