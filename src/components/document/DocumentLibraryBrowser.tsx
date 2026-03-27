@@ -290,7 +290,7 @@ export function DocumentLibraryBrowser({
                           className="h-7 w-7"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/admin/manage-documents?doc=${doc.id}`);
+                            navigate(`/manage-documents?doc=${doc.id}`);
                           }}
                         >
                           <ExternalLink className="h-3 w-3" />
