@@ -232,6 +232,91 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
     }
   };
 
+  const handleHoldPackage = async () => {
+    if (!holdTarget || !holdReason.trim()) return;
+    setHolding(true);
+    try {
+      const { error } = await supabase.rpc('transition_membership_state', {
+        p_instance_id: parseInt(holdTarget.id, 10),
+        p_new_state: 'paused',
+        p_reason: holdReason.trim(),
+      });
+      if (error) throw error;
+
+      // Notify the primary CSC
+      try {
+        const { data: cscRow } = await supabase
+          .from('tenant_csc_assignments')
+          .select('user_id')
+          .eq('tenant_id', tenantId)
+          .eq('is_primary', true)
+          .maybeSingle();
+        if (cscRow?.user_id) {
+          await supabase.rpc('emit_notification', {
+            p_event_type: 'risk_flagged' as any,
+            p_recipient_user_uuid: cscRow.user_id,
+            p_tenant_id: tenantId,
+            p_title: `Package on hold: ${holdTarget.package_name}`,
+            p_body: `${tenantName || 'Client'} — ${holdTarget.package_name} has been put on hold. Reason: ${holdReason.trim()}`,
+            p_source_type: 'package_instance',
+            p_source_id: holdTarget.id,
+          });
+        }
+      } catch (notifErr) {
+        console.error('Failed to notify CSC:', notifErr);
+      }
+
+      toast.success(`${holdTarget.package_name} has been put on hold`);
+      const title = `** PACKAGE STATUS "ON HOLD" — ${holdTarget.package_name} — ALL CLIENT ACTIVITY PAUSED **`;
+      setHoldTarget(null);
+      setHoldReason('');
+      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to put package on hold');
+    } finally {
+      setHolding(false);
+    }
+  };
+
+  const handleResumePackage = async (pkg: ClientPackage) => {
+    try {
+      const { error } = await supabase.rpc('transition_membership_state', {
+        p_instance_id: parseInt(pkg.id, 10),
+        p_new_state: 'active',
+        p_reason: 'Package resumed from hold',
+      });
+      if (error) throw error;
+
+      // Notify the primary CSC
+      try {
+        const { data: cscRow } = await supabase
+          .from('tenant_csc_assignments')
+          .select('user_id')
+          .eq('tenant_id', tenantId)
+          .eq('is_primary', true)
+          .maybeSingle();
+        if (cscRow?.user_id) {
+          await supabase.rpc('emit_notification', {
+            p_event_type: 'risk_flagged' as any,
+            p_recipient_user_uuid: cscRow.user_id,
+            p_tenant_id: tenantId,
+            p_title: `Package resumed: ${pkg.package_name}`,
+            p_body: `${tenantName || 'Client'} — ${pkg.package_name} has been resumed from hold.`,
+            p_source_type: 'package_instance',
+            p_source_id: pkg.id,
+          });
+        }
+      } catch (notifErr) {
+        console.error('Failed to notify CSC:', notifErr);
+      }
+
+      toast.success(`${pkg.package_name} has been resumed`);
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to resume package');
+    }
+  };
+
   // Renewal dialog state
   const [renewTarget, setRenewTarget] = useState<ClientPackage | null>(null);
   // Fetch note counts for all package instances
