@@ -247,19 +247,21 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
       try {
         const { data: cscRow } = await supabase
           .from('tenant_csc_assignments')
-          .select('user_id')
+          .select('csc_user_id')
           .eq('tenant_id', tenantId)
           .eq('is_primary', true)
           .maybeSingle();
-        if (cscRow?.user_id) {
+        if (cscRow?.csc_user_id) {
           await supabase.rpc('emit_notification', {
-            p_event_type: 'risk_flagged' as any,
-            p_recipient_user_uuid: cscRow.user_id,
+            p_event_type: 'risk_flagged',
+            p_recipient_user_uuid: cscRow.csc_user_id,
             p_tenant_id: tenantId,
-            p_title: `Package on hold: ${holdTarget.package_name}`,
-            p_body: `${tenantName || 'Client'} — ${holdTarget.package_name} has been put on hold. Reason: ${holdReason.trim()}`,
-            p_source_type: 'package_instance',
-            p_source_id: holdTarget.id,
+            p_record_type: 'package_instance',
+            p_record_id: holdTarget.id,
+            p_payload: {
+              title: `Package on hold: ${holdTarget.package_name}`,
+              body: `${tenantName || 'Client'} — ${holdTarget.package_name} has been put on hold. Reason: ${holdReason.trim()}`,
+            } as any,
           });
         }
       } catch (notifErr) {
@@ -291,19 +293,21 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
       try {
         const { data: cscRow } = await supabase
           .from('tenant_csc_assignments')
-          .select('user_id')
+          .select('csc_user_id')
           .eq('tenant_id', tenantId)
           .eq('is_primary', true)
           .maybeSingle();
-        if (cscRow?.user_id) {
+        if (cscRow?.csc_user_id) {
           await supabase.rpc('emit_notification', {
-            p_event_type: 'risk_flagged' as any,
-            p_recipient_user_uuid: cscRow.user_id,
+            p_event_type: 'risk_flagged',
+            p_recipient_user_uuid: cscRow.csc_user_id,
             p_tenant_id: tenantId,
-            p_title: `Package resumed: ${pkg.package_name}`,
-            p_body: `${tenantName || 'Client'} — ${pkg.package_name} has been resumed from hold.`,
-            p_source_type: 'package_instance',
-            p_source_id: pkg.id,
+            p_record_type: 'package_instance',
+            p_record_id: pkg.id,
+            p_payload: {
+              title: `Package resumed: ${pkg.package_name}`,
+              body: `${tenantName || 'Client'} — ${pkg.package_name} has been resumed from hold.`,
+            } as any,
           });
         }
       } catch (notifErr) {
