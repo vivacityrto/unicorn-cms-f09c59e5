@@ -1,53 +1,32 @@
 
 
-## Fix Document-Stage Relationship — Restore `documents.stage` as Authority
+## Fix: Documents Not Loading on Stage Detail Page
 
 ### Root Cause
-The `stage_documents` junction table has a FK constraint referencing the deprecated `documents_stages` table (IDs 1-70), making it impossible to store data for modern stages (IDs 1000+). The 72 rows currently in it are legacy artifacts with no operational value.
+The console shows error `42703: column documents.created_at does not exist`. The actual column name in the `documents` table is `createdat` (no underscore). This causes the entire document query to fail, so zero documents appear.
 
-### Changes
+This was introduced during the previous migration when `useStageTemplateContent.tsx` was rewritten to query `documents` directly — the select list used `created_at` instead of the actual column name `createdat`.
 
-#### 1. Truncate `stage_documents` table
-SQL migration to empty the table. The 72 rows reference deprecated legacy stage IDs and are not used by any current workflow.
+### Fix
 
-```sql
-TRUNCATE TABLE stage_documents;
-```
+**File: `src/hooks/useStageTemplateContent.tsx`**
 
-#### 2. Update memory note
-The existing memory says "stage_documents remains the valid junction table." This needs correcting to reflect that `documents.stage` is the authoritative source and `stage_documents` is empty/deprecated.
+1. **Line 123** — Change the document select from:
+   ```
+   'id, title, description, format, category, document_status, ai_status, ai_confidence_score, ai_category_confidence, ai_description_confidence, ai_reasoning, created_at, stage'
+   ```
+   to:
+   ```
+   'id, title, description, format, category, document_status, ai_status, ai_confidence_score, ai_category_confidence, ai_description_confidence, ai_reasoning, createdat, stage'
+   ```
 
-#### 3. Rewrite `src/hooks/useStageTemplateContent.tsx`
-- **Fetch**: Query `documents WHERE stage = stageId` instead of `stage_documents`
-- **Add/link document**: `UPDATE documents SET stage = stageId WHERE id = docId`
-- **Bulk add**: Same pattern for multiple docs
-- **Unlink/delete**: `UPDATE documents SET stage = null WHERE id = docId`
-- **Reorder**: Remove sort_order logic (not available on `documents.stage`; use title ordering)
-- **Copy to package overrides**: Fetch docs from `documents WHERE stage = stageId`
+2. **Line 176** — Update the mapping from `d.created_at` to `d.createdat`
 
-#### 4. Update `src/components/stage/StageDocumentsPanel.tsx`
-- **Link from Library dialog**: Change insert from `stage_documents` → `documents.update({ stage: stageId })`
-- **Data shape**: Adapt to flat document record (no junction wrapper)
+3. **Scan all other document select statements** in the same file (lines ~631, ~849) for the same `created_at` → `createdat` fix.
 
-#### 5. Database functions & views (SQL migration)
-- **`publish_stage_version`**: Change document snapshot section from `stage_documents sd JOIN documents d` → `documents WHERE stage = p_stage_id`; use defaults for junction-specific fields (is_core, visibility, etc.)
-- **`copy_stage_template_to_package`**: Same source change
-- **`get_document_stage_usage` function**: Query `documents.stage` joined to `stages` instead of `stage_documents` joined to `documents_stages`
-- **`document_stage_usage` view**: Recreate using `documents.stage` → `stages`
+### Secondary errors visible in console (not blocking, but should fix)
+- **`useStageAuditLog.tsx`**: Passing integer stage ID `1114` where a UUID is expected — needs a guard or skip for non-UUID IDs
+- **`useStageActiveUsage.tsx`**: PostgREST can't find FK between `client_packages` and `tenants` — likely a join syntax issue
 
-#### 6. No changes needed (already correct)
-- `useStageQualityCheck.tsx` — already uses `documents.stage`
-- `import-unicorn1-client` edge function — already uses `documents.stage`
-- `useResolvedStageContent` — already uses `documents.stage`
-
-### Files Modified
-| File | Change |
-|------|--------|
-| SQL migration | Truncate `stage_documents`; update `publish_stage_version`, `copy_stage_template_to_package`, `get_document_stage_usage`, `document_stage_usage` view |
-| `src/hooks/useStageTemplateContent.tsx` | Rewrite all document fetch + CRUD to use `documents.stage` |
-| `src/components/stage/StageDocumentsPanel.tsx` | Update Link dialog + data shape |
-| Memory note | Correct to reflect `documents.stage` as authoritative |
-
-### No structural schema changes
-The `stage_documents` table structure stays intact (for potential future migration). Only its data is cleared.
+These are separate issues but worth noting.
 
