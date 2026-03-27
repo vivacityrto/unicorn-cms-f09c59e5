@@ -970,7 +970,7 @@ export default function AdminStageDetail() {
       </div>
 
       {/* Two-Column Header Layout: Stage Info + Quality Check */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mb-6">
         {/* Left Column: Header Info */}
         <div className="space-y-3 min-w-0">
           {/* Stage Header */}
@@ -1067,7 +1067,7 @@ export default function AdminStageDetail() {
 
         {/* Right Column: Quality Check + Impact Panel */}
         {stage && (
-          <div className="lg:sticky lg:top-6 self-start space-y-4">
+          <div className="lg:sticky lg:top-6 self-start grid grid-cols-2 gap-4">
             <StageQualityPanel 
               result={qualityResult} 
               isLoading={qualityLoading}
