@@ -302,6 +302,8 @@ export function NoteFormDialog({
     setTitleManuallyEdited(false);
     setEmailMode(null);
     setSelectedPackageInfo(null);
+    setDraftRestored(false);
+    setDraftRestoredAt(null);
   }, []);
 
   // ── Populate form when opening ──
