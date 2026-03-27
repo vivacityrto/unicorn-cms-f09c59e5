@@ -458,6 +458,27 @@ export function NoteFormDialog({
     return 'No duration';
   };
 
+  // ── Auto-save draft to localStorage ──
+  useEffect(() => {
+    if (!open) return;
+    const interval = setInterval(() => {
+      if (!content.trim() && !title.trim()) return; // nothing to save
+      saveDraft(draftKey, {
+        title, content, noteType, priority, status: noteStatus,
+        duration, isPinned, packageInstanceId: selectedPackageInstanceId,
+        assignees, savedAt: Date.now(),
+      });
+    }, DRAFT_SAVE_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [open, draftKey, title, content, noteType, priority, noteStatus, duration, isPinned, selectedPackageInstanceId, assignees]);
+
+  const handleDiscardDraft = useCallback(() => {
+    clearDraft(draftKey);
+    setDraftRestored(false);
+    setDraftRestoredAt(null);
+    resetForm();
+  }, [draftKey, resetForm]);
+
   // ── File handling ──
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -490,9 +511,33 @@ export function NoteFormDialog({
         notifyClient,
         elapsedTimerSeconds: elapsedTime,
       });
+      clearDraft(draftKey);
+      setDraftRestored(false);
     } finally {
       setInternalSaving(false);
     }
+  };
+
+  // ── Dialog close with unsaved changes guard ──
+  const hasUnsavedContent = content.trim().length > 0 || title.trim().length > 0;
+
+  const handleDialogOpenChange = (o: boolean) => {
+    if (!o && hasUnsavedContent) {
+      setShowDiscardConfirm(true);
+      return;
+    }
+    if (!o) {
+      clearDraft(draftKey);
+      resetForm();
+    }
+    onOpenChange(o);
+  };
+
+  const handleConfirmDiscard = () => {
+    clearDraft(draftKey);
+    resetForm();
+    setShowDiscardConfirm(false);
+    onOpenChange(false);
   };
 
   if (!open) return null;
