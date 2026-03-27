@@ -718,8 +718,8 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
         const inserts = docs.data.map((d: any) => ({
           package_id: packageId,
           stage_id: stageId,
-          document_id: d.id,
-          sort_order: 0
+          document_id: d.document_id,
+          sort_order: d.sort_order ?? 0
         }));
         await supabase.from('package_stage_documents').insert(inserts);
       }
