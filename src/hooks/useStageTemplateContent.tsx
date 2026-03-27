@@ -419,15 +419,22 @@ export function useStageTemplateContent(stageId: number | null) {
     await fetchContent();
   };
 
-  // Document CRUD (documents table - stage column)
+  // Document CRUD (stage_documents junction table)
   const addDocument = async (documentId: number) => {
-    // Documents are linked by setting stage = stageId on existing document records
     if (!stageId) return;
+    const maxOrder = documents.reduce((max, d) => Math.max(max, d.sort_order), -1);
 
     const { error } = await supabase
-      .from('documents')
-      .update({ stage: stageId })
-      .eq('id', documentId);
+      .from('stage_documents')
+      .insert({
+        stage_id: stageId,
+        document_id: documentId,
+        sort_order: maxOrder + 1,
+        visibility: 'both',
+        delivery_type: 'manual',
+        is_tenant_visible: true,
+        is_required: false
+      });
 
     if (error) throw error;
 
@@ -443,15 +450,23 @@ export function useStageTemplateContent(stageId: number | null) {
 
   const addBulkDocuments = async (documentIds: number[]) => {
     if (!stageId || documentIds.length === 0) return;
+    const maxOrder = documents.reduce((max, d) => Math.max(max, d.sort_order), -1);
 
-    for (const docId of documentIds) {
-      const { error } = await supabase
-        .from('documents')
-        .update({ stage: stageId })
-        .eq('id', docId);
+    const inserts = documentIds.map((docId, idx) => ({
+      stage_id: stageId,
+      document_id: docId,
+      sort_order: maxOrder + 1 + idx,
+      visibility: 'both',
+      delivery_type: 'manual',
+      is_tenant_visible: true,
+      is_required: false
+    }));
 
-      if (error) throw error;
-    }
+    const { error } = await supabase
+      .from('stage_documents')
+      .insert(inserts);
+
+    if (error) throw error;
 
     await supabase.from('audit_events').insert({
       entity: 'stage',
@@ -463,11 +478,12 @@ export function useStageTemplateContent(stageId: number | null) {
     await fetchContent();
   };
 
-  const updateDocument = async (docId: number, data: Record<string, any>) => {
+  const updateDocument = async (stageDocId: number, data: Record<string, any>) => {
+    // Update stage_documents junction row (visibility, is_tenant_visible, etc.)
     const { error } = await supabase
-      .from('documents')
+      .from('stage_documents')
       .update(data)
-      .eq('id', docId);
+      .eq('id', stageDocId);
 
     if (error) throw error;
 
@@ -475,18 +491,18 @@ export function useStageTemplateContent(stageId: number | null) {
       entity: 'stage',
       entity_id: stageId?.toString() || '',
       action: 'stage.template_updated',
-      details: { change_type: 'document_updated', document_id: docId, updates: data }
+      details: { change_type: 'document_updated', stage_document_id: stageDocId, updates: data }
     });
 
     await fetchContent();
   };
 
-  const deleteDocument = async (docId: number) => {
-    // Unlink from stage by setting stage to null
+  const deleteDocument = async (stageDocId: number) => {
+    // Delete the junction row to unlink
     const { error } = await supabase
-      .from('documents')
-      .update({ stage: null })
-      .eq('id', docId);
+      .from('stage_documents')
+      .delete()
+      .eq('id', stageDocId);
 
     if (error) throw error;
 
@@ -494,16 +510,21 @@ export function useStageTemplateContent(stageId: number | null) {
       entity: 'stage',
       entity_id: stageId?.toString() || '',
       action: 'stage.template_updated',
-      details: { change_type: 'document_unlinked', document_id: docId }
+      details: { change_type: 'document_unlinked', stage_document_id: stageDocId }
     });
 
     await fetchContent();
   };
 
-  const reorderDocuments = async (_orderedIds: number[]) => {
-    // Documents table doesn't have sort_order - they're ordered by title
-    // This is a no-op for now
-    return;
+  const reorderDocuments = async (orderedIds: number[]) => {
+    // Update sort_order on stage_documents
+    for (let i = 0; i < orderedIds.length; i++) {
+      await supabase
+        .from('stage_documents')
+        .update({ sort_order: i })
+        .eq('id', orderedIds[i]);
+    }
+    await fetchContent();
   };
 
   const reorderTeamTasks = async (orderedIds: number[]) => {
