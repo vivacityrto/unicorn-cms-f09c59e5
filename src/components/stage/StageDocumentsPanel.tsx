@@ -318,13 +318,13 @@ export function StageDocumentsPanel({
       setReuseWarningOpen(true);
     } else {
       // Navigate directly to document detail
-      window.open(`/admin/manage-documents?doc=${docId}`, '_blank');
+      window.open(`/manage-documents?doc=${docId}`, '_blank');
     }
   };
   
   const handleEditAnyway = () => {
     if (selectedDocForEdit) {
-      window.open(`/admin/manage-documents?doc=${selectedDocForEdit.id}`, '_blank');
+      window.open(`/manage-documents?doc=${selectedDocForEdit.id}`, '_blank');
     }
     setReuseWarningOpen(false);
     setSelectedDocForEdit(null);
