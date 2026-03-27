@@ -347,14 +347,11 @@ export function StageDocumentsPanel({
       
       if (insertError) throw insertError;
       
-      // Update stage_documents to point to new document
-      const currentStageDoc = documents.find(d => getDocumentId(d) === selectedDocForEdit.id);
-      if (currentStageDoc) {
-        await supabase
-          .from('stage_documents')
-          .update({ document_id: newDoc.id })
-          .eq('id', currentStageDoc.id);
-      }
+      // Update the new document to point to this stage
+      await supabase
+        .from('documents')
+        .update({ stage: stageId })
+        .eq('id', newDoc.id);
       
       toast({ title: 'Document duplicated and relinked' });
       onRefresh();
