@@ -200,29 +200,15 @@ export function StageDocumentsPanel({
     
     setIsLinking(true);
     const docIds = Array.from(selectedDocIds);
-    const maxOrder = documents.reduce((max, d) => Math.max(max, d.sort_order), -1);
 
     try {
-      const inserts = docIds.map((docId, idx) => ({
-        stage_id: stageId,
-        document_id: docId,
-        sort_order: maxOrder + 1 + idx,
-        visibility: 'both',
-        delivery_type: 'manual',
-        is_tenant_visible: true,
-        is_required: false
-      }));
-
+      // Update documents.stage to link them to this stage
       const { error } = await supabase
-        .from('stage_documents')
-        .insert(inserts);
+        .from('documents')
+        .update({ stage: stageId })
+        .in('id', docIds);
 
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('Some documents are already linked to this stage');
-        }
-        throw error;
-      }
+      if (error) throw error;
 
       // Log audit event
       await supabase.from('audit_events').insert({
@@ -361,14 +347,11 @@ export function StageDocumentsPanel({
       
       if (insertError) throw insertError;
       
-      // Update stage_documents to point to new document
-      const currentStageDoc = documents.find(d => getDocumentId(d) === selectedDocForEdit.id);
-      if (currentStageDoc) {
-        await supabase
-          .from('stage_documents')
-          .update({ document_id: newDoc.id })
-          .eq('id', currentStageDoc.id);
-      }
+      // Update the new document to point to this stage
+      await supabase
+        .from('documents')
+        .update({ stage: stageId })
+        .eq('id', newDoc.id);
       
       toast({ title: 'Document duplicated and relinked' });
       onRefresh();
