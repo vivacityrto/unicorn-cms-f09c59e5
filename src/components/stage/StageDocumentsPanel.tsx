@@ -200,29 +200,15 @@ export function StageDocumentsPanel({
     
     setIsLinking(true);
     const docIds = Array.from(selectedDocIds);
-    const maxOrder = documents.reduce((max, d) => Math.max(max, d.sort_order), -1);
 
     try {
-      const inserts = docIds.map((docId, idx) => ({
-        stage_id: stageId,
-        document_id: docId,
-        sort_order: maxOrder + 1 + idx,
-        visibility: 'both',
-        delivery_type: 'manual',
-        is_tenant_visible: true,
-        is_required: false
-      }));
-
+      // Update documents.stage to link them to this stage
       const { error } = await supabase
-        .from('stage_documents')
-        .insert(inserts);
+        .from('documents')
+        .update({ stage: stageId })
+        .in('id', docIds);
 
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('Some documents are already linked to this stage');
-        }
-        throw error;
-      }
+      if (error) throw error;
 
       // Log audit event
       await supabase.from('audit_events').insert({
