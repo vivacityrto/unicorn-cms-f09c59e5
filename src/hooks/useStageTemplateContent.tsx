@@ -52,15 +52,22 @@ export interface StageEmail {
 
 export interface StageDocument {
   id: number;
-  stage: number;
+  stage_id: number;
+  document_id: number;
+  sort_order: number;
+  visibility: string;
+  delivery_type: string;
+  is_tenant_visible: boolean;
+  is_required: boolean;
+  is_core: boolean;
+  is_active: boolean;
+  notes: string | null;
+  pinned_version_id: string | null;
+  // Joined document fields
   title: string;
   description: string | null;
   format: string | null;
   category: string | null;
-  is_team_only: boolean;
-  is_tenant_downloadable: boolean;
-  is_auto_generated: boolean;
-  is_released: boolean;
   document_status: string | null;
   ai_status: string | null;
   ai_confidence_score: number | null;
@@ -112,10 +119,10 @@ export function useStageTemplateContent(stageId: number | null) {
           .eq('stage_id', stageId)
           .order('order_number', { ascending: true }),
         supabase
-          .from('documents')
-          .select('*')
-          .eq('stage', stageId)
-          .order('title', { ascending: true })
+          .from('stage_documents')
+          .select('id, stage_id, document_id, sort_order, visibility, delivery_type, is_tenant_visible, is_required, is_core, is_active, notes, pinned_version_id')
+          .eq('stage_id', stageId)
+          .order('sort_order', { ascending: true })
       ]);
 
       if (teamResult.error) throw teamResult.error;
@@ -140,7 +147,48 @@ export function useStageTemplateContent(stageId: number | null) {
       })));
       setClientTasks((clientResult.data || []) as unknown as StageClientTask[]);
       setEmails((emailsResult.data || []) as unknown as StageEmail[]);
-      setDocuments((docsResult.data || []) as unknown as StageDocument[]);
+
+      // Enrich stage_documents with document metadata
+      const stageDocRows = docsResult.data || [];
+      if (stageDocRows.length > 0) {
+        const docIds = [...new Set(stageDocRows.map((sd: any) => sd.document_id))];
+        const { data: docMeta } = await supabase
+          .from('documents')
+          .select('id, title, description, format, category, document_status, ai_status, ai_confidence_score, ai_category_confidence, ai_description_confidence, ai_reasoning, created_at')
+          .in('id', docIds);
+        const metaMap = new Map((docMeta || []).map((d: any) => [d.id, d]));
+
+        setDocuments(stageDocRows.map((sd: any) => {
+          const meta = metaMap.get(sd.document_id) || {};
+          return {
+            id: sd.id,
+            stage_id: sd.stage_id,
+            document_id: sd.document_id,
+            sort_order: sd.sort_order ?? 0,
+            visibility: sd.visibility || 'both',
+            delivery_type: sd.delivery_type || 'manual',
+            is_tenant_visible: sd.is_tenant_visible ?? true,
+            is_required: sd.is_required ?? false,
+            is_core: sd.is_core ?? false,
+            is_active: sd.is_active ?? true,
+            notes: sd.notes || null,
+            pinned_version_id: sd.pinned_version_id || null,
+            title: meta.title || `Document #${sd.document_id}`,
+            description: meta.description || null,
+            format: meta.format || null,
+            category: meta.category || null,
+            document_status: meta.document_status || null,
+            ai_status: meta.ai_status || null,
+            ai_confidence_score: meta.ai_confidence_score ?? null,
+            ai_category_confidence: meta.ai_category_confidence ?? null,
+            ai_description_confidence: meta.ai_description_confidence ?? null,
+            ai_reasoning: meta.ai_reasoning || null,
+            created_at: meta.created_at || null,
+          } as StageDocument;
+        }));
+      } else {
+        setDocuments([]);
+      }
     } catch (error: any) {
       console.error('Failed to fetch stage template content:', error);
       toast({
@@ -371,15 +419,22 @@ export function useStageTemplateContent(stageId: number | null) {
     await fetchContent();
   };
 
-  // Document CRUD (documents table - stage column)
+  // Document CRUD (stage_documents junction table)
   const addDocument = async (documentId: number) => {
-    // Documents are linked by setting stage = stageId on existing document records
     if (!stageId) return;
+    const maxOrder = documents.reduce((max, d) => Math.max(max, d.sort_order), -1);
 
     const { error } = await supabase
-      .from('documents')
-      .update({ stage: stageId })
-      .eq('id', documentId);
+      .from('stage_documents')
+      .insert({
+        stage_id: stageId,
+        document_id: documentId,
+        sort_order: maxOrder + 1,
+        visibility: 'both',
+        delivery_type: 'manual',
+        is_tenant_visible: true,
+        is_required: false
+      });
 
     if (error) throw error;
 
@@ -395,15 +450,23 @@ export function useStageTemplateContent(stageId: number | null) {
 
   const addBulkDocuments = async (documentIds: number[]) => {
     if (!stageId || documentIds.length === 0) return;
+    const maxOrder = documents.reduce((max, d) => Math.max(max, d.sort_order), -1);
 
-    for (const docId of documentIds) {
-      const { error } = await supabase
-        .from('documents')
-        .update({ stage: stageId })
-        .eq('id', docId);
+    const inserts = documentIds.map((docId, idx) => ({
+      stage_id: stageId,
+      document_id: docId,
+      sort_order: maxOrder + 1 + idx,
+      visibility: 'both',
+      delivery_type: 'manual',
+      is_tenant_visible: true,
+      is_required: false
+    }));
 
-      if (error) throw error;
-    }
+    const { error } = await supabase
+      .from('stage_documents')
+      .insert(inserts);
+
+    if (error) throw error;
 
     await supabase.from('audit_events').insert({
       entity: 'stage',
@@ -415,11 +478,12 @@ export function useStageTemplateContent(stageId: number | null) {
     await fetchContent();
   };
 
-  const updateDocument = async (docId: number, data: Record<string, any>) => {
+  const updateDocument = async (stageDocId: number, data: Record<string, any>) => {
+    // Update stage_documents junction row (visibility, is_tenant_visible, etc.)
     const { error } = await supabase
-      .from('documents')
+      .from('stage_documents')
       .update(data)
-      .eq('id', docId);
+      .eq('id', stageDocId);
 
     if (error) throw error;
 
@@ -427,18 +491,18 @@ export function useStageTemplateContent(stageId: number | null) {
       entity: 'stage',
       entity_id: stageId?.toString() || '',
       action: 'stage.template_updated',
-      details: { change_type: 'document_updated', document_id: docId, updates: data }
+      details: { change_type: 'document_updated', stage_document_id: stageDocId, updates: data }
     });
 
     await fetchContent();
   };
 
-  const deleteDocument = async (docId: number) => {
-    // Unlink from stage by setting stage to null
+  const deleteDocument = async (stageDocId: number) => {
+    // Delete the junction row to unlink
     const { error } = await supabase
-      .from('documents')
-      .update({ stage: null })
-      .eq('id', docId);
+      .from('stage_documents')
+      .delete()
+      .eq('id', stageDocId);
 
     if (error) throw error;
 
@@ -446,16 +510,21 @@ export function useStageTemplateContent(stageId: number | null) {
       entity: 'stage',
       entity_id: stageId?.toString() || '',
       action: 'stage.template_updated',
-      details: { change_type: 'document_unlinked', document_id: docId }
+      details: { change_type: 'document_unlinked', stage_document_id: stageDocId }
     });
 
     await fetchContent();
   };
 
-  const reorderDocuments = async (_orderedIds: number[]) => {
-    // Documents table doesn't have sort_order - they're ordered by title
-    // This is a no-op for now
-    return;
+  const reorderDocuments = async (orderedIds: number[]) => {
+    // Update sort_order on stage_documents
+    for (let i = 0; i < orderedIds.length; i++) {
+      await supabase
+        .from('stage_documents')
+        .update({ sort_order: i })
+        .eq('id', orderedIds[i]);
+    }
+    await fetchContent();
   };
 
   const reorderTeamTasks = async (orderedIds: number[]) => {
@@ -600,7 +669,7 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
         supabase.from('staff_tasks').select('*').eq('stage_id', stageId),
         supabase.from('client_tasks').select('*').eq('stage_id', stageId),
         supabase.from('emails').select('*').eq('stage_id', stageId),
-        supabase.from('documents').select('*').eq('stage', stageId)
+        supabase.from('stage_documents').select('document_id, sort_order').eq('stage_id', stageId)
       ]);
 
       // Copy team tasks
@@ -649,8 +718,8 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
         const inserts = docs.data.map((d: any) => ({
           package_id: packageId,
           stage_id: stageId,
-          document_id: d.id,
-          sort_order: 0
+          document_id: d.document_id,
+          sort_order: d.sort_order ?? 0
         }));
         await supabase.from('package_stage_documents').insert(inserts);
       }
