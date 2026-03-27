@@ -117,6 +117,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const [cancelTarget, setCancelTarget] = useState<ClientPackage | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [holdTarget, setHoldTarget] = useState<ClientPackage | null>(null);
+  const [holdReason, setHoldReason] = useState('');
+  const [holding, setHolding] = useState(false);
 
   const activePackages = packages.filter(p => !p.is_complete);
   const historyPackages = packages.filter(p => p.is_complete);
