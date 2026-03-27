@@ -944,6 +944,40 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Put on Hold Dialog */}
+      <Dialog open={!!holdTarget} onOpenChange={(open) => { if (!open) { setHoldTarget(null); setHoldReason(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Put Package on Hold</DialogTitle>
+            <DialogDescription>
+              Put <strong>{holdTarget?.package_name}</strong> on hold. This will pause all activity on this package. The primary CSC will be notified. A mandatory reason is required for the audit trail.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="hold-reason">Reason for Hold *</Label>
+              <Textarea
+                id="hold-reason"
+                placeholder="e.g., Client requested pause due to..."
+                value={holdReason}
+                onChange={(e) => setHoldReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setHoldTarget(null); setHoldReason(''); }} disabled={holding}>
+              Back
+            </Button>
+            <Button onClick={handleHoldPackage} disabled={holding || !holdReason.trim()}>
+              {holding ? 'Saving…' : 'Confirm Hold'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
