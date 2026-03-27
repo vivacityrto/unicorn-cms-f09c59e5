@@ -52,15 +52,22 @@ export interface StageEmail {
 
 export interface StageDocument {
   id: number;
-  stage: number;
+  stage_id: number;
+  document_id: number;
+  sort_order: number;
+  visibility: string;
+  delivery_type: string;
+  is_tenant_visible: boolean;
+  is_required: boolean;
+  is_core: boolean;
+  is_active: boolean;
+  notes: string | null;
+  pinned_version_id: string | null;
+  // Joined document fields
   title: string;
   description: string | null;
   format: string | null;
   category: string | null;
-  is_team_only: boolean;
-  is_tenant_downloadable: boolean;
-  is_auto_generated: boolean;
-  is_released: boolean;
   document_status: string | null;
   ai_status: string | null;
   ai_confidence_score: number | null;
