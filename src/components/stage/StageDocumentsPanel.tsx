@@ -461,7 +461,7 @@ export function StageDocumentsPanel({
               </div>
             </div>
           ) : (
-            <ScrollArea className="h-[400px]">
+            <ScrollArea className="h-[600px]">
               <div className="space-y-2">
                 {documents
                   .filter(doc => {
