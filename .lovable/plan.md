@@ -1,27 +1,42 @@
 
 
-## Data Correction: Sync `is_recurring` to Stage Instances
+## Fix: Prevent Notes from Disappearing During Editing
 
-### Summary
-There are **1,073 `stage_instances`** where the parent `stages.is_recurring = true` but the instance has `is_recurring = false`. The `package_stages` table is already correct. This is a data-only update.
+### Problem
+When writing a note for an extended period, the note dialog closes unexpectedly and content is lost. This is caused by:
+1. **Supabase auth token refresh** — fires `onAuthStateChange` every ~60 minutes, triggering re-renders that can reset dialog state
+2. **No draft persistence** — all note content lives in React state only; any unmount or re-render cascade wipes it
+3. **Parent re-renders** — profile/membership refetches on auth events can cascade and reset `isAddDialogOpen`
 
-### What Will Change
+### Solution: localStorage Draft Auto-Save
 
-**1 SQL data update** (using the insert/update tool, not a migration):
+**File: `src/components/notes/NoteFormDialog.tsx`**
 
-```sql
-UPDATE stage_instances si
-SET is_recurring = true
-FROM stages s
-WHERE si.stage_id = s.id
-  AND s.is_recurring = true
-  AND (si.is_recurring IS NULL OR si.is_recurring = false);
-```
+1. **Auto-save draft to localStorage** — every 3 seconds while the dialog is open, persist the current form state (title, content, noteType, priority, etc.) to `localStorage` keyed by `note-draft-{tenantId}-{noteId || 'new'}`
 
-This updates all 1,073 affected rows in one statement.
+2. **Restore draft on open** — when the dialog opens in create mode, check for an existing draft and restore it. Show a small banner: "Draft restored from [timestamp]" with a "Discard draft" link
 
-### What Won't Change
-- No schema changes
-- No code changes (the UI already reads `is_recurring` from `stage_instances`)
-- `package_stages` already has the correct values
+3. **Clear draft on successful save** — after `onSave` completes successfully, remove the draft from localStorage
+
+4. **Clear draft on explicit cancel** — when user clicks Cancel, prompt "You have unsaved changes. Discard?" before clearing
+
+**File: `src/components/client/ClientStructuredNotesTab.tsx`** (and `ClientNotesTab.tsx`)
+
+5. **Stabilize dialog open state** — wrap `isAddDialogOpen` with a `useRef` guard so auth-triggered re-renders don't reset it. Use `useCallback` with stable references for the `onOpenChange` handler
+
+### Technical Details
+
+- Draft key format: `note-draft-{tenantId}-{noteId || 'new'}`
+- Auto-save interval: 3 seconds via `useEffect` + `setInterval`
+- Stored fields: title, content, noteType, priority, status, duration, isPinned, assignees, packageInstanceId, startedDate/Time, completedDate/Time
+- File attachments are NOT stored (too large for localStorage) — only metadata of existing files
+- Draft banner uses a dismissible `Alert` component at the top of the dialog
+- Max draft age: 24 hours (auto-discard older drafts on open)
+
+### Changes Summary
+| File | Change |
+|------|--------|
+| `src/components/notes/NoteFormDialog.tsx` | Add draft auto-save/restore logic, draft restored banner, discard confirmation |
+| `src/components/client/ClientStructuredNotesTab.tsx` | Stabilize dialog state against re-renders |
+| `src/components/client/ClientNotesTab.tsx` | Same stabilization |
 
