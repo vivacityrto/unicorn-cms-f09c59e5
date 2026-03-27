@@ -812,7 +812,7 @@ export function NoteFormDialog({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => { resetForm(); onOpenChange(false); }}>
+                <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => handleDialogOpenChange(false)}>
                   Cancel
                 </Button>
                 <Button size="sm" className="text-xs h-8" onClick={handleSave} disabled={!content.trim() || saving}>
@@ -825,5 +825,22 @@ export function NoteFormDialog({
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Discard unsaved changes confirmation */}
+    {showDiscardConfirm && (
+      <Dialog open={showDiscardConfirm} onOpenChange={(o) => { if (!o) setShowDiscardConfirm(false); }}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Discard unsaved changes?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">You have unsaved note content. Are you sure you want to close?</p>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" size="sm" onClick={() => setShowDiscardConfirm(false)}>Keep editing</Button>
+            <Button variant="destructive" size="sm" onClick={handleConfirmDiscard}>Discard</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+    </>
   );
 }
