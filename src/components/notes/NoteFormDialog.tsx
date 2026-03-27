@@ -545,7 +545,8 @@ export function NoteFormDialog({
   const fileInputId = `note-file-upload-${mode}-${noteId || 'new'}`;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
+    <>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="w-[90vw] max-w-[1400px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === 'edit' ? 'Edit Note' : 'Add Note'}</DialogTitle>
