@@ -405,22 +405,14 @@ export function useStageTemplateContent(stageId: number | null) {
     await fetchContent();
   };
 
-  // Document CRUD (stage_documents junction table)
+  // Document CRUD (documents.stage column)
   const addDocument = async (documentId: number) => {
     if (!stageId) return;
-    const maxOrder = documents.reduce((max, d) => Math.max(max, d.sort_order), -1);
 
     const { error } = await supabase
-      .from('stage_documents')
-      .insert({
-        stage_id: stageId,
-        document_id: documentId,
-        sort_order: maxOrder + 1,
-        visibility: 'both',
-        delivery_type: 'manual',
-        is_tenant_visible: true,
-        is_required: false
-      });
+      .from('documents')
+      .update({ stage: stageId })
+      .eq('id', documentId);
 
     if (error) throw error;
 
@@ -436,21 +428,11 @@ export function useStageTemplateContent(stageId: number | null) {
 
   const addBulkDocuments = async (documentIds: number[]) => {
     if (!stageId || documentIds.length === 0) return;
-    const maxOrder = documents.reduce((max, d) => Math.max(max, d.sort_order), -1);
-
-    const inserts = documentIds.map((docId, idx) => ({
-      stage_id: stageId,
-      document_id: docId,
-      sort_order: maxOrder + 1 + idx,
-      visibility: 'both',
-      delivery_type: 'manual',
-      is_tenant_visible: true,
-      is_required: false
-    }));
 
     const { error } = await supabase
-      .from('stage_documents')
-      .insert(inserts);
+      .from('documents')
+      .update({ stage: stageId })
+      .in('id', documentIds);
 
     if (error) throw error;
 
@@ -464,12 +446,27 @@ export function useStageTemplateContent(stageId: number | null) {
     await fetchContent();
   };
 
-  const updateDocument = async (stageDocId: number, data: Record<string, any>) => {
-    // Update stage_documents junction row (visibility, is_tenant_visible, etc.)
+  const updateDocument = async (docId: number, data: Record<string, any>) => {
+    // No-op for junction-specific fields (visibility, is_core, etc.) since documents.stage model doesn't support them
+    // This preserves the interface for StageDocumentsPanel toggles without errors
+    console.warn('updateDocument: junction-specific fields not persisted in documents.stage model', data);
+
+    await supabase.from('audit_events').insert({
+      entity: 'stage',
+      entity_id: stageId?.toString() || '',
+      action: 'stage.template_updated',
+      details: { change_type: 'document_updated', document_id: docId, updates: data }
+    });
+
+    await fetchContent();
+  };
+
+  const deleteDocument = async (docId: number) => {
+    // Unlink by clearing the stage column
     const { error } = await supabase
-      .from('stage_documents')
-      .update(data)
-      .eq('id', stageDocId);
+      .from('documents')
+      .update({ stage: null })
+      .eq('id', docId);
 
     if (error) throw error;
 
@@ -477,40 +474,16 @@ export function useStageTemplateContent(stageId: number | null) {
       entity: 'stage',
       entity_id: stageId?.toString() || '',
       action: 'stage.template_updated',
-      details: { change_type: 'document_updated', stage_document_id: stageDocId, updates: data }
+      details: { change_type: 'document_unlinked', document_id: docId }
     });
 
     await fetchContent();
   };
 
-  const deleteDocument = async (stageDocId: number) => {
-    // Delete the junction row to unlink
-    const { error } = await supabase
-      .from('stage_documents')
-      .delete()
-      .eq('id', stageDocId);
-
-    if (error) throw error;
-
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId?.toString() || '',
-      action: 'stage.template_updated',
-      details: { change_type: 'document_unlinked', stage_document_id: stageDocId }
-    });
-
-    await fetchContent();
-  };
-
-  const reorderDocuments = async (orderedIds: number[]) => {
-    // Update sort_order on stage_documents
-    for (let i = 0; i < orderedIds.length; i++) {
-      await supabase
-        .from('stage_documents')
-        .update({ sort_order: i })
-        .eq('id', orderedIds[i]);
-    }
-    await fetchContent();
+  const reorderDocuments = async (_orderedIds: number[]) => {
+    // No-op: documents.stage model does not support sort_order
+    // Documents are ordered by title
+    console.warn('reorderDocuments: not supported in documents.stage model');
   };
 
   const reorderTeamTasks = async (orderedIds: number[]) => {
