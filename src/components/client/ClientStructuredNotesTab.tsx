@@ -147,6 +147,11 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [fetchingCommentsForTask, setFetchingCommentsForTask] = useState<string | null>(null);
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const isAddDialogOpenRef = useRef(false);
+  const stableSetIsAddDialogOpen = useCallback((open: boolean) => {
+    isAddDialogOpenRef.current = open;
+    setIsAddDialogOpen(open);
+  }, []);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);

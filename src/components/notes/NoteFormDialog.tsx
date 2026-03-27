@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Note } from '@/hooks/useNotes';
@@ -96,6 +98,46 @@ export interface NoteFormDialogProps {
 }
 
 const DURATION_TYPES = ['phone-call', 'meeting', 'action'];
+const DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+const DRAFT_SAVE_INTERVAL_MS = 3000;
+
+function getDraftKey(tenantId: number, noteId?: string) {
+  return `note-draft-${tenantId}-${noteId || 'new'}`;
+}
+
+interface DraftData {
+  title: string;
+  content: string;
+  noteType: string;
+  priority: string;
+  status: string;
+  duration: string;
+  isPinned: boolean;
+  packageInstanceId: string;
+  assignees: string[];
+  savedAt: number;
+}
+
+function saveDraft(key: string, data: DraftData) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+}
+
+function loadDraft(key: string): DraftData | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as DraftData;
+    if (Date.now() - data.savedAt > DRAFT_MAX_AGE_MS) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return data;
+  } catch { return null; }
+}
+
+function clearDraft(key: string) {
+  try { localStorage.removeItem(key); } catch {}
+}
 
 export function NoteFormDialog({
   open,
@@ -180,6 +222,12 @@ export function NoteFormDialog({
   // Package info for edit header
   const [selectedPackageInfo, setSelectedPackageInfo] = useState<{ name: string; full_text: string } | null>(null);
 
+  // Draft persistence
+  const draftKey = getDraftKey(tenantId, noteId);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftRestoredAt, setDraftRestoredAt] = useState<Date | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
   // ── Fetch dropdown options if not provided ──
   useEffect(() => {
     if (propTypeOptions) return;
@@ -254,6 +302,8 @@ export function NoteFormDialog({
     setTitleManuallyEdited(false);
     setEmailMode(null);
     setSelectedPackageInfo(null);
+    setDraftRestored(false);
+    setDraftRestoredAt(null);
   }, []);
 
   // ── Populate form when opening ──
@@ -262,6 +312,22 @@ export function NoteFormDialog({
 
     if (mode === 'create') {
       resetForm();
+      // Check for saved draft
+      const draft = loadDraft(draftKey);
+      if (draft) {
+        setTitle(draft.title);
+        setContent(draft.content);
+        setNoteType(draft.noteType);
+        setPriority(draft.priority);
+        setNoteStatus(draft.status);
+        setDuration(draft.duration);
+        setIsPinned(draft.isPinned);
+        setSelectedPackageInstanceId(draft.packageInstanceId);
+        if (draft.assignees?.length) setAssignees(draft.assignees);
+        if (draft.title) setTitleManuallyEdited(true);
+        setDraftRestored(true);
+        setDraftRestoredAt(new Date(draft.savedAt));
+      }
       return;
     }
 
@@ -392,6 +458,27 @@ export function NoteFormDialog({
     return 'No duration';
   };
 
+  // ── Auto-save draft to localStorage ──
+  useEffect(() => {
+    if (!open) return;
+    const interval = setInterval(() => {
+      if (!content.trim() && !title.trim()) return; // nothing to save
+      saveDraft(draftKey, {
+        title, content, noteType, priority, status: noteStatus,
+        duration, isPinned, packageInstanceId: selectedPackageInstanceId,
+        assignees, savedAt: Date.now(),
+      });
+    }, DRAFT_SAVE_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [open, draftKey, title, content, noteType, priority, noteStatus, duration, isPinned, selectedPackageInstanceId, assignees]);
+
+  const handleDiscardDraft = useCallback(() => {
+    clearDraft(draftKey);
+    setDraftRestored(false);
+    setDraftRestoredAt(null);
+    resetForm();
+  }, [draftKey, resetForm]);
+
   // ── File handling ──
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -424,9 +511,33 @@ export function NoteFormDialog({
         notifyClient,
         elapsedTimerSeconds: elapsedTime,
       });
+      clearDraft(draftKey);
+      setDraftRestored(false);
     } finally {
       setInternalSaving(false);
     }
+  };
+
+  // ── Dialog close with unsaved changes guard ──
+  const hasUnsavedContent = content.trim().length > 0 || title.trim().length > 0;
+
+  const handleDialogOpenChange = (o: boolean) => {
+    if (!o && hasUnsavedContent) {
+      setShowDiscardConfirm(true);
+      return;
+    }
+    if (!o) {
+      clearDraft(draftKey);
+      resetForm();
+    }
+    onOpenChange(o);
+  };
+
+  const handleConfirmDiscard = () => {
+    clearDraft(draftKey);
+    resetForm();
+    setShowDiscardConfirm(false);
+    onOpenChange(false);
   };
 
   if (!open) return null;
@@ -434,7 +545,8 @@ export function NoteFormDialog({
   const fileInputId = `note-file-upload-${mode}-${noteId || 'new'}`;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) resetForm(); onOpenChange(o); }}>
+    <>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="w-[90vw] max-w-[1400px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === 'edit' ? 'Edit Note' : 'Add Note'}</DialogTitle>
@@ -456,6 +568,24 @@ export function NoteFormDialog({
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Draft restored banner */}
+            {draftRestored && draftRestoredAt && (
+              <Alert variant="info" className="py-2">
+                <Clock className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                  <span className="text-xs">
+                    Draft restored from {format(draftRestoredAt, 'dd MMM yyyy, h:mm a')}
+                  </span>
+                  <button
+                    type="button"
+                    className="text-xs underline hover:no-underline ml-3"
+                    onClick={handleDiscardDraft}
+                  >
+                    Discard draft
+                  </button>
+                </AlertDescription>
+              </Alert>
+            )}
             {/* Row 1: Package, Type, Priority, Status */}
             <div className={`grid gap-4 ${
               showPackageSelector && activePackages.length > 0
@@ -682,7 +812,7 @@ export function NoteFormDialog({
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => { resetForm(); onOpenChange(false); }}>
+                <Button variant="outline" size="sm" className="text-xs h-8" onClick={() => handleDialogOpenChange(false)}>
                   Cancel
                 </Button>
                 <Button size="sm" className="text-xs h-8" onClick={handleSave} disabled={!content.trim() || saving}>
@@ -695,5 +825,22 @@ export function NoteFormDialog({
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Discard unsaved changes confirmation */}
+    {showDiscardConfirm && (
+      <Dialog open={showDiscardConfirm} onOpenChange={(o) => { if (!o) setShowDiscardConfirm(false); }}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Discard unsaved changes?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">You have unsaved note content. Are you sure you want to close?</p>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" size="sm" onClick={() => setShowDiscardConfirm(false)}>Keep editing</Button>
+            <Button variant="destructive" size="sm" onClick={handleConfirmDiscard}>Discard</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+    </>
   );
 }
