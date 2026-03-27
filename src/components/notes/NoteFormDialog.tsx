@@ -312,6 +312,22 @@ export function NoteFormDialog({
 
     if (mode === 'create') {
       resetForm();
+      // Check for saved draft
+      const draft = loadDraft(draftKey);
+      if (draft) {
+        setTitle(draft.title);
+        setContent(draft.content);
+        setNoteType(draft.noteType);
+        setPriority(draft.priority);
+        setNoteStatus(draft.status);
+        setDuration(draft.duration);
+        setIsPinned(draft.isPinned);
+        setSelectedPackageInstanceId(draft.packageInstanceId);
+        if (draft.assignees?.length) setAssignees(draft.assignees);
+        if (draft.title) setTitleManuallyEdited(true);
+        setDraftRestored(true);
+        setDraftRestoredAt(new Date(draft.savedAt));
+      }
       return;
     }
 
