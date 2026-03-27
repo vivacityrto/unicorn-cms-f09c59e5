@@ -568,6 +568,24 @@ export function NoteFormDialog({
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Draft restored banner */}
+            {draftRestored && draftRestoredAt && (
+              <Alert variant="info" className="py-2">
+                <Clock className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between">
+                  <span className="text-xs">
+                    Draft restored from {format(draftRestoredAt, 'dd MMM yyyy, h:mm a')}
+                  </span>
+                  <button
+                    type="button"
+                    className="text-xs underline hover:no-underline ml-3"
+                    onClick={handleDiscardDraft}
+                  >
+                    Discard draft
+                  </button>
+                </AlertDescription>
+              </Alert>
+            )}
             {/* Row 1: Package, Type, Priority, Status */}
             <div className={`grid gap-4 ${
               showPackageSelector && activePackages.length > 0
