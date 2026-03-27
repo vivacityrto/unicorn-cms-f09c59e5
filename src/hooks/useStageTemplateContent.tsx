@@ -147,7 +147,48 @@ export function useStageTemplateContent(stageId: number | null) {
       })));
       setClientTasks((clientResult.data || []) as unknown as StageClientTask[]);
       setEmails((emailsResult.data || []) as unknown as StageEmail[]);
-      setDocuments((docsResult.data || []) as unknown as StageDocument[]);
+
+      // Enrich stage_documents with document metadata
+      const stageDocRows = docsResult.data || [];
+      if (stageDocRows.length > 0) {
+        const docIds = [...new Set(stageDocRows.map((sd: any) => sd.document_id))];
+        const { data: docMeta } = await supabase
+          .from('documents')
+          .select('id, title, description, format, category, document_status, ai_status, ai_confidence_score, ai_category_confidence, ai_description_confidence, ai_reasoning, created_at')
+          .in('id', docIds);
+        const metaMap = new Map((docMeta || []).map((d: any) => [d.id, d]));
+
+        setDocuments(stageDocRows.map((sd: any) => {
+          const meta = metaMap.get(sd.document_id) || {};
+          return {
+            id: sd.id,
+            stage_id: sd.stage_id,
+            document_id: sd.document_id,
+            sort_order: sd.sort_order ?? 0,
+            visibility: sd.visibility || 'both',
+            delivery_type: sd.delivery_type || 'manual',
+            is_tenant_visible: sd.is_tenant_visible ?? true,
+            is_required: sd.is_required ?? false,
+            is_core: sd.is_core ?? false,
+            is_active: sd.is_active ?? true,
+            notes: sd.notes || null,
+            pinned_version_id: sd.pinned_version_id || null,
+            title: meta.title || `Document #${sd.document_id}`,
+            description: meta.description || null,
+            format: meta.format || null,
+            category: meta.category || null,
+            document_status: meta.document_status || null,
+            ai_status: meta.ai_status || null,
+            ai_confidence_score: meta.ai_confidence_score ?? null,
+            ai_category_confidence: meta.ai_category_confidence ?? null,
+            ai_description_confidence: meta.ai_description_confidence ?? null,
+            ai_reasoning: meta.ai_reasoning || null,
+            created_at: meta.created_at || null,
+          } as StageDocument;
+        }));
+      } else {
+        setDocuments([]);
+      }
     } catch (error: any) {
       console.error('Failed to fetch stage template content:', error);
       toast({
