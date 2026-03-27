@@ -117,6 +117,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const [cancelTarget, setCancelTarget] = useState<ClientPackage | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [holdTarget, setHoldTarget] = useState<ClientPackage | null>(null);
+  const [holdReason, setHoldReason] = useState('');
+  const [holding, setHolding] = useState(false);
 
   const activePackages = packages.filter(p => !p.is_complete);
   const historyPackages = packages.filter(p => p.is_complete);
@@ -226,6 +229,95 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
       toast.error(err.message || 'Failed to cancel package');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleHoldPackage = async () => {
+    if (!holdTarget || !holdReason.trim()) return;
+    setHolding(true);
+    try {
+      const { error } = await supabase.rpc('transition_membership_state', {
+        p_instance_id: parseInt(holdTarget.id, 10),
+        p_new_state: 'paused',
+        p_reason: holdReason.trim(),
+      });
+      if (error) throw error;
+
+      // Notify the primary CSC
+      try {
+        const { data: cscRow } = await supabase
+          .from('tenant_csc_assignments')
+          .select('csc_user_id')
+          .eq('tenant_id', tenantId)
+          .eq('is_primary', true)
+          .maybeSingle();
+        if (cscRow?.csc_user_id) {
+          await supabase.rpc('emit_notification', {
+            p_event_type: 'risk_flagged',
+            p_recipient_user_uuid: cscRow.csc_user_id,
+            p_tenant_id: tenantId,
+            p_record_type: 'package_instance',
+            p_record_id: holdTarget.id,
+            p_payload: {
+              title: `Package on hold: ${holdTarget.package_name}`,
+              body: `${tenantName || 'Client'} — ${holdTarget.package_name} has been put on hold. Reason: ${holdReason.trim()}`,
+            } as any,
+          });
+        }
+      } catch (notifErr) {
+        console.error('Failed to notify CSC:', notifErr);
+      }
+
+      toast.success(`${holdTarget.package_name} has been put on hold`);
+      const title = `** PACKAGE STATUS "ON HOLD" — ${holdTarget.package_name} — ALL CLIENT ACTIVITY PAUSED **`;
+      setHoldTarget(null);
+      setHoldReason('');
+      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to put package on hold');
+    } finally {
+      setHolding(false);
+    }
+  };
+
+  const handleResumePackage = async (pkg: ClientPackage) => {
+    try {
+      const { error } = await supabase.rpc('transition_membership_state', {
+        p_instance_id: parseInt(pkg.id, 10),
+        p_new_state: 'active',
+        p_reason: 'Package resumed from hold',
+      });
+      if (error) throw error;
+
+      // Notify the primary CSC
+      try {
+        const { data: cscRow } = await supabase
+          .from('tenant_csc_assignments')
+          .select('csc_user_id')
+          .eq('tenant_id', tenantId)
+          .eq('is_primary', true)
+          .maybeSingle();
+        if (cscRow?.csc_user_id) {
+          await supabase.rpc('emit_notification', {
+            p_event_type: 'risk_flagged',
+            p_recipient_user_uuid: cscRow.csc_user_id,
+            p_tenant_id: tenantId,
+            p_record_type: 'package_instance',
+            p_record_id: pkg.id,
+            p_payload: {
+              title: `Package resumed: ${pkg.package_name}`,
+              body: `${tenantName || 'Client'} — ${pkg.package_name} has been resumed from hold.`,
+            } as any,
+          });
+        }
+      } catch (notifErr) {
+        console.error('Failed to notify CSC:', notifErr);
+      }
+
+      toast.success(`${pkg.package_name} has been resumed`);
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to resume package');
     }
   };
 
@@ -555,6 +647,28 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                                 {isExpanded ? 'Collapse Stages' : 'Expand Stages'}
                               </DropdownMenuItem>
                             </CollapsibleTrigger>
+                            {!pkg.is_complete && pkg.membership_state !== 'paused' && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setHoldTarget(pkg);
+                                }}
+                              >
+                                <PauseCircle className="h-4 w-4 mr-2" />
+                                Put on Hold
+                              </DropdownMenuItem>
+                            )}
+                            {!pkg.is_complete && pkg.membership_state === 'paused' && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleResumePackage(pkg);
+                                }}
+                              >
+                                <PlayCircle className="h-4 w-4 mr-2" />
+                                Resume Package
+                              </DropdownMenuItem>
+                            )}
                             {!pkg.is_complete && (
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
@@ -826,6 +940,40 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
             </Button>
             <Button variant="destructive" onClick={handleCancelPackage} disabled={cancelling || !cancelReason.trim()}>
               {cancelling ? 'Cancelling…' : 'Confirm Cancellation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Put on Hold Dialog */}
+      <Dialog open={!!holdTarget} onOpenChange={(open) => { if (!open) { setHoldTarget(null); setHoldReason(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Put Package on Hold</DialogTitle>
+            <DialogDescription>
+              Put <strong>{holdTarget?.package_name}</strong> on hold. This will pause all activity on this package. The primary CSC will be notified. A mandatory reason is required for the audit trail.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="hold-reason">Reason for Hold *</Label>
+              <Textarea
+                id="hold-reason"
+                placeholder="e.g., Client requested pause due to..."
+                value={holdReason}
+                onChange={(e) => setHoldReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setHoldTarget(null); setHoldReason(''); }} disabled={holding}>
+              Back
+            </Button>
+            <Button onClick={handleHoldPackage} disabled={holding || !holdReason.trim()}>
+              {holding ? 'Saving…' : 'Confirm Hold'}
             </Button>
           </DialogFooter>
         </DialogContent>
