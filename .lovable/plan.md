@@ -1,46 +1,41 @@
 
 
-## Fix: Document Navigation 404 + Show Name & Description in Stage Documents
+## Reorganise Manage Stages Layout
 
-### Problem
-1. Clicking a document in Manage Stages navigates to `/admin/documents/{id}` — a route that doesn't exist — causing a 404
-2. Stage Documents list only shows the document `title` but not the `description`, making it hard to correlate with the Manage Documents list
+### Current State
+The page uses `grid-cols-[1fr_320px]` — a narrow 320px right column where Quality Check and Stage Impact are **stacked vertically**, creating excessive white space on the left.
+
+### Proposed Layout (matching your diagram)
+
+```text
+┌──────────────────────────┬─────────────────────┬─────────────────────┐
+│  Title, badges, desc     │   Quality Check     │   Stage Impact      │
+│  Simulate / Export       │   (card)            │   (card)            │
+│  Draft / Publish         │                     │   Sync to Packages  │
+│                          │                     │   7 Packages Using  │
+│                          │                     │   Package list...   │
+├──────────────────────────┴─────────────────────┴─────────────────────┤
+│  Warnings (if any)                                                   │
+├──────────────────────────────────────────────────────────────────────┤
+│  Main content tabs (full width)                                      │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Header info takes ~50% left, Quality Check and Stage Impact sit **side by side** in the remaining ~50% right.
 
 ### Changes
 
-**1. Fix 404 navigation — 3 files**
+**`src/pages/AdminStageDetail.tsx`**
+- Change grid from `grid-cols-[1fr_320px]` to `grid-cols-1 lg:grid-cols-[1fr_1fr]` — equal halves
+- Inside the right column, change stacking from vertical (`space-y-4`) to a **side-by-side grid**: `grid grid-cols-2 gap-4`
+- Both panels sit next to each other at the same level
 
-| File | Line | Current | New |
-|------|------|---------|-----|
-| `StageDocumentsPanel.tsx` | 321 | `window.open('/admin/documents/${docId}', '_blank')` | `window.open('/admin/manage-documents?doc=${docId}', '_blank')` |
-| `StageDocumentsPanel.tsx` | 327 | `window.open('/admin/documents/${selectedDocForEdit.id}', '_blank')` | `window.open('/admin/manage-documents?doc=${selectedDocForEdit.id}', '_blank')` |
-| `DocumentLibraryBrowser.tsx` | 293 | `navigate('/admin/documents/${doc.id}')` | `navigate('/admin/manage-documents?doc=${doc.id}')` |
-| `AdminDocumentAIReview.tsx` | 531 | `window.open('/admin/documents/${detailDoc.id}', '_blank')` | `window.open('/admin/manage-documents?doc=${detailDoc.id}', '_blank')` |
-
-**2. Deep-link support in ManageDocuments.tsx**
-
-Add `useSearchParams` on mount. If `?doc=` param is present, parse it as a number and set `selectedDocId` so the `GovernanceDocumentDetail` drill-down opens automatically.
-
-**3. Show both name and description in Stage Documents list**
-
-In `StageDocumentsPanel.tsx` (after line 509, below the title/badge row), add the description as a secondary line:
-
-```tsx
-{docData?.description && (
-  <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-    {docData.description}
-  </p>
-)}
-```
+**`src/components/package-builder/StageImpactPanel.tsx`**
+- Increase ScrollArea from `h-[200px]` to `h-[300px]` for longer package lists
 
 ### Files Modified
 | File | Change |
 |------|--------|
-| `src/components/stage/StageDocumentsPanel.tsx` | Fix 2 navigation links + add description display |
-| `src/components/document/DocumentLibraryBrowser.tsx` | Fix 1 navigation link |
-| `src/pages/AdminDocumentAIReview.tsx` | Fix 1 navigation link |
-| `src/pages/ManageDocuments.tsx` | Read `?doc=` query param on mount, auto-open detail |
-
-### No Data Changes
-No database modifications — you'll handle deduplication through the admin UI.
+| `src/pages/AdminStageDetail.tsx` | Change grid proportions + make right column a 2-col sub-grid |
+| `src/components/package-builder/StageImpactPanel.tsx` | Taller scroll area |
 
