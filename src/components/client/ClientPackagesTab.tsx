@@ -647,6 +647,28 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                                 {isExpanded ? 'Collapse Stages' : 'Expand Stages'}
                               </DropdownMenuItem>
                             </CollapsibleTrigger>
+                            {!pkg.is_complete && pkg.membership_state !== 'paused' && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setHoldTarget(pkg);
+                                }}
+                              >
+                                <PauseCircle className="h-4 w-4 mr-2" />
+                                Put on Hold
+                              </DropdownMenuItem>
+                            )}
+                            {!pkg.is_complete && pkg.membership_state === 'paused' && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleResumePackage(pkg);
+                                }}
+                              >
+                                <PlayCircle className="h-4 w-4 mr-2" />
+                                Resume Package
+                              </DropdownMenuItem>
+                            )}
                             {!pkg.is_complete && (
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
