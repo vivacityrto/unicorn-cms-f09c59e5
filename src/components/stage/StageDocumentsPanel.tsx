@@ -318,13 +318,13 @@ export function StageDocumentsPanel({
       setReuseWarningOpen(true);
     } else {
       // Navigate directly to document detail
-      window.open(`/admin/documents/${docId}`, '_blank');
+      window.open(`/admin/manage-documents?doc=${docId}`, '_blank');
     }
   };
   
   const handleEditAnyway = () => {
     if (selectedDocForEdit) {
-      window.open(`/admin/documents/${selectedDocForEdit.id}`, '_blank');
+      window.open(`/admin/manage-documents?doc=${selectedDocForEdit.id}`, '_blank');
     }
     setReuseWarningOpen(false);
     setSelectedDocForEdit(null);
@@ -507,6 +507,11 @@ export function StageDocumentsPanel({
                             </Badge>
                           )}
                         </div>
+                        {docData?.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                            {docData.description}
+                          </p>
+                        )}
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <Badge variant="outline" className={`text-xs ${fileType.className}`}>
                             {fileType.label}

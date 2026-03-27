@@ -528,7 +528,7 @@ export default function AdminDocumentAIReview() {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => window.open(`/admin/documents/${detailDoc.id}`, '_blank')}
+                      onClick={() => window.open(`/admin/manage-documents?doc=${detailDoc.id}`, '_blank')}
                     >
                       <ExternalLink className="h-3 w-3 mr-1" />
                       Open Document
