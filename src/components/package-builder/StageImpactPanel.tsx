@@ -114,7 +114,7 @@ export function StageImpactPanel({ stageId, stageName }: StageImpactPanelProps) 
               </div>
 
               {/* Package list */}
-              <ScrollArea className="h-[200px]">
+              <ScrollArea className="h-[300px]">
                 <div className="space-y-2">
                   {packages.map(pkg => (
                     <div 
