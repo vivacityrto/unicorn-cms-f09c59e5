@@ -120,7 +120,7 @@ export function useStageTemplateContent(stageId: number | null) {
           .order('order_number', { ascending: true }),
         supabase
           .from('documents')
-          .select('id, title, description, format, category, document_status, ai_status, ai_confidence_score, ai_category_confidence, ai_description_confidence, ai_reasoning, created_at, stage')
+          .select('id, title, description, format, category, document_status, ai_status, ai_confidence_score, ai_category_confidence, ai_description_confidence, ai_reasoning, createdat, stage')
           .eq('stage', stageId)
           .order('title', { ascending: true })
       ]);
@@ -173,7 +173,7 @@ export function useStageTemplateContent(stageId: number | null) {
         ai_category_confidence: d.ai_category_confidence ?? null,
         ai_description_confidence: d.ai_description_confidence ?? null,
         ai_reasoning: d.ai_reasoning || null,
-        created_at: d.created_at || null,
+        created_at: d.createdat || null,
       } as StageDocument)));
     } catch (error: any) {
       console.error('Failed to fetch stage template content:', error);
