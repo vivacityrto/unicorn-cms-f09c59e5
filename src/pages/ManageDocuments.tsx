@@ -1030,7 +1030,10 @@ export default function ManageDocuments() {
     return <div className="space-y-4 p-6 animate-fade-in">
       <GovernanceDocumentDetail
         documentId={selectedDocId}
-        onBack={() => setSelectedDocId(null)}
+        onBack={() => {
+          setSelectedDocId(null);
+          setSearchParams(prev => { prev.delete('doc'); return prev; });
+        }}
       />
     </div>;
   }
