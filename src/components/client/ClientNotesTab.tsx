@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,11 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
 
   // Local UI state
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const isAddDialogOpenRef = useRef(false);
+  const stableSetIsAddDialogOpen = useCallback((open: boolean) => {
+    isAddDialogOpenRef.current = open;
+    setIsAddDialogOpen(open);
+  }, []);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [noteText, setNoteText] = useState("");
