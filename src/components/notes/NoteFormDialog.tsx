@@ -222,6 +222,12 @@ export function NoteFormDialog({
   // Package info for edit header
   const [selectedPackageInfo, setSelectedPackageInfo] = useState<{ name: string; full_text: string } | null>(null);
 
+  // Draft persistence
+  const draftKey = getDraftKey(tenantId, noteId);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftRestoredAt, setDraftRestoredAt] = useState<Date | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
   // ── Fetch dropdown options if not provided ──
   useEffect(() => {
     if (propTypeOptions) return;
