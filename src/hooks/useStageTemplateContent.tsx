@@ -669,7 +669,7 @@ export function usePackageStageOverrides(packageId: number | null, stageId: numb
         supabase.from('staff_tasks').select('*').eq('stage_id', stageId),
         supabase.from('client_tasks').select('*').eq('stage_id', stageId),
         supabase.from('emails').select('*').eq('stage_id', stageId),
-        supabase.from('documents').select('*').eq('stage', stageId)
+        supabase.from('stage_documents').select('document_id, sort_order').eq('stage_id', stageId)
       ]);
 
       // Copy team tasks
