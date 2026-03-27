@@ -119,10 +119,10 @@ export function useStageTemplateContent(stageId: number | null) {
           .eq('stage_id', stageId)
           .order('order_number', { ascending: true }),
         supabase
-          .from('documents')
-          .select('*')
-          .eq('stage', stageId)
-          .order('title', { ascending: true })
+          .from('stage_documents')
+          .select('id, stage_id, document_id, sort_order, visibility, delivery_type, is_tenant_visible, is_required, is_core, is_active, notes, pinned_version_id')
+          .eq('stage_id', stageId)
+          .order('sort_order', { ascending: true })
       ]);
 
       if (teamResult.error) throw teamResult.error;
