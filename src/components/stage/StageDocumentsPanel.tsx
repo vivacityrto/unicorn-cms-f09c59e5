@@ -309,13 +309,13 @@ export function StageDocumentsPanel({
       setReuseWarningOpen(true);
     } else {
       // Navigate directly to document detail
-      window.open(`/manage-documents?doc=${docId}`, '_blank');
+      setDrawerDocId(docId);
     }
   };
   
   const handleEditAnyway = () => {
     if (selectedDocForEdit) {
-      window.open(`/manage-documents?doc=${selectedDocForEdit.id}`, '_blank');
+      setDrawerDocId(selectedDocForEdit.id);
     }
     setReuseWarningOpen(false);
     setSelectedDocForEdit(null);
@@ -762,6 +762,20 @@ export function StageDocumentsPanel({
           onDuplicate={handleDuplicateDocument}
         />
       )}
+
+      {/* Document detail drawer */}
+      <AppDrawer open={!!drawerDocId} onOpenChange={(open) => { if (!open) setDrawerDocId(null); }}>
+        <AppDrawerContent size="2xl">
+          <AppDrawerBody className="p-0">
+            {drawerDocId && (
+              <GovernanceDocumentDetail
+                documentId={drawerDocId}
+                onBack={() => setDrawerDocId(null)}
+              />
+            )}
+          </AppDrawerBody>
+        </AppDrawerContent>
+      </AppDrawer>
     </>
   );
 }
