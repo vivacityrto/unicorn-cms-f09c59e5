@@ -100,6 +100,9 @@ export function StageDocumentsPanel({
   const [reuseWarningOpen, setReuseWarningOpen] = useState(false);
   const [selectedDocForEdit, setSelectedDocForEdit] = useState<{ id: number; title: string; stageCount: number; stageNames: string[] } | null>(null);
   
+  // Inline document detail drawer
+  const [drawerDocId, setDrawerDocId] = useState<number | null>(null);
+  
   // Stage counts for documents
   const [documentStageCounts, setDocumentStageCounts] = useState<Map<number, { count: number; names: string[] }>>(new Map());
   
