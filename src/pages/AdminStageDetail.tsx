@@ -48,6 +48,7 @@ import { StageStandardsSelector } from '@/components/stage/StageStandardsSelecto
 import { StageSimulationDialog } from '@/components/stage/StageSimulationDialog';
 import { EditStageEmailDialog } from '@/components/stage/EditStageEmailDialog';
 import { StageImpactPanel } from '@/components/package-builder/StageImpactPanel';
+import { DocumentSyncAuditPanel } from '@/components/stage/DocumentSyncAuditPanel';
 import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
 import { SortableStaffTaskList } from '@/components/stage/SortableStaffTaskList';
@@ -1561,8 +1562,9 @@ export default function AdminStageDetail() {
           </TabsContent>
 
           {/* Documents Tab */}
-          <TabsContent value="documents">
+          <TabsContent value="documents" className="space-y-4">
             {renderReuseInfoBadge()}
+            <DocumentSyncAuditPanel stageId={stageIdNum!} />
             <StageDocumentsPanel
               stageId={stageIdNum!}
               documents={stageDocuments as any}
