@@ -1,16 +1,13 @@
-import { useState } from 'react';
 import { useDocumentSyncAudit, PackageSyncStatus } from '@/hooks/useDocumentSyncAudit';
 import { useStageVersions } from '@/hooks/useStageVersions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
-  RefreshCw, ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, 
-  FileText, Package, Loader2, ArrowUpCircle
+  RefreshCw, CheckCircle2, AlertTriangle, 
+  Package, ArrowUpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,15 +18,6 @@ interface DocumentSyncAuditPanelProps {
 export function DocumentSyncAuditPanel({ stageId }: DocumentSyncAuditPanelProps) {
   const { audit, isLoading, refetch } = useDocumentSyncAudit(stageId);
   const { publishVersion, isPublishing } = useStageVersions(stageId);
-  const [expandedPackages, setExpandedPackages] = useState<Set<number>>(new Set());
-
-  const toggleExpanded = (id: number) => {
-    setExpandedPackages(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
 
   const handleSyncAll = () => {
     publishVersion({ notes: 'Sync: push missing document instances to active packages' });
@@ -61,7 +49,6 @@ export function DocumentSyncAuditPanel({ stageId }: DocumentSyncAuditPanelProps)
   }
 
   const allInSync = audit.totalInSync === audit.totalPackages;
-  const outOfSync = audit.packages.filter(p => !p.inSync);
 
   return (
     <Card>
@@ -106,92 +93,54 @@ export function DocumentSyncAuditPanel({ stageId }: DocumentSyncAuditPanelProps)
             </AlertDescription>
           </Alert>
         ) : (
-          <ScrollArea className="max-h-[400px]">
-            <div className="space-y-2">
-              {audit.packages.map((pkg) => (
-                <PackageSyncRow
-                  key={pkg.stageInstanceId}
-                  pkg={pkg}
-                  isExpanded={expandedPackages.has(pkg.stageInstanceId)}
-                  onToggle={() => toggleExpanded(pkg.stageInstanceId)}
-                />
-              ))}
+          <div className="max-h-[400px] overflow-y-auto space-y-1 pr-1">
+            {/* Header row */}
+            <div className="flex items-center justify-between px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+              <span>Tenant · Package</span>
+              <div className="flex items-center gap-4 shrink-0">
+                <span className="w-12 text-right">Has</span>
+                <span className="w-12 text-right">Extra</span>
+                <span className="w-14 text-right">Missing</span>
+                <span className="w-5" />
+              </div>
             </div>
-          </ScrollArea>
+            {audit.packages.map((pkg) => (
+              <PackageSyncRow key={pkg.stageInstanceId} pkg={pkg} />
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
   );
 }
 
-function PackageSyncRow({ 
-  pkg, isExpanded, onToggle 
-}: { 
-  pkg: PackageSyncStatus; isExpanded: boolean; onToggle: () => void;
-}) {
+function PackageSyncRow({ pkg }: { pkg: PackageSyncStatus }) {
   return (
-    <Collapsible open={isExpanded} onOpenChange={onToggle}>
-      <CollapsibleTrigger asChild>
-        <button className={cn(
-          "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors",
-          "hover:bg-muted/50",
-          pkg.inSync ? "bg-muted/20" : "bg-destructive/5 border border-destructive/20"
-        )}>
-          <div className="flex items-center gap-2 min-w-0">
-            {isExpanded ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
-            <Package className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <span className="font-medium truncate">{pkg.tenantName}</span>
-            <span className="text-muted-foreground truncate">· {pkg.packageName}</span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 ml-2">
-            <span className="text-xs text-muted-foreground">
-              {pkg.instanceDocCount} / {pkg.templateDocCount}
-            </span>
-            {pkg.inSync ? (
-              <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-            ) : (
-              <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-            )}
-          </div>
-        </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="ml-8 mt-1 mb-2 space-y-2">
-          {pkg.missingDocs.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-destructive mb-1">
-                Missing in package ({pkg.missingDocs.length})
-              </p>
-              <div className="space-y-0.5">
-                {pkg.missingDocs.map(doc => (
-                  <div key={doc.id} className="flex items-center gap-2 text-xs text-muted-foreground pl-2">
-                    <FileText className="h-3 w-3 shrink-0" />
-                    <span className="truncate">{doc.title}</span>
-                    {doc.category && (
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">{doc.category}</Badge>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {pkg.orphanedInstances.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-brand-macaron-700 mb-1">
-                Orphaned instances ({pkg.orphanedInstances.length})
-              </p>
-              <div className="space-y-0.5">
-                {pkg.orphanedInstances.map(inst => (
-                  <div key={inst.instanceId} className="flex items-center gap-2 text-xs text-muted-foreground pl-2">
-                    <FileText className="h-3 w-3 shrink-0" />
-                    <span className="truncate">{inst.title}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+    <div className={cn(
+      "flex items-center justify-between px-3 py-2 rounded-md text-sm",
+      pkg.inSync ? "bg-muted/20" : "bg-destructive/5 border border-destructive/20"
+    )}>
+      <div className="flex items-center gap-2 min-w-0">
+        <Package className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <span className="font-medium truncate">{pkg.tenantName}</span>
+        <span className="text-muted-foreground truncate">· {pkg.packageName}</span>
+      </div>
+      <div className="flex items-center gap-4 shrink-0 ml-2">
+        <span className="w-12 text-right text-xs tabular-nums">{pkg.instanceDocCount}</span>
+        <span className={cn(
+          "w-12 text-right text-xs tabular-nums",
+          pkg.extraCount > 0 && "text-amber-600 font-medium"
+        )}>{pkg.extraCount}</span>
+        <span className={cn(
+          "w-14 text-right text-xs tabular-nums",
+          pkg.missingCount > 0 && "text-destructive font-medium"
+        )}>{pkg.missingCount}</span>
+        {pkg.inSync ? (
+          <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+        ) : (
+          <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+        )}
+      </div>
+    </div>
   );
 }

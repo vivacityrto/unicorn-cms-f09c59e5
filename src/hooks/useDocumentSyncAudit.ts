@@ -8,8 +8,8 @@ export interface PackageSyncStatus {
   stageInstanceId: number;
   templateDocCount: number;
   instanceDocCount: number;
-  missingDocs: Array<{ id: number; title: string; category: string | null }>;
-  orphanedInstances: Array<{ instanceId: number; documentId: number; title: string }>;
+  extraCount: number;
+  missingCount: number;
   inSync: boolean;
 }
 
@@ -18,6 +18,20 @@ export interface DocumentSyncAuditResult {
   packages: PackageSyncStatus[];
   totalInSync: number;
   totalPackages: number;
+}
+
+async function batchedQueries<T, R>(
+  items: T[],
+  batchSize: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
 }
 
 export function useDocumentSyncAudit(stageId: number | null) {
@@ -29,10 +43,10 @@ export function useDocumentSyncAudit(stageId: number | null) {
       // 1. Template docs (authoritative source)
       const { data: templateDocs, error: tdErr } = await supabase
         .from('documents')
-        .select('id, title, category')
+        .select('id')
         .eq('stage', stageId);
       if (tdErr) throw tdErr;
-      const templates = templateDocs || [];
+      const templateDocIds = new Set((templateDocs || []).map(t => t.id));
 
       // 2. Stage instances for this stage
       const { data: stageInstances, error: siErr } = await supabase
@@ -41,7 +55,7 @@ export function useDocumentSyncAudit(stageId: number | null) {
         .eq('stage_id', stageId);
       if (siErr) throw siErr;
       if (!stageInstances?.length) {
-        return { templateDocCount: templates.length, packages: [], totalInSync: 0, totalPackages: 0 };
+        return { templateDocCount: templateDocIds.size, packages: [], totalInSync: 0, totalPackages: 0 };
       }
 
       // 3. Active package instances (not complete)
@@ -52,7 +66,7 @@ export function useDocumentSyncAudit(stageId: number | null) {
         .in('id', piIds)
         .eq('is_complete', false);
       if (!packageInstances?.length) {
-        return { templateDocCount: templates.length, packages: [], totalInSync: 0, totalPackages: 0 };
+        return { templateDocCount: templateDocIds.size, packages: [], totalInSync: 0, totalPackages: 0 };
       }
 
       const activePiIds = new Set(packageInstances.map(pi => pi.id));
@@ -69,60 +83,38 @@ export function useDocumentSyncAudit(stageId: number | null) {
       const pkgMap = new Map((packages || []).map(p => [p.id, p.name || 'Unnamed Package']));
       const tenantMap = new Map((tenants || []).map(t => [t.id, t.name]));
 
-      // 5. Document instances for active stage instances
-      const siIds = activeStageInstances.map(si => si.id);
-      const { data: docInstances, error: diErr } = await supabase
-        .from('document_instances')
-        .select('id, document_id, stageinstance_id')
-        .in('stageinstance_id', siIds);
-      if (diErr) throw diErr;
-
-      // Get titles for orphaned docs
-      const allDocIds = [...new Set((docInstances || []).map(di => di.document_id))];
-      const { data: docMeta } = allDocIds.length > 0
-        ? await supabase.from('documents').select('id, title').in('id', allDocIds)
-        : { data: [] as { id: number; title: string }[] };
-      const docTitleMap = new Map((docMeta || []).map(d => [d.id, d.title]));
-
-      // 6. Build per-package comparison
-      const templateDocIds = new Set(templates.map(t => t.id));
+      // 5. Per-stage-instance document queries (avoids 1000-row limit)
       const piMap = new Map(packageInstances.map(pi => [pi.id, pi]));
 
-      const result: PackageSyncStatus[] = activeStageInstances.map(si => {
+      const perSiResults = await batchedQueries(activeStageInstances, 10, async (si) => {
+        const { data: docs } = await supabase
+          .from('document_instances')
+          .select('document_id')
+          .eq('stageinstance_id', si.id);
+        
+        const instanceDocIds = new Set((docs || []).map(d => d.document_id));
+        const missingCount = [...templateDocIds].filter(id => !instanceDocIds.has(id)).length;
+        const extraCount = [...instanceDocIds].filter(id => !templateDocIds.has(id)).length;
+
         const pi = piMap.get(si.packageinstance_id)!;
-        const siDocs = (docInstances || []).filter(di => di.stageinstance_id === si.id);
-        const instanceDocIdSet = new Set(siDocs.map(di => di.document_id));
-
-        const missingDocs = templates
-          .filter(t => !instanceDocIdSet.has(t.id))
-          .map(t => ({ id: t.id, title: t.title, category: t.category }));
-
-        const orphanedInstances = siDocs
-          .filter(di => !templateDocIds.has(di.document_id))
-          .map(di => ({
-            instanceId: di.id,
-            documentId: di.document_id,
-            title: docTitleMap.get(di.document_id) || `Document #${di.document_id}`,
-          }));
-
         return {
           packageInstanceId: pi.id,
           packageName: pkgMap.get(pi.package_id) || 'Unknown Package',
           tenantName: tenantMap.get(pi.tenant_id) || 'Unknown Client',
           stageInstanceId: si.id,
-          templateDocCount: templates.length,
-          instanceDocCount: siDocs.length,
-          missingDocs,
-          orphanedInstances,
-          inSync: missingDocs.length === 0 && orphanedInstances.length === 0,
-        };
+          templateDocCount: templateDocIds.size,
+          instanceDocCount: instanceDocIds.size,
+          extraCount,
+          missingCount,
+          inSync: missingCount === 0 && extraCount === 0,
+        } satisfies PackageSyncStatus;
       });
 
       return {
-        templateDocCount: templates.length,
-        packages: result,
-        totalInSync: result.filter(p => p.inSync).length,
-        totalPackages: result.length,
+        templateDocCount: templateDocIds.size,
+        packages: perSiResults,
+        totalInSync: perSiResults.filter(p => p.inSync).length,
+        totalPackages: perSiResults.length,
       };
     },
     enabled: !!stageId,
