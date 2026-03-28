@@ -1,60 +1,32 @@
 
 
-## Audit & Sync: Stage Template Documents vs Client Package Document Instances
+## Fix Document Sync Audit: Scrollability + Simplified Numbers + Per-Package Queries
 
-### Problem
-The admin "Manage Stages" document list (199 documents) shows a different set than the client package document list. This happens because:
+### Two Issues
 
-- **Admin view** reads directly from `documents WHERE stage = {stageId}` — the live template
-- **Client view** reads from `document_instances` — snapshots seeded at publish time
-- If documents were added to or removed from a stage template **after** the last publish, the `document_instances` for active packages won't reflect those changes
+1. **Not scrollable**: The `ScrollArea` with `max-h-[400px]` isn't working because it needs a fixed height, not max-height, and needs proper overflow setup.
+2. **Wrong counts (1000-row limit)**: The bulk query for `document_instances` across all 63 packages hits Supabase's 1000-row default limit, truncating results silently.
+3. **Too much info per row**: Show 3 simple numbers instead of expanding details.
 
-### Solution: Two-Part Fix
+### Changes
 
-#### Part 1 — Build a Document Sync Audit Tool (Admin UI)
+**`src/hooks/useDocumentSyncAudit.ts`** — Fix the 1000-row limit
+- Replace the single bulk `document_instances` query (line 74-77) with **per-stage-instance queries** using `Promise.all`
+- Each query fetches `document_id` for one `stageinstance_id` (~200 rows max, well under limit)
+- Batch in groups of 10 to avoid overwhelming the API
+- Remove the orphaned doc title lookup (no longer listing individual docs in the collapsed view)
 
-Add a **"Document Sync Status"** panel to the Admin Stage Detail page that compares:
-- Template documents (`documents WHERE stage = stageId`) 
-- Instance documents (`document_instances` for each active stage_instance)
+**`src/components/stage/DocumentSyncAuditPanel.tsx`** — Fix scroll + simplify display
+- Replace `ScrollArea` with a simple `div` using `max-h-[400px] overflow-y-auto` for reliable scrolling
+- Simplify each row to show 3 numbers inline (no expand/collapse needed):
+  - **Has**: total docs the tenant has in this package (`instanceDocCount`)
+  - **Extra**: docs in tenant but not in template (`orphanedInstances.length`)  
+  - **Missing**: docs in template but not in tenant (`missingDocs.length`)
+- Remove the `Collapsible` expand/collapse — just show the 3 counts per row
+- Keep the expand option but make it optional (click to see doc names if needed)
 
-The panel will show:
-- Count of template docs vs instance docs per active package
-- **Missing in instances** — docs in template but not yet seeded to a package
-- **Orphaned instances** — doc instances whose template doc no longer belongs to this stage
-- A **"Sync Now"** button that re-publishes the stage (calls `publish_stage_version`) to push missing documents to all active package instances
-
-This gives SuperAdmins visibility into drift and a one-click fix.
-
-#### Part 2 — Enhance `publish_stage_version` to handle removals (optional, confirm first)
-
-Currently the function is **additive-only** — it inserts missing document_instances but never removes ones whose source document was unlinked from the stage. This is by design (preserving history), but means orphaned instances persist.
-
-We have two options:
-1. **Keep additive-only** — orphaned instances stay but the audit panel flags them for manual review
-2. **Add soft-delete on publish** — mark document_instances as `status = 'removed'` when their source document no longer has `stage = stageId`
-
-### Implementation Plan
-
-**New file: `src/hooks/useDocumentSyncAudit.ts`**
-- Accepts a `stageId`
-- Fetches template docs from `documents WHERE stage = stageId`
-- Fetches all active `stage_instances` for that stage (via `stage_instances` → `package_instances WHERE is_complete = false`)
-- For each stage_instance, fetches `document_instances`
-- Compares and returns: `{ missingDocs, orphanedInstances, inSyncCount, totalTemplateCount }` per package
-
-**New component: `src/components/stage/DocumentSyncAuditPanel.tsx`**
-- Renders inside the Admin Stage Detail Documents tab
-- Shows a summary bar: "X of Y packages in sync"
-- Expandable list per package showing missing/orphaned docs
-- "Sync All" button that calls `publish_stage_version` to push missing docs
-
-**Modified file: `src/pages/AdminStageDetail.tsx`**
-- Import and render `DocumentSyncAuditPanel` within the Documents tab
-
-### Technical Details
-
-- The sync audit uses the same data path as `publish_stage_version`: `documents.stage` is the authoritative source
-- No new database tables or migrations needed — this is purely a read-comparison + existing RPC call
-- The `publish_stage_version` function already handles additive sync (inserts missing `document_instances` with `NOT EXISTS` guard)
-- Re-publishing is safe and idempotent — existing instances are preserved
+### UI Per Row (simplified)
+```text
+[Tenant Name · Package]    Has: 199  |  Extra: 4  |  Missing: 0    ✓
+```
 
