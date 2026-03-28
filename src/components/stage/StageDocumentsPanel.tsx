@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AppDrawer, AppDrawerContent, AppDrawerHeader, AppDrawerTitle, AppDrawerBody } from '@/components/ui/app-drawer';
+import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { 
