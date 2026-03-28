@@ -1562,8 +1562,9 @@ export default function AdminStageDetail() {
           </TabsContent>
 
           {/* Documents Tab */}
-          <TabsContent value="documents">
+          <TabsContent value="documents" className="space-y-4">
             {renderReuseInfoBadge()}
+            <DocumentSyncAuditPanel stageId={stageIdNum!} />
             <StageDocumentsPanel
               stageId={stageIdNum!}
               documents={stageDocuments as any}
