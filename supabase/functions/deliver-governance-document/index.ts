@@ -554,7 +554,7 @@ serve(async (req) => {
     // ── Load version + document ────────────────────────────────────────────
     const { data: version, error: vErr } = await supabase
       .from("document_versions")
-      .select("*, document:documents!document_versions_document_id_fkey(id, title, category, format)")
+      .select("*, document:documents!document_versions_document_id_fkey(id, title, category, format, framework_type)")
       .eq("id", document_version_id)
       .single();
 
@@ -828,6 +828,28 @@ serve(async (req) => {
     const driveId = spSettings.governance_drive_id;
     let parentItemId = spSettings.governance_folder_item_id;
     let categorySubfolder: string | null = null;
+
+    // ── Framework subfolder (e.g. "RTO", "CRICOS", "GTO") ──────────────────
+    const frameworkType = doc.framework_type as string | null;
+    if (frameworkType) {
+      const frameworkFolderName = frameworkType.toUpperCase();
+      try {
+        const parentInfo = await graphGet<DriveItem>(
+          `/drives/${driveId}/items/${parentItemId}`,
+        );
+        if (parentInfo.ok) {
+          const parentRef = parentInfo.data.parentReference as { path?: string } | undefined;
+          const fullPath = parentRef?.path
+            ? `${parentRef.path.replace(/^\/drives\/[^/]+\/root:/, '')}/${parentInfo.data.name}`
+            : parentInfo.data.name;
+          const cleanPath = fullPath.replace(/^\//, '');
+          const sub = await ensureFolder(driveId, cleanPath, frameworkFolderName);
+          parentItemId = sub.itemId;
+        }
+      } catch (e) {
+        console.warn(`[deliver] Could not resolve framework subfolder: ${e}`);
+      }
+    }
 
     if (doc.category) {
       const { data: catRow } = await supabase
