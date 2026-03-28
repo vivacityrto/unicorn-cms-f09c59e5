@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,6 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AppDrawer, AppDrawerContent, AppDrawerHeader, AppDrawerTitle, AppDrawerBody } from '@/components/ui/app-drawer';
-import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { 
@@ -100,8 +99,7 @@ export function StageDocumentsPanel({
   const [reuseWarningOpen, setReuseWarningOpen] = useState(false);
   const [selectedDocForEdit, setSelectedDocForEdit] = useState<{ id: number; title: string; stageCount: number; stageNames: string[] } | null>(null);
   
-  // Inline document detail drawer
-  const [drawerDocId, setDrawerDocId] = useState<number | null>(null);
+  const navigate = useNavigate();
   
   // Stage counts for documents
   const [documentStageCounts, setDocumentStageCounts] = useState<Map<number, { count: number; names: string[] }>>(new Map());
@@ -309,13 +307,13 @@ export function StageDocumentsPanel({
       setReuseWarningOpen(true);
     } else {
       // Navigate directly to document detail
-      setDrawerDocId(docId);
+      navigate(`/manage-documents?doc=${docId}`);
     }
   };
   
   const handleEditAnyway = () => {
     if (selectedDocForEdit) {
-      setDrawerDocId(selectedDocForEdit.id);
+      navigate(`/manage-documents?doc=${selectedDocForEdit.id}`);
     }
     setReuseWarningOpen(false);
     setSelectedDocForEdit(null);
@@ -763,19 +761,6 @@ export function StageDocumentsPanel({
         />
       )}
 
-      {/* Document detail drawer */}
-      <AppDrawer open={!!drawerDocId} onOpenChange={(open) => { if (!open) setDrawerDocId(null); }}>
-        <AppDrawerContent size="2xl">
-          <AppDrawerBody className="p-0">
-            {drawerDocId && (
-              <GovernanceDocumentDetail
-                documentId={drawerDocId}
-                onBack={() => setDrawerDocId(null)}
-              />
-            )}
-          </AppDrawerBody>
-        </AppDrawerContent>
-      </AppDrawer>
     </>
   );
 }
