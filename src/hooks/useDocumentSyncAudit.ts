@@ -37,23 +37,39 @@ export function useDocumentSyncAudit(stageId: number | null) {
       const templates = templateDocs || [];
 
       // 2. Get active stage_instances for this stage
+      // Use separate queries to avoid deep type instantiation
       const { data: stageInstances, error: siErr } = await supabase
         .from('stage_instances')
-        .select(`
-          id,
-          package_instance_id,
-          package_instances!inner (
-            id,
-            is_complete,
-            tenant_id,
-            client_packages!inner (
-              id,
-              name
-            )
-          )
-        `)
-        .eq('stage_id', stageId)
-        .eq('package_instances.is_complete', false);
+        .select('id, stage_id, package_instance_id')
+        .eq('stage_id', stageId);
+
+      if (siErr) throw siErr;
+      if (!stageInstances || stageInstances.length === 0) {
+        return { templateDocCount: templates.length, packages: [], totalInSync: 0, totalPackages: 0 };
+      }
+
+      // Get active package instances
+      const piIds = [...new Set(stageInstances.map(si => si.package_instance_id))];
+      const { data: packageInstances } = await supabase
+        .from('package_instances')
+        .select('id, tenant_id, package_id, is_complete')
+        .in('id', piIds)
+        .eq('is_complete', false);
+
+      if (!packageInstances || packageInstances.length === 0) {
+        return { templateDocCount: templates.length, packages: [], totalInSync: 0, totalPackages: 0 };
+      }
+
+      const activePiIds = new Set(packageInstances.map(pi => pi.id));
+      const activeStageInstances = stageInstances.filter(si => activePiIds.has(si.package_instance_id));
+
+      // Get package names
+      const cpIds = [...new Set(packageInstances.map(pi => pi.package_id))];
+      const { data: clientPackages } = await supabase
+        .from('client_packages')
+        .select('id, name')
+        .in('id', cpIds);
+      const cpMap = new Map((clientPackages || []).map(cp => [cp.id, cp.name]));
 
       if (siErr) throw siErr;
       if (!stageInstances || stageInstances.length === 0) {
