@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AppDrawer, AppDrawerContent, AppDrawerHeader, AppDrawerTitle, AppDrawerBody } from '@/components/ui/app-drawer';
+import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { 
@@ -97,6 +99,9 @@ export function StageDocumentsPanel({
   // Document reuse warning state
   const [reuseWarningOpen, setReuseWarningOpen] = useState(false);
   const [selectedDocForEdit, setSelectedDocForEdit] = useState<{ id: number; title: string; stageCount: number; stageNames: string[] } | null>(null);
+  
+  // Inline document detail drawer
+  const [drawerDocId, setDrawerDocId] = useState<number | null>(null);
   
   // Stage counts for documents
   const [documentStageCounts, setDocumentStageCounts] = useState<Map<number, { count: number; names: string[] }>>(new Map());
@@ -304,13 +309,13 @@ export function StageDocumentsPanel({
       setReuseWarningOpen(true);
     } else {
       // Navigate directly to document detail
-      window.open(`/manage-documents?doc=${docId}`, '_blank');
+      setDrawerDocId(docId);
     }
   };
   
   const handleEditAnyway = () => {
     if (selectedDocForEdit) {
-      window.open(`/manage-documents?doc=${selectedDocForEdit.id}`, '_blank');
+      setDrawerDocId(selectedDocForEdit.id);
     }
     setReuseWarningOpen(false);
     setSelectedDocForEdit(null);
@@ -757,6 +762,20 @@ export function StageDocumentsPanel({
           onDuplicate={handleDuplicateDocument}
         />
       )}
+
+      {/* Document detail drawer */}
+      <AppDrawer open={!!drawerDocId} onOpenChange={(open) => { if (!open) setDrawerDocId(null); }}>
+        <AppDrawerContent size="2xl">
+          <AppDrawerBody className="p-0">
+            {drawerDocId && (
+              <GovernanceDocumentDetail
+                documentId={drawerDocId}
+                onBack={() => setDrawerDocId(null)}
+              />
+            )}
+          </AppDrawerBody>
+        </AppDrawerContent>
+      </AppDrawer>
     </>
   );
 }
