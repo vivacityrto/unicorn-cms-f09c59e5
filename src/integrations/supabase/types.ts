@@ -49885,9 +49885,10 @@ export type Database = {
         Args: { p_document_id: number; p_notes?: string }
         Returns: string
       }
-      publish_stage_version:
-        | { Args: { p_notes?: string; p_stage_id: number }; Returns: string }
-        | { Args: { p_notes?: string; p_stage_id: number }; Returns: string }
+      publish_stage_version: {
+        Args: { p_notes?: string; p_stage_id: number }
+        Returns: string
+      }
       publish_vto: {
         Args: {
           p_core_focus: string
