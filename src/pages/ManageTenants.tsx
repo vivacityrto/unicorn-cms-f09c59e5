@@ -862,6 +862,7 @@ export default function ManageTenants() {
           showSeparators
         />
 
+        <Combobox
           options={[
             { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
             ...statusOptions.map(s => {
