@@ -764,6 +764,29 @@ export default function ManagePackages() {
               <CarouselNext className="absolute -right-4 -mt-[30px] mr-[10px]" />
             </Carousel>
           </div>
+
+          {/* Client count summary */}
+          {activePackage && (() => {
+            const currentTenants = tenantsByPackage[activePackage.id.toString()] || [];
+            const currentCount = currentTenants.filter(t => t.status === 'active').length;
+            const totalCount = packages.reduce((sum, pkg) => {
+              const tenants = tenantsByPackage[pkg.id.toString()] || [];
+              return sum + tenants.filter(t => t.status === 'active').length;
+            }, 0);
+            return (
+              <div className="flex items-center gap-4 text-sm">
+                <Badge variant="outline" className="px-3 py-1 text-sm font-semibold gap-1.5">
+                  <Users className="h-3.5 w-3.5" />
+                  {activePackage.name}: <span className="text-primary">{currentCount}</span>
+                </Badge>
+                <Badge variant="secondary" className="px-3 py-1 text-sm font-medium gap-1.5">
+                  <Package2 className="h-3.5 w-3.5" />
+                  All Packages: <span className="text-primary">{totalCount}</span>
+                </Badge>
+              </div>
+            );
+          })()}
+
           {activePackage && renderTabContent(activePackage)}
         </>}
 
