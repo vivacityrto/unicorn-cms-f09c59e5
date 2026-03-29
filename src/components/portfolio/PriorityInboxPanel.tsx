@@ -32,6 +32,7 @@ const typeLabels: Record<string, string> = {
   regulator_change: 'Regulator',
   playbook_suggested: 'Playbook',
   behavioural_prompt: 'Prompt',
+  registration_expiry: 'Registration',
 };
 
 export function PriorityInboxPanel({ items, loading, tenantNames, onAcknowledge, onSnooze, onOpenDrawer }: Props) {
