@@ -781,7 +781,7 @@ export default function ManagePackages() {
                 </Badge>
                 <Badge variant="secondary" className="px-3 py-1 text-sm font-medium gap-1.5">
                   <Package2 className="h-3.5 w-3.5" />
-                  All Packages: <span className="text-primary">{totalCount}</span>
+                  All Packages: <span className="text-primary">{packages.length}</span>
                 </Badge>
               </div>
             );
