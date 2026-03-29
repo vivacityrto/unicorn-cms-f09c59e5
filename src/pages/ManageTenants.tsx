@@ -56,6 +56,7 @@ interface Tenant {
   primary_contact_name?: string | null;
   hours_used_minutes?: number;
   hours_included_minutes?: number;
+  registration_end_date?: string | null;
 }
 
 interface CSCFilterOption {
@@ -78,6 +79,7 @@ export default function ManageTenants() {
   const [packages, setPackages] = useState<{ id: number; name: string; created_at?: string }[]>([]);
   const [sortField, setSortField] = useState<"status" | "member_count" | "created_at" | "renewal">("status");
   const [renewalFilter, setRenewalFilter] = useState<string>("all");
+  const [regEndFilter, setRegEndFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
@@ -163,7 +165,7 @@ export default function ManageTenants() {
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1);
-  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter]);
+  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter]);
 
   const fetchTenants = async () => {
     try {
