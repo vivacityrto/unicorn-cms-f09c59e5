@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { differenceInDays, parseISO, isValid, addMonths } from 'date-fns';
+import { getReRegistrationDueDate, getReRegistrationUrgency, formatReRegistrationLabel } from '@/lib/reRegistrationDate';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -558,19 +560,81 @@ export function useDashboardTriage() {
     staleTime: 120_000,
   });
 
+  // ── Registration expiry alerts (within 6 months) ──
+  const { data: regExpiryItems = [] } = useQuery({
+    queryKey: ['triage-registration-expiry'],
+    queryFn: async () => {
+      const sixMonthsOut = addMonths(new Date(), 6).toISOString().slice(0, 10);
+      const { data, error } = await supabase
+        .from('tga_rto_summary')
+        .select('tenant_id, registration_end_date, trading_name, rto_code')
+        .not('registration_end_date', 'is', null)
+        .lte('registration_end_date', sixMonthsOut);
+      if (error) throw error;
+      return (data || [])
+        .filter((r: any) => r.registration_end_date)
+        .map((r: any): PriorityInboxItem => {
+          const dueDate = getReRegistrationDueDate(r.registration_end_date);
+          const daysToExpiry = dueDate ? differenceInDays(dueDate, new Date()) : 999;
+          const urgency = dueDate ? getReRegistrationUrgency(dueDate) : 'green';
+          const severity = urgency === 'red' ? 'critical' : urgency === 'amber' ? 'high' : 'moderate';
+          const label = dueDate ? formatReRegistrationLabel(dueDate) : r.registration_end_date;
+          return {
+            item_id: `reg-expiry-${r.tenant_id}`,
+            item_type: 'registration_expiry',
+            severity,
+            tenant_id: r.tenant_id,
+            stage_instance_id: null,
+            standard_clause: null,
+            summary: `ASQA registration expiring – ${r.trading_name || r.rto_code}`,
+            owner_user_id: null,
+            created_at: new Date().toISOString(),
+            why_text: `Re-registration due: ${label}. Prepare re-registration documentation.`,
+          };
+        });
+    },
+    enabled: isVivacityStaff,
+    staleTime: 300_000,
+  });
+
   // ── Inbox never empty: use backend prompts as fallback ──
   const inboxWithFallbacks = useMemo(() => {
-    if (priorityInbox.length > 0) return priorityInbox;
+    // Merge priority inbox with registration expiry alerts
+    const merged = [...priorityInbox, ...regExpiryItems];
 
+    // Deduplicate by item_id
+    const seen = new Set<string>();
+    const deduped = merged.filter(i => {
+      if (seen.has(i.item_id)) return false;
+      seen.add(i.item_id);
+      return true;
+    });
+
+    // Apply snooze/ack filtering for reg expiry items
+    const now = new Date();
+    const snoozed = new Set(inboxActions.filter((a: any) => a.action_type === 'snooze' && (!a.until_at || new Date(a.until_at) > now)).map((a: any) => a.item_id));
+    const acked = new Set(inboxActions.filter((a: any) => a.action_type === 'acknowledge').map((a: any) => a.item_id));
+    let items = deduped.filter(i => !snoozed.has(i.item_id) && !acked.has(i.item_id));
+
+    if (savedView === 'my_tenants' && profile?.user_uuid) {
+      const myIds = new Set(rawTenants.filter(t => t.assigned_csc_user_id === profile.user_uuid).map(t => t.tenant_id));
+      items = items.filter(i => !i.tenant_id || myIds.has(i.tenant_id));
+    }
+
+    if (items.length > 0) {
+      return items.sort((a, b) => {
+        const sr = (SEVERITY_RANK[b.severity] || 0) - (SEVERITY_RANK[a.severity] || 0);
+        if (sr !== 0) return sr;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+    }
+
+    // Fallback to backend prompts
     let prompts = backendPrompts;
     if (savedView === 'my_tenants' && profile?.user_uuid) {
       prompts = prompts.filter((p: any) => p.owner_user_id === profile.user_uuid || !p.owner_user_id);
     }
 
-    // Filter out snoozed/acknowledged prompts
-    const now = new Date();
-    const snoozed = new Set(inboxActions.filter((a: any) => a.action_type === 'snooze' && (!a.until_at || new Date(a.until_at) > now)).map((a: any) => a.item_id));
-    const acked = new Set(inboxActions.filter((a: any) => a.action_type === 'acknowledge').map((a: any) => a.item_id));
     prompts = prompts.filter((p: any) => !snoozed.has(p.item_id) && !acked.has(p.item_id));
 
     if (prompts.length === 0) {
@@ -589,7 +653,7 @@ export function useDashboardTriage() {
     }
 
     return prompts.slice(0, 10);
-  }, [priorityInbox, backendPrompts, inboxActions, savedView, profile?.user_uuid]);
+  }, [priorityInbox, regExpiryItems, backendPrompts, inboxActions, savedView, rawTenants, profile?.user_uuid]);
 
   // ── Risk clusters ──
   const { data: riskClusters = [] } = useQuery({
