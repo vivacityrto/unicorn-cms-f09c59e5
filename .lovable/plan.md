@@ -1,32 +1,44 @@
 
 
-## Fix Document Sync Audit: Scrollability + Simplified Numbers + Per-Package Queries
+## Add `document_title` to `document_instances` for Resilience Against Deleted Documents
 
-### Two Issues
+### Problem
+When a source document is deleted from the `documents` table, any `document_instances` referencing it lose their title — they display as "Document #1234" because the JOIN returns nothing. This happens periodically and leaves legacy/historical data without meaningful labels.
 
-1. **Not scrollable**: The `ScrollArea` with `max-h-[400px]` isn't working because it needs a fixed height, not max-height, and needs proper overflow setup.
-2. **Wrong counts (1000-row limit)**: The bulk query for `document_instances` across all 63 packages hits Supabase's 1000-row default limit, truncating results silently.
-3. **Too much info per row**: Show 3 simple numbers instead of expanding details.
+### Solution
+Add a `document_title` column to `document_instances` that captures the document title at creation time. This acts as a denormalized fallback — the UI continues to prefer the live `documents.title` but falls back to `document_instances.document_title` when the source is gone.
 
 ### Changes
 
-**`src/hooks/useDocumentSyncAudit.ts`** — Fix the 1000-row limit
-- Replace the single bulk `document_instances` query (line 74-77) with **per-stage-instance queries** using `Promise.all`
-- Each query fetches `document_id` for one `stageinstance_id` (~200 rows max, well under limit)
-- Batch in groups of 10 to avoid overwhelming the API
-- Remove the orphaned doc title lookup (no longer listing individual docs in the collapsed view)
+**1. Database migration**
+- Add `document_title TEXT NULL` column to `document_instances`
+- Backfill existing rows from the `documents` table where the source still exists
 
-**`src/components/stage/DocumentSyncAuditPanel.tsx`** — Fix scroll + simplify display
-- Replace `ScrollArea` with a simple `div` using `max-h-[400px] overflow-y-auto` for reliable scrolling
-- Simplify each row to show 3 numbers inline (no expand/collapse needed):
-  - **Has**: total docs the tenant has in this package (`instanceDocCount`)
-  - **Extra**: docs in tenant but not in template (`orphanedInstances.length`)  
-  - **Missing**: docs in template but not in tenant (`missingDocs.length`)
-- Remove the `Collapsible` expand/collapse — just show the 3 counts per row
-- Keep the expand option but make it optional (click to see doc names if needed)
+```sql
+ALTER TABLE public.document_instances 
+  ADD COLUMN document_title text NULL;
 
-### UI Per Row (simplified)
-```text
-[Tenant Name · Package]    Has: 199  |  Extra: 4  |  Missing: 0    ✓
+UPDATE public.document_instances di
+SET document_title = d.title
+FROM public.documents d
+WHERE di.document_id = d.id;
 ```
+
+**2. Update `publish_stage_version` RPC**
+- Modify the function so that when it inserts new `document_instances`, it also populates `document_title` from the source `documents.title`.
+
+**3. Update `useStageDocuments.ts`**
+- Include `document_title` in the select query
+- Change the title fallback: use `meta?.title || inst.document_title || 'Document #...'`
+
+**4. Update `StageDocumentsPanel.tsx` (Link Documents dialog)**
+- When manually linking documents, populate `document_title` on insert
+
+**5. Update Document Sync Audit (`DocListDialog`)**
+- When displaying document names for missing/extra docs, fall back to `document_title` from `document_instances` when the source document no longer exists
+
+### What stays the same
+- The live `documents.title` remains the primary source when available
+- No changes to RLS policies (the new column inherits the existing row-level policies)
+- Audit trail is preserved — no existing data is modified beyond the backfill
 
