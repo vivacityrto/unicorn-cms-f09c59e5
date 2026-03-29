@@ -1,44 +1,60 @@
 
 
-## Add `document_title` to `document_instances` for Resilience Against Deleted Documents
+## Plan: Create `dd_states` Lookup Table and Replace `ctstates` References
 
-### Problem
-When a source document is deleted from the `documents` table, any `document_instances` referencing it lose their title — they display as "Document #1234" because the JOIN returns nothing. This happens periodically and leaves legacy/historical data without meaningful labels.
+### Summary
+Create a general-purpose `dd_states` Australian states/territories lookup table (not GTO-specific), populate it from the existing `ctstates` table, and update all code references.
 
-### Solution
-Add a `document_title` column to `document_instances` that captures the document title at creation time. This acts as a denormalized fallback — the UI continues to prefer the live `documents.title` but falls back to `document_instances.document_title` when the source is gone.
+---
 
-### Changes
-
-**1. Database migration**
-- Add `document_title TEXT NULL` column to `document_instances`
-- Backfill existing rows from the `documents` table where the source still exists
+### Step 1: Database Migration — Create `dd_states`
 
 ```sql
-ALTER TABLE public.document_instances 
-  ADD COLUMN document_title text NULL;
+CREATE TABLE public.dd_states (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text NOT NULL UNIQUE,
+  label text NOT NULL,
+  description text,
+  sort_order integer NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true
+);
 
-UPDATE public.document_instances di
-SET document_title = d.title
-FROM public.documents d
-WHERE di.document_id = d.id;
+-- Populate from ctstates
+INSERT INTO public.dd_states (code, label, description, sort_order)
+SELECT 
+  lower(replace("Description", ' ', '_')),
+  "Description",
+  "Description",
+  "Seq"
+FROM public.ctstates
+ORDER BY "Seq";
+
+-- Add a 'National' option for documents applicable to all states
+INSERT INTO public.dd_states (code, label, description, sort_order)
+VALUES ('national', 'National', 'All States / National', 999);
+
+-- RLS
+ALTER TABLE public.dd_states ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "dd_states_select" ON public.dd_states FOR SELECT TO authenticated USING (true);
+CREATE POLICY "dd_states_write_sa" ON public.dd_states FOR ALL TO authenticated
+  USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
 ```
 
-**2. Update `publish_stage_version` RPC**
-- Modify the function so that when it inserts new `document_instances`, it also populates `document_title` from the source `documents.title`.
+Uses standard `dd_` conventions: UUID `id`, `code`/`label`/`description`/`sort_order`/`is_active` columns — consistent with all other lookup tables.
 
-**3. Update `useStageDocuments.ts`**
-- Include `document_title` in the select query
-- Change the title fallback: use `meta?.title || inst.document_title || 'Document #...'`
+### Step 2: Update `PackageDetail.tsx`
+- Replace `supabase.from("ctstates")` with `supabase.from("dd_states" as any)`
+- Update column references from PascalCase (`Code`, `Description`) to snake_case (`code`, `label`)
+- Update the state mapping logic accordingly
 
-**4. Update `StageDocumentsPanel.tsx` (Link Documents dialog)**
-- When manually linking documents, populate `document_title` on insert
+### Step 3: Update `ManageTenants.tsx`
+- Same changes as Step 2 — swap table name and column references
 
-**5. Update Document Sync Audit (`DocListDialog`)**
-- When displaying document names for missing/extra docs, fall back to `document_title` from `document_instances` when the source document no longer exists
+### Step 4: Auto-available in Code Tables Admin
+The `dd_states` table will automatically appear in the Code Tables admin page via the `list_code_tables` RPC, making it manageable by SuperAdmins (add/edit/deactivate states).
 
-### What stays the same
-- The live `documents.title` remains the primary source when available
-- No changes to RLS policies (the new column inherits the existing row-level policies)
-- Audit trail is preserved — no existing data is modified beyond the backfill
+### Notes
+- `ctstates` is **not** deleted — deprecated later as requested
+- Only 2 frontend files need updating
+- The table is general-purpose and can be referenced by GTO documents, tenant addresses, package state filtering, etc.
 
