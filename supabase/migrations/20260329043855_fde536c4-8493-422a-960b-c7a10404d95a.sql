@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.publish_stage_version(p_stage_id bigint, p_notes text);
