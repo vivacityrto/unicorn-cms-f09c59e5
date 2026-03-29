@@ -126,7 +126,10 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
           </Button>
           <div>
-            <h1 className="text-xl font-bold">{doc.title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold">{doc.title}</h1>
+              <span className="text-xs text-muted-foreground tabular-nums">#{doc.id}</span>
+            </div>
             <p className="text-sm text-muted-foreground">
               {valueLabelMap.get(doc.category) || doc.category || 'Uncategorised'} • {doc.format || 'Unknown format'}
             </p>
