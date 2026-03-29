@@ -108,6 +108,8 @@ export function useDocumentSyncAudit(stageId: number | null) {
           stageInstanceId: si.id,
           templateDocCount: templateDocIds.size,
           instanceDocCount: instanceDocIds.size,
+          extraDocIds,
+          missingDocIds,
           extraCount,
           missingCount,
           inSync: missingCount === 0 && extraCount === 0,
