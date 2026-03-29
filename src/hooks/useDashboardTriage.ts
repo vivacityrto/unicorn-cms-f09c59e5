@@ -301,9 +301,10 @@ export function useDashboardTriage() {
   const todaysFocus = useMemo((): FocusItem[] => {
     const items: FocusItem[] = [];
     const now = Date.now();
-    const tenants = savedView === 'my_tenants' && profile?.user_uuid
+    const tenants = (savedView === 'my_tenants' && profile?.user_uuid
       ? rawTenants.filter(t => t.assigned_csc_user_id === profile.user_uuid)
-      : rawTenants;
+      : rawTenants
+    ).filter(t => t.tenant_status === 'active' && !(t.tenant_name || '').toLowerCase().startsWith('test'));
 
     // Critical stages
     tenants.filter(t => t.worst_stage_health_status === 'critical').slice(0, 2).forEach(t => {
