@@ -14,6 +14,7 @@ interface TaskDescriptionDialogProps {
   taskName: string;
   description: string | null;
   className?: string;
+  documentId?: number | string;
 }
 
 export function TaskDescriptionButton({ taskName, description, className }: TaskDescriptionDialogProps) {
