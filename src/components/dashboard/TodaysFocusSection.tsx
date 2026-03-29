@@ -46,9 +46,10 @@ export function TodaysFocusSection({ items, onAction, onSnooze }: Props) {
               <Card
                 key={item.id}
                 className={cn(
-                  'border-l-4 transition-all hover:shadow-md',
+                  'border-l-4 transition-all hover:shadow-md cursor-pointer',
                   severityStyles[item.severity] || severityStyles.moderate
                 )}
+                onClick={() => onAction(item)}
               >
                 <CardContent className="p-3 flex items-center gap-3">
                   <Badge className={cn('text-[10px] shrink-0', sev.class)}>{sev.label}</Badge>
