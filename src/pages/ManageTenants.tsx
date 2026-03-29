@@ -353,6 +353,17 @@ export default function ManageTenants() {
         });
       }
 
+      // Fetch registration end dates from tga_rto_summary
+      const { data: regEndData } = await supabase
+        .from('tga_rto_summary')
+        .select('tenant_id, registration_end_date')
+        .in('tenant_id', tenantIds)
+        .not('registration_end_date', 'is', null);
+      const regEndMap = (regEndData || []).reduce((acc, r) => {
+        acc[(r as any).tenant_id] = (r as any).registration_end_date;
+        return acc;
+      }, {} as Record<number, string>);
+
       const tenantsWithCounts = tenantsData.map(tenant => {
         const activePackages = tenantPackagesMap[tenant.id] || [];
         const firstNonKS = activePackages.find((p: TenantPackageInfo) => !p.name.startsWith('KS'));
@@ -379,6 +390,7 @@ export default function ManageTenants() {
           primary_contact_name: primaryContactMap[tenant.id] || null,
           hours_used_minutes: tenantTimeUsedMap[tenant.id] || 0,
           hours_included_minutes: tenantIncludedMinutesMap[tenant.id] || 0,
+          registration_end_date: regEndMap[tenant.id] || null,
           // Override name prefix: if they have a KS, prepend KS indicator
           _hasKickStart: hasKickStart,
         } as any;
