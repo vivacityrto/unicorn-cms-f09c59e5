@@ -158,11 +158,24 @@ export function StageDocumentsPanel({
       // Get already linked document IDs
       const linkedIds = new Set(documents.map(d => d.document_id || (d as any).id));
       
-      const { data, error } = await supabase
-        .from('documents')
-        .select('id, title, format, category, description')
-        .order('title', { ascending: true })
-        .limit(200);
+      // Fetch all documents (no limit) so every doc is available for linking
+      let allDocs: any[] = [];
+      let from = 0;
+      const PAGE = 1000;
+      while (true) {
+        const { data: page, error: pageErr } = await supabase
+          .from('documents')
+          .select('id, title, format, category, description')
+          .order('title', { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (pageErr) throw pageErr;
+        if (!page || page.length === 0) break;
+        allDocs = allDocs.concat(page);
+        if (page.length < PAGE) break;
+        from += PAGE;
+      }
+      const data = allDocs;
+      const error = null;
 
       if (error) throw error;
       
