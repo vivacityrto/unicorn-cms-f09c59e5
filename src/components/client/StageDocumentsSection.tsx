@@ -442,7 +442,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
                   <p className="text-sm truncate">{doc.title}</p>
-                  <TaskDescriptionButton taskName={doc.title} description={doc.description} documentId={doc.id} />
+                  <TaskDescriptionButton taskName={doc.title} description={doc.description} documentId={doc.document_id} />
                   {doc.has_sharepoint_link && (
                     <TooltipProvider>
                       <Tooltip>
