@@ -8,6 +8,8 @@ export interface PackageSyncStatus {
   stageInstanceId: number;
   templateDocCount: number;
   instanceDocCount: number;
+  extraDocIds: number[];
+  missingDocIds: number[];
   extraCount: number;
   missingCount: number;
   inSync: boolean;
@@ -93,8 +95,10 @@ export function useDocumentSyncAudit(stageId: number | null) {
           .eq('stageinstance_id', si.id);
         
         const instanceDocIds = new Set((docs || []).map(d => d.document_id));
-        const missingCount = [...templateDocIds].filter(id => !instanceDocIds.has(id)).length;
-        const extraCount = [...instanceDocIds].filter(id => !templateDocIds.has(id)).length;
+        const missingDocIds = [...templateDocIds].filter(id => !instanceDocIds.has(id));
+        const extraDocIds = [...instanceDocIds].filter(id => !templateDocIds.has(id));
+        const missingCount = missingDocIds.length;
+        const extraCount = extraDocIds.length;
 
         const pi = piMap.get(si.packageinstance_id)!;
         return {
@@ -104,6 +108,8 @@ export function useDocumentSyncAudit(stageId: number | null) {
           stageInstanceId: si.id,
           templateDocCount: templateDocIds.size,
           instanceDocCount: instanceDocIds.size,
+          extraDocIds,
+          missingDocIds,
           extraCount,
           missingCount,
           inSync: missingCount === 0 && extraCount === 0,
