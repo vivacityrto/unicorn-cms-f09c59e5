@@ -73,7 +73,7 @@ export function PriorityInboxPanel({ items, loading, tenantNames, onAcknowledge,
                 const sev = severityConfig[item.severity] || severityConfig.moderate;
                 const tenantName = item.tenant_id ? tenantNames[item.tenant_id] || `Tenant ${item.tenant_id}` : '—';
                 return (
-                  <div key={item.item_id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">
+                  <div key={item.item_id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40 transition-colors cursor-pointer" onClick={() => item.tenant_id && onOpenDrawer(item.tenant_id)}>
                     <Badge className={cn('text-[10px] shrink-0 mt-0.5', sev.class)}>{sev.label}</Badge>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
