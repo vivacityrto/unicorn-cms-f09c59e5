@@ -586,7 +586,7 @@ export function useDashboardTriage() {
             tenant_id: r.tenant_id,
             stage_instance_id: null,
             standard_clause: null,
-            summary: `ASQA registration expiring – ${r.trading_name || r.rto_code}`,
+            summary: `ASQA registration expiring ${r.registration_end_date} – ${r.trading_name || r.rto_code}`,
             owner_user_id: null,
             created_at: new Date().toISOString(),
             why_text: `Re-registration due: ${label}. Prepare re-registration documentation.`,
