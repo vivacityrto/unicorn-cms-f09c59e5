@@ -257,9 +257,9 @@ export default function ManageTenants() {
 
       const { data: adminUsersData } = await supabase.from("users").select("tenant_id, state").eq("unicorn_role", "Admin").in("tenant_id", tenantIds);
       const stateCodes = [...new Set(adminUsersData?.map(u => u.state).filter(Boolean) || [])];
-      const { data: statesData } = await supabase.from("ctstates").select("Code, Description").in("Code", stateCodes);
-      const stateDescMap = (statesData || []).reduce((acc, state) => {
-        acc[state.Code] = state.Description;
+      const { data: statesData } = await supabase.from("dd_states" as any).select("code, label").in("code", stateCodes);
+      const stateDescMap = (statesData || []).reduce((acc, state: any) => {
+        acc[state.code] = state.label;
         return acc;
       }, {} as Record<number, string>);
 
