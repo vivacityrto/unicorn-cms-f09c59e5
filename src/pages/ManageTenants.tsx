@@ -1123,6 +1123,8 @@ export default function ManageTenants() {
                       })() : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
+                    </TableCell>
+                    <TableCell className="py-6 px-4 text-center whitespace-nowrap">
                       {tenant.last_note_date ? (
                         <TooltipProvider>
                           <Tooltip>
