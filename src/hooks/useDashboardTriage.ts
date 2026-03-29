@@ -572,7 +572,7 @@ export function useDashboardTriage() {
         .lte('registration_end_date', sixMonthsOut);
       if (error) throw error;
       return (data || [])
-        .filter((r: any) => r.registration_end_date)
+        .filter((r: any) => r.registration_end_date && !(r.trading_name || '').toLowerCase().startsWith('test'))
         .map((r: any): PriorityInboxItem => {
           const dueDate = getReRegistrationDueDate(r.registration_end_date);
           const daysToExpiry = dueDate ? differenceInDays(dueDate, new Date()) : 999;
@@ -599,8 +599,14 @@ export function useDashboardTriage() {
 
   // ── Inbox never empty: use backend prompts as fallback ──
   const inboxWithFallbacks = useMemo(() => {
-    // Merge priority inbox with registration expiry alerts
-    const merged = [...priorityInbox, ...regExpiryItems];
+    // Build set of test tenant IDs to exclude
+    const testTenantIds = new Set(
+      rawTenants.filter(t => (t.tenant_name || '').toLowerCase().startsWith('test')).map(t => t.tenant_id)
+    );
+
+    // Merge priority inbox with registration expiry alerts, excluding test tenants
+    const merged = [...priorityInbox, ...regExpiryItems]
+      .filter(i => !i.tenant_id || !testTenantIds.has(i.tenant_id));
 
     // Deduplicate by item_id
     const seen = new Set<string>();
