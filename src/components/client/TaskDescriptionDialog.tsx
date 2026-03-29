@@ -14,9 +14,10 @@ interface TaskDescriptionDialogProps {
   taskName: string;
   description: string | null;
   className?: string;
+  documentId?: number | string;
 }
 
-export function TaskDescriptionButton({ taskName, description, className }: TaskDescriptionDialogProps) {
+export function TaskDescriptionButton({ taskName, description, className, documentId }: TaskDescriptionDialogProps) {
   const [open, setOpen] = useState(false);
 
   if (!description) return null;
@@ -44,7 +45,12 @@ export function TaskDescriptionButton({ taskName, description, className }: Task
           className="max-h-[80vh] overflow-y-auto"
         >
           <DialogHeader>
-            <DialogTitle className="text-base">{taskName}</DialogTitle>
+            <DialogTitle className="text-base flex items-center gap-2">
+              {taskName}
+              {documentId && (
+                <span className="text-xs text-muted-foreground tabular-nums font-normal">#{documentId}</span>
+              )}
+            </DialogTitle>
           </DialogHeader>
           <div
             className="prose prose-sm dark:prose-invert max-w-none break-words"
