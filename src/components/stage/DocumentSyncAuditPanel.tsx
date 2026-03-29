@@ -37,7 +37,7 @@ function useDocumentNames(docIds: number[], enabled: boolean) {
       if (!docIds.length) return [];
       const { data, error } = await supabase
         .from('documents')
-        .select('id, name')
+        .select('id, title')
         .in('id', docIds);
       if (error) throw error;
       return data || [];
