@@ -185,7 +185,7 @@ function PackageSyncRow({ pkg, onClickCount }: { pkg: PackageSyncStatus; onClick
           className={cn(
             "w-12 text-right text-xs tabular-nums rounded px-1 py-0.5 transition-colors",
             pkg.extraCount > 0 
-              ? "text-amber-600 font-medium hover:bg-amber-100 cursor-pointer" 
+              ? "text-amber-600 font-medium hover:bg-accent cursor-pointer" 
               : "text-muted-foreground cursor-default"
           )}
         >
@@ -239,14 +239,14 @@ function DocListDialog({ dialog, onOpenChange }: { dialog: DocListDialogState; o
               {(docs || []).map(doc => (
                 <li key={doc.id} className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm bg-muted/30">
                   <span className="text-muted-foreground text-xs tabular-nums shrink-0">#{doc.id}</span>
-                  <span>{doc.name || 'Untitled'}</span>
+                  <span>{doc.title || 'Untitled'}</span>
                 </li>
               ))}
               {/* Show IDs not found in documents table (for extra/orphaned) */}
               {dialog.type === 'extra' && dialog.docIds
                 .filter(id => !(docs || []).some(d => d.id === id))
                 .map(id => (
-                  <li key={id} className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm bg-amber-50 text-amber-700">
+                  <li key={id} className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm bg-muted/50 text-muted-foreground">
                     <span className="text-xs tabular-nums shrink-0">#{id}</span>
                     <span className="italic">Template removed</span>
                   </li>
