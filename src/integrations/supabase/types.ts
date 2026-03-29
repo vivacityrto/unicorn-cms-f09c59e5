@@ -12926,6 +12926,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_states: {
+        Row: {
+          code: string
+          description: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       dd_status: {
         Row: {
           code: number
