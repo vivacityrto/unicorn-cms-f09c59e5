@@ -508,6 +508,18 @@ export default function ManageTenants() {
       });
     }
 
+    // Registration end date filter
+    if (regEndFilter !== "all") {
+      const months = parseInt(regEndFilter);
+      const now = new Date();
+      const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
+      filtered = filtered.filter(tenant => {
+        if (!tenant.registration_end_date) return false;
+        const regEnd = new Date(tenant.registration_end_date);
+        return regEnd <= cutoff;
+      });
+    }
+
     // Sort
     filtered.sort((a, b) => {
       if (sortField === "status") {
