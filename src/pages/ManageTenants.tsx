@@ -295,22 +295,34 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string | null>);
 
-      // Fetch last note per tenant using a distinct-on-like approach
-      // Fetch in batches per tenant to avoid 1000-row limit truncation
+      // Fetch last note per tenant from both 'notes' and 'client_notes' tables
       const lastNoteMap: Record<number, { date: string; snippet: string }> = {};
       const noteBatchSize = 50;
       for (let i = 0; i < tenantIds.length; i += noteBatchSize) {
         const batch = tenantIds.slice(i, i + noteBatchSize);
-        const { data: lastNotesData } = await supabase
-          .from("client_notes")
-          .select("tenant_id, created_at, title, content")
-          .in("tenant_id", batch)
-          .order("created_at", { ascending: false })
-          .limit(batch.length * 2); // at most 2 per tenant is enough to get the latest
-        (lastNotesData || []).forEach(note => {
+        // Fetch from main 'notes' table (tenant & package notes) and 'client_notes' in parallel
+        const [notesRes, clientNotesRes] = await Promise.all([
+          supabase
+            .from("notes")
+            .select("tenant_id, created_at, title, note_details")
+            .in("tenant_id", batch)
+            .order("created_at", { ascending: false })
+            .limit(batch.length * 2),
+          supabase
+            .from("client_notes")
+            .select("tenant_id, created_at, title, content")
+            .in("tenant_id", batch)
+            .order("created_at", { ascending: false })
+            .limit(batch.length * 2),
+        ]);
+        // Merge both sources, picking the most recent per tenant
+        const allNotes = [
+          ...(notesRes.data || []).map((n: any) => ({ tenant_id: n.tenant_id, created_at: n.created_at, snippet: (n.title || n.note_details || '').substring(0, 50) })),
+          ...(clientNotesRes.data || []).map((n: any) => ({ tenant_id: n.tenant_id, created_at: n.created_at, snippet: (n.title || n.content || '').substring(0, 50) })),
+        ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        allNotes.forEach(note => {
           if (!lastNoteMap[note.tenant_id]) {
-            const snippet = (note.title || note.content || '').substring(0, 50);
-            lastNoteMap[note.tenant_id] = { date: note.created_at, snippet };
+            lastNoteMap[note.tenant_id] = { date: note.created_at, snippet: note.snippet };
           }
         });
       }
