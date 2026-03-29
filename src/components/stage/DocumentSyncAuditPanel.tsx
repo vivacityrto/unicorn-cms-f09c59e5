@@ -152,7 +152,9 @@ export function DocumentSyncAuditPanel({ stageId }: DocumentSyncAuditPanelProps)
                   <span className="w-5" />
                 </div>
               </div>
-              {audit.packages.map((pkg) => (
+              {audit.packages
+                .filter((pkg) => pkg.extraCount > 0 || pkg.missingCount > 0)
+                .map((pkg) => (
                 <PackageSyncRow key={pkg.stageInstanceId} pkg={pkg} onClickCount={openDocList} />
               ))}
             </div>
