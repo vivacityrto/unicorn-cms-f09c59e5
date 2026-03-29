@@ -216,8 +216,33 @@ function PackageSyncRow({ pkg, onClickCount }: { pkg: PackageSyncStatus; onClick
   );
 }
 
+function useDocumentInstanceTitles(docIds: number[], stageInstanceId: number | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ['document-instance-titles', docIds, stageInstanceId],
+    queryFn: async () => {
+      if (!docIds.length) return new Map<number, string>();
+      const { data } = await supabase
+        .from('document_instances')
+        .select('document_id, document_title')
+        .in('document_id', docIds)
+        .not('document_title', 'is', null)
+        .limit(1000);
+      const map = new Map<number, string>();
+      for (const row of data || []) {
+        if (row.document_title && !map.has(row.document_id)) {
+          map.set(row.document_id, row.document_title);
+        }
+      }
+      return map;
+    },
+    enabled: enabled && docIds.length > 0,
+  });
+}
+
 function DocListDialog({ dialog, onOpenChange }: { dialog: DocListDialogState; onOpenChange: (open: boolean) => void }) {
   const { data: docs, isLoading } = useDocumentNames(dialog.docIds, dialog.open);
+  const orphanedIds = dialog.docIds.filter(id => !(docs || []).some(d => d.id === id));
+  const { data: fallbackTitles } = useDocumentInstanceTitles(orphanedIds, undefined, dialog.open && orphanedIds.length > 0);
 
   return (
     <AppModal open={dialog.open} onOpenChange={onOpenChange}>
@@ -244,16 +269,14 @@ function DocListDialog({ dialog, onOpenChange }: { dialog: DocListDialogState; o
                   <span>{doc.title || 'Untitled'}</span>
                 </li>
               ))}
-              {/* Show IDs not found in documents table (for extra/orphaned) */}
-              {dialog.type === 'extra' && dialog.docIds
-                .filter(id => !(docs || []).some(d => d.id === id))
-                .map(id => (
-                  <li key={id} className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm bg-muted/50 text-muted-foreground">
-                    <span className="text-xs tabular-nums shrink-0">#{id}</span>
-                    <span className="italic">Template removed</span>
-                  </li>
-                ))
-              }
+              {/* Show IDs not found in documents table — use fallback title from document_instances */}
+              {orphanedIds.map(id => (
+                <li key={id} className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm bg-muted/50 text-muted-foreground">
+                  <span className="text-xs tabular-nums shrink-0">#{id}</span>
+                  <span className="italic">{fallbackTitles?.get(id) || 'Template removed'}</span>
+                  <Badge variant="outline" className="text-[10px] ml-auto">Deleted</Badge>
+                </li>
+              ))}
             </ul>
           )}
         </AppModalBody>

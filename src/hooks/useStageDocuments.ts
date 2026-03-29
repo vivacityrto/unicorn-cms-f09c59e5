@@ -43,7 +43,7 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
       // Fetch document_instances for this stage_instance, scoped to tenant
       const { data: instances, error, count } = await supabase
         .from('document_instances')
-        .select('id, document_id, isgenerated, status, created_at, generation_status, generated_file_url, generationdate, last_error, is_manual_allocation', { count: 'exact' })
+        .select('id, document_id, document_title, isgenerated, status, created_at, generation_status, generated_file_url, generationdate, last_error, is_manual_allocation', { count: 'exact' })
         .eq('stageinstance_id', stageInstanceId)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
@@ -81,7 +81,7 @@ export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStage
         return {
           id: inst.id,
           document_id: inst.document_id,
-          title: meta?.title || `Document #${inst.document_id}`,
+          title: meta?.title || (inst as any).document_title || `Document #${inst.document_id}`,
           description: meta?.description || null,
           category: meta?.category || null,
           status: inst.status || 'pending',
