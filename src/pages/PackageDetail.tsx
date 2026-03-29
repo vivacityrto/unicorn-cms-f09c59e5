@@ -737,9 +737,9 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       // Fetch state from first admin user for each tenant
       const { data: adminUsersData } = await supabase.from("users").select("tenant_id, state").eq("unicorn_role", "Admin").in("tenant_id", tenantIds);
       const stateCodes = [...new Set(adminUsersData?.map((u: any) => u.state).filter(Boolean) || [])];
-      const { data: statesData } = await supabase.from("dd_states" as any).select("code, label").in("code", stateCodes);
+      const { data: statesData } = await supabase.from("dd_states" as any).select("legacy_code, label").in("legacy_code", stateCodes);
       const stateDescMap = (statesData || []).reduce((acc: Record<number, string>, state: any) => {
-        acc[state.code] = state.label;
+        acc[state.legacy_code] = state.label;
         return acc;
       }, {});
       const stateMap = (adminUsersData || []).reduce((acc: Record<number, string | null>, user: any) => {
