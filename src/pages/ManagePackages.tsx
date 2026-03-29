@@ -769,7 +769,7 @@ export default function ManagePackages() {
           {activePackage && (() => {
             const currentTenants = tenantsByPackage[activePackage.id.toString()] || [];
             const currentCount = currentTenants.filter(t => t.status === 'active').length;
-            const totalCount = packages.reduce((sum, pkg) => {
+            const totalClients = packages.reduce((sum, pkg) => {
               const tenants = tenantsByPackage[pkg.id.toString()] || [];
               return sum + tenants.filter(t => t.status === 'active').length;
             }, 0);
