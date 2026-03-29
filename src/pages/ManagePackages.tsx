@@ -769,7 +769,7 @@ export default function ManagePackages() {
           {activePackage && (() => {
             const currentTenants = tenantsByPackage[activePackage.id.toString()] || [];
             const currentCount = currentTenants.filter(t => t.status === 'active').length;
-            const totalCount = packages.reduce((sum, pkg) => {
+            const totalClients = packages.reduce((sum, pkg) => {
               const tenants = tenantsByPackage[pkg.id.toString()] || [];
               return sum + tenants.filter(t => t.status === 'active').length;
             }, 0);
@@ -781,7 +781,7 @@ export default function ManagePackages() {
                 </Badge>
                 <Badge variant="secondary" className="px-3 py-1 text-sm font-medium gap-1.5">
                   <Package2 className="h-3.5 w-3.5" />
-                  All Packages: <span className="text-primary">{packages.length}</span>
+                  All Packages: <span className="text-primary">{totalClients}</span>
                 </Badge>
               </div>
             );
