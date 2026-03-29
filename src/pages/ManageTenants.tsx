@@ -56,6 +56,7 @@ interface Tenant {
   primary_contact_name?: string | null;
   hours_used_minutes?: number;
   hours_included_minutes?: number;
+  registration_end_date?: string | null;
 }
 
 interface CSCFilterOption {
@@ -78,6 +79,7 @@ export default function ManageTenants() {
   const [packages, setPackages] = useState<{ id: number; name: string; created_at?: string }[]>([]);
   const [sortField, setSortField] = useState<"status" | "member_count" | "created_at" | "renewal">("status");
   const [renewalFilter, setRenewalFilter] = useState<string>("all");
+  const [regEndFilter, setRegEndFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
@@ -163,7 +165,7 @@ export default function ManageTenants() {
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1);
-  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter]);
+  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter]);
 
   const fetchTenants = async () => {
     try {
@@ -351,6 +353,17 @@ export default function ManageTenants() {
         });
       }
 
+      // Fetch registration end dates from tga_rto_summary
+      const { data: regEndData } = await supabase
+        .from('tga_rto_summary')
+        .select('tenant_id, registration_end_date')
+        .in('tenant_id', tenantIds)
+        .not('registration_end_date', 'is', null);
+      const regEndMap = (regEndData || []).reduce((acc, r) => {
+        acc[(r as any).tenant_id] = (r as any).registration_end_date;
+        return acc;
+      }, {} as Record<number, string>);
+
       const tenantsWithCounts = tenantsData.map(tenant => {
         const activePackages = tenantPackagesMap[tenant.id] || [];
         const firstNonKS = activePackages.find((p: TenantPackageInfo) => !p.name.startsWith('KS'));
@@ -377,6 +390,7 @@ export default function ManageTenants() {
           primary_contact_name: primaryContactMap[tenant.id] || null,
           hours_used_minutes: tenantTimeUsedMap[tenant.id] || 0,
           hours_included_minutes: tenantIncludedMinutesMap[tenant.id] || 0,
+          registration_end_date: regEndMap[tenant.id] || null,
           // Override name prefix: if they have a KS, prepend KS indicator
           _hasKickStart: hasKickStart,
         } as any;
@@ -491,6 +505,18 @@ export default function ManageTenants() {
         if (!tenant.next_renewal_date) return false;
         const renewal = new Date(tenant.next_renewal_date);
         return renewal <= cutoff;
+      });
+    }
+
+    // Registration end date filter
+    if (regEndFilter !== "all") {
+      const months = parseInt(regEndFilter);
+      const now = new Date();
+      const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
+      filtered = filtered.filter(tenant => {
+        if (!tenant.registration_end_date) return false;
+        const regEnd = new Date(tenant.registration_end_date);
+        return regEnd <= cutoff;
       });
     }
 
@@ -820,6 +846,24 @@ export default function ManageTenants() {
 
         <Combobox
           options={[
+            { value: "all", label: "All Reg End", icon: Calendar, iconColor: "text-muted-foreground" },
+            { value: "3", label: "Within 3 months", icon: Calendar, iconColor: "text-red-600" },
+            { value: "6", label: "Within 6 months", icon: Calendar, iconColor: "text-amber-600" },
+            { value: "9", label: "Within 9 months", icon: Calendar, iconColor: "text-yellow-600" },
+            { value: "12", label: "Within 1 year", icon: Calendar, iconColor: "text-primary" },
+          ]}
+          value={regEndFilter}
+          onValueChange={setRegEndFilter}
+          placeholder="Filter by reg end..."
+          searchPlaceholder="Search..."
+          emptyText="No options."
+          className="w-full md:w-[220px] h-[48px]"
+          showIcons
+          showSeparators
+        />
+
+        <Combobox
+          options={[
             { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
             ...statusOptions.map(s => {
               const iconMap: Record<string, typeof CheckCircle2> = { active: CheckCircle2, disabled: XCircle, on_hold: Pause, overrun: AlertCircle, terminated: XCircle, cancelled: Archive };
@@ -875,6 +919,7 @@ export default function ManageTenants() {
                   >
                     Anniversary {sortField === "renewal" && "▲"}
                   </TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Reg End</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Last Note</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1051,6 +1096,28 @@ export default function ManageTenants() {
                           <div className={cn("text-sm font-medium flex items-center gap-1", colorClass)}>
                             <Calendar className="h-3 w-3" />
                             {renewal.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                          </div>
+                        );
+                      })() : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
+                      {tenant.registration_end_date ? (() => {
+                        const regEnd = new Date(tenant.registration_end_date);
+                        const now = new Date();
+                        const diffDays = Math.ceil((regEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                        const colorClass = diffDays <= 90
+                          ? "text-destructive"
+                          : diffDays <= 180
+                          ? "text-amber-600"
+                          : diffDays <= 270
+                          ? "text-yellow-600"
+                          : "text-muted-foreground";
+                        return (
+                          <div className={cn("text-sm font-medium flex items-center gap-1", colorClass)}>
+                            <Calendar className="h-3 w-3" />
+                            {regEnd.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
                           </div>
                         );
                       })() : (
