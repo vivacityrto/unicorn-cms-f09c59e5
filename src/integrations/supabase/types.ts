@@ -13991,6 +13991,7 @@ export type Database = {
           coments: string | null
           created_at: string
           document_id: number | null
+          document_title: string | null
           generated_by: string | null
           generated_file_url: string | null
           generated_item_id: string | null
@@ -14011,6 +14012,7 @@ export type Database = {
           coments?: string | null
           created_at?: string
           document_id?: number | null
+          document_title?: string | null
           generated_by?: string | null
           generated_file_url?: string | null
           generated_item_id?: string | null
@@ -14031,6 +14033,7 @@ export type Database = {
           coments?: string | null
           created_at?: string
           document_id?: number | null
+          document_title?: string | null
           generated_by?: string | null
           generated_file_url?: string | null
           generated_item_id?: string | null
@@ -49885,10 +49888,9 @@ export type Database = {
         Args: { p_document_id: number; p_notes?: string }
         Returns: string
       }
-      publish_stage_version: {
-        Args: { p_notes?: string; p_stage_id: number }
-        Returns: string
-      }
+      publish_stage_version:
+        | { Args: { p_notes?: string; p_stage_id: number }; Returns: string }
+        | { Args: { p_notes?: string; p_stage_id: number }; Returns: string }
       publish_vto: {
         Args: {
           p_core_focus: string
