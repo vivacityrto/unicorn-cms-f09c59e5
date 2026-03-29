@@ -200,7 +200,13 @@ export function usePortfolioCockpit() {
       inboxActions.filter((a: any) => a.action_type === 'acknowledge').map((a: any) => a.item_id)
     );
 
-    let items = rawInbox.filter(i => !snoozedIds.has(i.item_id) && !ackedIds.has(i.item_id));
+    // Exclude test tenants
+    const testTenantIds = new Set(
+      rawPortfolio.filter(t => (t.tenant_name || '').toLowerCase().startsWith('test')).map(t => t.tenant_id)
+    );
+    let items = rawInbox
+      .filter(i => !snoozedIds.has(i.item_id) && !ackedIds.has(i.item_id))
+      .filter(i => !i.tenant_id || !testTenantIds.has(i.tenant_id));
 
     // Filter by assigned tenants for CSCs
     if (savedView === 'my_tenants' && profile?.user_uuid) {
