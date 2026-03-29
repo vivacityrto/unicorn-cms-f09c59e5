@@ -21661,6 +21661,81 @@ export type Database = {
           },
         ]
       }
+      import_rto_docs: {
+        Row: {
+          accountable_role: string | null
+          approved_for_implementation: string | null
+          current_version: string | null
+          date_document_updated: string | null
+          date_uploaded_to_unicorn: string | null
+          document_code: string | null
+          document_description: string | null
+          document_editor: string | null
+          document_title: string | null
+          document_type: string | null
+          id: string
+          imported_at: string
+          last_updated: string | null
+          new_template_exists: string | null
+          relevant_legislation: string | null
+          source_file_name: string | null
+          srto_2015: string | null
+          srto_2025: string | null
+          status: string | null
+          subcategory: string | null
+          suggested_revisions_against_new_standards: string | null
+          to_be_tabled_at_level_10: string | null
+        }
+        Insert: {
+          accountable_role?: string | null
+          approved_for_implementation?: string | null
+          current_version?: string | null
+          date_document_updated?: string | null
+          date_uploaded_to_unicorn?: string | null
+          document_code?: string | null
+          document_description?: string | null
+          document_editor?: string | null
+          document_title?: string | null
+          document_type?: string | null
+          id?: string
+          imported_at?: string
+          last_updated?: string | null
+          new_template_exists?: string | null
+          relevant_legislation?: string | null
+          source_file_name?: string | null
+          srto_2015?: string | null
+          srto_2025?: string | null
+          status?: string | null
+          subcategory?: string | null
+          suggested_revisions_against_new_standards?: string | null
+          to_be_tabled_at_level_10?: string | null
+        }
+        Update: {
+          accountable_role?: string | null
+          approved_for_implementation?: string | null
+          current_version?: string | null
+          date_document_updated?: string | null
+          date_uploaded_to_unicorn?: string | null
+          document_code?: string | null
+          document_description?: string | null
+          document_editor?: string | null
+          document_title?: string | null
+          document_type?: string | null
+          id?: string
+          imported_at?: string
+          last_updated?: string | null
+          new_template_exists?: string | null
+          relevant_legislation?: string | null
+          source_file_name?: string | null
+          srto_2015?: string | null
+          srto_2025?: string | null
+          status?: string | null
+          subcategory?: string | null
+          suggested_revisions_against_new_standards?: string | null
+          to_be_tabled_at_level_10?: string | null
+        }
+        Relationships: []
+      }
       integration_slack: {
         Row: {
           bot_user_id: string | null
