@@ -846,6 +846,23 @@ export default function ManageTenants() {
 
         <Combobox
           options={[
+            { value: "all", label: "All Reg End", icon: Calendar, iconColor: "text-muted-foreground" },
+            { value: "3", label: "Within 3 months", icon: Calendar, iconColor: "text-red-600" },
+            { value: "6", label: "Within 6 months", icon: Calendar, iconColor: "text-amber-600" },
+            { value: "9", label: "Within 9 months", icon: Calendar, iconColor: "text-yellow-600" },
+            { value: "12", label: "Within 1 year", icon: Calendar, iconColor: "text-primary" },
+          ]}
+          value={regEndFilter}
+          onValueChange={setRegEndFilter}
+          placeholder="Filter by reg end..."
+          searchPlaceholder="Search..."
+          emptyText="No options."
+          className="w-full md:w-[220px] h-[48px]"
+          showIcons
+          showSeparators
+        />
+
+          options={[
             { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
             ...statusOptions.map(s => {
               const iconMap: Record<string, typeof CheckCircle2> = { active: CheckCircle2, disabled: XCircle, on_hold: Pause, overrun: AlertCircle, terminated: XCircle, cancelled: Archive };
@@ -901,6 +918,7 @@ export default function ManageTenants() {
                   >
                     Anniversary {sortField === "renewal" && "▲"}
                   </TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Reg End</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Last Note</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1083,7 +1101,27 @@ export default function ManageTenants() {
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-6 px-4 text-center whitespace-nowrap">
+                    <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
+                      {tenant.registration_end_date ? (() => {
+                        const regEnd = new Date(tenant.registration_end_date);
+                        const now = new Date();
+                        const diffDays = Math.ceil((regEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                        const colorClass = diffDays <= 90
+                          ? "text-destructive"
+                          : diffDays <= 180
+                          ? "text-amber-600"
+                          : diffDays <= 270
+                          ? "text-yellow-600"
+                          : "text-muted-foreground";
+                        return (
+                          <div className={cn("text-sm font-medium flex items-center gap-1", colorClass)}>
+                            <Calendar className="h-3 w-3" />
+                            {regEnd.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                          </div>
+                        );
+                      })() : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                       {tenant.last_note_date ? (
                         <TooltipProvider>
                           <Tooltip>
