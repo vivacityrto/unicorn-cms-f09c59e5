@@ -600,14 +600,17 @@ export function useDashboardTriage() {
 
   // ── Inbox never empty: use backend prompts as fallback ──
   const inboxWithFallbacks = useMemo(() => {
-    // Build set of test tenant IDs to exclude
+    // Build sets for exclusion: test tenants and inactive tenants
     const testTenantIds = new Set(
       rawTenants.filter(t => (t.tenant_name || '').toLowerCase().startsWith('test')).map(t => t.tenant_id)
     );
+    const activeTenantIds = new Set(
+      rawTenants.filter(t => t.tenant_status === 'active').map(t => t.tenant_id)
+    );
 
-    // Merge priority inbox with registration expiry alerts, excluding test tenants
+    // Merge priority inbox with registration expiry alerts, excluding test and inactive tenants
     const merged = [...priorityInbox, ...regExpiryItems]
-      .filter(i => !i.tenant_id || !testTenantIds.has(i.tenant_id));
+      .filter(i => !i.tenant_id || (!testTenantIds.has(i.tenant_id) && activeTenantIds.has(i.tenant_id)));
 
     // Deduplicate by item_id
     const seen = new Set<string>();
