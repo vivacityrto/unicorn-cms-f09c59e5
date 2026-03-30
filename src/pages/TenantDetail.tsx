@@ -284,7 +284,7 @@ export default function TenantDetail() {
       setLogoPath((tenantData as any).logo_path || null);
       const {
         count: memberCountData
-      } = await supabase.from("users").select("*", {
+      } = await supabase.from("tenant_users").select("*", {
         count: 'exact',
         head: true
       }).eq("tenant_id", parseInt(tenantId));

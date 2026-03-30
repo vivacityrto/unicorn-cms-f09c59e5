@@ -708,7 +708,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       const tenantIds = (tenantsData || []).map((t: any) => t.id);
 
       // Batch fetch member counts
-      const { data: memberCounts } = await supabase.from("users").select("tenant_id").in("tenant_id", tenantIds);
+      const { data: memberCounts } = await supabase.from("tenant_users").select("tenant_id").in("tenant_id", tenantIds);
       const memberCountMap = (memberCounts || []).reduce((acc: Record<number, number>, user: any) => {
         acc[user.tenant_id] = (acc[user.tenant_id] || 0) + 1;
         return acc;

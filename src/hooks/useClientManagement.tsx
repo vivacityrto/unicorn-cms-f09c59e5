@@ -141,7 +141,7 @@ export function useClientManagement() {
 
       // Fetch member counts
       const { data: memberCounts } = await supabase
-        .from('users')
+        .from('tenant_users')
         .select('tenant_id')
         .in('tenant_id', tenantIds);
 
