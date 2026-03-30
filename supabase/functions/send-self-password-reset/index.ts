@@ -229,7 +229,7 @@ serve(async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Unexpected error:", error);
     return new Response(
-      JSON.stringify({ ok: false, code: "UNEXPECTED_ERROR", detail: error.message }),
+      JSON.stringify({ ok: false, code: "UNEXPECTED_ERROR", detail: "An unexpected error occurred" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
