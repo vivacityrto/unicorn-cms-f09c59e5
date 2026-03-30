@@ -29,6 +29,22 @@ serve(async (req) => {
       );
     }
 
+    // Validate rto_id format (numeric string, 4-6 digits)
+    if (typeof rto_id !== 'string' || !/^\d{4,6}$/.test(rto_id)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid rto_id: must be a 4-6 digit number' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate offset and page_size
+    if (typeof offset !== 'number' || offset < 0 || !Number.isInteger(offset)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid offset: must be a non-negative integer' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Validate component type
     const validTypes = ['qualification', 'unit', 'skillSet', 'accreditedCourse'];
     if (!validTypes.includes(component_type)) {

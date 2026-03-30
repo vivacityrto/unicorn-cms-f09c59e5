@@ -68,9 +68,17 @@ serve(async (req) => {
     const body: ExportRequest = await req.json();
     const { export_id } = body;
 
-    if (!export_id) {
+    if (!export_id || typeof export_id !== 'string') {
       return new Response(
         JSON.stringify({ error: "export_id is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate UUID format
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(export_id)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid export_id: must be a valid UUID" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

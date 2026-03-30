@@ -38,6 +38,38 @@ Deno.serve(async (req: Request) => {
     const body: GenerateDocumentRequest = await req.json();
     const { document_id, tenant_id, client_legacy_id, stage_id, package_id } = body;
 
+    // Input validation
+    if (!document_id || typeof document_id !== 'number' || !Number.isInteger(document_id) || document_id <= 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid document_id: must be a positive integer' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    if (!tenant_id || typeof tenant_id !== 'number' || !Number.isInteger(tenant_id) || tenant_id <= 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid tenant_id: must be a positive integer' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    if (!stage_id || typeof stage_id !== 'number' || !Number.isInteger(stage_id) || stage_id <= 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid stage_id: must be a positive integer' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    if (!package_id || typeof package_id !== 'number' || !Number.isInteger(package_id) || package_id <= 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid package_id: must be a positive integer' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+    if (client_legacy_id !== undefined && client_legacy_id !== null && typeof client_legacy_id !== 'string') {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid client_legacy_id: must be a string' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
     console.log('Generate document request:', { document_id, tenant_id, client_legacy_id, stage_id, package_id });
 
     // SECURITY: Verify user has access to the target tenant
