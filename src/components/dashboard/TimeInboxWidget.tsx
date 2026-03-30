@@ -101,7 +101,7 @@ export function TimeInboxBanner() {
           <span>You have {stats.overdue_count} unposted time draft{stats.overdue_count !== 1 ? 's' : ''} older than 2 days</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline" className="text-amber-700 border-amber-500/50 hover:bg-amber-500/10">
+          <Button asChild size="sm" variant="outline" className="text-brand-aqua-700 border-brand-aqua-500/50 hover:bg-brand-aqua-500/10">
             <Link to="/time-inbox">Review Now</Link>
           </Button>
           <Button 

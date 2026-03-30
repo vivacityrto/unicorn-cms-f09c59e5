@@ -130,7 +130,7 @@ function SuggestionsButton() {
     <>
       <Button
         size="sm"
-        className="gap-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        className="gap-1.5 text-xs bg-brand-aqua text-white hover:bg-brand-aqua-600"
         onClick={() => setOpen(prev => !prev)}
         title="Suggestion & Issue Register"
       >
