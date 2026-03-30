@@ -112,6 +112,44 @@ const handler = async (req: Request): Promise<Response> => {
     const body: SendEmailRequest = await req.json();
     const { tenant_id, client_id, package_id, stage_id, email_template_id, recipient_type, to_override, dry_run, stage_release_id } = body;
 
+    // Input validation
+    if (!tenant_id || typeof tenant_id !== 'number' || !Number.isInteger(tenant_id) || tenant_id <= 0) {
+      return new Response(
+        JSON.stringify({ error: "Invalid tenant_id: must be a positive integer" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!email_template_id || typeof email_template_id !== 'string') {
+      return new Response(
+        JSON.stringify({ error: "Invalid email_template_id: must be a non-empty string" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (!recipient_type || !['tenant', 'internal', 'both'].includes(recipient_type)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid recipient_type: must be 'tenant', 'internal', or 'both'" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (package_id !== undefined && (typeof package_id !== 'number' || !Number.isInteger(package_id) || package_id <= 0)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid package_id: must be a positive integer" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (stage_id !== undefined && (typeof stage_id !== 'number' || !Number.isInteger(stage_id) || stage_id <= 0)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid stage_id: must be a positive integer" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (to_override !== undefined && (typeof to_override !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to_override))) {
+      return new Response(
+        JSON.stringify({ error: "Invalid to_override: must be a valid email address" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log("Processing send-stage-email request:", { tenant_id, package_id, stage_id, email_template_id, recipient_type, dry_run });
 
     // 1. Fetch email template
