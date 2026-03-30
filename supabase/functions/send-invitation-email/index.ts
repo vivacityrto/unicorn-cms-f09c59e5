@@ -114,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
         statusText: mailgunResponse.statusText,
         body: errorText,
       });
-      throw new Error(`Failed to send email: ${errorText}`);
+      throw new Error("Failed to send invitation email");
     }
 
     const result = await mailgunResponse.json();
@@ -130,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("Error in send-invitation-email function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Failed to send invitation email" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

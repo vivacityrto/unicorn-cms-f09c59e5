@@ -183,7 +183,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: errorMessage
+        error: 'Unable to generate document. Please try again or contact support.'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
