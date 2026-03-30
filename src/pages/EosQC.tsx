@@ -59,7 +59,7 @@ function ScheduleEditPopover({ qc, onSave }: { qc: QuarterlyConversation; onSave
           <Pencil className="h-3 w-3" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-4" align="start">
+      <PopoverContent className="w-auto p-4 max-h-[520px]" align="start">
         <div className="space-y-3">
           <Label className="text-sm font-medium">Reschedule</Label>
           <CalendarPicker
