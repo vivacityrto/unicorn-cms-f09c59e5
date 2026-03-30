@@ -438,7 +438,7 @@ export default function EosQCSession() {
                       <FileText className="h-4 w-4 mr-2" />
                       Download PDF
                     </Button>
-                      variant="outline"
+                    <Button
                       className="flex-1"
                       disabled={scheduleNext.isPending}
                       onClick={() => qc && scheduleNext.mutate({ qc_id: qc.id })}
