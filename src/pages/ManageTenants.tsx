@@ -228,7 +228,7 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string>);
 
-      const { data: memberCounts } = await supabase.from("users").select("tenant_id").in("tenant_id", tenantIds);
+      const { data: memberCounts } = await supabase.from("tenant_users").select("tenant_id").in("tenant_id", tenantIds);
       const memberCountMap = (memberCounts || []).reduce((acc, user) => {
         acc[user.tenant_id] = (acc[user.tenant_id] || 0) + 1;
         return acc;
