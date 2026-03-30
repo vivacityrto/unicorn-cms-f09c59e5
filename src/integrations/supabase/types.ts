@@ -49414,6 +49414,7 @@ export type Database = {
           rto_package_instance_id: number
         }[]
       }
+      get_active_tenant_count: { Args: never; Returns: number }
       get_all_resources: {
         Args: never
         Returns: {

@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
         console.log(`Auth user not found (may be archived), proceeding to delete from users table`);
       } else {
         console.error("Auth delete error:", authDeleteError);
-        return jsonErr(400, "DELETE_FAILED", authDeleteError.message);
+        return jsonErr(400, "DELETE_FAILED", "Unable to delete user account");
       }
     } else {
       console.log(`Successfully deleted user ${user_uuid} from auth.users`);
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     
     if (deleteError) {
       console.error("Users table delete error:", deleteError);
-      return jsonErr(400, "DELETE_FAILED", deleteError.message);
+      return jsonErr(400, "DELETE_FAILED", "Unable to remove user record");
     }
 
     console.log(`Successfully deleted user ${user_uuid} from users table`);
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     });
   } catch (e: any) {
     console.error("Error deleting user:", e);
-    return jsonErr(500, "UNHANDLED", e?.message ?? String(e));
+    return jsonErr(500, "INTERNAL_ERROR", "An unexpected error occurred");
   }
 });
 
