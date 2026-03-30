@@ -419,11 +419,25 @@ export default function EosQCSession() {
 
                 {isSigned && (
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => window.print()}>
+                    <Button variant="outline" className="flex-1" onClick={() => {
+                      exportQCPdf({
+                        revieweeName: reviewee.fullName,
+                        managerNames: managers.map(m => m.fullName),
+                        scheduledAt: qc.scheduled_at,
+                        templateName: template.name,
+                        quarterStart: qc.quarter_start,
+                        quarterEnd: qc.quarter_end,
+                        sections: template.sections,
+                        answers: answers || [],
+                        fit: fit || [],
+                        signoffs: (signoffs || []) as any,
+                        summaryText,
+                        coreValues: coreValues || undefined,
+                      });
+                    }}>
                       <FileText className="h-4 w-4 mr-2" />
                       Download PDF
                     </Button>
-                    <Button
                       variant="outline"
                       className="flex-1"
                       disabled={scheduleNext.isPending}
