@@ -88,10 +88,11 @@ serve(async (req) => {
       .maybeSingle();
 
     if (roleErr) {
+      console.error("Role lookup error:", roleErr);
       return jsonResponse(500, {
         ok: false,
         code: "ROLE_LOOKUP_FAILED",
-        detail: roleErr.message,
+        detail: "Unable to verify user permissions",
       });
     }
 
@@ -198,10 +199,11 @@ serve(async (req) => {
       .maybeSingle();
 
     if (tenantError) {
+      console.error("Tenant lookup error:", tenantError);
       return jsonResponse(500, {
         ok: false,
         code: "TENANT_LOOKUP_FAILED",
-        detail: tenantError.message,
+        detail: "Unable to verify tenant",
       });
     }
 
@@ -260,7 +262,7 @@ serve(async (req) => {
           return jsonResponse(500, {
             ok: false,
             code: 'USER_CREATE_FAILED',
-            detail: insertError.message,
+            detail: 'Unable to create user record',
           });
         }
         console.log(`[skip_email] Created user: ${userUuid}`);
@@ -300,7 +302,7 @@ serve(async (req) => {
         return jsonResponse(500, {
           ok: false,
           code: 'TENANT_USER_CREATE_FAILED',
-          detail: tuError.message,
+          detail: 'Unable to add user to tenant',
         });
       }
 
@@ -390,7 +392,7 @@ serve(async (req) => {
       return jsonResponse(500, {
         ok: false,
         code: "INVITATION_CREATE_FAILED",
-        detail: inviteError.message,
+        detail: "Unable to create invitation",
       });
     }
 
@@ -489,8 +491,8 @@ serve(async (req) => {
     
     return jsonResponse(500, {
       ok: false,
-      code: "UNHANDLED_ERROR",
-      detail: e?.message || String(e),
+      code: "INTERNAL_ERROR",
+      detail: "An unexpected error occurred",
     });
   }
 });
