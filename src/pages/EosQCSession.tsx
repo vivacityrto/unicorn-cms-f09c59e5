@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, CheckCircle, FileText, Calendar, Play, Lock, Clock, Bell } from 'lucide-react';
+import { exportQCPdf } from '@/utils/qcPdfExport';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { SaveStatusIndicator } from '@/components/eos/qc/SaveStatusIndicator';
