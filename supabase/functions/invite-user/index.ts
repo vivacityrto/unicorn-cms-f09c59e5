@@ -191,6 +191,22 @@ serve(async (req) => {
       });
     }
 
+    // 4b. Rate limiting - check recent invite attempts for this email
+    const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
+    const { data: recentAttempts } = await supabase
+      .from('audit_invites')
+      .select('created_at')
+      .eq('email', payload.email.toLowerCase())
+      .gte('created_at', oneHourAgo);
+
+    if (recentAttempts && recentAttempts.length >= 5) {
+      return jsonResponse(429, {
+        ok: false,
+        code: 'RATE_LIMIT_EXCEEDED',
+        detail: 'Too many invitation attempts for this email. Please try again later.',
+      });
+    }
+
     // 5. Verify tenant exists
     const { data: tenantData, error: tenantError } = await supabase
       .from("tenants")
