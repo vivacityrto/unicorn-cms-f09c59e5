@@ -8,10 +8,11 @@ export const useQuarterlyConversations = () => {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '');
 
   // Fetch all QCs user has access to
   const { data: conversations, isLoading } = useQuery({
-    queryKey: ['qc-conversations', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['qc-conversations', isSuper ? 'all' : isVivacityTeam ? 'vivacity' : profile?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('eos_qc')
@@ -21,20 +22,20 @@ export const useQuarterlyConversations = () => {
       if (error) throw error;
       return data as unknown as QuarterlyConversation[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   // Fetch templates
   const { data: templates } = useQuery({
-    queryKey: ['qc-templates', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['qc-templates', isSuper ? 'all' : isVivacityTeam ? 'vivacity' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_qc_templates')
         .select('*')
         .order('is_default', { ascending: false });
       
-      // SuperAdmins see all templates; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // SuperAdmins and Vivacity Team see all templates; others filter by their tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -42,7 +43,7 @@ export const useQuarterlyConversations = () => {
       if (error) throw error;
       return data as unknown as QCTemplate[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   // Schedule new QC
