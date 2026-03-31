@@ -35,6 +35,18 @@ interface OutlookEmail {
       address: string;
     };
   };
+  toRecipients?: Array<{
+    emailAddress?: {
+      name?: string;
+      address?: string;
+    };
+  }>;
+  ccRecipients?: Array<{
+    emailAddress?: {
+      name?: string;
+      address?: string;
+    };
+  }>;
   receivedDateTime: string;
   hasAttachments: boolean;
   bodyPreview: string;
@@ -138,6 +150,28 @@ async function fetchCalendarEvents(accessToken: string): Promise<CalendarEvent[]
   return data.value || [];
 }
 
+function normalizeAddress(value?: string | null) {
+  return value?.trim().toLowerCase() || null;
+}
+
+function emailMatchesFilter(email: OutlookEmail, filterEmail?: string) {
+  const needle = normalizeAddress(filterEmail);
+  if (!needle) return true;
+
+  const isFullEmail = needle.includes('@');
+  const addresses = [
+    email.from?.emailAddress?.address,
+    ...(email.toRecipients || []).map((recipient) => recipient.emailAddress?.address),
+    ...(email.ccRecipients || []).map((recipient) => recipient.emailAddress?.address),
+  ]
+    .map(normalizeAddress)
+    .filter((value): value is string => Boolean(value));
+
+  return addresses.some((address) =>
+    isFullEmail ? address === needle : address.endsWith(`@${needle}`)
+  );
+}
+
 async function fetchEmails(accessToken: string, folder: string, top: number, filterEmail?: string): Promise<OutlookEmail[]> {
   // Determine the folder path
   let folderPath = 'inbox';
@@ -148,57 +182,51 @@ async function fetchEmails(accessToken: string, folder: string, top: number, fil
   }
 
   const url = new URL(`https://graph.microsoft.com/v1.0/me/mailFolders/${folderPath}/messages`);
-  url.searchParams.set('$select', 'id,subject,from,toRecipients,receivedDateTime,hasAttachments,bodyPreview,isRead');
+  const pageSize = filterEmail ? Math.min(Math.max(top * 2, 50), 100) : top;
+  const maxMessagesToScan = filterEmail ? 500 : top;
+  url.searchParams.set('$select', 'id,subject,from,toRecipients,ccRecipients,receivedDateTime,hasAttachments,bodyPreview,isRead');
   url.searchParams.set('$orderby', 'receivedDateTime desc');
-  url.searchParams.set('$top', String(top));
-
-  // Filter by email or domain using $filter (more reliable than $search across folders)
-  if (filterEmail) {
-    const isFullEmail = filterEmail.includes('@');
-    if (folderPath === 'sentitems') {
-      // For sent items, filter by recipient address/domain
-      if (isFullEmail) {
-        url.searchParams.set('$filter', `toRecipients/any(r:r/emailAddress/address eq '${filterEmail}')`);
-      } else {
-        url.searchParams.set('$filter', `toRecipients/any(r:endsWith(r/emailAddress/address, '@${filterEmail}'))`);
-      }
-    } else {
-      // For inbox, filter by sender address/domain
-      if (isFullEmail) {
-        url.searchParams.set('$filter', `from/emailAddress/address eq '${filterEmail}'`);
-      } else {
-        url.searchParams.set('$filter', `endsWith(from/emailAddress/address, '@${filterEmail}')`);
-      }
-    }
-  }
+  url.searchParams.set('$top', String(pageSize));
 
   console.log('[sync-outlook] Fetching emails from folder:', folderPath);
 
-  const response = await fetch(url.toString(), {
-    headers: { 'Authorization': `Bearer ${accessToken}` }
-  });
+  const headers = { 'Authorization': `Bearer ${accessToken}` };
+  const matchedEmails: OutlookEmail[] = [];
+  let scannedCount = 0;
+  let nextUrl: string | null = url.toString();
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[sync-outlook] Graph API email error:', {
-      status: response.status,
-      statusText: response.statusText,
-      body: errorText
-    });
-    
-    if (response.status === 401) {
-      throw new Error('Token expired or invalid - user needs to reconnect');
+  while (nextUrl && scannedCount < maxMessagesToScan && matchedEmails.length < top) {
+    const response = await fetch(nextUrl, { headers });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[sync-outlook] Graph API email error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      
+      if (response.status === 401) {
+        throw new Error('Token expired or invalid - user needs to reconnect');
+      }
+      if (response.status === 403) {
+        throw new Error('Insufficient permissions - Mail.Read scope may be missing');
+      }
+      
+      throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
     }
-    if (response.status === 403) {
-      throw new Error('Insufficient permissions - Mail.Read scope may be missing');
-    }
-    
-    throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
+
+    const data = await response.json();
+    const emails = (data.value || []) as OutlookEmail[];
+    scannedCount += emails.length;
+
+    const pageMatches = filterEmail ? emails.filter((email) => emailMatchesFilter(email, filterEmail)) : emails;
+    matchedEmails.push(...pageMatches);
+    nextUrl = data['@odata.nextLink'] || null;
   }
 
-  const data = await response.json();
-  console.log('[sync-outlook] Fetched', data.value?.length || 0, 'emails from Graph API');
-  return data.value || [];
+  console.log('[sync-outlook] Scanned', scannedCount, 'emails from Graph API and matched', matchedEmails.length || 0);
+  return matchedEmails.slice(0, top);
 }
 
 serve(async (req) => {
@@ -336,6 +364,17 @@ serve(async (req) => {
             fetchEmails(accessToken, 'inbox', top, filterEmail),
             fetchEmails(accessToken, 'sent', top, filterEmail),
           ]);
+          if (results.every((result) => result.status === 'rejected')) {
+            const firstError = results.find((result) => result.status === 'rejected');
+            const message = firstError && firstError.status === 'rejected'
+              ? (firstError.reason instanceof Error ? firstError.reason.message : 'Failed to fetch emails from Outlook')
+              : 'Failed to fetch emails from Outlook';
+            const status = message.includes('Token expired') ? 401 : message.includes('Not connected') ? 400 : 502;
+            return new Response(
+              JSON.stringify({ error: message }),
+              { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
           const inboxEmails = results[0].status === 'fulfilled' ? results[0].value : [];
           const sentEmails = results[1].status === 'fulfilled' ? results[1].value : [];
           if (results[0].status === 'rejected') console.warn('[sync-outlook] Inbox fetch failed:', results[0].reason);

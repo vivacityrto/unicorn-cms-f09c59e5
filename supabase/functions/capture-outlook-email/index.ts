@@ -17,6 +17,13 @@ interface EmailPayload {
   tenant_id: string;
 }
 
+interface TokenRecord {
+  access_token: string;
+  refresh_token: string | null;
+  expires_at: string;
+  scope?: string | null;
+}
+
 function decodeHtmlEntities(value: string) {
   return value
     .replace(/&nbsp;/gi, " ")
@@ -55,6 +62,61 @@ function buildPreviewText(emailData: any) {
     emailData?.bodyPreview,
     emailData?.subject
   );
+}
+
+async function refreshTokenIfNeeded(
+  serviceClient: ReturnType<typeof createClient>,
+  userId: string,
+  token: TokenRecord
+) {
+  const expiresAt = new Date(token.expires_at);
+  const now = new Date();
+
+  if (expiresAt.getTime() - now.getTime() > 5 * 60 * 1000) {
+    return token.access_token;
+  }
+
+  if (!token.refresh_token) {
+    throw new Error("Microsoft token expired. Please reconnect your Outlook account.");
+  }
+
+  const tokenResponse = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: Deno.env.get("MICROSOFT_CLIENT_ID")!,
+      client_secret: Deno.env.get("MICROSOFT_CLIENT_SECRET")!,
+      refresh_token: token.refresh_token,
+      grant_type: "refresh_token",
+      scope: token.scope || "openid profile email offline_access Mail.Read Calendars.Read",
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    const errorText = await tokenResponse.text();
+    console.error("Microsoft token refresh failed:", errorText);
+    throw new Error("Microsoft token expired. Please reconnect your Outlook account.");
+  }
+
+  const tokens = await tokenResponse.json();
+  const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+
+  const { error: updateError } = await serviceClient
+    .from("oauth_tokens")
+    .update({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token || token.refresh_token,
+      expires_at: newExpiresAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId)
+    .eq("provider", "microsoft");
+
+  if (updateError) {
+    console.error("Failed to persist refreshed Microsoft token:", updateError);
+  }
+
+  return tokens.access_token as string;
 }
 
 async function generateAiSummary({
@@ -180,7 +242,7 @@ Deno.serve(async (req) => {
 
     const { data: tokenData, error: tokenError } = await serviceClient
       .from("oauth_tokens")
-      .select("access_token, expires_at")
+      .select("access_token, refresh_token, expires_at, scope")
       .eq("user_id", userId)
       .eq("provider", "microsoft")
       .single();
@@ -193,10 +255,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if token is expired
-    if (new Date(tokenData.expires_at) < new Date()) {
+    let accessToken: string;
+    try {
+      accessToken = await refreshTokenIfNeeded(serviceClient, userId, tokenData as TokenRecord);
+    } catch (tokenRefreshError) {
       return new Response(
-        JSON.stringify({ error: "Microsoft token expired. Please reconnect your Outlook account." }),
+        JSON.stringify({ error: tokenRefreshError instanceof Error ? tokenRefreshError.message : "Microsoft token expired. Please reconnect your Outlook account." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -223,7 +287,7 @@ Deno.serve(async (req) => {
       }
 
       console.log("Refreshing linked email metadata:", email_id);
-      const emailData = await fetchGraphEmail(tokenData.access_token, message_id);
+      const emailData = await fetchGraphEmail(accessToken, message_id);
       const previewText = buildPreviewText(emailData);
       const aiSummary = await generateAiSummary({
         previewText,
@@ -275,7 +339,7 @@ Deno.serve(async (req) => {
 
     // Fetch email from Microsoft Graph
     console.log("Fetching email from Microsoft Graph:", message_id);
-    const emailData = await fetchGraphEmail(tokenData.access_token, message_id);
+    const emailData = await fetchGraphEmail(accessToken, message_id);
     console.log("Email fetched successfully:", emailData.subject);
     const previewText = buildPreviewText(emailData);
 
@@ -332,7 +396,7 @@ Deno.serve(async (req) => {
         `https://graph.microsoft.com/v1.0/me/messages/${message_id}/attachments`,
         {
           headers: {
-            Authorization: `Bearer ${tokenData.access_token}`,
+            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
         }
