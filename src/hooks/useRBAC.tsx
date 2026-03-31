@@ -89,7 +89,6 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'ask_viv:access',
     'vto:edit',
     'qc:edit',
-    'qc:view_all',
     'qc:sign',
     'rocks:create',
     'rocks:edit_own',
