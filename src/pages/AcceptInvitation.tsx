@@ -53,21 +53,21 @@ const [invitationData, setInvitationData] = useState<{
     try {
       const tokenHash = await hashToken(token);
 
-      const inviteQuery = await supabase
-        .from('user_invitations')
-        .select('*')
-        .eq('token_hash', tokenHash)
-        .maybeSingle() as any;
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('validate_invitation_token', {
+        p_token_hash: tokenHash,
+      });
 
-      if (inviteQuery.error) {
-        throw new Error(inviteQuery.error.message || 'Failed to validate invitation');
+      if (rpcError) {
+        throw new Error('Failed to validate invitation');
       }
 
-      if (!inviteQuery.data) {
-        throw new Error('Invalid or expired invitation token');
+      const result = rpcResult as any;
+
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
-      const data = inviteQuery.data;
+      const data = result;
 
       if (data.status !== 'pending') {
         throw new Error('This invitation has already been used');
