@@ -50497,6 +50497,10 @@ export type Database = {
         Args: { p_meeting_id: string }
         Returns: Json
       }
+      storage_package_tenant_check: {
+        Args: { file_path: string }
+        Returns: boolean
+      }
       sync_l10_meeting_participants: {
         Args: { p_meeting_id: string }
         Returns: Json
@@ -50704,6 +50708,10 @@ export type Database = {
       }
       validate_excel_bindings: {
         Args: { p_document_id: number }
+        Returns: Json
+      }
+      validate_invitation_token: {
+        Args: { p_token_hash: string }
         Returns: Json
       }
       validate_meeting_agenda: {
