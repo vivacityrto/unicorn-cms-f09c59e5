@@ -75,7 +75,6 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'eos_meetings:edit',
     'qc:schedule',
     'qc:edit',
-    'qc:view_all',
     'qc:sign',
     'rocks:create',
     'rocks:edit_own',
