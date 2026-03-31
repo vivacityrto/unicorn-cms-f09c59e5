@@ -88,16 +88,16 @@ export function ClientEmailsTab({ tenantId, clientName }: ClientEmailsTabProps) 
       {/* Inbox Browser */}
       {showInboxBrowser && (
         <div className="space-y-2">
-          {primaryContactEmail && (
+          {clientDomain && (
             <p className="text-sm text-muted-foreground px-1">
-              Showing emails matching primary contact: <span className="font-medium text-foreground">{primaryContactEmail}</span>
+              Showing emails matching domain: <span className="font-medium text-foreground">@{clientDomain}</span>
             </p>
           )}
           <OutlookInboxBrowser
             tenantId={String(tenantId)}
             defaultClientId={tenantId}
             onEmailLinked={handleEmailLinked}
-            filterEmail={primaryContactEmail}
+            filterEmail={clientDomain}
           />
         </div>
       )}
