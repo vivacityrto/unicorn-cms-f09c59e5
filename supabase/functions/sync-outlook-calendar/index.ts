@@ -332,10 +332,14 @@ serve(async (req) => {
       try {
         if (filterEmail) {
           // When filtering by contact, search both inbox and sent items
-          const [inboxEmails, sentEmails] = await Promise.all([
+          const results = await Promise.allSettled([
             fetchEmails(accessToken, 'inbox', top, filterEmail),
             fetchEmails(accessToken, 'sent', top, filterEmail),
           ]);
+          const inboxEmails = results[0].status === 'fulfilled' ? results[0].value : [];
+          const sentEmails = results[1].status === 'fulfilled' ? results[1].value : [];
+          if (results[0].status === 'rejected') console.warn('[sync-outlook] Inbox fetch failed:', results[0].reason);
+          if (results[1].status === 'rejected') console.warn('[sync-outlook] Sent fetch failed:', results[1].reason);
           // Merge and deduplicate by id, then sort by date descending
           const emailMap = new Map<string, OutlookEmail>();
           for (const e of [...inboxEmails, ...sentEmails]) {
