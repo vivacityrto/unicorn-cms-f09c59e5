@@ -152,11 +152,24 @@ async function fetchEmails(accessToken: string, folder: string, top: number, fil
   url.searchParams.set('$orderby', 'receivedDateTime desc');
   url.searchParams.set('$top', String(top));
 
-  // Filter by specific email address using $search (participants covers from and to)
+  // Filter by email or domain using $filter (more reliable than $search across folders)
   if (filterEmail) {
-    url.searchParams.set('$search', `"participants:${filterEmail}"`);
-    // $search and $orderby can't be combined in Graph API, remove orderby
-    url.searchParams.delete('$orderby');
+    const isFullEmail = filterEmail.includes('@');
+    if (folderPath === 'sentitems') {
+      // For sent items, filter by recipient address/domain
+      if (isFullEmail) {
+        url.searchParams.set('$filter', `toRecipients/any(r:r/emailAddress/address eq '${filterEmail}')`);
+      } else {
+        url.searchParams.set('$filter', `toRecipients/any(r:endsWith(r/emailAddress/address, '@${filterEmail}'))`);
+      }
+    } else {
+      // For inbox, filter by sender address/domain
+      if (isFullEmail) {
+        url.searchParams.set('$filter', `from/emailAddress/address eq '${filterEmail}'`);
+      } else {
+        url.searchParams.set('$filter', `endsWith(from/emailAddress/address, '@${filterEmail}')`);
+      }
+    }
   }
 
   console.log('[sync-outlook] Fetching emails from folder:', folderPath);
