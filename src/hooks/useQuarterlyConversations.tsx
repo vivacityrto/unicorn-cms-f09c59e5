@@ -27,15 +27,15 @@ export const useQuarterlyConversations = () => {
 
   // Fetch templates
   const { data: templates } = useQuery({
-    queryKey: ['qc-templates', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['qc-templates', isSuper ? 'all' : isVivacityTeam ? 'vivacity' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_qc_templates')
         .select('*')
         .order('is_default', { ascending: false });
       
-      // SuperAdmins see all templates; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // SuperAdmins and Vivacity Team see all templates; others filter by their tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -43,7 +43,7 @@ export const useQuarterlyConversations = () => {
       if (error) throw error;
       return data as unknown as QCTemplate[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   // Schedule new QC
