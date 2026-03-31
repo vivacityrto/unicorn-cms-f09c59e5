@@ -182,40 +182,51 @@ async function fetchEmails(accessToken: string, folder: string, top: number, fil
   }
 
   const url = new URL(`https://graph.microsoft.com/v1.0/me/mailFolders/${folderPath}/messages`);
-  const graphTop = filterEmail ? Math.min(Math.max(top * 4, 100), 250) : top;
+  const pageSize = filterEmail ? Math.min(Math.max(top * 2, 50), 100) : top;
+  const maxMessagesToScan = filterEmail ? 500 : top;
   url.searchParams.set('$select', 'id,subject,from,toRecipients,ccRecipients,receivedDateTime,hasAttachments,bodyPreview,isRead');
   url.searchParams.set('$orderby', 'receivedDateTime desc');
-  url.searchParams.set('$top', String(graphTop));
+  url.searchParams.set('$top', String(pageSize));
 
   console.log('[sync-outlook] Fetching emails from folder:', folderPath);
 
-  const response = await fetch(url.toString(), {
-    headers: { 'Authorization': `Bearer ${accessToken}` }
-  });
+  const headers = { 'Authorization': `Bearer ${accessToken}` };
+  const matchedEmails: OutlookEmail[] = [];
+  let scannedCount = 0;
+  let nextUrl: string | null = url.toString();
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[sync-outlook] Graph API email error:', {
-      status: response.status,
-      statusText: response.statusText,
-      body: errorText
-    });
-    
-    if (response.status === 401) {
-      throw new Error('Token expired or invalid - user needs to reconnect');
+  while (nextUrl && scannedCount < maxMessagesToScan && matchedEmails.length < top) {
+    const response = await fetch(nextUrl, { headers });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[sync-outlook] Graph API email error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      
+      if (response.status === 401) {
+        throw new Error('Token expired or invalid - user needs to reconnect');
+      }
+      if (response.status === 403) {
+        throw new Error('Insufficient permissions - Mail.Read scope may be missing');
+      }
+      
+      throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
     }
-    if (response.status === 403) {
-      throw new Error('Insufficient permissions - Mail.Read scope may be missing');
-    }
-    
-    throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
+
+    const data = await response.json();
+    const emails = (data.value || []) as OutlookEmail[];
+    scannedCount += emails.length;
+
+    const pageMatches = filterEmail ? emails.filter((email) => emailMatchesFilter(email, filterEmail)) : emails;
+    matchedEmails.push(...pageMatches);
+    nextUrl = data['@odata.nextLink'] || null;
   }
 
-  const data = await response.json();
-  const emails = (data.value || []) as OutlookEmail[];
-  const filteredEmails = filterEmail ? emails.filter((email) => emailMatchesFilter(email, filterEmail)) : emails;
-  console.log('[sync-outlook] Fetched', emails.length || 0, 'emails from Graph API and matched', filteredEmails.length || 0);
-  return filteredEmails.slice(0, top);
+  console.log('[sync-outlook] Scanned', scannedCount, 'emails from Graph API and matched', matchedEmails.length || 0);
+  return matchedEmails.slice(0, top);
 }
 
 serve(async (req) => {
