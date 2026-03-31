@@ -1,29 +1,48 @@
 
 
-## Fix: Members Count Using Wrong Table
+## Fix: QC Visibility — Team Members Seeing Others' Quarterly Conversations
 
 ### Problem
-All member count queries fetch from `users.tenant_id`, but the authoritative user-tenant relationship lives in the `tenant_users` junction table. Users linked via `tenant_users` who don't have `tenant_id` set on their `users` row will not be counted — resulting in tenants showing 0 members even though they have users.
+Every Vivacity team member can see all Quarterly Conversations instead of only their own. The root cause is in both the database policies and frontend permissions.
 
-### Fix
-Switch all member count queries from `users` table to `tenant_users` table across 4 locations:
+### Root Cause Analysis
 
-### Files to Change
+**Database (RLS):** The `eos_qc_manage` policy (FOR ALL, which includes SELECT) still grants access via `is_vivacity_team_safe()`, meaning any Vivacity staff can read all QCs — bypassing the restrictive `eos_qc_select` policy added later.
 
-1. **`src/pages/ManageTenants.tsx`** (~line 231)
-   - Change: `supabase.from("users").select("tenant_id").in("tenant_id", tenantIds)`
-   - To: `supabase.from("tenant_users").select("tenant_id").in("tenant_id", tenantIds)`
+**Frontend (RBAC):** The `qc:view_all` permission is granted to Team Leader and Team Member roles, so the UI shows the "All Conversations" tab and skips client-side filtering for those roles.
 
-2. **`src/hooks/useClientManagement.tsx`** (~line 143)
-   - Same change: query `tenant_users` instead of `users`
+### Plan
 
-3. **`src/pages/PackageDetail.tsx`** (~line 711)
-   - Same change: query `tenant_users` instead of `users`
+#### 1. Database Migration — Tighten `eos_qc_manage` policy
+Drop the existing `eos_qc_manage` policy and replace it so only managers on the QC or SuperAdmin-Administrator can modify (and implicitly read via FOR ALL):
 
-4. **`src/pages/TenantDetail.tsx`** (~line 287)
-   - Change: `supabase.from("users").select("*", { count: 'exact', head: true }).eq("tenant_id", ...)`
-   - To: `supabase.from("tenant_users").select("*", { count: 'exact', head: true }).eq("tenant_id", ...)`
+```sql
+DROP POLICY IF EXISTS "eos_qc_manage" ON public.eos_qc;
+DROP POLICY IF EXISTS "Vivacity team can insert qc" ON public.eos_qc;
+DROP POLICY IF EXISTS "Vivacity team can update qc" ON public.eos_qc;
+DROP POLICY IF EXISTS "Vivacity team can delete qc" ON public.eos_qc;
 
-### Why This Fixes It
-The `tenant_users` table is the canonical source of tenant membership. The `users.tenant_id` field is not reliably populated for all users, causing undercounts.
+CREATE POLICY "eos_qc_manage" ON public.eos_qc
+FOR ALL TO authenticated
+USING (
+  public.is_qc_admin_safe(auth.uid())
+  OR auth.uid() = ANY(manager_ids)
+)
+WITH CHECK (
+  public.is_qc_admin_safe(auth.uid())
+  OR auth.uid() = ANY(manager_ids)
+);
+```
+
+Also tighten related tables (`eos_qc_answers`, `eos_qc_fit`, `eos_qc_signoffs`, `eos_qc_links`) to use `can_access_qc()` for SELECT, ensuring answers/fit data from other people's QCs aren't leaked.
+
+#### 2. Frontend — Remove `qc:view_all` from non-admin roles
+In `src/hooks/useRBAC.tsx`, remove `qc:view_all` from the Team Leader and Team Member permission arrays. Only Super Admin (Administrator level) should retain it.
+
+#### 3. Frontend — Ensure query fetches only relevant QCs
+In `src/hooks/useQuarterlyConversations.tsx`, the query already fetches all and relies on RLS. After the RLS fix, the database will only return QCs the user participates in. No code change needed here — the RLS fix handles it.
+
+### Files Changed
+- **New migration** — Drop old permissive policies, tighten `eos_qc_manage` and related table policies
+- **`src/hooks/useRBAC.tsx`** — Remove `qc:view_all` from Team Leader and Team Member roles
 
