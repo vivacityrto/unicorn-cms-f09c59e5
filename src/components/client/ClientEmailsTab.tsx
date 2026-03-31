@@ -18,19 +18,33 @@ export function ClientEmailsTab({ tenantId, clientName }: ClientEmailsTabProps) 
 
   const { refetch } = useLinkedEmails({ clientId: tenantId });
 
-  // Fetch primary contact email for this tenant
-  const { data: primaryContactEmail } = useQuery({
-    queryKey: ['primary-contact-email', tenantId],
+  // Extract the client's domain from their tenant users' email addresses
+  const { data: clientDomain } = useQuery({
+    queryKey: ['client-email-domain', tenantId],
     queryFn: async () => {
       const { data } = await supabase
         .from('tenant_users')
         .select('users!inner(email)')
         .eq('tenant_id', tenantId)
-        .eq('primary_contact', true)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      return (data?.users as any)?.email as string | undefined;
+        .limit(10);
+
+      if (!data || data.length === 0) return undefined;
+
+      // Extract domains from all user emails, excluding common free providers
+      const freeProviders = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com', 'icloud.com', 'aol.com'];
+      const domains = data
+        .map((row: any) => {
+          const email = row.users?.email as string | undefined;
+          if (!email) return null;
+          const domain = email.split('@')[1]?.toLowerCase();
+          return domain && !freeProviders.includes(domain) ? domain : null;
+        })
+        .filter(Boolean) as string[];
+
+      // Return the most common non-free domain
+      if (domains.length === 0) return undefined;
+      const freq = domains.reduce((acc, d) => ({ ...acc, [d]: (acc[d] || 0) + 1 }), {} as Record<string, number>);
+      return Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0];
     },
     enabled: showInboxBrowser,
   });
@@ -74,16 +88,16 @@ export function ClientEmailsTab({ tenantId, clientName }: ClientEmailsTabProps) 
       {/* Inbox Browser */}
       {showInboxBrowser && (
         <div className="space-y-2">
-          {primaryContactEmail && (
+          {clientDomain && (
             <p className="text-sm text-muted-foreground px-1">
-              Showing emails matching primary contact: <span className="font-medium text-foreground">{primaryContactEmail}</span>
+              Showing emails matching domain: <span className="font-medium text-foreground">@{clientDomain}</span>
             </p>
           )}
           <OutlookInboxBrowser
             tenantId={String(tenantId)}
             defaultClientId={tenantId}
             onEmailLinked={handleEmailLinked}
-            filterEmail={primaryContactEmail}
+            filterEmail={clientDomain}
           />
         </div>
       )}
