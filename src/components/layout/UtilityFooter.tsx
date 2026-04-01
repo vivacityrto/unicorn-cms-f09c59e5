@@ -99,19 +99,30 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
 
         {/* Right: Quick Links */}
         <div className="flex items-center gap-4">
-          {quickLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group"
-            >
-              <link.icon className="h-3.5 w-3.5" />
-              <span>{link.label}</span>
-              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </a>
-          ))}
+          {quickLinks.map((link) =>
+            link.internal ? (
+              <Link
+                key={link.label}
+                to={link.href}
+                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group"
+              >
+                <link.icon className="h-3.5 w-3.5" />
+                <span>{link.label}</span>
+              </Link>
+            ) : (
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors group"
+              >
+                <link.icon className="h-3.5 w-3.5" />
+                <span>{link.label}</span>
+                <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
+            )
+          )}
         </div>
       </div>
     </footer>
