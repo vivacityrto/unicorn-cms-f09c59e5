@@ -49,7 +49,11 @@ export default function SuggestionRegister() {
     return items.some(item => item.release_status?.code !== 'released');
   }, [items]);
 
-  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string | null>(() => {
+    const tabParam = searchParams.get('tab');
+    return tabParam === 'released' ? 'released' : null;
+  });
   const resolvedTab = activeTab ?? (isLoading ? 'suggestions' : hasUnreleased ? 'suggestions' : 'released');
 
   const [search, setSearch] = useState('');

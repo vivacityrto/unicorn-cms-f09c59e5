@@ -59,8 +59,9 @@ export function UtilityFooter({ activeTenantName }: UtilityFooterProps) {
     },
     {
       label: "Release Notes",
-      href: "https://docs.vivacity.com.au/releases",
+      href: "/suggestions?tab=released",
       icon: FileText,
+      internal: true,
     },
   ];
 
