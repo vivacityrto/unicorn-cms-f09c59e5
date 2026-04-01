@@ -4432,498 +4432,6 @@ export type Database = {
         }
         Relationships: []
       }
-      backup_notes: {
-        Row: {
-          assignees: string[] | null
-          completed_date: string | null
-          created_at: string | null
-          created_by: string | null
-          date_imported: string | null
-          duration: number | null
-          file_names: string[] | null
-          id: string | null
-          is_pinned: boolean | null
-          note_details: string | null
-          note_type: string | null
-          package_id: number | null
-          parent_id: number | null
-          parent_type: string | null
-          parent_uuid: string | null
-          priority: string | null
-          started_date: string | null
-          tags: string[] | null
-          tenant_id: number | null
-          tenant_uuid: string | null
-          title: string | null
-          u1_id: number | null
-          u1_package: string | null
-          u1_package_id: number | null
-          u1_staffname: string | null
-          u1_userid: number | null
-          updated_at: string | null
-          uploaded_files: string[] | null
-          user_id: number | null
-          user_uuid: string | null
-        }
-        Insert: {
-          assignees?: string[] | null
-          completed_date?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          date_imported?: string | null
-          duration?: number | null
-          file_names?: string[] | null
-          id?: string | null
-          is_pinned?: boolean | null
-          note_details?: string | null
-          note_type?: string | null
-          package_id?: number | null
-          parent_id?: number | null
-          parent_type?: string | null
-          parent_uuid?: string | null
-          priority?: string | null
-          started_date?: string | null
-          tags?: string[] | null
-          tenant_id?: number | null
-          tenant_uuid?: string | null
-          title?: string | null
-          u1_id?: number | null
-          u1_package?: string | null
-          u1_package_id?: number | null
-          u1_staffname?: string | null
-          u1_userid?: number | null
-          updated_at?: string | null
-          uploaded_files?: string[] | null
-          user_id?: number | null
-          user_uuid?: string | null
-        }
-        Update: {
-          assignees?: string[] | null
-          completed_date?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          date_imported?: string | null
-          duration?: number | null
-          file_names?: string[] | null
-          id?: string | null
-          is_pinned?: boolean | null
-          note_details?: string | null
-          note_type?: string | null
-          package_id?: number | null
-          parent_id?: number | null
-          parent_type?: string | null
-          parent_uuid?: string | null
-          priority?: string | null
-          started_date?: string | null
-          tags?: string[] | null
-          tenant_id?: number | null
-          tenant_uuid?: string | null
-          title?: string | null
-          u1_id?: number | null
-          u1_package?: string | null
-          u1_package_id?: number | null
-          u1_staffname?: string | null
-          u1_userid?: number | null
-          updated_at?: string | null
-          uploaded_files?: string[] | null
-          user_id?: number | null
-          user_uuid?: string | null
-        }
-        Relationships: []
-      }
-      backup_package_instances: {
-        Row: {
-          client_id: number | null
-          clo_id: number | null
-          end_date: string | null
-          hours_added: number | null
-          hours_included: number | null
-          hours_used: number | null
-          id: number | null
-          is_complete: boolean | null
-          last_document_update_email: string | null
-          manager_id: string | null
-          package_id: number | null
-          release_documents_office: boolean | null
-          release_documents_pdf: boolean | null
-          start_date: string | null
-          tenant_id: number | null
-          u1_packageid: number | null
-        }
-        Insert: {
-          client_id?: number | null
-          clo_id?: number | null
-          end_date?: string | null
-          hours_added?: number | null
-          hours_included?: number | null
-          hours_used?: number | null
-          id?: number | null
-          is_complete?: boolean | null
-          last_document_update_email?: string | null
-          manager_id?: string | null
-          package_id?: number | null
-          release_documents_office?: boolean | null
-          release_documents_pdf?: boolean | null
-          start_date?: string | null
-          tenant_id?: number | null
-          u1_packageid?: number | null
-        }
-        Update: {
-          client_id?: number | null
-          clo_id?: number | null
-          end_date?: string | null
-          hours_added?: number | null
-          hours_included?: number | null
-          hours_used?: number | null
-          id?: number | null
-          is_complete?: boolean | null
-          last_document_update_email?: string | null
-          manager_id?: string | null
-          package_id?: number | null
-          release_documents_office?: boolean | null
-          release_documents_pdf?: boolean | null
-          start_date?: string | null
-          tenant_id?: number | null
-          u1_packageid?: number | null
-        }
-        Relationships: []
-      }
-      backup_packages: {
-        Row: {
-          created_at: string | null
-          details: string | null
-          document_assurance_period: number | null
-          duration_months: number | null
-          full_text: string | null
-          id: number | null
-          name: string | null
-          package_type: string | null
-          progress_mode: string | null
-          slug: string | null
-          status: string | null
-          total_hours: number | null
-          u1_packageid: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          details?: string | null
-          document_assurance_period?: number | null
-          duration_months?: number | null
-          full_text?: string | null
-          id?: number | null
-          name?: string | null
-          package_type?: string | null
-          progress_mode?: string | null
-          slug?: string | null
-          status?: string | null
-          total_hours?: number | null
-          u1_packageid?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          details?: string | null
-          document_assurance_period?: number | null
-          duration_months?: number | null
-          full_text?: string | null
-          id?: number | null
-          name?: string | null
-          package_type?: string | null
-          progress_mode?: string | null
-          slug?: string | null
-          status?: string | null
-          total_hours?: number | null
-          u1_packageid?: number | null
-        }
-        Relationships: []
-      }
-      backup_packages_phase3: {
-        Row: {
-          created_at: string | null
-          details: string | null
-          document_assurance_period: number | null
-          duration_months: number | null
-          full_text: string | null
-          id: number | null
-          name: string | null
-          package_type: string | null
-          progress_mode: string | null
-          slug: string | null
-          status: string | null
-          total_hours: number | null
-          u1_packageid: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          details?: string | null
-          document_assurance_period?: number | null
-          duration_months?: number | null
-          full_text?: string | null
-          id?: number | null
-          name?: string | null
-          package_type?: string | null
-          progress_mode?: string | null
-          slug?: string | null
-          status?: string | null
-          total_hours?: number | null
-          u1_packageid?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          details?: string | null
-          document_assurance_period?: number | null
-          duration_months?: number | null
-          full_text?: string | null
-          id?: number | null
-          name?: string | null
-          package_type?: string | null
-          progress_mode?: string | null
-          slug?: string | null
-          status?: string | null
-          total_hours?: number | null
-          u1_packageid?: number | null
-        }
-        Relationships: []
-      }
-      backup_users: {
-        Row: {
-          abn: string | null
-          accountable_person: string | null
-          accounting_system: string | null
-          acn: string | null
-          archived: boolean | null
-          availability_note: string | null
-          avatar_path: string | null
-          avatar_updated_at: string | null
-          avatar_url: string | null
-          away_message: string | null
-          bio: string | null
-          biography: string | null
-          booking_url: string | null
-          clickup_url: string | null
-          client_id: string | null
-          communication_pref: string | null
-          country: string | null
-          cover_user_id: string | null
-          created_at: string | null
-          cricos_id: string | null
-          csc_visibility: Json | null
-          disabled: boolean | null
-          email: string | null
-          email_address: string | null
-          first_name: string | null
-          global_role: string | null
-          head_office_address: string | null
-          is_csc: boolean | null
-          is_team: boolean | null
-          job_title: string | null
-          keap_url: string | null
-          last_name: string | null
-          last_new_client_tasks_email: string | null
-          last_sign_in_at: string | null
-          leave_from: string | null
-          leave_until: string | null
-          legacy_id: number | null
-          legal_name: string | null
-          linkedin: string | null
-          linkedin_url: string | null
-          lms: string | null
-          manager_id: number | null
-          manager_uuid: string | null
-          mobile_phone: string | null
-          notes: string | null
-          phone: string | null
-          phone_number: string | null
-          po_box: string | null
-          po_box_address: string | null
-          postcode: string | null
-          profile_photo: boolean | null
-          public_holiday_region: string | null
-          registration_end_date: string | null
-          response_time_sla: string | null
-          role: string | null
-          rto_id: number | null
-          rto_name: string | null
-          staff_team: Database["public"]["Enums"]["staff_team_type"] | null
-          state: number | null
-          street_address: string | null
-          street_number_and_name: string | null
-          suburb: string | null
-          superadmin_level: string | null
-          tenant_id: number | null
-          tenant_name: string | null
-          tenant_role: string | null
-          timezone: string | null
-          title: string | null
-          training_facility_address: string | null
-          TS: string | null
-          unicorn_role: Database["public"]["Enums"]["unicorn_role"] | null
-          updated_at: string | null
-          user_type: Database["public"]["Enums"]["user_type_enum"] | null
-          user_uuid: string | null
-          website: string | null
-          working_days: Json | null
-          working_hours: Json | null
-        }
-        Insert: {
-          abn?: string | null
-          accountable_person?: string | null
-          accounting_system?: string | null
-          acn?: string | null
-          archived?: boolean | null
-          availability_note?: string | null
-          avatar_path?: string | null
-          avatar_updated_at?: string | null
-          avatar_url?: string | null
-          away_message?: string | null
-          bio?: string | null
-          biography?: string | null
-          booking_url?: string | null
-          clickup_url?: string | null
-          client_id?: string | null
-          communication_pref?: string | null
-          country?: string | null
-          cover_user_id?: string | null
-          created_at?: string | null
-          cricos_id?: string | null
-          csc_visibility?: Json | null
-          disabled?: boolean | null
-          email?: string | null
-          email_address?: string | null
-          first_name?: string | null
-          global_role?: string | null
-          head_office_address?: string | null
-          is_csc?: boolean | null
-          is_team?: boolean | null
-          job_title?: string | null
-          keap_url?: string | null
-          last_name?: string | null
-          last_new_client_tasks_email?: string | null
-          last_sign_in_at?: string | null
-          leave_from?: string | null
-          leave_until?: string | null
-          legacy_id?: number | null
-          legal_name?: string | null
-          linkedin?: string | null
-          linkedin_url?: string | null
-          lms?: string | null
-          manager_id?: number | null
-          manager_uuid?: string | null
-          mobile_phone?: string | null
-          notes?: string | null
-          phone?: string | null
-          phone_number?: string | null
-          po_box?: string | null
-          po_box_address?: string | null
-          postcode?: string | null
-          profile_photo?: boolean | null
-          public_holiday_region?: string | null
-          registration_end_date?: string | null
-          response_time_sla?: string | null
-          role?: string | null
-          rto_id?: number | null
-          rto_name?: string | null
-          staff_team?: Database["public"]["Enums"]["staff_team_type"] | null
-          state?: number | null
-          street_address?: string | null
-          street_number_and_name?: string | null
-          suburb?: string | null
-          superadmin_level?: string | null
-          tenant_id?: number | null
-          tenant_name?: string | null
-          tenant_role?: string | null
-          timezone?: string | null
-          title?: string | null
-          training_facility_address?: string | null
-          TS?: string | null
-          unicorn_role?: Database["public"]["Enums"]["unicorn_role"] | null
-          updated_at?: string | null
-          user_type?: Database["public"]["Enums"]["user_type_enum"] | null
-          user_uuid?: string | null
-          website?: string | null
-          working_days?: Json | null
-          working_hours?: Json | null
-        }
-        Update: {
-          abn?: string | null
-          accountable_person?: string | null
-          accounting_system?: string | null
-          acn?: string | null
-          archived?: boolean | null
-          availability_note?: string | null
-          avatar_path?: string | null
-          avatar_updated_at?: string | null
-          avatar_url?: string | null
-          away_message?: string | null
-          bio?: string | null
-          biography?: string | null
-          booking_url?: string | null
-          clickup_url?: string | null
-          client_id?: string | null
-          communication_pref?: string | null
-          country?: string | null
-          cover_user_id?: string | null
-          created_at?: string | null
-          cricos_id?: string | null
-          csc_visibility?: Json | null
-          disabled?: boolean | null
-          email?: string | null
-          email_address?: string | null
-          first_name?: string | null
-          global_role?: string | null
-          head_office_address?: string | null
-          is_csc?: boolean | null
-          is_team?: boolean | null
-          job_title?: string | null
-          keap_url?: string | null
-          last_name?: string | null
-          last_new_client_tasks_email?: string | null
-          last_sign_in_at?: string | null
-          leave_from?: string | null
-          leave_until?: string | null
-          legacy_id?: number | null
-          legal_name?: string | null
-          linkedin?: string | null
-          linkedin_url?: string | null
-          lms?: string | null
-          manager_id?: number | null
-          manager_uuid?: string | null
-          mobile_phone?: string | null
-          notes?: string | null
-          phone?: string | null
-          phone_number?: string | null
-          po_box?: string | null
-          po_box_address?: string | null
-          postcode?: string | null
-          profile_photo?: boolean | null
-          public_holiday_region?: string | null
-          registration_end_date?: string | null
-          response_time_sla?: string | null
-          role?: string | null
-          rto_id?: number | null
-          rto_name?: string | null
-          staff_team?: Database["public"]["Enums"]["staff_team_type"] | null
-          state?: number | null
-          street_address?: string | null
-          street_number_and_name?: string | null
-          suburb?: string | null
-          superadmin_level?: string | null
-          tenant_id?: number | null
-          tenant_name?: string | null
-          tenant_role?: string | null
-          timezone?: string | null
-          title?: string | null
-          training_facility_address?: string | null
-          TS?: string | null
-          unicorn_role?: Database["public"]["Enums"]["unicorn_role"] | null
-          updated_at?: string | null
-          user_type?: Database["public"]["Enums"]["user_type_enum"] | null
-          user_uuid?: string | null
-          website?: string | null
-          working_days?: Json | null
-          working_hours?: Json | null
-        }
-        Relationships: []
-      }
       behavioural_prompts: {
         Row: {
           created_at: string
@@ -6602,6 +6110,7 @@ export type Database = {
           comment_by_id: number | null
           comment_id: string
           comment_text: string | null
+          created_at: string
           date_created: number | null
           fetched_at: string
           id: number
@@ -6609,6 +6118,7 @@ export type Database = {
           resolved: boolean | null
           task_id: string
           tenant_id: number | null
+          updated_at: string | null
         }
         Insert: {
           comment_by?: string | null
@@ -6616,6 +6126,7 @@ export type Database = {
           comment_by_id?: number | null
           comment_id: string
           comment_text?: string | null
+          created_at?: string
           date_created?: number | null
           fetched_at?: string
           id?: never
@@ -6623,6 +6134,7 @@ export type Database = {
           resolved?: boolean | null
           task_id: string
           tenant_id?: number | null
+          updated_at?: string | null
         }
         Update: {
           comment_by?: string | null
@@ -6630,6 +6142,7 @@ export type Database = {
           comment_by_id?: number | null
           comment_id?: string
           comment_text?: string | null
+          created_at?: string
           date_created?: number | null
           fetched_at?: string
           id?: never
@@ -6637,6 +6150,7 @@ export type Database = {
           resolved?: boolean | null
           task_id?: string
           tenant_id?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -6745,6 +6259,7 @@ export type Database = {
           audit_date: string | null
           checklists: Json | null
           client_meeting_attendance: string | null
+          created_at: string
           creator_id: number | null
           creator_username: string | null
           cricos_rereg_date: string | null
@@ -6796,6 +6311,7 @@ export type Database = {
           time_spent: number | null
           time_with_vivacity: string | null
           unicorn_url: string | null
+          updated_at: string | null
           url: string | null
           watchers: Json | null
           working_hours: string | null
@@ -6805,6 +6321,7 @@ export type Database = {
           audit_date?: string | null
           checklists?: Json | null
           client_meeting_attendance?: string | null
+          created_at?: string
           creator_id?: number | null
           creator_username?: string | null
           cricos_rereg_date?: string | null
@@ -6856,6 +6373,7 @@ export type Database = {
           time_spent?: number | null
           time_with_vivacity?: string | null
           unicorn_url?: string | null
+          updated_at?: string | null
           url?: string | null
           watchers?: Json | null
           working_hours?: string | null
@@ -6865,6 +6383,7 @@ export type Database = {
           audit_date?: string | null
           checklists?: Json | null
           client_meeting_attendance?: string | null
+          created_at?: string
           creator_id?: number | null
           creator_username?: string | null
           cricos_rereg_date?: string | null
@@ -6916,6 +6435,7 @@ export type Database = {
           time_spent?: number | null
           time_with_vivacity?: string | null
           unicorn_url?: string | null
+          updated_at?: string | null
           url?: string | null
           watchers?: Json | null
           working_hours?: string | null
@@ -9422,6 +8942,7 @@ export type Database = {
           stageinstance_id: number
           status: number
           u1_id: number | null
+          updated_at: string | null
         }
         Insert: {
           clienttask_id: number
@@ -9432,6 +8953,7 @@ export type Database = {
           stageinstance_id: number
           status?: number
           u1_id?: number | null
+          updated_at?: string | null
         }
         Update: {
           clienttask_id?: number
@@ -9442,6 +8964,7 @@ export type Database = {
           stageinstance_id?: number
           status?: number
           u1_id?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -15220,6 +14743,7 @@ export type Database = {
           bcc: string | null
           cc: string | null
           content: string | null
+          created_at: string
           email_id: number | null
           id: number
           is_core: boolean | null
@@ -15231,12 +14755,14 @@ export type Database = {
           stageinstance_id: number
           subject: string | null
           to: string | null
+          updated_at: string | null
           user_attachments: string
         }
         Insert: {
           bcc?: string | null
           cc?: string | null
           content?: string | null
+          created_at?: string
           email_id?: number | null
           id?: number
           is_core?: boolean | null
@@ -15248,12 +14774,14 @@ export type Database = {
           stageinstance_id: number
           subject?: string | null
           to?: string | null
+          updated_at?: string | null
           user_attachments?: string
         }
         Update: {
           bcc?: string | null
           cc?: string | null
           content?: string | null
+          created_at?: string
           email_id?: number | null
           id?: number
           is_core?: boolean | null
@@ -15265,6 +14793,7 @@ export type Database = {
           stageinstance_id?: number
           subject?: string | null
           to?: string | null
+          updated_at?: string | null
           user_attachments?: string
         }
         Relationships: [
@@ -32605,6 +32134,7 @@ export type Database = {
         Row: {
           comment: string | null
           completion_date: string | null
+          created_at: string
           event_conducted_date: string | null
           id: number
           is_recurring: boolean
@@ -32617,10 +32147,12 @@ export type Database = {
           status: string | null
           status_date: string | null
           status_id: number | null
+          updated_at: string | null
         }
         Insert: {
           comment?: string | null
           completion_date?: string | null
+          created_at?: string
           event_conducted_date?: string | null
           id?: number
           is_recurring?: boolean
@@ -32633,10 +32165,12 @@ export type Database = {
           status?: string | null
           status_date?: string | null
           status_id?: number | null
+          updated_at?: string | null
         }
         Update: {
           comment?: string | null
           completion_date?: string | null
+          created_at?: string
           event_conducted_date?: string | null
           id?: number
           is_recurring?: boolean
@@ -32649,6 +32183,7 @@ export type Database = {
           status?: string | null
           status_date?: string | null
           status_id?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
