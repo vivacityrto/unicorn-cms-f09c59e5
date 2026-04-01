@@ -192,8 +192,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 270 47% 26%;
 
-    /* PRIMARY = Purple #7130A0 – main action colour */
-    --primary: 275 55% 41%;
+    /* PRIMARY = Aqua #23C0DD – main action colour */
+    --primary: 190 74% 50%;
     --primary-foreground: 0 0% 100%;
 
     /* SECONDARY = Acai #44235F – structural, headings */
@@ -214,7 +214,7 @@
 
     --border: 270 20% 87%;
     --input: 270 20% 91%;
-    --ring: 275 55% 41%; /* Purple – focus rings match primary */
+    --ring: 190 74% 50%; /* Aqua – focus rings match primary */
 
     --radius: 0.75rem; /* 12px card radius */
 
@@ -359,8 +359,8 @@
     --popover: 270 40% 12%;
     --popover-foreground: 0 0% 95%;
 
-    /* Purple 500-600 adjusted for dark contrast */
-    --primary: 275 55% 55%;
+    /* Aqua adjusted for dark contrast */
+    --primary: 190 74% 58%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 270 35% 50%;
@@ -377,7 +377,7 @@
 
     --border: 270 25% 22%;
     --input: 270 25% 20%;
-    --ring: 275 55% 55%;
+    --ring: 190 74% 58%;
 
     /* Dark mode compliance states */
     --state-compliant: var(--brand-purple-500);
