@@ -359,8 +359,8 @@
     --popover: 270 40% 12%;
     --popover-foreground: 0 0% 95%;
 
-    /* Purple 500-600 adjusted for dark contrast */
-    --primary: 275 55% 55%;
+    /* Aqua adjusted for dark contrast */
+    --primary: 190 74% 58%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 270 35% 50%;
