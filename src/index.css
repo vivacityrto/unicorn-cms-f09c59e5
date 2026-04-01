@@ -377,7 +377,7 @@
 
     --border: 270 25% 22%;
     --input: 270 25% 20%;
-    --ring: 275 55% 55%;
+    --ring: 190 74% 58%;
 
     /* Dark mode compliance states */
     --state-compliant: var(--brand-purple-500);
