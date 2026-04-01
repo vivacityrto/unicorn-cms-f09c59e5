@@ -35,8 +35,11 @@ export function FloatingSuggestionsDialog({ open, onClose }: FloatingSuggestions
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState(false);
 
-  // Dragging state
-  const [position, setPosition] = useState({ x: window.innerWidth - 520, y: 80 });
+  // Dragging state – compute safe initial position
+  const [position, setPosition] = useState(() => ({
+    x: Math.max(16, Math.min(window.innerWidth - 480, window.innerWidth - 520)),
+    y: 64,
+  }));
   const dragRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
