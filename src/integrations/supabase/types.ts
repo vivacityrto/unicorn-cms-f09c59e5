@@ -28825,6 +28825,51 @@ export type Database = {
         }
         Relationships: []
       }
+      release_notes: {
+        Row: {
+          body: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          id: number
+          is_highlighted: boolean
+          is_published: boolean
+          released_at: string
+          summary: string
+          updated_at: string | null
+          version: string
+          version_label: string | null
+        }
+        Insert: {
+          body?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          is_highlighted?: boolean
+          is_published?: boolean
+          released_at?: string
+          summary: string
+          updated_at?: string | null
+          version: string
+          version_label?: string | null
+        }
+        Update: {
+          body?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          is_highlighted?: boolean
+          is_published?: boolean
+          released_at?: string
+          summary?: string
+          updated_at?: string | null
+          version?: string
+          version_label?: string | null
+        }
+        Relationships: []
+      }
       research_audit_log: {
         Row: {
           action: string

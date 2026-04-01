@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useSuggestItems, useReleasedSuggestItems } from '@/hooks/useSuggestItems';
@@ -49,7 +49,11 @@ export default function SuggestionRegister() {
     return items.some(item => item.release_status?.code !== 'released');
   }, [items]);
 
-  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string | null>(() => {
+    const tabParam = searchParams.get('tab');
+    return tabParam === 'released' ? 'released' : null;
+  });
   const resolvedTab = activeTab ?? (isLoading ? 'suggestions' : hasUnreleased ? 'suggestions' : 'released');
 
   const [search, setSearch] = useState('');
