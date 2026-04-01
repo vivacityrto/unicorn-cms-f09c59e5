@@ -86,17 +86,23 @@ export function FloatingSuggestionsDialog({ open, onClose }: FloatingSuggestions
   const height = expanded ? 600 : 440;
 
   return (
-    <div
-      ref={dragRef}
-      style={{
-        position: 'fixed',
-        left: position.x,
-        top: position.y,
-        width,
-        zIndex: 9999,
-      }}
-      className="rounded-xl border bg-background shadow-2xl flex flex-col overflow-hidden"
-    >
+    <>
+      {/* Backdrop to make the dialog noticeable */}
+      <div
+        className="fixed inset-0 bg-black/10 z-[9998]"
+        onClick={onClose}
+      />
+      <div
+        ref={dragRef}
+        style={{
+          position: 'fixed',
+          left: position.x,
+          top: position.y,
+          width,
+          zIndex: 9999,
+        }}
+        className="rounded-xl border bg-background shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+      >
       {/* Drag handle / header */}
       <div
         className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b cursor-move select-none"
