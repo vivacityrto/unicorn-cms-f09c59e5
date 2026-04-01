@@ -10,6 +10,7 @@ interface UserProfile {
   last_name: string | null;
   unicorn_role: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User';
   global_role: 'SuperAdmin' | null;
+  superadmin_level: 'Administrator' | 'Team Leader' | 'General' | 'Assistant' | null;
   tenant_id: number | null;
   avatar_url: string | null;
   job_title: string | null;
