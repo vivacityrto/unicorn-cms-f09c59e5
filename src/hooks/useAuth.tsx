@@ -10,6 +10,7 @@ interface UserProfile {
   last_name: string | null;
   unicorn_role: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User';
   global_role: 'SuperAdmin' | null;
+  superadmin_level: 'Administrator' | 'Team Leader' | 'General' | 'Assistant' | null;
   tenant_id: number | null;
   avatar_url: string | null;
   job_title: string | null;
@@ -86,7 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('user_uuid, email, first_name, last_name, unicorn_role, global_role, tenant_id, avatar_url, job_title')
+        .select('user_uuid, email, first_name, last_name, unicorn_role, global_role, superadmin_level, tenant_id, avatar_url, job_title')
         .eq('user_uuid', userId)
         .maybeSingle();
 

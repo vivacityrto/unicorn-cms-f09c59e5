@@ -208,7 +208,11 @@ export const useRBAC = () => {
     if (is_super_admin) return true;
 
     // Use unicorn_role for permission lookup (handles Team Leader, Team Member)
-    const userRole = profile?.unicorn_role || 'General User';
+    // Assistant level mirrors Team Leader access exactly
+    let userRole = profile?.unicorn_role || 'General User';
+    if (profile?.superadmin_level === 'Assistant') {
+      userRole = 'Team Leader';
+    }
     const permissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS['General User'];
     
     return permissions.includes(permission);
