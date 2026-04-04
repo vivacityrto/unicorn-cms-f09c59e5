@@ -1,23 +1,16 @@
 import { useState } from "react";
-import { Building2, FileText, ArrowRight } from "lucide-react";
+import { Building2, FileText, ArrowRight, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CourseCardLegacy as CourseCard, type CourseCardData } from "@/components/academy/CourseCard";
+import CourseCard from "@/components/academy/CourseCard";
 import { Card, CardContent } from "@/components/ui/card";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
+import { useAcademyCourses, formatDuration, mapEnrollmentStatus, getCourseCategory } from "@/hooks/useAcademyCourses";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ACCENT = "#7130A0";
+const AUDIENCE_KEY = "governance_person";
 
-const categories = ["All", "Governing Obligations", "Strategic Planning", "Financial Governance", "Risk Management", "Leadership"];
-
-const courses: CourseCardData[] = [
-  { id: "gp1", title: "Governing Persons Obligations Under SRTO 2025", description: "Understand the legal and regulatory obligations of Governing Persons under the Standards for RTOs 2025.", category: "Governing Obligations", duration: "3h", lessons: 0, totalLessons: 9, difficulty: "Intermediate", status: "Not Started" },
-  { id: "gp2", title: "Strategic Planning for RTO Sustainability", description: "Develop and implement strategic plans that ensure long-term sustainability for your RTO.", category: "Strategic Planning", duration: "4h", lessons: 4, totalLessons: 12, difficulty: "Advanced", status: "In Progress", progress: 30 },
-  { id: "gp3", title: "Financial Governance and Accountability for RTOs", description: "Financial oversight, budgeting, and accountability frameworks for Governing Persons of RTOs.", category: "Financial Governance", duration: "3.5h", lessons: 0, totalLessons: 10, difficulty: "Intermediate", status: "Not Started" },
-  { id: "gp4", title: "Risk Management Frameworks for Governing Persons", description: "Build and maintain risk management frameworks tailored to Governing Persons' responsibilities.", category: "Risk Management", duration: "2.5h", lessons: 0, totalLessons: 8, difficulty: "Intermediate", status: "Not Started" },
-  { id: "gp5", title: "Leading High-Performance RTO Teams", description: "Leadership strategies for Governing Persons to build and maintain high-performance teams.", category: "Leadership", duration: "3h", lessons: 0, totalLessons: 10, difficulty: "Intermediate", status: "Not Started" },
-  { id: "gp6", title: "Understanding ASQA's Regulatory Approach — A Governing Person Perspective", description: "How ASQA's regulatory framework impacts Governing Persons and what you need to know.", category: "Governing Obligations", duration: "2h", lessons: 0, totalLessons: 7, difficulty: "Beginner", status: "Not Started" },
-  { id: "gp7", title: "Data-Driven Decision Making for RTO Leaders", description: "Use data and analytics to inform strategic decisions as a Governing Person of an RTO.", category: "Strategic Planning", duration: "2.5h", lessons: 0, totalLessons: 8, difficulty: "Advanced", status: "Not Started" },
-];
+const categoryTabs = ["All", "Governing Obligations", "Strategic Planning", "Financial Governance", "Risk Management", "Leadership"];
 
 const resources = [
   "Governing Persons Obligations Checklist (SRTO 2025)",
@@ -27,7 +20,11 @@ const resources = [
 
 export default function GovernancePersonPage() {
   const [activeFilter, setActiveFilter] = useState("All");
-  const filtered = activeFilter === "All" ? courses : courses.filter((c) => c.category === activeFilter);
+  const { data: courses = [], isLoading } = useAcademyCourses({ audienceKey: AUDIENCE_KEY });
+
+  const filtered = activeFilter === "All"
+    ? courses
+    : courses.filter((c) => (c.tags ?? []).some(t => t === activeFilter));
 
   return (
     <AcademyPageWrapper
@@ -37,7 +34,7 @@ export default function GovernancePersonPage() {
       accentColour={ACCENT}
     >
       <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b">
-        {categories.map((cat) => (
+        {categoryTabs.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveFilter(cat)}
@@ -52,14 +49,51 @@ export default function GovernancePersonPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map((course) => (
-          <CourseCard key={course.id} course={course} accentColor={ACCENT} />
-        ))}
-      </div>
+      {isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-[14px] border border-border overflow-hidden">
+              <Skeleton className="h-[148px] w-full rounded-none" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="h-8 w-full mt-4" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {filtered.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">No courses in this category yet.</div>
+      {!isLoading && filtered.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map((course) => {
+            const status = mapEnrollmentStatus(course.enrollment_status, course.has_certificate);
+            return (
+              <CourseCard
+                key={course.id}
+                title={course.title}
+                category={getCourseCategory(course.tags, course.target_audience)}
+                duration={formatDuration(course.estimated_minutes)}
+                lessonCount={course.total_lessons}
+                difficulty={(course.difficulty_level as "Beginner" | "Intermediate" | "Advanced") ?? "Beginner"}
+                status={status}
+                progressPercent={course.progress_percentage}
+                completedLessons={course.completed_lessons}
+                totalLessons={course.total_lessons}
+                accentColour={ACCENT}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {!isLoading && filtered.length === 0 && (
+        <div className="text-center py-16">
+          <GraduationCap className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <p className="font-medium text-foreground">No courses available yet</p>
+          <p className="text-sm text-muted-foreground mt-1">More courses coming soon — check back shortly</p>
+        </div>
       )}
 
       <div className="space-y-3 pt-4">
