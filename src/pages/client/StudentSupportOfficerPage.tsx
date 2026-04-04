@@ -14,6 +14,7 @@ const categoryTabs = ["All", "Online Delivery", "Student Engagement", "Support S
 
 export default function StudentSupportOfficerPage() {
   const [activeFilter, setActiveFilter] = useState("All");
+  const navigate = useNavigate();
   const { data: courses = [], isLoading } = useAcademyCourses({ audienceKey: AUDIENCE_KEY });
 
   const filtered = activeFilter === "All"
