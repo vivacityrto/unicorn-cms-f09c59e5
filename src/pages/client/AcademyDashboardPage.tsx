@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 
 const statCards = [
   { label: "Courses", value: 12, icon: BookOpen },
@@ -58,18 +59,12 @@ const statusVariant = (s: string) =>
 
 export default function AcademyDashboardPage() {
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <GraduationCap className="h-6 w-6" style={{ color: "#23c0dd" }} />
-          <h1 className="text-2xl font-bold text-foreground">Vivacity Academy</h1>
-        </div>
-        <p className="text-muted-foreground">
-          Your personalised learning portal — built for the VET sector
-        </p>
-      </div>
-
+    <AcademyPageWrapper
+      title="Vivacity Academy"
+      subtitle="Your personalised learning portal — built for the VET sector"
+      icon={<GraduationCap className="h-6 w-6" />}
+      accentColour="#23c0dd"
+    >
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((s) => (
@@ -158,6 +153,6 @@ export default function AcademyDashboardPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AcademyPageWrapper>
   );
 }
