@@ -22,8 +22,8 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
     queryKey: ["enrolment-detail", enrolmentId],
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from("academy_enrollments")
+      const q = supabase
+        .from("academy_enrollments" as any)
         .select(`
           *,
           course:academy_courses(id, title),
@@ -31,7 +31,8 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
           user:users!academy_enrollments_user_id_fkey(user_uuid, first_name, last_name, email, avatar_url)
         `)
         .eq("id", enrolmentId!)
-        .single() as any);
+        .single();
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },

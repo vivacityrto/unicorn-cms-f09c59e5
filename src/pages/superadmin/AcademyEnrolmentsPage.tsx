@@ -57,15 +57,16 @@ export default function AcademyEnrolmentsPage() {
   const { data: enrolments, isLoading } = useQuery({
     queryKey: ["academy-enrolments"],
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from("academy_enrollments")
+      const q = supabase
+        .from("academy_enrollments" as any)
         .select(`
           *,
           course:academy_courses(id, title, slug),
           tenant:tenants(id, name),
           user:users!academy_enrollments_user_id_fkey(user_uuid, first_name, last_name, email, avatar_url)
         `)
-        .order("enrolled_at", { ascending: false }) as any);
+        .order("enrolled_at", { ascending: false });
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
