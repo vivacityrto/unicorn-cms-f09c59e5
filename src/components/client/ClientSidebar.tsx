@@ -174,13 +174,13 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentReque
             className={cn(
               "flex items-center gap-3 mx-2 mb-1 w-[calc(100%-16px)] transition-all text-sm rounded-lg min-h-[44px] relative",
               sidebarOpen ? "px-4" : "px-0 justify-center",
-              isAcademyChildActive
+              isAcademyActive
                 ? "bg-white/15 text-white font-semibold"
                 : "text-white/80 hover:bg-white/10 hover:text-white"
             )}
             style={{ paddingTop: "10px", paddingBottom: "10px" }}
           >
-            {isAcademyChildActive && (
+            {isAcademyActive && (
               <div
                 className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
                 style={{ backgroundColor: "hsl(189 74% 50%)" }}
@@ -188,7 +188,7 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentReque
             )}
             <GraduationCap
               className="w-[18px] h-[18px] flex-shrink-0"
-              style={{ color: isAcademyChildActive ? "hsl(189 74% 50%)" : "currentColor" }}
+              style={{ color: isAcademyActive ? "hsl(189 74% 50%)" : "currentColor" }}
             />
             {sidebarOpen && (
               <>
