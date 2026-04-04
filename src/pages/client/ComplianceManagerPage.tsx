@@ -1,24 +1,16 @@
 import { useState } from "react";
-import { ShieldCheck, FileText, ArrowRight } from "lucide-react";
+import { ShieldCheck, FileText, ArrowRight, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CourseCardLegacy as CourseCard, type CourseCardData } from "@/components/academy/CourseCard";
+import CourseCard from "@/components/academy/CourseCard";
 import { Card, CardContent } from "@/components/ui/card";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
+import { useAcademyCourses, formatDuration, mapEnrollmentStatus, getCourseCategory } from "@/hooks/useAcademyCourses";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ACCENT = "#ed1878";
+const AUDIENCE_KEY = "compliance_manager";
 
-const categories = ["All", "SRTO 2025", "Audit Preparation", "Quality Assurance", "CRICOS", "Self-Assessment"];
-
-const courses: CourseCardData[] = [
-  { id: "cm1", title: "Standards for RTOs 2025 — Full Implementation Guide", description: "End-to-end guide to understanding and implementing the Standards for RTOs 2025 across your organisation.", category: "SRTO 2025", duration: "6.5h", lessons: 13, totalLessons: 18, difficulty: "Intermediate", status: "In Progress", progress: 72 },
-  { id: "cm2", title: "Preparing for an ASQA Audit — Practical Strategies", description: "Practical strategies and checklists to prepare your RTO for a successful ASQA regulatory audit.", category: "Audit Preparation", duration: "5h", lessons: 0, totalLessons: 15, difficulty: "Advanced", status: "Not Started" },
-  { id: "cm3", title: "Continuous Improvement Frameworks for RTOs", description: "Build and maintain a continuous improvement culture with practical frameworks for VET providers.", category: "Quality Assurance", duration: "3.5h", lessons: 11, totalLessons: 11, difficulty: "Intermediate", status: "Completed" },
-  { id: "cm4", title: "CRICOS Registration and Ongoing Compliance", description: "Navigate CRICOS registration requirements and maintain ongoing compliance for international students.", category: "CRICOS", duration: "4h", lessons: 0, totalLessons: 12, difficulty: "Intermediate", status: "Not Started" },
-  { id: "cm5", title: "Self-Assessment and Evidence Collection", description: "Learn to conduct effective self-assessments and collect robust evidence for compliance demonstration.", category: "Self-Assessment", duration: "2.5h", lessons: 0, totalLessons: 8, difficulty: "Beginner", status: "Not Started" },
-  { id: "cm6", title: "RTO Compliance Fundamentals", description: "Foundation course covering the key compliance obligations every RTO must understand.", category: "SRTO 2025", duration: "2.5h", lessons: 9, totalLessons: 9, difficulty: "Beginner", status: "Completed" },
-  { id: "cm7", title: "Third-Party Arrangements — Compliance and Oversight", description: "Manage third-party arrangements with proper governance, contracts, and quality oversight.", category: "Quality Assurance", duration: "2h", lessons: 0, totalLessons: 7, difficulty: "Intermediate", status: "Not Started" },
-  { id: "cm8", title: "Student Support Services and Wellbeing Compliance", description: "Ensure your student support services meet regulatory requirements and promote learner wellbeing.", category: "SRTO 2025", duration: "1.5h", lessons: 0, totalLessons: 6, difficulty: "Beginner", status: "Not Started" },
-];
+const categoryTabs = ["All", "SRTO 2025", "Audit Preparation", "Quality Assurance", "CRICOS", "Self-Assessment"];
 
 const resources = [
   "SRTO 2025 Quick Reference Checklist",
@@ -28,7 +20,11 @@ const resources = [
 
 export default function ComplianceManagerPage() {
   const [activeFilter, setActiveFilter] = useState("All");
-  const filtered = activeFilter === "All" ? courses : courses.filter((c) => c.category === activeFilter);
+  const { data: courses = [], isLoading } = useAcademyCourses({ audienceKey: AUDIENCE_KEY });
+
+  const filtered = activeFilter === "All"
+    ? courses
+    : courses.filter((c) => (c.tags ?? []).some(t => t === activeFilter));
 
   return (
     <AcademyPageWrapper
@@ -39,15 +35,13 @@ export default function ComplianceManagerPage() {
     >
       {/* Filter tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b">
-        {categories.map((cat) => (
+        {categoryTabs.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveFilter(cat)}
             className={cn(
               "px-3 py-2 text-sm font-medium whitespace-nowrap rounded-t-md transition-colors",
-              activeFilter === cat
-                ? "border-b-2"
-                : "text-muted-foreground hover:text-foreground"
+              activeFilter === cat ? "border-b-2" : "text-muted-foreground hover:text-foreground"
             )}
             style={activeFilter === cat ? { color: ACCENT, borderColor: ACCENT } : undefined}
           >
@@ -56,15 +50,51 @@ export default function ComplianceManagerPage() {
         ))}
       </div>
 
-      {/* Course grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filtered.map((course) => (
-          <CourseCard key={course.id} course={course} accentColor={ACCENT} />
-        ))}
-      </div>
+      {isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-[14px] border border-border overflow-hidden">
+              <Skeleton className="h-[148px] w-full rounded-none" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-3 w-3/4" />
+                <Skeleton className="h-8 w-full mt-4" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {filtered.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">No courses in this category yet.</div>
+      {!isLoading && filtered.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filtered.map((course) => {
+            const status = mapEnrollmentStatus(course.enrollment_status, course.has_certificate);
+            return (
+              <CourseCard
+                key={course.id}
+                title={course.title}
+                category={getCourseCategory(course.tags, course.target_audience)}
+                duration={formatDuration(course.estimated_minutes)}
+                lessonCount={course.total_lessons}
+                difficulty={(course.difficulty_level as "Beginner" | "Intermediate" | "Advanced") ?? "Beginner"}
+                status={status}
+                progressPercent={course.progress_percentage}
+                completedLessons={course.completed_lessons}
+                totalLessons={course.total_lessons}
+                accentColour={ACCENT}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {!isLoading && filtered.length === 0 && (
+        <div className="text-center py-16">
+          <GraduationCap className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <p className="font-medium text-foreground">No courses available yet</p>
+          <p className="text-sm text-muted-foreground mt-1">More courses coming soon — check back shortly</p>
+        </div>
       )}
 
       {/* Compliance Resources */}

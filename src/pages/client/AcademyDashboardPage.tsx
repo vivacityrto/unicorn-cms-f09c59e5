@@ -14,13 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
-
-const statCards = [
-  { label: "Courses", value: 12, icon: BookOpen },
-  { label: "In Progress", value: 3, icon: Clock },
-  { label: "Certificates", value: 7, icon: Award },
-  { label: "Events", value: 2, icon: Calendar },
-];
+import { useAcademyDashboardStats, useMyAcademyCourses, formatDuration } from "@/hooks/useAcademyCourses";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const roleTiles = [
   {
@@ -46,18 +41,23 @@ const roleTiles = [
   },
 ];
 
-const myCourses = [
-  { name: "RTO Compliance Fundamentals", status: "In Progress", duration: "4h 30m", progress: 45 },
-  { name: "Quality Assurance Best Practices", status: "In Progress", duration: "3h 15m", progress: 20 },
-  { name: "Trainer & Assessor Essentials", status: "In Progress", duration: "6h", progress: 68 },
-  { name: "CRICOS National Code Overview", status: "Completed", duration: "2h", progress: 100 },
-  { name: "Governance Foundations for RTOs", status: "Not Started", duration: "5h", progress: 0 },
-];
+const statusVariant = (s: string | null) =>
+  s === "completed" ? "default" : s === "active" ? "secondary" : "outline";
 
-const statusVariant = (s: string) =>
-  s === "Completed" ? "default" : s === "In Progress" ? "secondary" : "outline";
+const statusLabel = (s: string | null) =>
+  s === "completed" ? "Completed" : s === "active" ? "In Progress" : "Not Started";
 
 export default function AcademyDashboardPage() {
+  const { data: stats, isLoading: statsLoading } = useAcademyDashboardStats();
+  const { data: myCourses = [], isLoading: coursesLoading } = useMyAcademyCourses();
+
+  const statCards = [
+    { label: "Courses", value: stats?.courses ?? 0, icon: BookOpen },
+    { label: "In Progress", value: stats?.inProgress ?? 0, icon: Clock },
+    { label: "Certificates", value: stats?.certificates ?? 0, icon: Award },
+    { label: "Events", value: stats?.events ?? 0, icon: Calendar },
+  ];
+
   return (
     <AcademyPageWrapper
       title="Vivacity Academy"
@@ -71,7 +71,11 @@ export default function AcademyDashboardPage() {
           <Card key={s.label}>
             <CardContent className="pt-6 flex flex-col items-center text-center">
               <s.icon className="h-6 w-6 mb-2" style={{ color: "#23c0dd" }} />
-              <span className="text-3xl font-bold text-foreground">{s.value}</span>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-12 mb-1" />
+              ) : (
+                <span className="text-3xl font-bold text-foreground">{s.value}</span>
+              )}
               <span className="text-sm text-muted-foreground mt-1">{s.label}</span>
             </CardContent>
           </Card>
@@ -113,23 +117,40 @@ export default function AcademyDashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {myCourses.map((c) => (
-            <div key={c.name} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+          {coursesLoading && (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                <Skeleton className="h-2 w-24" />
+              </div>
+            ))
+          )}
+          {!coursesLoading && myCourses.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">You haven't enrolled in any courses yet.</p>
+            </div>
+          )}
+          {!coursesLoading && myCourses.map((c) => (
+            <div key={c.course_id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm text-foreground">{c.name}</h4>
+                <h4 className="font-medium text-sm text-foreground">{c.course_title}</h4>
                 <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={statusVariant(c.status)} className="text-xs">
-                    {c.status}
+                  <Badge variant={statusVariant(c.enrollment_status)} className="text-xs">
+                    {statusLabel(c.enrollment_status)}
                   </Badge>
-                  <span className="text-xs text-muted-foreground">{c.duration}</span>
+                  <span className="text-xs text-muted-foreground">{formatDuration(c.estimated_minutes)}</span>
                 </div>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
                 <span className="text-xs font-medium text-muted-foreground w-8 text-right">
-                  {c.progress}%
+                  {c.progress_percentage ?? 0}%
                 </span>
                 <Progress
-                  value={c.progress}
+                  value={c.progress_percentage ?? 0}
                   className="w-24 h-2 [&>div]:bg-[#23c0dd]"
                 />
               </div>
