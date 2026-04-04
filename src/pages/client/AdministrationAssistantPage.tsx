@@ -14,6 +14,7 @@ const categoryTabs = ["All", "Strategic Planning", "Branding & Marketing", "Busi
 
 export default function AdministrationAssistantPage() {
   const [activeFilter, setActiveFilter] = useState("All");
+  const navigate = useNavigate();
   const { data: courses = [], isLoading } = useAcademyCourses({ audienceKey: AUDIENCE_KEY });
 
   const filtered = activeFilter === "All"
