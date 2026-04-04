@@ -153,6 +153,10 @@ const NewSuggestionForm = lazy(() => import("./pages/NewSuggestionForm"));
 const SuggestionDetail = lazy(() => import("./pages/SuggestionDetail"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
 const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
+const AcademyDashboardWrapperNew = lazy(() => import("./pages/client/AcademyDashboardWrapper"));
+const AcademyTrainerWrapperNew = lazy(() => import("./pages/client/AcademyTrainerWrapper"));
+const AcademyComplianceManagerWrapperNew = lazy(() => import("./pages/client/AcademyComplianceManagerWrapper"));
+const AcademyGovernancePersonWrapperNew = lazy(() => import("./pages/client/AcademyGovernancePersonWrapper"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
