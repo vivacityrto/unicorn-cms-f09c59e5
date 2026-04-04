@@ -9,6 +9,7 @@ interface ClientTenantContextValue {
   logoUrl: string | null;
   isPreview: boolean;
   isReadOnly: boolean;
+  academyAccessEnabled: boolean;
 }
 
 const ClientTenantContext = createContext<ClientTenantContextValue>({
@@ -17,6 +18,7 @@ const ClientTenantContext = createContext<ClientTenantContextValue>({
   logoUrl: null,
   isPreview: false,
   isReadOnly: false,
+  academyAccessEnabled: false,
 });
 
 export function ClientTenantProvider({ children }: { children: ReactNode }) {
