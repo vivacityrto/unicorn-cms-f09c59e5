@@ -25,6 +25,7 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
   const { isPreviewMode, previewTenant } = useClientPreview();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [academyAccessEnabled, setAcademyAccessEnabled] = useState(false);
 
   // Preview mode takes precedence (staff viewing as client)
   const isPreview = isPreviewMode && !!previewTenant;
