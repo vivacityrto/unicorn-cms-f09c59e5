@@ -54,19 +54,19 @@ export default function AcademyEnrolmentsPage() {
   const [drawerEnrolmentId, setDrawerEnrolmentId] = useState<number | null>(null);
 
   // Fetch enrolments with progress view
-  const { data: enrolments, isLoading } = useQuery({
+  const { data: enrolments, isLoading } = useQuery<any[]>({
     queryKey: ["academy-enrolments"],
     queryFn: async () => {
-      const q = supabase
-        .from("academy_enrollments" as any)
+      const { data, error } = await supabase
+        .from("academy_enrollments")
         .select(`
           *,
           course:academy_courses(id, title, slug),
-          tenant:tenants(id, name),
+          tenant:tenants!academy_enrollments_tenant_id_fkey(id, name),
           user:users!academy_enrollments_user_id_fkey(user_uuid, first_name, last_name, email, avatar_url)
         `)
         .order("enrolled_at", { ascending: false });
-      const { data, error } = await q;
+      if (error) throw error;
       if (error) throw error;
       return data;
     },

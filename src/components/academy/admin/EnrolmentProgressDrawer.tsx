@@ -18,21 +18,20 @@ interface Props {
 export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props) {
   const open = enrolmentId !== null;
 
-  const { data: enrolment, isLoading: loadingEnrolment } = useQuery({
+  const { data: enrolment, isLoading: loadingEnrolment } = useQuery<any>({
     queryKey: ["enrolment-detail", enrolmentId],
     enabled: open,
     queryFn: async () => {
-      const q = supabase
-        .from("academy_enrollments" as any)
+      const { data, error } = await supabase
+        .from("academy_enrollments")
         .select(`
           *,
           course:academy_courses(id, title),
-          tenant:tenants(id, name),
+          tenant:tenants!academy_enrollments_tenant_id_fkey(id, name),
           user:users!academy_enrollments_user_id_fkey(user_uuid, first_name, last_name, email, avatar_url)
         `)
         .eq("id", enrolmentId!)
         .single();
-      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
