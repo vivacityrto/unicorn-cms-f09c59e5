@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Building2, GraduationCap, ChevronRight, FileText, ArrowRight } from "lucide-react";
+import { Building2, FileText, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CourseCardLegacy as CourseCard, type CourseCardData } from "@/components/academy/CourseCard";
 import { Card, CardContent } from "@/components/ui/card";
+import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 
 const ACCENT = "#7130A0";
 
@@ -30,24 +30,12 @@ export default function GovernancePersonPage() {
   const filtered = activeFilter === "All" ? courses : courses.filter((c) => c.category === activeFilter);
 
   return (
-    <div className="space-y-6">
-      <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        <Link to="/academy" className="hover:text-foreground transition-colors flex items-center gap-1">
-          <GraduationCap className="h-3.5 w-3.5" />
-          Vivacity Academy
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-foreground font-medium">Governance Person</span>
-      </nav>
-
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <Building2 className="h-6 w-6" style={{ color: ACCENT }} />
-          <h1 className="text-2xl font-bold text-foreground">Governance Person</h1>
-        </div>
-        <p className="text-muted-foreground">Board obligations, strategic governance, financial management, and business leadership for RTO Governing Persons</p>
-      </div>
-
+    <AcademyPageWrapper
+      title="Governance Person"
+      subtitle="Board obligations, strategic governance, financial management, and business leadership for RTO Governing Persons"
+      icon={<Building2 className="h-6 w-6" />}
+      accentColour={ACCENT}
+    >
       <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b">
         {categories.map((cat) => (
           <button
@@ -94,6 +82,6 @@ export default function GovernancePersonPage() {
           ))}
         </div>
       </div>
-    </div>
+    </AcademyPageWrapper>
   );
 }

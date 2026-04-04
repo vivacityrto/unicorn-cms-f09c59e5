@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { ShieldCheck, GraduationCap, ChevronRight, FileText, ArrowRight } from "lucide-react";
+import { ShieldCheck, FileText, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CourseCardLegacy as CourseCard, type CourseCardData } from "@/components/academy/CourseCard";
 import { Card, CardContent } from "@/components/ui/card";
+import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 
 const ACCENT = "#ed1878";
 
@@ -31,26 +31,12 @@ export default function ComplianceManagerPage() {
   const filtered = activeFilter === "All" ? courses : courses.filter((c) => c.category === activeFilter);
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        <Link to="/academy" className="hover:text-foreground transition-colors flex items-center gap-1">
-          <GraduationCap className="h-3.5 w-3.5" />
-          Vivacity Academy
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-foreground font-medium">Compliance Manager</span>
-      </nav>
-
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <ShieldCheck className="h-6 w-6" style={{ color: ACCENT }} />
-          <h1 className="text-2xl font-bold text-foreground">Compliance Manager</h1>
-        </div>
-        <p className="text-muted-foreground">Standards, audits, quality assurance, and regulatory compliance training</p>
-      </div>
-
+    <AcademyPageWrapper
+      title="Compliance Manager"
+      subtitle="Standards, audits, quality assurance, and regulatory compliance training"
+      icon={<ShieldCheck className="h-6 w-6" />}
+      accentColour={ACCENT}
+    >
       {/* Filter tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b">
         {categories.map((cat) => (
@@ -102,6 +88,6 @@ export default function ComplianceManagerPage() {
           ))}
         </div>
       </div>
-    </div>
+    </AcademyPageWrapper>
   );
 }

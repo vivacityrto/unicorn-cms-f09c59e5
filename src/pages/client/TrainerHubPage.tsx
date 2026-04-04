@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Users, GraduationCap, ChevronRight } from "lucide-react";
+import { Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CourseCardLegacy as CourseCard, type CourseCardData } from "@/components/academy/CourseCard";
+import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 
 const categories = ["All", "TAE Training", "Assessor Skills", "Industry Currency", "Wellbeing", "New Releases"];
 
@@ -43,8 +43,8 @@ const courses: CourseCardData[] = [
   },
   {
     id: "4",
-    title: "Designing Learning Programs for Adult Learners",
-    description: "Principles and practices for creating effective learning programs tailored to adult learners in VET.",
+    title: "RPL and Credit Transfer Processes",
+    description: "Implement compliant RPL and credit transfer processes aligned with national standards.",
     category: "Assessor Skills",
     duration: "3h",
     lessons: 0,
@@ -55,7 +55,7 @@ const courses: CourseCardData[] = [
   {
     id: "5",
     title: "Using Digital Tools for Training Delivery",
-    description: "Explore digital platforms and tools to enhance online and blended training delivery.",
+    description: "Explore digital platforms and tools to enhance training delivery and learner engagement.",
     category: "TAE Training",
     duration: "2.5h",
     lessons: 6,
@@ -67,7 +67,7 @@ const courses: CourseCardData[] = [
   {
     id: "6",
     title: "Trainer Wellbeing and Resilience in VET",
-    description: "Build personal resilience and manage wellbeing as a trainer in the vocational education sector.",
+    description: "Strategies for maintaining mental health and building resilience as a VET trainer.",
     category: "Wellbeing",
     duration: "1.5h",
     lessons: 0,
@@ -79,35 +79,15 @@ const courses: CourseCardData[] = [
 
 export default function TrainerHubPage() {
   const [activeFilter, setActiveFilter] = useState("All");
-
-  const filtered =
-    activeFilter === "All"
-      ? courses
-      : courses.filter((c) => c.category === activeFilter);
+  const filtered = activeFilter === "All" ? courses : courses.filter((c) => c.category === activeFilter);
 
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        <Link to="/academy" className="hover:text-foreground transition-colors flex items-center gap-1">
-          <GraduationCap className="h-3.5 w-3.5" />
-          Vivacity Academy
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <span className="text-foreground font-medium">Trainer Hub</span>
-      </nav>
-
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <Users className="h-6 w-6" style={{ color: "#23c0dd" }} />
-          <h1 className="text-2xl font-bold text-foreground">Trainer Hub</h1>
-        </div>
-        <p className="text-muted-foreground">
-          Professional development for trainers and assessors in the VET sector
-        </p>
-      </div>
-
+    <AcademyPageWrapper
+      title="Trainer Hub"
+      subtitle="Professional development for trainers and assessors in the VET sector"
+      icon={<Users className="h-6 w-6" />}
+      accentColour="#23c0dd"
+    >
       {/* Filter tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b">
         {categories.map((cat) => (
@@ -138,6 +118,6 @@ export default function TrainerHubPage() {
           No courses in this category yet.
         </div>
       )}
-    </div>
+    </AcademyPageWrapper>
   );
 }
