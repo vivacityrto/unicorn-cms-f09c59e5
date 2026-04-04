@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ShieldCheck, FileText, ArrowRight, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CourseCard from "@/components/academy/CourseCard";
