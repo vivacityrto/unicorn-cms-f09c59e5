@@ -1059,6 +1059,7 @@ const App = () => (
             <Route path="/academy/governance-person" element={<ProtectedRoute><AcademyGovernancePersonWrapperNew /></ProtectedRoute>} />
             <Route path="/academy/student-support-officer" element={<ProtectedRoute><AcademyStudentSupportWrapper /></ProtectedRoute>} />
             <Route path="/academy/administration-assistant" element={<ProtectedRoute><AcademyAdminAssistantWrapper /></ProtectedRoute>} />
+            <Route path="/academy/course/:slug" element={<ProtectedRoute><AcademyCourseDetailWrapper /></ProtectedRoute>} />
             
             {/* Add-in Shell Route - works without full auth for add-in JWT holders */}
             <Route path="/addin" element={<AddinShell />} />
