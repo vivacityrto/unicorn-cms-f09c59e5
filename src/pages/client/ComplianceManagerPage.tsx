@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ShieldCheck, FileText, ArrowRight, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CourseCard from "@/components/academy/CourseCard";
@@ -20,6 +21,7 @@ const resources = [
 
 export default function ComplianceManagerPage() {
   const [activeFilter, setActiveFilter] = useState("All");
+  const navigate = useNavigate();
   const { data: courses = [], isLoading } = useAcademyCourses({ audienceKey: AUDIENCE_KEY });
 
   const filtered = activeFilter === "All"
@@ -83,6 +85,9 @@ export default function ComplianceManagerPage() {
                 completedLessons={course.completed_lessons}
                 totalLessons={course.total_lessons}
                 accentColour={ACCENT}
+                onClick={() => navigate(`/academy/course/${course.slug}`)}
+                onStart={() => navigate(`/academy/course/${course.slug}`)}
+                onContinue={() => navigate(`/academy/course/${course.slug}`)}
               />
             );
           })}

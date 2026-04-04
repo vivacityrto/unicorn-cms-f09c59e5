@@ -21,6 +21,7 @@ export interface CourseCardProps {
   accentColour?: string;
   onContinue?: () => void;
   onStart?: () => void;
+  onClick?: () => void;
 }
 
 /** Also re-export the legacy interface so existing pages keep compiling during migration. */
@@ -56,13 +57,15 @@ export default function CourseCard({
   accentColour = "#23c0dd",
   onContinue,
   onStart,
+  onClick,
 }: CourseCardProps) {
   const total = totalLessons ?? lessonCount;
   const badge = statusBadge[status];
 
   return (
     <div
-      className="flex flex-col overflow-hidden bg-white"
+      className="flex flex-col overflow-hidden bg-white cursor-pointer"
+      onClick={onClick}
       style={{
         border: "1px solid #e8e4ef",
         borderRadius: 14,

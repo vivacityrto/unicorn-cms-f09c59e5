@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { HeartHandshake, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CourseCard from "@/components/academy/CourseCard";
@@ -13,6 +14,7 @@ const categoryTabs = ["All", "Online Delivery", "Student Engagement", "Support S
 
 export default function StudentSupportOfficerPage() {
   const [activeFilter, setActiveFilter] = useState("All");
+  const navigate = useNavigate();
   const { data: courses = [], isLoading } = useAcademyCourses({ audienceKey: AUDIENCE_KEY });
 
   const filtered = activeFilter === "All"
@@ -79,6 +81,9 @@ export default function StudentSupportOfficerPage() {
                 completedLessons={course.completed_lessons}
                 totalLessons={course.total_lessons}
                 accentColour={ACCENT}
+                onClick={() => navigate(`/academy/course/${course.slug}`)}
+                onStart={() => navigate(`/academy/course/${course.slug}`)}
+                onContinue={() => navigate(`/academy/course/${course.slug}`)}
               />
             );
           })}
