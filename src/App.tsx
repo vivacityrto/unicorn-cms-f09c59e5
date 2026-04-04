@@ -1018,6 +1018,7 @@ const App = () => (
             <Route path="/admin/merge-field-tags" element={<ProtectedRoute requireSuperAdmin><MergeFieldTagsAdmin /></ProtectedRoute>} />
             {/* SuperAdmin Academy Management */}
             <Route path="/superadmin/academy/enrollments" element={<ProtectedRoute requireSuperAdmin><AcademyEnrolmentsPage /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/tenant-access" element={<ProtectedRoute requireSuperAdmin><AcademyTenantAccessPage /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCourses /></ProtectedRoute>} />
