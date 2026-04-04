@@ -21,6 +21,7 @@ const resources = [
 
 export default function ComplianceManagerPage() {
   const [activeFilter, setActiveFilter] = useState("All");
+  const navigate = useNavigate();
   const { data: courses = [], isLoading } = useAcademyCourses({ audienceKey: AUDIENCE_KEY });
 
   const filtered = activeFilter === "All"
