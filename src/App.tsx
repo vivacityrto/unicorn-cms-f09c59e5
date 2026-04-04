@@ -159,6 +159,7 @@ const AcademyComplianceManagerWrapperNew = lazy(() => import("./pages/client/Aca
 const AcademyGovernancePersonWrapperNew = lazy(() => import("./pages/client/AcademyGovernancePersonWrapper"));
 const AcademyEnrolmentsPage = lazy(() => import("./pages/superadmin/AcademyEnrolmentsPage"));
 const AcademyTenantAccessPage = lazy(() => import("./pages/superadmin/AcademyTenantAccessPage"));
+const AcademyCertificatesAdminPage = lazy(() => import("./pages/superadmin/AcademyCertificatesPage"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
