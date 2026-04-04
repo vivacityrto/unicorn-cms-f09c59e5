@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Building2, GraduationCap, ChevronRight, FileText, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CourseCard, type CourseCardData } from "@/components/academy/CourseCard";
+import { CourseCardLegacy as CourseCard, type CourseCardData } from "@/components/academy/CourseCard";
 import { Card, CardContent } from "@/components/ui/card";
 
 const ACCENT = "#7130A0";
