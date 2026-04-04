@@ -160,6 +160,7 @@ const AcademyGovernancePersonWrapperNew = lazy(() => import("./pages/client/Acad
 const AcademyStudentSupportWrapper = lazy(() => import("./pages/client/AcademyStudentSupportWrapper"));
 const AcademyAdminAssistantWrapper = lazy(() => import("./pages/client/AcademyAdminAssistantWrapper"));
 const AcademyCourseDetailWrapper = lazy(() => import("./pages/client/AcademyCourseDetailWrapper"));
+const AcademyLessonViewerWrapper = lazy(() => import("./pages/client/AcademyLessonViewerWrapper"));
 const AcademyEnrolmentsPage = lazy(() => import("./pages/superadmin/AcademyEnrolmentsPage"));
 const AcademyTenantAccessPage = lazy(() => import("./pages/superadmin/AcademyTenantAccessPage"));
 const AcademyCertificatesAdminPage = lazy(() => import("./pages/superadmin/AcademyCertificatesPage"));
