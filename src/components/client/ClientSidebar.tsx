@@ -101,8 +101,8 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentReque
   const { openHelpCenter } = useHelpCenter();
   const isAdmin = isSuperAdmin() || (activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false);
 
-  const isAcademyChildActive = academySubItems.some((s) => location.pathname === s.path);
-  const [academyOpen, setAcademyOpen] = useState(isAcademyChildActive);
+  const isAcademyActive = location.pathname === "/academy" || location.pathname.startsWith("/academy/");
+  const [academyOpen, setAcademyOpen] = useState(isAcademyActive);
 
   const filterAdmin = (items: SidebarMenuItem[]) =>
     items.filter((item) => !item.adminOnly || isAdmin);
