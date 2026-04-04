@@ -57,18 +57,36 @@ export default function AcademyEnrolmentsPage() {
   const { data: enrolments, isLoading } = useQuery<any[]>({
     queryKey: ["academy-enrolments"],
     queryFn: async () => {
+      // Use separate queries to avoid TS2589 deep type instantiation from tenant FK fan-out
       const { data, error } = await supabase
         .from("academy_enrollments")
-        .select(`
-          *,
-          course:academy_courses(id, title, slug),
-          tenant:tenants!academy_enrollments_tenant_id_fkey(id, name),
-          user:users!academy_enrollments_user_id_fkey(user_uuid, first_name, last_name, email, avatar_url)
-        `)
+        .select("*")
         .order("enrolled_at", { ascending: false });
       if (error) throw error;
-      if (error) throw error;
-      return data;
+
+      // Enrich with related data
+      const courseIds = [...new Set(data.map((e) => e.course_id))];
+      const userIds = [...new Set(data.map((e) => e.user_id))];
+      const tenantIds = [...new Set(data.map((e) => e.tenant_id).filter(Boolean))] as number[];
+
+      const [coursesRes, usersRes, tenantsRes] = await Promise.all([
+        supabase.from("academy_courses").select("id, title, slug").in("id", courseIds),
+        supabase.from("users").select("user_uuid, first_name, last_name, email, avatar_url").in("user_uuid", userIds),
+        tenantIds.length > 0
+          ? supabase.from("tenants").select("id, name").in("id", tenantIds)
+          : Promise.resolve({ data: [] as any[], error: null }),
+      ]);
+
+      const courseMap = new Map((coursesRes.data || []).map((c) => [c.id, c]));
+      const userMap = new Map((usersRes.data || []).map((u) => [u.user_uuid, u]));
+      const tenantMap = new Map(((tenantsRes as any).data || []).map((t: any) => [t.id, t]));
+
+      return data.map((e) => ({
+        ...e,
+        course: courseMap.get(e.course_id) || null,
+        user: userMap.get(e.user_id) || null,
+        tenant: e.tenant_id ? tenantMap.get(e.tenant_id) || null : null,
+      }));
     },
   });
 

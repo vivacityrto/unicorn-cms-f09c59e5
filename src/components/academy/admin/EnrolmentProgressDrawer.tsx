@@ -22,18 +22,27 @@ export default function EnrolmentProgressDrawer({ enrolmentId, onClose }: Props)
     queryKey: ["enrolment-detail", enrolmentId],
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: enr, error } = await supabase
         .from("academy_enrollments")
-        .select(`
-          *,
-          course:academy_courses(id, title),
-          tenant:tenants!academy_enrollments_tenant_id_fkey(id, name),
-          user:users!academy_enrollments_user_id_fkey(user_uuid, first_name, last_name, email, avatar_url)
-        `)
+        .select("*")
         .eq("id", enrolmentId!)
         .single();
       if (error) throw error;
-      return data;
+
+      const [courseRes, userRes, tenantRes] = await Promise.all([
+        supabase.from("academy_courses").select("id, title").eq("id", enr.course_id).single(),
+        supabase.from("users").select("user_uuid, first_name, last_name, email, avatar_url").eq("user_uuid", enr.user_id).single(),
+        enr.tenant_id
+          ? supabase.from("tenants").select("id, name").eq("id", enr.tenant_id).single()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      return {
+        ...enr,
+        course: courseRes.data,
+        user: userRes.data,
+        tenant: (tenantRes as any).data,
+      };
     },
   });
 
