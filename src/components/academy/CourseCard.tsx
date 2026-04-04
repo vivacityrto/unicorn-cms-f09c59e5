@@ -21,6 +21,7 @@ export interface CourseCardProps {
   accentColour?: string;
   onContinue?: () => void;
   onStart?: () => void;
+  onClick?: () => void;
 }
 
 /** Also re-export the legacy interface so existing pages keep compiling during migration. */
