@@ -7,6 +7,8 @@ import {
   Users,
   ShieldCheck,
   Building2,
+  HeartHandshake,
+  ClipboardList,
   ChevronRight,
   Clock,
 } from "lucide-react";
@@ -38,6 +40,20 @@ const roleTiles = [
     icon: Building2,
     accent: "#7130A0",
     route: "/academy/governance-person",
+  },
+  {
+    title: "Student Support Officer",
+    description: "Online delivery, student engagement, and support services",
+    icon: HeartHandshake,
+    accent: "#23c0dd",
+    route: "/academy/student-support-officer",
+  },
+  {
+    title: "Administration Assistant",
+    description: "Strategic planning, branding, business operations, and governance",
+    icon: ClipboardList,
+    accent: "#7130A0",
+    route: "/academy/administration-assistant",
   },
 ];
 
@@ -83,7 +99,7 @@ export default function AcademyDashboardPage() {
       </div>
 
       {/* Role Tiles */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {roleTiles.map((tile) => (
           <Link key={tile.route} to={tile.route} className="block group">
             <Card

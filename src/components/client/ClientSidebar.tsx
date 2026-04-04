@@ -21,6 +21,8 @@ import {
   Inbox,
   GraduationCap,
   ChevronDown,
+  HeartHandshake,
+  ClipboardList,
 } from "lucide-react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,6 +49,8 @@ const academySubItems: SidebarMenuItem[] = [
   { icon: GraduationCap, label: "Trainer Hub", path: "/academy/trainer" },
   { icon: GraduationCap, label: "Compliance Manager", path: "/academy/compliance-manager" },
   { icon: GraduationCap, label: "Governance Person", path: "/academy/governance-person" },
+  { icon: HeartHandshake, label: "Student Support Officer", path: "/academy/student-support-officer" },
+  { icon: ClipboardList, label: "Administration Assistant", path: "/academy/administration-assistant" },
 ];
 
 const clientMenuItemsAfter: SidebarMenuItem[] = [
