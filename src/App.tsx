@@ -153,6 +153,10 @@ const NewSuggestionForm = lazy(() => import("./pages/NewSuggestionForm"));
 const SuggestionDetail = lazy(() => import("./pages/SuggestionDetail"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
 const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
+const AcademyDashboardWrapperNew = lazy(() => import("./pages/client/AcademyDashboardWrapper"));
+const AcademyTrainerWrapperNew = lazy(() => import("./pages/client/AcademyTrainerWrapper"));
+const AcademyComplianceManagerWrapperNew = lazy(() => import("./pages/client/AcademyComplianceManagerWrapper"));
+const AcademyGovernancePersonWrapperNew = lazy(() => import("./pages/client/AcademyGovernancePersonWrapper"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
@@ -1039,6 +1043,10 @@ const App = () => (
             <Route path="/client/profile" element={<ProtectedRoute><ClientProfileWrapperNew /></ProtectedRoute>} />
             <Route path="/client/tga" element={<ProtectedRoute><ClientTgaDetailsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/files" element={<ProtectedRoute><ClientFilesWrapperNew /></ProtectedRoute>} />
+            <Route path="/academy" element={<ProtectedRoute><AcademyDashboardWrapperNew /></ProtectedRoute>} />
+            <Route path="/academy/trainer" element={<ProtectedRoute><AcademyTrainerWrapperNew /></ProtectedRoute>} />
+            <Route path="/academy/compliance-manager" element={<ProtectedRoute><AcademyComplianceManagerWrapperNew /></ProtectedRoute>} />
+            <Route path="/academy/governance-person" element={<ProtectedRoute><AcademyGovernancePersonWrapperNew /></ProtectedRoute>} />
             
             {/* Add-in Shell Route - works without full auth for add-in JWT holders */}
             <Route path="/addin" element={<AddinShell />} />
