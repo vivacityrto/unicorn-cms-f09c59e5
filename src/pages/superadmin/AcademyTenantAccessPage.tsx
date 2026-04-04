@@ -1,6 +1,4 @@
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +19,6 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { toast } from "sonner";
 import { format, addDays, startOfMonth, endOfMonth, addMonths, isAfter, isBefore } from "date-fns";
 import {
   Search, Settings, Eye, CalendarIcon, Shield, ShieldOff, Clock, X, Plus,
@@ -29,31 +26,20 @@ import {
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import AcademyStatCard from "@/components/academy/admin/AcademyStatCard";
+import {
+  useTenantSummaries,
+  useToggleTenantAccess,
+  useUpdateTenantAccess,
+  usePackageCourseRules,
+  useAddPackageCourseRule,
+  useRemovePackageCourseRule,
+  useRuleFormOptions,
+  type TenantRow,
+} from "@/hooks/academy/useTenantAcademyAccess";
 
 type StatusTab = "all" | "enabled" | "disabled" | "expiring";
 
-interface TenantRow {
-  id: number;
-  name: string;
-  academy_access_enabled: boolean;
-  academy_max_users: number | null;
-  academy_subscription_expires_at: string | null;
-  metadata: Record<string, any> | null;
-  enrolled_count: number;
-  package_name: string | null;
-}
-
-interface AutoEnrolRule {
-  id: number;
-  package_id: number;
-  course_id: number;
-  is_active: boolean;
-  package_name: string | null;
-  course_title: string | null;
-}
-
 export default function AcademyTenantAccessPage() {
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("all");
   const [drawerTenant, setDrawerTenant] = useState<TenantRow | null>(null);
@@ -73,169 +59,14 @@ export default function AcademyTenantAccessPage() {
   const now = new Date();
   const thirtyDaysFromNow = addDays(now, 30);
 
-  // ── Fetch tenants ──
-  const { data: tenants = [], isLoading } = useQuery<TenantRow[]>({
-    queryKey: ["academy-tenant-access"],
-    queryFn: async () => {
-      const { data: tenantData, error } = await supabase
-        .from("tenants")
-        .select("id, name, academy_access_enabled, academy_max_users, academy_subscription_expires_at, metadata")
-        .order("name");
-      if (error) throw error;
-
-      // Get enrolled counts per tenant
-      const { data: enrolData } = await supabase
-        .from("academy_enrollments")
-        .select("tenant_id")
-        .eq("status", "active");
-
-      const countMap = new Map<number, number>();
-      (enrolData ?? []).forEach((e: any) => {
-        countMap.set(e.tenant_id, (countMap.get(e.tenant_id) || 0) + 1);
-      });
-
-      return (tenantData ?? []).map((t: any) => ({
-        id: t.id,
-        name: t.name ?? `Tenant ${t.id}`,
-        academy_access_enabled: t.academy_access_enabled ?? false,
-        academy_max_users: t.academy_max_users,
-        academy_subscription_expires_at: t.academy_subscription_expires_at,
-        metadata: t.metadata as Record<string, any> | null,
-        enrolled_count: countMap.get(t.id) || 0,
-        package_name: null, // placeholder
-      }));
-    },
-  });
-
-  // ── Fetch auto-enrol rules for drawer ──
-  const { data: autoEnrolRules = [], refetch: refetchRules } = useQuery<AutoEnrolRule[]>({
-    queryKey: ["academy-auto-enrol-rules", drawerTenant?.id],
-    enabled: !!drawerTenant,
-    queryFn: async () => {
-      if (!drawerTenant) return [];
-      const { data: rules } = await supabase
-        .from("academy_package_course_rules")
-        .select("id, package_id, course_id, is_active")
-        .eq("is_active", true);
-
-      if (!rules?.length) return [];
-
-      const packageIds = [...new Set(rules.map((r: any) => r.package_id))];
-      const courseIds = [...new Set(rules.map((r: any) => r.course_id))];
-
-      const [{ data: pkgs }, { data: courses }] = await Promise.all([
-        supabase.from("packages").select("id, name").in("id", packageIds),
-        supabase.from("academy_courses").select("id, title").in("id", courseIds),
-      ]);
-
-      const pkgMap = new Map((pkgs ?? []).map((p: any) => [p.id, p.name]));
-      const courseMap = new Map((courses ?? []).map((c: any) => [c.id, c.title]));
-
-      return rules.map((r: any) => ({
-        id: r.id,
-        package_id: r.package_id,
-        course_id: r.course_id,
-        is_active: r.is_active,
-        package_name: pkgMap.get(r.package_id) ?? `Package ${r.package_id}`,
-        course_title: courseMap.get(r.course_id) ?? `Course ${r.course_id}`,
-      }));
-    },
-  });
-
-  // ── Packages & courses for add-rule form ──
-  const { data: allPackages = [] } = useQuery({
-    queryKey: ["packages-list"],
-    enabled: showAddRule,
-    queryFn: async () => {
-      const { data } = await supabase.from("packages").select("id, name").order("name");
-      return data ?? [];
-    },
-  });
-
-  const { data: allCourses = [] } = useQuery({
-    queryKey: ["courses-list"],
-    enabled: showAddRule,
-    queryFn: async () => {
-      const { data } = await supabase.from("academy_courses").select("id, title").eq("status", "published").order("title");
-      return data ?? [];
-    },
-  });
-
-  // ── Toggle access mutation ──
-  const toggleMutation = useMutation({
-    mutationFn: async ({ id, enabled }: { id: number; enabled: boolean }) => {
-      const { error } = await supabase
-        .from("tenants")
-        .update({ academy_access_enabled: enabled } as any)
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: (_, vars) => {
-      toast.success(`Academy access ${vars.enabled ? "enabled" : "disabled"}`);
-      queryClient.invalidateQueries({ queryKey: ["academy-tenant-access"] });
-    },
-    onError: () => toast.error("Failed to update access"),
-  });
-
-  // ── Save settings mutation ──
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      if (!drawerTenant) return;
-      const existingMeta = (drawerTenant.metadata ?? {}) as Record<string, any>;
-      const newMeta = { ...existingMeta, academy_notes: formNotes || null };
-      const { error } = await supabase
-        .from("tenants")
-        .update({
-          academy_access_enabled: formAccess,
-          academy_max_users: formMaxUsers === "" ? null : formMaxUsers,
-          academy_subscription_expires_at: formExpires ? formExpires.toISOString() : null,
-          metadata: newMeta,
-        } as any)
-        .eq("id", drawerTenant.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Academy settings saved");
-      setDrawerTenant(null);
-      queryClient.invalidateQueries({ queryKey: ["academy-tenant-access"] });
-    },
-    onError: () => toast.error("Failed to save settings"),
-  });
-
-  // ── Add auto-enrol rule ──
-  const addRuleMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("academy_package_course_rules").insert({
-        package_id: parseInt(rulePackageId),
-        course_id: parseInt(ruleCourseId),
-        is_active: true,
-      } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Auto-enrol rule added");
-      setShowAddRule(false);
-      setRulePackageId("");
-      setRuleCourseId("");
-      refetchRules();
-    },
-    onError: () => toast.error("Failed to add rule"),
-  });
-
-  // ── Remove auto-enrol rule ──
-  const removeRuleMutation = useMutation({
-    mutationFn: async (ruleId: number) => {
-      const { error } = await supabase
-        .from("academy_package_course_rules")
-        .update({ is_active: false } as any)
-        .eq("id", ruleId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Rule removed");
-      refetchRules();
-    },
-  });
+  // ── Data hooks ──
+  const { data: tenants = [], isLoading } = useTenantSummaries();
+  const toggleMutation = useToggleTenantAccess();
+  const saveMutation = useUpdateTenantAccess();
+  const { data: autoEnrolRules = [] } = usePackageCourseRules(!!drawerTenant);
+  const addRuleMutation = useAddPackageCourseRule();
+  const removeRuleMutation = useRemovePackageCourseRule();
+  const { packages: allPackages, courses: allCourses } = useRuleFormOptions(showAddRule);
 
   // ── Open drawer ──
   const openDrawer = (t: TenantRow) => {
@@ -262,12 +93,10 @@ export default function AcademyTenantAccessPage() {
   // ── Filter logic ──
   const filtered = useMemo(() => {
     let list = tenants;
-
     if (search) {
       const q = search.toLowerCase();
       list = list.filter((t) => t.name.toLowerCase().includes(q));
     }
-
     if (statusTab === "enabled") list = list.filter((t) => t.academy_access_enabled);
     if (statusTab === "disabled") list = list.filter((t) => !t.academy_access_enabled);
     if (statusTab === "expiring") {
@@ -277,15 +106,12 @@ export default function AcademyTenantAccessPage() {
         return isAfter(exp, now) && isBefore(exp, thirtyDaysFromNow);
       });
     }
-
-    // Timeline month filter
     if (timelineMonth) {
       list = list.filter((t) => {
         if (!t.academy_subscription_expires_at) return false;
         return format(new Date(t.academy_subscription_expires_at), "yyyy-MM") === timelineMonth;
       });
     }
-
     return list;
   }, [tenants, search, statusTab, timelineMonth]);
 
@@ -293,17 +119,15 @@ export default function AcademyTenantAccessPage() {
   const expiryTimeline = useMemo(() => {
     const months: { key: string; label: string; count: number }[] = [];
     for (let i = 0; i < 6; i++) {
-      const monthStart = startOfMonth(addMonths(now, i));
-      const monthEnd = endOfMonth(monthStart);
-      const key = format(monthStart, "yyyy-MM");
+      const mStart = startOfMonth(addMonths(now, i));
+      const mEnd = endOfMonth(mStart);
+      const key = format(mStart, "yyyy-MM");
       const count = tenants.filter((t) => {
         if (!t.academy_subscription_expires_at) return false;
         const exp = new Date(t.academy_subscription_expires_at);
-        return !isBefore(exp, monthStart) && !isAfter(exp, monthEnd);
+        return !isBefore(exp, mStart) && !isAfter(exp, mEnd);
       }).length;
-      if (count > 0) {
-        months.push({ key, label: format(monthStart, "MMMM yyyy"), count });
-      }
+      if (count > 0) months.push({ key, label: format(mStart, "MMMM yyyy"), count });
     }
     return months;
   }, [tenants]);
@@ -327,6 +151,24 @@ export default function AcademyTenantAccessPage() {
     { value: "expiring", label: "Expiring Soon" },
   ];
 
+  const handleSaveSettings = () => {
+    if (!drawerTenant) return;
+    const existingMeta = (drawerTenant.metadata ?? {}) as Record<string, any>;
+    const newMeta = { ...existingMeta, academy_notes: formNotes || null };
+    saveMutation.mutate(
+      {
+        tenantId: drawerTenant.id,
+        data: {
+          academy_access_enabled: formAccess,
+          academy_max_users: formMaxUsers === "" ? null : formMaxUsers as number,
+          academy_subscription_expires_at: formExpires ? formExpires.toISOString() : null,
+          metadata: newMeta,
+        },
+      },
+      { onSuccess: () => setDrawerTenant(null) }
+    );
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -340,36 +182,16 @@ export default function AcademyTenantAccessPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <AcademyStatCard
-            label="Tenants with Access"
-            value={stats.withAccess}
-            icon={<Shield className="h-5 w-5 text-primary" />}
-            loading={isLoading}
-          />
-          <AcademyStatCard
-            label="Without Access"
-            value={stats.withoutAccess}
-            icon={<ShieldOff className="h-5 w-5 text-muted-foreground" />}
-            loading={isLoading}
-          />
-          <AcademyStatCard
-            label="Expiring This Month"
-            value={stats.expiring}
-            icon={<Clock className="h-5 w-5 text-orange-500" />}
-            loading={isLoading}
-          />
+          <AcademyStatCard label="Tenants with Access" value={stats.withAccess} icon={<Shield className="h-5 w-5 text-primary" />} loading={isLoading} />
+          <AcademyStatCard label="Without Access" value={stats.withoutAccess} icon={<ShieldOff className="h-5 w-5 text-muted-foreground" />} loading={isLoading} />
+          <AcademyStatCard label="Expiring This Month" value={stats.expiring} icon={<Clock className="h-5 w-5 text-orange-500" />} loading={isLoading} />
         </div>
 
         {/* Filter bar */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search tenant name…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+            <Input placeholder="Search tenant name…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
           <div className="flex gap-1 border rounded-lg p-1 bg-muted/30">
             {tabs.map((tab) => (
@@ -503,13 +325,11 @@ export default function AcademyTenantAccessPage() {
           </SheetHeader>
 
           <div className="space-y-6 py-6">
-            {/* Access toggle */}
             <div className="flex items-center justify-between">
               <Label className="text-base font-medium">Academy Access</Label>
               <Switch checked={formAccess} onCheckedChange={setFormAccess} />
             </div>
 
-            {/* Max users */}
             <div className="space-y-2">
               <Label>Maximum Users</Label>
               <Input
@@ -524,7 +344,6 @@ export default function AcademyTenantAccessPage() {
               </p>
             </div>
 
-            {/* Subscription expires */}
             <div className="space-y-2">
               <Label>Subscription Expires</Label>
               <Popover>
@@ -538,18 +357,11 @@ export default function AcademyTenantAccessPage() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formExpires}
-                    onSelect={setFormExpires}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
+                  <Calendar mode="single" selected={formExpires} onSelect={setFormExpires} initialFocus className={cn("p-3 pointer-events-auto")} />
                 </PopoverContent>
               </Popover>
             </div>
 
-            {/* Notes */}
             <div className="space-y-2">
               <Label>Notes</Label>
               <Textarea
@@ -589,7 +401,6 @@ export default function AcademyTenantAccessPage() {
                 </div>
               ))}
 
-              {/* Add rule form */}
               {showAddRule && (
                 <div className="rounded-lg border p-4 space-y-3 bg-muted/30">
                   <div className="space-y-2">
@@ -617,7 +428,12 @@ export default function AcademyTenantAccessPage() {
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      onClick={() => addRuleMutation.mutate()}
+                      onClick={() => {
+                        addRuleMutation.mutate(
+                          { packageId: parseInt(rulePackageId), courseId: parseInt(ruleCourseId) },
+                          { onSuccess: () => { setShowAddRule(false); setRulePackageId(""); setRuleCourseId(""); } }
+                        );
+                      }}
                       disabled={!rulePackageId || !ruleCourseId}
                       style={{ backgroundColor: "hsl(var(--primary))" }}
                     >
@@ -632,10 +448,7 @@ export default function AcademyTenantAccessPage() {
 
           <SheetFooter className="gap-2">
             <Button variant="outline" onClick={() => setDrawerTenant(null)}>Cancel</Button>
-            <Button
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending}
-            >
+            <Button onClick={handleSaveSettings} disabled={saveMutation.isPending}>
               Save Settings
             </Button>
           </SheetFooter>

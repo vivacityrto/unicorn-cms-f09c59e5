@@ -1,6 +1,4 @@
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,11 +20,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   Search, Plus, MoreHorizontal, Eye, CalendarIcon, XCircle,
@@ -36,12 +32,19 @@ import { cn } from "@/lib/utils";
 import AcademyStatCard from "@/components/academy/admin/AcademyStatCard";
 import CourseProgressBar from "@/components/academy/admin/CourseProgressBar";
 import EnrolmentProgressDrawer from "@/components/academy/admin/EnrolmentProgressDrawer";
+import {
+  useAdminEnrollments,
+  useEnrollmentProgress,
+  useEnrollmentFilterOptions,
+  useRevokeEnrollment,
+  useReactivateEnrollment,
+  useExtendEnrollment,
+} from "@/hooks/academy/useAcademyEnrollments";
 
 type StatusFilter = "all" | "active" | "completed" | "expired" | "revoked";
 type SourceFilter = "all" | "manual" | "auto" | "package";
 
 export default function AcademyEnrolmentsPage() {
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [courseFilter, setCourseFilter] = useState<string>("all");
   const [tenantFilter, setTenantFilter] = useState<string>("all");
@@ -53,88 +56,13 @@ export default function AcademyEnrolmentsPage() {
   const [extendDate, setExtendDate] = useState<Date | undefined>();
   const [drawerEnrolmentId, setDrawerEnrolmentId] = useState<number | null>(null);
 
-  // Fetch enrolments with progress view
-  const { data: enrolments, isLoading } = useQuery<any[]>({
-    queryKey: ["academy-enrolments"],
-    queryFn: async () => {
-      // Use separate queries to avoid TS2589 deep type instantiation from tenant FK fan-out
-      const { data, error } = await supabase
-        .from("academy_enrollments")
-        .select("*")
-        .order("enrolled_at", { ascending: false });
-      if (error) throw error;
-
-      // Enrich with related data
-      const courseIds = [...new Set(data.map((e) => e.course_id))];
-      const userIds = [...new Set(data.map((e) => e.user_id))];
-      const tenantIds = [...new Set(data.map((e) => e.tenant_id).filter(Boolean))] as number[];
-
-      const [coursesRes, usersRes, tenantsRes] = await Promise.all([
-        supabase.from("academy_courses").select("id, title, slug").in("id", courseIds),
-        supabase.from("users").select("user_uuid, first_name, last_name, email, avatar_url").in("user_uuid", userIds),
-        tenantIds.length > 0
-          ? supabase.from("tenants").select("id, name").in("id", tenantIds)
-          : Promise.resolve({ data: [] as any[], error: null }),
-      ]);
-
-      const courseMap = new Map((coursesRes.data || []).map((c) => [c.id, c]));
-      const userMap = new Map((usersRes.data || []).map((u) => [u.user_uuid, u]));
-      const tenantMap = new Map(((tenantsRes as any).data || []).map((t: any) => [t.id, t]));
-
-      return data.map((e) => ({
-        ...e,
-        course: courseMap.get(e.course_id) || null,
-        user: userMap.get(e.user_id) || null,
-        tenant: e.tenant_id ? tenantMap.get(e.tenant_id) || null : null,
-      }));
-    },
-  });
-
-  // Fetch progress data
-  const { data: progressData } = useQuery({
-    queryKey: ["academy-progress"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("v_academy_course_progress")
-        .select("*");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch courses for filter
-  const { data: courses } = useQuery({
-    queryKey: ["academy-courses-list"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("academy_courses")
-        .select("id, title")
-        .order("title");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch tenants for filter
-  const { data: tenants } = useQuery({
-    queryKey: ["academy-tenants-list"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tenants")
-        .select("id, name")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const progressMap = useMemo(() => {
-    const map = new Map<number, { progress_percentage: number | null; completed_lessons: number | null; total_lessons: number | null }>();
-    progressData?.forEach((p) => {
-      if (p.enrollment_id) map.set(p.enrollment_id, p);
-    });
-    return map;
-  }, [progressData]);
+  // ── Data hooks ──
+  const { data: enrolments, isLoading } = useAdminEnrollments();
+  const { data: progressMap = new Map() } = useEnrollmentProgress();
+  const { courses, tenants } = useEnrollmentFilterOptions();
+  const revokeMutation = useRevokeEnrollment();
+  const reactivateMutation = useReactivateEnrollment();
+  const extendMutation = useExtendEnrollment();
 
   // Filter enrolments
   const filtered = useMemo(() => {
@@ -166,61 +94,10 @@ export default function AcademyEnrolmentsPage() {
     };
   }, [enrolments]);
 
-  // Revoke mutation
-  const revokeMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const { error } = await supabase
-        .from("academy_enrollments")
-        .update({ status: "revoked", revoked_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["academy-enrolments"] });
-      toast.success("Enrolment revoked");
-      setRevokeTarget(null);
-    },
-    onError: () => toast.error("Failed to revoke enrolment"),
-  });
-
-  // Reactivate mutation
-  const reactivateMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const { error } = await supabase
-        .from("academy_enrollments")
-        .update({ status: "active", revoked_at: null, revoke_reason: null })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["academy-enrolments"] });
-      toast.success("Enrolment reactivated");
-    },
-    onError: () => toast.error("Failed to reactivate"),
-  });
-
-  // Extend expiry mutation
-  const extendMutation = useMutation({
-    mutationFn: async ({ id, date }: { id: number; date: string }) => {
-      const { error } = await supabase
-        .from("academy_enrollments")
-        .update({ expires_at: date })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["academy-enrolments"] });
-      toast.success("Expiry extended");
-      setExtendTarget(null);
-      setExtendDate(undefined);
-    },
-    onError: () => toast.error("Failed to extend expiry"),
-  });
-
   // Bulk revoke
   const handleBulkRevoke = async () => {
     for (const id of selectedIds) {
-      await revokeMutation.mutateAsync(id);
+      await revokeMutation.mutateAsync({ id });
     }
     setSelectedIds(new Set());
   };
@@ -297,18 +174,13 @@ export default function AcademyEnrolmentsPage() {
             <div className="flex flex-wrap gap-3">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search user, email, tenant…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                />
+                <Input placeholder="Search user, email, tenant…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
               </div>
               <Select value={courseFilter} onValueChange={setCourseFilter}>
                 <SelectTrigger className="w-[200px]"><SelectValue placeholder="All Courses" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Courses</SelectItem>
-                  {courses?.map((c) => (
+                  {courses.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>
                   ))}
                 </SelectContent>
@@ -317,7 +189,7 @@ export default function AcademyEnrolmentsPage() {
                 <SelectTrigger className="w-[200px]"><SelectValue placeholder="All Tenants" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Tenants</SelectItem>
-                  {tenants?.map((t) => (
+                  {tenants.map((t) => (
                     <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -409,10 +281,7 @@ export default function AcademyEnrolmentsPage() {
                     return (
                       <TableRow key={e.id}>
                         <TableCell>
-                          <Checkbox
-                            checked={selectedIds.has(e.id)}
-                            onCheckedChange={() => toggleSelect(e.id)}
-                          />
+                          <Checkbox checked={selectedIds.has(e.id)} onCheckedChange={() => toggleSelect(e.id)} />
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -497,7 +366,11 @@ export default function AcademyEnrolmentsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => revokeTarget && revokeMutation.mutate(revokeTarget)}>
+            <AlertDialogAction onClick={() => {
+              if (revokeTarget) {
+                revokeMutation.mutate({ id: revokeTarget }, { onSuccess: () => setRevokeTarget(null) });
+              }
+            }}>
               Revoke
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -523,7 +396,14 @@ export default function AcademyEnrolmentsPage() {
             <Button variant="outline" onClick={() => setExtendTarget(null)}>Cancel</Button>
             <Button
               disabled={!extendDate}
-              onClick={() => extendTarget && extendDate && extendMutation.mutate({ id: extendTarget, date: extendDate.toISOString() })}
+              onClick={() => {
+                if (extendTarget && extendDate) {
+                  extendMutation.mutate(
+                    { id: extendTarget, date: extendDate.toISOString() },
+                    { onSuccess: () => { setExtendTarget(null); setExtendDate(undefined); } }
+                  );
+                }
+              }}
             >
               Save
             </Button>
