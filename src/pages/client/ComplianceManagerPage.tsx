@@ -85,6 +85,9 @@ export default function ComplianceManagerPage() {
                 completedLessons={course.completed_lessons}
                 totalLessons={course.total_lessons}
                 accentColour={ACCENT}
+                onClick={() => navigate(`/academy/course/${course.slug}`)}
+                onStart={() => navigate(`/academy/course/${course.slug}`)}
+                onContinue={() => navigate(`/academy/course/${course.slug}`)}
               />
             );
           })}
