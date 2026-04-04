@@ -96,7 +96,7 @@ function NavItem({ item, isActive, sidebarOpen: sOpen }: { item: SidebarMenuItem
 
 export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentRequest }: ClientSidebarProps) {
   const location = useLocation();
-  const { tenantName, isPreview, activeTenantId } = useClientTenant();
+  const { tenantName, isPreview, activeTenantId, academyAccessEnabled } = useClientTenant();
   const { getTenantRole, isSuperAdmin } = useAuth();
   const { openHelpCenter } = useHelpCenter();
   const isAdmin = isSuperAdmin() || (activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false);
