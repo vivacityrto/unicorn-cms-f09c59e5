@@ -168,66 +168,70 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentReque
             <NavItem key={item.path} item={item} isActive={location.pathname === item.path} sidebarOpen={sidebarOpen} />
           ))}
 
-          {/* Vivacity Academy collapsible */}
-          <button
-            onClick={() => setAcademyOpen((prev) => !prev)}
-            className={cn(
-              "flex items-center gap-3 mx-2 mb-1 w-[calc(100%-16px)] transition-all text-sm rounded-lg min-h-[44px] relative",
-              sidebarOpen ? "px-4" : "px-0 justify-center",
-              isAcademyActive
-                ? "bg-white/15 text-white font-semibold"
-                : "text-white/80 hover:bg-white/10 hover:text-white"
-            )}
-            style={{ paddingTop: "10px", paddingBottom: "10px" }}
-          >
-            {isAcademyActive && (
-              <div
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
-                style={{ backgroundColor: "hsl(189 74% 50%)" }}
-              />
-            )}
-            <GraduationCap
-              className="w-[18px] h-[18px] flex-shrink-0"
-              style={{ color: isAcademyActive ? "hsl(189 74% 50%)" : "currentColor" }}
-            />
-            {sidebarOpen && (
-              <>
-                <span className="leading-snug flex-1 text-left">Vivacity Academy</span>
-                <ChevronDown
-                  className={cn("w-4 h-4 transition-transform duration-200", academyOpen && "rotate-180")}
+          {/* Vivacity Academy collapsible (hidden when access disabled) */}
+          {academyAccessEnabled && (
+            <>
+              <button
+                onClick={() => setAcademyOpen((prev) => !prev)}
+                className={cn(
+                  "flex items-center gap-3 mx-2 mb-1 w-[calc(100%-16px)] transition-all text-sm rounded-lg min-h-[44px] relative",
+                  sidebarOpen ? "px-4" : "px-0 justify-center",
+                  isAcademyActive
+                    ? "bg-white/15 text-white font-semibold"
+                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                )}
+                style={{ paddingTop: "10px", paddingBottom: "10px" }}
+              >
+                {isAcademyActive && (
+                  <div
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
+                    style={{ backgroundColor: "hsl(189 74% 50%)" }}
+                  />
+                )}
+                <GraduationCap
+                  className="w-[18px] h-[18px] flex-shrink-0"
+                  style={{ color: isAcademyActive ? "hsl(189 74% 50%)" : "currentColor" }}
                 />
-              </>
-            )}
-          </button>
+                {sidebarOpen && (
+                  <>
+                    <span className="leading-snug flex-1 text-left">Vivacity Academy</span>
+                    <ChevronDown
+                      className={cn("w-4 h-4 transition-transform duration-200", academyOpen && "rotate-180")}
+                    />
+                  </>
+                )}
+              </button>
 
-          {/* Academy sub-items */}
-          {academyOpen && sidebarOpen && (
-            <div className="ml-4">
-              {academySubItems.map((sub) => {
-                const active = location.pathname === sub.path;
-                return (
-                  <Link
-                    key={sub.path}
-                    to={sub.path}
-                    className={cn(
-                      "flex items-center gap-2 mx-2 mb-0.5 transition-all text-xs rounded-lg min-h-[36px] relative pl-6",
-                      active
-                        ? "bg-white/15 text-white font-semibold"
-                        : "text-white/70 hover:bg-white/[0.08] hover:text-white"
-                    )}
-                    style={{ paddingTop: "6px", paddingBottom: "6px" }}
-                  >
-                    {active && (
-                      <div
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full"
-                        style={{ backgroundColor: "hsl(189 74% 50%)" }}
-                      />
-                    )}
-                    <span>{sub.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
+              {/* Academy sub-items */}
+              {academyOpen && sidebarOpen && (
+                <div className="ml-4">
+                  {academySubItems.map((sub) => {
+                    const active = location.pathname === sub.path;
+                    return (
+                      <Link
+                        key={sub.path}
+                        to={sub.path}
+                        className={cn(
+                          "flex items-center gap-2 mx-2 mb-0.5 transition-all text-xs rounded-lg min-h-[36px] relative pl-6",
+                          active
+                            ? "bg-white/15 text-white font-semibold"
+                            : "text-white/70 hover:bg-white/[0.08] hover:text-white"
+                        )}
+                        style={{ paddingTop: "6px", paddingBottom: "6px" }}
+                      >
+                        {active && (
+                          <div
+                            className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full"
+                            style={{ backgroundColor: "hsl(189 74% 50%)" }}
+                          />
+                        )}
+                        <span>{sub.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
 
           {/* Items after Academy */}
