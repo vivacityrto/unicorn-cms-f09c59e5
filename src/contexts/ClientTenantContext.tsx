@@ -9,6 +9,7 @@ interface ClientTenantContextValue {
   logoUrl: string | null;
   isPreview: boolean;
   isReadOnly: boolean;
+  academyAccessEnabled: boolean;
 }
 
 const ClientTenantContext = createContext<ClientTenantContextValue>({
@@ -17,12 +18,14 @@ const ClientTenantContext = createContext<ClientTenantContextValue>({
   logoUrl: null,
   isPreview: false,
   isReadOnly: false,
+  academyAccessEnabled: false,
 });
 
 export function ClientTenantProvider({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
   const { isPreviewMode, previewTenant } = useClientPreview();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [academyAccessEnabled, setAcademyAccessEnabled] = useState(false);
 
   // Preview mode takes precedence (staff viewing as client)
   const isPreview = isPreviewMode && !!previewTenant;
@@ -30,12 +33,12 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
   const tenantName = isPreview ? previewTenant!.name : null;
 
   useEffect(() => {
-    if (!activeTenantId) { setLogoUrl(null); return; }
+    if (!activeTenantId) { setLogoUrl(null); setAcademyAccessEnabled(false); return; }
 
     (async () => {
       const { data } = await supabase
         .from("tenants")
-        .select("logo_path")
+        .select("logo_path, academy_access_enabled")
         .eq("id", activeTenantId)
         .single();
 
@@ -47,6 +50,7 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
       } else {
         setLogoUrl(null);
       }
+      setAcademyAccessEnabled(data?.academy_access_enabled ?? false);
     })();
   }, [activeTenantId]);
 
@@ -57,7 +61,8 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
         tenantName,
         logoUrl,
         isPreview,
-        isReadOnly: isPreview, // Preview is always read-only
+        isReadOnly: isPreview,
+        academyAccessEnabled,
       }}
     >
       {children}
