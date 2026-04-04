@@ -259,10 +259,15 @@ export default function AcademyCourseDetailPage() {
                       <ul className="space-y-1 pl-10">
                         {publishedModLessons.map((lesson) => {
                           const done = completedLessonIds.includes(lesson.id);
+                          const canNavigate = isEnrolled;
                           return (
                             <li
                               key={lesson.id}
-                              className="flex items-center gap-2 py-2 px-3 rounded-md text-sm hover:bg-muted/50 transition-colors"
+                              className={`flex items-center gap-2 py-2 px-3 rounded-md text-sm hover:bg-muted/50 transition-colors ${canNavigate ? "cursor-pointer" : ""}`}
+                              onClick={canNavigate ? () => navigate(`/academy/course/${slug}/lesson/${lesson.id}`) : undefined}
+                              role={canNavigate ? "button" : undefined}
+                              tabIndex={canNavigate ? 0 : undefined}
+                              onKeyDown={canNavigate ? (e) => { if (e.key === "Enter") navigate(`/academy/course/${slug}/lesson/${lesson.id}`); } : undefined}
                             >
                               {done ? (
                                 <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: "#22c55e" }} />

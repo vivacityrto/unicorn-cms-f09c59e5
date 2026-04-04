@@ -160,6 +160,7 @@ const AcademyGovernancePersonWrapperNew = lazy(() => import("./pages/client/Acad
 const AcademyStudentSupportWrapper = lazy(() => import("./pages/client/AcademyStudentSupportWrapper"));
 const AcademyAdminAssistantWrapper = lazy(() => import("./pages/client/AcademyAdminAssistantWrapper"));
 const AcademyCourseDetailWrapper = lazy(() => import("./pages/client/AcademyCourseDetailWrapper"));
+const AcademyLessonViewerWrapper = lazy(() => import("./pages/client/AcademyLessonViewerWrapper"));
 const AcademyEnrolmentsPage = lazy(() => import("./pages/superadmin/AcademyEnrolmentsPage"));
 const AcademyTenantAccessPage = lazy(() => import("./pages/superadmin/AcademyTenantAccessPage"));
 const AcademyCertificatesAdminPage = lazy(() => import("./pages/superadmin/AcademyCertificatesPage"));
@@ -1060,6 +1061,7 @@ const App = () => (
             <Route path="/academy/student-support-officer" element={<ProtectedRoute><AcademyStudentSupportWrapper /></ProtectedRoute>} />
             <Route path="/academy/administration-assistant" element={<ProtectedRoute><AcademyAdminAssistantWrapper /></ProtectedRoute>} />
             <Route path="/academy/course/:slug" element={<ProtectedRoute><AcademyCourseDetailWrapper /></ProtectedRoute>} />
+            <Route path="/academy/course/:slug/lesson/:lessonId" element={<ProtectedRoute><AcademyLessonViewerWrapper /></ProtectedRoute>} />
             
             {/* Add-in Shell Route - works without full auth for add-in JWT holders */}
             <Route path="/addin" element={<AddinShell />} />
