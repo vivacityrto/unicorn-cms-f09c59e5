@@ -160,6 +160,8 @@ export function getCourseCategory(tags: string[] | null, targetAudience: string 
       trainer: "Trainer",
       compliance_manager: "Compliance",
       governance_person: "Governance",
+      student_support_officer: "Student Support",
+      administration_assistant: "Administration",
     };
     return labelMap[parts[0]] ?? parts[0];
   }
