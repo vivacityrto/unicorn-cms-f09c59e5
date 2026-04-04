@@ -64,7 +64,8 @@ export default function CourseCard({
 
   return (
     <div
-      className="flex flex-col overflow-hidden bg-white"
+      className="flex flex-col overflow-hidden bg-white cursor-pointer"
+      onClick={onClick}
       style={{
         border: "1px solid #e8e4ef",
         borderRadius: 14,
