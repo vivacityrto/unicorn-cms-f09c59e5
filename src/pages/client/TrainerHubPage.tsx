@@ -15,6 +15,7 @@ const categoryTabs = ["All", "TAE Training", "Assessor Skills", "Industry Curren
 
 export default function TrainerHubPage() {
   const [activeFilter, setActiveFilter] = useState("All");
+  const navigate = useNavigate();
   const { data: courses = [], isLoading } = useAcademyCourses({ audienceKey: AUDIENCE_KEY });
 
   const filtered = activeFilter === "All"
