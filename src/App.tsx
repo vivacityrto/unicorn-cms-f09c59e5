@@ -159,6 +159,7 @@ const AcademyComplianceManagerWrapperNew = lazy(() => import("./pages/client/Aca
 const AcademyGovernancePersonWrapperNew = lazy(() => import("./pages/client/AcademyGovernancePersonWrapper"));
 const AcademyEnrolmentsPage = lazy(() => import("./pages/superadmin/AcademyEnrolmentsPage"));
 const AcademyTenantAccessPage = lazy(() => import("./pages/superadmin/AcademyTenantAccessPage"));
+const AcademyCertificatesAdminPage = lazy(() => import("./pages/superadmin/AcademyCertificatesPage"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
@@ -1019,6 +1020,7 @@ const App = () => (
             {/* SuperAdmin Academy Management */}
             <Route path="/superadmin/academy/enrollments" element={<ProtectedRoute requireSuperAdmin><AcademyEnrolmentsPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/tenant-access" element={<ProtectedRoute requireSuperAdmin><AcademyTenantAccessPage /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/certificates" element={<ProtectedRoute requireSuperAdmin><AcademyCertificatesAdminPage /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCourses /></ProtectedRoute>} />
