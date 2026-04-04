@@ -57,6 +57,7 @@ export default function CourseCard({
   accentColour = "#23c0dd",
   onContinue,
   onStart,
+  onClick,
 }: CourseCardProps) {
   const total = totalLessons ?? lessonCount;
   const badge = statusBadge[status];
