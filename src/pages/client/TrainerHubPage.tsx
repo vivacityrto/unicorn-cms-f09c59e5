@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Users, GraduationCap, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CourseCard, type CourseCardData } from "@/components/academy/CourseCard";
+import { CourseCardLegacy as CourseCard, type CourseCardData } from "@/components/academy/CourseCard";
 
 const categories = ["All", "TAE Training", "Assessor Skills", "Industry Currency", "Wellbeing", "New Releases"];
 
