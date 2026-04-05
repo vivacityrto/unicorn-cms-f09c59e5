@@ -325,7 +325,14 @@ export default function AcademyLessonViewerPage() {
 
         {/* Lesson header */}
         <div className="space-y-2">
-          <h1 className="text-xl font-bold text-foreground">{lesson.title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground">{lesson.title}</h1>
+            {isPreview && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-accent/15 text-accent-foreground border border-accent/30">
+                <Eye className="h-3 w-3" /> Preview
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             {lesson.estimated_minutes && (
               <span className="flex items-center gap-1">
