@@ -166,6 +166,8 @@ const AcademyAssessmentResultWrapper = lazy(() => import("./pages/client/Academy
 const AcademyEnrolmentsPage = lazy(() => import("./pages/superadmin/AcademyEnrolmentsPage"));
 const AcademyTenantAccessPage = lazy(() => import("./pages/superadmin/AcademyTenantAccessPage"));
 const AcademyCertificatesAdminPage = lazy(() => import("./pages/superadmin/AcademyCertificatesPage"));
+const AcademyBuilderLibrary = lazy(() => import("./pages/superadmin/AcademyBuilderLibrary"));
+const AcademyBuilderCourse = lazy(() => import("./pages/superadmin/AcademyBuilderCourse"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
