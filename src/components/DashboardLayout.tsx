@@ -146,6 +146,7 @@ export const DashboardLayout = ({
     eos: false,
     resourceManagement: false,
     administration: false,
+    academyBuilder: false,
     systemConfig: false,
     // Legacy for client view
     main: false,
