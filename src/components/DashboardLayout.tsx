@@ -469,7 +469,16 @@ export const DashboardLayout = ({
                   "administration"
                 )}
 
-              {/* 6. SYSTEM CONFIG Section - Super Admin Only */}
+              {/* 6. ACADEMY BUILDER Section - Super Admin Only */}
+              {isSuperAdmin &&
+                renderSection(
+                  "academyBuilder",
+                  "Academy",
+                  academyBuilderMenuItems,
+                  "academyBuilder"
+                )}
+
+              {/* 7. SYSTEM CONFIG Section - Super Admin Only */}
               {isSuperAdmin &&
                 renderSection(
                   "systemConfig",
