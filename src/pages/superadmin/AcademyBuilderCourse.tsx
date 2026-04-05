@@ -405,7 +405,7 @@ export default function AcademyBuilderCourse() {
         </TabsContent>
 
         <TabsContent value="assessment">
-          <AssessmentEditorTab courseId={courseId!} />
+          <AssessmentEditorTab courseId={courseId!} courseTitle={course.title} courseDescription={course.description} courseTargetAudience={course.target_audience} />
         </TabsContent>
 
         <TabsContent value="packages">
