@@ -383,14 +383,24 @@ export default function AcademyBuilderCourse() {
                               </div>
                             ))}
 
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openLessonEditor(mod.id)}
-                              className="w-full mt-1 text-muted-foreground hover:text-foreground"
-                            >
-                              <Plus className="h-3.5 w-3.5 mr-1" /> Add Lesson
-                            </Button>
+                            <div className="flex gap-1 mt-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openLessonEditor(mod.id)}
+                                className="flex-1 text-muted-foreground hover:text-foreground"
+                              >
+                                <Plus className="h-3.5 w-3.5 mr-1" /> Add Lesson
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setImportVideosModuleId(mod.id)}
+                                className="flex-1 text-muted-foreground hover:text-foreground"
+                              >
+                                <Upload className="h-3.5 w-3.5 mr-1" /> Import Videos
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </div>
