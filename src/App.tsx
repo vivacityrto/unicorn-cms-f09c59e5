@@ -166,6 +166,8 @@ const AcademyAssessmentResultWrapper = lazy(() => import("./pages/client/Academy
 const AcademyEnrolmentsPage = lazy(() => import("./pages/superadmin/AcademyEnrolmentsPage"));
 const AcademyTenantAccessPage = lazy(() => import("./pages/superadmin/AcademyTenantAccessPage"));
 const AcademyCertificatesAdminPage = lazy(() => import("./pages/superadmin/AcademyCertificatesPage"));
+const AcademyBuilderLibrary = lazy(() => import("./pages/superadmin/AcademyBuilderLibrary"));
+const AcademyBuilderCourse = lazy(() => import("./pages/superadmin/AcademyBuilderCourse"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
@@ -1027,6 +1029,8 @@ const App = () => (
             <Route path="/superadmin/academy/enrollments" element={<ProtectedRoute requireSuperAdmin><AcademyEnrolmentsPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/tenant-access" element={<ProtectedRoute requireSuperAdmin><AcademyTenantAccessPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/certificates" element={<ProtectedRoute requireSuperAdmin><AcademyCertificatesAdminPage /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/builder" element={<ProtectedRoute requireSuperAdmin><AcademyBuilderLibrary /></ProtectedRoute>} />
+            <Route path="/superadmin/academy/builder/:courseId" element={<ProtectedRoute requireSuperAdmin><AcademyBuilderCourse /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCourses /></ProtectedRoute>} />
