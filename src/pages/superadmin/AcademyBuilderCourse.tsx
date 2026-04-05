@@ -13,9 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip, Sparkles, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import LessonEditorPanel from "@/components/academy/builder/LessonEditorPanel";
+import ImportVideosPanel from "@/components/academy/builder/ImportVideosPanel";
 import AssessmentEditorTab from "@/components/academy/builder/AssessmentEditorTab";
 import PackageRulesTab from "@/components/academy/builder/PackageRulesTab";
 
@@ -49,6 +50,7 @@ export default function AcademyBuilderCourse() {
   const [lessonEditorOpen, setLessonEditorOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<{ lesson: AcademyLesson | null; moduleId: number; courseId: number } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "module" | "lesson"; id: number; name: string; hasChildren?: boolean } | null>(null);
+  const [importVideosModuleId, setImportVideosModuleId] = useState<number | null>(null);
 
   // Fetch course
   const { data: course, isLoading: courseLoading } = useQuery({
@@ -381,14 +383,24 @@ export default function AcademyBuilderCourse() {
                               </div>
                             ))}
 
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openLessonEditor(mod.id)}
-                              className="w-full mt-1 text-muted-foreground hover:text-foreground"
-                            >
-                              <Plus className="h-3.5 w-3.5 mr-1" /> Add Lesson
-                            </Button>
+                            <div className="flex gap-1 mt-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openLessonEditor(mod.id)}
+                                className="flex-1 text-muted-foreground hover:text-foreground"
+                              >
+                                <Plus className="h-3.5 w-3.5 mr-1" /> Add Lesson
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setImportVideosModuleId(mod.id)}
+                                className="flex-1 text-muted-foreground hover:text-foreground"
+                              >
+                                <Upload className="h-3.5 w-3.5 mr-1" /> Import Videos
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -421,6 +433,21 @@ export default function AcademyBuilderCourse() {
           moduleId={editingLesson.moduleId}
           courseId={editingLesson.courseId}
           lesson={editingLesson.lesson}
+        />
+      )}
+
+      {/* Import Videos Panel */}
+      {importVideosModuleId != null && (
+        <ImportVideosPanel
+          open={importVideosModuleId != null}
+          onClose={() => setImportVideosModuleId(null)}
+          moduleId={importVideosModuleId}
+          courseId={courseId!}
+          existingVideoIds={
+            modules
+              .find(m => m.id === importVideosModuleId)
+              ?.lessons.filter(l => l.video_id).map(l => l.video_id!) ?? []
+          }
         />
       )}
 
