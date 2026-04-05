@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useModulesWithLessons } from "@/hooks/academy/useAcademyModulesLessons";
 import { formatDuration } from "@/hooks/useAcademyCourses";
 import { toast } from "sonner";
+import AssessmentEntrySection from "@/components/academy/AssessmentEntrySection";
 
 export default function AcademyCourseDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -295,6 +296,15 @@ export default function AcademyCourseDetailPage() {
           </Accordion>
         )}
       </div>
+
+      {/* Assessment Section */}
+      {course && (
+        <AssessmentEntrySection
+          courseId={course.id}
+          slug={course.slug}
+          enrollmentStatus={enrollment?.enrollment_status ?? null}
+        />
+      )}
     </div>
   );
 }
