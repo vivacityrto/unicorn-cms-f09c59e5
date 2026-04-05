@@ -242,6 +242,11 @@ export default function AcademyBuilderCourse() {
                 <Input defaultValue={(course.tags ?? []).join(", ")} onBlur={(e) => autoSave("tags", e.target.value.split(",").map((t: string) => t.trim()).filter(Boolean))} />
               </Field>
 
+              <AiDescriptionGenerator course={course} courseId={courseId!} onGenerated={(short_desc, desc) => {
+                // Auto-save both fields with debounce
+                updateCourse.mutate({ id: courseId!, data: { short_description: short_desc, description: desc } as any });
+              }} />
+
               <div className="flex items-center justify-between">
                 <span className="text-sm text-foreground">Free Course</span>
                 <Switch checked={course.is_free ?? false} onCheckedChange={(v) => autoSave("is_free", v)} />
