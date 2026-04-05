@@ -436,6 +436,21 @@ export default function AcademyBuilderCourse() {
         />
       )}
 
+      {/* Import Videos Panel */}
+      {importVideosModuleId != null && (
+        <ImportVideosPanel
+          open={importVideosModuleId != null}
+          onClose={() => setImportVideosModuleId(null)}
+          moduleId={importVideosModuleId}
+          courseId={courseId!}
+          existingVideoIds={
+            modules
+              .find(m => m.id === importVideosModuleId)
+              ?.lessons.filter(l => l.video_id).map(l => l.video_id!) ?? []
+          }
+        />
+      )}
+
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
