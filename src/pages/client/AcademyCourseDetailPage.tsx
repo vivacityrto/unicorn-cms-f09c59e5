@@ -296,6 +296,15 @@ export default function AcademyCourseDetailPage() {
           </Accordion>
         )}
       </div>
+
+      {/* Assessment Section */}
+      {course && (
+        <AssessmentEntrySection
+          courseId={course.id}
+          slug={course.slug}
+          enrollmentStatus={enrollment?.enrollment_status ?? null}
+        />
+      )}
     </div>
   );
 }
