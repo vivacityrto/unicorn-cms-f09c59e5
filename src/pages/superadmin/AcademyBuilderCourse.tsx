@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip } from "lucide-react";
+import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import LessonEditorPanel from "@/components/academy/builder/LessonEditorPanel";
 import AssessmentEditorTab from "@/components/academy/builder/AssessmentEditorTab";
@@ -212,11 +212,11 @@ export default function AcademyBuilderCourse() {
               </Field>
 
               <Field label="Short Description">
-                <Textarea defaultValue={course.short_description ?? ""} onBlur={(e) => autoSave("short_description", e.target.value)} rows={2} />
+                <Textarea data-field="short_description" defaultValue={course.short_description ?? ""} onBlur={(e) => autoSave("short_description", e.target.value)} rows={2} />
               </Field>
 
               <Field label="Description">
-                <Textarea defaultValue={course.description ?? ""} onBlur={(e) => autoSave("description", e.target.value)} rows={4} />
+                <Textarea data-field="description" defaultValue={course.description ?? ""} onBlur={(e) => autoSave("description", e.target.value)} rows={4} />
               </Field>
 
               <Field label="Target Audience">
@@ -241,6 +241,11 @@ export default function AcademyBuilderCourse() {
               <Field label="Tags (comma-separated)">
                 <Input defaultValue={(course.tags ?? []).join(", ")} onBlur={(e) => autoSave("tags", e.target.value.split(",").map((t: string) => t.trim()).filter(Boolean))} />
               </Field>
+
+              <AiDescriptionGenerator course={course} courseId={courseId!} onGenerated={(short_desc, desc) => {
+                // Auto-save both fields with debounce
+                updateCourse.mutate({ id: courseId!, data: { short_description: short_desc, description: desc } as any });
+              }} />
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-foreground">Free Course</span>
@@ -400,7 +405,7 @@ export default function AcademyBuilderCourse() {
         </TabsContent>
 
         <TabsContent value="assessment">
-          <AssessmentEditorTab courseId={courseId!} />
+          <AssessmentEditorTab courseId={courseId!} courseTitle={course.title} courseDescription={course.description} courseTargetAudience={course.target_audience} />
         </TabsContent>
 
         <TabsContent value="packages">
@@ -447,6 +452,67 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="space-y-1">
       <label className="text-xs font-medium text-muted-foreground">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any; courseId: number; onGenerated: (short: string, desc: string) => void }) {
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setError(null);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("academy-ai-generate", {
+        body: {
+          action: "generate_descriptions",
+          title: course.title,
+          target_audience: course.target_audience,
+          difficulty_level: course.difficulty_level,
+          tags: course.tags,
+        },
+      });
+
+      if (fnError) throw new Error(fnError.message);
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.short_description && data?.description) {
+        onGenerated(data.short_description, data.description);
+        // Force re-render of textareas by updating DOM directly
+        const shortEl = document.querySelector('[data-field="short_description"]') as HTMLTextAreaElement;
+        const descEl = document.querySelector('[data-field="description"]') as HTMLTextAreaElement;
+        if (shortEl) shortEl.value = data.short_description;
+        if (descEl) descEl.value = data.description;
+        toast.success("Descriptions generated — review and edit before saving");
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (e: any) {
+      setError("Generation failed — check your connection and try again");
+      console.error("AI generation error:", e);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-1">
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full text-xs gap-1.5"
+        style={{ borderColor: "#7130A0", color: "#7130A0" }}
+        onClick={handleGenerate}
+        disabled={!course.title?.trim() || generating}
+      >
+        {generating ? (
+          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating…</>
+        ) : (
+          <><Sparkles className="h-3.5 w-3.5" /> Generate with AI</>
+        )}
+      </Button>
+      {error && <p className="text-[11px] text-destructive">{error}</p>}
     </div>
   );
 }

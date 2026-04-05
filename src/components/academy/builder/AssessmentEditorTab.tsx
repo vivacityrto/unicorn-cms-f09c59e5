@@ -12,22 +12,37 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Save, ClipboardCheck, GripVertical, X } from "lucide-react";
+import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from "@/components/ui/modals";
+import { Plus, Trash2, Save, ClipboardCheck, GripVertical, X, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const VALUE_LETTERS = ["A", "B", "C", "D", "E", "F"];
 
-export default function AssessmentEditorTab({ courseId }: { courseId: number }) {
+interface AssessmentEditorTabProps {
+  courseId: number;
+  courseTitle?: string;
+  courseDescription?: string | null;
+  courseTargetAudience?: string | null;
+}
+
+export default function AssessmentEditorTab({ courseId, courseTitle, courseDescription, courseTargetAudience }: AssessmentEditorTabProps) {
   const { data: assessment, isLoading: assLoading } = useBuilderAssessment(courseId);
   const { data: dbQuestions = [], isLoading: qLoading } = useBuilderQuestions(assessment?.id ?? null);
   const createAssessment = useCreateAssessment();
   const updateAssessment = useUpdateAssessment();
   const deleteQuestionMut = useDeleteQuestion();
   const saveAllQuestionsMut = useSaveAllQuestions();
+  const queryClient = useQueryClient();
 
   const [localQuestions, setLocalQuestions] = useState<BuilderQuestion[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; text: string } | null>(null);
   const [nextTempId, setNextTempId] = useState(-1);
+
+  // AI generation state
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiContext, setAiContext] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
 
   useEffect(() => {
     if (dbQuestions.length > 0) {
@@ -82,7 +97,6 @@ export default function AssessmentEditorTab({ courseId }: { courseId: number }) 
       if (i !== qIdx) return q;
       const opts = [...q.options];
       if (field === "is_correct" && value === true) {
-        // Only one correct
         opts.forEach((o, j) => { opts[j] = { ...o, is_correct: j === optIdx }; });
       } else {
         opts[optIdx] = { ...opts[optIdx], [field]: value };
@@ -103,9 +117,7 @@ export default function AssessmentEditorTab({ courseId }: { courseId: number }) 
     setLocalQuestions(prev => prev.map((q, i) => {
       if (i !== qIdx || q.options.length <= 2) return q;
       const opts = q.options.filter((_, j) => j !== optIdx);
-      // Re-assign values
       const revalued = opts.map((o, j) => ({ ...o, value: VALUE_LETTERS[j] || String(j + 1) }));
-      // Ensure at least one correct
       if (!revalued.some(o => o.is_correct)) revalued[0].is_correct = true;
       return { ...q, options: revalued };
     }));
@@ -121,7 +133,6 @@ export default function AssessmentEditorTab({ courseId }: { courseId: number }) 
 
   const handleSaveAll = () => {
     if (!assessment) return;
-    // Validate
     for (const q of localQuestions) {
       if (!q.question_text.trim()) {
         toast.error("All questions must have text");
@@ -136,7 +147,6 @@ export default function AssessmentEditorTab({ courseId }: { courseId: number }) 
         return;
       }
     }
-    // Convert temp IDs to new inserts
     const toSave = localQuestions.map(q => q.id < 0 ? { ...q, id: 0 } : q);
     saveAllQuestionsMut.mutate({ assessmentId: assessment.id, questions: toSave });
   };
@@ -148,6 +158,64 @@ export default function AssessmentEditorTab({ courseId }: { courseId: number }) 
     }
     setLocalQuestions(prev => prev.filter(q => q.id !== deleteTarget.id));
     setDeleteTarget(null);
+  };
+
+  const handleOpenAiModal = () => {
+    setAiContext(courseDescription || "");
+    setAiModalOpen(true);
+  };
+
+  const handleAiGenerate = async () => {
+    if (!assessment || !aiContext.trim()) return;
+    setAiGenerating(true);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("academy-ai-generate", {
+        body: {
+          action: "generate_questions",
+          title: courseTitle || "Untitled Course",
+          target_audience: courseTargetAudience || "training professionals",
+          context_text: aiContext,
+        },
+      });
+
+      if (fnError) throw new Error(fnError.message);
+      if (data?.error) throw new Error(data.error);
+
+      const questions = data?.questions;
+      if (!Array.isArray(questions) || questions.length === 0) {
+        throw new Error("No questions returned");
+      }
+
+      // Get max sort_order from existing questions
+      const maxSort = localQuestions.length > 0
+        ? Math.max(...localQuestions.map(q => q.sort_order ?? 0))
+        : 0;
+
+      // Insert all questions into the database
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        const { error } = await supabase.from("academy_assessment_questions").insert({
+          assessment_id: assessment.id,
+          question_text: q.question_text,
+          question_type: "multiple_choice",
+          options: q.options,
+          points: 1,
+          sort_order: maxSort + i + 1,
+          explanation: q.explanation || null,
+        } as any);
+        if (error) throw error;
+      }
+
+      // Refresh question list
+      queryClient.invalidateQueries({ queryKey: ["academy-assessment-questions-builder", assessment.id] });
+      setAiModalOpen(false);
+      toast.success(`${questions.length} questions generated — review and edit before publishing`);
+    } catch (e: any) {
+      console.error("AI question generation error:", e);
+      toast.error("Generation failed, please try again");
+    } finally {
+      setAiGenerating(false);
+    }
   };
 
   if (assLoading) {
@@ -226,6 +294,19 @@ export default function AssessmentEditorTab({ courseId }: { courseId: number }) 
             <Save className="h-3.5 w-3.5 mr-1" /> {saveAllQuestionsMut.isPending ? "Saving…" : "Save All Questions"}
           </Button>
         </div>
+
+        {/* AI Generate Button - only when unpublished */}
+        {!assessment.is_published && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs gap-1.5"
+            style={{ borderColor: "#ed1878", color: "#ed1878" }}
+            onClick={handleOpenAiModal}
+          >
+            <Sparkles className="h-3.5 w-3.5" /> Generate Starter Questions
+          </Button>
+        )}
 
         {qLoading ? (
           <div className="space-y-3">
@@ -341,6 +422,44 @@ export default function AssessmentEditorTab({ courseId }: { courseId: number }) 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AI Question Generation Modal */}
+      <AppModal open={aiModalOpen} onOpenChange={setAiModalOpen}>
+        <AppModalContent size="md">
+          <AppModalHeader>
+            <AppModalTitle>✨ Generate Starter Questions</AppModalTitle>
+          </AppModalHeader>
+          <AppModalBody className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Describe what this course covers — paste your key learning outcomes, topics, or lesson titles. The AI will generate 8 multiple-choice questions for review.
+            </p>
+            <Textarea
+              value={aiContext}
+              onChange={(e) => setAiContext(e.target.value)}
+              placeholder="e.g. This course covers RTO registration requirements, ASQA compliance obligations, training and assessment strategies..."
+              rows={8}
+              className="text-sm"
+            />
+          </AppModalBody>
+          <AppModalFooter>
+            <Button variant="outline" onClick={() => setAiModalOpen(false)} disabled={aiGenerating}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAiGenerate}
+              disabled={!aiContext.trim() || aiGenerating}
+              className="text-white hover:opacity-90"
+              style={{ backgroundColor: "#ed1878" }}
+            >
+              {aiGenerating ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Generating…</>
+              ) : (
+                <><Sparkles className="h-4 w-4 mr-1" /> Generate</>
+              )}
+            </Button>
+          </AppModalFooter>
+        </AppModalContent>
+      </AppModal>
     </div>
   );
 }

@@ -42971,6 +42971,7 @@ export type Database = {
         Row: {
           added_by: string | null
           created_at: string
+          duration_seconds: number | null
           folder_id: string
           folder_name: string | null
           id: string
@@ -42981,6 +42982,7 @@ export type Database = {
         Insert: {
           added_by?: string | null
           created_at?: string
+          duration_seconds?: number | null
           folder_id: string
           folder_name?: string | null
           id?: string
@@ -42991,6 +42993,7 @@ export type Database = {
         Update: {
           added_by?: string | null
           created_at?: string
+          duration_seconds?: number | null
           folder_id?: string
           folder_name?: string | null
           id?: string
