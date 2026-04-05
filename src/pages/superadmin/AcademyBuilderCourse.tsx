@@ -212,11 +212,11 @@ export default function AcademyBuilderCourse() {
               </Field>
 
               <Field label="Short Description">
-                <Textarea defaultValue={course.short_description ?? ""} onBlur={(e) => autoSave("short_description", e.target.value)} rows={2} />
+                <Textarea data-field="short_description" defaultValue={course.short_description ?? ""} onBlur={(e) => autoSave("short_description", e.target.value)} rows={2} />
               </Field>
 
               <Field label="Description">
-                <Textarea defaultValue={course.description ?? ""} onBlur={(e) => autoSave("description", e.target.value)} rows={4} />
+                <Textarea data-field="description" defaultValue={course.description ?? ""} onBlur={(e) => autoSave("description", e.target.value)} rows={4} />
               </Field>
 
               <Field label="Target Audience">
