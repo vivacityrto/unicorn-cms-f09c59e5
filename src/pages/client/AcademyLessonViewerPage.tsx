@@ -3,12 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   GraduationCap, ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
-  Play, BookOpen, FileText, CheckCircle2, Clock, ArrowLeft, ArrowRight,
+  Play, BookOpen, FileText, CheckCircle2, Clock, ArrowLeft, ArrowRight, Eye,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const ACCENT = "#23c0dd";
 
@@ -42,7 +42,7 @@ export default function AcademyLessonViewerPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_lessons")
-        .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, estimated_minutes, video_id, resource_id, content_markdown")
+        .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown")
         .eq("id", numericLessonId!)
         .single();
       if (error) throw error;
@@ -162,6 +162,20 @@ export default function AcademyLessonViewerPage() {
     return <BookOpen className="h-3.5 w-3.5" />;
   };
 
+  const isPreview = lesson?.is_preview === true;
+  const isEnrolled = !!enrollment && enrollment.enrollment_status === "active";
+
+  // Access gate: redirect if not preview and not enrolled
+  useEffect(() => {
+    if (courseLoading || lessonLoading) return;
+    if (!course || !lesson) return;
+    if (isPreview) return; // preview lessons are always accessible
+    if (isEnrolled) return; // enrolled users can access
+    // Not preview + not enrolled → redirect
+    toast.error("Please enrol in this course to access this lesson.");
+    navigate(`/academy/course/${slug}`, { replace: true });
+  }, [courseLoading, lessonLoading, course, lesson, isPreview, isEnrolled, slug, navigate]);
+
   if (courseLoading || lessonLoading) {
     return (
       <div className="space-y-4">
@@ -182,6 +196,11 @@ export default function AcademyLessonViewerPage() {
         </Button>
       </div>
     );
+  }
+
+  // If not preview and not enrolled, don't render (effect will redirect)
+  if (!isPreview && !isEnrolled) {
+    return null;
   }
 
   // Build Vimeo embed URL
@@ -306,7 +325,14 @@ export default function AcademyLessonViewerPage() {
 
         {/* Lesson header */}
         <div className="space-y-2">
-          <h1 className="text-xl font-bold text-foreground">{lesson.title}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-foreground">{lesson.title}</h1>
+            {isPreview && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-accent/15 text-accent-foreground border border-accent/30">
+                <Eye className="h-3 w-3" /> Preview
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             {lesson.estimated_minutes && (
               <span className="flex items-center gap-1">
