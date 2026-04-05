@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   GraduationCap, ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
-  Play, BookOpen, FileText, CheckCircle2, Clock, ArrowLeft, ArrowRight,
+  Play, BookOpen, FileText, CheckCircle2, Clock, ArrowLeft, ArrowRight, Eye,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
