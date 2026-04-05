@@ -50,6 +50,7 @@ export default function AcademyBuilderCourse() {
   const [lessonEditorOpen, setLessonEditorOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<{ lesson: AcademyLesson | null; moduleId: number; courseId: number } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "module" | "lesson"; id: number; name: string; hasChildren?: boolean } | null>(null);
+  const [importVideosModuleId, setImportVideosModuleId] = useState<number | null>(null);
 
   // Fetch course
   const { data: course, isLoading: courseLoading } = useQuery({
