@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, MapPin, Database, FileCheck, Tags, Globe } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, MapPin, Database, FileCheck, Tags, Globe, GraduationCap } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -90,7 +90,12 @@ const administrationMenuItems = [
   { icon: Mail, label: "Email Templates", path: "/admin/email-templates", superAdminOnly: true },
 ];
 
-// 6. SYSTEM CONFIG Section - Super Admin Only
+// 6. ACADEMY BUILDER Section - Super Admin Only
+const academyBuilderMenuItems = [
+  { icon: GraduationCap, label: "Academy Builder", path: "/superadmin/academy/builder" },
+];
+
+// 7. SYSTEM CONFIG Section - Super Admin Only
 const systemConfigMenuItems = [
   { icon: Package2, label: "Manage Packages", path: "/admin/manage-packages" },
   { icon: Blocks, label: "Manage Stages", path: "/admin/stages" },
@@ -141,6 +146,7 @@ export const DashboardLayout = ({
     eos: false,
     resourceManagement: false,
     administration: false,
+    academyBuilder: false,
     systemConfig: false,
     // Legacy for client view
     main: false,
@@ -463,7 +469,16 @@ export const DashboardLayout = ({
                   "administration"
                 )}
 
-              {/* 6. SYSTEM CONFIG Section - Super Admin Only */}
+              {/* 6. ACADEMY BUILDER Section - Super Admin Only */}
+              {isSuperAdmin &&
+                renderSection(
+                  "academyBuilder",
+                  "Academy",
+                  academyBuilderMenuItems,
+                  "academyBuilder"
+                )}
+
+              {/* 7. SYSTEM CONFIG Section - Super Admin Only */}
               {isSuperAdmin &&
                 renderSection(
                   "systemConfig",
