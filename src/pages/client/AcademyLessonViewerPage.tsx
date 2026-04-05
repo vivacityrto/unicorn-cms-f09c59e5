@@ -42,7 +42,7 @@ export default function AcademyLessonViewerPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_lessons")
-        .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, estimated_minutes, video_id, resource_id, content_markdown")
+        .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown")
         .eq("id", numericLessonId!)
         .single();
       if (error) throw error;
