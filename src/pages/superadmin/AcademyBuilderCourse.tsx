@@ -455,3 +455,64 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
+
+function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any; courseId: number; onGenerated: (short: string, desc: string) => void }) {
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setError(null);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("academy-ai-generate", {
+        body: {
+          action: "generate_descriptions",
+          title: course.title,
+          target_audience: course.target_audience,
+          difficulty_level: course.difficulty_level,
+          tags: course.tags,
+        },
+      });
+
+      if (fnError) throw new Error(fnError.message);
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.short_description && data?.description) {
+        onGenerated(data.short_description, data.description);
+        // Force re-render of textareas by updating DOM directly
+        const shortEl = document.querySelector('[data-field="short_description"]') as HTMLTextAreaElement;
+        const descEl = document.querySelector('[data-field="description"]') as HTMLTextAreaElement;
+        if (shortEl) shortEl.value = data.short_description;
+        if (descEl) descEl.value = data.description;
+        toast.success("Descriptions generated — review and edit before saving");
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (e: any) {
+      setError("Generation failed — check your connection and try again");
+      console.error("AI generation error:", e);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-1">
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full text-xs gap-1.5"
+        style={{ borderColor: "#7130A0", color: "#7130A0" }}
+        onClick={handleGenerate}
+        disabled={!course.title?.trim() || generating}
+      >
+        {generating ? (
+          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating…</>
+        ) : (
+          <><Sparkles className="h-3.5 w-3.5" /> Generate with AI</>
+        )}
+      </Button>
+      {error && <p className="text-[11px] text-destructive">{error}</p>}
+    </div>
+  );
+}
