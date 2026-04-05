@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
  import unicornLogo from "@/assets/unicorn-logo.svg";
+import vivacityLogo from "@/assets/vivacity-logo-colour.svg";
 import { LogIn, KeyRound, Sparkles } from "lucide-react";
 
 const Login = () => {
@@ -380,13 +381,9 @@ const Login = () => {
           </CardContent>
         </Card>
 
-        {/* Powered by Vivacity Footer */}
-        <div className="text-center text-white mt-3">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <span className="text-sm">Powered by</span>
-            <span className="font-bold text-lg">✒️ Vivacity</span>
-          </div>
-          <p className="text-xs tracking-wider">RTO + CRICOS SUPERHERO</p>
+        {/* Vivacity Logo Footer */}
+        <div className="flex justify-center mt-4">
+          <img src={vivacityLogo} alt="Vivacity" className="h-10" />
         </div>
       </div>
     </div>
