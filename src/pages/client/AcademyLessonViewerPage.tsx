@@ -162,6 +162,20 @@ export default function AcademyLessonViewerPage() {
     return <BookOpen className="h-3.5 w-3.5" />;
   };
 
+  const isPreview = lesson?.is_preview === true;
+  const isEnrolled = !!enrollment && enrollment.enrollment_status === "active";
+
+  // Access gate: redirect if not preview and not enrolled
+  useEffect(() => {
+    if (courseLoading || lessonLoading) return;
+    if (!course || !lesson) return;
+    if (isPreview) return; // preview lessons are always accessible
+    if (isEnrolled) return; // enrolled users can access
+    // Not preview + not enrolled → redirect
+    toast.error("Please enrol in this course to access this lesson.");
+    navigate(`/academy/course/${slug}`, { replace: true });
+  }, [courseLoading, lessonLoading, course, lesson, isPreview, isEnrolled, slug, navigate]);
+
   if (courseLoading || lessonLoading) {
     return (
       <div className="space-y-4">
@@ -182,6 +196,11 @@ export default function AcademyLessonViewerPage() {
         </Button>
       </div>
     );
+  }
+
+  // If not preview and not enrolled, don't render (effect will redirect)
+  if (!isPreview && !isEnrolled) {
+    return null;
   }
 
   // Build Vimeo embed URL
