@@ -90,7 +90,12 @@ const administrationMenuItems = [
   { icon: Mail, label: "Email Templates", path: "/admin/email-templates", superAdminOnly: true },
 ];
 
-// 6. SYSTEM CONFIG Section - Super Admin Only
+// 6. ACADEMY BUILDER Section - Super Admin Only
+const academyBuilderMenuItems = [
+  { icon: GraduationCap, label: "Academy Builder", path: "/superadmin/academy/builder" },
+];
+
+// 7. SYSTEM CONFIG Section - Super Admin Only
 const systemConfigMenuItems = [
   { icon: Package2, label: "Manage Packages", path: "/admin/manage-packages" },
   { icon: Blocks, label: "Manage Stages", path: "/admin/stages" },
