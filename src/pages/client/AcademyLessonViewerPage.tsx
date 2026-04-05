@@ -139,11 +139,52 @@ export default function AcademyLessonViewerPage() {
         { onConflict: "enrollment_id,lesson_id" }
       );
       if (error) throw error;
+
+      // Check if entire course is now complete
+      const { data: moduleIds } = await supabase
+        .from("academy_modules")
+        .select("id")
+        .eq("course_id", course.id);
+      const modIds = (moduleIds ?? []).map((m: any) => m.id);
+      if (modIds.length === 0) return { courseComplete: false };
+
+      const { count: totalCount } = await supabase
+        .from("academy_lessons")
+        .select("id", { count: "exact", head: true })
+        .in("module_id", modIds);
+
+      const { data: allLessonIds } = await supabase
+        .from("academy_lessons")
+        .select("id")
+        .in("module_id", modIds);
+      const lessonIdList = (allLessonIds ?? []).map((l: any) => l.id);
+
+      const { count: completedCount } = await supabase
+        .from("academy_lesson_progress")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_completed", true)
+        .in("lesson_id", lessonIdList);
+
+      if ((completedCount ?? 0) >= (totalCount ?? 1)) {
+        await supabase
+          .from("academy_enrollments")
+          .update({ status: "completed", completed_at: new Date().toISOString() } as any)
+          .eq("user_id", user.id)
+          .eq("course_id", course.id)
+          .eq("status", "active");
+        return { courseComplete: true };
+      }
+      return { courseComplete: false };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("Lesson marked as complete!");
       qc.invalidateQueries({ queryKey: ["academy-lesson-progress"] });
       qc.invalidateQueries({ queryKey: ["academy-enrollment-detail"] });
+      if (result?.courseComplete) {
+        toast.success("🎉 Course complete! Your certificate is being generated.");
+        navigate(`/academy/course/${slug}`);
+      }
     },
     onError: (e: any) => toast.error(e?.message || "Failed to update progress"),
   });
