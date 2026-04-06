@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip, Sparkles, Loader2, Upload } from "lucide-react";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import LessonEditorPanel from "@/components/academy/builder/LessonEditorPanel";
 import ImportVideosPanel from "@/components/academy/builder/ImportVideosPanel";
@@ -160,6 +161,7 @@ export default function AcademyBuilderCourse() {
 
   if (courseLoading) {
     return (
+      <DashboardLayout>
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
         <Skeleton className="h-8 w-64" />
         <div className="grid grid-cols-[30%_1fr] gap-6">
@@ -167,19 +169,23 @@ export default function AcademyBuilderCourse() {
           <Skeleton className="h-[600px]" />
         </div>
       </div>
+      </DashboardLayout>
     );
   }
 
   if (!course) {
     return (
+      <DashboardLayout>
       <div className="p-6 text-center py-16">
         <p className="font-medium text-foreground">Course not found</p>
         <Button variant="outline" className="mt-4" onClick={() => navigate("/superadmin/academy/builder")}>Back to Library</Button>
       </div>
+      </DashboardLayout>
     );
   }
 
   return (
+    <DashboardLayout>
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -471,6 +477,7 @@ export default function AcademyBuilderCourse() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </DashboardLayout>
   );
 }
 

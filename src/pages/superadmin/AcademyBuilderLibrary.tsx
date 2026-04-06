@@ -16,6 +16,7 @@ import {
 import {
   Plus, Search, GraduationCap, BookOpen, Video, Award, Clock,
 } from "lucide-react";
+import { DashboardLayout } from "@/components/DashboardLayout";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -76,6 +77,7 @@ export default function AcademyBuilderLibrary() {
   };
 
   return (
+    <DashboardLayout>
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -205,5 +207,6 @@ export default function AcademyBuilderLibrary() {
         </DialogContent>
       </Dialog>
     </div>
+    </DashboardLayout>
   );
 }
