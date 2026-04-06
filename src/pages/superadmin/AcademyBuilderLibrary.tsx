@@ -16,6 +16,7 @@ import {
 import {
   Plus, Search, GraduationCap, BookOpen, Video, Award, Clock,
 } from "lucide-react";
+import { DashboardLayout } from "@/components/DashboardLayout";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
