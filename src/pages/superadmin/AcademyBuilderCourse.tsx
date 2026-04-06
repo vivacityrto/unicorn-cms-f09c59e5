@@ -161,6 +161,7 @@ export default function AcademyBuilderCourse() {
 
   if (courseLoading) {
     return (
+      <DashboardLayout>
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
         <Skeleton className="h-8 w-64" />
         <div className="grid grid-cols-[30%_1fr] gap-6">
@@ -168,6 +169,7 @@ export default function AcademyBuilderCourse() {
           <Skeleton className="h-[600px]" />
         </div>
       </div>
+      </DashboardLayout>
     );
   }
 
