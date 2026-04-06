@@ -207,5 +207,6 @@ export default function AcademyBuilderLibrary() {
         </DialogContent>
       </Dialog>
     </div>
+    </DashboardLayout>
   );
 }
