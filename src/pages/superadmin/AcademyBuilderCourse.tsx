@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip, Sparkles, Loader2, Upload } from "lucide-react";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import LessonEditorPanel from "@/components/academy/builder/LessonEditorPanel";
 import ImportVideosPanel from "@/components/academy/builder/ImportVideosPanel";
