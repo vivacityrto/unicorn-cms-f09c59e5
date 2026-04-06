@@ -175,10 +175,12 @@ export default function AcademyBuilderCourse() {
 
   if (!course) {
     return (
+      <DashboardLayout>
       <div className="p-6 text-center py-16">
         <p className="font-medium text-foreground">Course not found</p>
         <Button variant="outline" className="mt-4" onClick={() => navigate("/superadmin/academy/builder")}>Back to Library</Button>
       </div>
+      </DashboardLayout>
     );
   }
 
