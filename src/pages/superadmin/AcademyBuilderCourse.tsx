@@ -477,6 +477,7 @@ export default function AcademyBuilderCourse() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </DashboardLayout>
   );
 }
 
