@@ -922,12 +922,21 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                               {doc.document?.title || doc.documents?.doc_name || doc.doc_name || doc.title || 'Document'}
                             </span>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs capitalize">
-                                {doc.visibility}
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs capitalize">
-                                {doc.delivery_type}
-                              </Badge>
+                              {doc.visibility && (
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {doc.visibility}
+                                </Badge>
+                              )}
+                              {doc.delivery_type && (
+                                <Badge variant="secondary" className="text-xs capitalize">
+                                  {doc.delivery_type}
+                                </Badge>
+                              )}
+                              {doc.framework_type && (
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {doc.framework_type}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
