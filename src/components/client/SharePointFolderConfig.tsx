@@ -55,6 +55,8 @@ interface SharePointSettings {
   governance_folder_item_id: string | null;
   governance_folder_url: string | null;
   governance_folder_name: string | null;
+  provisioning_status: string | null;
+  setup_mode: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -84,6 +86,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [provisioning, setProvisioning] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [browsingSharedFolder, setBrowsingSharedFolder] = useState(false);
