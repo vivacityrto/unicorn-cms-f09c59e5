@@ -773,48 +773,60 @@ export function PackageBuilderEditor() {
           <ResizablePanel defaultSize={showAIPanel ? 50 : 75}>
             <ScrollArea className="h-full">
               <div className="p-6">
-                {selectedStageId && selectedStage ? (
-                  <StageDetailPanel
-                    packageId={packageId!}
-                    stageId={selectedStageId}
-                    stage={selectedStage.stage}
-                    allStages={allStages}
-                    onClose={() => setSelectedStageId(null)}
-                  />
-                ) : (
-                  <div className="space-y-6">
-                    <Tabs defaultValue="details">
-                      <TabsList>
-                        <TabsTrigger value="details">Package Details</TabsTrigger>
-                        <TabsTrigger value="phases">Phases</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="details" className="mt-4">
-                        <PackageDetailsCard
-                          formData={formData}
-                          setFormData={setFormData}
-                        />
-                      </TabsContent>
-                      <TabsContent value="phases" className="mt-4">
-                        <PackagePhasesTab
-                          packageId={packageId!}
-                          packageStageIds={packageStages.map(ps => ps.stage_id)}
-                          stageMap={new Map(allStages.map(s => [s.id, { id: s.id, title: s.title, stage_type: s.stage_type || undefined }]))}
-                        />
-                      </TabsContent>
-                    </Tabs>
+                <Tabs
+                  key={selectedStage ? `stage-${selectedStage.stage_id}` : 'package-overview'}
+                  defaultValue={selectedStage ? 'stage' : 'details'}
+                  className="space-y-6"
+                >
+                  <TabsList>
+                    <TabsTrigger value="details">Package Details</TabsTrigger>
+                    <TabsTrigger value="phases">Phases</TabsTrigger>
+                    {selectedStage && (
+                      <TabsTrigger value="stage">
+                        {selectedStage.stage?.title || 'Selected Stage'}
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
 
-                    {/* Select a Stage Prompt */}
-                    <Card className="border-dashed">
-                      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                        <Layers className="h-12 w-12 text-muted-foreground mb-4" />
-                        <h3 className="font-semibold text-lg mb-2">Select a Stage to Configure</h3>
-                        <p className="text-muted-foreground max-w-md">
-                          Click on a stage from the left panel to configure its team tasks, emails, client tasks, and documents.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
+                  <TabsContent value="details" className="mt-4 space-y-6">
+                    <PackageDetailsCard
+                      formData={formData}
+                      setFormData={setFormData}
+                    />
+
+                    {!selectedStage && (
+                      <Card className="border-dashed">
+                        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                          <Layers className="h-12 w-12 text-muted-foreground mb-4" />
+                          <h3 className="font-semibold text-lg mb-2">Select a Stage to Configure</h3>
+                          <p className="text-muted-foreground max-w-md">
+                            Click on a stage from the left panel to configure its team tasks, emails, client tasks, and documents.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="phases" className="mt-4">
+                    <PackagePhasesTab
+                      packageId={packageId!}
+                      packageStageIds={packageStages.map(ps => ps.stage_id)}
+                      stageMap={new Map(allStages.map(s => [s.id, { id: s.id, title: s.title, stage_type: s.stage_type || undefined }]))}
+                    />
+                  </TabsContent>
+
+                  {selectedStage && selectedStage.stage && (
+                    <TabsContent value="stage" className="mt-4">
+                      <StageDetailPanel
+                        packageId={packageId!}
+                        stageId={selectedStage.stage_id}
+                        stage={selectedStage.stage}
+                        allStages={allStages}
+                        onClose={() => setSelectedStageId(null)}
+                      />
+                    </TabsContent>
+                  )}
+                </Tabs>
               </div>
             </ScrollArea>
           </ResizablePanel>
