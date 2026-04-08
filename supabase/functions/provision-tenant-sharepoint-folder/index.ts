@@ -518,6 +518,20 @@ serve(async (req) => {
       }
     }
 
+    // ── Create default shared folder from app_settings ──
+    let sharedFolderItemId: string | null = null;
+    let sharedFolderName: string | null = null;
+    if (defaultShareName) {
+      try {
+        const sharedResult = await ensureFolder(accessToken, driveId, folderPath, defaultShareName);
+        sharedFolderItemId = sharedResult.itemId;
+        sharedFolderName = defaultShareName;
+        console.log("[provision-sp] Default shared folder created:", { defaultShareName, itemId: sharedFolderItemId });
+      } catch (e) {
+        console.error("[provision-sp] Failed to create default shared folder:", defaultShareName, e);
+      }
+    }
+
     // ── Apply seed rules ──
     let seedResult = { linksCreated: 0, filesCopied: 0, errors: [] as string[] };
     const seedRules = (template?.seed_rules as SeedRule[]) || [];
@@ -577,7 +591,7 @@ serve(async (req) => {
     }
 
     // Save to tenant_sharepoint_settings
-    await upsertSettings(supabaseAdmin, tenant_id, callerUserId, {
+    const settingsPayload: Record<string, unknown> = {
       site_id: siteId,
       drive_id: driveId,
       base_path: SP_BASE_PATH,
@@ -591,7 +605,15 @@ serve(async (req) => {
       provisioning_status: "success",
       provisioning_error: null,
       template_id: template?.id || null,
-    });
+    };
+
+    // Include default shared folder if created
+    if (sharedFolderItemId && sharedFolderName) {
+      settingsPayload.shared_folder_item_id = sharedFolderItemId;
+      settingsPayload.shared_folder_name = sharedFolderName;
+    }
+
+    await upsertSettings(supabaseAdmin, tenant_id, callerUserId, settingsPayload);
 
     // Emit timeline events
     await emitTimelineEvent(supabaseAdmin, {
