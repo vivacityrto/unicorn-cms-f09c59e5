@@ -28,31 +28,37 @@ const GRAPH_BASE = "https://graph.microsoft.com/v1.0";  // kept for direct fetch
  * The stored value is URL-encoded and includes "Shared Documents/" prefix which
  * must be stripped since Graph API drive paths are relative to the drive root.
  */
-async function resolveBasePath(
+async function resolveAppSettings(
   supabaseAdmin: ReturnType<typeof createClient>,
-): Promise<string> {
+): Promise<{ basePath: string; defaultShareName: string | null }> {
   const { data, error } = await supabaseAdmin
     .from("app_settings")
-    .select("sharepoint_client_folders")
+    .select("sharepoint_client_folders, sharepoint_defaultshare")
     .limit(1)
     .single();
 
-  if (error || !data?.sharepoint_client_folders) {
-    console.warn("[provision-sp] app_settings.sharepoint_client_folders not found, using fallback:", SP_BASE_PATH_FALLBACK);
-    return SP_BASE_PATH_FALLBACK;
+  let basePath = SP_BASE_PATH_FALLBACK;
+  let defaultShareName: string | null = null;
+
+  if (error || !data) {
+    console.warn("[provision-sp] app_settings not found, using fallbacks");
+    return { basePath, defaultShareName };
   }
 
-  const decoded = decodeURIComponent(data.sharepoint_client_folders);
-  // Strip "Shared Documents/" prefix — Graph drive paths are relative to the drive root
-  const stripped = decoded.replace(/^Shared Documents\/?/, "");
-  if (!stripped) {
-    console.warn("[provision-sp] sharepoint_client_folders resolved to empty after stripping, using fallback");
-    return SP_BASE_PATH_FALLBACK;
+  if (data.sharepoint_client_folders) {
+    const decoded = decodeURIComponent(data.sharepoint_client_folders);
+    const stripped = decoded.replace(/^Shared Documents\/?/, "");
+    if (stripped) {
+      basePath = `/${stripped.replace(/^\//, "")}`;
+    }
   }
 
-  const basePath = `/${stripped.replace(/^\//, "")}`;
-  console.log("[provision-sp] Resolved base path from app_settings:", basePath);
-  return basePath;
+  if (data.sharepoint_defaultshare) {
+    defaultShareName = decodeURIComponent(data.sharepoint_defaultshare).trim() || null;
+  }
+
+  console.log("[provision-sp] Resolved app_settings:", { basePath, defaultShareName });
+  return { basePath, defaultShareName };
 }
 
 // ── Helpers ──
@@ -458,8 +464,8 @@ serve(async (req) => {
     // Get app-only token
     const accessToken = await getAppToken();
 
-    // Resolve base path from app_settings
-    const SP_BASE_PATH = await resolveBasePath(supabaseAdmin);
+    // Resolve settings from app_settings
+    const { basePath: SP_BASE_PATH, defaultShareName } = await resolveAppSettings(supabaseAdmin);
 
     // Resolve site and drive
     const { siteId, driveId } = await resolveSiteAndDrive(supabaseAdmin, accessToken);
@@ -509,6 +515,20 @@ serve(async (req) => {
         console.log("[provision-sp] Subfolder created:", subName);
       } catch (e) {
         console.error("[provision-sp] Subfolder error:", subName, e);
+      }
+    }
+
+    // ── Create default shared folder from app_settings ──
+    let sharedFolderItemId: string | null = null;
+    let sharedFolderName: string | null = null;
+    if (defaultShareName) {
+      try {
+        const sharedResult = await ensureFolder(accessToken, driveId, folderPath, defaultShareName);
+        sharedFolderItemId = sharedResult.itemId;
+        sharedFolderName = defaultShareName;
+        console.log("[provision-sp] Default shared folder created:", { defaultShareName, itemId: sharedFolderItemId });
+      } catch (e) {
+        console.error("[provision-sp] Failed to create default shared folder:", defaultShareName, e);
       }
     }
 
@@ -571,7 +591,7 @@ serve(async (req) => {
     }
 
     // Save to tenant_sharepoint_settings
-    await upsertSettings(supabaseAdmin, tenant_id, callerUserId, {
+    const settingsPayload: Record<string, unknown> = {
       site_id: siteId,
       drive_id: driveId,
       base_path: SP_BASE_PATH,
@@ -585,7 +605,15 @@ serve(async (req) => {
       provisioning_status: "success",
       provisioning_error: null,
       template_id: template?.id || null,
-    });
+    };
+
+    // Include default shared folder if created
+    if (sharedFolderItemId && sharedFolderName) {
+      settingsPayload.shared_folder_item_id = sharedFolderItemId;
+      settingsPayload.shared_folder_name = sharedFolderName;
+    }
+
+    await upsertSettings(supabaseAdmin, tenant_id, callerUserId, settingsPayload);
 
     // Emit timeline events
     await emitTimelineEvent(supabaseAdmin, {
