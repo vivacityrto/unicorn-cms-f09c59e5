@@ -464,8 +464,8 @@ serve(async (req) => {
     // Get app-only token
     const accessToken = await getAppToken();
 
-    // Resolve base path from app_settings
-    const SP_BASE_PATH = await resolveBasePath(supabaseAdmin);
+    // Resolve settings from app_settings
+    const { basePath: SP_BASE_PATH, defaultShareName } = await resolveAppSettings(supabaseAdmin);
 
     // Resolve site and drive
     const { siteId, driveId } = await resolveSiteAndDrive(supabaseAdmin, accessToken);
