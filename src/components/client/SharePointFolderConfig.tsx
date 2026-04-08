@@ -262,6 +262,31 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
     }
   };
 
+  // Provision SharePoint client folder via edge function
+  const handleProvisionFolder = async () => {
+    setProvisioning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('provision-tenant-sharepoint-folder', {
+        body: { tenant_id: tenantId },
+      });
+
+      if (error) {
+        toast({ title: 'Provisioning failed', description: error.message || 'Could not provision folder.', variant: 'destructive' });
+      } else if (data?.already_provisioned) {
+        toast({ title: 'Already provisioned', description: 'A SharePoint folder already exists for this client.' });
+      } else if (data?.success) {
+        toast({ title: 'Folder provisioned', description: `Client folder created successfully in SharePoint.` });
+      } else {
+        toast({ title: 'Provisioning failed', description: data?.error || 'Unknown error during provisioning.', variant: 'destructive' });
+      }
+      await fetchSettings();
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'An unexpected error occurred.', variant: 'destructive' });
+    } finally {
+      setProvisioning(false);
+    }
+  };
+
   const handleToggleEnabled = async () => {
     if (!settings) return;
 
