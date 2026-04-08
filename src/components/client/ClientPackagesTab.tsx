@@ -375,21 +375,30 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
 
   if (packages.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Package2 className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-lg font-medium mb-2">No packages assigned</p>
-          <p className="text-sm text-muted-foreground mb-4">
-            This client doesn't have any packages yet.
-          </p>
-          {isSuperAdmin() && (
-            <Button onClick={() => setStartPackageOpen(true)}>
-              <Rocket className="h-4 w-4 mr-2" />
-              Start Package
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+      <>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Package2 className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-medium mb-2">No packages assigned</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              This client doesn't have any packages yet.
+            </p>
+            {isSuperAdmin() && (
+              <Button onClick={() => setStartPackageOpen(true)}>
+                <Rocket className="h-4 w-4 mr-2" />
+                Start Package
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+        <StartPackageDialog
+          open={startPackageOpen}
+          onOpenChange={setStartPackageOpen}
+          tenantId={tenantId}
+          tenantName={tenantName || 'Client'}
+          onSuccess={() => onAddPackage?.()}
+        />
+      </>
     );
   }
 
