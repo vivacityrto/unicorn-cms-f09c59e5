@@ -370,7 +370,9 @@ export async function ensureFolder(
   }
 
   if (!resp.ok) {
-    throw new Error(`Failed to create folder "${folderName}": ${resp.status}`);
+    const errorDetail = JSON.stringify(resp.data);
+    console.error(`[graph-app-client] ensureFolder failed: POST ${createUrl} → ${resp.status}`, errorDetail);
+    throw new Error(`Failed to create folder "${folderName}": ${resp.status} — ${errorDetail}`);
   }
 
   return { itemId: resp.data.id, webUrl: resp.data.webUrl };
