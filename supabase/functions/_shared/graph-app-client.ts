@@ -420,8 +420,9 @@ export function stripBusinessSuffixes(name: string): string {
 /**
  * Build a deterministic client folder name from tenant data.
  *
- * With valid RTO ID:  "{rtoId} - {DisplayName}"
- * Without:            "KS-{Name}"
+ * KickStart packages:           "KS-{DisplayName}"
+ * Other packages with RTO ID:   "DD-{rtoId} - {DisplayName}"
+ * No RTO ID, not KickStart:     "KS-{DisplayName}" (legacy fallback)
  *
  * DisplayName = legal_name if present, otherwise name.
  * If display name > 60 chars, business suffixes are stripped first.
@@ -430,6 +431,7 @@ export function buildClientFolderName(
   rtoId: string | null | undefined,
   legalName: string | null | undefined,
   name: string,
+  isKickStart?: boolean,
 ): string {
   const invalidRtoPatterns = ['', 'tba', 'replacing:'];
   const hasValidRtoId =
@@ -446,9 +448,15 @@ export function buildClientFolderName(
     }
   }
 
-  const raw = hasValidRtoId
-    ? `${rtoId.trim()} - ${finalDisplay}`
-    : `KS-${finalDisplay}`;
+  let raw: string;
+  if (isKickStart || (!hasValidRtoId && isKickStart !== false)) {
+    // KickStart or no RTO ID with unknown package type
+    raw = `KS-${finalDisplay}`;
+  } else if (hasValidRtoId) {
+    raw = `DD-${rtoId!.trim()} - ${finalDisplay}`;
+  } else {
+    raw = `KS-${finalDisplay}`;
+  }
 
   return sanitiseFolderName(raw);
 }

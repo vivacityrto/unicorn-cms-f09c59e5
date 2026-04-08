@@ -20,7 +20,7 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const SP_BASE_PATH = "/Unicorn Clients";
+const SP_BASE_PATH = "/Client Folder";
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";  // kept for direct fetch calls below
 
 // ── Helpers ──
