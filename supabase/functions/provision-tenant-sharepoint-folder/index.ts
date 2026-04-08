@@ -618,8 +618,9 @@ serve(async (req) => {
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
+        fallback: true,
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
