@@ -20,8 +20,40 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const SP_BASE_PATH = "/Client Folder";
+const SP_BASE_PATH_FALLBACK = "/Client Folder";
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";  // kept for direct fetch calls below
+
+/**
+ * Resolve the SharePoint base path from app_settings.sharepoint_client_folders.
+ * The stored value is URL-encoded and includes "Shared Documents/" prefix which
+ * must be stripped since Graph API drive paths are relative to the drive root.
+ */
+async function resolveBasePath(
+  supabaseAdmin: ReturnType<typeof createClient>,
+): Promise<string> {
+  const { data, error } = await supabaseAdmin
+    .from("app_settings")
+    .select("sharepoint_client_folders")
+    .limit(1)
+    .single();
+
+  if (error || !data?.sharepoint_client_folders) {
+    console.warn("[provision-sp] app_settings.sharepoint_client_folders not found, using fallback:", SP_BASE_PATH_FALLBACK);
+    return SP_BASE_PATH_FALLBACK;
+  }
+
+  const decoded = decodeURIComponent(data.sharepoint_client_folders);
+  // Strip "Shared Documents/" prefix — Graph drive paths are relative to the drive root
+  const stripped = decoded.replace(/^Shared Documents\/?/, "");
+  if (!stripped) {
+    console.warn("[provision-sp] sharepoint_client_folders resolved to empty after stripping, using fallback");
+    return SP_BASE_PATH_FALLBACK;
+  }
+
+  const basePath = `/${stripped.replace(/^\//, "")}`;
+  console.log("[provision-sp] Resolved base path from app_settings:", basePath);
+  return basePath;
+}
 
 // ── Helpers ──
 
@@ -421,6 +453,9 @@ serve(async (req) => {
 
     // Get app-only token
     const accessToken = await getAppToken();
+
+    // Resolve base path from app_settings
+    const SP_BASE_PATH = await resolveBasePath(supabaseAdmin);
 
     // Resolve site and drive
     const { siteId, driveId } = await resolveSiteAndDrive(supabaseAdmin, accessToken);
