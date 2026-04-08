@@ -245,10 +245,20 @@ export function usePackageBuilder() {
 
     if (fetchError) throw fetchError;
 
+    // Get the next available ID since packages table has no auto-increment
+    const { data: maxIdRow } = await supabase
+      .from('packages')
+      .select('id')
+      .order('id', { ascending: false })
+      .limit(1)
+      .single();
+    const nextId = (maxIdRow?.id ?? 0) + 1;
+
     // Create new package with "(Copy)" suffix
     const { data: newPackage, error: createError } = await supabase
       .from('packages')
       .insert([{
+        id: nextId,
         name: `${original.name} (Copy)`,
         full_text: `${original.full_text} (Copy)`,
         details: original.details,
