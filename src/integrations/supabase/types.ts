@@ -2940,6 +2940,7 @@ export type Database = {
           minutes_store_raw_copilot_input: boolean
           review_required_before_release: boolean
           sharepoint_client_folders: string | null
+          sharepoint_defaultshare: string | null
           sharepoint_site_url: string | null
           updated_at: string
         }
@@ -2969,6 +2970,7 @@ export type Database = {
           minutes_store_raw_copilot_input?: boolean
           review_required_before_release?: boolean
           sharepoint_client_folders?: string | null
+          sharepoint_defaultshare?: string | null
           sharepoint_site_url?: string | null
           updated_at?: string
         }
@@ -2998,6 +3000,7 @@ export type Database = {
           minutes_store_raw_copilot_input?: boolean
           review_required_before_release?: boolean
           sharepoint_client_folders?: string | null
+          sharepoint_defaultshare?: string | null
           sharepoint_site_url?: string | null
           updated_at?: string
         }
