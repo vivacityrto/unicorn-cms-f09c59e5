@@ -842,7 +842,7 @@ export function useResolvedStageContent(packageId: number | null, stageId: numbe
             .order('sort_order', { ascending: true }),
           supabase
             .from('emails')
-            .select('*, email_templates:email_template_id(id, internal_name, subject, html_body)')
+            .select('*, email_templates:email_template_id(id, internal_name, subject, html_body)' as any)
             .eq('stage_id', stageId)
             .order('order_number', { ascending: true }),
           supabase
