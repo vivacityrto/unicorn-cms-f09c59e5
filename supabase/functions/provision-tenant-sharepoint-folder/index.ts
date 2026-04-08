@@ -28,31 +28,37 @@ const GRAPH_BASE = "https://graph.microsoft.com/v1.0";  // kept for direct fetch
  * The stored value is URL-encoded and includes "Shared Documents/" prefix which
  * must be stripped since Graph API drive paths are relative to the drive root.
  */
-async function resolveBasePath(
+async function resolveAppSettings(
   supabaseAdmin: ReturnType<typeof createClient>,
-): Promise<string> {
+): Promise<{ basePath: string; defaultShareName: string | null }> {
   const { data, error } = await supabaseAdmin
     .from("app_settings")
-    .select("sharepoint_client_folders")
+    .select("sharepoint_client_folders, sharepoint_defaultshare")
     .limit(1)
     .single();
 
-  if (error || !data?.sharepoint_client_folders) {
-    console.warn("[provision-sp] app_settings.sharepoint_client_folders not found, using fallback:", SP_BASE_PATH_FALLBACK);
-    return SP_BASE_PATH_FALLBACK;
+  let basePath = SP_BASE_PATH_FALLBACK;
+  let defaultShareName: string | null = null;
+
+  if (error || !data) {
+    console.warn("[provision-sp] app_settings not found, using fallbacks");
+    return { basePath, defaultShareName };
   }
 
-  const decoded = decodeURIComponent(data.sharepoint_client_folders);
-  // Strip "Shared Documents/" prefix — Graph drive paths are relative to the drive root
-  const stripped = decoded.replace(/^Shared Documents\/?/, "");
-  if (!stripped) {
-    console.warn("[provision-sp] sharepoint_client_folders resolved to empty after stripping, using fallback");
-    return SP_BASE_PATH_FALLBACK;
+  if (data.sharepoint_client_folders) {
+    const decoded = decodeURIComponent(data.sharepoint_client_folders);
+    const stripped = decoded.replace(/^Shared Documents\/?/, "");
+    if (stripped) {
+      basePath = `/${stripped.replace(/^\//, "")}`;
+    }
   }
 
-  const basePath = `/${stripped.replace(/^\//, "")}`;
-  console.log("[provision-sp] Resolved base path from app_settings:", basePath);
-  return basePath;
+  if (data.sharepoint_defaultshare) {
+    defaultShareName = decodeURIComponent(data.sharepoint_defaultshare).trim() || null;
+  }
+
+  console.log("[provision-sp] Resolved app_settings:", { basePath, defaultShareName });
+  return { basePath, defaultShareName };
 }
 
 // ── Helpers ──
