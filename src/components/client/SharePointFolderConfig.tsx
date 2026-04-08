@@ -55,6 +55,8 @@ interface SharePointSettings {
   governance_folder_item_id: string | null;
   governance_folder_url: string | null;
   governance_folder_name: string | null;
+  provisioning_status: string | null;
+  setup_mode: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -84,6 +86,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [provisioning, setProvisioning] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [browsingSharedFolder, setBrowsingSharedFolder] = useState(false);
@@ -256,6 +259,31 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'An unexpected error occurred.', variant: 'destructive' });
     } finally {
       setValidating(false);
+    }
+  };
+
+  // Provision SharePoint client folder via edge function
+  const handleProvisionFolder = async () => {
+    setProvisioning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('provision-tenant-sharepoint-folder', {
+        body: { tenant_id: tenantId },
+      });
+
+      if (error) {
+        toast({ title: 'Provisioning failed', description: error.message || 'Could not provision folder.', variant: 'destructive' });
+      } else if (data?.already_provisioned) {
+        toast({ title: 'Already provisioned', description: 'A SharePoint folder already exists for this client.' });
+      } else if (data?.success) {
+        toast({ title: 'Folder provisioned', description: `Client folder created successfully in SharePoint.` });
+      } else {
+        toast({ title: 'Provisioning failed', description: data?.error || 'Unknown error during provisioning.', variant: 'destructive' });
+      }
+      await fetchSettings();
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'An unexpected error occurred.', variant: 'destructive' });
+    } finally {
+      setProvisioning(false);
     }
   };
 
@@ -555,6 +583,46 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{settings.validation_error}</AlertDescription>
           </Alert>
+        )}
+
+        {/* Folder Provisioning — SuperAdmin only */}
+        {isSuperAdmin() && (
+          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <FolderPlus className="h-4 w-4" />
+                  Folder Provisioning
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {settings?.provisioning_status === 'success'
+                    ? 'Client folder has been provisioned in SharePoint.'
+                    : 'Create the client folder structure in SharePoint automatically.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {settings?.provisioning_status === 'success' && (
+                  <Badge variant="default" className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Provisioned
+                  </Badge>
+                )}
+                <Button
+                  variant={settings?.provisioning_status === 'success' ? 'outline' : 'default'}
+                  size="sm"
+                  onClick={handleProvisionFolder}
+                  disabled={provisioning}
+                >
+                  {provisioning ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {settings?.provisioning_status === 'success' ? 'Re-provision' : 'Provision Folder'}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Shared Folder Configuration — full width */}
