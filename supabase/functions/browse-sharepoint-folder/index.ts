@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
+import { getAppToken } from "../_shared/graph-app-client.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -215,7 +215,7 @@ serve(async (req) => {
       root_name = settings.root_name || "SharePoint";
     }
 
-    // Get user's Microsoft token
+    // Get user's Microsoft token, fall back to app-level token
     const { data: tokenData } = await supabaseAdmin
       .from("oauth_tokens")
       .select("access_token, refresh_token, expires_at, scope")
@@ -223,21 +223,28 @@ serve(async (req) => {
       .eq("provider", "microsoft")
       .single();
 
-    if (!tokenData) {
-      return new Response(
-        JSON.stringify({ error: "Microsoft account not connected" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     let accessToken: string;
-    try {
-      accessToken = await refreshToken(supabaseAdmin, user.id, tokenData);
-    } catch {
-      return new Response(
-        JSON.stringify({ error: "Microsoft token expired. Please reconnect." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (tokenData) {
+      try {
+        accessToken = await refreshToken(supabaseAdmin, user.id, tokenData);
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "Microsoft token expired. Please reconnect." }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      // Fall back to app-level credentials (client_credentials grant)
+      try {
+        accessToken = await getAppToken();
+        console.log("[browse-sp] Using app-level token (no user OAuth token found)");
+      } catch (e) {
+        console.error("[browse-sp] App token fallback failed:", e);
+        return new Response(
+          JSON.stringify({ error: "Microsoft account not connected and app credentials unavailable" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // ===================== LIST FOLDER CONTENTS =====================
