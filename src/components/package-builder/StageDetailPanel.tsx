@@ -907,7 +907,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                           <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
                           <div className="flex-1 min-w-0">
                             <span className="font-medium block">
-                              {doc.document?.title || doc.documents?.doc_name || 'Document'}
+                              {doc.document?.title || doc.documents?.doc_name || doc.doc_name || doc.title || 'Document'}
                             </span>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline" className="text-xs capitalize">
