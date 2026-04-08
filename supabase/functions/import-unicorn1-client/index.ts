@@ -356,8 +356,9 @@ serve(async (req) => {
           const endDate = p.EndDate ?? p.enddate ?? null;
           const cloId = p.CLO_Id ?? p.Clo_Id ?? p.clo_id ?? null;
           const isComplete = p.IsComplete ?? p.iscomplete ?? false;
-          const { error } = await svcClient.from("package_instances").insert({
-            id: pid,
+          // Try inserting with U1 ID first; if conflict, insert without ID (auto-generate)
+          let insertError: any = null;
+          const row = {
             tenant_id: client_id,
             package_id: p.Package_Id ?? p.package_id,
             is_complete: Boolean(isComplete),
@@ -365,7 +366,15 @@ serve(async (req) => {
             end_date: endDate,
             clo_id: cloId ? Number(cloId) : null,
             u1_packageid: p.Package_Id ?? p.package_id,
-          });
+          };
+          const { error: err1 } = await svcClient.from("package_instances").insert({ id: pid, ...row });
+          if (err1) {
+            // ID conflict — retry without explicit ID so sequence auto-generates
+            console.warn(`PI ${pid} ID conflict, retrying with auto-ID:`, err1.message);
+            const { error: err2 } = await svcClient.from("package_instances").insert(row);
+            insertError = err2;
+          }
+          const error = insertError;
           if (error) {
             console.error(`PI ${pid}:`, error.message);
             skipped++;
