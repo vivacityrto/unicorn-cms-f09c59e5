@@ -266,8 +266,9 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const handleProvisionFolder = async () => {
     setProvisioning(true);
     try {
+      const isReprovision = settings?.provisioning_status === 'success';
       const { data, error } = await supabase.functions.invoke('provision-tenant-sharepoint-folder', {
-        body: { tenant_id: tenantId },
+        body: { tenant_id: tenantId, force: isReprovision },
       });
 
       if (error) {

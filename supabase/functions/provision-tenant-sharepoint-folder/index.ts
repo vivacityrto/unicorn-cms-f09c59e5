@@ -372,7 +372,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { tenant_id } = body as { tenant_id: number };
+    const { tenant_id, force } = body as { tenant_id: number; force?: boolean };
     tenantIdForError = tenant_id;
 
     if (!tenant_id) {
@@ -427,22 +427,26 @@ serve(async (req) => {
       );
     }
 
-    // Check idempotency
-    const { data: existingSettings } = await supabaseAdmin
-      .from("tenant_sharepoint_settings")
-      .select("provisioning_status, root_item_id")
-      .eq("tenant_id", tenant_id)
-      .maybeSingle();
+    // Check idempotency (skip if force=true for re-provisioning)
+    if (!force) {
+      const { data: existingSettings } = await supabaseAdmin
+        .from("tenant_sharepoint_settings")
+        .select("provisioning_status, root_item_id")
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
 
-    if (existingSettings?.provisioning_status === "success" && existingSettings?.root_item_id) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          already_provisioned: true,
-          message: "SharePoint folder already provisioned",
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      if (existingSettings?.provisioning_status === "success" && existingSettings?.root_item_id) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            already_provisioned: true,
+            message: "SharePoint folder already provisioned",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else {
+      console.log("[provision-sp] Force re-provision requested for tenant", tenant_id);
     }
 
     // Mark as pending
