@@ -1,24 +1,27 @@
 
 
-## Add "Provision SharePoint Folder" Button to Integrations Tab
+## Use `app_settings.sharepoint_client_folders` for Folder Path
 
 ### Problem
-When a client is imported from Unicorn 1, the SharePoint client folder is not automatically provisioned (unlike the onboarding flow which has a toggle for it). There is no way to trigger folder provisioning from the Integrations tab.
+The provisioning edge function has the root folder path hardcoded as `const SP_BASE_PATH = "/Client Folder"`. The actual path should come from the `app_settings` table's `sharepoint_client_folders` column, which currently holds `Shared Documents/Client Folder` (URL-encoded as `Shared%20Documents%2FClient%20Folder`).
 
-### Solution
-Add a "SharePoint Folder Provisioning" section to the existing `SharePointFolderConfig` component on the Integrations tab. This will include a "Provision Client Folder" button that calls the existing `provision-tenant-sharepoint-folder` edge function.
+### Current State
+- `app_settings.sharepoint_client_folders` = `Shared Documents/Client Folder`
+- The Graph API drive path is relative to the drive root, which *is* "Shared Documents" — so the effective sub-path is just `Client Folder`
+- The hardcoded `SP_BASE_PATH = "/Client Folder"` happens to be correct today but won't adapt if the setting changes
 
-### Changes
+### Plan
 
-**File: `src/components/client/SharePointFolderConfig.tsx`**
-- Add a "Provision Folder" button to the card, visible when no folder has been provisioned yet (i.e., `provisioning_status` is not `success` or settings don't exist).
-- The button calls `supabase.functions.invoke('provision-tenant-sharepoint-folder', { body: { tenant_id: tenantId } })` -- reusing the exact same logic already in `ClientFilesTab.tsx`.
-- Show provisioning state (loading spinner) and success/error toast feedback.
-- If already provisioned, show a subtle "Re-provision" option for cases where the folder needs to be recreated.
-- After successful provisioning, refetch the settings to update the UI.
+**File: `supabase/functions/provision-tenant-sharepoint-folder/index.ts`**
 
-### Technical Details
-- No database changes needed -- the edge function and settings table already exist.
-- The provisioning button will be gated to SuperAdmin users only (using `useAuth().isSuperAdmin`).
-- Reuses the existing `provision-tenant-sharepoint-folder` edge function which handles idempotency (returns `already_provisioned: true` if folder exists).
+1. Remove the hardcoded `const SP_BASE_PATH = "/Client Folder"` constant.
+2. After creating the Supabase admin client, fetch the `sharepoint_client_folders` value from `app_settings`.
+3. Parse the value: URL-decode it, then strip the leading `Shared Documents/` prefix (since Graph API drive paths are already relative to the drive root which *is* "Shared Documents"). The remainder becomes the base path (e.g., `Client Folder` → `/Client Folder`).
+4. If the setting is missing or empty, fall back to `/Client Folder` with a console warning, so existing behaviour is preserved.
+5. Use this dynamic path in place of every `SP_BASE_PATH` reference (folder creation and settings storage).
+
+### Technical Detail
+- The Graph API `/drives/{driveId}/root:/path:/children` is relative to the document library root ("Shared Documents"), so `Shared Documents/Client Folder` → strip `Shared Documents/` → use `/Client Folder` as the drive-relative path.
+- URL-decode with `decodeURIComponent()` before stripping.
+- Single query added: `SELECT sharepoint_client_folders FROM app_settings LIMIT 1`.
 
