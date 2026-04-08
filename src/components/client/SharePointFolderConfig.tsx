@@ -585,6 +585,46 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
           </Alert>
         )}
 
+        {/* Folder Provisioning — SuperAdmin only */}
+        {isSuperAdmin() && (
+          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <FolderPlus className="h-4 w-4" />
+                  Folder Provisioning
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {settings?.provisioning_status === 'success'
+                    ? 'Client folder has been provisioned in SharePoint.'
+                    : 'Create the client folder structure in SharePoint automatically.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {settings?.provisioning_status === 'success' && (
+                  <Badge variant="default" className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Provisioned
+                  </Badge>
+                )}
+                <Button
+                  variant={settings?.provisioning_status === 'success' ? 'outline' : 'default'}
+                  size="sm"
+                  onClick={handleProvisionFolder}
+                  disabled={provisioning}
+                >
+                  {provisioning ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                  )}
+                  {settings?.provisioning_status === 'success' ? 'Re-provision' : 'Provision Folder'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Shared Folder Configuration — full width */}
         {settings && settings.validation_status === 'valid' && (
           <SharedFolderSection
