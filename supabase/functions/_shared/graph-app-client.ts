@@ -422,7 +422,10 @@ export function stripBusinessSuffixes(name: string): string {
  *
  * KickStart packages:           "KS-{DisplayName}"
  * Other packages with RTO ID:   "DD-{rtoId} - {DisplayName}"
- * No RTO ID, not KickStart:     "KS-{DisplayName}" (legacy fallback)
+ * Naming rules:
+ *   KickStart package:              "KS-{DisplayName}"
+ *   DD with valid RTO ID:           "DD-{rtoId} - {DisplayName}"
+ *   No package / unknown:           "{DisplayName}" (plain name)
  *
  * DisplayName = legal_name if present, otherwise name.
  * If display name > 60 chars, business suffixes are stripped first.
@@ -449,13 +452,13 @@ export function buildClientFolderName(
   }
 
   let raw: string;
-  if (isKickStart || (!hasValidRtoId && isKickStart !== false)) {
-    // KickStart or no RTO ID with unknown package type
+  if (isKickStart === true) {
     raw = `KS-${finalDisplay}`;
   } else if (hasValidRtoId) {
     raw = `DD-${rtoId!.trim()} - ${finalDisplay}`;
   } else {
-    raw = `KS-${finalDisplay}`;
+    // No package or unknown type — just use the display name
+    raw = finalDisplay;
   }
 
   return sanitiseFolderName(raw);
