@@ -775,19 +775,31 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                       const templateName = email.email_template?.internal_name || 
                         email.email_templates?.internal_name || 
                         emailTemplates.find(t => t.id === email.email_template_id)?.internal_name ||
+                        email.name ||
                         'Unknown Template';
+                      const triggerType = email.trigger_type?.replace('_', ' ') ?? null;
+                      const recipientType = email.recipient_type ?? null;
                       return (
                         <div key={email.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                           <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
                           <div className="flex-1 min-w-0">
                             <span className="font-medium block">{templateName}</span>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs capitalize">
-                              {email.trigger_type?.replace('_', ' ') ?? 'Unknown'}
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs capitalize">
-                                {email.recipient_type ?? 'Unknown'}
-                              </Badge>
+                              {triggerType && (
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {triggerType}
+                                </Badge>
+                              )}
+                              {recipientType && (
+                                <Badge variant="secondary" className="text-xs capitalize">
+                                  {recipientType}
+                                </Badge>
+                              )}
+                              {email.subject && (
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {email.subject}
+                                </span>
+                              )}
                             </div>
                           </div>
                           {useOverrides && (
