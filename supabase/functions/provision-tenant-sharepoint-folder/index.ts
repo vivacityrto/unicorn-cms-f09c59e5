@@ -20,7 +20,7 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const SP_BASE_PATH = "/Unicorn Clients";
+const SP_BASE_PATH = "/Client Folder";
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";  // kept for direct fetch calls below
 
 // ── Helpers ──
@@ -428,8 +428,20 @@ serve(async (req) => {
     // Ensure base folder exists
     await ensureFolder(accessToken, driveId, "/", SP_BASE_PATH.replace(/^\//, ""));
 
+    // Determine if this is a KickStart package
+    const { data: activePackage } = await supabaseAdmin
+      .from("client_packages")
+      .select("package:packages(package_type)")
+      .eq("tenant_id", tenant_id)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+
+    const packageType = (activePackage?.package as any)?.package_type || null;
+    const isKickStart = packageType === "regulatory_submission";
+
     // Build folder name
-    const folderName = buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name);
+    const folderName = buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name, isKickStart);
     const folderPath = `${SP_BASE_PATH}/${folderName}`;
 
     console.log("[provision-sp] Creating folder:", { folderName, folderPath, siteId, driveId });
