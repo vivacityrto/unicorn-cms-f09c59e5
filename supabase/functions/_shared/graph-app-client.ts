@@ -343,8 +343,13 @@ export async function ensureFolder(
   parentPath: string,
   folderName: string,
 ): Promise<{ itemId: string; webUrl: string }> {
-  const encodedParent = parentPath.replace(/^\//, "");
-  const createUrl = `/drives/${driveId}/root:/${encodeURIComponent(encodedParent)}:/children`;
+  const encodedParent = parentPath.replace(/^\//, "").replace(/\/$/, "");
+
+  // When parent is root (empty after stripping slashes), use /root/children
+  // Otherwise use /root:/{path}:/children
+  const createUrl = encodedParent
+    ? `/drives/${driveId}/root:/${encodeURIComponent(encodedParent)}:/children`
+    : `/drives/${driveId}/root/children`;
 
   const resp = await graphPost<DriveItem>(createUrl, {
     name: folderName,
@@ -354,7 +359,9 @@ export async function ensureFolder(
 
   if (resp.status === 409) {
     // Already exists — fetch it
-    const getPath = `/drives/${driveId}/root:/${encodeURIComponent(encodedParent)}/${encodeURIComponent(folderName)}`;
+    const getPath = encodedParent
+      ? `/drives/${driveId}/root:/${encodeURIComponent(encodedParent)}/${encodeURIComponent(folderName)}`
+      : `/drives/${driveId}/root:/${encodeURIComponent(folderName)}`;
     const existing = await graphGet<DriveItem>(getPath);
     if (!existing.ok) {
       throw new Error(`Folder exists but could not retrieve: ${folderName}`);
