@@ -58,6 +58,7 @@ import { PackageStagesManager } from './PackageStagesManager';
 import { PackageNotesSection } from './PackageNotesSection';
 import { PackageTimeSection } from './PackageTimeSection';
 import { StartPackageDialog } from './StartPackageDialog';
+import { PackagePinnedNote } from './PackagePinnedNote';
 import { RenewalConfirmDialog } from './RenewalConfirmDialog';
 import { PackageDataManager } from './PackageDataManager';
 import { useNavigate } from 'react-router-dom';
@@ -628,6 +629,9 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                         <Badge variant="secondary">{pkg.current_stage_name}</Badge>
                       </div>
                     )}
+
+                    {/* Pinned Note */}
+                    <PackagePinnedNote tenantId={tenantId} packageInstanceId={parseInt(pkg.id, 10)} />
 
                     {/* Blocked Warning */}
                     {pkg.has_blocked_stages && (
