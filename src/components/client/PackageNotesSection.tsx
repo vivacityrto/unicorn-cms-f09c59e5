@@ -242,7 +242,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
+                  <TableHead className="w-[100px]">Date</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Priority</TableHead>
@@ -264,7 +264,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
                           {note.is_pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
-                          <span className="truncate max-w-[200px]">{note.title || '—'}</span>
+                          <span>{note.title || '—'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
