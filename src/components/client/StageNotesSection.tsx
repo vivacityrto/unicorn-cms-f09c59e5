@@ -59,18 +59,18 @@ export function StageNotesSection({ tenantId, packageId }: StageNotesSectionProp
               <StickyNote className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{note.title}</p>
+              <p className="text-sm font-medium">{note.title}</p>
               <p className="text-xs text-muted-foreground line-clamp-2">
                 {stripHtml(note.note_details)}
               </p>
             </div>
-            <div className="flex flex-col items-end gap-1 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
+              <Badge variant="outline" className="text-xs">{note.note_type}</Badge>
               {note.created_at && (
-                <span className="text-xs text-muted-foreground">
-                  {format(new Date(note.created_at), 'dd MMM yyyy')}
+                <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                  {format(new Date(note.created_at), 'dd/MM/yy')}
                 </span>
               )}
-              <Badge variant="outline" className="text-xs">{note.note_type}</Badge>
             </div>
           </div>
         ))}
