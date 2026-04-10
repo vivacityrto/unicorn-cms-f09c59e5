@@ -121,12 +121,30 @@ serve(async (req) => {
     const isSuperAdmin = callerProfile.unicorn_role === 'Super Admin';
     const isTenantAdmin = !isVivacityStaff && callerProfile.unicorn_role === 'Admin';
 
-    if (!isSuperAdmin && !isTenantAdmin) {
+    if (!isVivacityStaff && !isTenantAdmin) {
       return jsonResponse(403, {
         ok: false,
         code: "FORBIDDEN",
         detail: "You don't have permission to invite users to this tenant",
       });
+    }
+
+    // For tenant admins, verify they belong to the target tenant
+    if (isTenantAdmin) {
+      const { data: memberCheck } = await supabase
+        .from('tenant_users')
+        .select('id')
+        .eq('user_id', callerUser.user.id)
+        .eq('tenant_id', payload.tenant_id)
+        .maybeSingle();
+
+      if (!memberCheck) {
+        return jsonResponse(403, {
+          ok: false,
+          code: "FORBIDDEN",
+          detail: "You can only invite users to your own organisation",
+        });
+      }
     }
 
     // Tenant admins can only invite to their own tenant
