@@ -116,13 +116,12 @@ serve(async (req) => {
       });
     }
 
-    // Check permissions: Super Admin can invite anyone, Tenant Admins can invite to their own tenant
-    // Check global_role for SuperAdmin status
-    const isSuperAdmin = callerProfile.global_role === 'SuperAdmin';
-    const isTenantAdmin = callerProfile.tenant_id === payload.tenant_id && 
-      (callerProfile.unicorn_role === 'Admin' || callerProfile.tenant_role === 'admin');
+    // Check permissions: Vivacity staff can invite anyone, Tenant Admins can invite to their own tenant
+    const isVivacityStaff = VIVACITY_ROLES.includes(callerProfile.unicorn_role as UnicornRole);
+    const isSuperAdmin = callerProfile.unicorn_role === 'Super Admin';
+    const isTenantAdmin = !isVivacityStaff && callerProfile.unicorn_role === 'Admin';
 
-    if (!isSuperAdmin && !isTenantAdmin) {
+    if (!isVivacityStaff && !isTenantAdmin) {
       return jsonResponse(403, {
         ok: false,
         code: "FORBIDDEN",
@@ -130,17 +129,26 @@ serve(async (req) => {
       });
     }
 
-    // Tenant admins can only invite to their own tenant
-    if (!isSuperAdmin && callerProfile.tenant_id !== payload.tenant_id) {
-      return jsonResponse(403, {
-        ok: false,
-        code: "FORBIDDEN",
-        detail: "You can only invite users to your own organisation",
-      });
+    // For tenant admins, verify they belong to the target tenant
+    if (isTenantAdmin) {
+      const { data: memberCheck } = await supabase
+        .from('tenant_users')
+        .select('id')
+        .eq('user_id', callerUser.user.id)
+        .eq('tenant_id', payload.tenant_id)
+        .maybeSingle();
+
+      if (!memberCheck) {
+        return jsonResponse(403, {
+          ok: false,
+          code: "FORBIDDEN",
+          detail: "You can only invite users to your own organisation",
+        });
+      }
     }
 
     // Tenant admins can only assign Admin or User roles (not Super Admin, Team Leader, etc.)
-    if (!isSuperAdmin && !CLIENT_ROLES.includes(payload.unicorn_role)) {
+    if (!isVivacityStaff && !CLIENT_ROLES.includes(payload.unicorn_role)) {
       return jsonResponse(403, {
         ok: false,
         code: "FORBIDDEN",
