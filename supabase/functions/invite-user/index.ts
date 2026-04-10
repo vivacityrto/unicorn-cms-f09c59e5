@@ -116,11 +116,10 @@ serve(async (req) => {
       });
     }
 
-    // Check permissions: Super Admin can invite anyone, Tenant Admins can invite to their own tenant
-    // Check global_role for SuperAdmin status
-    const isSuperAdmin = callerProfile.global_role === 'SuperAdmin';
-    const isTenantAdmin = callerProfile.tenant_id === payload.tenant_id && 
-      (callerProfile.unicorn_role === 'Admin' || callerProfile.tenant_role === 'admin');
+    // Check permissions: Vivacity staff can invite anyone, Tenant Admins can invite to their own tenant
+    const isVivacityStaff = VIVACITY_ROLES.includes(callerProfile.unicorn_role as UnicornRole);
+    const isSuperAdmin = callerProfile.unicorn_role === 'Super Admin';
+    const isTenantAdmin = !isVivacityStaff && callerProfile.unicorn_role === 'Admin';
 
     if (!isSuperAdmin && !isTenantAdmin) {
       return jsonResponse(403, {
