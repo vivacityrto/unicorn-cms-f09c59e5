@@ -147,17 +147,8 @@ serve(async (req) => {
       }
     }
 
-    // Tenant admins can only invite to their own tenant
-    if (!isSuperAdmin && callerProfile.tenant_id !== payload.tenant_id) {
-      return jsonResponse(403, {
-        ok: false,
-        code: "FORBIDDEN",
-        detail: "You can only invite users to your own organisation",
-      });
-    }
-
     // Tenant admins can only assign Admin or User roles (not Super Admin, Team Leader, etc.)
-    if (!isSuperAdmin && !CLIENT_ROLES.includes(payload.unicorn_role)) {
+    if (!isVivacityStaff && !CLIENT_ROLES.includes(payload.unicorn_role)) {
       return jsonResponse(403, {
         ok: false,
         code: "FORBIDDEN",
