@@ -58,8 +58,18 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
   }, [meetingType, templates]);
 
   const handleSchedule = async () => {
-    if (!title || !scheduledDate || !facilitatorId || !profile) {
-      toast({ title: 'Please fill in all required fields', variant: 'destructive' });
+    const missing: string[] = [];
+    if (!title) missing.push('Meeting Title');
+    if (!scheduledDate) missing.push('Scheduled Date & Time');
+    if (!facilitatorId) missing.push('Facilitator');
+    if (!profile) missing.push('User profile (not loaded)');
+    
+    if (missing.length > 0) {
+      toast({ 
+        title: 'Missing required fields', 
+        description: missing.join(', '),
+        variant: 'destructive' 
+      });
       return;
     }
 
