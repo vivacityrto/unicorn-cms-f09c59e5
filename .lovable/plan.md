@@ -1,54 +1,104 @@
 
 
-## Fix: CRICOS-Aware Audit Type Cards Not Updating
+## Audit Scheduling, Calendar Sync & Report Template
 
-### Root Cause Analysis
+### Summary
+Add a Schedule tab to the audit workspace with three appointment panels (document deadline, opening meeting, closing meeting), calendar sync via `sync-outlook-calendar`, a client portal upcoming audit section, and report template with three-phase structure. All DB infrastructure (audit_appointments table, schedule_audit_phase RPC, client_audits columns) already exists.
 
-The detection logic and card arrays are correctly defined, but there are two issues:
+---
 
-1. **`CRICOS_INVALID_VALUES` is not comprehensive enough** — values like `'NA'` (no slash), `'none'`, `'None'`, or whitespace-only strings would pass through as valid CRICOS IDs, while others like `'N/A'` are correctly filtered. The `.includes()` check also uses exact match on trimmed input but the array doesn't cover all edge cases.
+### Files to Create
 
-2. **Potential timing/state issue** — When the modal opens with `preselectedTenantId`, `tenantId` is set immediately but the `tenants` array loads asynchronously. If the async query returns data where `cricos_id` is technically non-null but an invalid placeholder (not in the filter list), or if there's a brief period where `selectedTenant` is undefined, the cards may render incorrectly.
+**1. `src/hooks/useAuditSchedule.ts`** — Appointment data hooks
+- `useAuditAppointments(auditId)` — fetches from `audit_appointments` where `audit_id`, returns grouped by type
+- `useScheduleAuditPhase()` — calls `schedule_audit_phase` RPC, then creates `calendar_events` record for meetings, then invokes `sync-outlook-calendar` edge function, updates `outlook_event_id`
+- `useCancelAuditAppointment()` — PATCH status=cancelled + sync-outlook-calendar with action=cancel
+- `useCompleteAuditAppointment()` — PATCH status=completed + completed_at, transitions audit status for opening meeting completion
 
-3. **Selected card not re-evaluated when registration type changes** — When a user selects a card in Step 1 (from the wrong list), then selects a client in Step 2, then goes back to Step 1, the `selectedCard` state may still reference a card from the previous list. The card selection should be cleared when the registration type changes.
+**2. `src/components/audit/workspace/ScheduleTab.tsx`** — Main schedule tab
+- Three stacked panels: DocumentDeadlinePanel, OpeningMeetingPanel, ClosingMeetingPanel
+- Each panel has unscheduled form state and scheduled display state
+- Scheduling order enforcement (opening before closing, validation on dates)
+- Outlook sync indicators (synced/syncing/failed with retry)
 
-### Changes
+**3. `src/components/audit/workspace/AppointmentPanel.tsx`** — Reusable meeting panel
+- Date picker, time picker (30-min increments), duration select, online/on-site toggle
+- Attendee multi-selector (internal users + tenant contacts + free-text email)
+- Client instructions textarea, internal notes collapsible
+- Scheduled state card with join link, attendees, edit/cancel/mark complete buttons
 
-**1. `src/types/clientAudits.ts`** — Make CRICOS detection more robust:
-- Use case-insensitive comparison for invalid values
-- Add `'NA'`, `'None'`, `'none'`, `'nil'` to the invalid list
-- Use a helper function with `.toLowerCase().trim()` matching instead of exact `.includes()`
+**4. `src/components/client/ClientUpcomingAuditSection.tsx`** — Client portal section
+- Queries `audit_appointments` for tenant's active audit
+- Vertical timeline: document deadline → opening meeting → review period (calculated) → closing meeting
+- Shows client_instructions, meeting links, attendee names
+- "Add to my calendar" .ics download (client-side generation)
+- "Upload documents →" link to evidence section
 
-**2. `src/components/audit/NewAuditModal.tsx`** — Fix state management:
-- Add a `useEffect` that clears `selectedCard` when `registrationType` changes (so going back to Step 1 after selecting a client shows the correct cards with no stale selection)
-- Update the note text when no client is selected to: "Select a client to see recommended audit types."
-- Ensure the registration type banner renders correctly with the tenant data
+### Files to Modify
+
+**5. `src/pages/AuditWorkspaceNew.tsx`**
+- Add Schedule tab (CalendarClock icon) between Overview and Audit Form
+- Import ScheduleTab, pass audit and auditId
+- Add `useAuditAppointments` query
+
+**6. `src/components/audit/workspace/AuditSidebar.tsx`**
+- Add compact schedule summary below progress bar
+- Shows evidence due date, opening/closing times, review period
+- "Not scheduled" with "Set date" link jumps to Schedule tab
+
+**7. `src/components/audit/workspace/ReportTab.tsx`**
+- Add report readiness checklist before generate button (opening meeting status, questions answered, closing meeting status)
+- Update generate-audit-report invocation to include `include_sections` payload with opening_meeting, document_review, and closing_meeting data
+- Show "Generate draft report" when closing meeting incomplete with advisory
+
+**8. `src/types/auditWorkspace.ts`**
+- Add `AppointmentType`, `AppointmentStatus`, `AuditAttendee`, `AuditAppointment` types
+
+**9. `src/components/client/ClientHomePage.tsx`**
+- Import and render `ClientUpcomingAuditSection` above AuditPreparationSection
 
 ### Technical Details
 
-```typescript
-// Updated CRICOS detection (case-insensitive, broader coverage)
-const CRICOS_INVALID_LOWER = ['', 'n/a', 'na', '-', 'tbc', 'tba', 'none', 'nil'];
-
-export function detectRegistrationType(rtoId, cricosId) {
-  const isRto = !!rtoId && rtoId.trim() !== '';
-  const isCricos = !!cricosId && !CRICOS_INVALID_LOWER.includes(cricosId.trim().toLowerCase());
-  ...
-}
-
-// Clear selected card when registration type changes
-useEffect(() => {
-  if (registrationType && selectedCard) {
-    const stillValid = auditTypeCards.some(
-      c => c.value === selectedCard.value && c.is_rto === selectedCard.is_rto && c.is_cricos === selectedCard.is_cricos
-    );
-    if (!stillValid) setSelectedCard(null);
-  }
-}, [registrationType, auditTypeCards]);
+```text
+Tab order: Overview | Schedule | Audit Form | Documents | Findings | Actions | Report
 ```
+
+Calendar event creation pattern:
+```typescript
+const { data: event } = await supabase.from('calendar_events').insert({
+  tenant_id: audit.subject_tenant_id,
+  user_id: userId,
+  title: `Opening Meeting — ${audit.snapshot_rto_name}`,
+  start_at: `${date}T${startTime}:00`,
+  end_at: `${date}T${endTime}:00`,
+  location, meeting_url, attendees,
+  provider: 'internal', status: 'confirmed',
+}).select('id').single();
+
+// Sync to Outlook
+const { data } = await supabase.functions.invoke('sync-outlook-calendar', {
+  body: { event_id: event.id, action: 'create', send_invites: true }
+});
+```
+
+.ics generation (client-side):
+```typescript
+function generateICS(appointment: AuditAppointment): string {
+  return `BEGIN:VCALENDAR\nBEGIN:VEVENT\nDTSTART:${...}\nDTEND:${...}\nSUMMARY:${...}\nLOCATION:${...}\nEND:VEVENT\nEND:VCALENDAR`;
+}
+```
+
+No database migrations required.
 
 | Action | File |
 |--------|------|
-| Modify | `src/types/clientAudits.ts` — case-insensitive CRICOS detection |
-| Modify | `src/components/audit/NewAuditModal.tsx` — clear stale card selection on registration type change, update note text |
+| Create | `src/hooks/useAuditSchedule.ts` |
+| Create | `src/components/audit/workspace/ScheduleTab.tsx` |
+| Create | `src/components/audit/workspace/AppointmentPanel.tsx` |
+| Create | `src/components/client/ClientUpcomingAuditSection.tsx` |
+| Modify | `src/pages/AuditWorkspaceNew.tsx` |
+| Modify | `src/components/audit/workspace/AuditSidebar.tsx` |
+| Modify | `src/components/audit/workspace/ReportTab.tsx` |
+| Modify | `src/types/auditWorkspace.ts` |
+| Modify | `src/components/client/ClientHomePage.tsx` |
 
