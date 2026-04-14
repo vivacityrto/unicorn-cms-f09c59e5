@@ -1,104 +1,67 @@
 
 
-## Audit Scheduling, Calendar Sync & Report Template
+## Connect CHC Stage to Audit Workspace
 
 ### Summary
-Add a Schedule tab to the audit workspace with three appointment panels (document deadline, opening meeting, closing meeting), calendar sync via `sync-outlook-calendar`, a client portal upcoming audit section, and report template with three-phase structure. All DB infrastructure (audit_appointments table, schedule_audit_phase RPC, client_audits columns) already exists.
+Wire the existing CHC package stage (Stage ID 24) to the audit module via four integration points: stage-linked audit creation, milestone-driven task auto-completion, sidebar link in workspace, and audit progress card in stage view. DB columns (`client_audits.linked_stage_instance_id`, `stage_instances.linked_audit_id`) and RPC (`complete_chc_stage_tasks`) already exist.
 
 ---
 
-### Files to Create
+### Changes
 
-**1. `src/hooks/useAuditSchedule.ts`** — Appointment data hooks
-- `useAuditAppointments(auditId)` — fetches from `audit_appointments` where `audit_id`, returns grouped by type
-- `useScheduleAuditPhase()` — calls `schedule_audit_phase` RPC, then creates `calendar_events` record for meetings, then invokes `sync-outlook-calendar` edge function, updates `outlook_event_id`
-- `useCancelAuditAppointment()` — PATCH status=cancelled + sync-outlook-calendar with action=cancel
-- `useCompleteAuditAppointment()` — PATCH status=completed + completed_at, transitions audit status for opening meeting completion
+**1. `src/types/clientAudits.ts`** — Add `linked_stage_instance_id` to `ClientAudit` interface and `opening_meeting_at`/`closing_meeting_at` fields.
 
-**2. `src/components/audit/workspace/ScheduleTab.tsx`** — Main schedule tab
-- Three stacked panels: DocumentDeadlinePanel, OpeningMeetingPanel, ClosingMeetingPanel
-- Each panel has unscheduled form state and scheduled display state
-- Scheduling order enforcement (opening before closing, validation on dates)
-- Outlook sync indicators (synced/syncing/failed with retry)
+**2. `src/hooks/useClientAudits.ts`** — Add `linked_stage_instance_id` to `CreateAuditInput`. In `useCreateAudit` mutationFn:
+- Include `linked_stage_instance_id` in the insert payload
+- After successful insert, if `linked_stage_instance_id` is set, UPDATE `stage_instances` SET `linked_audit_id = newAuditId` WHERE `id = linked_stage_instance_id`
 
-**3. `src/components/audit/workspace/AppointmentPanel.tsx`** — Reusable meeting panel
-- Date picker, time picker (30-min increments), duration select, online/on-site toggle
-- Attendee multi-selector (internal users + tenant contacts + free-text email)
-- Client instructions textarea, internal notes collapsible
-- Scheduled state card with join link, attendees, edit/cancel/mark complete buttons
+**3. `src/components/audit/NewAuditModal.tsx`** — Accept new optional props `preselectedStageInstanceId?: number`. Pass it through to `useCreateAudit`. When a stage instance ID is provided alongside `preselectedAuditType`, auto-select the matching card and skip Step 1.
 
-**4. `src/components/client/ClientUpcomingAuditSection.tsx`** — Client portal section
-- Queries `audit_appointments` for tenant's active audit
-- Vertical timeline: document deadline → opening meeting → review period (calculated) → closing meeting
-- Shows client_instructions, meeting links, attendee names
-- "Add to my calendar" .ics download (client-side generation)
-- "Upload documents →" link to evidence section
+**4. `src/hooks/useAuditSchedule.ts`** — After scheduling opening meeting, call `supabase.rpc('complete_chc_stage_tasks', { p_audit_id, p_milestone: 'scheduled' })`. Wire other milestones:
+- In `useScheduleAuditPhase` (opening_meeting) → `'scheduled'`
+- In `useCompleteAuditAppointment` (opening complete) → no separate milestone (already covered)
 
-### Files to Modify
+**5. `src/hooks/useAuditReport.ts`** — After `release_audit_report` RPC success, call `complete_chc_stage_tasks` with `'report_released'`.
 
-**5. `src/pages/AuditWorkspaceNew.tsx`**
-- Add Schedule tab (CalendarClock icon) between Overview and Audit Form
-- Import ScheduleTab, pass audit and auditId
-- Add `useAuditAppointments` query
+**6. `src/components/audit/workspace/AuditSidebar.tsx`** — When `audit.linked_stage_instance_id` is set, render a banner below the schedule summary:
+```
+📋 Linked to CHC stage
+[View stage tasks →]
+```
+Link navigates to `/clients/{tenant_id}?tab=packages&stage={stage_instance_id}`.
 
-**6. `src/components/audit/workspace/AuditSidebar.tsx`**
-- Add compact schedule summary below progress bar
-- Shows evidence due date, opening/closing times, review period
-- "Not scheduled" with "Set date" link jumps to Schedule tab
+**7. `src/components/client/PackageStagesManager.tsx`** — In the stage collapsible content, when `stage.linked_audit_id` is set, render an `AuditProgressCard` above the tabs:
+```
+🔍 Audit in progress
+Compliance Health Check — {title}
+Progress: {score_pct}%
+Opening meeting: {opening_meeting_at}
+[Open Audit Workspace →]
+```
+Query `client_audits` by `linked_audit_id` for `score_pct`, `opening_meeting_at`, `status`, `title`. Add `linked_audit_id` to the stage_instances select query.
 
-**7. `src/components/audit/workspace/ReportTab.tsx`**
-- Add report readiness checklist before generate button (opening meeting status, questions answered, closing meeting status)
-- Update generate-audit-report invocation to include `include_sections` payload with opening_meeting, document_review, and closing_meeting data
-- Show "Generate draft report" when closing meeting incomplete with advisory
-
-**8. `src/types/auditWorkspace.ts`**
-- Add `AppointmentType`, `AppointmentStatus`, `AuditAttendee`, `AuditAppointment` types
-
-**9. `src/components/client/ClientHomePage.tsx`**
-- Import and render `ClientUpcomingAuditSection` above AuditPreparationSection
+**8. `src/components/client/AuditProgressCard.tsx`** — New component showing audit status, score, opening meeting date, and link to `/audits/{audit_id}`.
 
 ### Technical Details
 
-```text
-Tab order: Overview | Schedule | Audit Form | Documents | Findings | Actions | Report
-```
+Milestone trigger points:
+- `'scheduled'` → `useScheduleAuditPhase` when `appointmentType === 'opening_meeting'`
+- `'evidence_sent'` → existing evidence request send flow (future wire, note in code)
+- `'conducted'` → `useAuditStatusTransition` when status → `'complete'`
+- `'report_released'` → `useReleaseReport` on success
 
-Calendar event creation pattern:
-```typescript
-const { data: event } = await supabase.from('calendar_events').insert({
-  tenant_id: audit.subject_tenant_id,
-  user_id: userId,
-  title: `Opening Meeting — ${audit.snapshot_rto_name}`,
-  start_at: `${date}T${startTime}:00`,
-  end_at: `${date}T${endTime}:00`,
-  location, meeting_url, attendees,
-  provider: 'internal', status: 'confirmed',
-}).select('id').single();
-
-// Sync to Outlook
-const { data } = await supabase.functions.invoke('sync-outlook-calendar', {
-  body: { event_id: event.id, action: 'create', send_invites: true }
-});
-```
-
-.ics generation (client-side):
-```typescript
-function generateICS(appointment: AuditAppointment): string {
-  return `BEGIN:VCALENDAR\nBEGIN:VEVENT\nDTSTART:${...}\nDTEND:${...}\nSUMMARY:${...}\nLOCATION:${...}\nEND:VEVENT\nEND:VCALENDAR`;
-}
-```
-
-No database migrations required.
+The `complete_chc_stage_tasks` RPC delegates to `complete_audit_stage_tasks` internally — no new DB migration needed.
 
 | Action | File |
 |--------|------|
-| Create | `src/hooks/useAuditSchedule.ts` |
-| Create | `src/components/audit/workspace/ScheduleTab.tsx` |
-| Create | `src/components/audit/workspace/AppointmentPanel.tsx` |
-| Create | `src/components/client/ClientUpcomingAuditSection.tsx` |
-| Modify | `src/pages/AuditWorkspaceNew.tsx` |
+| Modify | `src/types/clientAudits.ts` |
+| Modify | `src/hooks/useClientAudits.ts` |
+| Modify | `src/components/audit/NewAuditModal.tsx` |
+| Modify | `src/hooks/useAuditSchedule.ts` |
+| Modify | `src/hooks/useAuditReport.ts` |
 | Modify | `src/components/audit/workspace/AuditSidebar.tsx` |
-| Modify | `src/components/audit/workspace/ReportTab.tsx` |
-| Modify | `src/types/auditWorkspace.ts` |
-| Modify | `src/components/client/ClientHomePage.tsx` |
+| Modify | `src/components/client/PackageStagesManager.tsx` |
+| Create | `src/components/client/AuditProgressCard.tsx` |
+
+No database migrations required.
 
