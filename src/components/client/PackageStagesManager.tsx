@@ -91,11 +91,17 @@ interface StageRowProps {
 
 function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, packageInstanceId, onUpdate, profile }: StageRowProps) {
   const { statuses } = useTaskStatusOptions();
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
   const statusCode = typeof stage.status === 'number' ? stage.status : 0;
   const StatusIcon = getStatusIcon(statusCode);
   const statusColor = getStatusColor(statusCode);
   const statusLabel = statuses.find(s => s.code === statusCode)?.label || `Status ${statusCode}`;
   const { staffTasks, clientTasks, documents, emails, loading: countsLoading } = useStageCounts(stage.id);
+
+  // Check if this is an audit-type stage that should show prompt
+  const isAuditStage = AUDIT_STAGE_IDS.includes(stage.stage_id);
+  const mappedAuditType = STAGE_AUDIT_TYPE_MAP[stage.stage_id];
+  const showAuditPrompt = isAuditStage && !stage.linked_audit_id;
 
   const countBadge = (count: number) =>
     !countsLoading ? (
