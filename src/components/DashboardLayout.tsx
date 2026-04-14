@@ -40,6 +40,7 @@ const clientsMenuItems = [
   { icon: FileText, label: "Documents", path: "/manage-documents" },
   { icon: Mail, label: "Communications", path: "/communications" },
   { icon: Lightbulb, label: "RTO Tips", path: "/rto-tips" },
+  { icon: FileCheck, label: "Compliance Auditor", path: "/compliance-audits" },
 ];
 
 // 3. EOS Section - Role-Aware Visibility
