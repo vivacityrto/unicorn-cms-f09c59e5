@@ -419,6 +419,16 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
             </TableBody>
           </Table>
         </div>
+
+        <DeleteConfirmDialog
+          open={!!deletingRow}
+          onOpenChange={(open) => { if (!open) setDeletingRow(null); }}
+          title="Delete Package Instance"
+          description={`This will permanently delete this package instance and all associated phase, stage, task, email, and document data. This cannot be undone.`}
+          itemName={deletingRow ? `${deletingRow.package_name} (${deletingRow.start_date ? format(new Date(deletingRow.start_date + 'T00:00:00'), 'dd MMM yyyy') : 'No start'} – ${deletingRow.end_date ? format(new Date(deletingRow.end_date + 'T00:00:00'), 'dd MMM yyyy') : 'No end'})` : ''}
+          onConfirm={() => deletingRow && handleDelete(deletingRow)}
+          isDeleting={isDeleting}
+        />
       </DialogContent>
     </Dialog>
   );
