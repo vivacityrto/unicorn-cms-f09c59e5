@@ -11,11 +11,16 @@ export interface ClientAudit {
   status: AuditStatus;
   risk_rating: AuditRisk | null;
   score_pct: number | null;
+  score_total: number | null;
+  score_max: number | null;
   conducted_at: string | null;
+  closed_at: string | null;
   next_audit_due: string | null;
   lead_auditor_id: string | null;
   assisted_by_id: string | null;
+  report_prepared_by_id: string | null;
   training_products: string[];
+  template_id: string | null;
   snapshot_rto_name: string | null;
   snapshot_rto_number: string | null;
   snapshot_cricos_code: string | null;
@@ -25,7 +30,11 @@ export interface ClientAudit {
   snapshot_email: string | null;
   snapshot_website: string | null;
   snapshot_other_contacts: string | null;
+  executive_summary: string | null;
+  overall_finding: string | null;
   ai_analysis_status: AuditAiStatus;
+  report_generated_at: string | null;
+  report_pdf_path: string | null;
   doc_number: string | null;
   created_by: string | null;
   created_at: string;
