@@ -51,22 +51,31 @@ export function useAudit(auditId: string | undefined) {
   });
 }
 
-const AUDIT_TYPE_TEMPLATE: Record<AuditType, string> = {
+export const AUDIT_TYPE_TEMPLATE: Record<AuditType, string> = {
   compliance_health_check: 'cc025000-0000-0000-0000-000000000001',
+  cricos_chc: '788a5beb-93b2-48fd-a262-b313060823f4',
+  rto_cricos_chc: 'bc025000-0000-0000-0000-000000000001',
   mock_audit: 'a0025000-0000-0000-0000-000000000001',
+  cricos_mock_audit: '788a5beb-93b2-48fd-a262-b313060823f4',
   due_diligence: 'd0025000-0000-0000-0000-000000000001',
 };
 
 const AUDIT_TYPE_HUMAN: Record<AuditType, string> = {
   compliance_health_check: 'Compliance Health Check',
+  cricos_chc: 'CRICOS Compliance Health Check',
+  rto_cricos_chc: 'Combined RTO + CRICOS CHC',
   mock_audit: 'Mock Audit',
+  cricos_mock_audit: 'CRICOS Mock Audit',
   due_diligence: 'Due Diligence',
 };
 
-interface CreateAuditInput {
+export interface CreateAuditInput {
   audit_type: AuditType;
   subject_tenant_id: number;
   client_name: string;
+  is_rto?: boolean;
+  is_cricos?: boolean;
+  template_id?: string;
   title?: string;
   conducted_at?: string;
   lead_auditor_id?: string;
@@ -82,6 +91,10 @@ interface CreateAuditInput {
   snapshot_email?: string;
   snapshot_website?: string;
   snapshot_other_contacts?: string;
+  snapshot_overseas_student_count?: number | null;
+  snapshot_education_agents?: string | null;
+  snapshot_prisms_users?: string | null;
+  snapshot_dha_contact?: string | null;
 }
 
 export function useCreateAudit() {
@@ -94,6 +107,7 @@ export function useCreateAudit() {
       const year = new Date().getFullYear();
       const title = input.title?.trim() || `${AUDIT_TYPE_HUMAN[input.audit_type]} — ${input.client_name} — ${year}`;
       const userId = session?.user?.id;
+      const templateId = input.template_id || AUDIT_TYPE_TEMPLATE[input.audit_type];
 
       const { data, error } = await supabase
         .from('client_audits' as any)
@@ -102,6 +116,8 @@ export function useCreateAudit() {
           subject_tenant_id: input.subject_tenant_id,
           title,
           status: 'draft',
+          is_rto: input.is_rto ?? null,
+          is_cricos: input.is_cricos ?? null,
           conducted_at: input.conducted_at || null,
           lead_auditor_id: input.lead_auditor_id || null,
           assisted_by_id: input.assisted_by_id || null,
@@ -116,7 +132,11 @@ export function useCreateAudit() {
           snapshot_email: input.snapshot_email || null,
           snapshot_website: input.snapshot_website || null,
           snapshot_other_contacts: input.snapshot_other_contacts || null,
-          template_id: AUDIT_TYPE_TEMPLATE[input.audit_type],
+          snapshot_overseas_student_count: input.snapshot_overseas_student_count ?? null,
+          snapshot_education_agents: input.snapshot_education_agents || null,
+          snapshot_prisms_users: input.snapshot_prisms_users || null,
+          snapshot_dha_contact: input.snapshot_dha_contact || null,
+          template_id: templateId,
           ai_analysis_status: 'none',
           created_by: userId,
         } as any)
@@ -135,7 +155,7 @@ export function useCreateAudit() {
           source: 'internal',
         } as any);
       } catch {
-        // Non-critical — don't fail the audit creation
+        // Non-critical
       }
 
       return data as unknown as { id: string };

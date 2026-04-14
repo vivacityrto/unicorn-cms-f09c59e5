@@ -1,4 +1,11 @@
-export type AuditType = 'compliance_health_check' | 'mock_audit' | 'due_diligence';
+export type AuditType =
+  | 'compliance_health_check'
+  | 'cricos_chc'
+  | 'rto_cricos_chc'
+  | 'mock_audit'
+  | 'cricos_mock_audit'
+  | 'due_diligence';
+
 export type AuditStatus = 'draft' | 'in_progress' | 'review' | 'complete' | 'archived';
 export type AuditRisk = 'low' | 'medium' | 'high' | 'critical';
 export type AuditAiStatus = 'none' | 'pending' | 'processing' | 'complete' | 'error';
@@ -21,6 +28,8 @@ export interface ClientAudit {
   report_prepared_by_id: string | null;
   training_products: string[];
   template_id: string | null;
+  is_rto: boolean | null;
+  is_cricos: boolean | null;
   snapshot_rto_name: string | null;
   snapshot_rto_number: string | null;
   snapshot_cricos_code: string | null;
@@ -30,6 +39,10 @@ export interface ClientAudit {
   snapshot_email: string | null;
   snapshot_website: string | null;
   snapshot_other_contacts: string | null;
+  snapshot_overseas_student_count: number | null;
+  snapshot_education_agents: string | null;
+  snapshot_prisms_users: string | null;
+  snapshot_dha_contact: string | null;
   executive_summary: string | null;
   overall_finding: string | null;
   ai_analysis_status: AuditAiStatus;
@@ -55,8 +68,11 @@ export interface AuditDashboardRow extends ClientAudit {
 }
 
 export const AUDIT_TYPE_LABELS: Record<AuditType, string> = {
-  compliance_health_check: 'CHC',
+  compliance_health_check: 'CHC — RTO',
+  cricos_chc: 'CHC — CRICOS',
+  rto_cricos_chc: 'CHC — RTO + CRICOS',
   mock_audit: 'Mock Audit',
+  cricos_mock_audit: 'Mock Audit — CRICOS',
   due_diligence: 'Due Diligence',
 };
 
@@ -74,3 +90,15 @@ export const AUDIT_RISK_LABELS: Record<AuditRisk, string> = {
   high: 'High Risk',
   critical: 'Critical Risk',
 };
+
+export const CRICOS_INVALID_VALUES = [null, '', 'n/a', 'N/A', '-', 'TBC', 'TBA'];
+
+export function detectRegistrationType(rtoId: string | null | undefined, cricosId: string | null | undefined) {
+  const isRto = !!rtoId && rtoId.trim() !== '';
+  const isCricos = !!cricosId && !CRICOS_INVALID_VALUES.includes(cricosId.trim());
+  if (isCricos && isRto) return 'both' as const;
+  if (isCricos) return 'cricos_only' as const;
+  return 'rto_only' as const;
+}
+
+export type RegistrationType = ReturnType<typeof detectRegistrationType>;
