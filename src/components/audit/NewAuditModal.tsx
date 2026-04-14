@@ -297,7 +297,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   }, [tenantId, tenants]);
 
   const resetForm = () => {
-    setStep(preselectedAuditType ? 2 : 1);
+    setStep(hasPreselectedType ? 2 : 1);
     setSelectedCard(null);
     if (!preselectedTenantId) { setTenantId(null); setTenantName(''); }
     setTitle(''); setLeadAuditorId(''); setAssistedById('');
