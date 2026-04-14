@@ -470,6 +470,41 @@ export function useAuditScore(
   }, [calculate]);
 }
 
+// ─── Section Summary & Risk Level ───
+export function useUpdateSectionSummary(auditId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ sectionId, summary }: { sectionId: string; summary: string }) => {
+      const { error } = await supabase
+        .from('client_audit_sections' as any)
+        .update({ section_summary: summary } as any)
+        .eq('id', sectionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit-sections', auditId] });
+    },
+  });
+}
+
+export function useUpdateSectionRiskLevel(auditId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ sectionId, riskLevel }: { sectionId: string; riskLevel: string }) => {
+      const { error } = await supabase
+        .from('client_audit_sections' as any)
+        .update({ risk_level: riskLevel } as any)
+        .eq('id', sectionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit-sections', auditId] });
+    },
+  });
+}
+
 // ─── Internal Users for dropdowns ───
 export function useInternalUsers() {
   return useQuery({
