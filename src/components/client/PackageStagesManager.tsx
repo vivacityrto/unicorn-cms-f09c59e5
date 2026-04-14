@@ -26,6 +26,7 @@ import { StageDocumentsSection } from './StageDocumentsSection';
 import { StageEmailsSection } from './StageEmailsSection';
 import { StageNotesSection } from './StageNotesSection';
 import { LegacyDataDiagnostics } from './LegacyDataDiagnostics';
+import { AuditProgressCard } from './AuditProgressCard';
 import { PhaseGroupHeader } from './PhaseGroupHeader';
 import { useCheckpointPhasesEnabled } from '@/hooks/useCheckpointPhasesEnabled';
 import { usePhaseProgress } from '@/hooks/usePhaseProgress';
@@ -171,6 +172,11 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
         </div>
 
         <CollapsibleContent>
+          {stage.linked_audit_id && (
+            <div className="px-3 pt-3">
+              <AuditProgressCard linkedAuditId={stage.linked_audit_id} />
+            </div>
+          )}
           <StageDetailSection
             stageInstanceId={stage.id}
             tenantId={tenantId}
