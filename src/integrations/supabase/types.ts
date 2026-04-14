@@ -3525,6 +3525,143 @@ export type Database = {
           },
         ]
       }
+      audit_appointments: {
+        Row: {
+          appointment_type: string
+          attendees: Json
+          audit_id: string
+          calendar_entry_id: string | null
+          calendar_event_id: string | null
+          client_instructions: string | null
+          completed_at: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          id: string
+          internal_notes: string | null
+          is_online: boolean
+          location: string | null
+          meeting_url: string | null
+          outlook_event_id: string | null
+          outlook_synced_at: string | null
+          scheduled_date: string | null
+          scheduled_end_time: string | null
+          scheduled_start_time: string | null
+          status: string
+          teams_join_url: string | null
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_type: string
+          attendees?: Json
+          audit_id: string
+          calendar_entry_id?: string | null
+          calendar_event_id?: string | null
+          client_instructions?: string | null
+          completed_at?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
+          id?: string
+          internal_notes?: string | null
+          is_online?: boolean
+          location?: string | null
+          meeting_url?: string | null
+          outlook_event_id?: string | null
+          outlook_synced_at?: string | null
+          scheduled_date?: string | null
+          scheduled_end_time?: string | null
+          scheduled_start_time?: string | null
+          status?: string
+          teams_join_url?: string | null
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_type?: string
+          attendees?: Json
+          audit_id?: string
+          calendar_entry_id?: string | null
+          calendar_event_id?: string | null
+          client_instructions?: string | null
+          completed_at?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
+          id?: string
+          internal_notes?: string | null
+          is_online?: boolean
+          location?: string | null
+          meeting_url?: string | null
+          outlook_event_id?: string | null
+          outlook_synced_at?: string | null
+          scheduled_date?: string | null
+          scheduled_end_time?: string | null
+          scheduled_start_time?: string | null
+          status?: string
+          teams_join_url?: string | null
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_appointments_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_appointments_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "audit_appointments_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "audit_appointments_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_appointments_calendar_entry_id_fkey"
+            columns: ["calendar_entry_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_appointments_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_appointments_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events_shared"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_ask_viv_access_denied: {
         Row: {
           created_at: string
@@ -9500,12 +9637,16 @@ export type Database = {
         Row: {
           ai_analysis_status: string
           assisted_by_id: string | null
+          audit_is_online: boolean
+          audit_location: string | null
           audit_type: string
           closed_at: string | null
+          closing_meeting_at: string | null
           conducted_at: string | null
           created_at: string
           created_by: string | null
           doc_number: string | null
+          document_deadline_at: string | null
           executive_summary: string | null
           id: string
           intelligence_pack_id: string | null
@@ -9513,6 +9654,7 @@ export type Database = {
           is_rto: boolean
           lead_auditor_id: string | null
           next_audit_due: string | null
+          opening_meeting_at: string | null
           overall_finding: string | null
           report_acknowledged_at: string | null
           report_acknowledged_by: string | null
@@ -9550,12 +9692,16 @@ export type Database = {
         Insert: {
           ai_analysis_status?: string
           assisted_by_id?: string | null
+          audit_is_online?: boolean
+          audit_location?: string | null
           audit_type: string
           closed_at?: string | null
+          closing_meeting_at?: string | null
           conducted_at?: string | null
           created_at?: string
           created_by?: string | null
           doc_number?: string | null
+          document_deadline_at?: string | null
           executive_summary?: string | null
           id?: string
           intelligence_pack_id?: string | null
@@ -9563,6 +9709,7 @@ export type Database = {
           is_rto?: boolean
           lead_auditor_id?: string | null
           next_audit_due?: string | null
+          opening_meeting_at?: string | null
           overall_finding?: string | null
           report_acknowledged_at?: string | null
           report_acknowledged_by?: string | null
@@ -9600,12 +9747,16 @@ export type Database = {
         Update: {
           ai_analysis_status?: string
           assisted_by_id?: string | null
+          audit_is_online?: boolean
+          audit_location?: string | null
           audit_type?: string
           closed_at?: string | null
+          closing_meeting_at?: string | null
           conducted_at?: string | null
           created_at?: string
           created_by?: string | null
           doc_number?: string | null
+          document_deadline_at?: string | null
           executive_summary?: string | null
           id?: string
           intelligence_pack_id?: string | null
@@ -9613,6 +9764,7 @@ export type Database = {
           is_rto?: boolean
           lead_auditor_id?: string | null
           next_audit_due?: string | null
+          opening_meeting_at?: string | null
           overall_finding?: string | null
           report_acknowledged_at?: string | null
           report_acknowledged_by?: string | null
@@ -56614,6 +56766,24 @@ export type Database = {
           p_outcome_type: string
         }
         Returns: Json
+      }
+      schedule_audit_phase: {
+        Args: {
+          p_appointment_type: string
+          p_attendees?: Json
+          p_audit_id: string
+          p_client_instructions?: string
+          p_created_by?: string
+          p_duration_minutes?: number
+          p_end_time: string
+          p_internal_notes?: string
+          p_is_online?: boolean
+          p_location?: string
+          p_meeting_url?: string
+          p_scheduled_date: string
+          p_start_time: string
+        }
+        Returns: string
       }
       search_knowledge_items: {
         Args: {
