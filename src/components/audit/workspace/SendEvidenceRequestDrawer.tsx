@@ -110,7 +110,7 @@ export function SendEvidenceRequestDrawer({ open, onOpenChange, audit }: SendEvi
 
   return (
     <AppDrawer open={open} onOpenChange={onOpenChange}>
-      <AppDrawerContent width="lg" side="right">
+      <AppDrawerContent size="lg">
         <AppDrawerHeader>
           <AppDrawerTitle>Send Evidence Request</AppDrawerTitle>
         </AppDrawerHeader>

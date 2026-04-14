@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useUpdateAudit, useInternalUsers } from '@/hooks/useAuditWorkspace';
+import { EvidenceRequestsSection } from './EvidenceRequestsSection';
 import type { ClientAudit, AuditRisk } from '@/types/clientAudits';
 
 interface OverviewTabProps {
@@ -226,6 +227,9 @@ export function OverviewTab({ audit }: OverviewTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Evidence Requests */}
+      <EvidenceRequestsSection audit={audit} />
     </div>
   );
 }

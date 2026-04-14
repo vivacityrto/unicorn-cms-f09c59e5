@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,14 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Plus, Trash2, CheckCircle2, RefreshCw, ArrowRight } from 'lucide-react';
 import { useAuditActions, useAuditFindings, useInternalUsers } from '@/hooks/useAuditWorkspace';
+import { useSyncAuditActions } from '@/hooks/useAuditActionPlan';
 import { useAuth } from '@/hooks/useAuth';
 import { ACTION_STATUS_OPTIONS, PRIORITY_OPTIONS } from '@/types/auditWorkspace';
 import { cn } from '@/lib/utils';
 
 interface ActionsTabProps {
   auditId: string;
+  auditStatus?: string;
+  subjectTenantId?: number;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -24,12 +29,16 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'bg-gray-100 text-gray-400',
 };
 
-export function ActionsTab({ auditId }: ActionsTabProps) {
+export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTabProps) {
   const { data: actions, createAction, updateAction, deleteAction } = useAuditActions(auditId);
   const { data: findings } = useAuditFindings(auditId);
   const { data: users } = useInternalUsers();
   const { session } = useAuth();
+  const syncActions = useSyncAuditActions();
   const [showForm, setShowForm] = useState(false);
+
+  const isComplete = auditStatus === 'complete';
+  const syncedCount = actions?.filter(a => (a as any).client_action_item_id).length || 0;
 
   const statCounts = {
     open: actions?.filter(a => a.status === 'open').length || 0,
@@ -40,6 +49,25 @@ export function ActionsTab({ auditId }: ActionsTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Completion sync banner */}
+      {isComplete && (
+        <Alert className="bg-green-50 border-green-200">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-green-800">
+              This audit is complete. {syncedCount} action{syncedCount !== 1 ? 's' : ''} synced to the client action plan.
+            </span>
+            {subjectTenantId && (
+              <Button size="sm" variant="outline" asChild>
+                <Link to={`/tenant/${subjectTenantId}?tab=actions`}>
+                  View in client folder <ArrowRight className="h-3 w-3 ml-1" />
+                </Link>
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Stats */}
       <div className="flex gap-4 text-sm">
         <span>Open: <strong>{statCounts.open}</strong></span>
