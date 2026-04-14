@@ -142,7 +142,7 @@ export default function AuditWorkspaceNew() {
                 <FindingsTab auditId={audit.id} />
               </TabsContent>
               <TabsContent value="actions">
-                <ActionsTab auditId={audit.id} />
+                <ActionsTab auditId={audit.id} auditStatus={audit.status} subjectTenantId={audit.subject_tenant_id} />
               </TabsContent>
               <TabsContent value="report">
                 <ReportTab audit={audit} findings={findings || []} actions={actions || []} />

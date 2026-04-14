@@ -14,6 +14,7 @@ import { AuditTypeBadge } from '@/components/audit/AuditTypeBadge';
 import { AuditStatusBadge } from '@/components/audit/AuditStatusBadge';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { NewAuditModal } from '@/components/audit/NewAuditModal';
+import { AuditSchedulerSection } from '@/components/audit/AuditSchedulerSection';
 import { useAuditsDashboard, useOverdueActionCount } from '@/hooks/useClientAudits';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { AuditType, AuditStatus, AuditDashboardRow } from '@/types/clientAudits';
@@ -25,6 +26,14 @@ export default function AuditsAssessments() {
   const { data: audits = [], isLoading } = useAuditsDashboard();
   const { data: overdueCount = 0 } = useOverdueActionCount();
   const [modalOpen, setModalOpen] = useState(false);
+  const [schedulerCHCTenantId, setSchedulerCHCTenantId] = useState<number | null>(null);
+  const [schedulerCHCTenantName, setSchedulerCHCTenantName] = useState('');
+
+  const handleStartCHC = (tenantId: number, tenantName: string) => {
+    setSchedulerCHCTenantId(tenantId);
+    setSchedulerCHCTenantName(tenantName);
+    setModalOpen(true);
+  };
 
   // Filters
   const [search, setSearch] = useState('');
@@ -216,12 +225,24 @@ export default function AuditsAssessments() {
         </Table>
       )}
 
+      {/* Audit Scheduler */}
+      <AuditSchedulerSection onStartCHC={handleStartCHC} />
+
       {/* Reference Library */}
       <div className="border-t pt-6">
         <ReferenceLibrarySection />
       </div>
 
-      <NewAuditModal open={modalOpen} onOpenChange={setModalOpen} />
+      <NewAuditModal
+        open={modalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) { setSchedulerCHCTenantId(null); setSchedulerCHCTenantName(''); }
+        }}
+        preselectedTenantId={schedulerCHCTenantId || undefined}
+        preselectedTenantName={schedulerCHCTenantName || undefined}
+        preselectedAuditType={schedulerCHCTenantId ? 'compliance_health_check' : undefined}
+      />
     </div>
     </DashboardLayout>
   );

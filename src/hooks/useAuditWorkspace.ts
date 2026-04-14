@@ -389,7 +389,15 @@ export function useAuditStatusTransition(auditId: string | undefined) {
         .eq('id', auditId);
       if (error) throw error;
 
+      let syncCount = 0;
       if (status === 'complete') {
+        // Sync audit actions to client action items
+        try {
+          const { data } = await supabase
+            .rpc('sync_audit_actions_to_client_items', { p_audit_id: auditId } as any);
+          syncCount = (data as number) || 0;
+        } catch {}
+
         try {
           await supabase.from('client_timeline_events' as any).insert({
             tenant_id: audit.subject_tenant_id,
@@ -405,11 +413,19 @@ export function useAuditStatusTransition(auditId: string | undefined) {
           } as any);
         } catch {}
       }
+
+      return syncCount;
     },
-    onSuccess: () => {
+    onSuccess: (syncCount, { status }) => {
       queryClient.invalidateQueries({ queryKey: ['client-audit', auditId] });
       queryClient.invalidateQueries({ queryKey: ['client-audits-dashboard'] });
-      toast.success('Status updated');
+      if (status === 'complete' && syncCount > 0) {
+        toast.success(`Audit marked complete. ${syncCount} corrective action${syncCount > 1 ? 's' : ''} added to client action plan.`);
+      } else if (status === 'complete') {
+        toast.success('Audit marked complete. No open actions to sync.');
+      } else {
+        toast.success('Status updated');
+      }
     },
   });
 }
