@@ -1,63 +1,66 @@
 
 
-## Audit Three-Phase Workflow Redesign
+## CRICOS-Aware Audit Type Detection — Implementation Plan
 
 ### Summary
-Replace the flat section list in the Audit Form tab with a three-phase workflow (Opening Meeting → Document Review → Closing Meeting), with phase-appropriate question card styles. Redesign the sidebar to group sections by phase.
-
-### Phase Data
-- Opening Meeting: 1 section, 4 questions (`client_discussion`)
-- Document Review: 17 sections, 100 questions (`auditor_assessment`)
-- Closing Meeting: 1 section, 5 questions (`closing_discussion`)
-- DB columns `audit_phase`, `section_summary`, `risk_level` already exist on `client_audit_sections`
+Update the New Audit modal to detect client registration type (RTO, CRICOS, or both) and dynamically show the correct audit type cards, template IDs, and CRICOS snapshot fields. Update the badge component and scheduler to handle all six audit types.
 
 ### Files to Modify
 
-**1. `src/types/auditWorkspace.ts`** — Add `AuditPhase`, `QuestionContext` types. Add `audit_phase` to `AuditSection`. Add `question_context` to `TemplateQuestion`. Add closing-meeting rating options constant.
+**1. `src/types/clientAudits.ts`**
+- Expand `AuditType` to include `'cricos_chc' | 'rto_cricos_chc' | 'cricos_mock_audit'`
+- Expand `AUDIT_TYPE_LABELS` with all 6 types
+- Add `is_rto`, `is_cricos`, and CRICOS snapshot fields to `ClientAudit` interface
 
-**2. `src/components/audit/workspace/AuditFormTab.tsx`** — Full rewrite of template rendering:
-- Fetch sections grouped by `audit_phase` into 3 phases
-- Render horizontal phase stepper at top (with completion checkmarks)
-- Phase 1 (Opening Meeting): warm blue/purple tint, conversation-style cards, summary textarea
-- Phase 2 (Document Review): clean, info banner about independent review, Outcome group headers with aggregate completion %, section risk selectors, section summary textareas
-- Phase 3 (Closing Meeting): warm tint, findings summary panel at top, discussion-style cards, closing notes textarea
-- Outcome grouping logic based on sort_order ranges from the section data
+**2. `src/hooks/useClientAudits.ts`**
+- Expand `AUDIT_TYPE_TEMPLATE` map with all 6 types (including `cricos_chc`, `rto_cricos_chc`, `cricos_mock_audit`)
+- Expand `AUDIT_TYPE_HUMAN` map
+- Add `is_rto`, `is_cricos`, and CRICOS snapshot fields to `CreateAuditInput`
+- Pass them through in the insert mutation
 
-**3. `src/components/audit/workspace/QuestionCard.tsx`** — Add `questionContext` prop:
-- `client_discussion`: notes field large/prominent above rating, label "Client response / notes:", no evidence disclosure, rating secondary
-- `auditor_assessment`: evidence expanded by default, label "Auditor notes:", "Assessment:" label, tooltip helper text, flagged panel says "Finding guide" with "Raise Finding" button
-- `closing_discussion`: relabel ratings to Acknowledged/Partially acknowledged/Disputed, "Client response:" label, large textarea
+**3. `src/components/audit/NewAuditModal.tsx`** — Major changes:
+- Fetch `cricos_id` alongside existing tenant fields (`tenants` query adds `cricos_id`)
+- Derive `registrationType` (`rto_only`, `cricos_only`, `both`) from selected tenant's `rto_id` and `cricos_id`
+- Replace static `auditTypes` array with dynamic card generation based on `registrationType`:
+  - `rto_only`: CHC, Mock Audit, Due Diligence
+  - `cricos_only`: CRICOS CHC, Due Diligence
+  - `both`: Combined CHC (recommended), RTO CHC, CRICOS CHC, Due Diligence
+- Show registration indicator banner when `both`
+- Step 1 shows note "Select a client first..." if no client yet; once client selected (Step 2), going back to Step 1 shows filtered cards
+- Step 3: add CRICOS-specific fields (overseas student count, education agents, PRISMS users, DHA contact) shown conditionally when `is_cricos = true`
+- Add TGA source note for CRICOS fields
+- `handleSave` passes `is_rto`, `is_cricos`, `template_id`, and CRICOS snapshot fields
 
-### New Files
+**4. `src/components/audit/AuditTypeBadge.tsx`**
+- Expand `variantMap` and `AUDIT_TYPE_LABELS` usage for all 6 types
+- Add CRICOS teal variant: use custom className or a new badge variant for teal styling
+- Map: `cricos_chc` → teal, `rto_cricos_chc` → purple, `cricos_mock_audit` → teal
 
-**4. `src/components/audit/workspace/PhaseStepIndicator.tsx`** — Horizontal stepper showing 3 phases with completion state.
+**5. `src/components/audit/AuditSchedulerSection.tsx`**
+- Update `onStartCHC` to detect registration type and pass the recommended audit type
+- "Start CHC" button logic: RTO-only → `compliance_health_check`, CRICOS-only → `cricos_chc`, both → `rto_cricos_chc`
+- Need to fetch `cricos_id` from the scheduler data or tenant lookup
 
-**5. `src/components/audit/workspace/OpeningMeetingPhase.tsx`** — Renders Phase 1 sections with conversation styling and summary field.
+**6. `src/components/client/AuditScheduleAlert.tsx`**
+- Same detection logic for the "Start CHC" button in client folder banners
 
-**6. `src/components/audit/workspace/DocumentReviewPhase.tsx`** — Renders Phase 2 with outcome group headers, info banner, section risk selectors, section summaries.
+### Template ID Map (all 6 types)
+```
+compliance_health_check  → cc025000-0000-0000-0000-000000000001
+cricos_chc               → 788a5beb-93b2-48fd-a262-b313060823f4
+rto_cricos_chc           → bc025000-0000-0000-0000-000000000001
+mock_audit               → a0025000-0000-0000-0000-000000000001
+cricos_mock_audit        → 788a5beb-93b2-48fd-a262-b313060823f4  (fallback)
+due_diligence            → d0025000-0000-0000-0000-000000000001
+```
 
-**7. `src/components/audit/workspace/ClosingMeetingPhase.tsx`** — Renders Phase 3 with findings summary panel, discussion cards, closing notes.
-
-**8. `src/components/audit/workspace/AuditSidebar.tsx`** — Rewrite section nav to group by phase:
-- Phase headers (non-clickable labels) with completion indicator
-- Section items nested under each phase
-- Progress bar counts only `document_review` questions
-- Label: "X of Y evidence items assessed"
-
-### Hooks Changes
-
-**9. `src/hooks/useAuditWorkspace.ts`** — Add:
-- `useUpdateSectionSummary(auditId)` — PATCH `section_summary` on `client_audit_sections`
-- `useUpdateSectionRiskLevel(auditId)` — PATCH `risk_level` on `client_audit_sections`
-- Ensure `useAuditQuestions` also fetches `question_context` from template questions
+### CRICOS Detection Logic
+```typescript
+const CRICOS_INVALID = [null, '', 'n/a', 'N/A', '-', 'TBC', 'TBA'];
+const isCricos = !CRICOS_INVALID.includes(cricos_id);
+const isRto = !!rto_id && rto_id !== '';
+```
 
 ### No Database Migrations
-All required columns (`audit_phase`, `section_summary`, `risk_level`, `question_context`) already exist.
-
-### Key Design Details
-- Outcome grouping derived from section titles (parse "Outcome N" prefix; fallback "Compliance requirements")
-- Phase completion = all questions in that phase's sections have a rating
-- Keep existing status workflow — phase indicators in sidebar show progress visually
-- Document review progress bar excludes opening/closing meeting questions
-- Section risk level selector: Low / Medium / High / Critical pills saving to `client_audit_sections.risk_level`
+All columns (`is_rto`, `is_cricos`, `snapshot_overseas_student_count`, `snapshot_education_agents`, `snapshot_prisms_users`, `snapshot_dha_contact`) and new `audit_type` values already exist in the database.
 
