@@ -267,6 +267,10 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                 <div><Label>Email</Label><Input value={email} onChange={e => setEmail(e.target.value)} /></div>
                 <div className="col-span-2"><Label>Website</Label><Input value={website} onChange={e => setWebsite(e.target.value)} /></div>
               </div>
+              <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <span>ℹ️</span>
+                <span>Details sourced from the national training register (training.gov.au). You can edit them before saving.</span>
+              </p>
             </div>
           )}
         </AppModalBody>
