@@ -119,10 +119,10 @@ export function useComplianceAuditList(tenantId: number | null) {
           if (audit.auditor_user_id) {
             const { data: user } = await supabase
               .from('users')
-              .select('full_name')
+              .select('first_name, last_name')
               .eq('user_uuid', audit.auditor_user_id)
               .single();
-            auditorName = user?.full_name || '—';
+            auditorName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || '—' : '—';
           }
 
           // Open CAAs count
