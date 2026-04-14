@@ -20,6 +20,7 @@ interface NewAuditModalProps {
   preselectedTenantId?: number;
   preselectedTenantName?: string;
   preselectedAuditType?: AuditType;
+  preselectedStageInstanceId?: number;
 }
 
 interface AuditTypeCard {
@@ -128,7 +129,7 @@ interface TenantRecord {
   profile_cricos_number: string | null;
 }
 
-export function NewAuditModal({ open, onOpenChange, preselectedTenantId, preselectedTenantName, preselectedAuditType }: NewAuditModalProps) {
+export function NewAuditModal({ open, onOpenChange, preselectedTenantId, preselectedTenantName, preselectedAuditType, preselectedStageInstanceId }: NewAuditModalProps) {
   const hasPreselectedType = !!preselectedAuditType;
   const [step, setStep] = useState(hasPreselectedType ? 2 : 1);
   const [selectedCard, setSelectedCard] = useState<AuditTypeCard | null>(null);
@@ -285,6 +286,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       assisted_by_id: assistedById || undefined,
       training_products: trainingProducts ? trainingProducts.split(',').map(s => s.trim()).filter(Boolean) : undefined,
       doc_number: docNumber || undefined,
+      linked_stage_instance_id: preselectedStageInstanceId || undefined,
       snapshot_rto_name: rtoName || undefined,
       snapshot_rto_number: rtoNumber || undefined,
       snapshot_cricos_code: cricosCode || undefined,

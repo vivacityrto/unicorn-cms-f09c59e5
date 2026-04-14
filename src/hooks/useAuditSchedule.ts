@@ -75,6 +75,18 @@ export function useScheduleAuditPhase(auditId: string | undefined) {
       );
       if (rpcErr) throw rpcErr;
 
+      // Auto-complete CHC stage tasks when opening meeting is scheduled
+      if (params.appointmentType === 'opening_meeting' && auditId) {
+        try {
+          await supabase.rpc('complete_chc_stage_tasks' as any, {
+            p_audit_id: auditId,
+            p_milestone: 'scheduled',
+          } as any);
+        } catch {
+          // Non-critical — RPC may not exist yet
+        }
+      }
+
       // For meetings, create calendar event and sync
       if (params.appointmentType === 'opening_meeting' || params.appointmentType === 'closing_meeting') {
         const meetingLabel = params.appointmentType === 'opening_meeting' ? 'Opening Meeting' : 'Closing Meeting';

@@ -16,6 +16,16 @@ export function useReleaseReport(auditId: string | undefined) {
           p_release_notes: releaseNotes || null,
         } as any);
       if (error) throw error;
+
+      // Auto-complete CHC stage tasks on report release
+      try {
+        await supabase.rpc('complete_chc_stage_tasks' as any, {
+          p_audit_id: auditId,
+          p_milestone: 'report_released',
+        } as any);
+      } catch {
+        // Non-critical
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-audit', auditId] });
