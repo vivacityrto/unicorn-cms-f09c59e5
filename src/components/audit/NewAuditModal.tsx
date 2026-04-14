@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ShieldCheck, ClipboardList, Building2, ArrowRight, ArrowLeft, Loader2, Award, Globe, Info } from 'lucide-react';
+import { ShieldCheck, ClipboardList, Building2, ArrowRight, ArrowLeft, Loader2, Award, Globe, Info, Link2 } from 'lucide-react';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/modals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateAudit } from '@/hooks/useClientAudits';
 import { useAuth } from '@/hooks/useAuth';
+import { STAGE_AUDIT_TYPE_MAP } from '@/hooks/useStageAuditLink';
 import type { AuditType } from '@/types/clientAudits';
 import { detectRegistrationType, isCricosValid } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
+
+const STAGE_NAME_MAP: Record<number, string> = {
+  24: 'Compliance Health Check',
+  5: 'Mock Audit',
+  1106: 'Mock Audit & Submission',
+};
 
 interface NewAuditModalProps {
   open: boolean;
