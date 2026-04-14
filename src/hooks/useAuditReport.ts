@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { autoCompleteStageTasks } from '@/hooks/useStageAuditLink';
 
 export function useReleaseReport(auditId: string | undefined) {
   const queryClient = useQueryClient();
@@ -17,15 +18,8 @@ export function useReleaseReport(auditId: string | undefined) {
         } as any);
       if (error) throw error;
 
-      // Auto-complete CHC stage tasks on report release
-      try {
-        await supabase.rpc('complete_chc_stage_tasks' as any, {
-          p_audit_id: auditId,
-          p_milestone: 'report_released',
-        } as any);
-      } catch {
-        // Non-critical
-      }
+      // Auto-complete stage tasks on report release
+      await autoCompleteStageTasks(auditId, 'report_released');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-audit', auditId] });
