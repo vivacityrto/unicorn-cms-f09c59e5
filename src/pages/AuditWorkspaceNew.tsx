@@ -81,6 +81,7 @@ export default function AuditWorkspaceNew() {
               setActiveTab('form');
             }}
             onStatusChange={handleStatusChange}
+            onNavigateToSchedule={() => setActiveTab('schedule')}
             leadAuditorName={leadAuditor ? `${leadAuditor.first_name} ${leadAuditor.last_name}` : null}
             leadAuditorAvatar={leadAuditor?.avatar_url}
           />
