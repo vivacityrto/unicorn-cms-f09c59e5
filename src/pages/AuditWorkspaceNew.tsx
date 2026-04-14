@@ -104,6 +104,9 @@ export default function AuditWorkspaceNew() {
                 <TabsTrigger value="overview" className="gap-1.5">
                   <LayoutDashboard className="h-3.5 w-3.5" /> Overview
                 </TabsTrigger>
+                <TabsTrigger value="schedule" className="gap-1.5">
+                  <CalendarClock className="h-3.5 w-3.5" /> Schedule
+                </TabsTrigger>
                 <TabsTrigger value="form" className="gap-1.5">
                   <ClipboardList className="h-3.5 w-3.5" /> Audit Form
                 </TabsTrigger>
@@ -133,6 +136,9 @@ export default function AuditWorkspaceNew() {
 
               <TabsContent value="overview">
                 <OverviewTab audit={audit} />
+              </TabsContent>
+              <TabsContent value="schedule">
+                <ScheduleTab audit={audit} />
               </TabsContent>
               <TabsContent value="form">
                 <AuditFormTab audit={audit} selectedSectionId={sections?.[selectedSection]?.id} />
