@@ -129,6 +129,23 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
                           Due: {new Date(action.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
                       )}
+                      {/* Sync status */}
+                      {isComplete && (
+                        (action as any).client_action_item_id ? (
+                          <span className="text-green-600 flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Synced to action plan
+                          </span>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-6 px-2"
+                            onClick={() => syncActions.mutate(auditId)}
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" /> Sync now
+                          </Button>
+                        )
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
