@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import TenantProgressTable from "@/components/tenant/TenantProgressTable";
 import { TenantClickUpActivity } from "@/components/tenant/TenantClickUpActivity";
 import { CSCProfileCard } from "@/components/csc/CSCProfileCard";
+import { TenantRelationships } from "@/components/tenant/TenantRelationships";
 import { ViewAsClientButton } from "@/components/client/ViewAsClientButton";
 import { ClientQuickNav } from "@/components/client/ClientQuickNav";
 import { EnrichTenantButton } from "@/components/tenant/EnrichTenantButton";
@@ -961,6 +962,9 @@ export default function TenantDetail() {
 
             {/* CSC Profile Card - uses new CSC assignment system */}
             <CSCProfileCard tenantId={parseInt(tenantId || '0')} compact={true} />
+
+            {/* Related Organisations */}
+            <TenantRelationships tenantId={parseInt(tenantId || '0')} />
 
             {/* Contact Info */}
             <Card className="border-0 shadow-lg overflow-hidden">
