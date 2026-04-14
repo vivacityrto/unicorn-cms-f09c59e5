@@ -46,6 +46,7 @@ export function useInitializeSections(auditId: string | undefined) {
             standard_code: s.title,
             title: s.title,
             sort_order: s.sort_order ?? i,
+            audit_phase: s.audit_phase || 'document_review',
           }));
 
           const { error } = await supabase
