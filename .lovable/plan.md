@@ -1,153 +1,63 @@
 
 
-## Audit Preparation Portal, Scheduler & Digital Action Plan
+## Audit Three-Phase Workflow Redesign
 
 ### Summary
-Three features closing the audit lifecycle loop: (1) Evidence requests from the audit workspace + client upload portal, (2) Scheduler showing overdue/upcoming CHCs on dashboard and client folders, (3) Auto-sync of findings to client action items on audit completion.
+Replace the flat section list in the Audit Form tab with a three-phase workflow (Opening Meeting → Document Review → Closing Meeting), with phase-appropriate question card styles. Redesign the sidebar to group sections by phase.
 
----
+### Phase Data
+- Opening Meeting: 1 section, 4 questions (`client_discussion`)
+- Document Review: 17 sections, 100 questions (`auditor_assessment`)
+- Closing Meeting: 1 section, 5 questions (`closing_discussion`)
+- DB columns `audit_phase`, `section_summary`, `risk_level` already exist on `client_audit_sections`
 
-### Feature 1 — Audit Preparation Portal
+### Files to Modify
 
-#### 1A: Auditor side (audit workspace Overview tab)
+**1. `src/types/auditWorkspace.ts`** — Add `AuditPhase`, `QuestionContext` types. Add `audit_phase` to `AuditSection`. Add `question_context` to `TemplateQuestion`. Add closing-meeting rating options constant.
 
-**New file: `src/components/audit/workspace/EvidenceRequestsSection.tsx`**
-- Renders below the Client Snapshot card in OverviewTab
-- Header: "Evidence Requests" + "+ Send Evidence Request" button
-- Lists existing `evidence_requests` where `audit_id = auditId` using the existing `useEvidenceRequests` hook (filtered by audit_id)
-- Each request card: title, sent date, due date, status badge, item progress bar
-- Expandable item list: name, required badge, status, file download, Accept/Request Revision buttons
+**2. `src/components/audit/workspace/AuditFormTab.tsx`** — Full rewrite of template rendering:
+- Fetch sections grouped by `audit_phase` into 3 phases
+- Render horizontal phase stepper at top (with completion checkmarks)
+- Phase 1 (Opening Meeting): warm blue/purple tint, conversation-style cards, summary textarea
+- Phase 2 (Document Review): clean, info banner about independent review, Outcome group headers with aggregate completion %, section risk selectors, section summary textareas
+- Phase 3 (Closing Meeting): warm tint, findings summary panel at top, discussion-style cards, closing notes textarea
+- Outcome grouping logic based on sort_order ranges from the section data
 
-**New file: `src/components/audit/workspace/SendEvidenceRequestDrawer.tsx`**
-- Drawer with: title, due date (default 14 days), intro message, dynamic item list
-- "Generate from audit questions" button: queries `compliance_template_questions` for this audit's template, creates items from `evidence_to_sight` fields
-- Each item: document name, guidance text, required toggle, section dropdown
-- Save: INSERT `evidence_requests` with `audit_id`, then INSERT `evidence_request_items` with `section_id`
+**3. `src/components/audit/workspace/QuestionCard.tsx`** — Add `questionContext` prop:
+- `client_discussion`: notes field large/prominent above rating, label "Client response / notes:", no evidence disclosure, rating secondary
+- `auditor_assessment`: evidence expanded by default, label "Auditor notes:", "Assessment:" label, tooltip helper text, flagged panel says "Finding guide" with "Raise Finding" button
+- `closing_discussion`: relabel ratings to Acknowledged/Partially acknowledged/Disputed, "Client response:" label, large textarea
 
-**New hook: `src/hooks/useAuditPrep.ts`**
-- `useAuditEvidenceRequests(auditId)` — fetches evidence_requests where audit_id matches, with nested items
-- `useCreateAuditEvidenceRequest()` — inserts request + items with audit_id set
-- `useGenerateRequestFromQuestions(auditId)` — loads template questions with evidence_to_sight, returns pre-filled items
-- `useReviewEvidenceItem()` — updates status, review_notes, reviewed_at, reviewed_by on evidence_request_items
+### New Files
 
-**Modify: `src/components/audit/workspace/OverviewTab.tsx`**
-- Import and render `EvidenceRequestsSection` below the Client Snapshot card, passing `audit`
+**4. `src/components/audit/workspace/PhaseStepIndicator.tsx`** — Horizontal stepper showing 3 phases with completion state.
 
-#### 1B: Client side — Preparation Portal
+**5. `src/components/audit/workspace/OpeningMeetingPhase.tsx`** — Renders Phase 1 sections with conversation styling and summary field.
 
-**New file: `src/components/client/AuditPreparationSection.tsx`**
-- Section shown on ClientHomePage when evidence_requests with `audit_id IS NOT NULL` exist for this tenant
-- Header: "Prepare for your upcoming audit"
-- For each active request: card with title, due date, progress bar, consultant name
-- Per item: document name, guidance, required badge, status, upload button
-- Upload: file to `portal-documents` bucket at `{tenant_id}/audit/{request_id}/{item_id}/{filename}`
-- INSERT portal_documents + UPDATE evidence_request_items with received_document_id and status
-- Revision requested: amber panel with review_notes + re-upload
-- Accepted: green tick
+**6. `src/components/audit/workspace/DocumentReviewPhase.tsx`** — Renders Phase 2 with outcome group headers, info banner, section risk selectors, section summaries.
 
-**New hook additions in `src/hooks/useAuditPrep.ts`**
-- `useClientEvidenceRequests(tenantId)` — fetches evidence_requests where audit_id IS NOT NULL for client portal
-- `useUploadEvidenceItem()` — uploads to storage + creates portal_documents + updates evidence_request_items
+**7. `src/components/audit/workspace/ClosingMeetingPhase.tsx`** — Renders Phase 3 with findings summary panel, discussion cards, closing notes.
 
-**Modify: `src/components/client/ClientHomePage.tsx`**
-- Import and conditionally render `AuditPreparationSection` below the progress anchors
+**8. `src/components/audit/workspace/AuditSidebar.tsx`** — Rewrite section nav to group by phase:
+- Phase headers (non-clickable labels) with completion indicator
+- Section items nested under each phase
+- Progress bar counts only `document_review` questions
+- Label: "X of Y evidence items assessed"
 
----
+### Hooks Changes
 
-### Feature 2 — Audit Scheduler
+**9. `src/hooks/useAuditWorkspace.ts`** — Add:
+- `useUpdateSectionSummary(auditId)` — PATCH `section_summary` on `client_audit_sections`
+- `useUpdateSectionRiskLevel(auditId)` — PATCH `risk_level` on `client_audit_sections`
+- Ensure `useAuditQuestions` also fetches `question_context` from template questions
 
-**New hook: `src/hooks/useAuditScheduler.ts`**
-- `useAuditSchedule(filter?)` — queries `v_audit_schedule` view, ordered by `days_until_due`
-- `useClientAuditSchedule(tenantId)` — single client's schedule row
+### No Database Migrations
+All required columns (`audit_phase`, `section_summary`, `risk_level`, `question_context`) already exist.
 
-**New file: `src/components/audit/AuditSchedulerSection.tsx`**
-- Collapsible section for `/audits` dashboard
-- Stat pills: overdue (red), due within 90 days (amber), never audited (grey)
-- Table: Client, RTO ID, Risk, Last CHC, Last Score, Next Due, Status badge, "Start CHC" button
-- "Start CHC" opens NewAuditModal pre-filled with client + `compliance_health_check` type
-- Expanded by default if any overdue
-
-**Modify: `src/pages/AuditsAssessments.tsx`**
-- Import and render `AuditSchedulerSection` between the audits table and the Reference Library
-
-**New file: `src/components/client/AuditScheduleAlert.tsx`**
-- Banner component for client folder: overdue (amber), due soon (yellow), never audited (info)
-- "Start CHC" button opens NewAuditModal pre-filled
-
-**Modify: `src/components/client/ClientAuditsTab.tsx`** (or parent `ClientDetail.tsx`)
-- Import and render `AuditScheduleAlert` above the audits list
-
----
-
-### Feature 3 — Digital Action Plan
-
-#### 3A: Auto-sync on audit completion
-
-**Modify: `src/hooks/useAuditWorkspace.ts` — `useAuditStatusTransition`**
-- After status = 'complete' update succeeds, call `supabase.rpc('sync_audit_actions_to_client_items', { p_audit_id: auditId })`
-- Return the sync count in the success toast: "{N} corrective actions added to client action plan"
-
-#### 3B: Actions tab sync status
-
-**Modify: `src/components/audit/workspace/ActionsTab.tsx`**
-- When audit is complete: banner at top "This audit is complete. N actions synced to client action plan. [View in client folder →]"
-- Per action card: if `client_action_item_id` is set → green "Synced" label; else grey "Not synced" + "Sync now" button
-
-#### 3C: Client portal action plan
-
-**New file: `src/components/client/ClientActionPlanSection.tsx`**
-- Shows `client_action_items` where `source = 'audit'` and `status != 'completed'`
-- Priority-ordered cards: priority badge, title, source audit name, due date, assignee
-- "Mark as complete" → PATCH status = 'completed'
-- "Upload evidence" → file picker → portal_documents with linked_task_id
-- Summary stats: total open, overdue (red), due this month (amber)
-- Empty state: "No outstanding actions from your audits."
-
-**New hook: `src/hooks/useAuditActionPlan.ts`**
-- `useClientActionPlan(tenantId)` — fetches client_action_items where source = 'audit'
-- `useCompleteClientAction()` — PATCH status + completed_at + completed_by
-- `useSyncAuditActions(auditId)` — calls the RPC
-
-**Modify: `src/components/client/ClientHomePage.tsx`**
-- Import and render `ClientActionPlanSection` below the Audit Preparation section
-
----
-
-### NewAuditModal prefill for Scheduler
-
-**Modify: `src/components/audit/NewAuditModal.tsx`**
-- Add optional `preselectedAuditType?: AuditType` prop
-- When set, skip Step 1 and lock audit type
-
----
-
-### Technical Notes
-- `evidence_requests` table already has `audit_id` column (uuid, nullable)
-- `evidence_request_items` already has `section_id` and `question_id` columns
-- `v_audit_schedule` view exists with columns: tenant_id, client_name, rto_id, client_risk_level, last_conducted_at, last_score_pct, next_due_date, schedule_status, days_until_due, etc.
-- `sync_audit_actions_to_client_items` RPC exists, takes `p_audit_id: string`, returns number
-- `client_action_items` table has `source` text column for filtering audit-sourced items
-- No database migrations required — all tables, views, and RPCs already exist
-- All Supabase queries use `as any` cast pattern consistent with codebase
-
-### Files Summary
-
-| Action | File |
-|--------|------|
-| Create | `src/hooks/useAuditPrep.ts` |
-| Create | `src/hooks/useAuditScheduler.ts` |
-| Create | `src/hooks/useAuditActionPlan.ts` |
-| Create | `src/components/audit/workspace/EvidenceRequestsSection.tsx` |
-| Create | `src/components/audit/workspace/SendEvidenceRequestDrawer.tsx` |
-| Create | `src/components/audit/AuditSchedulerSection.tsx` |
-| Create | `src/components/client/AuditPreparationSection.tsx` |
-| Create | `src/components/client/AuditScheduleAlert.tsx` |
-| Create | `src/components/client/ClientActionPlanSection.tsx` |
-| Modify | `src/components/audit/workspace/OverviewTab.tsx` |
-| Modify | `src/components/audit/workspace/ActionsTab.tsx` |
-| Modify | `src/components/audit/NewAuditModal.tsx` |
-| Modify | `src/pages/AuditsAssessments.tsx` |
-| Modify | `src/components/client/ClientAuditsTab.tsx` |
-| Modify | `src/components/client/ClientHomePage.tsx` |
-| Modify | `src/hooks/useAuditWorkspace.ts` |
+### Key Design Details
+- Outcome grouping derived from section titles (parse "Outcome N" prefix; fallback "Compliance requirements")
+- Phase completion = all questions in that phase's sections have a rating
+- Keep existing status workflow — phase indicators in sidebar show progress visually
+- Document review progress bar excludes opening/closing meeting questions
+- Section risk level selector: Low / Medium / High / Critical pills saving to `client_audit_sections.risk_level`
 
