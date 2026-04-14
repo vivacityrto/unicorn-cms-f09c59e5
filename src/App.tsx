@@ -960,6 +960,10 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            {/* Compliance Auditor Routes */}
+            <Route path="/compliance-audits/:tenantId" element={<ProtectedRoute><ComplianceAuditList /></ProtectedRoute>} />
+            <Route path="/compliance-audits/:tenantId/audit/:auditId" element={<ProtectedRoute><ComplianceAuditForm /></ProtectedRoute>} />
+            <Route path="/compliance-audits/:tenantId/audit/:auditId/report" element={<ProtectedRoute><ComplianceAuditReport /></ProtectedRoute>} />
             {/* Resource Hub Routes */}
             <Route path="/resource-hub" element={<ProtectedRoute><ResourceHubDashboard /></ProtectedRoute>} />
             <Route path="/resource-hub/templates" element={<ProtectedRoute><ResourceCategoryPage categoryId="templates" /></ProtectedRoute>} />
