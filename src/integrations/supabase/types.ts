@@ -8313,6 +8313,235 @@ export type Database = {
           },
         ]
       }
+      client_audit_actions: {
+        Row: {
+          assigned_to: string | null
+          audit_id: string
+          client_action_item_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          finding_id: string | null
+          id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          audit_id: string
+          client_action_item_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          finding_id?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          audit_id?: string
+          client_action_item_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          finding_id?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_actions_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_actions_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_actions_client_action_item_id_fkey"
+            columns: ["client_action_item_id"]
+            isOneToOne: false
+            referencedRelation: "client_action_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_actions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "client_audit_findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_audit_documents: {
+        Row: {
+          ai_findings: Json | null
+          ai_processed_at: string | null
+          ai_recommendations: Json | null
+          ai_risk_summary: string | null
+          ai_status: string
+          audit_id: string
+          created_at: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          qualification_code: string | null
+          qualification_title: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          ai_findings?: Json | null
+          ai_processed_at?: string | null
+          ai_recommendations?: Json | null
+          ai_risk_summary?: string | null
+          ai_status?: string
+          audit_id: string
+          created_at?: string
+          document_type?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          qualification_code?: string | null
+          qualification_title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          ai_findings?: Json | null
+          ai_processed_at?: string | null
+          ai_recommendations?: Json | null
+          ai_risk_summary?: string | null
+          ai_status?: string
+          audit_id?: string
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          qualification_code?: string | null
+          qualification_title?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_documents_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_documents_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_audit_findings: {
+        Row: {
+          audit_id: string
+          created_at: string
+          created_by: string | null
+          detail: string | null
+          id: string
+          impact: string | null
+          is_auto_generated: boolean
+          priority: string
+          response_id: string | null
+          section_id: string | null
+          standard_reference: string | null
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          audit_id: string
+          created_at?: string
+          created_by?: string | null
+          detail?: string | null
+          id?: string
+          impact?: string | null
+          is_auto_generated?: boolean
+          priority?: string
+          response_id?: string | null
+          section_id?: string | null
+          standard_reference?: string | null
+          summary: string
+          updated_at?: string
+        }
+        Update: {
+          audit_id?: string
+          created_at?: string
+          created_by?: string | null
+          detail?: string | null
+          id?: string
+          impact?: string | null
+          is_auto_generated?: boolean
+          priority?: string
+          response_id?: string | null
+          section_id?: string | null
+          standard_reference?: string | null
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "client_audit_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "client_audit_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_audit_log: {
         Row: {
           action: string
@@ -8351,6 +8580,399 @@ export type Database = {
           tenant_id?: number
         }
         Relationships: []
+      }
+      client_audit_responses: {
+        Row: {
+          ai_confidence: number | null
+          ai_suggested_notes: string | null
+          ai_suggested_rating: string | null
+          audit_id: string
+          created_at: string
+          evidence_urls: string[]
+          id: string
+          is_flagged: boolean
+          notes: string | null
+          question_id: string | null
+          question_text: string | null
+          rating: string | null
+          responded_at: string | null
+          responded_by: string | null
+          score: number | null
+          section_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_confidence?: number | null
+          ai_suggested_notes?: string | null
+          ai_suggested_rating?: string | null
+          audit_id: string
+          created_at?: string
+          evidence_urls?: string[]
+          id?: string
+          is_flagged?: boolean
+          notes?: string | null
+          question_id?: string | null
+          question_text?: string | null
+          rating?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
+          score?: number | null
+          section_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_confidence?: number | null
+          ai_suggested_notes?: string | null
+          ai_suggested_rating?: string | null
+          audit_id?: string
+          created_at?: string
+          evidence_urls?: string[]
+          id?: string
+          is_flagged?: boolean
+          notes?: string | null
+          question_id?: string | null
+          question_text?: string | null
+          rating?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
+          score?: number | null
+          section_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_template_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "client_audit_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_audit_sections: {
+        Row: {
+          audit_id: string
+          created_at: string
+          description: string | null
+          id: string
+          risk_level: string | null
+          score_max: number | null
+          score_total: number | null
+          section_summary: string | null
+          sort_order: number
+          standard_code: string | null
+          template_section_id: string | null
+          title: string
+        }
+        Insert: {
+          audit_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          risk_level?: string | null
+          score_max?: number | null
+          score_total?: number | null
+          section_summary?: string | null
+          sort_order?: number
+          standard_code?: string | null
+          template_section_id?: string | null
+          title: string
+        }
+        Update: {
+          audit_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          risk_level?: string | null
+          score_max?: number | null
+          score_total?: number | null
+          section_summary?: string | null
+          sort_order?: number
+          standard_code?: string | null
+          template_section_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_sections_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_sections_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_sections_template_section_id_fkey"
+            columns: ["template_section_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_template_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_audits: {
+        Row: {
+          ai_analysis_status: string
+          assisted_by_id: string | null
+          audit_type: string
+          closed_at: string | null
+          conducted_at: string | null
+          created_at: string
+          created_by: string | null
+          doc_number: string | null
+          executive_summary: string | null
+          id: string
+          intelligence_pack_id: string | null
+          lead_auditor_id: string | null
+          next_audit_due: string | null
+          overall_finding: string | null
+          report_generated_at: string | null
+          report_pdf_path: string | null
+          report_prepared_by_id: string | null
+          risk_rating: string | null
+          score_max: number | null
+          score_pct: number | null
+          score_total: number | null
+          snapshot_ceo: string | null
+          snapshot_cricos_code: string | null
+          snapshot_email: string | null
+          snapshot_other_contacts: string | null
+          snapshot_phone: string | null
+          snapshot_rto_name: string | null
+          snapshot_rto_number: string | null
+          snapshot_site_address: string | null
+          snapshot_website: string | null
+          status: string
+          subject_tenant_id: number
+          template_id: string | null
+          title: string | null
+          training_products: string[]
+          updated_at: string
+        }
+        Insert: {
+          ai_analysis_status?: string
+          assisted_by_id?: string | null
+          audit_type: string
+          closed_at?: string | null
+          conducted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          doc_number?: string | null
+          executive_summary?: string | null
+          id?: string
+          intelligence_pack_id?: string | null
+          lead_auditor_id?: string | null
+          next_audit_due?: string | null
+          overall_finding?: string | null
+          report_generated_at?: string | null
+          report_pdf_path?: string | null
+          report_prepared_by_id?: string | null
+          risk_rating?: string | null
+          score_max?: number | null
+          score_pct?: number | null
+          score_total?: number | null
+          snapshot_ceo?: string | null
+          snapshot_cricos_code?: string | null
+          snapshot_email?: string | null
+          snapshot_other_contacts?: string | null
+          snapshot_phone?: string | null
+          snapshot_rto_name?: string | null
+          snapshot_rto_number?: string | null
+          snapshot_site_address?: string | null
+          snapshot_website?: string | null
+          status?: string
+          subject_tenant_id: number
+          template_id?: string | null
+          title?: string | null
+          training_products?: string[]
+          updated_at?: string
+        }
+        Update: {
+          ai_analysis_status?: string
+          assisted_by_id?: string | null
+          audit_type?: string
+          closed_at?: string | null
+          conducted_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          doc_number?: string | null
+          executive_summary?: string | null
+          id?: string
+          intelligence_pack_id?: string | null
+          lead_auditor_id?: string | null
+          next_audit_due?: string | null
+          overall_finding?: string | null
+          report_generated_at?: string | null
+          report_pdf_path?: string | null
+          report_prepared_by_id?: string | null
+          risk_rating?: string | null
+          score_max?: number | null
+          score_pct?: number | null
+          score_total?: number | null
+          snapshot_ceo?: string | null
+          snapshot_cricos_code?: string | null
+          snapshot_email?: string | null
+          snapshot_other_contacts?: string | null
+          snapshot_phone?: string | null
+          snapshot_rto_name?: string | null
+          snapshot_rto_number?: string | null
+          snapshot_site_address?: string | null
+          snapshot_website?: string | null
+          status?: string
+          subject_tenant_id?: number
+          template_id?: string | null
+          title?: string | null
+          training_products?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audits_intelligence_pack_id_fkey"
+            columns: ["intelligence_pack_id"]
+            isOneToOne: false
+            referencedRelation: "audit_intelligence_packs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       client_commitments: {
         Row: {
@@ -47784,6 +48406,142 @@ export type Database = {
           unicorn_url: string | null
         }
         Relationships: []
+      }
+      v_client_audits_dashboard: {
+        Row: {
+          action_count: number | null
+          ai_analysis_status: string | null
+          audit_type: string | null
+          client_name: string | null
+          client_type: Database["public"]["Enums"]["tenant_type"] | null
+          conducted_at: string | null
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          doc_number: string | null
+          document_count: number | null
+          finding_count: number | null
+          id: string | null
+          lead_auditor_avatar: string | null
+          lead_auditor_id: string | null
+          lead_auditor_name: string | null
+          next_audit_due: string | null
+          open_action_count: number | null
+          risk_rating: string | null
+          rto_number: string | null
+          score_pct: number | null
+          status: string | null
+          subject_tenant_id: number | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       v_client_dashboard_progress: {
         Row: {
