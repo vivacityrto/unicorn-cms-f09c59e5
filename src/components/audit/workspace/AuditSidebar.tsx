@@ -49,6 +49,23 @@ export function AuditSidebar({
 }: AuditSidebarProps) {
   const navigate = useNavigate();
   const { documentDeadline, openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
+
+  // Fetch stage_id for dynamic label
+  const { data: stageLink } = useQuery({
+    queryKey: ['audit-stage-link', audit.linked_stage_instance_id],
+    enabled: !!audit.linked_stage_instance_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('stage_instances' as any)
+        .select('id, stage_id')
+        .eq('id', audit.linked_stage_instance_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+  });
+
+  const stageLabel = stageLink?.stage_id ? (STAGE_LABEL_MAP[stageLink.stage_id as number] || 'Linked stage') : 'Linked stage';
   // Group sections by phase
   const phaseGroups: PhaseGroup[] = [
     { key: 'opening_meeting', label: 'PHASE 1 — OPENING MEETING', sections: [] },
@@ -182,7 +199,7 @@ export function AuditSidebar({
           >
             <ClipboardList className="h-3.5 w-3.5" />
             <div className="text-left">
-              <span className="font-medium block">Linked to CHC stage</span>
+              <span className="font-medium block">Linked to {stageLabel}</span>
               <span className="text-[10px] text-muted-foreground">View stage tasks →</span>
             </div>
           </button>
