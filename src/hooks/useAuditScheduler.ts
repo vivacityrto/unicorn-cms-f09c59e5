@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { detectRegistrationType } from '@/types/clientAudits';
+import type { AuditType } from '@/types/clientAudits';
 
 export interface AuditScheduleRow {
   tenant_id: number;
   client_name: string;
   rto_id: string | null;
+  cricos_id: string | null;
   client_risk_level: string | null;
   registration_end_date: string | null;
   last_audit_id: string | null;
@@ -58,4 +61,12 @@ export function useClientAuditSchedule(tenantId: number | null | undefined) {
       return data as unknown as AuditScheduleRow | null;
     },
   });
+}
+
+/** Returns the recommended CHC audit type based on a client's registration */
+export function getRecommendedCHCType(rtoId: string | null | undefined, cricosId: string | null | undefined): AuditType {
+  const reg = detectRegistrationType(rtoId, cricosId);
+  if (reg === 'both') return 'rto_cricos_chc';
+  if (reg === 'cricos_only') return 'cricos_chc';
+  return 'compliance_health_check';
 }

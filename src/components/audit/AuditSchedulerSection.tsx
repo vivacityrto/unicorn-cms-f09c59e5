@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChevronDown, ChevronUp, Play } from 'lucide-react';
-import { useAuditSchedule, type AuditScheduleRow } from '@/hooks/useAuditScheduler';
+import { useAuditSchedule, getRecommendedCHCType, type AuditScheduleRow } from '@/hooks/useAuditScheduler';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import type { AuditType } from '@/types/clientAudits';
 
 interface AuditSchedulerSectionProps {
-  onStartCHC: (tenantId: number, tenantName: string) => void;
+  onStartCHC: (tenantId: number, tenantName: string, auditType?: AuditType) => void;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -87,6 +88,7 @@ export function AuditSchedulerSection({ onStartCHC }: AuditSchedulerSectionProps
                     const daysLabel = row.schedule_status === 'due_soon' && row.days_until_due != null
                       ? `Due in ${row.days_until_due}d`
                       : statusCfg.label;
+                    const recommendedType = getRecommendedCHCType(row.rto_id, row.cricos_id);
 
                     return (
                       <TableRow key={row.tenant_id}>
@@ -129,7 +131,7 @@ export function AuditSchedulerSection({ onStartCHC }: AuditSchedulerSectionProps
                         </TableCell>
                         <TableCell>
                           {row.schedule_status !== 'in_progress' && row.schedule_status !== 'on_track' && (
-                            <Button size="sm" variant="outline" onClick={() => onStartCHC(row.tenant_id, row.client_name)}>
+                            <Button size="sm" variant="outline" onClick={() => onStartCHC(row.tenant_id, row.client_name, recommendedType)}>
                               <Play className="h-3 w-3 mr-1" /> Start CHC
                             </Button>
                           )}
