@@ -62,10 +62,6 @@ const AUDIT_TYPE_HUMAN: Record<AuditType, string> = {
   mock_audit: 'Mock Audit',
   due_diligence: 'Due Diligence',
 };
-  compliance_health_check: 'Compliance Health Check',
-  mock_audit: 'Mock Audit',
-  due_diligence: 'Due Diligence',
-};
 
 interface CreateAuditInput {
   audit_type: AuditType;
