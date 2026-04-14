@@ -389,16 +389,28 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
                         />
                       </TableCell>
                       <TableCell>
-                        {hasEdits(row.id) && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleSave(row)}
-                            disabled={savingId === row.id}
-                          >
-                            <Save className="h-3 w-3 mr-1" />
-                            {savingId === row.id ? '…' : 'Save'}
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {hasEdits(row.id) && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleSave(row)}
+                              disabled={savingId === row.id}
+                            >
+                              <Save className="h-3 w-3 mr-1" />
+                              {savingId === row.id ? '…' : 'Save'}
+                            </Button>
+                          )}
+                          {canDelete(row) && !hasEdits(row.id) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setDeletingRow(row)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
