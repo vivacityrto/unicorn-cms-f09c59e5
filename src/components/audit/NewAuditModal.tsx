@@ -408,6 +408,18 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
 
           {step === 2 && (
             <div className="space-y-4">
+              {isStageLinked && stageName && (
+                <Alert className="bg-primary/5 border-primary/20">
+                  <Link2 className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-sm">
+                    <span className="font-medium">Creating audit for {stageName} stage</span>
+                    {preselectedTenantName && <span> — {preselectedTenantName}</span>}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This audit will be linked to your package stage. Stage tasks will auto-complete as you progress.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
               <div>
                 <Label>Client *</Label>
                 {isClientLocked ? (
