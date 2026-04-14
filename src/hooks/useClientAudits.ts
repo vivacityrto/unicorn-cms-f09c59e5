@@ -51,6 +51,12 @@ export function useAudit(auditId: string | undefined) {
   });
 }
 
+const AUDIT_TYPE_TEMPLATE: Record<AuditType, string> = {
+  compliance_health_check: 'cc025000-0000-0000-0000-000000000001',
+  mock_audit: 'a0025000-0000-0000-0000-000000000001',
+  due_diligence: 'd0025000-0000-0000-0000-000000000001',
+};
+
 const AUDIT_TYPE_HUMAN: Record<AuditType, string> = {
   compliance_health_check: 'Compliance Health Check',
   mock_audit: 'Mock Audit',
@@ -110,6 +116,7 @@ export function useCreateAudit() {
           snapshot_email: input.snapshot_email || null,
           snapshot_website: input.snapshot_website || null,
           snapshot_other_contacts: input.snapshot_other_contacts || null,
+          template_id: AUDIT_TYPE_TEMPLATE[input.audit_type],
           ai_analysis_status: 'none',
           created_by: userId,
         } as any)
