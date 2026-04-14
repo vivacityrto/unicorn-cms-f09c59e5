@@ -59,6 +59,8 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
   const [edits, setEdits] = useState<Record<number, RowEdits>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
   const [sortMode, setSortMode] = useState<'start' | 'package_start'>('start');
+  const [deletingRow, setDeletingRow] = useState<PackageInstanceRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
