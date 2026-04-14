@@ -1,116 +1,54 @@
 
 
-## Enhanced Audit Action Plan & Report Release
+## Fix: CRICOS-Aware Audit Type Cards Not Updating
 
-### Summary
-Four connected features: (1) Rich action drawer in audit workspace, (2) Report release workflow in Report tab, (3) Client portal audit report section, (4) Enhanced client action plan with response/verification workflow. All DB infrastructure (columns, views, RPCs) already exists.
+### Root Cause Analysis
 
----
+The detection logic and card arrays are correctly defined, but there are two issues:
 
-### Feature 1 — Enhanced Actions Tab
+1. **`CRICOS_INVALID_VALUES` is not comprehensive enough** — values like `'NA'` (no slash), `'none'`, `'None'`, or whitespace-only strings would pass through as valid CRICOS IDs, while others like `'N/A'` are correctly filtered. The `.includes()` check also uses exact match on trimmed input but the array doesn't cover all edge cases.
 
-**Update `src/types/auditWorkspace.ts`**
-- Add `ActionType`, `DeliveryModel`, `VerificationStatus` types
-- Expand `AuditAction` interface with all new columns (action_type, delivery_model, standard_reference, labels, evidence_required, client_notes, internal_notes, client_response, verification_status, verified_by/at, evidence_document_ids, extended_due_date, extension_reason)
-- Add `AuditActionPlanItem` interface extending `AuditAction` with view columns (subject_tenant_id, audit_title, assigned_to_name, finding_summary, is_overdue, effective_due_date, days_remaining)
-- Add constants: `ACTION_TYPE_OPTIONS`, `DELIVERY_MODEL_OPTIONS`, `VERIFICATION_STATUS_OPTIONS`
+2. **Potential timing/state issue** — When the modal opens with `preselectedTenantId`, `tenantId` is set immediately but the `tenants` array loads asynchronously. If the async query returns data where `cricos_id` is technically non-null but an invalid placeholder (not in the filter list), or if there's a brief period where `selectedTenant` is undefined, the cards may render incorrectly.
 
-**Create `src/components/audit/workspace/ActionDrawer.tsx`**
-- Full-featured drawer with 5 sections: Identity (type segmented selector, title, standard_reference, labels), Delivery (radio cards), Client-facing (client_notes textarea, due date, priority, evidence toggle), Internal notes (collapsible), Finding link (read-only panel if linked)
-- Used for both create and edit modes
-- Pre-fills from finding when opened via "Raise Action"
+3. **Selected card not re-evaluated when registration type changes** — When a user selects a card in Step 1 (from the wrong list), then selects a client in Step 2, then goes back to Step 1, the `selectedCard` state may still reference a card from the previous list. The card selection should be cleared when the registration type changes.
 
-**Create `src/components/audit/workspace/VerificationDrawer.tsx`**
-- Shows client response text + uploaded evidence docs with download links
-- Three action buttons: Verified, Request Resubmission, Waive
-- Verification notes textarea
-- PATCHes verification_status + verified_by/at/notes + status
+### Changes
 
-**Rewrite `src/components/audit/workspace/ActionsTab.tsx`**
-- Replace inline AddActionForm with ActionDrawer
-- Add filter bar: delivery model, action type, verification status
-- Add stats: awaiting verification, client self, vivacity-assisted
-- Redesigned action cards showing: action_type badge with icon/color, delivery model badge, standard_reference, client_notes preview, labels, verification status, Edit/Verify/Waive buttons
-- Internal notes collapsible (Vivacity staff only)
+**1. `src/types/clientAudits.ts`** — Make CRICOS detection more robust:
+- Use case-insensitive comparison for invalid values
+- Add `'NA'`, `'None'`, `'none'`, `'nil'` to the invalid list
+- Use a helper function with `.toLowerCase().trim()` matching instead of exact `.includes()`
 
-**Update `src/hooks/useAuditWorkspace.ts`** — `useAuditActions`
-- Query includes all new columns (still from `client_audit_actions`)
-- `createAction` accepts full payload with new fields
-- Add `useVerifyAction` mutation
+**2. `src/components/audit/NewAuditModal.tsx`** — Fix state management:
+- Add a `useEffect` that clears `selectedCard` when `registrationType` changes (so going back to Step 1 after selecting a client shows the correct cards with no stale selection)
+- Update the note text when no client is selected to: "Select a client to see recommended audit types."
+- Ensure the registration type banner renders correctly with the tenant data
 
----
+### Technical Details
 
-### Feature 2 — Report Release (Report Tab)
+```typescript
+// Updated CRICOS detection (case-insensitive, broader coverage)
+const CRICOS_INVALID_LOWER = ['', 'n/a', 'na', '-', 'tbc', 'tba', 'none', 'nil'];
 
-**Update `src/components/audit/workspace/ReportTab.tsx`**
-- Add "Release to Client" section below report preview, separated by divider
-- Unreleased state: message textarea + warning about visibility + "Release Report to Client" button
-- Released state: green banner with releaser name/date, acknowledgement status
-- "Revoke access" button (SuperAdmin only) — sets `report_client_visible = false`
-- Confirm dialog before release
+export function detectRegistrationType(rtoId, cricosId) {
+  const isRto = !!rtoId && rtoId.trim() !== '';
+  const isCricos = !!cricosId && !CRICOS_INVALID_LOWER.includes(cricosId.trim().toLowerCase());
+  ...
+}
 
-**Create `src/hooks/useAuditReport.ts`**
-- `useReleaseReport(auditId)` — calls `release_audit_report` RPC
-- `useAcknowledgeReport(auditId)` — calls `acknowledge_audit_report` RPC
-- `useRevokeReport(auditId)` — PATCH `report_client_visible = false`
-
----
-
-### Feature 3 — Client Portal: Audit Reports
-
-**Create `src/components/client/ClientAuditReportsSection.tsx`**
-- Queries `client_audits` where `report_client_visible = true` for tenant
-- Report card: audit title, release date, conducted date, lead auditor, release notes message, risk rating, score, finding count
-- "Download Report PDF" button (signed URL from storage)
-- "View Action Plan" scrolls/navigates to action plan section
-- "Acknowledge Report" checkbox + button → calls `acknowledge_audit_report` RPC
-- Post-acknowledge: shows "Acknowledged on {date}"
-
-**Create `src/hooks/useClientAuditPortal.ts`**
-- `useClientAuditReports(tenantId)` — fetches visible audits
-- `useClientActionPlanEnhanced(tenantId)` — queries `v_audit_action_plan` view
-
-**Modify `src/components/client/ClientHomePage.tsx`**
-- Import and render `ClientAuditReportsSection` between AuditPreparationSection and ClientActionPlanSection
-
----
-
-### Feature 4 — Enhanced Client Action Plan
-
-**Rewrite `src/components/client/ClientActionPlanSection.tsx`**
-- Query `v_audit_action_plan` instead of `client_action_items`
-- Action cards show: action_type badge, priority, standard_reference, `client_notes` (not description), delivery model context text, assigned consultant name
-- Large response textarea saving to `client_response`
-- Evidence upload to `portal-documents` at `{tenant_id}/audit-actions/{action_id}/{filename}`, inserting `portal_documents` with `linked_audit_action_id`
-- "Submit response" → PATCHes client_response + verification_status = 'response_received' + status = 'in_progress'
-- Verification status banners: verified (green), rejected (amber with resubmit), waived (grey)
-- Observation type: informational only, no response required
-- Filter out cancelled actions and observation types from counts
-
-**Update `src/hooks/useAuditActionPlan.ts`**
-- `useClientActionPlan` → query `v_audit_action_plan` filtered by `subject_tenant_id` and `report_client_visible = true`
-- `useClientSubmitActionResponse()` — PATCH client_response fields + verification_status
-- `useUploadActionEvidence()` — upload + insert portal_documents + append to evidence_document_ids
-- Keep `useSyncAuditActions` and `useCompleteClientAction`
-
----
-
-### Files Summary
+// Clear selected card when registration type changes
+useEffect(() => {
+  if (registrationType && selectedCard) {
+    const stillValid = auditTypeCards.some(
+      c => c.value === selectedCard.value && c.is_rto === selectedCard.is_rto && c.is_cricos === selectedCard.is_cricos
+    );
+    if (!stillValid) setSelectedCard(null);
+  }
+}, [registrationType, auditTypeCards]);
+```
 
 | Action | File |
 |--------|------|
-| Modify | `src/types/auditWorkspace.ts` |
-| Create | `src/components/audit/workspace/ActionDrawer.tsx` |
-| Create | `src/components/audit/workspace/VerificationDrawer.tsx` |
-| Rewrite | `src/components/audit/workspace/ActionsTab.tsx` |
-| Modify | `src/components/audit/workspace/ReportTab.tsx` |
-| Create | `src/hooks/useAuditReport.ts` |
-| Create | `src/components/client/ClientAuditReportsSection.tsx` |
-| Create | `src/hooks/useClientAuditPortal.ts` |
-| Rewrite | `src/components/client/ClientActionPlanSection.tsx` |
-| Modify | `src/hooks/useAuditActionPlan.ts` |
-| Modify | `src/hooks/useAuditWorkspace.ts` |
-| Modify | `src/components/client/ClientHomePage.tsx` |
-
-No database migrations required — all columns, views, and RPCs already exist.
+| Modify | `src/types/clientAudits.ts` — case-insensitive CRICOS detection |
+| Modify | `src/components/audit/NewAuditModal.tsx` — clear stale card selection on registration type change, update note text |
 
