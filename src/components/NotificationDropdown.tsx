@@ -107,6 +107,19 @@ export const NotificationDropdown = () => {
             </div>
           </div>
 
+          {/* Unread toggle */}
+          <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
+            <div className="flex items-center gap-2">
+              <Switch id="hide-read-dropdown" checked={hideRead} onCheckedChange={setHideRead} className="scale-75" />
+              <Label htmlFor="hide-read-dropdown" className="text-xs cursor-pointer">
+                {hideRead ? <><EyeOff className="h-3 w-3 inline mr-1" />Unread only</> : <><Eye className="h-3 w-3 inline mr-1" />Show all</>}
+              </Label>
+            </div>
+            {unreadCount > 0 && (
+              <span className="text-xs text-muted-foreground">{unreadCount} unread</span>
+            )}
+          </div>
+
           {/* Type filter badges */}
           {Object.keys(typeCounts).length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-4 py-2 border-b bg-muted/30">
