@@ -325,9 +325,9 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       // Fetch stage_instances for this package_instance
       const stageResult = await (supabase
         .from('stage_instances' as any)
-        .select('id, stage_id, status, status_date, completion_date, comment, paid, released_client_tasks, is_recurring, event_conducted_date')
+        .select('id, stage_id, status, status_date, completion_date, comment, paid, released_client_tasks, is_recurring, event_conducted_date, linked_audit_id')
         .eq('packageinstance_id', resolvedInstanceId)
-        .order('stage_sortorder')) as { data: Array<{ id: number; stage_id: number; status: string | null; completion_date: string | null; paid: boolean | null; released_client_tasks: boolean | null }> | null; error: any };
+        .order('stage_sortorder')) as { data: Array<{ id: number; stage_id: number; status: string | null; completion_date: string | null; paid: boolean | null; released_client_tasks: boolean | null; linked_audit_id: string | null }> | null; error: any };
       
       const stageData = stageResult.data;
       const stageError = stageResult.error;
@@ -372,6 +372,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
           released_client_tasks: row.released_client_tasks ?? false,
           is_recurring: row.is_recurring ?? false,
           event_conducted_date: row.event_conducted_date || null,
+          linked_audit_id: row.linked_audit_id || null,
         };
       });
 
