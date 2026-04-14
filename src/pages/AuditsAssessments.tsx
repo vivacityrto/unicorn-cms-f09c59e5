@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { DashboardLayout } from '@/components/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Plus, Search, X, Calendar, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
 import { format, isPast, startOfYear } from 'date-fns';
