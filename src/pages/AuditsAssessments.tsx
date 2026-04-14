@@ -62,6 +62,7 @@ export default function AuditsAssessments() {
   }).length;
 
   return (
+    <DashboardLayout>
     <div className="space-y-6">
       <PageHeader
         title="Audits & Assessments"
