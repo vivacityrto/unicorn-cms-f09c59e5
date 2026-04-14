@@ -191,8 +191,17 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   useEffect(() => {
     if (!open) return;
     setTenantsLoading(true);
-    supabase.from('tenants').select('id, name, rto_id, rto_name, cricos_id').order('name').then(({ data }) => {
-      setTenants((data as any[]) || []);
+    supabase.from('tenants').select('id, name, rto_id, rto_name, cricos_id, tenant_profile(org_type, cricos_number)').order('name').then(({ data }) => {
+      const mapped = ((data as any[]) || []).map(t => ({
+        id: t.id,
+        name: t.name,
+        rto_id: t.rto_id,
+        rto_name: t.rto_name,
+        cricos_id: t.cricos_id,
+        org_type: t.tenant_profile?.org_type || null,
+        profile_cricos_number: t.tenant_profile?.cricos_number || null,
+      }));
+      setTenants(mapped);
       setTenantsLoading(false);
     });
     supabase.from('users').select('user_uuid, first_name, last_name').eq('is_vivacity_internal', true).then(({ data }) => {
