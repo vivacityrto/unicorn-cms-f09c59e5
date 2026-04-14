@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateAudit } from '@/hooks/useClientAudits';
+import { useAuth } from '@/hooks/useAuth';
 import type { AuditType } from '@/types/clientAudits';
 import { detectRegistrationType, isCricosValid } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
@@ -138,7 +139,6 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   const [tenantId, setTenantId] = useState<number | null>(preselectedTenantId || null);
   const [tenantName, setTenantName] = useState(preselectedTenantName || '');
   const [title, setTitle] = useState('');
-  const [conductedAt, setConductedAt] = useState('');
   const [leadAuditorId, setLeadAuditorId] = useState('');
   const [assistedById, setAssistedById] = useState('');
   const [trainingProducts, setTrainingProducts] = useState('');
@@ -166,6 +166,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   const [tenantsLoading, setTenantsLoading] = useState(false);
 
   const createAudit = useCreateAudit();
+  const { session } = useAuth();
 
   const selectedTenant = useMemo(() => tenants.find(t => t.id === tenantId), [tenants, tenantId]);
   const registrationType = useMemo(() => {
@@ -211,6 +212,14 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       setAuditors(((data as any[]) || []).map(u => ({ user_uuid: u.user_uuid, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() })));
     });
   }, [open]);
+
+  // Default lead auditor to current user
+  useEffect(() => {
+    if (auditors.length > 0 && !leadAuditorId && session?.user?.id) {
+      const match = auditors.find(a => a.user_uuid === session.user.id);
+      if (match) setLeadAuditorId(match.user_uuid);
+    }
+  }, [auditors, session?.user?.id]);
 
   // Pre-select card from preselectedAuditType
   useEffect(() => {
@@ -262,7 +271,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     setStep(preselectedAuditType ? 2 : 1);
     setSelectedCard(null);
     if (!preselectedTenantId) { setTenantId(null); setTenantName(''); }
-    setTitle(''); setConductedAt(''); setLeadAuditorId(''); setAssistedById('');
+    setTitle(''); setLeadAuditorId(''); setAssistedById('');
     setTrainingProducts(''); setDocNumber('');
     setRtoName(''); setRtoNumber(''); setCricosCode('');
     setSiteAddress(''); setCeo(''); setPhone(''); setEmail(''); setWebsite('');
@@ -281,7 +290,6 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       is_cricos: selectedCard.is_cricos,
       template_id: selectedCard.template_id,
       title: title || undefined,
-      conducted_at: conductedAt || undefined,
       lead_auditor_id: leadAuditorId || undefined,
       assisted_by_id: assistedById || undefined,
       training_products: trainingProducts ? trainingProducts.split(',').map(s => s.trim()).filter(Boolean) : undefined,
@@ -388,18 +396,14 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                   </Select>
                 )}
               </div>
-              <div>
-                <Label>Audit Title (optional)</Label>
-                <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Auto-generated if left blank" />
-              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Conducted On</Label>
-                  <Input type="date" value={conductedAt} onChange={e => setConductedAt(e.target.value)} />
+                  <Label>Audit Title (optional)</Label>
+                  <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Auto-generated if left blank" />
                 </div>
                 <div>
                   <Label>Doc Number</Label>
-                  <Input value={docNumber} onChange={e => setDocNumber(e.target.value)} placeholder="e.g. CHC-2026-001" />
+                  <Input value={docNumber} onChange={e => setDocNumber(e.target.value)} placeholder="Auto-generated if blank — e.g. CHC-2025-001" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
