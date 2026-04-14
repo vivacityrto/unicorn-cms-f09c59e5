@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { format, differenceInMonths } from 'date-fns';
-import { CalendarIcon, AlertTriangle, Save, Database, ArrowUpDown } from 'lucide-react';
+import { format, differenceInMonths, differenceInDays } from 'date-fns';
+import { CalendarIcon, AlertTriangle, Save, Database, ArrowUpDown, Trash2 } from 'lucide-react';
+import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
