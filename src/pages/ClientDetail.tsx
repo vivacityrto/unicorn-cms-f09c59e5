@@ -30,7 +30,7 @@ import {
   Activity,
   LogIn,
   CheckSquare,
-  
+  ClipboardCheck,
   Save,
   Loader2,
   Mail,
@@ -46,6 +46,7 @@ import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
 import { ClientIntegrationsTab } from '@/components/client/ClientIntegrationsTab';
 import { ClientTimeTab } from '@/components/client/ClientTimeTab';
 import { DocumentsHub } from '@/components/documents/DocumentsHub';
+import { ClientAuditsTab } from '@/components/client/ClientAuditsTab';
 import { TenantUsersTab } from '@/components/client/TenantUsersTab';
 import { TenantTimeTrackerBar } from '@/components/client/TenantTimeTrackerBar';
 import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard';
