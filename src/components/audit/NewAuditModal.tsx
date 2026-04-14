@@ -247,13 +247,16 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     }
   }, [auditors, session?.user?.id]);
 
-  // Pre-select card from preselectedAuditType
+  // Pre-select card from stageAuditType (resolved from stage or preselected)
   useEffect(() => {
-    if (preselectedAuditType && auditTypeCards.length > 0 && !selectedCard) {
-      const match = auditTypeCards.find(c => c.value === preselectedAuditType);
-      if (match) setSelectedCard(match);
+    if (stageAuditType && auditTypeCards.length > 0 && !selectedCard) {
+      const match = auditTypeCards.find(c => c.value === stageAuditType);
+      if (match) {
+        setSelectedCard(match);
+        if (isStageLinked) setStep(2); // Skip Step 1 when stage-linked
+      }
     }
-  }, [preselectedAuditType, auditTypeCards]);
+  }, [stageAuditType, auditTypeCards]);
 
   // Clear stale card selection when registration type changes
   useEffect(() => {
