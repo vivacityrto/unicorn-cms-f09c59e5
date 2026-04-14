@@ -49,6 +49,9 @@ export interface ClientAudit {
   report_generated_at: string | null;
   report_pdf_path: string | null;
   doc_number: string | null;
+  linked_stage_instance_id: number | null;
+  opening_meeting_at: string | null;
+  closing_meeting_at: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
