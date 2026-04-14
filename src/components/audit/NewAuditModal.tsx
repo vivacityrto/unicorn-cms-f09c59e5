@@ -169,7 +169,13 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   const selectedTenant = useMemo(() => tenants.find(t => t.id === tenantId), [tenants, tenantId]);
   const registrationType = useMemo(() => {
     if (!selectedTenant) return null;
-    return detectRegistrationType(selectedTenant.rto_id, selectedTenant.cricos_id);
+    // Use org_type from tenant_profile as primary source (matches the OrgTypeBadge)
+    const ot = selectedTenant.org_type;
+    if (ot === 'rto_cricos') return 'both' as const;
+    if (ot === 'cricos') return 'cricos_only' as const;
+    if (ot === 'rto') return 'rto_only' as const;
+    // Fallback to field-level detection
+    return detectRegistrationType(selectedTenant.rto_id, selectedTenant.profile_cricos_number || selectedTenant.cricos_id);
   }, [selectedTenant]);
 
   const auditTypeCards = useMemo(() => {
