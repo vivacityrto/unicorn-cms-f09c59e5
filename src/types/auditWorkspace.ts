@@ -1,6 +1,10 @@
 export type AuditPhase = 'opening_meeting' | 'document_review' | 'closing_meeting';
 export type QuestionContext = 'client_discussion' | 'auditor_assessment' | 'closing_discussion';
 
+export type ActionType = 'corrective_action' | 'mandatory_rectification' | 'improvement_opportunity' | 'observation';
+export type DeliveryModel = 'client_self' | 'vivacity_assisted' | 'vivacity_led';
+export type VerificationStatus = 'pending' | 'response_received' | 'verified' | 'rejected' | 'waived';
+
 export interface AuditSection {
   id: string;
   audit_id: string;
@@ -55,14 +59,48 @@ export interface AuditAction {
   id: string;
   audit_id: string;
   finding_id: string | null;
+  action_type: ActionType;
+  delivery_model: DeliveryModel;
   title: string;
   description: string | null;
+  client_notes: string | null;
+  internal_notes: string | null;
+  standard_reference: string | null;
+  labels: string[];
   assigned_to: string | null;
   due_date: string | null;
+  extended_due_date: string | null;
+  extension_reason: string | null;
   status: 'open' | 'in_progress' | 'complete' | 'deferred' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'critical';
+  evidence_required: boolean;
+  evidence_document_ids: string[];
+  client_response: string | null;
+  client_response_at: string | null;
+  client_responded_by: string | null;
+  verification_status: VerificationStatus;
+  verified_by: string | null;
+  verified_at: string | null;
+  verification_notes: string | null;
+  client_action_item_id: string | null;
   created_by: string | null;
   created_at: string;
+  updated_at: string;
+}
+
+export interface AuditActionPlanItem extends AuditAction {
+  subject_tenant_id: number;
+  audit_title: string;
+  audit_type: string;
+  audit_conducted_at: string | null;
+  report_client_visible: boolean;
+  assigned_to_name: string | null;
+  assigned_to_avatar: string | null;
+  finding_summary: string | null;
+  finding_priority: string | null;
+  is_overdue: boolean;
+  effective_due_date: string | null;
+  days_remaining: number | null;
 }
 
 export interface AuditDocument {
@@ -157,4 +195,25 @@ export const ACTION_STATUS_OPTIONS = [
   { value: 'complete', label: 'Complete' },
   { value: 'deferred', label: 'Deferred' },
   { value: 'cancelled', label: 'Cancelled' },
+] as const;
+
+export const ACTION_TYPE_OPTIONS = [
+  { value: 'corrective_action', label: 'Corrective Action', icon: 'Wrench', color: 'bg-blue-100 text-blue-800 border-blue-300', description: 'Non-compliance that must be addressed' },
+  { value: 'mandatory_rectification', label: 'Mandatory Rectification', icon: 'AlertTriangle', color: 'bg-red-100 text-red-800 border-red-300', description: 'Critical — must be fixed before next audit or registration' },
+  { value: 'improvement_opportunity', label: 'Improvement Opportunity', icon: 'Lightbulb', color: 'bg-amber-100 text-amber-800 border-amber-300', description: 'Not currently non-compliant but improvement is recommended' },
+  { value: 'observation', label: 'Observation', icon: 'Eye', color: 'bg-gray-100 text-gray-600 border-gray-300', description: 'Noted for awareness — no action required' },
+] as const;
+
+export const DELIVERY_MODEL_OPTIONS = [
+  { value: 'client_self', label: 'Client self-completes', description: 'Client addresses this independently' },
+  { value: 'vivacity_assisted', label: 'Vivacity-assisted', description: 'Vivacity works with the client (Superhero / DWY)' },
+  { value: 'vivacity_led', label: 'Vivacity-led', description: 'Vivacity manages this for client (DFY)' },
+] as const;
+
+export const VERIFICATION_STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending', color: 'bg-gray-100 text-gray-600' },
+  { value: 'response_received', label: 'Response Received', color: 'bg-blue-100 text-blue-700' },
+  { value: 'verified', label: 'Verified', color: 'bg-green-100 text-green-700' },
+  { value: 'rejected', label: 'Rejected', color: 'bg-red-100 text-red-700' },
+  { value: 'waived', label: 'Waived', color: 'bg-gray-100 text-gray-500' },
 ] as const;
