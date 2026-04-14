@@ -9653,6 +9653,7 @@ export type Database = {
           is_cricos: boolean
           is_rto: boolean
           lead_auditor_id: string | null
+          linked_stage_instance_id: number | null
           next_audit_due: string | null
           opening_meeting_at: string | null
           overall_finding: string | null
@@ -9708,6 +9709,7 @@ export type Database = {
           is_cricos?: boolean
           is_rto?: boolean
           lead_auditor_id?: string | null
+          linked_stage_instance_id?: number | null
           next_audit_due?: string | null
           opening_meeting_at?: string | null
           overall_finding?: string | null
@@ -9763,6 +9765,7 @@ export type Database = {
           is_cricos?: boolean
           is_rto?: boolean
           lead_auditor_id?: string | null
+          linked_stage_instance_id?: number | null
           next_audit_due?: string | null
           opening_meeting_at?: string | null
           overall_finding?: string | null
@@ -9806,6 +9809,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "audit_intelligence_packs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audits_linked_stage_instance_id_fkey"
+            columns: ["linked_stage_instance_id"]
+            isOneToOne: false
+            referencedRelation: "stage_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audits_linked_stage_instance_id_fkey"
+            columns: ["linked_stage_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_stage_instances"
+            referencedColumns: ["stage_instance_id"]
           },
           {
             foreignKeyName: "client_audits_subject_tenant_id_fkey"
@@ -37064,6 +37081,7 @@ export type Database = {
           event_conducted_date: string | null
           id: number
           is_recurring: boolean
+          linked_audit_id: string | null
           packageinstance_id: number
           paid: boolean
           released_client_tasks: boolean
@@ -37082,6 +37100,7 @@ export type Database = {
           event_conducted_date?: string | null
           id?: number
           is_recurring?: boolean
+          linked_audit_id?: string | null
           packageinstance_id: number
           paid?: boolean
           released_client_tasks?: boolean
@@ -37100,6 +37119,7 @@ export type Database = {
           event_conducted_date?: string | null
           id?: number
           is_recurring?: boolean
+          linked_audit_id?: string | null
           packageinstance_id?: number
           paid?: boolean
           released_client_tasks?: boolean
@@ -37111,7 +37131,36 @@ export type Database = {
           status_id?: number | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stage_instances_linked_audit_id_fkey"
+            columns: ["linked_audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_instances_linked_audit_id_fkey"
+            columns: ["linked_audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "stage_instances_linked_audit_id_fkey"
+            columns: ["linked_audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "stage_instances_linked_audit_id_fkey"
+            columns: ["linked_audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stage_release_items: {
         Row: {
@@ -55463,6 +55512,14 @@ export type Database = {
           target_rows: number
           target_table: string
         }[]
+      }
+      complete_audit_stage_tasks: {
+        Args: { p_audit_id: string; p_milestone: string }
+        Returns: number
+      }
+      complete_chc_stage_tasks: {
+        Args: { p_audit_id: string; p_milestone: string }
+        Returns: number
       }
       complete_meeting_instance: {
         Args: { p_meeting_id: string }
