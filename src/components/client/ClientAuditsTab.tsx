@@ -13,6 +13,7 @@ import { NewAuditModal } from '@/components/audit/NewAuditModal';
 import { useClientAudits } from '@/hooks/useClientAudits';
 import type { AuditDashboardRow } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
+import { HistoricalReferencesSection } from '@/components/audit/references/HistoricalReferencesSection';
 
 interface ClientAuditsTabProps {
   tenantId: number;
@@ -75,6 +76,11 @@ export function ClientAuditsTab({ tenantId, tenantName }: ClientAuditsTabProps) 
           </div>
         </div>
       )}
+
+      {/* Historical Reference Audits */}
+      <div className="border-t pt-6">
+        <HistoricalReferencesSection tenantId={tenantId} />
+      </div>
 
       <NewAuditModal
         open={modalOpen}

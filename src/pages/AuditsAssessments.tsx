@@ -18,6 +18,7 @@ import { useAuditsDashboard, useOverdueActionCount } from '@/hooks/useClientAudi
 import { Skeleton } from '@/components/ui/skeleton';
 import type { AuditType, AuditStatus, AuditDashboardRow } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
+import { ReferenceLibrarySection } from '@/components/audit/references/ReferenceLibrarySection';
 
 export default function AuditsAssessments() {
   const navigate = useNavigate();
@@ -214,6 +215,11 @@ export default function AuditsAssessments() {
           </TableBody>
         </Table>
       )}
+
+      {/* Reference Library */}
+      <div className="border-t pt-6">
+        <ReferenceLibrarySection />
+      </div>
 
       <NewAuditModal open={modalOpen} onOpenChange={setModalOpen} />
     </div>
