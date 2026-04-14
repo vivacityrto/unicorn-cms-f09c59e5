@@ -241,3 +241,18 @@ export function AuditSidebar({
     </div>
   );
 }
+
+function ScheduleRow({ icon, label, value, onSetDate }: {
+  icon: string; label: string; value: string | null; onSetDate?: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between text-[11px]">
+      <span className="text-muted-foreground">{icon} {label}</span>
+      {value ? (
+        <span className="font-medium">{value}</span>
+      ) : (
+        <button onClick={onSetDate} className="text-primary hover:underline text-[10px]">Set date</button>
+      )}
+    </div>
+  );
+}
