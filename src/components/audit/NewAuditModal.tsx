@@ -138,7 +138,26 @@ interface TenantRecord {
 }
 
 export function NewAuditModal({ open, onOpenChange, preselectedTenantId, preselectedTenantName, preselectedAuditType, preselectedStageInstanceId }: NewAuditModalProps) {
-  const hasPreselectedType = !!preselectedAuditType;
+  // Resolve stage context: map stage instance → audit type if not already provided
+  const [resolvedStageId, setResolvedStageId] = useState<number | null>(null);
+  
+  useEffect(() => {
+    if (!open || !preselectedStageInstanceId) { setResolvedStageId(null); return; }
+    supabase
+      .from('stage_instances' as any)
+      .select('stage_id')
+      .eq('id', preselectedStageInstanceId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setResolvedStageId((data as any).stage_id);
+      });
+  }, [open, preselectedStageInstanceId]);
+
+  const stageAuditType = preselectedAuditType || (resolvedStageId ? STAGE_AUDIT_TYPE_MAP[resolvedStageId] : undefined);
+  const stageName = resolvedStageId ? STAGE_NAME_MAP[resolvedStageId] : null;
+  const hasPreselectedType = !!stageAuditType;
+  const isStageLinked = !!preselectedStageInstanceId;
+  
   const [step, setStep] = useState(hasPreselectedType ? 2 : 1);
   const [selectedCard, setSelectedCard] = useState<AuditTypeCard | null>(null);
 
