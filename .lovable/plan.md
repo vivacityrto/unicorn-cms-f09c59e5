@@ -1,31 +1,28 @@
 
 
-## Wire Compliance Auditor Navigation
+## Fix Delete Button — Column Names + Missing Cascade Tables
 
 ### Problem
-The sidebar item "Compliance Auditor" links to `/compliance-audits`, which currently redirects to `/manage-tenants`. The actual audit list page lives at `/compliance-audits/:tenantId` and requires a tenant ID param.
-
-### Solution
-Create a lightweight global audit list page at `/compliance-audits` that shows all audits across all tenants (SuperAdmin view). This mirrors how Vivacity staff would use it — they pick from a list rather than navigating via a specific tenant first.
+The delete function fails because:
+1. **Wrong column names**: Lines 196-198 use `stage_instance_id` but the actual DB column is `stageinstance_id` (no underscore)
+2. **Missing cascade tables**: `package_instance_state_log` and `compliance_score_snapshots` reference `package_instances` without DB-level CASCADE
 
 ### Changes
 
-**New file: `src/pages/ComplianceAuditGlobal.tsx`**
-- A simple page that queries `compliance_audits` joined with `tenants` (for tenant name) and `compliance_templates` (for template name)
-- Displays a table with columns: Tenant, Template, Status, Audit Date, Actions (View)
-- "View" navigates to `/compliance-audits/:tenantId/audit/:auditId`
-- Search/filter by tenant name
-- Uses `DashboardLayout` wrapper consistent with other pages
+**File: `src/components/client/PackageDataManager.tsx`** — `handleDelete` function (lines 185-222)
 
-**Modified file: `src/App.tsx`**
-- Change line 964 from the `Navigate` redirect to render the new `ComplianceAuditGlobal` component:
-  ```
-  <Route path="/compliance-audits" element={<ProtectedRoute><ComplianceAuditGlobal /></ProtectedRoute>} />
-  ```
-- Add lazy import for the new page
+Replace the cascade sequence with:
 
-**No changes to:**
-- `DashboardLayout.tsx` (sidebar link already points to `/compliance-audits`)
-- Existing tenant-scoped routes (`:tenantId`, `:auditId`, `:auditId/report`)
-- Any data fetching hooks or component styling
+1. Fetch stages via `packageinstance_id` (unchanged)
+2. Fix column name: `client_task_instances.stageinstance_id`
+3. Fix column name: `email_instances.stageinstance_id`
+4. Fix column name: `document_instances.stageinstance_id`
+5. Delete `stage_instances` (unchanged)
+6. Delete `time_entries` (unchanged)
+7. Delete `phase_instances` (unchanged)
+8. **Add**: Delete `package_instance_state_log` WHERE `package_instance_id = row.id`
+9. **Add**: Delete `compliance_score_snapshots` WHERE `package_instance_id = row.id`
+10. Delete `package_instances` (unchanged)
+
+No migration needed — code-only fix. No risk to other packages (confirmed: stage IDs are unique per package).
 
