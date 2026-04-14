@@ -384,6 +384,13 @@ export default function ClientDetail() {
                 Actions
               </TabsTrigger>
               <TabsTrigger
+                value="audits"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Audits
+              </TabsTrigger>
+              <TabsTrigger
                 value="emails"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
               >
