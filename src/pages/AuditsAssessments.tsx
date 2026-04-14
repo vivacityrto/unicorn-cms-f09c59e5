@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { DashboardLayout } from '@/components/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Plus, Search, X, Calendar, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
 import { format, isPast, startOfYear } from 'date-fns';
@@ -61,6 +62,7 @@ export default function AuditsAssessments() {
   }).length;
 
   return (
+    <DashboardLayout>
     <div className="space-y-6">
       <PageHeader
         title="Audits & Assessments"
@@ -215,5 +217,6 @@ export default function AuditsAssessments() {
 
       <NewAuditModal open={modalOpen} onOpenChange={setModalOpen} />
     </div>
+    </DashboardLayout>
   );
 }
