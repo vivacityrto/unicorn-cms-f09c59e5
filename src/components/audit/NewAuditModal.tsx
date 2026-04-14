@@ -84,27 +84,36 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     });
   }, [open]);
 
-  // Auto-fetch snapshot when tenant selected
+  // Auto-fetch snapshot from TGA view when tenant selected
   useEffect(() => {
     if (!tenantId) return;
     const t = tenants.find(t => t.id === tenantId);
     if (t) {
-      setRtoName(t.rto_name || t.name || '');
-      setRtoNumber(t.rto_id || '');
       setTenantName(t.name);
     }
-    // Try to fetch tenant_profile
-    supabase.from('tenant_profile' as any).select('*').eq('tenant_id', tenantId).maybeSingle().then(({ data }) => {
-      if (data) {
-        const d = data as any;
-        setSiteAddress(d.address || '');
-        setCeo(d.ceo || d.principal || '');
-        setPhone(d.phone || '');
-        setEmail(d.email || '');
-        setWebsite(d.website || '');
-        if (d.cricos_code) setCricosCode(d.cricos_code);
-      }
-    });
+    // Query v_tga_audit_snapshot for auto-population
+    supabase
+      .from('v_tga_audit_snapshot' as any)
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          const d = data as any;
+          setRtoName(d.legal_name || t?.rto_name || t?.name || '');
+          setRtoNumber(d.rto_code || t?.rto_id || '');
+          setCricosCode(d.cricos_codes || '');
+          setCeo(d.ceo_name || '');
+          setSiteAddress(d.head_office_address || '');
+          setPhone(d.contact_phone || '');
+          setEmail(d.contact_email || '');
+          setWebsite(d.website || '');
+        } else {
+          // Fallback to basic tenant data
+          setRtoName(t?.rto_name || t?.name || '');
+          setRtoNumber(t?.rto_id || '');
+        }
+      });
   }, [tenantId, tenants]);
 
   const resetForm = () => {
@@ -258,6 +267,10 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                 <div><Label>Email</Label><Input value={email} onChange={e => setEmail(e.target.value)} /></div>
                 <div className="col-span-2"><Label>Website</Label><Input value={website} onChange={e => setWebsite(e.target.value)} /></div>
               </div>
+              <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <span>ℹ️</span>
+                <span>Details sourced from the national training register (training.gov.au). You can edit them before saving.</span>
+              </p>
             </div>
           )}
         </AppModalBody>
