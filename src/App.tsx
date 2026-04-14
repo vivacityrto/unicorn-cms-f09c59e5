@@ -87,6 +87,8 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const ResetPassword = lazy(() => import("./pages/ResetPassword"));
  const Audits = lazy(() => import("./pages/Audits"));
  const AuditWorkspace = lazy(() => import("./pages/AuditWorkspace"));
+ const AuditsAssessments = lazy(() => import("./pages/AuditsAssessments"));
+ const AuditWorkspacePlaceholder = lazy(() => import("./pages/AuditWorkspacePlaceholder"));
  const AuditFindings = lazy(() => import("./pages/AuditFindings"));
  const AuditActions = lazy(() => import("./pages/AuditActions"));
  const AuditReport = lazy(() => import("./pages/AuditReport"));
