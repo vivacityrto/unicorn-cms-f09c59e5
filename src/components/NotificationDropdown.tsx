@@ -172,7 +172,6 @@ export const NotificationDropdown = () => {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 space-y-0.5 min-w-0">
-                        {/* Client name if available */}
                         {notification.tenant_name && (
                           <p className="text-xs font-medium text-primary truncate">
                             {notification.tenant_name}
@@ -188,9 +187,23 @@ export const NotificationDropdown = () => {
                           {format(new Date(notification.created_at), 'MMM d, yyyy h:mm a')}
                         </p>
                       </div>
-                      {!notification.is_read && (
-                        <span className="mt-1 h-2.5 w-2.5 rounded-full bg-destructive flex-shrink-0" />
-                      )}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {!notification.is_read && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsRead(notification.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted"
+                            title="Mark as read"
+                          >
+                            <MailOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        )}
+                        {!notification.is_read && (
+                          <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-destructive flex-shrink-0" />
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
