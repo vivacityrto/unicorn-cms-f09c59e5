@@ -217,5 +217,6 @@ export default function AuditsAssessments() {
 
       <NewAuditModal open={modalOpen} onOpenChange={setModalOpen} />
     </div>
+    </DashboardLayout>
   );
 }
