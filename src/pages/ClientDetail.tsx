@@ -30,7 +30,7 @@ import {
   Activity,
   LogIn,
   CheckSquare,
-  
+  ClipboardCheck,
   Save,
   Loader2,
   Mail,
@@ -46,6 +46,7 @@ import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
 import { ClientIntegrationsTab } from '@/components/client/ClientIntegrationsTab';
 import { ClientTimeTab } from '@/components/client/ClientTimeTab';
 import { DocumentsHub } from '@/components/documents/DocumentsHub';
+import { ClientAuditsTab } from '@/components/client/ClientAuditsTab';
 import { TenantUsersTab } from '@/components/client/TenantUsersTab';
 import { TenantTimeTrackerBar } from '@/components/client/TenantTimeTrackerBar';
 import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard';
@@ -383,6 +384,13 @@ export default function ClientDetail() {
                 Actions
               </TabsTrigger>
               <TabsTrigger
+                value="audits"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Audits
+              </TabsTrigger>
+              <TabsTrigger
                 value="emails"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
               >
@@ -512,6 +520,10 @@ export default function ClientDetail() {
 
           <TabsContent value="actions" className="mt-0">
             <ClientActionItemsTab tenantId={tenantIdNum!} clientId={tenant.id.toString()} />
+          </TabsContent>
+
+          <TabsContent value="audits" className="mt-0">
+            <ClientAuditsTab tenantId={tenantIdNum!} tenantName={tenant.name} />
           </TabsContent>
 
           <TabsContent value="emails" className="mt-0">
