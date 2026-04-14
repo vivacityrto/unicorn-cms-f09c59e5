@@ -165,7 +165,7 @@ export const NotificationDropdown = () => {
                 {filteredNotifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-3 px-4 hover:bg-accent/50 transition-colors cursor-pointer ${
+                    className={`p-3 px-4 hover:bg-accent/50 transition-colors cursor-pointer group ${
                       !notification.is_read ? 'bg-accent/20' : ''
                     }`}
                     onClick={() => handleNotifClick(notification)}
