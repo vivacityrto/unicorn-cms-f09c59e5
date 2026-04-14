@@ -1,86 +1,125 @@
 
 
-## Audits & Assessments Module — Shell Build
+## Full Audit Workspace — Implementation Plan
 
 ### Summary
-Build the new client audits module across 4 areas: a team dashboard at `/audits` (replacing the existing template-based page), a new "Audits" tab in the client detail page, a multi-step "New Audit" modal, and a placeholder workspace at `/audits/:id`.
+Replace the placeholder at `/audits/:id` with a full two-column audit workspace containing 6 tabs: Overview, Audit Form, Documents, Findings, Actions, and Report. No new database migrations needed — all tables exist.
 
-### Technical Details
-
-**Existing state**: The route `/audits` already exists and renders `src/pages/Audits.tsx` (a template/inspection manager). The sidebar has no "Audits" entry in the WORK section. The DB tables `client_audits`, `client_audit_sections`, `client_audit_responses`, `client_audit_findings`, `client_audit_actions`, `client_audit_documents`, and view `v_client_audits_dashboard` all exist with the exact columns specified.
-
-**No database migrations needed** — all tables and the dashboard view already exist.
+### Scope Note
+The `analyze-document` edge function currently handles document categorization (not compliance audit analysis). The `generate-audit-report` edge function does not exist yet. For this build, we will wire the UI for both but handle the missing edge function gracefully (show "coming soon" for report generation, and stub the AI document analysis call).
 
 ---
 
-### Files to Create
+### Technical Details
 
-1. **`src/types/clientAudits.ts`** — TypeScript types: `AuditType`, `AuditStatus`, `AuditRisk`, `AuditAiStatus`, `ClientAudit`, `AuditDashboardRow` as specified in the prompt.
+**No database migrations required.** All tables (`client_audits`, `client_audit_sections`, `client_audit_responses`, `client_audit_findings`, `client_audit_actions`, `client_audit_documents`) and columns (`executive_summary`, `overall_finding`, `template_id`, `report_generated_at`, `report_pdf_path`, `report_prepared_by_id`, `score_total`, `score_max`, `closed_at`) already exist.
 
-2. **`src/hooks/useClientAudits.ts`** — React Query hooks:
-   - `useAuditsDashboard()` — fetches all rows from `v_client_audits_dashboard`, ordered by `updated_at DESC`
-   - `useClientAudits(tenantId)` — same view filtered by `subject_tenant_id`
-   - `useCreateAudit()` — mutation to INSERT into `client_audits` + INSERT timeline event into `client_timeline_events`
-   - `useAudit(auditId)` — fetches single row from `client_audits` by id
+**Storage bucket:** Need to create `audit-documents` bucket if it doesn't exist — will check and create via migration if needed.
 
-3. **`src/pages/AuditsAssessments.tsx`** — The new team dashboard page:
-   - Header with title "Audits & Assessments" and "New Audit" button
-   - 4 stat cards: Total Audits, Active Audits, Completed This Year, Overdue Actions
-   - Filter bar: search, audit type multi-select, status select, lead auditor select, clear filters
-   - Table with columns: Client (name + RTO), Audit Type badge, Status badge, Risk badge, Lead Auditor (avatar + name), Conducted date, Next Due (red if past), Findings count, Open Actions count (orange if >0), Open button
-   - Empty state with illustration text
-   - Each row clickable → `/audits/:id`
+---
 
-4. **`src/components/audit/NewAuditModal.tsx`** — Multi-step modal (3 steps):
-   - Step 1: Select type (3 large cards — CHC, Mock Audit, Due Diligence)
-   - Step 2: Client & details (client dropdown, title, date, lead/assisted auditors, training products tags, doc number). If `preselectedTenantId` prop set, lock client field.
-   - Step 3: Snapshot client details — auto-fetch from `tenant_profile` joined with `tenants`, pre-fill snapshot fields, editable
-   - Save: INSERT into `client_audits` with `status='draft'`, auto-generate title if blank, INSERT timeline event, navigate to `/audits/{id}`
+### Files to Create (~12 new files)
 
-5. **`src/components/audit/AuditTypeBadge.tsx`** — Badge component for audit type (CHC=Blue, Mock=Purple, Due Diligence=Amber)
+**1. `src/types/auditWorkspace.ts`** — Extended types for the workspace (AuditSection, AuditResponse, AuditFinding, AuditAction, AuditDocument, AiFinding, AiRecommendation, TemplateQuestion interfaces).
 
-6. **`src/components/audit/AuditStatusBadge.tsx`** — Badge component for status (draft=Grey, in_progress=Blue, review=Amber, complete=Green, archived=Grey muted)
+**2. `src/hooks/useAuditWorkspace.ts`** — All workspace data hooks:
+- `useAuditSections(auditId)` — fetch/initialize sections from template or standards_reference
+- `useAuditQuestions(sectionId)` — fetch compliance_template_questions for a section
+- `useAuditResponses(auditId)` — fetch all responses + `upsertResponse` mutation
+- `useAuditFindings(auditId)` — CRUD for findings
+- `useAuditActions(auditId)` — CRUD for actions
+- `useAuditDocuments(auditId)` — fetch + upload + polling for AI status
+- `useAuditScore(auditId, responses, questions)` — derived score with debounced PATCH
+- `useUpdateAudit(auditId)` — PATCH metadata fields on blur
+- `useAuditStatusTransition(auditId)` — status workflow with timeline events
 
-7. **`src/components/audit/AuditRiskBadge.tsx`** — Badge component for risk rating (low=Green, medium=Amber, high=Orange, critical=Red)
+**3. `src/pages/AuditWorkspace.tsx`** — Main page replacing `AuditWorkspacePlaceholder`:
+- Two-column layout: 280px sticky sidebar + scrollable content
+- Sidebar: audit identity, progress bar, section nav, risk/score footer, status controls
+- Content: 6-tab interface (Overview, Audit Form, Documents, Findings, Actions, Report)
+- Responsive: sidebar collapses to top bar on <1024px
 
-8. **`src/components/client/ClientAuditsTab.tsx`** — Audits tab for client detail page:
-   - Header with "Audits & Assessments" title and "Start New Audit" button (opens modal with pre-selected client)
-   - Card-based audit list (not table) filtered by `subject_tenant_id`
-   - Each card: type/status/risk badges, title, lead auditor + findings + open actions, next due date
-   - Empty state
-   - Audit history summary timeline for completed audits (date, type, risk, score, lead)
+**4. `src/components/audit/workspace/AuditSidebar.tsx`** — Left sidebar component:
+- Audit type/status badges, client name, RTO number
+- Lead auditor display
+- Overall progress bar (% questions answered, color-coded)
+- Scrollable section nav with completion indicators (green/amber/grey dots)
+- Footer: risk badge, score %, "Generate Report" button, status dropdown
 
-9. **`src/pages/AuditWorkspacePlaceholder.tsx`** — Placeholder page at `/audits/:id`:
-   - Back link, audit title, client name, type/status badges
-   - "Audit workspace coming soon" message
-   - 4 stat tiles (all zero for new audits)
+**5. `src/components/audit/workspace/OverviewTab.tsx`** — Tab 1:
+- Two-column editable grid (title, doc number, dates, auditor selectors)
+- Training products tag input (CHC/Mock only)
+- Client snapshot read-only summary + "Edit snapshot" toggle
+- Risk rating selector, score display
+- Executive summary + overall finding textareas
+- All fields auto-save on blur via `useUpdateAudit`
+
+**6. `src/components/audit/workspace/AuditFormTab.tsx`** — Tab 2 (core):
+- Section initialization logic (template-driven vs freeform/SRTO 2025)
+- Collapsible sections with completion counts
+- Question cards with rating pills, notes textarea, add finding/attach evidence buttons
+- Flagged response handling (amber corrective action panel)
+- AI pre-fill suggestion display (accept/modify/dismiss)
+- Freeform mode: placeholder text + manual finding list
+
+**7. `src/components/audit/workspace/QuestionCard.tsx`** — Individual question rendering:
+- Clause + nc_map header
+- Audit statement text
+- Collapsible evidence_to_sight
+- Rating pill buttons (dynamic based on response_set)
+- Debounced notes auto-save
+- Inline add finding form
+- Evidence attachment
+
+**8. `src/components/audit/workspace/DocumentsTab.tsx`** — Tab 3:
+- Drag-and-drop upload zone
+- Document type selector on upload
+- Document cards with AI status display
+- Expandable AI findings/recommendations with "Add as Finding"/"Add as Action" buttons
+- Polling for processing documents
+
+**9. `src/components/audit/workspace/FindingsTab.tsx`** — Tab 4:
+- Filter bar (priority + AI/manual)
+- Findings grouped by priority (Critical → Low)
+- Create/edit/delete actions
+- Finding count badge
+
+**10. `src/components/audit/workspace/ActionsTab.tsx`** — Tab 5:
+- Stat row (Open/In Progress/Complete/Overdue)
+- List view grouped by status
+- Inline status dropdown changes
+- Add Action drawer with finding linking
+
+**11. `src/components/audit/workspace/ReportTab.tsx`** — Tab 6:
+- Generate Report button (calls edge function or shows "coming soon" if not available)
+- Report preview (executive summary, overall finding, risk, score, finding/action counts)
+- Download PDF link
+
+**12. `src/components/audit/workspace/AddFindingForm.tsx`** — Reusable inline finding form
 
 ### Files to Modify
 
-10. **`src/components/DashboardLayout.tsx`**:
-    - Add `{ icon: ClipboardCheck, label: "Audits", path: "/audits" }` to `clientsMenuItems` array (after Compliance Auditor or as appropriate in the CLIENTS section)
-    - Import `ClipboardCheck` from lucide-react (already imported)
+**13. `src/App.tsx`** — Change `/audits/:id` route from `AuditWorkspacePlaceholder` to the new `AuditWorkspace` (lazy import)
 
-11. **`src/App.tsx`**:
-    - Replace the existing `/audits` route to render `AuditsAssessments` instead of `Audits`
-    - Replace `/audits/:id` route to render `AuditWorkspacePlaceholder` instead of `AuditWorkspace`
-    - Add lazy imports for the new pages
-    - Keep existing `/audits/create-template`, `/audits/:id/findings`, `/audits/:id/actions`, `/audits/:id/report` routes intact
+**14. `src/types/clientAudits.ts`** — Add `template_id`, `executive_summary`, `overall_finding`, `report_generated_at`, `report_pdf_path`, `report_prepared_by_id`, `score_total`, `score_max`, `closed_at` to `ClientAudit` interface
 
-12. **`src/pages/ClientDetail.tsx`**:
-    - Import `ClientAuditsTab` and `ClipboardCheck` icon
-    - Add "Audits" tab trigger between "Actions" and "Emails" tabs, with active audit count badge
-    - Add `TabsContent` for "audits" value rendering `ClientAuditsTab`
-    - Query active audit count for the badge using a lightweight count query
+### Implementation Order
+1. Types + hooks (foundation)
+2. AuditSidebar + main AuditWorkspace layout
+3. OverviewTab (simplest tab)
+4. AuditFormTab + QuestionCard (most complex — core of the workspace)
+5. FindingsTab + AddFindingForm
+6. ActionsTab
+7. DocumentsTab (AI integration)
+8. ReportTab
+9. Wire route in App.tsx
 
-### Badge Color Specifications
-- **Audit Type**: CHC → `info` variant (blue), Mock Audit → `default` variant (purple), Due Diligence → `warning` variant (amber)
-- **Status**: draft → `outline`, in_progress → `info`, review → `warning`, complete → `default` (green/success style), archived → `secondary`
-- **Risk**: low → green, medium → amber, high → orange, critical → red (inline styles matching `RiskLevelBadge` pattern)
-
-### Data Flow
-- Dashboard queries `v_client_audits_dashboard` (denormalized view with all needed joins)
-- New Audit modal queries `tenants` for client dropdown, `tenant_profile` for snapshot, `users` for auditor dropdowns (filtered by `is_vivacity_internal = true` or `unicorn_role IN (...)`)
-- Create mutation inserts into `client_audits` then `client_timeline_events`
-- Client tab reuses same view filtered by tenant
+### Key Design Decisions
+- All Supabase queries use `as any` cast pattern (consistent with existing codebase)
+- Auto-save on blur for metadata, debounced 500ms for notes
+- Section initialization happens on first render of Audit Form tab (not on audit creation)
+- Score calculation runs client-side after each response, debounced 1s PATCH to server
+- Storage bucket `audit-documents` — will create via migration if missing
+- The `generate-audit-report` edge function does not exist — Report tab will show "Generate Report" as disabled with a "Coming soon" note until the function is built
+- The existing `analyze-document` function is for document categorization, not audit analysis — Documents tab will call it but display results generically
 
