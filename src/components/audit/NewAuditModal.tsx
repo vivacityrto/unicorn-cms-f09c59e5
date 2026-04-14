@@ -124,6 +124,8 @@ interface TenantRecord {
   rto_id: string | null;
   rto_name: string | null;
   cricos_id: string | null;
+  org_type: string | null;
+  profile_cricos_number: string | null;
 }
 
 export function NewAuditModal({ open, onOpenChange, preselectedTenantId, preselectedTenantName, preselectedAuditType }: NewAuditModalProps) {
