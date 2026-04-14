@@ -34,6 +34,7 @@ export const NotificationDropdown = () => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [previewNotif, setPreviewNotif] = useState<Notification | null>(null);
+  const [hideRead, setHideRead] = useState(false);
 
   // Count by type
   const typeCounts: Record<string, number> = {};
@@ -41,9 +42,13 @@ export const NotificationDropdown = () => {
     typeCounts[n.type] = (typeCounts[n.type] || 0) + 1;
   });
 
-  const filteredNotifications = activeFilter
+  let filteredNotifications = activeFilter
     ? notifications.filter(n => n.type === activeFilter)
     : notifications;
+
+  if (hideRead) {
+    filteredNotifications = filteredNotifications.filter(n => !n.is_read);
+  }
 
   const handleNotifClick = (notification: Notification) => {
     if (!notification.is_read) markAsRead(notification.id);
