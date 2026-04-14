@@ -11,6 +11,9 @@ import { useNavigate } from 'react-router-dom';
 import type { ClientAudit, AuditStatus } from '@/types/clientAudits';
 import type { AuditSection, AuditResponse, AuditPhase, AuditAppointment } from '@/types/auditWorkspace';
 import { useAuditAppointments } from '@/hooks/useAuditSchedule';
+import { STAGE_LABEL_MAP } from '@/hooks/useStageAuditLink';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
 interface AuditSidebarProps {
