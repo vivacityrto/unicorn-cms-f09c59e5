@@ -14,6 +14,8 @@ import { useMomentumState } from "@/hooks/useMomentumState";
 import { AttentionPanel } from "./AttentionPanel";
 import { AuditReadinessCard } from "./AuditReadinessCard";
 import { ActivityTimeline } from "./ActivityTimeline";
+import { AuditPreparationSection } from "./AuditPreparationSection";
+import { ClientActionPlanSection } from "./ClientActionPlanSection";
 
 export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
@@ -46,6 +48,12 @@ export function ClientHomePage() {
 
       {/* Progress Anchors */}
       <ProgressAnchors tenantId={activeTenantId} variant="client" />
+
+      {/* Audit Preparation Portal */}
+      <AuditPreparationSection />
+
+      {/* Client Action Plan */}
+      <ClientActionPlanSection />
 
       {/* Row 1: What do you need? */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

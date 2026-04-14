@@ -16,6 +16,7 @@ interface NewAuditModalProps {
   onOpenChange: (open: boolean) => void;
   preselectedTenantId?: number;
   preselectedTenantName?: string;
+  preselectedAuditType?: AuditType;
 }
 
 const auditTypes: { value: AuditType; label: string; icon: any; description: string }[] = [
@@ -39,9 +40,10 @@ const auditTypes: { value: AuditType; label: string; icon: any; description: str
   },
 ];
 
-export function NewAuditModal({ open, onOpenChange, preselectedTenantId, preselectedTenantName }: NewAuditModalProps) {
-  const [step, setStep] = useState(1);
-  const [auditType, setAuditType] = useState<AuditType | null>(null);
+export function NewAuditModal({ open, onOpenChange, preselectedTenantId, preselectedTenantName, preselectedAuditType }: NewAuditModalProps) {
+  const hasPreselectedType = !!preselectedAuditType;
+  const [step, setStep] = useState(hasPreselectedType ? 2 : 1);
+  const [auditType, setAuditType] = useState<AuditType | null>(preselectedAuditType || null);
 
   // Step 2
   const [tenantId, setTenantId] = useState<number | null>(preselectedTenantId || null);
@@ -117,8 +119,8 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   }, [tenantId, tenants]);
 
   const resetForm = () => {
-    setStep(1);
-    setAuditType(null);
+    setStep(preselectedAuditType ? 2 : 1);
+    setAuditType(preselectedAuditType || null);
     if (!preselectedTenantId) { setTenantId(null); setTenantName(''); }
     setTitle(''); setConductedAt(''); setLeadAuditorId(''); setAssistedById('');
     setTrainingProducts(''); setDocNumber('');

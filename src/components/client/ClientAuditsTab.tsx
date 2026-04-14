@@ -10,6 +10,7 @@ import { AuditTypeBadge } from '@/components/audit/AuditTypeBadge';
 import { AuditStatusBadge } from '@/components/audit/AuditStatusBadge';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { NewAuditModal } from '@/components/audit/NewAuditModal';
+import { AuditScheduleAlert } from '@/components/client/AuditScheduleAlert';
 import { useClientAudits } from '@/hooks/useClientAudits';
 import type { AuditDashboardRow } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,9 @@ export function ClientAuditsTab({ tenantId, tenantName }: ClientAuditsTabProps) 
 
   return (
     <div className="space-y-6">
+      {/* Schedule Alert */}
+      <AuditScheduleAlert tenantId={tenantId} onStartCHC={() => setModalOpen(true)} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Audits & Assessments</h2>
