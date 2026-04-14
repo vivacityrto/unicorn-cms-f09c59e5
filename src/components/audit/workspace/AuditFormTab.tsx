@@ -1,28 +1,36 @@
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Plus, Info } from 'lucide-react';
-import { useAuditSections, useInitializeSections, useAuditQuestions, useAuditResponses, useAuditFindings, useAuditScore } from '@/hooks/useAuditWorkspace';
+import { useAuditSections, useInitializeSections, useAuditQuestions, useAuditResponses, useAuditFindings, useAuditScore, useUpdateSectionSummary, useUpdateSectionRiskLevel } from '@/hooks/useAuditWorkspace';
 import { useAuth } from '@/hooks/useAuth';
 import { QuestionCard } from './QuestionCard';
 import { AddFindingForm } from './AddFindingForm';
+import { PhaseStepIndicator } from './PhaseStepIndicator';
+import { OpeningMeetingPhase } from './OpeningMeetingPhase';
+import { DocumentReviewPhase } from './DocumentReviewPhase';
+import { ClosingMeetingPhase } from './ClosingMeetingPhase';
 import type { ClientAudit } from '@/types/clientAudits';
-import type { TemplateQuestion, AuditResponse } from '@/types/auditWorkspace';
+import type { TemplateQuestion, AuditResponse, AuditPhase, AuditSection } from '@/types/auditWorkspace';
 
 interface AuditFormTabProps {
   audit: ClientAudit;
+  selectedSectionId?: string;
 }
 
-export function AuditFormTab({ audit }: AuditFormTabProps) {
+export function AuditFormTab({ audit, selectedSectionId }: AuditFormTabProps) {
   const { session } = useAuth();
   const userId = session?.user?.id;
   const { data: sections, isLoading: sectionsLoading } = useAuditSections(audit.id);
   const initSections = useInitializeSections(audit.id);
   const { data: responses, upsertResponse } = useAuditResponses(audit.id);
   const { createFinding } = useAuditFindings(audit.id);
+  const updateSummary = useUpdateSectionSummary(audit.id);
+  const updateRiskLevel = useUpdateSectionRiskLevel(audit.id);
   const [initialized, setInitialized] = useState(false);
+  const [activePhase, setActivePhase] = useState<AuditPhase>('opening_meeting');
 
-  // Initialize sections if empty
   useEffect(() => {
     if (sectionsLoading || initialized) return;
     if (sections && sections.length === 0) {
@@ -30,6 +38,15 @@ export function AuditFormTab({ audit }: AuditFormTabProps) {
       setInitialized(true);
     }
   }, [sections, sectionsLoading, initialized, audit.template_id]);
+
+  // Auto-navigate to phase when section is selected
+  useEffect(() => {
+    if (!selectedSectionId || !sections) return;
+    const section = sections.find(s => s.id === selectedSectionId);
+    if (section?.audit_phase) {
+      setActivePhase(section.audit_phase);
+    }
+  }, [selectedSectionId, sections]);
 
   const isTemplate = !!audit.template_id;
 
@@ -59,21 +76,158 @@ export function AuditFormTab({ audit }: AuditFormTabProps) {
     );
   }
 
+  // Group sections by phase
+  const openingSections = sections?.filter(s => s.audit_phase === 'opening_meeting') || [];
+  const reviewSections = sections?.filter(s => s.audit_phase === 'document_review') || [];
+  const closingSections = sections?.filter(s => s.audit_phase === 'closing_meeting') || [];
+
+  return (
+    <TemplatePhaseView
+      audit={audit}
+      sections={sections || []}
+      responses={responses || []}
+      openingSections={openingSections}
+      reviewSections={reviewSections}
+      closingSections={closingSections}
+      activePhase={activePhase}
+      setActivePhase={setActivePhase}
+      userId={userId}
+      onUpsertResponse={upsertResponse.mutate}
+      onAddFinding={(f: any) => createFinding.mutate(f)}
+      onUpdateSummary={(sectionId, summary) => updateSummary.mutate({ sectionId, summary })}
+      onUpdateRiskLevel={(sectionId, riskLevel) => updateRiskLevel.mutate({ sectionId, riskLevel })}
+      selectedSectionId={selectedSectionId}
+    />
+  );
+}
+
+function TemplatePhaseView({
+  audit,
+  sections,
+  responses,
+  openingSections,
+  reviewSections,
+  closingSections,
+  activePhase,
+  setActivePhase,
+  userId,
+  onUpsertResponse,
+  onAddFinding,
+  onUpdateSummary,
+  onUpdateRiskLevel,
+  selectedSectionId,
+}: {
+  audit: ClientAudit;
+  sections: AuditSection[];
+  responses: AuditResponse[];
+  openingSections: AuditSection[];
+  reviewSections: AuditSection[];
+  closingSections: AuditSection[];
+  activePhase: AuditPhase;
+  setActivePhase: (phase: AuditPhase) => void;
+  userId: string | undefined;
+  onUpsertResponse: (data: any) => void;
+  onAddFinding: (f: any) => void;
+  onUpdateSummary: (sectionId: string, summary: string) => void;
+  onUpdateRiskLevel: (sectionId: string, riskLevel: string) => void;
+  selectedSectionId?: string;
+}) {
+  const queryClient = useQueryClient();
+  const allTemplateSectionIds = sections.filter(s => s.template_section_id).map(s => s.template_section_id!);
+
+  // Build questionsBySection from query cache
+  const questionsBySection: Record<string, TemplateQuestion[]> = {};
+  for (const tsId of allTemplateSectionIds) {
+    const cached = queryClient.getQueryData<TemplateQuestion[]>(['audit-questions', tsId]);
+    questionsBySection[tsId] = cached || [];
+  }
+
+  // Calculate phase completions
+  const getPhaseStats = (phaseSections: AuditSection[]) => {
+    let total = 0;
+    let answered = 0;
+    for (const s of phaseSections) {
+      const qs = questionsBySection[s.template_section_id || ''] || [];
+      total += qs.length;
+      answered += qs.filter(q => responses.find(r => r.question_id === q.id && r.rating)).length;
+    }
+    return { total, answered, isComplete: total > 0 && answered === total };
+  };
+
+  const openingStats = getPhaseStats(openingSections);
+  const reviewStats = getPhaseStats(reviewSections);
+  const closingStats = getPhaseStats(closingSections);
+
+  const allReviewQuestions = reviewSections.flatMap(s => questionsBySection[s.template_section_id || ''] || []);
+  useAuditScore(audit.id, responses, allReviewQuestions.length > 0 ? allReviewQuestions : undefined);
+
+  const phases = [
+    { key: 'opening_meeting' as AuditPhase, label: 'Opening Meeting', number: 1, ...openingStats, questionCount: openingStats.total, answeredCount: openingStats.answered },
+    { key: 'document_review' as AuditPhase, label: 'Document Review', number: 2, ...reviewStats, questionCount: reviewStats.total, answeredCount: reviewStats.answered },
+    { key: 'closing_meeting' as AuditPhase, label: 'Closing Meeting', number: 3, ...closingStats, questionCount: closingStats.total, answeredCount: closingStats.answered },
+  ];
+
   return (
     <div className="space-y-4">
-      {sections?.map((section) => (
-        <TemplateSectionBlock
-          key={section.id}
-          section={section}
-          audit={audit}
-          responses={responses || []}
-          userId={userId}
-          onUpsertResponse={upsertResponse.mutate}
-          onAddFinding={(f: any) => createFinding.mutate(f)}
-        />
+      {/* Invisible question loaders to populate cache */}
+      {allTemplateSectionIds.map(tsId => (
+        <QuestionLoader key={tsId} templateSectionId={tsId} />
       ))}
+
+      <PhaseStepIndicator
+        phases={phases}
+        activePhase={activePhase}
+        onPhaseClick={setActivePhase}
+      />
+
+      {activePhase === 'opening_meeting' && (
+        <OpeningMeetingPhase
+          sections={openingSections}
+          responses={responses}
+          questionsBySection={questionsBySection}
+          userId={userId}
+          auditId={audit.id}
+          onUpsertResponse={onUpsertResponse}
+          onAddFinding={onAddFinding}
+          onUpdateSummary={onUpdateSummary}
+        />
+      )}
+
+      {activePhase === 'document_review' && (
+        <DocumentReviewPhase
+          sections={reviewSections}
+          responses={responses}
+          questionsBySection={questionsBySection}
+          userId={userId}
+          auditId={audit.id}
+          onUpsertResponse={onUpsertResponse}
+          onAddFinding={onAddFinding}
+          onUpdateSummary={onUpdateSummary}
+          onUpdateRiskLevel={onUpdateRiskLevel}
+          selectedSectionId={selectedSectionId}
+        />
+      )}
+
+      {activePhase === 'closing_meeting' && (
+        <ClosingMeetingPhase
+          sections={closingSections}
+          responses={responses}
+          questionsBySection={questionsBySection}
+          userId={userId}
+          auditId={audit.id}
+          onUpsertResponse={onUpsertResponse}
+          onAddFinding={onAddFinding}
+          onUpdateSummary={onUpdateSummary}
+        />
+      )}
     </div>
   );
+}
+
+// Invisible component that triggers question loading for a template section
+function QuestionLoader({ templateSectionId }: { templateSectionId: string }) {
+  useAuditQuestions(templateSectionId);
+  return null;
 }
 
 function FreeformSection({
@@ -125,97 +279,6 @@ function FreeformSection({
               onSave={(f) => { onAddFinding(f); setShowForm(false); }}
               onCancel={() => setShowForm(false)}
             />
-          )}
-        </CardContent>
-      )}
-    </Card>
-  );
-}
-
-function TemplateSectionBlock({
-  section,
-  audit,
-  responses,
-  userId,
-  onUpsertResponse,
-  onAddFinding,
-}: {
-  section: any;
-  audit: ClientAudit;
-  responses: AuditResponse[];
-  userId: string | undefined;
-  onUpsertResponse: (data: any) => void;
-  onAddFinding: (f: any) => void;
-}) {
-  const [open, setOpen] = useState(true);
-  const { data: questions } = useAuditQuestions(section.template_section_id);
-
-  // Calculate score for this section
-  useAuditScore(audit.id, responses, questions || undefined);
-
-  const sectionResponses = responses.filter(r => r.section_id === section.id);
-  const answeredCount = sectionResponses.filter(r => r.rating).length;
-  const totalCount = questions?.length ?? 0;
-
-  const handleRate = (questionId: string, rating: string, score: number, isFlagged: boolean) => {
-    if (!userId) return;
-    onUpsertResponse({
-      audit_id: audit.id,
-      section_id: section.id,
-      question_id: questionId,
-      rating,
-      score,
-      is_flagged: isFlagged,
-      responded_by: userId,
-    });
-  };
-
-  const handleNote = (questionId: string, notesValue: string) => {
-    if (!userId) return;
-    const existing = responses.find(r => r.question_id === questionId);
-    onUpsertResponse({
-      audit_id: audit.id,
-      section_id: section.id,
-      question_id: questionId,
-      rating: existing?.rating || null,
-      notes: notesValue,
-      score: existing?.score || null,
-      is_flagged: existing?.is_flagged || false,
-      responded_by: userId,
-    });
-  };
-
-  return (
-    <Card>
-      <CardHeader className="cursor-pointer" onClick={() => setOpen(!open)}>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-sm">{section.title}</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {answeredCount} of {totalCount} answered
-            </p>
-          </div>
-          {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </div>
-      </CardHeader>
-      {open && (
-        <CardContent className="space-y-3">
-          {questions?.map(q => (
-            <QuestionCard
-              key={q.id}
-              question={q}
-              response={responses.find(r => r.question_id === q.id)}
-              auditId={audit.id}
-              sectionId={section.id}
-              onRate={handleRate}
-              onNote={handleNote}
-              onAddFinding={onAddFinding}
-            />
-          ))}
-          {(!questions || questions.length === 0) && (
-            <p className="text-xs text-muted-foreground p-4 text-center">
-              No questions available for this section.
-            </p>
           )}
         </CardContent>
       )}

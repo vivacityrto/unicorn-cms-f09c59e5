@@ -133,7 +133,7 @@ export default function AuditWorkspaceNew() {
                 <OverviewTab audit={audit} />
               </TabsContent>
               <TabsContent value="form">
-                <AuditFormTab audit={audit} />
+                <AuditFormTab audit={audit} selectedSectionId={sections?.[selectedSection]?.id} />
               </TabsContent>
               <TabsContent value="documents">
                 <DocumentsTab auditId={audit.id} />

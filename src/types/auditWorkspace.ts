@@ -1,3 +1,6 @@
+export type AuditPhase = 'opening_meeting' | 'document_review' | 'closing_meeting';
+export type QuestionContext = 'client_discussion' | 'auditor_assessment' | 'closing_discussion';
+
 export interface AuditSection {
   id: string;
   audit_id: string;
@@ -10,6 +13,7 @@ export interface AuditSection {
   score_max: number | null;
   risk_level: string | null;
   section_summary: string | null;
+  audit_phase: AuditPhase | null;
   created_at: string;
 }
 
@@ -110,6 +114,7 @@ export interface TemplateQuestion {
   nc_map: string | null;
   sort_order: number;
   is_active: boolean;
+  question_context: QuestionContext | null;
 }
 
 export const RATING_OPTIONS_FULL = [
@@ -123,6 +128,12 @@ export const RATING_OPTIONS_FULL = [
 export const RATING_OPTIONS_SAFE = [
   { value: 'compliant', label: 'Compliant', color: 'bg-green-100 text-green-800 border-green-300' },
   { value: 'at_risk', label: 'At Risk', color: 'bg-amber-100 text-amber-800 border-amber-300' },
+] as const;
+
+export const RATING_OPTIONS_CLOSING = [
+  { value: 'compliant', label: 'Acknowledged', color: 'bg-green-100 text-green-800 border-green-300' },
+  { value: 'at_risk', label: 'Partially Acknowledged', color: 'bg-amber-100 text-amber-800 border-amber-300' },
+  { value: 'non_compliant', label: 'Disputed', color: 'bg-red-100 text-red-800 border-red-300' },
 ] as const;
 
 export const DOCUMENT_TYPES = [

@@ -9358,6 +9358,7 @@ export type Database = {
       client_audit_sections: {
         Row: {
           audit_id: string
+          audit_phase: string
           created_at: string
           description: string | null
           id: string
@@ -9372,6 +9373,7 @@ export type Database = {
         }
         Insert: {
           audit_id: string
+          audit_phase?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -9386,6 +9388,7 @@ export type Database = {
         }
         Update: {
           audit_id?: string
+          audit_phase?: string
           created_at?: string
           description?: string | null
           id?: string
@@ -13532,6 +13535,7 @@ export type Database = {
           id: string
           is_active: boolean
           nc_map: string | null
+          question_context: string | null
           response_set: string
           score_at_risk: number
           score_compliant: number
@@ -13550,6 +13554,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           nc_map?: string | null
+          question_context?: string | null
           response_set: string
           score_at_risk?: number
           score_compliant?: number
@@ -13568,6 +13573,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           nc_map?: string | null
+          question_context?: string | null
           response_set?: string
           score_at_risk?: number
           score_compliant?: number
@@ -13588,6 +13594,7 @@ export type Database = {
       }
       compliance_template_sections: {
         Row: {
+          audit_phase: string
           created_at: string
           id: string
           sort_order: number
@@ -13595,6 +13602,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          audit_phase?: string
           created_at?: string
           id?: string
           sort_order?: number
@@ -13602,6 +13610,7 @@ export type Database = {
           title: string
         }
         Update: {
+          audit_phase?: string
           created_at?: string
           id?: string
           sort_order?: number
