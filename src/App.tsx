@@ -170,6 +170,7 @@ const AcademyBuilderLibrary = lazy(() => import("./pages/superadmin/AcademyBuild
 const AcademyBuilderCourse = lazy(() => import("./pages/superadmin/AcademyBuilderCourse"));
 
 // Compliance Auditor pages
+const ComplianceAuditGlobal = lazy(() => import("./pages/ComplianceAuditGlobal"));
 const ComplianceAuditList = lazy(() => import("./pages/ComplianceAuditList"));
 const ComplianceAuditForm = lazy(() => import("./pages/ComplianceAuditForm"));
 const ComplianceAuditReport = lazy(() => import("./pages/ComplianceAuditReport"));
@@ -961,7 +962,7 @@ const App = () => (
               } 
             />
             {/* Compliance Auditor Routes */}
-            <Route path="/compliance-audits" element={<ProtectedRoute><Navigate to="/manage-tenants" replace /></ProtectedRoute>} />
+            <Route path="/compliance-audits" element={<ProtectedRoute><ComplianceAuditGlobal /></ProtectedRoute>} />
             <Route path="/compliance-audits/:tenantId" element={<ProtectedRoute><ComplianceAuditList /></ProtectedRoute>} />
             <Route path="/compliance-audits/:tenantId/audit/:auditId" element={<ProtectedRoute><ComplianceAuditForm /></ProtectedRoute>} />
             <Route path="/compliance-audits/:tenantId/audit/:auditId/report" element={<ProtectedRoute><ComplianceAuditReport /></ProtectedRoute>} />
