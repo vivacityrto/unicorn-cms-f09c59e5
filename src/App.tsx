@@ -936,7 +936,7 @@ const App = () => (
               path="/audits/:id" 
               element={
                 <ProtectedRoute>
-                  <AuditWorkspacePlaceholder />
+                  <AuditWorkspaceNew />
                 </ProtectedRoute>
               } 
             />
