@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, ClipboardCheck } from 'lucide-react';
 import { format, isPast } from 'date-fns';
@@ -25,6 +25,12 @@ export function ClientAuditsTab({ tenantId, tenantName }: ClientAuditsTabProps) 
   const navigate = useNavigate();
   const { data: audits = [], isLoading } = useClientAudits(tenantId);
   const [modalOpen, setModalOpen] = useState(false);
+  const [preselectedAuditType, setPreselectedAuditType] = useState<import('@/types/clientAudits').AuditType | undefined>(undefined);
+
+  const handleStartCHC = useCallback((auditType?: import('@/types/clientAudits').AuditType) => {
+    setPreselectedAuditType(auditType);
+    setModalOpen(true);
+  }, []);
 
   const completedAudits = audits.filter(a => a.status === 'complete');
 
