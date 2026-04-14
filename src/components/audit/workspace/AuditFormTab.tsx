@@ -31,9 +31,6 @@ export function AuditFormTab({ audit, selectedSectionId }: AuditFormTabProps) {
   const [initialized, setInitialized] = useState(false);
   const [activePhase, setActivePhase] = useState<AuditPhase>('opening_meeting');
 
-  // Load questions for all template sections
-  const templateSectionIds = sections?.filter(s => s.template_section_id).map(s => s.template_section_id!) || [];
-
   useEffect(() => {
     if (sectionsLoading || initialized) return;
     if (sections && sections.length === 0) {
@@ -135,87 +132,14 @@ function TemplatePhaseView({
   onUpdateRiskLevel: (sectionId: string, riskLevel: string) => void;
   selectedSectionId?: string;
 }) {
-  // Load ALL questions for all sections using individual hooks
-  // We need to collect questions per template_section_id
+  const queryClient = useQueryClient();
   const allTemplateSectionIds = sections.filter(s => s.template_section_id).map(s => s.template_section_id!);
-  
-  // Use a single component that loads questions for each section
-  return (
-    <div className="space-y-4">
-      {allTemplateSectionIds.map(tsId => (
-        <QuestionLoader key={tsId} templateSectionId={tsId} />
-      ))}
-      <TemplatePhaseViewInner
-        audit={audit}
-        sections={sections}
-        responses={responses}
-        openingSections={openingSections}
-        reviewSections={reviewSections}
-        closingSections={closingSections}
-        activePhase={activePhase}
-        setActivePhase={setActivePhase}
-        userId={userId}
-        onUpsertResponse={onUpsertResponse}
-        onAddFinding={onAddFinding}
-        onUpdateSummary={onUpdateSummary}
-        onUpdateRiskLevel={onUpdateRiskLevel}
-        selectedSectionId={selectedSectionId}
-      />
-    </div>
-  );
-}
 
-// Invisible component that triggers question loading for a template section
-function QuestionLoader({ templateSectionId }: { templateSectionId: string }) {
-  useAuditQuestions(templateSectionId);
-  return null;
-}
-
-function TemplatePhaseViewInner({
-  audit,
-  sections,
-  responses,
-  openingSections,
-  reviewSections,
-  closingSections,
-  activePhase,
-  setActivePhase,
-  userId,
-  onUpsertResponse,
-  onAddFinding,
-  onUpdateSummary,
-  onUpdateRiskLevel,
-  selectedSectionId,
-}: {
-  audit: ClientAudit;
-  sections: AuditSection[];
-  responses: AuditResponse[];
-  openingSections: AuditSection[];
-  reviewSections: AuditSection[];
-  closingSections: AuditSection[];
-  activePhase: AuditPhase;
-  setActivePhase: (phase: AuditPhase) => void;
-  userId: string | undefined;
-  onUpsertResponse: (data: any) => void;
-  onAddFinding: (f: any) => void;
-  onUpdateSummary: (sectionId: string, summary: string) => void;
-  onUpdateRiskLevel: (sectionId: string, riskLevel: string) => void;
-  selectedSectionId?: string;
-}) {
-  // Build questionsBySection from react-query cache
-  // We need to access cached question data
+  // Build questionsBySection from query cache
   const questionsBySection: Record<string, TemplateQuestion[]> = {};
-  
-  // Load questions for each section - use hooks at top level
-  const questionQueries = sections
-    .filter(s => s.template_section_id)
-    .map(s => {
-      const { data } = useAuditQuestions(s.template_section_id);
-      return { templateSectionId: s.template_section_id!, questions: data || [] };
-    });
-
-  for (const q of questionQueries) {
-    questionsBySection[q.templateSectionId] = q.questions;
+  for (const tsId of allTemplateSectionIds) {
+    const cached = queryClient.getQueryData<TemplateQuestion[]>(['audit-questions', tsId]);
+    questionsBySection[tsId] = cached || [];
   }
 
   // Calculate phase completions
@@ -234,7 +158,6 @@ function TemplatePhaseViewInner({
   const reviewStats = getPhaseStats(reviewSections);
   const closingStats = getPhaseStats(closingSections);
 
-  // Score calculation using document review questions only
   const allReviewQuestions = reviewSections.flatMap(s => questionsBySection[s.template_section_id || ''] || []);
   useAuditScore(audit.id, responses, allReviewQuestions.length > 0 ? allReviewQuestions : undefined);
 
@@ -245,7 +168,12 @@ function TemplatePhaseViewInner({
   ];
 
   return (
-    <>
+    <div className="space-y-4">
+      {/* Invisible question loaders to populate cache */}
+      {allTemplateSectionIds.map(tsId => (
+        <QuestionLoader key={tsId} templateSectionId={tsId} />
+      ))}
+
       <PhaseStepIndicator
         phases={phases}
         activePhase={activePhase}
@@ -292,8 +220,14 @@ function TemplatePhaseViewInner({
           onUpdateSummary={onUpdateSummary}
         />
       )}
-    </>
+    </div>
   );
+}
+
+// Invisible component that triggers question loading for a template section
+function QuestionLoader({ templateSectionId }: { templateSectionId: string }) {
+  useAuditQuestions(templateSectionId);
+  return null;
 }
 
 function FreeformSection({
