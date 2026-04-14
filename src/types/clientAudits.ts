@@ -91,11 +91,20 @@ export const AUDIT_RISK_LABELS: Record<AuditRisk, string> = {
   critical: 'Critical Risk',
 };
 
-export const CRICOS_INVALID_VALUES = [null, '', 'n/a', 'N/A', '-', 'TBC', 'TBA'];
+export const CRICOS_INVALID_VALUES = [null, '', 'n/a', 'N/A', 'NA', 'na', '-', 'TBC', 'TBA', 'tbc', 'tba', 'none', 'None', 'nil', 'Nil'];
+
+const CRICOS_INVALID_LOWER = new Set(['', 'n/a', 'na', '-', 'tbc', 'tba', 'none', 'nil']);
+
+export function isCricosValid(cricosId: string | null | undefined): boolean {
+  if (!cricosId) return false;
+  const trimmed = cricosId.trim();
+  if (trimmed === '') return false;
+  return !CRICOS_INVALID_LOWER.has(trimmed.toLowerCase());
+}
 
 export function detectRegistrationType(rtoId: string | null | undefined, cricosId: string | null | undefined) {
   const isRto = !!rtoId && rtoId.trim() !== '';
-  const isCricos = !!cricosId && !CRICOS_INVALID_VALUES.includes(cricosId.trim());
+  const isCricos = isCricosValid(cricosId);
   if (isCricos && isRto) return 'both' as const;
   if (isCricos) return 'cricos_only' as const;
   return 'rto_only' as const;

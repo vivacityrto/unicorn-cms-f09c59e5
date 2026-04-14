@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateAudit } from '@/hooks/useClientAudits';
 import type { AuditType } from '@/types/clientAudits';
-import { detectRegistrationType, CRICOS_INVALID_VALUES } from '@/types/clientAudits';
+import { detectRegistrationType, isCricosValid } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
 
 interface NewAuditModalProps {
@@ -200,6 +200,16 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     }
   }, [preselectedAuditType, auditTypeCards]);
 
+  // Clear stale card selection when registration type changes
+  useEffect(() => {
+    if (selectedCard) {
+      const stillValid = auditTypeCards.some(
+        c => c.value === selectedCard.value && c.is_rto === selectedCard.is_rto && c.is_cricos === selectedCard.is_cricos
+      );
+      if (!stillValid) setSelectedCard(null);
+    }
+  }, [registrationType, auditTypeCards]);
+
   // Auto-fetch snapshot from TGA view when tenant selected
   useEffect(() => {
     if (!tenantId) return;
@@ -350,7 +360,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                     <SelectContent>
                       {tenants.map(t => (
                         <SelectItem key={t.id} value={t.id.toString()}>
-                          {t.name}{t.rto_id ? ` (${t.rto_id})` : ''}{t.cricos_id && !CRICOS_INVALID_VALUES.includes(t.cricos_id) ? ` [CRICOS: ${t.cricos_id}]` : ''}
+                          {t.name}{t.rto_id ? ` (${t.rto_id})` : ''}{isCricosValid(t.cricos_id) ? ` [CRICOS: ${t.cricos_id}]` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
