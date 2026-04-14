@@ -6,7 +6,8 @@ import { AuditTypeBadge } from '@/components/audit/AuditTypeBadge';
 import { AuditStatusBadge } from '@/components/audit/AuditStatusBadge';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { cn } from '@/lib/utils';
-import { Check, CalendarClock } from 'lucide-react';
+import { Check, CalendarClock, ClipboardList } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { ClientAudit, AuditStatus } from '@/types/clientAudits';
 import type { AuditSection, AuditResponse, AuditPhase, AuditAppointment } from '@/types/auditWorkspace';
 import { useAuditAppointments } from '@/hooks/useAuditSchedule';
@@ -43,6 +44,7 @@ export function AuditSidebar({
   leadAuditorName,
   leadAuditorAvatar,
 }: AuditSidebarProps) {
+  const navigate = useNavigate();
   const { documentDeadline, openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
   // Group sections by phase
   const phaseGroups: PhaseGroup[] = [
