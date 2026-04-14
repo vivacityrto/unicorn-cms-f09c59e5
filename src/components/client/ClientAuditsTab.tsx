@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, ClipboardCheck } from 'lucide-react';
 import { format, isPast } from 'date-fns';
@@ -12,7 +12,10 @@ import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { NewAuditModal } from '@/components/audit/NewAuditModal';
 import { AuditScheduleAlert } from '@/components/client/AuditScheduleAlert';
 import { useClientAudits } from '@/hooks/useClientAudits';
+import { supabase } from '@/integrations/supabase/client';
+import { AUDIT_STAGE_IDS, STAGE_AUDIT_TYPE_MAP } from '@/hooks/useStageAuditLink';
 import type { AuditDashboardRow } from '@/types/clientAudits';
+import type { AuditType } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
 import { HistoricalReferencesSection } from '@/components/audit/references/HistoricalReferencesSection';
 
@@ -25,9 +28,32 @@ export function ClientAuditsTab({ tenantId, tenantName }: ClientAuditsTabProps) 
   const navigate = useNavigate();
   const { data: audits = [], isLoading } = useClientAudits(tenantId);
   const [modalOpen, setModalOpen] = useState(false);
-  const [preselectedAuditType, setPreselectedAuditType] = useState<import('@/types/clientAudits').AuditType | undefined>(undefined);
+  const [preselectedAuditType, setPreselectedAuditType] = useState<AuditType | undefined>(undefined);
+  const [activeStageInstanceId, setActiveStageInstanceId] = useState<number | undefined>(undefined);
 
-  const handleStartCHC = useCallback((auditType?: import('@/types/clientAudits').AuditType) => {
+  // Detect active audit-type stage instance without a linked audit
+  useEffect(() => {
+    const detectActiveStage = async () => {
+      const { data } = await supabase
+        .from('stage_instances' as any)
+        .select('id, stage_id, linked_audit_id, packageinstance_id, package_instances!inner(tenant_id)')
+        .in('stage_id', AUDIT_STAGE_IDS)
+        .is('linked_audit_id', null)
+        .neq('status', 2) // not completed
+        .order('id', { ascending: false });
+
+      if (data && (data as any[]).length > 0) {
+        // Find one that belongs to this tenant
+        const match = (data as any[]).find(d => d.package_instances?.tenant_id === tenantId);
+        if (match) {
+          setActiveStageInstanceId(match.id);
+        }
+      }
+    };
+    detectActiveStage();
+  }, [tenantId]);
+
+  const handleStartCHC = useCallback((auditType?: AuditType) => {
     setPreselectedAuditType(auditType);
     setModalOpen(true);
   }, []);
@@ -101,6 +127,7 @@ export function ClientAuditsTab({ tenantId, tenantName }: ClientAuditsTabProps) 
         preselectedTenantId={tenantId}
         preselectedTenantName={tenantName}
         preselectedAuditType={preselectedAuditType}
+        preselectedStageInstanceId={activeStageInstanceId}
       />
     </div>
   );

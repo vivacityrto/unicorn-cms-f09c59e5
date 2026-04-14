@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { autoCompleteStageTasks } from '@/hooks/useStageAuditLink';
 import type { AuditAppointment, AppointmentType } from '@/types/auditWorkspace';
 
 // ─── Fetch Appointments ───
@@ -75,16 +76,9 @@ export function useScheduleAuditPhase(auditId: string | undefined) {
       );
       if (rpcErr) throw rpcErr;
 
-      // Auto-complete CHC stage tasks when opening meeting is scheduled
+      // Auto-complete stage tasks when opening meeting is scheduled
       if (params.appointmentType === 'opening_meeting' && auditId) {
-        try {
-          await supabase.rpc('complete_chc_stage_tasks' as any, {
-            p_audit_id: auditId,
-            p_milestone: 'scheduled',
-          } as any);
-        } catch {
-          // Non-critical — RPC may not exist yet
-        }
+        await autoCompleteStageTasks(auditId, 'scheduled');
       }
 
       // For meetings, create calendar event and sync

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ShieldCheck, ClipboardList, Building2, ArrowRight, ArrowLeft, Loader2, Award, Globe, Info } from 'lucide-react';
+import { ShieldCheck, ClipboardList, Building2, ArrowRight, ArrowLeft, Loader2, Award, Globe, Info, Link2 } from 'lucide-react';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/modals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateAudit } from '@/hooks/useClientAudits';
 import { useAuth } from '@/hooks/useAuth';
+import { STAGE_AUDIT_TYPE_MAP } from '@/hooks/useStageAuditLink';
 import type { AuditType } from '@/types/clientAudits';
 import { detectRegistrationType, isCricosValid } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
+
+const STAGE_NAME_MAP: Record<number, string> = {
+  24: 'Compliance Health Check',
+  5: 'Mock Audit',
+  1106: 'Mock Audit & Submission',
+};
 
 interface NewAuditModalProps {
   open: boolean;
@@ -131,7 +138,26 @@ interface TenantRecord {
 }
 
 export function NewAuditModal({ open, onOpenChange, preselectedTenantId, preselectedTenantName, preselectedAuditType, preselectedStageInstanceId }: NewAuditModalProps) {
-  const hasPreselectedType = !!preselectedAuditType;
+  // Resolve stage context: map stage instance → audit type if not already provided
+  const [resolvedStageId, setResolvedStageId] = useState<number | null>(null);
+  
+  useEffect(() => {
+    if (!open || !preselectedStageInstanceId) { setResolvedStageId(null); return; }
+    supabase
+      .from('stage_instances' as any)
+      .select('stage_id')
+      .eq('id', preselectedStageInstanceId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setResolvedStageId((data as any).stage_id);
+      });
+  }, [open, preselectedStageInstanceId]);
+
+  const stageAuditType = preselectedAuditType || (resolvedStageId ? STAGE_AUDIT_TYPE_MAP[resolvedStageId] : undefined);
+  const stageName = resolvedStageId ? STAGE_NAME_MAP[resolvedStageId] : null;
+  const hasPreselectedType = !!stageAuditType;
+  const isStageLinked = !!preselectedStageInstanceId;
+  
   const [step, setStep] = useState(hasPreselectedType ? 2 : 1);
   const [selectedCard, setSelectedCard] = useState<AuditTypeCard | null>(null);
 
@@ -221,13 +247,16 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     }
   }, [auditors, session?.user?.id]);
 
-  // Pre-select card from preselectedAuditType
+  // Pre-select card from stageAuditType (resolved from stage or preselected)
   useEffect(() => {
-    if (preselectedAuditType && auditTypeCards.length > 0 && !selectedCard) {
-      const match = auditTypeCards.find(c => c.value === preselectedAuditType);
-      if (match) setSelectedCard(match);
+    if (stageAuditType && auditTypeCards.length > 0 && !selectedCard) {
+      const match = auditTypeCards.find(c => c.value === stageAuditType);
+      if (match) {
+        setSelectedCard(match);
+        if (isStageLinked) setStep(2); // Skip Step 1 when stage-linked
+      }
     }
-  }, [preselectedAuditType, auditTypeCards]);
+  }, [stageAuditType, auditTypeCards]);
 
   // Clear stale card selection when registration type changes
   useEffect(() => {
@@ -268,7 +297,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   }, [tenantId, tenants]);
 
   const resetForm = () => {
-    setStep(preselectedAuditType ? 2 : 1);
+    setStep(hasPreselectedType ? 2 : 1);
     setSelectedCard(null);
     if (!preselectedTenantId) { setTenantId(null); setTenantName(''); }
     setTitle(''); setLeadAuditorId(''); setAssistedById('');
@@ -379,6 +408,18 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
 
           {step === 2 && (
             <div className="space-y-4">
+              {isStageLinked && stageName && (
+                <Alert className="bg-primary/5 border-primary/20">
+                  <Link2 className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-sm">
+                    <span className="font-medium">Creating audit for {stageName} stage</span>
+                    {preselectedTenantName && <span> — {preselectedTenantName}</span>}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This audit will be linked to your package stage. Stage tasks will auto-complete as you progress.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
               <div>
                 <Label>Client *</Label>
                 {isClientLocked ? (

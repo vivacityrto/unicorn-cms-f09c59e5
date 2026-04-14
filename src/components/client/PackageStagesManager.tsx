@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,6 +28,8 @@ import { StageEmailsSection } from './StageEmailsSection';
 import { StageNotesSection } from './StageNotesSection';
 import { LegacyDataDiagnostics } from './LegacyDataDiagnostics';
 import { AuditProgressCard } from './AuditProgressCard';
+import { NewAuditModal } from '@/components/audit/NewAuditModal';
+import { AUDIT_STAGE_IDS, STAGE_AUDIT_TYPE_MAP } from '@/hooks/useStageAuditLink';
 import { PhaseGroupHeader } from './PhaseGroupHeader';
 import { useCheckpointPhasesEnabled } from '@/hooks/useCheckpointPhasesEnabled';
 import { usePhaseProgress } from '@/hooks/usePhaseProgress';
@@ -40,7 +43,9 @@ import {
   MessageSquare,
   RefreshCw,
   FileText,
-  Mail
+  Mail,
+  Search,
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -87,11 +92,17 @@ interface StageRowProps {
 
 function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, packageInstanceId, onUpdate, profile }: StageRowProps) {
   const { statuses } = useTaskStatusOptions();
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
   const statusCode = typeof stage.status === 'number' ? stage.status : 0;
   const StatusIcon = getStatusIcon(statusCode);
   const statusColor = getStatusColor(statusCode);
   const statusLabel = statuses.find(s => s.code === statusCode)?.label || `Status ${statusCode}`;
   const { staffTasks, clientTasks, documents, emails, loading: countsLoading } = useStageCounts(stage.id);
+
+  // Check if this is an audit-type stage that should show prompt
+  const isAuditStage = AUDIT_STAGE_IDS.includes(stage.stage_id);
+  const mappedAuditType = STAGE_AUDIT_TYPE_MAP[stage.stage_id];
+  const showAuditPrompt = isAuditStage && !stage.linked_audit_id;
 
   const countBadge = (count: number) =>
     !countsLoading ? (
@@ -172,9 +183,34 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
         </div>
 
         <CollapsibleContent>
+          {/* Audit progress card or prompt */}
           {stage.linked_audit_id && (
             <div className="px-3 pt-3">
               <AuditProgressCard linkedAuditId={stage.linked_audit_id} />
+            </div>
+          )}
+          {showAuditPrompt && (
+            <div className="px-3 pt-3">
+              <Card className="border-dashed border-muted-foreground/30 bg-muted/20 mb-3">
+                <CardContent className="p-4 space-y-3 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">No audit workspace linked</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Start this audit in the new audit workspace for full scheduling, evidence tracking, and report generation.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={(e) => { e.stopPropagation(); setAuditModalOpen(true); }}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Create Audit Record
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           )}
           <StageDetailSection
@@ -229,6 +265,17 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
           </Tabs>
         </CollapsibleContent>
       </div>
+
+      {/* NewAuditModal for stage-linked creation */}
+      {showAuditPrompt && (
+        <NewAuditModal
+          open={auditModalOpen}
+          onOpenChange={(open) => { setAuditModalOpen(open); if (!open) onUpdate(); }}
+          preselectedTenantId={tenantId}
+          preselectedAuditType={mappedAuditType}
+          preselectedStageInstanceId={stage.id}
+        />
+      )}
     </Collapsible>
   );
 }
