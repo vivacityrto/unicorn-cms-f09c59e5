@@ -1,27 +1,46 @@
 
 
-## Use `app_settings.sharepoint_client_folders` for Folder Path
+## Plan: Organisation Parent-Child Linking
 
-### Problem
-The provisioning edge function has the root folder path hardcoded as `const SP_BASE_PATH = "/Client Folder"`. The actual path should come from the `app_settings` table's `sharepoint_client_folders` column, which currently holds `Shared Documents/Client Folder` (URL-encoded as `Shared%20Documents%2FClient%20Folder`).
+### Overview
+Add the ability to link organisations in parent-child relationships (informational only — no data sharing). A new `tenant_relationships` table stores the links, and the UI shows related organisations on the tenant detail page.
 
-### Current State
-- `app_settings.sharepoint_client_folders` = `Shared Documents/Client Folder`
-- The Graph API drive path is relative to the drive root, which *is* "Shared Documents" — so the effective sub-path is just `Client Folder`
-- The hardcoded `SP_BASE_PATH = "/Client Folder"` happens to be correct today but won't adapt if the setting changes
+### Database Changes
+Create a new `tenant_relationships` table:
+- `id` (bigserial PK)
+- `parent_tenant_id` (bigint, FK to tenants.id, NOT NULL)
+- `child_tenant_id` (bigint, FK to tenants.id, NOT NULL)
+- `notes` (text, nullable) — optional context for the relationship
+- `created_by` (uuid, FK to auth.users) — audit trail
+- `created_at` / `updated_at` — standard timestamps
+- Unique constraint on `(parent_tenant_id, child_tenant_id)`
+- Check constraint: `parent_tenant_id != child_tenant_id`
+- RLS: Vivacity staff can read/write; tenant members can read relationships involving their tenant
+- Indexes on both FK columns
 
-### Plan
+### UI Changes
 
-**File: `supabase/functions/provision-tenant-sharepoint-folder/index.ts`**
+**1. "Related Organisations" section on Tenant Detail page**
+- Add a small card/section (likely in the sidebar or below org details) titled "Related Organisations"
+- Shows parent org (if any) with a link to navigate to it
+- Shows child orgs (if any) as a list with links
+- Each entry shows the org name and an optional note
 
-1. Remove the hardcoded `const SP_BASE_PATH = "/Client Folder"` constant.
-2. After creating the Supabase admin client, fetch the `sharepoint_client_folders` value from `app_settings`.
-3. Parse the value: URL-decode it, then strip the leading `Shared Documents/` prefix (since Graph API drive paths are already relative to the drive root which *is* "Shared Documents"). The remainder becomes the base path (e.g., `Client Folder` → `/Client Folder`).
-4. If the setting is missing or empty, fall back to `/Client Folder` with a console warning, so existing behaviour is preserved.
-5. Use this dynamic path in place of every `SP_BASE_PATH` reference (folder creation and settings storage).
+**2. Add/Remove relationship dialog**
+- A "Link Organisation" button (SuperAdmin/Vivacity only)
+- Opens a dialog with:
+  - Dropdown to select relationship direction (Parent / Child)
+  - Searchable tenant selector to pick the other organisation
+  - Optional notes field
+- Remove link via a small delete button on each relationship row
 
-### Technical Detail
-- The Graph API `/drives/{driveId}/root:/path:/children` is relative to the document library root ("Shared Documents"), so `Shared Documents/Client Folder` → strip `Shared Documents/` → use `/Client Folder` as the drive-relative path.
-- URL-decode with `decodeURIComponent()` before stripping.
-- Single query added: `SELECT sharepoint_client_folders FROM app_settings LIMIT 1`.
+### Files to Create/Modify
+- **New migration**: `tenant_relationships` table + RLS policies
+- **New component**: `src/components/tenant/TenantRelationships.tsx` — displays and manages links
+- **Modified**: `src/pages/TenantDetail.tsx` — integrate the new component
+
+### Security
+- Only Vivacity staff (SuperAdmin, VivacityTeam) can create or delete relationships
+- All tenant members can view relationships involving their tenant
+- Audit via `created_by` and timestamps
 
