@@ -57,6 +57,7 @@ interface StageInstance {
   released_client_tasks: boolean;
   is_recurring: boolean;
   event_conducted_date: string | null;
+  linked_audit_id: string | null;
 }
 
 interface PackageStagesManagerProps {

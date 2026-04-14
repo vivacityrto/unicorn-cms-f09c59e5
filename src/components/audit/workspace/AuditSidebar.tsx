@@ -170,6 +170,22 @@ export function AuditSidebar({
         />
       </div>
 
+      {/* CHC Stage Link */}
+      {audit.linked_stage_instance_id && (
+        <div className="p-4 border-b">
+          <button
+            onClick={() => navigate(`/clients/${audit.subject_tenant_id}?tab=packages&stage=${audit.linked_stage_instance_id}`)}
+            className="flex items-center gap-2 text-xs text-primary hover:underline w-full"
+          >
+            <ClipboardList className="h-3.5 w-3.5" />
+            <div className="text-left">
+              <span className="font-medium block">Linked to CHC stage</span>
+              <span className="text-[10px] text-muted-foreground">View stage tasks →</span>
+            </div>
+          </button>
+        </div>
+      )}
+
       {/* Phase-grouped Section Nav */}
       <div className="flex-1 overflow-y-auto p-2">
         {phaseGroups.map(group => {
