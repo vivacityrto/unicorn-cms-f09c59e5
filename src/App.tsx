@@ -169,6 +169,11 @@ const AcademyCertificatesAdminPage = lazy(() => import("./pages/superadmin/Acade
 const AcademyBuilderLibrary = lazy(() => import("./pages/superadmin/AcademyBuilderLibrary"));
 const AcademyBuilderCourse = lazy(() => import("./pages/superadmin/AcademyBuilderCourse"));
 
+// Compliance Auditor pages
+const ComplianceAuditList = lazy(() => import("./pages/ComplianceAuditList"));
+const ComplianceAuditForm = lazy(() => import("./pages/ComplianceAuditForm"));
+const ComplianceAuditReport = lazy(() => import("./pages/ComplianceAuditReport"));
+
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
 const AcademyCourses = lazy(() => import("./pages/academy/AcademyCourses"));
