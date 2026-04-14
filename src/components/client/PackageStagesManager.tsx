@@ -27,6 +27,8 @@ import { StageEmailsSection } from './StageEmailsSection';
 import { StageNotesSection } from './StageNotesSection';
 import { LegacyDataDiagnostics } from './LegacyDataDiagnostics';
 import { AuditProgressCard } from './AuditProgressCard';
+import { NewAuditModal } from '@/components/audit/NewAuditModal';
+import { AUDIT_STAGE_IDS, STAGE_AUDIT_TYPE_MAP } from '@/hooks/useStageAuditLink';
 import { PhaseGroupHeader } from './PhaseGroupHeader';
 import { useCheckpointPhasesEnabled } from '@/hooks/useCheckpointPhasesEnabled';
 import { usePhaseProgress } from '@/hooks/usePhaseProgress';
@@ -40,7 +42,9 @@ import {
   MessageSquare,
   RefreshCw,
   FileText,
-  Mail
+  Mail,
+  Search,
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
