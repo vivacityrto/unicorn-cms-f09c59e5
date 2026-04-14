@@ -193,10 +193,10 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
 
       if (stages && stages.length > 0) {
         const stageIds = stages.map(s => s.id);
-        await supabase.from('client_task_instances').delete().in('stage_instance_id', stageIds);
-        await supabase.from('email_instances').delete().in('stage_instance_id', stageIds);
-        await supabase.from('document_instances').delete().in('stage_instance_id', stageIds);
-        await supabase.from('stage_instances').delete().in('id', stageIds);
+        await (supabase.from('client_task_instances') as any).delete().in('stage_instance_id', stageIds);
+        await (supabase.from('email_instances') as any).delete().in('stage_instance_id', stageIds);
+        await (supabase.from('document_instances') as any).delete().in('stage_instance_id', stageIds);
+        await (supabase.from('stage_instances') as any).delete().in('id', stageIds);
       }
 
       // 2. Delete time entries
