@@ -182,9 +182,34 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
         </div>
 
         <CollapsibleContent>
+          {/* Audit progress card or prompt */}
           {stage.linked_audit_id && (
             <div className="px-3 pt-3">
               <AuditProgressCard linkedAuditId={stage.linked_audit_id} />
+            </div>
+          )}
+          {showAuditPrompt && (
+            <div className="px-3 pt-3">
+              <Card className="border-dashed border-muted-foreground/30 bg-muted/20 mb-3">
+                <CardContent className="p-4 space-y-3 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-muted-foreground">No audit workspace linked</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Start this audit in the new audit workspace for full scheduling, evidence tracking, and report generation.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={(e) => { e.stopPropagation(); setAuditModalOpen(true); }}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Create Audit Record
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           )}
           <StageDetailSection
