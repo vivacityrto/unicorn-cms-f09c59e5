@@ -213,6 +213,14 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     });
   }, [open]);
 
+  // Default lead auditor to current user
+  useEffect(() => {
+    if (auditors.length > 0 && !leadAuditorId && session?.user?.id) {
+      const match = auditors.find(a => a.user_uuid === session.user.id);
+      if (match) setLeadAuditorId(match.user_uuid);
+    }
+  }, [auditors, session?.user?.id]);
+
   // Pre-select card from preselectedAuditType
   useEffect(() => {
     if (preselectedAuditType && auditTypeCards.length > 0 && !selectedCard) {
