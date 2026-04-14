@@ -7,6 +7,7 @@ import { useAcknowledgeReport } from '@/hooks/useAuditReport';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { supabase } from '@/integrations/supabase/client';
+import type { AuditRisk } from '@/types/clientAudits';
 import { AUDIT_TYPE_LABELS } from '@/types/clientAudits';
 
 export function ClientAuditReportsSection() {
@@ -72,7 +73,7 @@ function AuditReportCard({ report }: { report: ReturnType<typeof useClientAuditR
           {report.risk_rating && (
             <div>
               <span className="text-xs text-muted-foreground">Risk rating: </span>
-              <AuditRiskBadge risk={report.risk_rating} />
+              <AuditRiskBadge risk={report.risk_rating as AuditRisk} />
             </div>
           )}
           {report.score_pct !== null && (
