@@ -176,7 +176,51 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
     setSavingId(null);
   };
 
-  // Sort rows
+  const canDelete = (row: PackageInstanceRow) => {
+    if (!row.is_complete) return false;
+    if (!row.start_date || !row.end_date) return false;
+    return differenceInDays(new Date(row.end_date), new Date(row.start_date)) < 7;
+  };
+
+  const handleDelete = async (row: PackageInstanceRow) => {
+    setIsDeleting(true);
+    try {
+      // 1. Delete child stage data (task_instances, email_instances, document_instances via stage)
+      const { data: stages } = await supabase
+        .from('stage_instances')
+        .select('id')
+        .eq('packageinstance_id', row.id);
+
+      if (stages && stages.length > 0) {
+        const stageIds = stages.map(s => s.id);
+        await supabase.from('client_task_instances').delete().in('stage_instance_id', stageIds);
+        await supabase.from('email_instances').delete().in('stage_instance_id', stageIds);
+        await supabase.from('document_instances').delete().in('stage_instance_id', stageIds);
+        await supabase.from('stage_instances').delete().in('id', stageIds);
+      }
+
+      // 2. Delete time entries
+      await supabase.from('time_entries').delete().eq('package_instance_id', row.id);
+
+      // 3. Delete phase instances
+      await supabase.from('phase_instances').delete().eq('package_instance_id', row.id);
+
+      // 4. Delete the package instance itself
+      const { error } = await supabase.from('package_instances').delete().eq('id', row.id);
+
+      if (error) throw error;
+
+      toast({ title: 'Deleted', description: `${row.package_name} instance removed.` });
+      setDeletingRow(null);
+      await fetchData();
+      onSuccess?.();
+    } catch (err: any) {
+      toast({ title: 'Delete failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const sortedRows = [...rows].sort((a, b) => {
     if (sortMode === 'package_start') {
       const nameCmp = a.package_name.localeCompare(b.package_name);
