@@ -1,48 +1,42 @@
 
 
-## Historical Audit References — Implementation Plan
+## Fix: Auto-link Compliance Templates to New Audits
+
+### Problem
+When creating a new audit, `template_id` is never set on the `client_audits` record. This causes the workspace to fall back to "freeform" mode (8 empty Standard sections with no questions), even though there are 248 template questions ready to load.
+
+### Root Cause
+`useCreateAudit` in `src/hooks/useClientAudits.ts` does not include `template_id` in the INSERT.
+
+### Template Mapping
+| Audit Type | Template ID | Template Name |
+|---|---|---|
+| `compliance_health_check` | `cc025000-0000-0000-0000-000000000001` | SRTO 2025 – Compliance Health Check |
+| `mock_audit` | `a0025000-0000-0000-0000-000000000001` | SRTO 2025 – Mock Audit |
+| `due_diligence` | `d0025000-0000-0000-0000-000000000001` | RTO Due Diligence Assessment |
+
+### Changes
+
+**1. `src/hooks/useClientAudits.ts`** — Add a template ID lookup map and set `template_id` on INSERT based on `audit_type`.
+
+```typescript
+const AUDIT_TYPE_TEMPLATE: Record<AuditType, string> = {
+  compliance_health_check: 'cc025000-0000-0000-0000-000000000001',
+  mock_audit: 'a0025000-0000-0000-0000-000000000001',
+  due_diligence: 'd0025000-0000-0000-0000-000000000001',
+};
+```
+
+Add `template_id: AUDIT_TYPE_TEMPLATE[input.audit_type]` to the insert object.
+
+**2. Fix existing audit** — The audit `65df89a8-...` already has freeform sections created. Two options:
+- Delete the existing `client_audit_sections` rows for this audit and PATCH `template_id` so it re-initialises with the template on next load.
+- Or simply patch `template_id` and let the user delete/recreate the audit.
+
+I will PATCH the existing audit's `template_id` and delete its empty sections so it re-initialises correctly on next page load.
+
+**3. `src/components/audit/workspace/AuditFormTab.tsx`** — No changes needed; it already checks `audit.template_id` and branches into template vs freeform mode.
 
 ### Summary
-Add a "Historical Reference Audits" section to the client Audits tab and a collapsible "Reference Library" to the `/audits` dashboard. This includes an upload modal, reference cards with AI analysis integration, edit/delete capabilities, and a new hooks file.
-
-### Files to Create
-
-**1. `src/types/auditReferences.ts`** — Types for `ClientAuditReference`, source/outcome unions, and label/color maps for badges.
-
-**2. `src/hooks/useAuditReferences.ts`** — React Query hooks:
-- `useClientAuditReferences(tenantId)` — fetch references for a client
-- `useAllAuditReferences()` — fetch all references joined with tenants for dashboard
-- `useCreateAuditReference()` — upload file to `audit-references` bucket + INSERT row
-- `useUpdateAuditReference()` — PATCH metadata fields
-- `useDeleteAuditReference()` — DELETE row + remove file from storage
-- `useAnalyseAuditReference()` — PATCH `ai_status`, invoke `analyze-document` edge function, poll for completion
-
-**3. `src/components/audit/references/UploadReferenceModal.tsx`** — Single-step form modal with source selector, metadata fields, date picker, outcome dropdown, notes textarea, and file upload zone. On save: uploads to storage path `{tenantId}/{uuid}/{filename}`, inserts record, shows toast.
-
-**4. `src/components/audit/references/ReferenceCard.tsx`** — Card component showing source badge, outcome badge, label, date, auditor, framework, file info, notes. Action buttons: Download (signed URL), Analyse with AI (with polling spinner), Edit, Delete. Expandable AI results section when `ai_status = 'complete'`.
-
-**5. `src/components/audit/references/ReferenceBadges.tsx`** — Source badge and Outcome badge components with the specified color mappings.
-
-**6. `src/components/audit/references/EditReferenceDrawer.tsx`** — Drawer/modal for editing metadata fields (not the file).
-
-**7. `src/components/audit/references/HistoricalReferencesSection.tsx`** — Wrapper component rendering the heading, upload button, reference cards list, and empty state. Used in `ClientAuditsTab`.
-
-**8. `src/components/audit/references/ReferenceLibrarySection.tsx`** — Collapsible section for the `/audits` dashboard showing a searchable/filterable table of all references across clients.
-
-### Files to Modify
-
-**9. `src/components/client/ClientAuditsTab.tsx`** — Import and render `HistoricalReferencesSection` below the existing audit history, passing `tenantId`.
-
-**10. `src/pages/AuditsAssessments.tsx`** — Import and render `ReferenceLibrarySection` below the active audits table, collapsed by default.
-
-### No Database Migrations
-Table `client_audit_references` and storage bucket `audit-references` already exist with correct schema and RLS policies.
-
-### Key Design Decisions
-- File upload max 100MB; accepts PDF, DOCX, XLSX, ZIP
-- Storage path: `{subject_tenant_id}/{reference_id}/{filename}`
-- AI analysis calls existing `analyze-document` edge function with `{ reference_id, file_path, document_type: "audit_report", context: "historical_reference" }`
-- Poll interval: 5 seconds for AI status
-- Reference library on `/audits` is collapsible to keep it secondary
-- Follows existing patterns: `as any` cast for Supabase queries, React Query for state, sonner for toasts
+Two-line fix in the create hook + a one-time data patch for the existing audit.
 
