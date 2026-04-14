@@ -961,6 +961,7 @@ const App = () => (
               } 
             />
             {/* Compliance Auditor Routes */}
+            <Route path="/compliance-audits" element={<ProtectedRoute><Navigate to="/manage-tenants" replace /></ProtectedRoute>} />
             <Route path="/compliance-audits/:tenantId" element={<ProtectedRoute><ComplianceAuditList /></ProtectedRoute>} />
             <Route path="/compliance-audits/:tenantId/audit/:auditId" element={<ProtectedRoute><ComplianceAuditForm /></ProtectedRoute>} />
             <Route path="/compliance-audits/:tenantId/audit/:auditId/report" element={<ProtectedRoute><ComplianceAuditReport /></ProtectedRoute>} />
