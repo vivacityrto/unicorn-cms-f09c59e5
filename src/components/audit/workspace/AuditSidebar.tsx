@@ -6,9 +6,11 @@ import { AuditTypeBadge } from '@/components/audit/AuditTypeBadge';
 import { AuditStatusBadge } from '@/components/audit/AuditStatusBadge';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
+import { Check, CalendarClock } from 'lucide-react';
 import type { ClientAudit, AuditStatus } from '@/types/clientAudits';
-import type { AuditSection, AuditResponse, AuditPhase } from '@/types/auditWorkspace';
+import type { AuditSection, AuditResponse, AuditPhase, AuditAppointment } from '@/types/auditWorkspace';
+import { useAuditAppointments } from '@/hooks/useAuditSchedule';
+import { format } from 'date-fns';
 
 interface AuditSidebarProps {
   audit: ClientAudit;
@@ -18,6 +20,7 @@ interface AuditSidebarProps {
   selectedSectionIndex: number;
   onSelectSection: (idx: number) => void;
   onStatusChange: (status: AuditStatus) => void;
+  onNavigateToSchedule?: () => void;
   leadAuditorName?: string | null;
   leadAuditorAvatar?: string | null;
 }
@@ -36,9 +39,11 @@ export function AuditSidebar({
   selectedSectionIndex,
   onSelectSection,
   onStatusChange,
+  onNavigateToSchedule,
   leadAuditorName,
   leadAuditorAvatar,
 }: AuditSidebarProps) {
+  const { documentDeadline, openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
   // Group sections by phase
   const phaseGroups: PhaseGroup[] = [
     { key: 'opening_meeting', label: 'PHASE 1 — OPENING MEETING', sections: [] },
@@ -132,6 +137,35 @@ export function AuditSidebar({
         </div>
         <Progress value={progressPct} className="h-2" indicatorClassName={progressColor} />
         <p className="text-[10px] text-muted-foreground">{reviewAnswered} of {reviewTotal} evidence items assessed</p>
+      </div>
+
+      {/* Schedule Summary */}
+      <div className="p-4 border-b space-y-1.5">
+        <div className="flex items-center gap-1.5 mb-1">
+          <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Schedule</span>
+        </div>
+        <ScheduleRow
+          icon="📋" label="Evidence due"
+          value={documentDeadline?.scheduled_date
+            ? format(new Date(documentDeadline.scheduled_date + 'T00:00:00'), 'd MMM')
+            : null}
+          onSetDate={onNavigateToSchedule}
+        />
+        <ScheduleRow
+          icon="🗣" label="Opening"
+          value={openingMeeting?.scheduled_date
+            ? `${format(new Date(openingMeeting.scheduled_date + 'T00:00:00'), 'd MMM')}${openingMeeting.scheduled_start_time ? ` ${openingMeeting.scheduled_start_time.slice(0, 5)}` : ''}`
+            : null}
+          onSetDate={onNavigateToSchedule}
+        />
+        <ScheduleRow
+          icon="🎯" label="Closing"
+          value={closingMeeting?.scheduled_date
+            ? `${format(new Date(closingMeeting.scheduled_date + 'T00:00:00'), 'd MMM')}${closingMeeting.scheduled_start_time ? ` ${closingMeeting.scheduled_start_time.slice(0, 5)}` : ''}`
+            : null}
+          onSetDate={onNavigateToSchedule}
+        />
       </div>
 
       {/* Phase-grouped Section Nav */}
