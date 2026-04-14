@@ -205,7 +205,13 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
       // 3. Delete phase instances
       await supabase.from('phase_instances').delete().eq('package_instance_id', row.id);
 
-      // 4. Delete the package instance itself
+      // 4. Delete package_instance_state_log
+      await (supabase.from('package_instance_state_log') as any).delete().eq('package_instance_id', row.id);
+
+      // 5. Delete compliance_score_snapshots
+      await (supabase.from('compliance_score_snapshots') as any).delete().eq('package_instance_id', row.id);
+
+      // 6. Delete the package instance itself
       const { error } = await supabase.from('package_instances').delete().eq('id', row.id);
 
       if (error) throw error;
