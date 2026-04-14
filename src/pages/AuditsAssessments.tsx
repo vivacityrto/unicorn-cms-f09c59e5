@@ -28,10 +28,12 @@ export default function AuditsAssessments() {
   const [modalOpen, setModalOpen] = useState(false);
   const [schedulerCHCTenantId, setSchedulerCHCTenantId] = useState<number | null>(null);
   const [schedulerCHCTenantName, setSchedulerCHCTenantName] = useState('');
+  const [schedulerCHCAuditType, setSchedulerCHCAuditType] = useState<AuditType | undefined>(undefined);
 
-  const handleStartCHC = (tenantId: number, tenantName: string) => {
+  const handleStartCHC = (tenantId: number, tenantName: string, auditType?: AuditType) => {
     setSchedulerCHCTenantId(tenantId);
     setSchedulerCHCTenantName(tenantName);
+    setSchedulerCHCAuditType(auditType);
     setModalOpen(true);
   };
 
@@ -237,11 +239,11 @@ export default function AuditsAssessments() {
         open={modalOpen}
         onOpenChange={(open) => {
           setModalOpen(open);
-          if (!open) { setSchedulerCHCTenantId(null); setSchedulerCHCTenantName(''); }
+          if (!open) { setSchedulerCHCTenantId(null); setSchedulerCHCTenantName(''); setSchedulerCHCAuditType(undefined); }
         }}
         preselectedTenantId={schedulerCHCTenantId || undefined}
         preselectedTenantName={schedulerCHCTenantName || undefined}
-        preselectedAuditType={schedulerCHCTenantId ? 'compliance_health_check' : undefined}
+        preselectedAuditType={schedulerCHCAuditType}
       />
     </div>
     </DashboardLayout>
