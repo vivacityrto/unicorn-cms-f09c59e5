@@ -17,6 +17,7 @@ import { ActivityTimeline } from "./ActivityTimeline";
 import { AuditPreparationSection } from "./AuditPreparationSection";
 import { ClientActionPlanSection } from "./ClientActionPlanSection";
 import { ClientAuditReportsSection } from "./ClientAuditReportsSection";
+import { ClientUpcomingAuditSection } from "./ClientUpcomingAuditSection";
 
 export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
@@ -49,6 +50,9 @@ export function ClientHomePage() {
 
       {/* Progress Anchors */}
       <ProgressAnchors tenantId={activeTenantId} variant="client" />
+
+      {/* Upcoming Audit Schedule */}
+      <ClientUpcomingAuditSection />
 
       {/* Audit Preparation Portal */}
       <AuditPreparationSection />

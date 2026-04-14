@@ -1,4 +1,39 @@
 export type AuditPhase = 'opening_meeting' | 'document_review' | 'closing_meeting';
+export type AppointmentType = 'document_submission_deadline' | 'opening_meeting' | 'document_review' | 'closing_meeting';
+export type AppointmentStatus = 'draft' | 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
+
+export interface AuditAttendee {
+  name: string;
+  email: string;
+  role: 'lead_auditor' | 'assistant_auditor' | 'client_contact' | 'observer';
+}
+
+export interface AuditAppointment {
+  id: string;
+  audit_id: string;
+  appointment_type: AppointmentType;
+  scheduled_date: string | null;
+  scheduled_start_time: string | null;
+  scheduled_end_time: string | null;
+  duration_minutes: number;
+  location: string | null;
+  is_online: boolean;
+  meeting_url: string | null;
+  teams_join_url: string | null;
+  attendees: AuditAttendee[];
+  client_instructions: string | null;
+  internal_notes: string | null;
+  calendar_entry_id: string | null;
+  calendar_event_id: string | null;
+  outlook_event_id: string | null;
+  outlook_synced_at: string | null;
+  status: AppointmentStatus;
+  confirmed_at: string | null;
+  completed_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
 export type QuestionContext = 'client_discussion' | 'auditor_assessment' | 'closing_discussion';
 
 export type ActionType = 'corrective_action' | 'mandatory_rectification' | 'improvement_opportunity' | 'observation';

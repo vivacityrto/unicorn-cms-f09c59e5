@@ -4,11 +4,13 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, LayoutDashboard, ClipboardList, FileText, AlertTriangle, CheckSquare, FileBarChart } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, CalendarClock, ClipboardList, FileText, AlertTriangle, CheckSquare, FileBarChart } from 'lucide-react';
 import { useAudit } from '@/hooks/useClientAudits';
 import { useAuditSections, useAuditResponses, useAuditFindings, useAuditActions, useAuditStatusTransition, useInternalUsers } from '@/hooks/useAuditWorkspace';
+import { useAuditAppointments } from '@/hooks/useAuditSchedule';
 import { AuditSidebar } from '@/components/audit/workspace/AuditSidebar';
 import { OverviewTab } from '@/components/audit/workspace/OverviewTab';
+import { ScheduleTab } from '@/components/audit/workspace/ScheduleTab';
 import { AuditFormTab } from '@/components/audit/workspace/AuditFormTab';
 import { DocumentsTab } from '@/components/audit/workspace/DocumentsTab';
 import { FindingsTab } from '@/components/audit/workspace/FindingsTab';
@@ -79,6 +81,7 @@ export default function AuditWorkspaceNew() {
               setActiveTab('form');
             }}
             onStatusChange={handleStatusChange}
+            onNavigateToSchedule={() => setActiveTab('schedule')}
             leadAuditorName={leadAuditor ? `${leadAuditor.first_name} ${leadAuditor.last_name}` : null}
             leadAuditorAvatar={leadAuditor?.avatar_url}
           />
@@ -101,6 +104,9 @@ export default function AuditWorkspaceNew() {
               <TabsList className="mb-4">
                 <TabsTrigger value="overview" className="gap-1.5">
                   <LayoutDashboard className="h-3.5 w-3.5" /> Overview
+                </TabsTrigger>
+                <TabsTrigger value="schedule" className="gap-1.5">
+                  <CalendarClock className="h-3.5 w-3.5" /> Schedule
                 </TabsTrigger>
                 <TabsTrigger value="form" className="gap-1.5">
                   <ClipboardList className="h-3.5 w-3.5" /> Audit Form
@@ -131,6 +137,9 @@ export default function AuditWorkspaceNew() {
 
               <TabsContent value="overview">
                 <OverviewTab audit={audit} />
+              </TabsContent>
+              <TabsContent value="schedule">
+                <ScheduleTab audit={audit} />
               </TabsContent>
               <TabsContent value="form">
                 <AuditFormTab audit={audit} selectedSectionId={sections?.[selectedSection]?.id} />
