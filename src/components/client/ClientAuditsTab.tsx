@@ -94,9 +94,13 @@ export function ClientAuditsTab({ tenantId, tenantName }: ClientAuditsTabProps) 
 
       <NewAuditModal
         open={modalOpen}
-        onOpenChange={setModalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) setPreselectedAuditType(undefined);
+        }}
         preselectedTenantId={tenantId}
         preselectedTenantName={tenantName}
+        preselectedAuditType={preselectedAuditType}
       />
     </div>
   );
