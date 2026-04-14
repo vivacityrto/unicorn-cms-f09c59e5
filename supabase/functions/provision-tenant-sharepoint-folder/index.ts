@@ -366,6 +366,21 @@ async function applySeedRules(
   return result;
 }
 
+interface ActivePackageSummary {
+  package_type: string | null;
+  name: string | null;
+  full_text: string | null;
+}
+
+function isDueDiligencePackage(pkg: ActivePackageSummary | null | undefined): boolean {
+  if (!pkg) return false;
+
+  const name = (pkg.name || '').trim();
+  const fullText = (pkg.full_text || '').trim();
+
+  return /\bdue diligence\b/i.test(fullText) || /^dd(?:$|[\s+-])/i.test(name);
+}
+
 // ── Main Handler ──
 
 serve(async (req) => {
@@ -473,20 +488,28 @@ serve(async (req) => {
     // Ensure base folder exists
     await ensureFolder(accessToken, driveId, "/", SP_BASE_PATH.replace(/^\//, ""));
 
-    // Determine if this is a KickStart package
-    const { data: activePackage } = await supabaseAdmin
+    // Derive naming mode from the active package mix
+    const { data: activePackages } = await supabaseAdmin
       .from("client_packages")
-      .select("package:packages(package_type)")
+      .select("package:packages(package_type, name, full_text)")
       .eq("tenant_id", tenant_id)
-      .eq("status", "active")
-      .limit(1)
-      .maybeSingle();
+      .eq("status", "active");
 
-    const packageType = (activePackage?.package as any)?.package_type || null;
-    const isKickStart = packageType === "regulatory_submission";
+    const packageSummaries = (activePackages || [])
+      .map((row) => row.package as ActivePackageSummary | null)
+      .filter((pkg): pkg is ActivePackageSummary => !!pkg);
+
+    const hasKickStartPackage = packageSummaries.some(
+      (pkg) => pkg.package_type === "regulatory_submission",
+    );
+    const isDueDiligenceOnly =
+      packageSummaries.length === 1 && isDueDiligencePackage(packageSummaries[0]);
 
     // Build folder name
-    const folderName = buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name, isKickStart);
+    const folderName = buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name, {
+      isKickStart: hasKickStartPackage,
+      isDueDiligence: isDueDiligenceOnly,
+    });
     const folderPath = `${SP_BASE_PATH}/${folderName}`;
 
     console.log("[provision-sp] Creating folder:", { folderName, folderPath, siteId, driveId });

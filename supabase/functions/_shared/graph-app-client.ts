@@ -420,21 +420,26 @@ export function stripBusinessSuffixes(name: string): string {
 /**
  * Build a deterministic client folder name from tenant data.
  *
- * KickStart packages:           "KS-{DisplayName}"
- * Other packages with RTO ID:   "DD-{rtoId} - {DisplayName}"
  * Naming rules:
- *   KickStart package:              "KS-{DisplayName}"
- *   DD with valid RTO ID:           "DD-{rtoId} - {DisplayName}"
- *   No package / unknown:           "{DisplayName}" (plain name)
+ *   KickStart package:                  "KS-{DisplayName}"
+ *   Due Diligence package with RTO ID:  "DD-{rtoId} - {DisplayName}"
+ *   Other clients with RTO ID:          "{rtoId} - {DisplayName}"
+ *   Due Diligence package without RTO:  "DD-{DisplayName}"
+ *   No RTO ID:                          "{DisplayName}"
  *
  * DisplayName = legal_name if present, otherwise name.
  * If display name > 60 chars, business suffixes are stripped first.
  */
+interface BuildClientFolderNameOptions {
+  isKickStart?: boolean;
+  isDueDiligence?: boolean;
+}
+
 export function buildClientFolderName(
   rtoId: string | null | undefined,
   legalName: string | null | undefined,
   name: string,
-  isKickStart?: boolean,
+  options?: BuildClientFolderNameOptions,
 ): string {
   const invalidRtoPatterns = ['', 'tba', 'replacing:'];
   const hasValidRtoId =
@@ -442,6 +447,8 @@ export function buildClientFolderName(
     !invalidRtoPatterns.some((p) => rtoId.trim().toLowerCase().startsWith(p));
 
   const displayName = (legalName?.trim() || name).trim();
+  const isKickStart = options?.isKickStart === true;
+  const isDueDiligence = options?.isDueDiligence === true;
 
   let finalDisplay = displayName;
   if (finalDisplay.length > 60) {
@@ -452,12 +459,15 @@ export function buildClientFolderName(
   }
 
   let raw: string;
-  if (isKickStart === true) {
+  if (isKickStart) {
     raw = `KS-${finalDisplay}`;
-  } else if (hasValidRtoId) {
+  } else if (hasValidRtoId && isDueDiligence) {
     raw = `DD-${rtoId!.trim()} - ${finalDisplay}`;
+  } else if (hasValidRtoId) {
+    raw = `${rtoId!.trim()} - ${finalDisplay}`;
+  } else if (isDueDiligence) {
+    raw = `DD-${finalDisplay}`;
   } else {
-    // No package or unknown type — just use the display name
     raw = finalDisplay;
   }
 
