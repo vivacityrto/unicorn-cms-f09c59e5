@@ -37,7 +37,7 @@ export function ClientAuditsTab({ tenantId, tenantName }: ClientAuditsTabProps) 
   return (
     <div className="space-y-6">
       {/* Schedule Alert */}
-      <AuditScheduleAlert tenantId={tenantId} onStartCHC={() => setModalOpen(true)} />
+      <AuditScheduleAlert tenantId={tenantId} onStartCHC={handleStartCHC} />
 
       {/* Header */}
       <div className="flex items-center justify-between">
