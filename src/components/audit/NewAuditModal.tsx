@@ -124,6 +124,8 @@ interface TenantRecord {
   rto_id: string | null;
   rto_name: string | null;
   cricos_id: string | null;
+  org_type: string | null;
+  profile_cricos_number: string | null;
 }
 
 export function NewAuditModal({ open, onOpenChange, preselectedTenantId, preselectedTenantName, preselectedAuditType }: NewAuditModalProps) {
@@ -167,7 +169,13 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   const selectedTenant = useMemo(() => tenants.find(t => t.id === tenantId), [tenants, tenantId]);
   const registrationType = useMemo(() => {
     if (!selectedTenant) return null;
-    return detectRegistrationType(selectedTenant.rto_id, selectedTenant.cricos_id);
+    // Use org_type from tenant_profile as primary source (matches the OrgTypeBadge)
+    const ot = selectedTenant.org_type;
+    if (ot === 'rto_cricos') return 'both' as const;
+    if (ot === 'cricos') return 'cricos_only' as const;
+    if (ot === 'rto') return 'rto_only' as const;
+    // Fallback to field-level detection
+    return detectRegistrationType(selectedTenant.rto_id, selectedTenant.profile_cricos_number || selectedTenant.cricos_id);
   }, [selectedTenant]);
 
   const auditTypeCards = useMemo(() => {
@@ -183,10 +191,21 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   useEffect(() => {
     if (!open) return;
     setTenantsLoading(true);
-    supabase.from('tenants').select('id, name, rto_id, rto_name, cricos_id').order('name').then(({ data }) => {
-      setTenants((data as any[]) || []);
+    const fetchTenants = async () => {
+      const { data } = await (supabase as any).from('tenants').select('id, name, rto_id, rto_name, cricos_id, tenant_profile(org_type, cricos_number)').order('name');
+      const mapped = ((data as any[]) || []).map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        rto_id: t.rto_id,
+        rto_name: t.rto_name,
+        cricos_id: t.cricos_id,
+        org_type: t.tenant_profile?.org_type || null,
+        profile_cricos_number: t.tenant_profile?.cricos_number || null,
+      }));
+      setTenants(mapped);
       setTenantsLoading(false);
-    });
+    };
+    fetchTenants();
     supabase.from('users').select('user_uuid, first_name, last_name').eq('is_vivacity_internal', true).then(({ data }) => {
       setAuditors(((data as any[]) || []).map(u => ({ user_uuid: u.user_uuid, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() })));
     });
@@ -301,8 +320,8 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                   <AlertDescription className="text-sm">
                     This client is registered as both an RTO and a CRICOS provider.
                     <span className="flex gap-2 mt-1">
-                      <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200">RTO: {selectedTenant.rto_id}</Badge>
-                      <Badge variant="outline" className="text-[10px] bg-teal-50 border-teal-200">CRICOS: {selectedTenant.cricos_id}</Badge>
+                      {selectedTenant.rto_id && <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200">RTO: {selectedTenant.rto_id}</Badge>}
+                      <Badge variant="outline" className="text-[10px] bg-teal-50 border-teal-200">CRICOS: {selectedTenant.profile_cricos_number || selectedTenant.cricos_id || '—'}</Badge>
                     </span>
                   </AlertDescription>
                 </Alert>
