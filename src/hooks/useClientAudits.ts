@@ -82,6 +82,7 @@ export interface CreateAuditInput {
   assisted_by_id?: string;
   training_products?: string[];
   doc_number?: string;
+  linked_stage_instance_id?: number;
   snapshot_rto_name?: string;
   snapshot_rto_number?: string;
   snapshot_cricos_code?: string;
@@ -137,12 +138,27 @@ export function useCreateAudit() {
           snapshot_prisms_users: input.snapshot_prisms_users || null,
           snapshot_dha_contact: input.snapshot_dha_contact || null,
           template_id: templateId,
+          linked_stage_instance_id: input.linked_stage_instance_id || null,
           ai_analysis_status: 'none',
           created_by: userId,
         } as any)
         .select('id')
         .single();
       if (error) throw error;
+
+      const newAuditId = (data as any).id;
+
+      // Back-link stage_instances if linked
+      if (input.linked_stage_instance_id) {
+        try {
+          await supabase
+            .from('stage_instances' as any)
+            .update({ linked_audit_id: newAuditId } as any)
+            .eq('id', input.linked_stage_instance_id);
+        } catch {
+          // Non-critical
+        }
+      }
 
       // Insert timeline event
       try {
@@ -151,7 +167,7 @@ export function useCreateAudit() {
           event_type: 'audit_created',
           title: `Audit started: ${title}`,
           entity_type: 'client_audit',
-          entity_id: (data as any).id,
+          entity_id: newAuditId,
           source: 'internal',
         } as any);
       } catch {
