@@ -37581,6 +37581,7 @@ export type Database = {
       stages: {
         Row: {
           ai_hint: string | null
+          audit_type_key: string | null
           certified_notes: string | null
           covers_standards: string[] | null
           created_by: string | null
@@ -37592,6 +37593,7 @@ export type Database = {
           frameworks: string[] | null
           id: number
           is_archived: boolean
+          is_audit_workspace: boolean
           is_certified: boolean
           is_recurring: boolean
           is_reusable: boolean | null
@@ -37602,12 +37604,14 @@ export type Database = {
           stage_key: string | null
           stage_type: string | null
           status: string | null
+          successor_of: number | null
           updated_at: string | null
           version_label: string | null
           videourl: string | null
         }
         Insert: {
           ai_hint?: string | null
+          audit_type_key?: string | null
           certified_notes?: string | null
           covers_standards?: string[] | null
           created_by?: string | null
@@ -37619,6 +37623,7 @@ export type Database = {
           frameworks?: string[] | null
           id: number
           is_archived?: boolean
+          is_audit_workspace?: boolean
           is_certified?: boolean
           is_recurring?: boolean
           is_reusable?: boolean | null
@@ -37629,12 +37634,14 @@ export type Database = {
           stage_key?: string | null
           stage_type?: string | null
           status?: string | null
+          successor_of?: number | null
           updated_at?: string | null
           version_label?: string | null
           videourl?: string | null
         }
         Update: {
           ai_hint?: string | null
+          audit_type_key?: string | null
           certified_notes?: string | null
           covers_standards?: string[] | null
           created_by?: string | null
@@ -37646,6 +37653,7 @@ export type Database = {
           frameworks?: string[] | null
           id?: number
           is_archived?: boolean
+          is_audit_workspace?: boolean
           is_certified?: boolean
           is_recurring?: boolean
           is_reusable?: boolean | null
@@ -37656,11 +37664,20 @@ export type Database = {
           stage_key?: string | null
           stage_type?: string | null
           status?: string | null
+          successor_of?: number | null
           updated_at?: string | null
           version_label?: string | null
           videourl?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stages_successor_of_fkey"
+            columns: ["successor_of"]
+            isOneToOne: false
+            referencedRelation: "stages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       standards_reference: {
         Row: {
