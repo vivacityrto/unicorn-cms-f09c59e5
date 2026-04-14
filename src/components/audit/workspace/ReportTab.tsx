@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileText, Download, Clock, Send, CheckCircle2, AlertTriangle, Shield, X } from 'lucide-react';
+import { FileText, Download, Clock, Send, CheckCircle2, AlertTriangle, Shield, X, Info } from 'lucide-react';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { useReleaseReport, useRevokeReport } from '@/hooks/useAuditReport';
 import { useAuditActions } from '@/hooks/useAuditWorkspace';
+import { useAuditAppointments } from '@/hooks/useAuditSchedule';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +33,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   const [releaseNotes, setReleaseNotes] = useState('');
   const releaseReport = useReleaseReport(audit.id);
   const revokeReport = useRevokeReport(audit.id);
+  const { openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
 
   const findingsByPriority = {
     critical: findings.filter(f => f.priority === 'critical').length,
@@ -45,8 +47,43 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   const releasedAt = (audit as any).report_released_at;
   const acknowledgedAt = (audit as any).report_acknowledged_at;
 
+  const openingComplete = openingMeeting?.status === 'completed';
+  const closingComplete = closingMeeting?.status === 'completed';
+
   return (
     <div className="space-y-6">
+      {/* Report Readiness */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Report Readiness</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            {openingComplete
+              ? <CheckCircle2 className="h-4 w-4 text-green-600" />
+              : <Clock className="h-4 w-4 text-amber-500" />}
+            <span>Opening meeting {openingComplete
+              ? `completed${openingMeeting?.scheduled_date ? ` (${new Date(openingMeeting.scheduled_date + 'T00:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })})` : ''}`
+              : 'not yet completed'}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            {closingComplete
+              ? <CheckCircle2 className="h-4 w-4 text-green-600" />
+              : <AlertTriangle className="h-4 w-4 text-amber-500" />}
+            <span>Closing meeting {closingComplete
+              ? 'completed'
+              : 'not yet completed'}</span>
+          </div>
+          {!closingComplete && (
+            <Alert className="mt-2 bg-muted/50">
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                You can generate a draft report now. The closing meeting section will be marked as pending until completed.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
       {/* Report Generation */}
       <Card>
         <CardHeader>
