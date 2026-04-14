@@ -50578,6 +50578,7 @@ export type Database = {
           active_status: string | null
           client_name: string | null
           client_risk_level: string | null
+          cricos_id: string | null
           days_until_due: number | null
           last_audit_id: string | null
           last_conducted_at: string | null
