@@ -47,8 +47,8 @@ export function usePortalDocuments(tenantId: number | null, direction?: string) 
     queryFn: async () => {
       if (!tenantId) return [];
       
-      let query = supabase
-        .from('portal_documents')
+      let query = (supabase
+        .from('portal_documents') as any)
         .select(`
           *,
           uploader:users!portal_documents_uploaded_by_fkey(first_name, last_name),
