@@ -3,17 +3,20 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Trash2, CheckCircle2, RefreshCw, ArrowRight } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Plus, Trash2, CheckCircle2, RefreshCw, ArrowRight, Wrench, AlertTriangle, Lightbulb, Eye, ChevronDown, ShieldCheck, Pencil } from 'lucide-react';
 import { useAuditActions, useAuditFindings, useInternalUsers } from '@/hooks/useAuditWorkspace';
 import { useSyncAuditActions } from '@/hooks/useAuditActionPlan';
 import { useAuth } from '@/hooks/useAuth';
-import { ACTION_STATUS_OPTIONS, PRIORITY_OPTIONS } from '@/types/auditWorkspace';
+import { ACTION_STATUS_OPTIONS, ACTION_TYPE_OPTIONS, DELIVERY_MODEL_OPTIONS, VERIFICATION_STATUS_OPTIONS } from '@/types/auditWorkspace';
+import type { AuditAction, AuditFinding } from '@/types/auditWorkspace';
+import { ActionDrawer } from './ActionDrawer';
+import { VerificationDrawer } from './VerificationDrawer';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ActionsTabProps {
   auditId: string;
@@ -29,22 +32,79 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'bg-gray-100 text-gray-400',
 };
 
+const ACTION_TYPE_ICONS: Record<string, React.ReactNode> = {
+  corrective_action: <Wrench className="h-3.5 w-3.5" />,
+  mandatory_rectification: <AlertTriangle className="h-3.5 w-3.5" />,
+  improvement_opportunity: <Lightbulb className="h-3.5 w-3.5" />,
+  observation: <Eye className="h-3.5 w-3.5" />,
+};
+
 export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTabProps) {
   const { data: actions, createAction, updateAction, deleteAction } = useAuditActions(auditId);
   const { data: findings } = useAuditFindings(auditId);
   const { data: users } = useInternalUsers();
   const { session } = useAuth();
   const syncActions = useSyncAuditActions();
-  const [showForm, setShowForm] = useState(false);
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editAction, setEditAction] = useState<AuditAction | null>(null);
+  const [linkedFinding, setLinkedFinding] = useState<AuditFinding | null>(null);
+  const [verifyDrawerOpen, setVerifyDrawerOpen] = useState(false);
+  const [verifyAction, setVerifyAction] = useState<AuditAction | null>(null);
+
+  // Filters
+  const [filterType, setFilterType] = useState('all');
+  const [filterDelivery, setFilterDelivery] = useState('all');
+  const [filterVerification, setFilterVerification] = useState('all');
 
   const isComplete = auditStatus === 'complete';
-  const syncedCount = actions?.filter(a => (a as any).client_action_item_id).length || 0;
+  const syncedCount = actions?.filter(a => a.client_action_item_id).length || 0;
+
+  const filtered = (actions || []).filter(a => {
+    if (filterType !== 'all' && a.action_type !== filterType) return false;
+    if (filterDelivery !== 'all' && a.delivery_model !== filterDelivery) return false;
+    if (filterVerification !== 'all' && a.verification_status !== filterVerification) return false;
+    return true;
+  });
 
   const statCounts = {
     open: actions?.filter(a => a.status === 'open').length || 0,
     in_progress: actions?.filter(a => a.status === 'in_progress').length || 0,
     complete: actions?.filter(a => a.status === 'complete').length || 0,
-    overdue: actions?.filter(a => a.status !== 'complete' && a.due_date && new Date(a.due_date) < new Date()).length || 0,
+    overdue: actions?.filter(a => a.status !== 'complete' && a.status !== 'cancelled' && a.due_date && new Date(a.due_date) < new Date()).length || 0,
+    awaiting_verification: actions?.filter(a => a.verification_status === 'response_received').length || 0,
+    client_self: actions?.filter(a => a.delivery_model === 'client_self').length || 0,
+    vivacity_assisted: actions?.filter(a => a.delivery_model === 'vivacity_assisted').length || 0,
+  };
+
+  const handleOpenDrawer = (action?: AuditAction, finding?: AuditFinding) => {
+    setEditAction(action || null);
+    setLinkedFinding(finding || null);
+    setDrawerOpen(true);
+  };
+
+  const handleSaveAction = (data: Partial<AuditAction> & { audit_id: string }) => {
+    const { id, ...rest } = data as any;
+    if (id) {
+      updateAction.mutate({ id, ...rest });
+    } else {
+      createAction.mutate({ ...rest, created_by: session?.user?.id });
+    }
+  };
+
+  const handleVerify = async (actionId: string, decision: 'verified' | 'rejected' | 'waived', notes: string) => {
+    const user = (await supabase.auth.getUser()).data.user;
+    const updates: any = {
+      verification_status: decision,
+      verification_notes: notes || null,
+      verified_by: user?.id,
+      verified_at: new Date().toISOString(),
+    };
+    if (decision === 'verified' || decision === 'waived') {
+      updates.status = 'complete';
+    }
+    updateAction.mutate({ id: actionId, ...updates });
+    toast.success(decision === 'verified' ? 'Action verified' : decision === 'waived' ? 'Action waived' : 'Resubmission requested');
   };
 
   return (
@@ -69,91 +129,181 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
       )}
 
       {/* Stats */}
-      <div className="flex gap-4 text-sm">
+      <div className="flex flex-wrap gap-4 text-sm">
         <span>Open: <strong>{statCounts.open}</strong></span>
         <span>In Progress: <strong>{statCounts.in_progress}</strong></span>
         <span>Complete: <strong>{statCounts.complete}</strong></span>
         <span className={statCounts.overdue > 0 ? 'text-red-600' : ''}>
           Overdue: <strong>{statCounts.overdue}</strong>
         </span>
+        {statCounts.awaiting_verification > 0 && (
+          <span className="text-blue-600">
+            <ShieldCheck className="h-3.5 w-3.5 inline mr-0.5" />
+            Awaiting verification: <strong>{statCounts.awaiting_verification}</strong>
+          </span>
+        )}
+        <span className="text-muted-foreground">Client self: {statCounts.client_self}</span>
+        <span className="text-muted-foreground">Vivacity-assisted: {statCounts.vivacity_assisted}</span>
       </div>
 
-      <div className="flex justify-end">
-        <Button size="sm" onClick={() => setShowForm(true)}>
+      {/* Filter bar + Add */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="h-8 w-[160px] text-xs">
+            <SelectValue placeholder="Action type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All types</SelectItem>
+            {ACTION_TYPE_OPTIONS.map(o => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterDelivery} onValueChange={setFilterDelivery}>
+          <SelectTrigger className="h-8 w-[160px] text-xs">
+            <SelectValue placeholder="Delivery model" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All delivery</SelectItem>
+            {DELIVERY_MODEL_OPTIONS.map(o => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterVerification} onValueChange={setFilterVerification}>
+          <SelectTrigger className="h-8 w-[160px] text-xs">
+            <SelectValue placeholder="Verification" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All verification</SelectItem>
+            {VERIFICATION_STATUS_OPTIONS.map(o => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex-1" />
+        <Button size="sm" onClick={() => handleOpenDrawer()}>
           <Plus className="h-3 w-3 mr-1" /> Add Action
         </Button>
       </div>
 
-      {showForm && (
-        <AddActionForm
-          auditId={auditId}
-          findings={findings || []}
-          users={users || []}
-          onSave={(action) => {
-            createAction.mutate({ ...action, created_by: session?.user?.id });
-            setShowForm(false);
-          }}
-          onCancel={() => setShowForm(false)}
-        />
-      )}
-
-      {!actions || actions.length === 0 ? (
+      {/* Action cards */}
+      {filtered.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-sm text-muted-foreground">
-            No corrective actions yet. Create actions from findings or manually.
+            {(actions?.length || 0) > 0 ? 'No actions match the current filters.' : 'No corrective actions yet. Create actions from findings or manually.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {actions.map(action => (
-            <Card key={action.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={cn('text-[10px]', STATUS_COLORS[action.status])}>
-                        {ACTION_STATUS_OPTIONS.find(o => o.value === action.status)?.label}
+        <div className="space-y-3">
+          {filtered.map(action => {
+            const typeOpt = ACTION_TYPE_OPTIONS.find(o => o.value === action.action_type);
+            const deliveryOpt = DELIVERY_MODEL_OPTIONS.find(o => o.value === action.delivery_model);
+            const verOpt = VERIFICATION_STATUS_OPTIONS.find(o => o.value === action.verification_status);
+            const isOverdue = action.status !== 'complete' && action.status !== 'cancelled' && action.due_date && new Date(action.due_date) < new Date();
+
+            return (
+              <Card key={action.id} className={cn(isOverdue && 'border-red-200')}>
+                <CardContent className="p-4 space-y-3">
+                  {/* Badges row */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {typeOpt && (
+                      <Badge variant="outline" className={cn('text-[10px] gap-1', typeOpt.color)}>
+                        {ACTION_TYPE_ICONS[action.action_type]} {typeOpt.label}
                       </Badge>
-                      <Badge variant="outline" className="text-[10px]">
-                        {action.priority}
+                    )}
+                    <Badge variant="outline" className={cn('text-[10px]', STATUS_COLORS[action.status])}>
+                      {ACTION_STATUS_OPTIONS.find(o => o.value === action.status)?.label}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px]">{action.priority}</Badge>
+                    {deliveryOpt && (
+                      <Badge variant="secondary" className="text-[10px]">{deliveryOpt.label}</Badge>
+                    )}
+                    {verOpt && action.verification_status !== 'pending' && (
+                      <Badge variant="outline" className={cn('text-[10px]', verOpt.color)}>
+                        {verOpt.label}
                       </Badge>
-                    </div>
-                    <p className="text-sm font-medium">{action.title}</p>
-                    {action.description && <p className="text-xs text-muted-foreground">{action.description}</p>}
-                    <div className="flex gap-3 text-xs text-muted-foreground">
-                      {action.assigned_to && (
-                        <span>Assigned: {users?.find(u => u.user_uuid === action.assigned_to)?.first_name || 'Unknown'}</span>
-                      )}
-                      {action.due_date && (
-                        <span className={new Date(action.due_date) < new Date() && action.status !== 'complete' ? 'text-red-600' : ''}>
-                          Due: {new Date(action.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
-                      )}
-                      {/* Sync status */}
-                      {isComplete && (
-                        (action as any).client_action_item_id ? (
-                          <span className="text-green-600 flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" /> Synced to action plan
-                          </span>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs h-6 px-2"
-                            onClick={() => syncActions.mutate(auditId)}
-                          >
-                            <RefreshCw className="h-3 w-3 mr-1" /> Sync now
-                          </Button>
-                        )
-                      )}
-                    </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1">
+
+                  {/* Title + standard ref */}
+                  <div>
+                    <p className="text-sm font-medium">{action.title}</p>
+                    {action.standard_reference && (
+                      <p className="text-xs text-muted-foreground">Standard ref: {action.standard_reference}</p>
+                    )}
+                  </div>
+
+                  {/* Client notes preview */}
+                  {action.client_notes && (
+                    <div className="rounded-md bg-muted/50 p-2">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Client Notes</p>
+                      <p className="text-xs text-foreground line-clamp-2">{action.client_notes}</p>
+                    </div>
+                  )}
+
+                  {/* Labels */}
+                  {action.labels && action.labels.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {action.labels.map((l, i) => (
+                        <Badge key={i} variant="secondary" className="text-[10px]">{l}</Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Meta row */}
+                  <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    {action.assigned_to && (
+                      <span>Assigned: {users?.find(u => u.user_uuid === action.assigned_to)?.first_name || 'Unknown'}</span>
+                    )}
+                    {action.due_date && (
+                      <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+                        Due: {new Date(action.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    )}
+                    {action.evidence_required && (
+                      <span>Evidence: required</span>
+                    )}
+                    {isComplete && (
+                      action.client_action_item_id ? (
+                        <span className="text-green-600 flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Synced
+                        </span>
+                      ) : (
+                        <Button variant="ghost" size="sm" className="text-xs h-5 px-2" onClick={() => syncActions.mutate(auditId)}>
+                          <RefreshCw className="h-3 w-3 mr-1" /> Sync
+                        </Button>
+                      )
+                    )}
+                  </div>
+
+                  {/* Internal notes (collapsible) */}
+                  {action.internal_notes && (
+                    <Collapsible>
+                      <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                        <ChevronDown className="h-3 w-3" /> Internal notes
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-1 rounded-md bg-amber-50 border border-amber-200 p-2 text-xs">
+                        {action.internal_notes}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1 pt-1 border-t">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleOpenDrawer(action)}>
+                      <Pencil className="h-3 w-3 mr-1" /> Edit
+                    </Button>
+                    {action.verification_status === 'response_received' && (
+                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setVerifyAction(action); setVerifyDrawerOpen(true); }}>
+                        <ShieldCheck className="h-3 w-3 mr-1" /> Verify
+                      </Button>
+                    )}
                     <Select
                       value={action.status}
                       onValueChange={(v) => updateAction.mutate({ id: action.id, status: v as any })}
                     >
-                      <SelectTrigger className="h-7 w-28 text-xs">
+                      <SelectTrigger className="h-7 w-28 text-xs ml-auto">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -162,111 +312,33 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button variant="ghost" size="sm" onClick={() => deleteAction.mutate(action.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button variant="ghost" size="sm" className="h-7" onClick={() => deleteAction.mutate(action.id)}>
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      {/* Drawers */}
+      <ActionDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        action={editAction}
+        finding={linkedFinding}
+        users={users || []}
+        auditId={auditId}
+        onSave={handleSaveAction}
+      />
+      <VerificationDrawer
+        open={verifyDrawerOpen}
+        onOpenChange={setVerifyDrawerOpen}
+        action={verifyAction}
+        onVerify={handleVerify}
+      />
     </div>
-  );
-}
-
-function AddActionForm({
-  auditId,
-  findings,
-  users,
-  onSave,
-  onCancel,
-}: {
-  auditId: string;
-  findings: any[];
-  users: any[];
-  onSave: (action: any) => void;
-  onCancel: () => void;
-}) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [assignedTo, setAssignedTo] = useState('__none__');
-  const [dueDate, setDueDate] = useState('');
-  const [priority, setPriority] = useState('medium');
-  const [findingId, setFindingId] = useState('__none__');
-
-  return (
-    <Card className="border-blue-200 bg-blue-50/50">
-      <CardContent className="p-4 space-y-3">
-        <div>
-          <Label className="text-xs">Title *</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-        </div>
-        <div>
-          <Label className="text-xs">Description</Label>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs">Assigned To</Label>
-            <Select value={assignedTo} onValueChange={setAssignedTo}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Unassigned</SelectItem>
-                {users.map(u => (
-                  <SelectItem key={u.user_uuid} value={u.user_uuid}>{u.first_name} {u.last_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Due Date</Label>
-            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-          </div>
-          <div>
-            <Label className="text-xs">Priority</Label>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PRIORITY_OPTIONS.map(o => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Linked Finding</Label>
-            <Select value={findingId} onValueChange={setFindingId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                {findings.map(f => (
-                  <SelectItem key={f.id} value={f.id}>{f.summary?.substring(0, 40)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => {
-            if (!title.trim()) return;
-            onSave({
-              audit_id: auditId,
-              title: title.trim(),
-              description: description.trim() || null,
-              assigned_to: assignedTo === '__none__' ? null : assignedTo,
-              due_date: dueDate || null,
-              priority,
-              finding_id: findingId === '__none__' ? null : findingId,
-              status: 'open',
-            });
-          }} disabled={!title.trim()}>
-            Save Action
-          </Button>
-          <Button size="sm" variant="outline" onClick={onCancel}>Cancel</Button>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
