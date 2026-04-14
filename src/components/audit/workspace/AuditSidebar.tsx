@@ -1,14 +1,14 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AuditTypeBadge } from '@/components/audit/AuditTypeBadge';
 import { AuditStatusBadge } from '@/components/audit/AuditStatusBadge';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { cn } from '@/lib/utils';
+import { Check } from 'lucide-react';
 import type { ClientAudit, AuditStatus } from '@/types/clientAudits';
-import type { AuditSection, AuditResponse } from '@/types/auditWorkspace';
+import type { AuditSection, AuditResponse, AuditPhase } from '@/types/auditWorkspace';
 
 interface AuditSidebarProps {
   audit: ClientAudit;
@@ -22,6 +22,12 @@ interface AuditSidebarProps {
   leadAuditorAvatar?: string | null;
 }
 
+interface PhaseGroup {
+  key: AuditPhase;
+  label: string;
+  sections: Array<AuditSection & { originalIndex: number }>;
+}
+
 export function AuditSidebar({
   audit,
   sections,
@@ -33,17 +39,51 @@ export function AuditSidebar({
   leadAuditorName,
   leadAuditorAvatar,
 }: AuditSidebarProps) {
-  const answeredCount = responses.filter(r => r.rating).length;
-  const progressPct = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
+  // Group sections by phase
+  const phaseGroups: PhaseGroup[] = [
+    { key: 'opening_meeting', label: 'PHASE 1 — OPENING MEETING', sections: [] },
+    { key: 'document_review', label: 'PHASE 2 — DOCUMENT REVIEW', sections: [] },
+    { key: 'closing_meeting', label: 'PHASE 3 — CLOSING MEETING', sections: [] },
+  ];
+
+  sections.forEach((section, idx) => {
+    const phase = section.audit_phase || 'document_review';
+    const group = phaseGroups.find(g => g.key === phase);
+    if (group) {
+      group.sections.push({ ...section, originalIndex: idx });
+    }
+  });
+
+  // Progress: count only document_review questions
+  const reviewSections = phaseGroups.find(g => g.key === 'document_review')?.sections || [];
+  const reviewResponses = responses.filter(r => 
+    reviewSections.some(s => s.id === r.section_id)
+  );
+  const reviewAnswered = reviewResponses.filter(r => r.rating).length;
+  const reviewTotal = reviewResponses.length || totalQuestions;
+  const progressPct = reviewTotal > 0 ? Math.round((reviewAnswered / reviewTotal) * 100) : 0;
   const progressColor = progressPct >= 90 ? 'bg-green-500' : progressPct >= 50 ? 'bg-blue-500' : 'bg-amber-500';
 
   const getSectionCompletion = (section: AuditSection) => {
     const sectionResponses = responses.filter(r => r.section_id === section.id);
     const answered = sectionResponses.filter(r => r.rating).length;
     const total = sectionResponses.length;
-    if (total === 0) return 'none';
-    if (answered === total) return 'complete';
-    return 'partial';
+    if (total === 0) return { status: 'none' as const, answered: 0, total: 0 };
+    if (answered === total) return { status: 'complete' as const, answered, total };
+    return { status: 'partial' as const, answered, total };
+  };
+
+  const getPhaseCompletion = (group: PhaseGroup) => {
+    let totalAnswered = 0;
+    let totalCount = 0;
+    for (const s of group.sections) {
+      const comp = getSectionCompletion(s);
+      totalAnswered += comp.answered;
+      totalCount += comp.total;
+    }
+    if (totalCount === 0) return 'Not started';
+    if (totalAnswered === totalCount) return 'Complete';
+    return 'In progress';
   };
 
   const statusOptions: { value: AuditStatus; label: string }[] = [
@@ -84,36 +124,62 @@ export function AuditSidebar({
         </p>
       </div>
 
-      {/* Progress */}
+      {/* Progress — document review only */}
       <div className="p-4 border-b space-y-2">
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Progress</span>
-          <span className="font-medium">{answeredCount} of {totalQuestions}</span>
+          <span className="font-medium">{reviewAnswered} of {reviewTotal}</span>
         </div>
         <Progress value={progressPct} className="h-2" indicatorClassName={progressColor} />
-        <p className="text-[10px] text-muted-foreground">{progressPct}% complete</p>
+        <p className="text-[10px] text-muted-foreground">{reviewAnswered} of {reviewTotal} evidence items assessed</p>
       </div>
 
-      {/* Section Nav */}
+      {/* Phase-grouped Section Nav */}
       <div className="flex-1 overflow-y-auto p-2">
-        <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Sections</p>
-        {sections.map((section, idx) => {
-          const completion = getSectionCompletion(section);
-          const dotColor = completion === 'complete' ? 'bg-green-500' : completion === 'partial' ? 'bg-amber-500' : 'bg-gray-300';
+        {phaseGroups.map(group => {
+          if (group.sections.length === 0) return null;
+          const phaseStatus = getPhaseCompletion(group);
+          const isComplete = phaseStatus === 'Complete';
+
           return (
-            <button
-              key={section.id}
-              onClick={() => onSelectSection(idx)}
-              className={cn(
-                'w-full text-left px-2 py-2 rounded-md text-xs flex items-start gap-2 transition-colors',
-                idx === selectedSectionIndex
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'hover:bg-muted text-muted-foreground'
-              )}
-            >
-              <span className={cn('w-2 h-2 rounded-full mt-1 flex-shrink-0', dotColor)} />
-              <span className="line-clamp-2">{section.title}</span>
-            </button>
+            <div key={group.key} className="mb-3">
+              <div className="px-2 py-1.5 flex items-center justify-between">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  {group.label}
+                </span>
+                {isComplete ? (
+                  <Check className="h-3 w-3 text-green-600" />
+                ) : (
+                  <span className="text-[9px] text-muted-foreground">{phaseStatus}</span>
+                )}
+              </div>
+              {group.sections.map(section => {
+                const comp = getSectionCompletion(section);
+                const dotColor = comp.status === 'complete' ? 'bg-green-500'
+                  : comp.status === 'partial' ? 'bg-amber-500'
+                  : 'bg-muted-foreground/30';
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => onSelectSection(section.originalIndex)}
+                    className={cn(
+                      'w-full text-left px-2 py-1.5 rounded-md text-xs flex items-start gap-2 transition-colors',
+                      section.originalIndex === selectedSectionIndex
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'hover:bg-muted text-muted-foreground'
+                    )}
+                  >
+                    <span className={cn('w-2 h-2 rounded-full mt-1 flex-shrink-0', dotColor)} />
+                    <div className="min-w-0 flex-1">
+                      <span className="line-clamp-2">{section.title}</span>
+                      {comp.total > 0 && (
+                        <span className="text-[10px] text-muted-foreground/70">{comp.answered}/{comp.total}</span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           );
         })}
       </div>
