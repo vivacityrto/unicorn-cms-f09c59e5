@@ -265,6 +265,17 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
           </Tabs>
         </CollapsibleContent>
       </div>
+
+      {/* NewAuditModal for stage-linked creation */}
+      {showAuditPrompt && (
+        <NewAuditModal
+          open={auditModalOpen}
+          onOpenChange={(open) => { setAuditModalOpen(open); if (!open) onUpdate(); }}
+          preselectedTenantId={tenantId}
+          preselectedAuditType={mappedAuditType}
+          preselectedStageInstanceId={stage.id}
+        />
+      )}
     </Collapsible>
   );
 }
