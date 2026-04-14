@@ -175,7 +175,7 @@ function DocumentReviewSection({
   onUpdateRiskLevel: (sectionId: string, riskLevel: string) => void;
   isSelected: boolean;
 }) {
-  const [open, setOpen] = useState(isSelected || true);
+  const [open, setOpen] = useState(true);
   const answered = questions.filter(q => responses.find(r => r.question_id === q.id && r.rating)).length;
 
   return (
