@@ -16,6 +16,7 @@ import { AuditReadinessCard } from "./AuditReadinessCard";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { AuditPreparationSection } from "./AuditPreparationSection";
 import { ClientActionPlanSection } from "./ClientActionPlanSection";
+import { ClientAuditReportsSection } from "./ClientAuditReportsSection";
 
 export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
@@ -51,6 +52,9 @@ export function ClientHomePage() {
 
       {/* Audit Preparation Portal */}
       <AuditPreparationSection />
+
+      {/* Audit Reports */}
+      <ClientAuditReportsSection />
 
       {/* Client Action Plan */}
       <ClientActionPlanSection />

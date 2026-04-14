@@ -34,6 +34,7 @@ export function useSyncAuditActions() {
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['audit-actions'] });
       queryClient.invalidateQueries({ queryKey: ['client-action-plan'] });
+      queryClient.invalidateQueries({ queryKey: ['client-action-plan-enhanced'] });
       if (count > 0) {
         toast.success(`${count} corrective action${count > 1 ? 's' : ''} synced to client action plan`);
       }
@@ -41,15 +42,15 @@ export function useSyncAuditActions() {
   });
 }
 
-// ─── Client portal: action plan ───
+// ─── Client portal: action plan (legacy — kept for backward compat) ───
 export function useClientActionPlan(tenantId: number | null | undefined) {
   return useQuery({
     queryKey: ['client-action-plan', tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('client_action_items' as any)
-        .select('*')
+        .select('*') as any)
         .eq('tenant_id', tenantId)
         .eq('source', 'audit')
         .neq('status', 'completed')
@@ -81,6 +82,32 @@ export function useCompleteClientAction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-action-plan'] });
       toast.success('Action marked as complete');
+    },
+  });
+}
+
+// ─── Client submit action response ───
+export function useClientSubmitActionResponse() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ actionId, response }: { actionId: string; response: string }) => {
+      const user = (await supabase.auth.getUser()).data.user;
+      const { error } = await supabase
+        .from('client_audit_actions' as any)
+        .update({
+          client_response: response,
+          client_response_at: new Date().toISOString(),
+          client_responded_by: user?.id,
+          verification_status: 'response_received',
+          status: 'in_progress',
+        } as any)
+        .eq('id', actionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['client-action-plan-enhanced'] });
+      toast.success('Response submitted — awaiting consultant review');
     },
   });
 }
