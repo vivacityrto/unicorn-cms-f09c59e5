@@ -362,6 +362,13 @@ export type Database = {
             foreignKeyName: "academy_certificates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_certificates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -617,6 +624,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_enrollments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "academy_enrollments_tenant_id_fkey"
@@ -1027,6 +1041,13 @@ export type Database = {
             foreignKeyName: "accountability_chart_versions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_chart_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -1165,6 +1186,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_charts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "accountability_charts_tenant_id_fkey"
@@ -1340,6 +1368,13 @@ export type Database = {
             foreignKeyName: "accountability_functions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_functions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -1510,6 +1545,13 @@ export type Database = {
             foreignKeyName: "accountability_seat_assignments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_seat_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -1666,6 +1708,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_seat_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "accountability_seat_roles_tenant_id_fkey"
@@ -1904,6 +1953,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "accountability_seats_tenant_id_fkey"
@@ -2161,6 +2217,13 @@ export type Database = {
             foreignKeyName: "ai_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -2344,6 +2407,13 @@ export type Database = {
             foreignKeyName: "ai_feedback_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -2494,6 +2564,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_interaction_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "ai_interaction_logs_tenant_id_fkey"
@@ -3135,6 +3212,13 @@ export type Database = {
             foreignKeyName: "assistant_audit_log_client_tenant_id_fkey"
             columns: ["client_tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "assistant_audit_log_client_tenant_id_fkey"
+            columns: ["client_tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -3532,6 +3616,13 @@ export type Database = {
             foreignKeyName: "audit_client_impersonation_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_client_impersonation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -3882,6 +3973,13 @@ export type Database = {
             foreignKeyName: "audit_gwc_trends_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_gwc_trends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -4164,6 +4262,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_intelligence_packs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "audit_intelligence_packs_tenant_id_fkey"
@@ -4482,6 +4587,13 @@ export type Database = {
             foreignKeyName: "audit_people_analyzer_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_people_analyzer_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -4768,6 +4880,13 @@ export type Database = {
             foreignKeyName: "audit_restricted_actions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_restricted_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -4940,6 +5059,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_seat_health_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "audit_seat_health_tenant_id_fkey"
@@ -5139,6 +5265,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_succession_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "audit_succession_events_tenant_id_fkey"
@@ -5429,6 +5562,13 @@ export type Database = {
             foreignKeyName: "audit_upgrade_attempts_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_upgrade_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -5612,6 +5752,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "behavioural_prompts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "behavioural_prompts_tenant_id_fkey"
@@ -5992,6 +6139,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "calendar_events_client_id_fkey"
@@ -6461,6 +6615,13 @@ export type Database = {
             foreignKeyName: "celebration_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "celebration_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -6625,6 +6786,13 @@ export type Database = {
             foreignKeyName: "ceo_decision_queue_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ceo_decision_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -6774,6 +6942,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_escalations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "chat_escalations_tenant_fk"
@@ -6929,6 +7104,13 @@ export type Database = {
             foreignKeyName: "chat_messages_tenant_fk"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "chat_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -7061,6 +7243,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "chat_sessions_tenant_fk"
@@ -7410,6 +7599,13 @@ export type Database = {
             foreignKeyName: "clickup_task_comments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_task_comments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -7712,6 +7908,13 @@ export type Database = {
             foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -7994,6 +8197,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clickup_tenant_mapping_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "clickup_tenant_mapping_tenant_id_fkey"
@@ -8365,6 +8575,13 @@ export type Database = {
             foreignKeyName: "client_ai_sessions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_ai_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -8588,6 +8805,20 @@ export type Database = {
             foreignKeyName: "client_audit_actions_audit_id_fkey"
             columns: ["audit_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_actions_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_actions_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -8677,6 +8908,20 @@ export type Database = {
             foreignKeyName: "client_audit_documents_audit_id_fkey"
             columns: ["audit_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_documents_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_documents_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -8735,6 +8980,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "client_audits"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
           },
           {
             foreignKeyName: "client_audit_findings_audit_id_fkey"
@@ -8878,6 +9137,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_references_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "client_audit_references_subject_tenant_id_fkey"
@@ -9056,6 +9322,20 @@ export type Database = {
             foreignKeyName: "client_audit_responses_audit_id_fkey"
             columns: ["audit_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -9125,6 +9405,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "client_audits"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_sections_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_sections_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
           },
           {
             foreignKeyName: "client_audit_sections_audit_id_fkey"
@@ -9271,6 +9565,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "client_audits_subject_tenant_id_fkey"
@@ -9436,6 +9737,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_commitments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "client_commitments_tenant_id_fkey"
@@ -9679,6 +9987,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_document_requests_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "client_document_requests_tenant_fk"
@@ -9961,6 +10276,13 @@ export type Database = {
             foreignKeyName: "client_documents_tenant_fk"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_documents_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -10225,6 +10547,13 @@ export type Database = {
             foreignKeyName: "client_impact_items_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_impact_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -10408,6 +10737,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_impact_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "client_impact_reports_tenant_id_fkey"
@@ -10931,6 +11267,13 @@ export type Database = {
             foreignKeyName: "client_portal_sessions_tenant_fk"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -11328,6 +11671,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tga_reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "client_tga_reviews_tenant_id_fkey"
@@ -11974,6 +12324,13 @@ export type Database = {
             foreignKeyName: "compliance_audits_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_audits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -12561,6 +12918,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -12835,6 +13199,13 @@ export type Database = {
             foreignKeyName: "compliance_task_instances_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -13035,6 +13406,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
@@ -13323,6 +13701,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "compliance_templates_tenant_id_fkey"
@@ -13632,6 +14017,13 @@ export type Database = {
             foreignKeyName: "consult_logs_tenant_fk"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -13828,6 +14220,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consult_time_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "consult_time_entries_tenant_id_fkey"
@@ -14120,6 +14519,13 @@ export type Database = {
             foreignKeyName: "consultant_assignment_audit_log_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -14281,6 +14687,13 @@ export type Database = {
             foreignKeyName: "consultant_capacity_audit_log_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -14430,6 +14843,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "consultant_capacity_audit_log_tenant_id_fkey"
@@ -15974,6 +16394,13 @@ export type Database = {
             foreignKeyName: "doc_chunks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "doc_chunks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -16132,6 +16559,13 @@ export type Database = {
             foreignKeyName: "doc_files_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "doc_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -16264,6 +16698,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_acknowledgements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "document_acknowledgements_tenant_id_fkey"
@@ -16925,6 +17366,13 @@ export type Database = {
             foreignKeyName: "document_links_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "document_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -17060,6 +17508,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "document_links_tenant_id_fkey"
@@ -18205,6 +18660,13 @@ export type Database = {
             foreignKeyName: "email_messages_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -18333,6 +18795,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "email_messages_tenant_id_fkey"
@@ -19054,6 +19523,13 @@ export type Database = {
             foreignKeyName: "eos_alerts_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -19378,6 +19854,13 @@ export type Database = {
             foreignKeyName: "eos_function_team_members_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_function_team_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -19643,6 +20126,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_health_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "eos_health_snapshots_tenant_id_fkey"
@@ -21460,6 +21950,13 @@ export type Database = {
             foreignKeyName: "eos_processes_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_processes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -21990,6 +22487,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "eos_rocks_client_id_fkey"
@@ -23014,6 +23518,13 @@ export type Database = {
             foreignKeyName: "evidence_gap_checks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "evidence_gap_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -23126,12 +23637,14 @@ export type Database = {
           id: string
           is_required: boolean
           item_name: string
+          question_id: string | null
           received_at: string | null
           received_document_id: string | null
           request_id: string
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          section_id: string | null
           status: string
           updated_at: string
         }
@@ -23143,12 +23656,14 @@ export type Database = {
           id?: string
           is_required?: boolean
           item_name: string
+          question_id?: string | null
           received_at?: string | null
           received_document_id?: string | null
           request_id: string
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          section_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -23160,16 +23675,25 @@ export type Database = {
           id?: string
           is_required?: boolean
           item_name?: string
+          question_id?: string | null
           received_at?: string | null
           received_document_id?: string | null
           request_id?: string
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          section_id?: string | null
           status?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "evidence_request_items_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_template_questions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "evidence_request_items_received_document_id_fkey"
             columns: ["received_document_id"]
@@ -23225,6 +23749,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "evidence_request_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "client_audit_sections"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -23351,6 +23882,7 @@ export type Database = {
       evidence_requests: {
         Row: {
           assigned_to_client_user_id: string | null
+          audit_id: string | null
           category: string
           completed_at: string | null
           created_at: string
@@ -23370,6 +23902,7 @@ export type Database = {
         }
         Insert: {
           assigned_to_client_user_id?: string | null
+          audit_id?: string | null
           category?: string
           completed_at?: string | null
           created_at?: string
@@ -23389,6 +23922,7 @@ export type Database = {
         }
         Update: {
           assigned_to_client_user_id?: string | null
+          audit_id?: string | null
           category?: string
           completed_at?: string | null
           created_at?: string
@@ -23448,6 +23982,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "evidence_requests_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "evidence_requests_linked_support_request_id_fkey"
@@ -23511,6 +24073,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "evidence_requests_tenant_id_fkey"
@@ -23899,6 +24468,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_controls_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "financial_controls_tenant_id_fkey"
@@ -24295,6 +24871,13 @@ export type Database = {
             foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_document_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -24474,6 +25057,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "help_threads_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "help_threads_tenant_id_fkey"
@@ -25006,6 +25596,13 @@ export type Database = {
             foreignKeyName: "knowledge_nodes_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "knowledge_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -25420,6 +26017,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lifecycle_checklist_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "lifecycle_checklist_instances_tenant_id_fkey"
@@ -25947,6 +26551,13 @@ export type Database = {
             foreignKeyName: "meeting_action_tasks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_action_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -26126,6 +26737,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_artifacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "meeting_artifacts_tenant_id_fkey"
@@ -26621,6 +27239,13 @@ export type Database = {
             foreignKeyName: "meeting_sync_audit_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_sync_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -26827,6 +27452,13 @@ export type Database = {
             foreignKeyName: "meetings_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -26983,6 +27615,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "meetings_tenant_id_fkey"
@@ -27461,6 +28100,13 @@ export type Database = {
             foreignKeyName: "messages_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -27599,6 +28245,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "momentum_state_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "momentum_state_history_tenant_id_fkey"
@@ -27954,6 +28607,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_outbox_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "notification_outbox_tenant_id_fkey"
@@ -28674,6 +29334,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "ops_work_items_tenant_id_fkey"
@@ -29958,6 +30625,13 @@ export type Database = {
             foreignKeyName: "people_analyzer_entries_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -30162,6 +30836,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_trends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "people_analyzer_trends_tenant_id_fkey"
@@ -30520,6 +31201,13 @@ export type Database = {
             foreignKeyName: "playbook_activations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "playbook_activations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -30793,6 +31481,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_document_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "portal_document_audit_tenant_id_fkey"
@@ -31243,6 +31938,13 @@ export type Database = {
             foreignKeyName: "portal_documents_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "portal_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -31444,6 +32146,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
@@ -32228,6 +32937,13 @@ export type Database = {
             foreignKeyName: "real_time_risk_alerts_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "real_time_risk_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -32615,6 +33331,13 @@ export type Database = {
             foreignKeyName: "research_jobs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "research_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -32893,6 +33616,13 @@ export type Database = {
             foreignKeyName: "retention_forecast_history_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "retention_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -33155,6 +33885,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "risk_forecast_history_tenant_id_fkey"
@@ -33438,6 +34175,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rock_outcomes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "rock_outcomes_tenant_id_fkey"
@@ -34113,6 +34857,13 @@ export type Database = {
             foreignKeyName: "seat_health_scores_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "seat_health_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -34270,6 +35021,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_measurable_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "seat_measurable_entries_tenant_id_fkey"
@@ -34440,6 +35198,13 @@ export type Database = {
             foreignKeyName: "seat_measurables_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "seat_measurables_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -34596,6 +35361,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_meeting_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "seat_meeting_requirements_tenant_id_fkey"
@@ -34819,6 +35591,13 @@ export type Database = {
             foreignKeyName: "seat_rebalancing_recommendations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "seat_rebalancing_recommendations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -34964,6 +35743,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_scorecard_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "seat_scorecard_versions_tenant_id_fkey"
@@ -35136,6 +35922,13 @@ export type Database = {
             foreignKeyName: "seat_scorecards_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "seat_scorecards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -35277,6 +36070,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sharepoint_access_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "sharepoint_access_log_tenant_id_fkey"
@@ -36749,6 +37549,13 @@ export type Database = {
             foreignKeyName: "suggest_attachments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -37210,6 +38017,13 @@ export type Database = {
             foreignKeyName: "suggest_items_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "suggest_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -37512,6 +38326,13 @@ export type Database = {
             foreignKeyName: "support_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "support_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -37791,6 +38612,13 @@ export type Database = {
             foreignKeyName: "tas_context_briefs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tas_context_briefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -38056,6 +38884,13 @@ export type Database = {
             foreignKeyName: "task_assignments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "task_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -38259,6 +39094,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_tenant_map_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "task_tenant_map_tenant_id_fkey"
@@ -38937,6 +39779,13 @@ export type Database = {
             foreignKeyName: "tenant_commercial_profiles_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_commercial_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -39224,6 +40073,13 @@ export type Database = {
             foreignKeyName: "tenant_compliance_memberships_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -39467,6 +40323,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_conversations_tenant_fk"
@@ -39777,6 +40640,13 @@ export type Database = {
             foreignKeyName: "tenant_document_request_attachments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_document_request_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -39933,6 +40803,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_document_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_document_requests_tenant_id_fkey"
@@ -40099,6 +40976,13 @@ export type Database = {
             foreignKeyName: "tenant_documents_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -40248,6 +41132,13 @@ export type Database = {
             foreignKeyName: "tenant_engagement_settings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_engagement_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -40388,6 +41279,13 @@ export type Database = {
             foreignKeyName: "tenant_identifier_aliases_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_identifier_aliases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -40523,6 +41421,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_identifiers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_identifiers_tenant_id_fkey"
@@ -40862,6 +41767,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_messages_tenant_fk"
@@ -41238,6 +42150,13 @@ export type Database = {
             foreignKeyName: "tenant_relationships_child_tenant_id_fkey"
             columns: ["child_tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_relationships_child_tenant_id_fkey"
+            columns: ["child_tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -41345,6 +42264,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_relationships_parent_tenant_id_fkey"
+            columns: ["parent_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_relationships_parent_tenant_id_fkey"
@@ -41505,6 +42431,13 @@ export type Database = {
             foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -41646,6 +42579,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
@@ -41804,6 +42744,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
@@ -42055,6 +43002,13 @@ export type Database = {
             foreignKeyName: "tenant_sharepoint_reference_links_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_reference_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -42215,6 +43169,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_seed_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_sharepoint_seed_runs_tenant_id_fkey"
@@ -42452,6 +43413,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_sharepoint_settings_tenant_id_fkey"
@@ -42701,6 +43669,13 @@ export type Database = {
             foreignKeyName: "tenant_support_inclusions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_support_inclusions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -42851,6 +43826,13 @@ export type Database = {
             foreignKeyName: "tenant_task_status_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_task_status_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -42989,6 +43971,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_tier_capacity_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_tier_capacity_config_tenant_id_fkey"
@@ -43919,6 +44908,13 @@ export type Database = {
             foreignKeyName: "tga_rto_acknowledgements_tenant_fk"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tga_rto_acknowledgements_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -44228,6 +45224,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tga_rto_flags_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tga_rto_flags_tenant_fk"
@@ -45821,6 +46824,13 @@ export type Database = {
             foreignKeyName: "user_activity_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "user_activity_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -46784,6 +47794,13 @@ export type Database = {
             foreignKeyName: "users_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -46943,6 +47960,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vector_embeddings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "vector_embeddings_tenant_id_fkey"
@@ -47139,6 +48163,13 @@ export type Database = {
             foreignKeyName: "vector_index_logs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "vector_index_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -47289,6 +48320,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_optimisation_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "workflow_optimisation_signals_tenant_id_fkey"
@@ -47553,6 +48591,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "calendar_events_client_id_fkey"
@@ -48114,6 +49159,13 @@ export type Database = {
             foreignKeyName: "meetings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -48353,6 +49405,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -48472,6 +49531,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
@@ -48660,6 +49726,13 @@ export type Database = {
             foreignKeyName: "accountability_seats_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -48830,6 +49903,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "accountability_seats_tenant_id_fkey"
@@ -49037,6 +50117,13 @@ export type Database = {
             foreignKeyName: "academy_enrollments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "academy_enrollments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -49140,6 +50227,25 @@ export type Database = {
           },
         ]
       }
+      v_audit_schedule: {
+        Row: {
+          active_audit_id: string | null
+          active_status: string | null
+          client_name: string | null
+          client_risk_level: string | null
+          days_until_due: number | null
+          last_audit_id: string | null
+          last_conducted_at: string | null
+          last_risk_rating: string | null
+          last_score_pct: number | null
+          next_due_date: string | null
+          registration_end_date: string | null
+          rto_id: string | null
+          schedule_status: string | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       v_clickup_comments: {
         Row: {
           clickup_url: string | null
@@ -49159,6 +50265,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
@@ -49451,6 +50564,13 @@ export type Database = {
             foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -49603,6 +50723,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audits_subject_tenant_id_fkey"
+            columns: ["subject_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "client_audits_subject_tenant_id_fkey"
@@ -50100,6 +51227,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -50352,6 +51486,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -50591,6 +51732,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
@@ -50844,6 +51992,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -51075,6 +52230,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
@@ -51970,6 +53132,13 @@ export type Database = {
             foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -52097,6 +53266,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
@@ -52234,6 +53410,13 @@ export type Database = {
             foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -52357,6 +53540,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
@@ -52503,6 +53693,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
@@ -52657,6 +53854,13 @@ export type Database = {
             foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "v_client_engagement_summary"
             referencedColumns: ["tenant_id"]
           },
@@ -52780,6 +53984,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
@@ -55166,6 +56377,10 @@ export type Database = {
       storage_package_tenant_check: {
         Args: { file_path: string }
         Returns: boolean
+      }
+      sync_audit_actions_to_client_items: {
+        Args: { p_audit_id: string }
+        Returns: number
       }
       sync_l10_meeting_participants: {
         Args: { p_meeting_id: string }
