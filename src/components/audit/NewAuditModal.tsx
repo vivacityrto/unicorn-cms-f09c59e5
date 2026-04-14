@@ -191,7 +191,8 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   useEffect(() => {
     if (!open) return;
     setTenantsLoading(true);
-    (supabase.from('tenants').select('id, name, rto_id, rto_name, cricos_id, tenant_profile(org_type, cricos_number)').order('name') as any).then(({ data }: any) => {
+    const fetchTenants = async () => {
+      const { data } = await (supabase as any).from('tenants').select('id, name, rto_id, rto_name, cricos_id, tenant_profile(org_type, cricos_number)').order('name');
       const mapped = ((data as any[]) || []).map((t: any) => ({
         id: t.id,
         name: t.name,
@@ -203,7 +204,8 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       }));
       setTenants(mapped);
       setTenantsLoading(false);
-    });
+    };
+    fetchTenants();
     supabase.from('users').select('user_uuid, first_name, last_name').eq('is_vivacity_internal', true).then(({ data }) => {
       setAuditors(((data as any[]) || []).map(u => ({ user_uuid: u.user_uuid, name: `${u.first_name || ''} ${u.last_name || ''}`.trim() })));
     });
