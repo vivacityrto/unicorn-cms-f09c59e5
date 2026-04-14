@@ -320,8 +320,8 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                   <AlertDescription className="text-sm">
                     This client is registered as both an RTO and a CRICOS provider.
                     <span className="flex gap-2 mt-1">
-                      <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200">RTO: {selectedTenant.rto_id}</Badge>
-                      <Badge variant="outline" className="text-[10px] bg-teal-50 border-teal-200">CRICOS: {selectedTenant.cricos_id}</Badge>
+                      {selectedTenant.rto_id && <Badge variant="outline" className="text-[10px] bg-blue-50 border-blue-200">RTO: {selectedTenant.rto_id}</Badge>}
+                      <Badge variant="outline" className="text-[10px] bg-teal-50 border-teal-200">CRICOS: {selectedTenant.profile_cricos_number || selectedTenant.cricos_id || '—'}</Badge>
                     </span>
                   </AlertDescription>
                 </Alert>
