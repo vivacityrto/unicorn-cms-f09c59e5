@@ -40,6 +40,7 @@ import {
   Phone
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
+import { TenantRelationships } from '@/components/tenant/TenantRelationships';
 import { ClientAddressSection } from '@/components/client/ClientAddressSection';
 import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
 import { ClientIntegrationsTab } from '@/components/client/ClientIntegrationsTab';
@@ -443,8 +444,9 @@ export default function ClientDetail() {
               <TenantUsersPreviewCard tenantId={tenantIdNum!} onViewAll={() => setActiveTab('users')} />
             </div>
 
-            
-            
+            {/* Related Organisations */}
+            <TenantRelationships tenantId={tenantIdNum!} />
+
             {/* Profile Form */}
             {canEdit ? (
               <>
