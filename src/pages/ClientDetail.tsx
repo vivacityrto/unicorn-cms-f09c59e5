@@ -522,6 +522,10 @@ export default function ClientDetail() {
             <ClientActionItemsTab tenantId={tenantIdNum!} clientId={tenant.id.toString()} />
           </TabsContent>
 
+          <TabsContent value="audits" className="mt-0">
+            <ClientAuditsTab tenantId={tenantIdNum!} tenantName={tenant.name} />
+          </TabsContent>
+
           <TabsContent value="emails" className="mt-0">
             <ClientEmailsTab tenantId={tenantIdNum!} clientName={tenant.name} />
           </TabsContent>
