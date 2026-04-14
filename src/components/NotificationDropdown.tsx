@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, EyeOff, Eye, MailOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -8,6 +8,8 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useNotifications } from '@/hooks/useNotifications';
 import type { Notification } from '@/hooks/useNotifications';
 import { NotePreviewDialog } from '@/components/notifications/NotePreviewDialog';
@@ -32,6 +34,7 @@ export const NotificationDropdown = () => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [previewNotif, setPreviewNotif] = useState<Notification | null>(null);
+  const [hideRead, setHideRead] = useState(false);
 
   // Count by type
   const typeCounts: Record<string, number> = {};
@@ -39,9 +42,13 @@ export const NotificationDropdown = () => {
     typeCounts[n.type] = (typeCounts[n.type] || 0) + 1;
   });
 
-  const filteredNotifications = activeFilter
+  let filteredNotifications = activeFilter
     ? notifications.filter(n => n.type === activeFilter)
     : notifications;
+
+  if (hideRead) {
+    filteredNotifications = filteredNotifications.filter(n => !n.is_read);
+  }
 
   const handleNotifClick = (notification: Notification) => {
     if (!notification.is_read) markAsRead(notification.id);
@@ -100,6 +107,19 @@ export const NotificationDropdown = () => {
             </div>
           </div>
 
+          {/* Unread toggle */}
+          <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
+            <div className="flex items-center gap-2">
+              <Switch id="hide-read-dropdown" checked={hideRead} onCheckedChange={setHideRead} className="scale-75" />
+              <Label htmlFor="hide-read-dropdown" className="text-xs cursor-pointer">
+                {hideRead ? <><EyeOff className="h-3 w-3 inline mr-1" />Unread only</> : <><Eye className="h-3 w-3 inline mr-1" />Show all</>}
+              </Label>
+            </div>
+            {unreadCount > 0 && (
+              <span className="text-xs text-muted-foreground">{unreadCount} unread</span>
+            )}
+          </div>
+
           {/* Type filter badges */}
           {Object.keys(typeCounts).length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-4 py-2 border-b bg-muted/30">
@@ -145,14 +165,13 @@ export const NotificationDropdown = () => {
                 {filteredNotifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-3 px-4 hover:bg-accent/50 transition-colors cursor-pointer ${
+                    className={`p-3 px-4 hover:bg-accent/50 transition-colors cursor-pointer group ${
                       !notification.is_read ? 'bg-accent/20' : ''
                     }`}
                     onClick={() => handleNotifClick(notification)}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 space-y-0.5 min-w-0">
-                        {/* Client name if available */}
                         {notification.tenant_name && (
                           <p className="text-xs font-medium text-primary truncate">
                             {notification.tenant_name}
@@ -168,9 +187,23 @@ export const NotificationDropdown = () => {
                           {format(new Date(notification.created_at), 'MMM d, yyyy h:mm a')}
                         </p>
                       </div>
-                      {!notification.is_read && (
-                        <span className="mt-1 h-2.5 w-2.5 rounded-full bg-destructive flex-shrink-0" />
-                      )}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {!notification.is_read && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsRead(notification.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted"
+                            title="Mark as read"
+                          >
+                            <MailOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        )}
+                        {!notification.is_read && (
+                          <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-destructive flex-shrink-0" />
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
