@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, EyeOff, Eye, MailOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Popover,
@@ -8,6 +8,8 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useNotifications } from '@/hooks/useNotifications';
 import type { Notification } from '@/hooks/useNotifications';
 import { NotePreviewDialog } from '@/components/notifications/NotePreviewDialog';

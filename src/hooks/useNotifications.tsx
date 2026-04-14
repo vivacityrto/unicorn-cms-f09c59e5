@@ -65,6 +65,10 @@ export const useNotifications = () => {
   }, []);
 
   const markAsRead = async (notificationId: string) => {
+    // Check if already read to avoid unnecessary updates
+    const target = notifications.find(n => n.id === notificationId);
+    if (target?.is_read) return;
+
     // Optimistic update
     setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n));
     setUnreadCount(prev => Math.max(0, prev - 1));
