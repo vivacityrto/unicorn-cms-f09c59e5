@@ -55321,6 +55321,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      audit_flag_overdue_chcs: { Args: never; Returns: undefined }
       audit_invalid_memberships: {
         Args: never
         Returns: {
@@ -55365,6 +55366,8 @@ export type Database = {
           user_id: string
         }[]
       }
+      audit_send_24hr_confirmation: { Args: never; Returns: undefined }
+      audit_send_evidence_reminders: { Args: never; Returns: undefined }
       audit_summary: { Args: never; Returns: Json }
       audit_users_without_membership: {
         Args: never
