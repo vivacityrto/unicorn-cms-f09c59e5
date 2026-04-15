@@ -17,9 +17,20 @@ export interface ClientNotification {
   updated_at: string;
 }
 
+/** Notification types that are relevant to clients (from Vivacity → tenant) */
+const CLIENT_FACING_TYPES = [
+  "meeting_upcoming",
+  "task_due",
+  "obligation_due",
+  "capacity_alert",
+  "events",
+  "event",
+];
+
 /**
  * Hook for client-facing notification centre.
- * Queries user_notifications scoped to auth.uid() via RLS and filtered by active tenant.
+ * Queries user_notifications scoped to auth.uid() via RLS, filtered by active tenant
+ * and limited to client-facing notification types only.
  */
 export function useClientNotifications() {
   const { profile } = useAuth();
@@ -33,6 +44,7 @@ export function useClientNotifications() {
         .from("user_notifications")
         .select("*")
         .eq("tenant_id", activeTenantId!)
+        .in("type", CLIENT_FACING_TYPES)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
