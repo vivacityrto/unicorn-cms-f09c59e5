@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useClientTenant } from "@/contexts/ClientTenantContext";
 
 export interface ClientNotification {
   id: string;
@@ -18,24 +19,26 @@ export interface ClientNotification {
 
 /**
  * Hook for client-facing notification centre.
- * Queries user_notifications scoped to auth.uid() via RLS.
+ * Queries user_notifications scoped to auth.uid() via RLS and filtered by active tenant.
  */
 export function useClientNotifications() {
   const { profile } = useAuth();
+  const { activeTenantId } = useClientTenant();
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["client-notifications", profile?.user_uuid],
+    queryKey: ["client-notifications", profile?.user_uuid, activeTenantId],
     queryFn: async (): Promise<ClientNotification[]> => {
       const { data, error } = await supabase
         .from("user_notifications")
         .select("*")
+        .eq("tenant_id", activeTenantId!)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return (data || []) as unknown as ClientNotification[];
     },
-    enabled: !!profile?.user_uuid,
+    enabled: !!profile?.user_uuid && !!activeTenantId,
   });
 
   const markAsRead = useMutation({
@@ -51,10 +54,12 @@ export function useClientNotifications() {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
+      if (!activeTenantId) return;
       const { error } = await supabase
         .from("user_notifications")
         .update({ is_read: true } as any)
-        .eq("is_read", false);
+        .eq("is_read", false)
+        .eq("tenant_id", activeTenantId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["client-notifications"] }),
