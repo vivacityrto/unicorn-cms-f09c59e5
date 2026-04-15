@@ -54,10 +54,12 @@ export function useClientNotifications() {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
+      if (!activeTenantId) return;
       const { error } = await supabase
         .from("user_notifications")
         .update({ is_read: true } as any)
-        .eq("is_read", false);
+        .eq("is_read", false)
+        .eq("tenant_id", activeTenantId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["client-notifications"] }),
