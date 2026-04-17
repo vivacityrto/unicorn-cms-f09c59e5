@@ -153,10 +153,23 @@ export default function NewStarterWizard() {
       if (!data?.ok) throw new Error(data?.error || "Provisioning failed");
       setRunId(data.run_id);
       setTranscript(data.transcript ?? []);
-      toast({
-        title: "M365 provisioning complete",
-        description: `${data.transcript?.filter((s: any) => s.ok).length ?? 0} steps succeeded`,
-      });
+      const succeeded = data.transcript?.filter((s: any) => s.ok).length ?? 0;
+      const total = data.transcript?.length ?? 0;
+      const status = data.status as "provisioned" | "partial" | "failed";
+      if (status === "provisioned") {
+        toast({ title: "Setup complete", description: `${succeeded}/${total} steps succeeded` });
+      } else if (status === "partial") {
+        toast({
+          title: "User saved in Unicorn — M365 needs attention",
+          description: `${succeeded}/${total} steps succeeded. Run the PowerShell script or fix Entra permissions.`,
+        });
+      } else {
+        toast({
+          title: "Setup failed",
+          description: "User could not be saved in Unicorn. Check the transcript.",
+          variant: "destructive",
+        });
+      }
       setEmailDialogOpen(true);
     } catch (e: any) {
       toast({ title: "Provisioning failed", description: e.message, variant: "destructive" });
@@ -354,18 +367,20 @@ export default function NewStarterWizard() {
         {step === 5 && (
           <Card>
             <CardHeader>
-              <CardTitle>5. Provision</CardTitle>
+              <CardTitle>5. Save &amp; provision</CardTitle>
               <CardDescription>
-                Create the M365 account, assign licenses, add to groups, and seed the onboarding checklist.
+                The user is created in Unicorn first, then we attempt to provision Microsoft 365.
+                If M365 fails (e.g. missing permissions), the user is still saved and you can run the
+                PowerShell script as a fallback.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {!runId ? (
                 <Button size="lg" onClick={provision} disabled={provisioning} className="w-full">
                   {provisioning ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Provisioning…</>
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving &amp; provisioning…</>
                   ) : (
-                    <>Run provisioning &amp; create checklist</>
+                    <>Save in Unicorn &amp; provision M365</>
                   )}
                 </Button>
               ) : (

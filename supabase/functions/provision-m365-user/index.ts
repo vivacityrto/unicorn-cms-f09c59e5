@@ -143,8 +143,109 @@ serve(async (req) => {
 
   const transcript: TranscriptStep[] = [];
   let msUserId: string | null = null;
+  let unicornUserUuid: string | null = null;
 
-  // Step 1: Create user
+  // ============================================================
+  // Step 0 (CRITICAL): Save the user in Unicorn FIRST.
+  // This must succeed regardless of Microsoft Graph outcome — the
+  // person needs to exist in our system even if M365 provisioning
+  // fails (e.g. missing Entra permissions). Graph errors are then
+  // recorded in the transcript and can be retried later.
+  // ============================================================
+  const VIVACITY_TENANT_ID = 6372;
+  try {
+    const emailLower = body.upn.toLowerCase();
+
+    // Check for existing public.users row by email (UPN)
+    const { data: existing } = await admin
+      .from("users")
+      .select("user_uuid")
+      .eq("email", emailLower)
+      .maybeSingle();
+
+    if (existing?.user_uuid) {
+      unicornUserUuid = existing.user_uuid;
+      transcript.push({
+        step: "unicorn_user",
+        ok: true,
+        detail: `Reusing existing Unicorn user ${unicornUserUuid}`,
+      });
+    } else {
+      unicornUserUuid = crypto.randomUUID();
+      const { error: insErr } = await admin.from("users").insert({
+        user_uuid: unicornUserUuid,
+        email: emailLower,
+        first_name: body.first_name.trim(),
+        last_name: (body.last_name || "-").trim(),
+        unicorn_role: "Team Member",
+        user_type: "Vivacity",
+        is_team: true,
+        disabled: false,
+        job_title: body.job_title || null,
+        phone: body.phone || null,
+      });
+      if (insErr) {
+        transcript.push({ step: "unicorn_user", ok: false, detail: insErr.message });
+        unicornUserUuid = null;
+      } else {
+        transcript.push({
+          step: "unicorn_user",
+          ok: true,
+          detail: `Created Unicorn user ${unicornUserUuid} (${emailLower})`,
+        });
+      }
+    }
+
+    // Ensure tenant_users membership in Vivacity tenant
+    if (unicornUserUuid) {
+      const { data: existingTu } = await admin
+        .from("tenant_users")
+        .select("id")
+        .eq("user_id", unicornUserUuid)
+        .eq("tenant_id", VIVACITY_TENANT_ID)
+        .maybeSingle();
+
+      if (!existingTu) {
+        const { error: tuErr } = await admin.from("tenant_users").insert({
+          user_id: unicornUserUuid,
+          tenant_id: VIVACITY_TENANT_ID,
+          role: "child",
+          primary_contact: false,
+        });
+        if (tuErr) {
+          transcript.push({ step: "tenant_membership", ok: false, detail: tuErr.message });
+        } else {
+          transcript.push({
+            step: "tenant_membership",
+            ok: true,
+            detail: `Added to Vivacity tenant (${VIVACITY_TENANT_ID})`,
+          });
+        }
+      } else {
+        transcript.push({
+          step: "tenant_membership",
+          ok: true,
+          detail: "Already a Vivacity tenant member",
+        });
+      }
+    }
+
+    // Stamp the run with the new Unicorn user_uuid immediately
+    if (unicornUserUuid) {
+      await admin
+        .from("staff_provisioning_runs")
+        .update({ target_user_id: unicornUserUuid })
+        .eq("id", run.id);
+    }
+  } catch (e) {
+    transcript.push({
+      step: "unicorn_user",
+      ok: false,
+      detail: e instanceof Error ? e.message : String(e),
+    });
+  }
+
+  // Step 1: Create user in Microsoft 365
   try {
     const createResp = await graphPost<any>("/users", {
       accountEnabled: true,
@@ -236,30 +337,45 @@ serve(async (req) => {
     }
   }
 
-  // Persist transcript + final status
+  // Persist transcript + final status.
+  // 'provisioned'         → everything (Unicorn + Graph) succeeded
+  // 'partial'             → Unicorn user saved, but one or more Graph steps failed
+  // 'failed'              → Unicorn user could not be saved (rare, blocking)
+  const unicornOk = !!unicornUserUuid;
   const allOk = transcript.every((s) => s.ok);
+  const status = !unicornOk ? "failed" : allOk ? "provisioned" : "partial";
+
   await admin
     .from("staff_provisioning_runs")
     .update({
       ms_user_id: msUserId,
       graph_transcript: transcript,
-      status: allOk ? "provisioned" : "failed",
+      status,
     })
     .eq("id", run.id);
 
-  // Generate checklist instances
-  try {
-    await admin.functions.invoke("generate-staff-checklist", {
-      body: {
-        run_id: run.id,
-        role_code: body.role_code,
-        location_code: body.location_code,
-        requested_by: profile!.user_uuid,
-      },
-    });
-  } catch (e) {
-    console.error("[provision-m365-user] checklist seed failed", e);
+  // Generate checklist instances (only meaningful if Unicorn user exists)
+  if (unicornOk) {
+    try {
+      await admin.functions.invoke("generate-staff-checklist", {
+        body: {
+          run_id: run.id,
+          role_code: body.role_code,
+          location_code: body.location_code,
+          requested_by: profile!.user_uuid,
+        },
+      });
+    } catch (e) {
+      console.error("[provision-m365-user] checklist seed failed", e);
+    }
   }
 
-  return json(200, { ok: true, run_id: run.id, ms_user_id: msUserId, transcript });
+  return json(200, {
+    ok: true,
+    run_id: run.id,
+    ms_user_id: msUserId,
+    unicorn_user_uuid: unicornUserUuid,
+    status,
+    transcript,
+  });
 });
