@@ -98,6 +98,41 @@ export default function NewStarterWizard() {
     })();
   }, []);
 
+  // Prefill from existing user when ?prefill=<uuid> is provided (Redo Setup flow)
+  useEffect(() => {
+    if (!prefillUserId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("first_name, last_name, email, mobile_phone, job_title, unicorn_role")
+        .eq("user_uuid", prefillUserId)
+        .maybeSingle();
+      if (error || !data) {
+        toast({
+          title: "Could not prefill user",
+          description: error?.message ?? "User not found",
+          variant: "destructive",
+        });
+        return;
+      }
+      setIsRedo(true);
+      setForm((f) => ({
+        ...f,
+        firstName: data.first_name ?? "",
+        lastName: data.last_name ?? "",
+        jobTitle: data.job_title ?? "",
+        upn: data.email ?? "",
+        mailNickname: data.email ? data.email.split("@")[0] : "",
+        displayName: [data.first_name, data.last_name].filter(Boolean).join(" "),
+        phone: data.mobile_phone ?? "",
+      }));
+      toast({
+        title: "Loaded existing user",
+        description: "Review each step, then re-run provisioning.",
+      });
+    })();
+  }, [prefillUserId, toast]);
+
   const psScript = useMemo(() => {
     if (!resolved.data) return "";
     return generatePowerShellScript({
