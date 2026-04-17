@@ -234,7 +234,7 @@ serve(async (req) => {
     if (unicornUserUuid) {
       await admin
         .from("staff_provisioning_runs")
-        .update({ unicorn_user_uuid: unicornUserUuid })
+        .update({ target_user_id: unicornUserUuid })
         .eq("id", run.id);
     }
   } catch (e) {
