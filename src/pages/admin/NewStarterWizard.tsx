@@ -292,6 +292,11 @@ export default function NewStarterWizard() {
           </div>
           <div className="flex items-center gap-2">
             {isRedo && <Badge className="text-sm">Redo</Badge>}
+            {isRedo && step !== 5 && (
+              <Button variant="outline" size="sm" onClick={() => setStep(5)}>
+                Skip to setup links
+              </Button>
+            )}
             <Badge variant="outline" className="text-sm">
               Step {step} of 5
             </Badge>
