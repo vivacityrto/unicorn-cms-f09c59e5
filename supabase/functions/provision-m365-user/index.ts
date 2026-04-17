@@ -337,30 +337,45 @@ serve(async (req) => {
     }
   }
 
-  // Persist transcript + final status
+  // Persist transcript + final status.
+  // 'provisioned'         → everything (Unicorn + Graph) succeeded
+  // 'partial'             → Unicorn user saved, but one or more Graph steps failed
+  // 'failed'              → Unicorn user could not be saved (rare, blocking)
+  const unicornOk = !!unicornUserUuid;
   const allOk = transcript.every((s) => s.ok);
+  const status = !unicornOk ? "failed" : allOk ? "provisioned" : "partial";
+
   await admin
     .from("staff_provisioning_runs")
     .update({
       ms_user_id: msUserId,
       graph_transcript: transcript,
-      status: allOk ? "provisioned" : "failed",
+      status,
     })
     .eq("id", run.id);
 
-  // Generate checklist instances
-  try {
-    await admin.functions.invoke("generate-staff-checklist", {
-      body: {
-        run_id: run.id,
-        role_code: body.role_code,
-        location_code: body.location_code,
-        requested_by: profile!.user_uuid,
-      },
-    });
-  } catch (e) {
-    console.error("[provision-m365-user] checklist seed failed", e);
+  // Generate checklist instances (only meaningful if Unicorn user exists)
+  if (unicornOk) {
+    try {
+      await admin.functions.invoke("generate-staff-checklist", {
+        body: {
+          run_id: run.id,
+          role_code: body.role_code,
+          location_code: body.location_code,
+          requested_by: profile!.user_uuid,
+        },
+      });
+    } catch (e) {
+      console.error("[provision-m365-user] checklist seed failed", e);
+    }
   }
 
-  return json(200, { ok: true, run_id: run.id, ms_user_id: msUserId, transcript });
+  return json(200, {
+    ok: true,
+    run_id: run.id,
+    ms_user_id: msUserId,
+    unicorn_user_uuid: unicornUserUuid,
+    status,
+    transcript,
+  });
 });
