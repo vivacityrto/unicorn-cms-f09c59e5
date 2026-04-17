@@ -171,7 +171,7 @@ export default function NewStarterWizard() {
       });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefillUserId, roles.data]);
+  }, [prefillUserId, roles.data, teamLeaders]);
 
   const psScript = useMemo(() => {
     if (!resolved.data) return "";
