@@ -371,10 +371,12 @@ export default function TeamUsers() {
               <UserPlus className="h-4 w-4 mr-2" />
               Quick Invite
             </Button>
-            <Button onClick={() => navigate('/admin/team-users/new-starter')}>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Add New Team Member
-            </Button>
+            {isSuperAdmin && (
+              <Button onClick={() => navigate('/admin/team-users/new-starter')}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Add New Team Member
+              </Button>
+            )}
           </div>
         </div>
 
