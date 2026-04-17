@@ -128,7 +128,8 @@ serve(async (req) => {
     return json(200, { ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    const code = (e as any)?.code;
     console.error("[send-staff-onboarding-email]", msg);
-    return json(500, { ok: false, error: msg });
+    return json(code === "no_microsoft_connection" ? 412 : 500, { ok: false, error: msg, code });
   }
 });
