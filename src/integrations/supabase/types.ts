@@ -48277,11 +48277,14 @@ export type Database = {
           manager_uuid: string | null
           mobile_phone: string | null
           notes: string | null
+          personal_email: string | null
+          personal_phone: string | null
           phone: string | null
           phone_number: string | null
           po_box: string | null
           po_box_address: string | null
           postcode: string | null
+          preferred_name: string | null
           profile_photo: boolean | null
           public_holiday_region: string | null
           registration_end_date: string | null
@@ -48291,6 +48294,7 @@ export type Database = {
           rto_name: string | null
           staff_team: Database["public"]["Enums"]["staff_team_type"] | null
           staff_teams: string[] | null
+          start_date: string | null
           state: number | null
           street_address: string | null
           street_number_and_name: string | null
@@ -48359,11 +48363,14 @@ export type Database = {
           manager_uuid?: string | null
           mobile_phone?: string | null
           notes?: string | null
+          personal_email?: string | null
+          personal_phone?: string | null
           phone?: string | null
           phone_number?: string | null
           po_box?: string | null
           po_box_address?: string | null
           postcode?: string | null
+          preferred_name?: string | null
           profile_photo?: boolean | null
           public_holiday_region?: string | null
           registration_end_date?: string | null
@@ -48373,6 +48380,7 @@ export type Database = {
           rto_name?: string | null
           staff_team?: Database["public"]["Enums"]["staff_team_type"] | null
           staff_teams?: string[] | null
+          start_date?: string | null
           state?: number | null
           street_address?: string | null
           street_number_and_name?: string | null
@@ -48441,11 +48449,14 @@ export type Database = {
           manager_uuid?: string | null
           mobile_phone?: string | null
           notes?: string | null
+          personal_email?: string | null
+          personal_phone?: string | null
           phone?: string | null
           phone_number?: string | null
           po_box?: string | null
           po_box_address?: string | null
           postcode?: string | null
+          preferred_name?: string | null
           profile_photo?: boolean | null
           public_holiday_region?: string | null
           registration_end_date?: string | null
@@ -48455,6 +48466,7 @@ export type Database = {
           rto_name?: string | null
           staff_team?: Database["public"]["Enums"]["staff_team_type"] | null
           staff_teams?: string[] | null
+          start_date?: string | null
           state?: number | null
           street_address?: string | null
           street_number_and_name?: string | null
