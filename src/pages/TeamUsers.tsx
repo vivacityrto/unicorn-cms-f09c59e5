@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Users, Search, Shield, UserCheck, UserX, UserPlus, Clock, MoreHorizontal, RefreshCw, X } from 'lucide-react';
+import { Users, Search, Shield, UserCheck, UserX, UserPlus, Clock, MoreHorizontal, RefreshCw, X, Sparkles } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
 interface TeamUser {
@@ -364,10 +364,16 @@ export default function TeamUsers() {
               Manage Vivacity team members and SuperAdmin users
             </p>
           </div>
-          <Button onClick={() => setInviteDialogOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setInviteDialogOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Quick Invite
+            </Button>
+            <Button onClick={() => navigate('/admin/team-users/new-starter')}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Add New Team Member
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

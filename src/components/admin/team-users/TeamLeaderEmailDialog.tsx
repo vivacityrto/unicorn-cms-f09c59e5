@@ -74,15 +74,8 @@ Let me know if you need anything else.`;
     }
     setSending(channel);
     try {
-      const fn = channel === "mailgun" ? "send-composed-email" : "send-email-graph";
-      const { data, error } = await supabase.functions.invoke(fn, {
-        body: {
-          to: editedTo,
-          subject,
-          body: editedBody,
-          html: editedBody.replace(/\n/g, "<br>"),
-          context: { provisioning_run_id: runId },
-        },
+      const { data, error } = await supabase.functions.invoke("send-staff-onboarding-email", {
+        body: { to: editedTo, subject, body: editedBody, channel, run_id: runId },
       });
       if (error) throw error;
       if (data && data.ok === false) throw new Error(data.error || "Send failed");
