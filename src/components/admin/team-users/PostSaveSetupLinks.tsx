@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -162,7 +163,14 @@ export function PostSaveSetupLinks({ newStarter, psScript, onResendEmail }: Prop
         ))}
 
         <p className="text-xs text-muted-foreground">
-          Manage these links in <strong>Code Tables → dd_usersetup_links</strong> (Super Admin only).
+          Manage these links in{" "}
+          <Link
+            to="/admin/code-tables?table=dd_usersetup_links"
+            className="font-semibold text-primary underline-offset-2 hover:underline"
+          >
+            Code Tables → dd_usersetup_links
+          </Link>{" "}
+          (Super Admin only).
         </p>
       </CardContent>
 
