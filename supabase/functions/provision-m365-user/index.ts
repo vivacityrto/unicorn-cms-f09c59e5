@@ -160,8 +160,12 @@ serve(async (req) => {
   // fails (e.g. missing Entra permissions). Graph errors are then
   // recorded in the transcript and can be retried later.
   // ============================================================
+  const mode: ProvisionMode = body.mode ?? "full";
+  const doUnicorn = mode === "full" || mode === "save_only";
+  const doGraph = mode === "full" || mode === "m365_only";
+
   const VIVACITY_TENANT_ID = 6372;
-  try {
+  if (doUnicorn) try {
     const emailLower = body.upn.toLowerCase();
 
     // Check for existing public.users row by email (UPN)
