@@ -9,6 +9,9 @@ type UpdateProfileBody = {
   mobile_phone?: string;
   timezone?: string;
   bio?: string;
+  email?: string;
+  personal_email?: string;
+  personal_phone?: string;
   user_type?: string;
   unicorn_role?: string;
   archived?: boolean;
