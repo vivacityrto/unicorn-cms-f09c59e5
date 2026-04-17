@@ -16624,6 +16624,48 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_usersetup_links: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          category?: string
+          code: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       dd_work_sub_type: {
         Row: {
           category: string
