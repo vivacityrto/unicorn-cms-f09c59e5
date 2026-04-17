@@ -81,13 +81,14 @@ serve(async (req) => {
     .eq("user_uuid", user.id)
     .maybeSingle();
 
-  const isStaff =
+  // Restricted to SuperAdmin only — provisioning M365 users is a privileged op
+  const isSuperAdmin =
     profile?.global_role === "SuperAdmin" ||
-    profile?.unicorn_role === "Super Admin" ||
-    profile?.user_type === "Vivacity Team" ||
-    profile?.user_type === "Vivacity";
+    profile?.unicorn_role === "Super Admin";
 
-  if (!isStaff) return json(403, { ok: false, error: "Staff only" });
+  if (!isSuperAdmin) {
+    return json(403, { ok: false, error: "Super Admin only" });
+  }
 
   let body: Body;
   try {

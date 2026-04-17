@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { Users, Search, Shield, UserCheck, UserX, UserPlus, Clock, MoreHorizontal, RefreshCw, X, Sparkles } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
+import { useRBAC } from '@/hooks/useRBAC';
 interface TeamUser {
   user_uuid: string;
   first_name: string;
@@ -58,6 +59,7 @@ const SUPERADMIN_LEVELS = [
 export default function TeamUsers() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isSuperAdmin } = useRBAC();
   const [users, setUsers] = useState<TeamUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<TeamUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -369,10 +371,12 @@ export default function TeamUsers() {
               <UserPlus className="h-4 w-4 mr-2" />
               Quick Invite
             </Button>
-            <Button onClick={() => navigate('/admin/team-users/new-starter')}>
-              <Sparkles className="h-4 w-4 mr-2" />
-              Add New Team Member
-            </Button>
+            {isSuperAdmin && (
+              <Button onClick={() => navigate('/admin/team-users/new-starter')}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Add New Team Member
+              </Button>
+            )}
           </div>
         </div>
 
