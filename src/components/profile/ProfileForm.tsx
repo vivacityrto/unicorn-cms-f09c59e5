@@ -123,21 +123,38 @@ export function ProfileForm({ user, canEdit, canEditWorkEmail = false, onSave }:
           <div className="space-y-2">
             <Label htmlFor="email">
               <Mail className="inline h-4 w-4 mr-2" />
-              Email
+              Vivacity Email
             </Label>
             <Input
               id="email"
               type="email"
-              value={user.email}
-              disabled
-              className="bg-muted"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              disabled={!canEdit || !canEditWorkEmail}
+              className={!canEditWorkEmail ? 'bg-muted' : undefined}
+              placeholder="firstname.lastname@vivacity.com.au"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="personal_email">
+              <Mail className="inline h-4 w-4 mr-2" />
+              Personal Email
+            </Label>
+            <Input
+              id="personal_email"
+              type="email"
+              value={formData.personal_email}
+              onChange={(e) => setFormData({ ...formData, personal_email: e.target.value })}
+              disabled={!canEdit}
+              placeholder="e.g., name@gmail.com"
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="phone">
               <Phone className="inline h-4 w-4 mr-2" />
-              Phone Number
+              Work Phone
             </Label>
             <Input
               id="phone"
@@ -145,6 +162,20 @@ export function ProfileForm({ user, canEdit, canEditWorkEmail = false, onSave }:
               onChange={(e) => setFormData({ ...formData, mobile_phone: e.target.value })}
               disabled={!canEdit}
               placeholder="e.g., 0412 345 678"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="personal_phone">
+              <Phone className="inline h-4 w-4 mr-2" />
+              Personal Phone
+            </Label>
+            <Input
+              id="personal_phone"
+              value={formData.personal_phone}
+              onChange={(e) => setFormData({ ...formData, personal_phone: e.target.value })}
+              disabled={!canEdit}
+              placeholder="e.g., +63 991 234 5678"
             />
           </div>
 
