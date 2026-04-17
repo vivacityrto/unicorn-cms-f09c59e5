@@ -111,8 +111,9 @@ Deno.serve(async (req) => {
       if (user_type) updatePayload.user_type = user_type;
       if (unicorn_role) updatePayload.unicorn_role = unicorn_role;
       if (archived !== undefined) updatePayload.archived = archived;
-    } else if (user_type || unicorn_role || archived !== undefined) {
-      console.log("Non-Super Admin attempted to change user_type, unicorn_role, or archived - ignoring");
+      if (email) updatePayload.email = email.trim().toLowerCase();
+    } else if (user_type || unicorn_role || archived !== undefined || email) {
+      console.log("Non-Super Admin attempted to change protected fields - ignoring");
     }
 
     // Update the user
