@@ -205,7 +205,7 @@ export default function NewStarterWizard() {
     }
   };
 
-  const provision = async () => {
+  const provision = async (mode: "save_only" | "m365_only" | "full" = "full") => {
     if (!resolved.data) return;
     if (form.teamLeaderId && !teamLeaders.some((t) => t.user_uuid === form.teamLeaderId)) {
       toast({
@@ -236,6 +236,7 @@ export default function NewStarterWizard() {
           mail_nickname: form.mailNickname,
           display_name: form.displayName,
           temp_password: form.tempPassword,
+          mode,
         },
       });
       if (error) throw error;
@@ -245,21 +246,25 @@ export default function NewStarterWizard() {
       const succeeded = data.transcript?.filter((s: any) => s.ok).length ?? 0;
       const total = data.transcript?.length ?? 0;
       const status = data.status as "provisioned" | "partial" | "failed";
+      const label =
+        mode === "save_only" ? "Saved in Unicorn"
+        : mode === "m365_only" ? "M365 provisioning complete"
+        : "Setup complete";
       if (status === "provisioned") {
-        toast({ title: "Setup complete", description: `${succeeded}/${total} steps succeeded` });
+        toast({ title: label, description: `${succeeded}/${total} steps succeeded` });
       } else if (status === "partial") {
         toast({
-          title: "User saved in Unicorn — M365 needs attention",
+          title: mode === "m365_only" ? "M365 partially provisioned" : "User saved — M365 needs attention",
           description: `${succeeded}/${total} steps succeeded. Run the PowerShell script or fix Entra permissions.`,
         });
       } else {
         toast({
           title: "Setup failed",
-          description: "User could not be saved in Unicorn. Check the transcript.",
+          description: "Check the transcript for details.",
           variant: "destructive",
         });
       }
-      setEmailDialogOpen(true);
+      if (mode !== "save_only") setEmailDialogOpen(true);
     } catch (e: any) {
       toast({ title: "Provisioning failed", description: e.message, variant: "destructive" });
     } finally {
