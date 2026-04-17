@@ -23,6 +23,7 @@ type Step = 1 | 2 | 3 | 4 | 5;
 interface FormState {
   firstName: string;
   lastName: string;
+  fullName: string;
   preferredName: string;
   personalEmail: string;
   phone: string;
@@ -40,6 +41,7 @@ interface FormState {
 const initial: FormState = {
   firstName: "",
   lastName: "",
+  fullName: "",
   preferredName: "",
   personalEmail: "",
   phone: "",
@@ -142,6 +144,7 @@ export default function NewStarterWizard() {
         ...f,
         firstName: data.first_name ?? "",
         lastName: data.last_name ?? "",
+        fullName: (data as any).full_name ?? f.fullName,
         preferredName: (data as any).preferred_name ?? f.preferredName,
         personalEmail: (data as any).personal_email ?? f.personalEmail,
         jobTitle: data.job_title ?? "",
@@ -208,6 +211,7 @@ export default function NewStarterWizard() {
         body: {
           first_name: form.firstName,
           last_name: form.lastName,
+          full_name: form.fullName || null,
           preferred_name: form.preferredName || null,
           personal_email: form.personalEmail || null,
           phone: form.phone || null,
@@ -305,6 +309,14 @@ export default function NewStarterWizard() {
                 <div className="space-y-2">
                   <Label>Surname *</Label>
                   <Input value={form.lastName} onChange={(e) => setField("lastName", e.target.value)} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Full legal name (optional)</Label>
+                  <Input
+                    value={form.fullName}
+                    onChange={(e) => setField("fullName", e.target.value)}
+                    placeholder="Use for users with multiple given names (e.g. Filipino naming)"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Preferred name (optional)</Label>
