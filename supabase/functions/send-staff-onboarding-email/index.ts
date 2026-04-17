@@ -55,7 +55,11 @@ async function sendGraph(admin: any, userId: string, to: string, subject: string
     .eq("user_id", userId)
     .eq("provider", "microsoft")
     .maybeSingle();
-  if (!token) throw new Error("No Microsoft connection — connect Outlook in Integrations first");
+  if (!token) {
+    const err = new Error("No Microsoft connection — connect Outlook in Integrations, or use 'Send via Mailgun'.");
+    (err as any).code = "no_microsoft_connection";
+    throw err;
+  }
 
   let accessToken = token.access_token;
   if (new Date(token.expires_at).getTime() - Date.now() < 5 * 60 * 1000) {
@@ -124,7 +128,8 @@ serve(async (req) => {
     return json(200, { ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    const code = (e as any)?.code;
     console.error("[send-staff-onboarding-email]", msg);
-    return json(500, { ok: false, error: msg });
+    return json(code === "no_microsoft_connection" ? 412 : 500, { ok: false, error: msg, code });
   }
 });

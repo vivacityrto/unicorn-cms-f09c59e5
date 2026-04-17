@@ -78,13 +78,27 @@ Let me know if you need anything else.`;
         body: { to: editedTo, subject, body: editedBody, channel, run_id: runId },
       });
       if (error) throw error;
-      if (data && data.ok === false) throw new Error(data.error || "Send failed");
+      if (data && data.ok === false) {
+        const err: any = new Error(data.error || "Send failed");
+        err.code = data.code;
+        throw err;
+      }
       toast({
         title: channel === "mailgun" ? "Email sent via Mailgun" : "Email sent from your Outlook",
       });
       onOpenChange(false);
     } catch (e: any) {
-      toast({ title: "Send failed", description: e.message, variant: "destructive" });
+      const isNoConn =
+        e?.code === "no_microsoft_connection" ||
+        /No Microsoft connection/i.test(e?.message ?? "") ||
+        /reconnect Outlook/i.test(e?.message ?? "");
+      toast({
+        title: isNoConn ? "Outlook not connected" : "Send failed",
+        description: isNoConn
+          ? "You haven't connected your Outlook mailbox. Use 'Send via Mailgun' instead, or connect Outlook in Integrations."
+          : e.message,
+        variant: "destructive",
+      });
     } finally {
       setSending("none");
     }
