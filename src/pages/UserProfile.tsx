@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileForm } from '@/components/profile/ProfileForm';
 import { AdminActions } from '@/components/profile/AdminActions';
@@ -216,11 +216,24 @@ export default function UserProfile() {
 
   return (
     <div className="container mx-auto p-6 max-w-7xl space-y-6 animate-fade-in">
-      {/* Back Button */}
-      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2 -ml-2">
-        <ArrowLeft className="h-4 w-4" />
-        Back
-      </Button>
+      {/* Back Button + Super Admin actions */}
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2 -ml-2">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+        {isSuperAdmin && (user.user_type === 'Vivacity' || user.user_type === 'Vivacity Team') && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/admin/team-users/new-starter?prefill=${user.user_uuid}`)}
+            className="gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Redo Setup
+          </Button>
+        )}
+      </div>
 
       {/* Profile Header Card */}
       <Card className="animate-scale-in">
