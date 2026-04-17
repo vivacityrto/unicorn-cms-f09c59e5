@@ -48256,6 +48256,7 @@ export type Database = {
           email: string
           email_address: string | null
           first_name: string
+          full_name: string | null
           global_role: string | null
           head_office_address: string | null
           is_csc: boolean | null
@@ -48342,6 +48343,7 @@ export type Database = {
           email: string
           email_address?: string | null
           first_name: string
+          full_name?: string | null
           global_role?: string | null
           head_office_address?: string | null
           is_csc?: boolean | null
@@ -48428,6 +48430,7 @@ export type Database = {
           email?: string
           email_address?: string | null
           first_name?: string
+          full_name?: string | null
           global_role?: string | null
           head_office_address?: string | null
           is_csc?: boolean | null
