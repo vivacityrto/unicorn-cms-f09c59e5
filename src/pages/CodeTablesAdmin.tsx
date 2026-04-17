@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useCodeTables, useTableData } from "@/hooks/useCodeTables";
 import { CodeTableSidebar } from "@/components/admin/CodeTableSidebar";
 import { CodeTableDataGrid } from "@/components/admin/CodeTableDataGrid";
@@ -18,7 +19,16 @@ type DialogMode = "create" | "edit" | "duplicate";
 
 export default function CodeTablesAdmin() {
   const { tables, loading: tablesLoading, refetch: refetchTables } = useCodeTables();
+  const [searchParams] = useSearchParams();
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
+
+  // Auto-select table from ?table= query param once tables are loaded
+  useEffect(() => {
+    const want = searchParams.get("table");
+    if (want && tables.some((t) => t.table_name === want) && selectedTable !== want) {
+      setSelectedTable(want);
+    }
+  }, [searchParams, tables, selectedTable]);
   const { data, loading: dataLoading, createRow, updateRow, deleteRow, refetch: refetchData } = useTableData(selectedTable);
 
   // Dialog state
