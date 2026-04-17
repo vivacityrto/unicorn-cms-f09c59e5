@@ -267,6 +267,7 @@ export default function UserProfile() {
           <ProfileForm
             user={user}
             canEdit={canEdit && isEditing}
+            canEditWorkEmail={isSuperAdmin && (user.user_type === 'Vivacity' || user.user_type === 'Vivacity Team')}
             onSave={() => {
               fetchUserData();
               setIsEditing(false);
