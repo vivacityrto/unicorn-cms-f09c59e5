@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Send, Loader2 } from "lucide-react";
+import { Mail, Send, Loader2, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { StaffProvisioningRule } from "@/hooks/useStaffProvisioningRules";
@@ -29,6 +29,7 @@ interface Props {
 export function TeamLeaderEmailDialog({ open, onOpenChange, runId, newStarter, teamLeader, rule }: Props) {
   const { toast } = useToast();
   const [sending, setSending] = useState<"none" | "mailgun" | "graph">("none");
+  const [copied, setCopied] = useState(false);
 
   const subject = `New starter setup — ${newStarter.displayName}`;
   const body = useMemo(() => {
@@ -142,7 +143,28 @@ Let me know if you need anything else.`;
             <Input value={subject} readOnly className="bg-muted/30" />
           </div>
           <div className="space-y-1.5">
-            <Label>Body</Label>
+            <div className="flex items-center justify-between">
+              <Label>Body</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(`Subject: ${subject}\n\n${editedBody}`);
+                    setCopied(true);
+                    toast({ title: "Email copied to clipboard" });
+                    setTimeout(() => setCopied(false), 1500);
+                  } catch {
+                    toast({ title: "Copy failed", variant: "destructive" });
+                  }
+                }}
+              >
+                {copied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
             <Textarea value={editedBody} onChange={(e) => setEditedBody(e.target.value)} rows={14} className="font-mono text-xs" />
           </div>
         </div>

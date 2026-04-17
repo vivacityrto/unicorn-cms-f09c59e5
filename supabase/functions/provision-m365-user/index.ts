@@ -35,6 +35,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface Body {
   first_name: string;
   last_name: string;
+  full_name?: string | null;
   preferred_name?: string | null;
   personal_email?: string | null;
   phone?: string | null;
@@ -177,6 +178,7 @@ serve(async (req) => {
           personal_email: body.personal_email || null,
           personal_phone: body.phone || null,
           preferred_name: body.preferred_name || null,
+          full_name: body.full_name || null,
           start_date: body.start_date || null,
           public_holiday_region: body.location_code || null,
           updated_at: new Date().toISOString(),
@@ -205,6 +207,7 @@ serve(async (req) => {
         personal_email: body.personal_email || null,
         personal_phone: body.phone || null,
         preferred_name: body.preferred_name || null,
+        full_name: body.full_name || null,
         start_date: body.start_date || null,
         public_holiday_region: body.location_code || null,
       });
