@@ -20,21 +20,27 @@ interface ProfileFormProps {
     job_title: string | null;
     timezone: string | null;
     bio: string | null;
+    personal_email?: string | null;
+    personal_phone?: string | null;
   };
   canEdit: boolean;
+  canEditWorkEmail?: boolean;
   onSave: () => void;
 }
 
-export function ProfileForm({ user, canEdit, onSave }: ProfileFormProps) {
+export function ProfileForm({ user, canEdit, canEditWorkEmail = false, onSave }: ProfileFormProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const { data: timezones = [], isLoading: loadingTimezones } = useTimezones();
   const groupedTimezones = groupTimezones(timezones);
-  
+
   const [formData, setFormData] = useState({
     first_name: user.first_name || '',
     last_name: user.last_name || '',
+    email: user.email || '',
     mobile_phone: user.mobile_phone || '',
+    personal_email: user.personal_email || '',
+    personal_phone: user.personal_phone || '',
     job_title: user.job_title || '',
     timezone: user.timezone || 'Australia/Sydney',
     bio: user.bio || '',
