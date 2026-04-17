@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,9 +56,12 @@ const initial: FormState = {
 
 export default function NewStarterWizard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const prefillUserId = searchParams.get("prefill");
   const { toast } = useToast();
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(initial);
+  const [isRedo, setIsRedo] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
   const [runId, setRunId] = useState<number | null>(null);
   const [transcript, setTranscript] = useState<any[]>([]);
@@ -94,6 +97,41 @@ export default function NewStarterWizard() {
       setTeamLeaders((data ?? []) as any);
     })();
   }, []);
+
+  // Prefill from existing user when ?prefill=<uuid> is provided (Redo Setup flow)
+  useEffect(() => {
+    if (!prefillUserId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("first_name, last_name, email, mobile_phone, job_title, unicorn_role")
+        .eq("user_uuid", prefillUserId)
+        .maybeSingle();
+      if (error || !data) {
+        toast({
+          title: "Could not prefill user",
+          description: error?.message ?? "User not found",
+          variant: "destructive",
+        });
+        return;
+      }
+      setIsRedo(true);
+      setForm((f) => ({
+        ...f,
+        firstName: data.first_name ?? "",
+        lastName: data.last_name ?? "",
+        jobTitle: data.job_title ?? "",
+        upn: data.email ?? "",
+        mailNickname: data.email ? data.email.split("@")[0] : "",
+        displayName: [data.first_name, data.last_name].filter(Boolean).join(" "),
+        phone: data.mobile_phone ?? "",
+      }));
+      toast({
+        title: "Loaded existing user",
+        description: "Review each step, then re-run provisioning.",
+      });
+    })();
+  }, [prefillUserId, toast]);
 
   const psScript = useMemo(() => {
     if (!resolved.data) return "";
@@ -188,15 +226,21 @@ export default function NewStarterWizard() {
               <ArrowLeft className="h-4 w-4 mr-1" /> Back to Team Users
             </Button>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <UserPlus2 className="h-7 w-7 text-primary" /> New Team Member Setup
+              <UserPlus2 className="h-7 w-7 text-primary" />
+              {isRedo ? "Redo Team Member Setup" : "New Team Member Setup"}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Multi-step onboarding with auto-provisioning to Microsoft 365.
+              {isRedo
+                ? "Prefilled from the existing user — review each step, then re-run provisioning."
+                : "Multi-step onboarding with auto-provisioning to Microsoft 365."}
             </p>
           </div>
-          <Badge variant="outline" className="text-sm">
-            Step {step} of 5
-          </Badge>
+          <div className="flex items-center gap-2">
+            {isRedo && <Badge className="text-sm">Redo</Badge>}
+            <Badge variant="outline" className="text-sm">
+              Step {step} of 5
+            </Badge>
+          </div>
         </div>
 
         {/* Stepper */}
