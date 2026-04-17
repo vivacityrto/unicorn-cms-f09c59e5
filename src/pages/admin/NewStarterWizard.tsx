@@ -154,7 +154,10 @@ export default function NewStarterWizard() {
         phone: (data as any).personal_phone ?? data.phone ?? data.mobile_phone ?? "",
         locationCode: locationCode || f.locationCode,
         roleCode: roleCode || f.roleCode,
-        teamLeaderId: (data.manager_uuid as string | null) ?? f.teamLeaderId,
+        teamLeaderId:
+          data.manager_uuid && teamLeaders.some((t) => t.user_uuid === data.manager_uuid)
+            ? (data.manager_uuid as string)
+            : f.teamLeaderId,
         startDate:
           (data as any).start_date
             ? String((data as any).start_date).slice(0, 10)
@@ -168,7 +171,7 @@ export default function NewStarterWizard() {
       });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefillUserId, roles.data]);
+  }, [prefillUserId, roles.data, teamLeaders]);
 
   const psScript = useMemo(() => {
     if (!resolved.data) return "";
@@ -204,6 +207,15 @@ export default function NewStarterWizard() {
 
   const provision = async () => {
     if (!resolved.data) return;
+    if (form.teamLeaderId && !teamLeaders.some((t) => t.user_uuid === form.teamLeaderId)) {
+      toast({
+        title: "Invalid team leader",
+        description: "The selected team leader is no longer active. Please pick another in Step 2.",
+        variant: "destructive",
+      });
+      setStep(2);
+      return;
+    }
     setProvisioning(true);
     setTranscript([]);
     try {
