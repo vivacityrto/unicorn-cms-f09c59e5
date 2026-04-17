@@ -154,7 +154,10 @@ export default function NewStarterWizard() {
         phone: (data as any).personal_phone ?? data.phone ?? data.mobile_phone ?? "",
         locationCode: locationCode || f.locationCode,
         roleCode: roleCode || f.roleCode,
-        teamLeaderId: (data.manager_uuid as string | null) ?? f.teamLeaderId,
+        teamLeaderId:
+          data.manager_uuid && teamLeaders.some((t) => t.user_uuid === data.manager_uuid)
+            ? (data.manager_uuid as string)
+            : f.teamLeaderId,
         startDate:
           (data as any).start_date
             ? String((data as any).start_date).slice(0, 10)
