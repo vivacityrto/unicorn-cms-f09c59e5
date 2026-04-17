@@ -207,6 +207,15 @@ export default function NewStarterWizard() {
 
   const provision = async () => {
     if (!resolved.data) return;
+    if (form.teamLeaderId && !teamLeaders.some((t) => t.user_uuid === form.teamLeaderId)) {
+      toast({
+        title: "Invalid team leader",
+        description: "The selected team leader is no longer active. Please pick another in Step 2.",
+        variant: "destructive",
+      });
+      setStep(2);
+      return;
+    }
     setProvisioning(true);
     setTranscript([]);
     try {
