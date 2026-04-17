@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,9 +56,12 @@ const initial: FormState = {
 
 export default function NewStarterWizard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const prefillUserId = searchParams.get("prefill");
   const { toast } = useToast();
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(initial);
+  const [isRedo, setIsRedo] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
   const [runId, setRunId] = useState<number | null>(null);
   const [transcript, setTranscript] = useState<any[]>([]);
