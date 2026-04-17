@@ -80,10 +80,13 @@ export function ProfileForm({ user, canEdit, canEditWorkEmail = false, onSave }:
     }
   };
 
-  const hasChanges = 
+  const hasChanges =
     formData.first_name !== (user.first_name || '') ||
     formData.last_name !== (user.last_name || '') ||
+    formData.email !== (user.email || '') ||
     formData.mobile_phone !== (user.mobile_phone || '') ||
+    formData.personal_email !== (user.personal_email || '') ||
+    formData.personal_phone !== (user.personal_phone || '') ||
     formData.job_title !== (user.job_title || '') ||
     formData.timezone !== (user.timezone || 'Australia/Sydney') ||
     formData.bio !== (user.bio || '');
