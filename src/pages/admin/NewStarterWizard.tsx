@@ -226,15 +226,21 @@ export default function NewStarterWizard() {
               <ArrowLeft className="h-4 w-4 mr-1" /> Back to Team Users
             </Button>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <UserPlus2 className="h-7 w-7 text-primary" /> New Team Member Setup
+              <UserPlus2 className="h-7 w-7 text-primary" />
+              {isRedo ? "Redo Team Member Setup" : "New Team Member Setup"}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Multi-step onboarding with auto-provisioning to Microsoft 365.
+              {isRedo
+                ? "Prefilled from the existing user — review each step, then re-run provisioning."
+                : "Multi-step onboarding with auto-provisioning to Microsoft 365."}
             </p>
           </div>
-          <Badge variant="outline" className="text-sm">
-            Step {step} of 5
-          </Badge>
+          <div className="flex items-center gap-2">
+            {isRedo && <Badge className="text-sm">Redo</Badge>}
+            <Badge variant="outline" className="text-sm">
+              Step {step} of 5
+            </Badge>
+          </div>
         </div>
 
         {/* Stepper */}
