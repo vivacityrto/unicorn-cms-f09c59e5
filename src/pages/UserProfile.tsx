@@ -37,6 +37,11 @@ interface UserData {
   tenant_name?: string | null;
   staff_team?: string | null;
   staff_teams?: string[] | null;  // New array field for multiple teams
+  // Personal contact (separate from work email/phone)
+  personal_email?: string | null;
+  personal_phone?: string | null;
+  preferred_name?: string | null;
+  start_date?: string | null;
   // CSC fields
   linkedin_url?: string | null;
   booking_url?: string | null;
@@ -121,6 +126,10 @@ export default function UserProfile() {
           last_sign_in_at,
           staff_team,
           staff_teams,
+          personal_email,
+          personal_phone,
+          preferred_name,
+          start_date,
           linkedin_url,
           booking_url,
           working_days,
@@ -258,6 +267,7 @@ export default function UserProfile() {
           <ProfileForm
             user={user}
             canEdit={canEdit && isEditing}
+            canEditWorkEmail={isSuperAdmin && (user.user_type === 'Vivacity' || user.user_type === 'Vivacity Team')}
             onSave={() => {
               fetchUserData();
               setIsEditing(false);

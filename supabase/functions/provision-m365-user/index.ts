@@ -166,10 +166,28 @@ serve(async (req) => {
 
     if (existing?.user_uuid) {
       unicornUserUuid = existing.user_uuid;
+      // Update existing record with the latest details from the wizard
+      const { error: updErr } = await admin
+        .from("users")
+        .update({
+          first_name: body.first_name.trim(),
+          last_name: (body.last_name || "-").trim(),
+          job_title: body.job_title || null,
+          phone: body.phone || null,
+          personal_email: body.personal_email || null,
+          personal_phone: body.phone || null,
+          preferred_name: body.preferred_name || null,
+          start_date: body.start_date || null,
+          public_holiday_region: body.location_code || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_uuid", existing.user_uuid);
       transcript.push({
         step: "unicorn_user",
-        ok: true,
-        detail: `Reusing existing Unicorn user ${unicornUserUuid}`,
+        ok: !updErr,
+        detail: updErr
+          ? `Reusing user ${unicornUserUuid} but update failed: ${updErr.message}`
+          : `Updated existing Unicorn user ${unicornUserUuid}`,
       });
     } else {
       unicornUserUuid = crypto.randomUUID();
@@ -184,6 +202,11 @@ serve(async (req) => {
         disabled: false,
         job_title: body.job_title || null,
         phone: body.phone || null,
+        personal_email: body.personal_email || null,
+        personal_phone: body.phone || null,
+        preferred_name: body.preferred_name || null,
+        start_date: body.start_date || null,
+        public_holiday_region: body.location_code || null,
       });
       if (insErr) {
         transcript.push({ step: "unicorn_user", ok: false, detail: insErr.message });

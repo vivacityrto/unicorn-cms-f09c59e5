@@ -105,7 +105,7 @@ export default function NewStarterWizard() {
       const { data, error } = await supabase
         .from("users")
         .select(
-          "first_name, last_name, email, phone, mobile_phone, job_title, unicorn_role, superadmin_level, staff_team, public_holiday_region, manager_uuid, created_at"
+          "first_name, last_name, email, phone, mobile_phone, job_title, unicorn_role, superadmin_level, staff_team, public_holiday_region, manager_uuid, created_at, personal_email, personal_phone, preferred_name, start_date"
         )
         .eq("user_uuid", prefillUserId)
         .maybeSingle();
@@ -142,15 +142,22 @@ export default function NewStarterWizard() {
         ...f,
         firstName: data.first_name ?? "",
         lastName: data.last_name ?? "",
+        preferredName: (data as any).preferred_name ?? f.preferredName,
+        personalEmail: (data as any).personal_email ?? f.personalEmail,
         jobTitle: data.job_title ?? "",
         upn: data.email ?? "",
         mailNickname: data.email ? data.email.split("@")[0] : "",
         displayName: [data.first_name, data.last_name].filter(Boolean).join(" "),
-        phone: data.phone ?? data.mobile_phone ?? "",
+        phone: (data as any).personal_phone ?? data.phone ?? data.mobile_phone ?? "",
         locationCode: locationCode || f.locationCode,
         roleCode: roleCode || f.roleCode,
         teamLeaderId: (data.manager_uuid as string | null) ?? f.teamLeaderId,
-        startDate: data.created_at ? String(data.created_at).slice(0, 10) : f.startDate,
+        startDate:
+          (data as any).start_date
+            ? String((data as any).start_date).slice(0, 10)
+            : data.created_at
+            ? String(data.created_at).slice(0, 10)
+            : f.startDate,
       }));
       toast({
         title: "Loaded existing user",
