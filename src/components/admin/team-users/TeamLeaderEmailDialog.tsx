@@ -143,7 +143,28 @@ Let me know if you need anything else.`;
             <Input value={subject} readOnly className="bg-muted/30" />
           </div>
           <div className="space-y-1.5">
-            <Label>Body</Label>
+            <div className="flex items-center justify-between">
+              <Label>Body</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(`Subject: ${subject}\n\n${editedBody}`);
+                    setCopied(true);
+                    toast({ title: "Email copied to clipboard" });
+                    setTimeout(() => setCopied(false), 1500);
+                  } catch {
+                    toast({ title: "Copy failed", variant: "destructive" });
+                  }
+                }}
+              >
+                {copied ? <Check className="h-3.5 w-3.5 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
             <Textarea value={editedBody} onChange={(e) => setEditedBody(e.target.value)} rows={14} className="font-mono text-xs" />
           </div>
         </div>
