@@ -21,10 +21,13 @@ export function useUserSetupLinks() {
         .from("dd_usersetup_links" as any)
         .select("*")
         .eq("is_active", true)
-        .order("sort_order");
+        .order("sort_order", { nullsFirst: false })
+        .order("id");
       if (error) throw error;
       return (data ?? []) as unknown as UserSetupLink[];
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 }
