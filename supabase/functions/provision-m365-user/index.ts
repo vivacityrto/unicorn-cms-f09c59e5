@@ -282,8 +282,24 @@ serve(async (req) => {
     });
   }
 
+  // m365_only mode: still need to resolve target_user_id from existing email
+  if (!doUnicorn) {
+    const { data: existing } = await admin
+      .from("users")
+      .select("user_uuid")
+      .eq("email", body.upn.toLowerCase())
+      .maybeSingle();
+    if (existing?.user_uuid) {
+      unicornUserUuid = existing.user_uuid;
+      await admin
+        .from("staff_provisioning_runs")
+        .update({ target_user_id: unicornUserUuid })
+        .eq("id", run.id);
+    }
+  }
+
   // Step 1: Create user in Microsoft 365
-  try {
+  if (doGraph) try {
     const createResp = await graphPost<any>("/users", {
       accountEnabled: true,
       displayName: body.display_name,
