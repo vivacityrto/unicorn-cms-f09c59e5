@@ -55,7 +55,11 @@ async function sendGraph(admin: any, userId: string, to: string, subject: string
     .eq("user_id", userId)
     .eq("provider", "microsoft")
     .maybeSingle();
-  if (!token) throw new Error("No Microsoft connection — connect Outlook in Integrations first");
+  if (!token) {
+    const err = new Error("No Microsoft connection — connect Outlook in Integrations, or use 'Send via Mailgun'.");
+    (err as any).code = "no_microsoft_connection";
+    throw err;
+  }
 
   let accessToken = token.access_token;
   if (new Date(token.expires_at).getTime() - Date.now() < 5 * 60 * 1000) {
