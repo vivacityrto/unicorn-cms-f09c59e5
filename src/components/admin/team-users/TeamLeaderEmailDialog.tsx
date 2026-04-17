@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Send, Loader2 } from "lucide-react";
+import { Mail, Send, Loader2, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { StaffProvisioningRule } from "@/hooks/useStaffProvisioningRules";
@@ -29,6 +29,7 @@ interface Props {
 export function TeamLeaderEmailDialog({ open, onOpenChange, runId, newStarter, teamLeader, rule }: Props) {
   const { toast } = useToast();
   const [sending, setSending] = useState<"none" | "mailgun" | "graph">("none");
+  const [copied, setCopied] = useState(false);
 
   const subject = `New starter setup — ${newStarter.displayName}`;
   const body = useMemo(() => {
