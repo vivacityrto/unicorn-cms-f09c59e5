@@ -77,28 +77,44 @@ Let me know if you need anything else.`;
       const { data, error } = await supabase.functions.invoke("send-staff-onboarding-email", {
         body: { to: editedTo, subject, body: editedBody, channel, run_id: runId },
       });
-      if (error) throw error;
-      if (data && data.ok === false) {
-        const err: any = new Error(data.error || "Send failed");
-        err.code = data.code;
-        throw err;
+
+      // Extract structured payload even when the function returned a non-2xx status.
+      // supabase-js puts the parsed JSON body on error.context for FunctionsHttpError.
+      let payload: any = data;
+      if (error && !payload) {
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx && typeof ctx.json === "function") payload = await ctx.json();
+          else if (ctx && typeof ctx.text === "function") {
+            const t = await ctx.text();
+            try { payload = JSON.parse(t); } catch { payload = { error: t }; }
+          }
+        } catch { /* ignore */ }
       }
+
+      const code = payload?.code;
+      const errMsg = payload?.error || (error as any)?.message;
+
+      if (code === "no_microsoft_connection") {
+        toast({
+          title: "Outlook not connected",
+          description: "You haven't connected your Outlook mailbox. Use 'Send via Mailgun' instead, or connect Outlook in Integrations.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (error || (payload && payload.ok === false)) {
+        toast({ title: "Send failed", description: errMsg ?? "Unknown error", variant: "destructive" });
+        return;
+      }
+
       toast({
         title: channel === "mailgun" ? "Email sent via Mailgun" : "Email sent from your Outlook",
       });
       onOpenChange(false);
     } catch (e: any) {
-      const isNoConn =
-        e?.code === "no_microsoft_connection" ||
-        /No Microsoft connection/i.test(e?.message ?? "") ||
-        /reconnect Outlook/i.test(e?.message ?? "");
-      toast({
-        title: isNoConn ? "Outlook not connected" : "Send failed",
-        description: isNoConn
-          ? "You haven't connected your Outlook mailbox. Use 'Send via Mailgun' instead, or connect Outlook in Integrations."
-          : e.message,
-        variant: "destructive",
-      });
+      toast({ title: "Send failed", description: e?.message ?? String(e), variant: "destructive" });
     } finally {
       setSending("none");
     }
