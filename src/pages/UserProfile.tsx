@@ -37,6 +37,11 @@ interface UserData {
   tenant_name?: string | null;
   staff_team?: string | null;
   staff_teams?: string[] | null;  // New array field for multiple teams
+  // Personal contact (separate from work email/phone)
+  personal_email?: string | null;
+  personal_phone?: string | null;
+  preferred_name?: string | null;
+  start_date?: string | null;
   // CSC fields
   linkedin_url?: string | null;
   booking_url?: string | null;
