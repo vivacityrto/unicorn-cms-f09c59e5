@@ -14,6 +14,7 @@ import { deriveMailNickname, deriveUpn, deriveDisplayName, generateTempPassword 
 import { generatePowerShellScript } from "@/lib/m365/scriptGenerator";
 import { StaffProvisioningPreview } from "@/components/admin/team-users/StaffProvisioningPreview";
 import { TeamLeaderEmailDialog } from "@/components/admin/team-users/TeamLeaderEmailDialog";
+import { PostSaveSetupLinks } from "@/components/admin/team-users/PostSaveSetupLinks";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -413,6 +414,16 @@ export default function NewStarterWizard() {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {step === 5 && runId && (
+          <PostSaveSetupLinks
+            newStarter={{
+              displayName: form.displayName,
+              upn: form.upn,
+              tempPassword: form.tempPassword,
+            }}
+          />
         )}
 
         {/* Footer nav */}
