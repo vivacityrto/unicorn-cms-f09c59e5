@@ -423,6 +423,8 @@ export default function NewStarterWizard() {
               upn: form.upn,
               tempPassword: form.tempPassword,
             }}
+            psScript={psScript}
+            onResendEmail={() => setEmailDialogOpen(true)}
           />
         )}
 
