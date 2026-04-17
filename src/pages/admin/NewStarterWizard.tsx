@@ -107,7 +107,7 @@ export default function NewStarterWizard() {
       const { data, error } = await supabase
         .from("users")
         .select(
-          "first_name, last_name, email, phone, mobile_phone, job_title, unicorn_role, superadmin_level, staff_team, public_holiday_region, manager_uuid, created_at, personal_email, personal_phone, preferred_name, start_date"
+          "first_name, last_name, full_name, email, phone, mobile_phone, job_title, unicorn_role, superadmin_level, staff_team, public_holiday_region, manager_uuid, created_at, personal_email, personal_phone, preferred_name, start_date"
         )
         .eq("user_uuid", prefillUserId)
         .maybeSingle();
