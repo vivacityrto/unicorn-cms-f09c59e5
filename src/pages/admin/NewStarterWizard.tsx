@@ -205,7 +205,7 @@ export default function NewStarterWizard() {
     }
   };
 
-  const provision = async () => {
+  const provision = async (mode: "save_only" | "m365_only" | "full" = "full") => {
     if (!resolved.data) return;
     if (form.teamLeaderId && !teamLeaders.some((t) => t.user_uuid === form.teamLeaderId)) {
       toast({
@@ -236,6 +236,7 @@ export default function NewStarterWizard() {
           mail_nickname: form.mailNickname,
           display_name: form.displayName,
           temp_password: form.tempPassword,
+          mode,
         },
       });
       if (error) throw error;
@@ -245,21 +246,25 @@ export default function NewStarterWizard() {
       const succeeded = data.transcript?.filter((s: any) => s.ok).length ?? 0;
       const total = data.transcript?.length ?? 0;
       const status = data.status as "provisioned" | "partial" | "failed";
+      const label =
+        mode === "save_only" ? "Saved in Unicorn"
+        : mode === "m365_only" ? "M365 provisioning complete"
+        : "Setup complete";
       if (status === "provisioned") {
-        toast({ title: "Setup complete", description: `${succeeded}/${total} steps succeeded` });
+        toast({ title: label, description: `${succeeded}/${total} steps succeeded` });
       } else if (status === "partial") {
         toast({
-          title: "User saved in Unicorn — M365 needs attention",
+          title: mode === "m365_only" ? "M365 partially provisioned" : "User saved — M365 needs attention",
           description: `${succeeded}/${total} steps succeeded. Run the PowerShell script or fix Entra permissions.`,
         });
       } else {
         toast({
           title: "Setup failed",
-          description: "User could not be saved in Unicorn. Check the transcript.",
+          description: "Check the transcript for details.",
           variant: "destructive",
         });
       }
-      setEmailDialogOpen(true);
+      if (mode !== "save_only") setEmailDialogOpen(true);
     } catch (e: any) {
       toast({ title: "Provisioning failed", description: e.message, variant: "destructive" });
     } finally {
@@ -287,6 +292,11 @@ export default function NewStarterWizard() {
           </div>
           <div className="flex items-center gap-2">
             {isRedo && <Badge className="text-sm">Redo</Badge>}
+            {isRedo && step !== 5 && (
+              <Button variant="outline" size="sm" onClick={() => setStep(5)}>
+                Skip to setup links
+              </Button>
+            )}
             <Badge variant="outline" className="text-sm">
               Step {step} of 5
             </Badge>
@@ -472,22 +482,55 @@ export default function NewStarterWizard() {
             <CardHeader>
               <CardTitle>5. Save &amp; provision</CardTitle>
               <CardDescription>
-                The user is created in Unicorn first, then we attempt to provision Microsoft 365.
-                If M365 fails (e.g. missing permissions), the user is still saved and you can run the
-                PowerShell script as a fallback.
+                Save the user in Unicorn, provision Microsoft 365, or do both. Each action is
+                independent — useful when M365 already exists or when you only need to update
+                Unicorn details.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!runId ? (
-                <Button size="lg" onClick={provision} disabled={provisioning} className="w-full">
-                  {provisioning ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving &amp; provisioning…</>
-                  ) : (
-                    <>Save in Unicorn &amp; provision M365</>
-                  )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={() => provision("save_only")}
+                  disabled={provisioning}
+                  className="h-auto py-4 flex flex-col items-start text-left whitespace-normal"
+                >
+                  <span className="font-semibold">
+                    {provisioning ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin inline" />Saving…</>) : "Save in Unicorn"}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-normal mt-1">
+                    Create / update the public.users record and tenant membership only.
+                  </span>
                 </Button>
-              ) : (
-                <div className="space-y-3">
+                <Button
+                  size="lg"
+                  onClick={() => provision("m365_only")}
+                  disabled={provisioning}
+                  className="h-auto py-4 flex flex-col items-start text-left whitespace-normal"
+                >
+                  <span className="font-semibold">
+                    {provisioning ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin inline" />Provisioning…</>) : "Provision M365"}
+                  </span>
+                  <span className="text-xs font-normal mt-1 opacity-90">
+                    Create the Entra account, assign licenses and add to groups via Graph.
+                  </span>
+                </Button>
+              </div>
+
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => provision("full")}
+                  disabled={provisioning}
+                >
+                  Or do both at once
+                </Button>
+              </div>
+
+              {runId && (
+                <div className="space-y-3 pt-2 border-t">
                   <div className="rounded-lg border bg-success/10 p-4 flex items-start gap-3">
                     <Check className="h-5 w-5 text-success mt-0.5" />
                     <div>
@@ -518,7 +561,10 @@ export default function NewStarterWizard() {
           </Card>
         )}
 
-        {step === 5 && runId && (
+        {/* PostSaveSetupLinks is always shown on Step 5 — it's the "view-only" landing page
+            for setting up software accounts, calendars, etc., regardless of whether a new
+            run was just executed. Useful for redo / reference. */}
+        {step === 5 && (
           <PostSaveSetupLinks
             newStarter={{
               displayName: form.displayName,

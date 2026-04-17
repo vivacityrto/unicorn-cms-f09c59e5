@@ -32,6 +32,8 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+type ProvisionMode = "full" | "save_only" | "m365_only";
+
 interface Body {
   first_name: string;
   last_name: string;
@@ -48,6 +50,10 @@ interface Body {
   mail_nickname: string;
   display_name: string;
   temp_password: string;
+  /** "full" (default) = save Unicorn + provision M365.
+   *  "save_only"      = save Unicorn only (skip Graph).
+   *  "m365_only"      = provision M365 only (skip Unicorn user create/update). */
+  mode?: ProvisionMode;
 }
 
 interface TranscriptStep {
@@ -154,8 +160,12 @@ serve(async (req) => {
   // fails (e.g. missing Entra permissions). Graph errors are then
   // recorded in the transcript and can be retried later.
   // ============================================================
+  const mode: ProvisionMode = body.mode ?? "full";
+  const doUnicorn = mode === "full" || mode === "save_only";
+  const doGraph = mode === "full" || mode === "m365_only";
+
   const VIVACITY_TENANT_ID = 6372;
-  try {
+  if (doUnicorn) try {
     const emailLower = body.upn.toLowerCase();
 
     // Check for existing public.users row by email (UPN)
@@ -272,8 +282,24 @@ serve(async (req) => {
     });
   }
 
+  // m365_only mode: still need to resolve target_user_id from existing email
+  if (!doUnicorn) {
+    const { data: existing } = await admin
+      .from("users")
+      .select("user_uuid")
+      .eq("email", body.upn.toLowerCase())
+      .maybeSingle();
+    if (existing?.user_uuid) {
+      unicornUserUuid = existing.user_uuid;
+      await admin
+        .from("staff_provisioning_runs")
+        .update({ target_user_id: unicornUserUuid })
+        .eq("id", run.id);
+    }
+  }
+
   // Step 1: Create user in Microsoft 365
-  try {
+  if (doGraph) try {
     const createResp = await graphPost<any>("/users", {
       accountEnabled: true,
       displayName: body.display_name,
