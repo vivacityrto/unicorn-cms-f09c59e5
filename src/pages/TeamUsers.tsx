@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { Users, Search, Shield, UserCheck, UserX, UserPlus, Clock, MoreHorizontal, RefreshCw, X, Sparkles } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
+import { useRBAC } from '@/hooks/useRBAC';
 interface TeamUser {
   user_uuid: string;
   first_name: string;
