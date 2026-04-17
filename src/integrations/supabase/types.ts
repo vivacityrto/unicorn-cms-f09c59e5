@@ -16234,6 +16234,72 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_staff_location: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      dd_staff_role: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dd_stage_types: {
         Row: {
           color: string
@@ -26116,6 +26182,7 @@ export type Database = {
           lifecycle_type: string
           notes: string | null
           package_instance_id: number | null
+          provisioning_run_id: number | null
           target_user_id: string | null
           template_id: string
           tenant_id: number | null
@@ -26130,6 +26197,7 @@ export type Database = {
           lifecycle_type: string
           notes?: string | null
           package_instance_id?: number | null
+          provisioning_run_id?: number | null
           target_user_id?: string | null
           template_id: string
           tenant_id?: number | null
@@ -26144,6 +26212,7 @@ export type Database = {
           lifecycle_type?: string
           notes?: string | null
           package_instance_id?: number | null
+          provisioning_run_id?: number | null
           target_user_id?: string | null
           template_id?: string
           tenant_id?: number | null
@@ -26232,6 +26301,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "lifecycle_checklist_instances_provisioning_run_id_fkey"
+            columns: ["provisioning_run_id"]
+            isOneToOne: false
+            referencedRelation: "staff_provisioning_runs"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "lifecycle_checklist_instances_target_user_id_fkey"
@@ -36689,6 +36765,276 @@ export type Database = {
           update_frequency_hours?: number | null
         }
         Relationships: []
+      }
+      staff_provisioning_rules: {
+        Row: {
+          calendars: string[]
+          created_at: string
+          id: number
+          is_active: boolean
+          licenses: string[]
+          location_code: string
+          m365_groups: string[]
+          notes: string | null
+          role_code: string
+          software: string[]
+          updated_at: string
+        }
+        Insert: {
+          calendars?: string[]
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          licenses?: string[]
+          location_code: string
+          m365_groups?: string[]
+          notes?: string | null
+          role_code: string
+          software?: string[]
+          updated_at?: string
+        }
+        Update: {
+          calendars?: string[]
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          licenses?: string[]
+          location_code?: string
+          m365_groups?: string[]
+          notes?: string | null
+          role_code?: string
+          software?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_provisioning_rules_location_code_fkey"
+            columns: ["location_code"]
+            isOneToOne: false
+            referencedRelation: "dd_staff_location"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_rules_role_code_fkey"
+            columns: ["role_code"]
+            isOneToOne: false
+            referencedRelation: "dd_staff_role"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      staff_provisioning_runs: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          first_name: string
+          graph_transcript: Json | null
+          id: number
+          job_title: string | null
+          last_name: string
+          location_code: string
+          mail_nickname: string | null
+          ms_user_id: string | null
+          personal_email: string | null
+          phone: string | null
+          preferred_name: string | null
+          requested_by: string | null
+          role_code: string
+          start_date: string | null
+          status: string
+          target_user_id: string | null
+          team_leader_id: string | null
+          updated_at: string
+          upn: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          first_name: string
+          graph_transcript?: Json | null
+          id?: number
+          job_title?: string | null
+          last_name: string
+          location_code: string
+          mail_nickname?: string | null
+          ms_user_id?: string | null
+          personal_email?: string | null
+          phone?: string | null
+          preferred_name?: string | null
+          requested_by?: string | null
+          role_code: string
+          start_date?: string | null
+          status?: string
+          target_user_id?: string | null
+          team_leader_id?: string | null
+          updated_at?: string
+          upn?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          first_name?: string
+          graph_transcript?: Json | null
+          id?: number
+          job_title?: string | null
+          last_name?: string
+          location_code?: string
+          mail_nickname?: string | null
+          ms_user_id?: string | null
+          personal_email?: string | null
+          phone?: string | null
+          preferred_name?: string | null
+          requested_by?: string | null
+          role_code?: string
+          start_date?: string | null
+          status?: string
+          target_user_id?: string | null
+          team_leader_id?: string | null
+          updated_at?: string
+          upn?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_provisioning_runs_location_code_fkey"
+            columns: ["location_code"]
+            isOneToOne: false
+            referencedRelation: "dd_staff_location"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_role_code_fkey"
+            columns: ["role_code"]
+            isOneToOne: false
+            referencedRelation: "dd_staff_role"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_team_leader_id_fkey"
+            columns: ["team_leader_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_team_leader_id_fkey"
+            columns: ["team_leader_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_team_leader_id_fkey"
+            columns: ["team_leader_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_team_leader_id_fkey"
+            columns: ["team_leader_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_team_leader_id_fkey"
+            columns: ["team_leader_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_team_leader_id_fkey"
+            columns: ["team_leader_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       staff_task_instances: {
         Row: {
