@@ -104,7 +104,9 @@ export default function NewStarterWizard() {
     (async () => {
       const { data, error } = await supabase
         .from("users")
-        .select("first_name, last_name, email, mobile_phone, job_title, unicorn_role")
+        .select(
+          "first_name, last_name, email, phone, mobile_phone, job_title, unicorn_role, superadmin_level, staff_team, public_holiday_region, manager_uuid, created_at"
+        )
         .eq("user_uuid", prefillUserId)
         .maybeSingle();
       if (error || !data) {
@@ -115,6 +117,26 @@ export default function NewStarterWizard() {
         });
         return;
       }
+
+      // Map staff_team → role code (singular). Fallback: job_title keyword match.
+      const availableRoles = (roles.data ?? []).map((r) => r.code);
+      const teamRaw = (data.staff_team as string | null) ?? "";
+      let roleCode = "";
+      if (teamRaw) {
+        const normalized = teamRaw.replace(/_development$/, "_developer");
+        if (availableRoles.includes(normalized)) roleCode = normalized;
+        else if (availableRoles.includes(teamRaw)) roleCode = teamRaw;
+      }
+      if (!roleCode && data.job_title) {
+        const jt = data.job_title.toLowerCase();
+        roleCode =
+          availableRoles.find((c) => jt.includes(c.replace(/_/g, " "))) ??
+          (jt.includes("developer") ? "software_developer" : "");
+      }
+
+      // Map public_holiday_region (e.g. AU/PH) → location code
+      const locationCode = (data.public_holiday_region as string | null) || form.locationCode;
+
       setIsRedo(true);
       setForm((f) => ({
         ...f,
@@ -124,14 +146,19 @@ export default function NewStarterWizard() {
         upn: data.email ?? "",
         mailNickname: data.email ? data.email.split("@")[0] : "",
         displayName: [data.first_name, data.last_name].filter(Boolean).join(" "),
-        phone: data.mobile_phone ?? "",
+        phone: data.phone ?? data.mobile_phone ?? "",
+        locationCode: locationCode || f.locationCode,
+        roleCode: roleCode || f.roleCode,
+        teamLeaderId: (data.manager_uuid as string | null) ?? f.teamLeaderId,
+        startDate: data.created_at ? String(data.created_at).slice(0, 10) : f.startDate,
       }));
       toast({
         title: "Loaded existing user",
         description: "Review each step, then re-run provisioning.",
       });
     })();
-  }, [prefillUserId, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefillUserId, roles.data]);
 
   const psScript = useMemo(() => {
     if (!resolved.data) return "";
