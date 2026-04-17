@@ -370,8 +370,8 @@ export default function NewStarterWizard() {
                 </Button>
               ) : (
                 <div className="space-y-3">
-                  <div className="rounded-lg border bg-emerald-50 dark:bg-emerald-950/30 p-4 flex items-start gap-3">
-                    <Check className="h-5 w-5 text-emerald-600 mt-0.5" />
+                  <div className="rounded-lg border bg-success/10 p-4 flex items-start gap-3">
+                    <Check className="h-5 w-5 text-success mt-0.5" />
                     <div>
                       <div className="font-medium">Run #{runId} created</div>
                       <div className="text-sm text-muted-foreground">

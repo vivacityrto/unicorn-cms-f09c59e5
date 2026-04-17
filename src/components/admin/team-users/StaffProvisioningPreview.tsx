@@ -82,7 +82,7 @@ Let me know if you need anything else.`}
                 <Copy className="h-4 w-4 mr-1" /> Copy
               </Button>
             </div>
-            <pre className="rounded-lg border p-4 bg-zinc-950 text-zinc-100 text-xs font-mono overflow-auto max-h-96">
+            <pre className="rounded-lg border p-4 bg-foreground text-background text-xs font-mono overflow-auto max-h-96">
 {psScript}
             </pre>
             <p className="text-xs text-muted-foreground mt-2">
