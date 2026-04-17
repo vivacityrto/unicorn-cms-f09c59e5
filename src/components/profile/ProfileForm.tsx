@@ -15,6 +15,7 @@ interface ProfileFormProps {
     user_uuid: string;
     first_name: string;
     last_name: string;
+    full_name?: string | null;
     email: string;
     mobile_phone: string | null;
     job_title: string | null;
@@ -37,6 +38,7 @@ export function ProfileForm({ user, canEdit, canEditWorkEmail = false, onSave }:
   const [formData, setFormData] = useState({
     first_name: user.first_name || '',
     last_name: user.last_name || '',
+    full_name: user.full_name || '',
     email: user.email || '',
     mobile_phone: user.mobile_phone || '',
     personal_email: user.personal_email || '',
@@ -83,6 +85,7 @@ export function ProfileForm({ user, canEdit, canEditWorkEmail = false, onSave }:
   const hasChanges =
     formData.first_name !== (user.first_name || '') ||
     formData.last_name !== (user.last_name || '') ||
+    formData.full_name !== (user.full_name || '') ||
     formData.email !== (user.email || '') ||
     formData.mobile_phone !== (user.mobile_phone || '') ||
     formData.personal_email !== (user.personal_email || '') ||
@@ -118,6 +121,20 @@ export function ProfileForm({ user, canEdit, canEditWorkEmail = false, onSave }:
               disabled={!canEdit}
               placeholder="Last name"
             />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="full_name">Full Legal Name</Label>
+            <Input
+              id="full_name"
+              value={formData.full_name}
+              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+              disabled={!canEdit}
+              placeholder="Full name as it appears on legal documents (supports multiple given names)"
+            />
+            <p className="text-xs text-muted-foreground">
+              Use this for users with more than two names (e.g. multiple given names).
+            </p>
           </div>
 
           <div className="space-y-2">

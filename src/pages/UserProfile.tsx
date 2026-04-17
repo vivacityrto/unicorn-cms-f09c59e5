@@ -20,6 +20,7 @@ interface UserData {
   user_uuid: string;
   first_name: string;
   last_name: string;
+  full_name?: string | null;
   email: string;
   mobile_phone: string | null;
   user_type: string;
@@ -110,6 +111,7 @@ export default function UserProfile() {
           user_uuid,
           first_name,
           last_name,
+          full_name,
           email,
           mobile_phone,
           user_type,

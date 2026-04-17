@@ -5,6 +5,7 @@ type UpdateProfileBody = {
   user_uuid: string;
   first_name?: string;
   last_name?: string;
+  full_name?: string;
   job_title?: string;
   mobile_phone?: string;
   timezone?: string;
