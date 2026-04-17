@@ -32,6 +32,8 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+type ProvisionMode = "full" | "save_only" | "m365_only";
+
 interface Body {
   first_name: string;
   last_name: string;
@@ -48,6 +50,10 @@ interface Body {
   mail_nickname: string;
   display_name: string;
   temp_password: string;
+  /** "full" (default) = save Unicorn + provision M365.
+   *  "save_only"      = save Unicorn only (skip Graph).
+   *  "m365_only"      = provision M365 only (skip Unicorn user create/update). */
+  mode?: ProvisionMode;
 }
 
 interface TranscriptStep {
