@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = (await req.json()) as UpdateProfileBody;
-    const { user_uuid, user_type, unicorn_role, archived, ...updates } = body;
+    const { user_uuid, user_type, unicorn_role, archived, email, ...updates } = body;
 
     if (!user_uuid) {
       return jsonErr(400, "MISSING_USER_ID", "User UUID is required");
