@@ -59,6 +59,7 @@ const SUPERADMIN_LEVELS = [
 export default function TeamUsers() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isSuperAdmin } = useRBAC();
   const [users, setUsers] = useState<TeamUser[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<TeamUser[]>([]);
   const [loading, setLoading] = useState(true);
