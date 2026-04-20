@@ -76,21 +76,15 @@ Deno.serve(async (req) => {
     });
 
     // Authorization: Vivacity staff (unicorn_role set) OR member of subject tenant
-    // Also resolves the caller's OWN tenant_id (auditor/owner tenant) for the insert.
     const { data: userRow, error: userRowErr } = await admin
       .from("users")
-      .select("user_uuid, unicorn_role, tenant_id")
+      .select("user_uuid, unicorn_role")
       .eq("user_uuid", userId)
       .maybeSingle();
 
     if (userRowErr) {
       console.error("users lookup error", userRowErr);
       return jsonResponse({ error: "Identity lookup failed" }, 500);
-    }
-
-    const ownerTenantId = userRow?.tenant_id ?? null;
-    if (!ownerTenantId) {
-      return jsonResponse({ error: "Caller has no home tenant_id; cannot own audit record" }, 400);
     }
 
     const isStaff = !!userRow?.unicorn_role;
