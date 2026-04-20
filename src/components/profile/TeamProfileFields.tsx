@@ -240,8 +240,14 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
     }
   };
 
-  const hasLeaveActive = formData.leave_from && formData.leave_until && 
-    new Date(formData.leave_until) >= new Date();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const hasLeaveScheduled = !!(formData.leave_from && formData.leave_until);
+  const hasLeaveActive = hasLeaveScheduled &&
+    new Date(formData.leave_from) <= today &&
+    new Date(formData.leave_until) >= today;
+  const hasLeaveUpcoming = hasLeaveScheduled && !hasLeaveActive &&
+    new Date(formData.leave_from) > today;
 
   const hasChanges = 
     formData.linkedin_url !== (user.linkedin_url || '') ||
