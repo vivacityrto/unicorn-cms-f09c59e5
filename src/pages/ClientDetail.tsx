@@ -87,6 +87,7 @@ export default function ClientDetail() {
   }, [searchParams]);
   const [primaryContactName, setPrimaryContactName] = useState<string>('');
   const [primaryContactEmail, setPrimaryContactEmail] = useState<string>('');
+  const [secondaryContactName, setSecondaryContactName] = useState<string>('');
   const [assignPackageOpen, setAssignPackageOpen] = useState(false);
   const [profileHasChanges, setProfileHasChanges] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -187,6 +188,24 @@ export default function ClientDetail() {
           setPrimaryContactName(`${userData.first_name || ''} ${userData.last_name || ''}`.trim());
           setPrimaryContactEmail(userData.email || '');
         }
+      }
+
+      const { data: scRow } = await supabase
+        .from('tenant_users')
+        .select('user_id')
+        .eq('tenant_id', tenantIdNum)
+        .eq('secondary_contact', true)
+        .limit(1)
+        .maybeSingle();
+      if (scRow?.user_id) {
+        const { data: scUser } = await supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('user_uuid', scRow.user_id)
+          .maybeSingle();
+        if (scUser) setSecondaryContactName(`${scUser.first_name || ''} ${scUser.last_name || ''}`.trim());
+      } else {
+        setSecondaryContactName('');
       }
     } catch (err) {
       console.error('Error fetching primary contact:', err);
@@ -300,6 +319,12 @@ export default function ClientDetail() {
                     : <span className="text-muted-foreground/50">No primary contact</span>
                   }
                 </div>
+                {secondaryContactName && (
+                  <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    <span>Secondary Contact: {secondaryContactName}</span>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -42755,6 +42755,9 @@ export type Database = {
           primary_contact_phone: string | null
           rto_email: string | null
           rto_number: string | null
+          secondary_contact_email: string | null
+          secondary_contact_name: string | null
+          secondary_contact_phone: string | null
           state: string | null
           suburb: string | null
           tenant_id: number
@@ -42783,6 +42786,9 @@ export type Database = {
           primary_contact_phone?: string | null
           rto_email?: string | null
           rto_number?: string | null
+          secondary_contact_email?: string | null
+          secondary_contact_name?: string | null
+          secondary_contact_phone?: string | null
           state?: string | null
           suburb?: string | null
           tenant_id: number
@@ -42811,6 +42817,9 @@ export type Database = {
           primary_contact_phone?: string | null
           rto_email?: string | null
           rto_number?: string | null
+          secondary_contact_email?: string | null
+          secondary_contact_name?: string | null
+          secondary_contact_phone?: string | null
           state?: string | null
           suburb?: string | null
           tenant_id?: number
@@ -44849,6 +44858,7 @@ export type Database = {
           id: number
           primary_contact: boolean | null
           role: string
+          secondary_contact: boolean
           tenant_id: number
           user_id: string
         }
@@ -44858,6 +44868,7 @@ export type Database = {
           id?: number
           primary_contact?: boolean | null
           role?: string
+          secondary_contact?: boolean
           tenant_id: number
           user_id: string
         }
@@ -44867,6 +44878,7 @@ export type Database = {
           id?: number
           primary_contact?: boolean | null
           role?: string
+          secondary_contact?: boolean
           tenant_id?: number
           user_id?: string
         }
@@ -57082,7 +57094,7 @@ export type Database = {
           p_client_id: number
           p_minutes: number
           p_notes?: string
-          p_package_id?: number
+          p_package_instance_id?: number
           p_save_as_draft?: boolean
           p_work_date: string
         }

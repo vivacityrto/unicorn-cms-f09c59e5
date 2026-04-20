@@ -337,7 +337,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
         onOpenChange={setMeetingTimeOpen}
         clientId={tenantId}
         clientName={tenantName}
-        defaultPackageId={selectedPackage?.package_id || null}
+        defaultPackageId={selectedPackage?.id || null}
         packages={packages}
         onSuccess={handleSuccess}
       />

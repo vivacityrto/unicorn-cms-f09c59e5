@@ -40,6 +40,7 @@ import {
   UserPlus, 
   Shield, 
   User as UserIcon, 
+  UserCheck,
   Mail, 
   Clock,
   Phone,
@@ -76,6 +77,8 @@ interface TenantMemberInfo {
   user_id: string;
   role: string;
   created_at: string;
+  primary_contact?: boolean | null;
+  secondary_contact?: boolean | null;
   users: TenantUser;
 }
 
@@ -122,11 +125,26 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
-  // Map DB role values (parent/child) to readable labels
+  // Map DB role values to readable labels (incl. virtual 'secondary')
   const getRoleLabel = (role: string) => {
     if (role === 'parent') return 'Primary Contact';
+    if (role === 'secondary') return 'Secondary Contact';
     if (role === 'child') return 'User';
     return role;
+  };
+
+  // Resolve effective role value combining role + contact flags
+  const getMemberRoleValue = (m: TenantMemberInfo) => {
+    if (m.secondary_contact) return 'secondary';
+    if (m.role === 'parent') return 'parent';
+    return 'child';
+  };
+
+  // Primary and Secondary are mutually exclusive
+  const buildRolePatch = (newRole: string) => {
+    if (newRole === 'parent') return { role: 'parent', primary_contact: true, secondary_contact: false };
+    if (newRole === 'secondary') return { role: 'child', primary_contact: false, secondary_contact: true };
+    return { role: 'child', primary_contact: false, secondary_contact: false };
   };
 
   const fetchPendingInvites = async () => {
@@ -150,15 +168,18 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     if (!canChangeRoles) return;
     setUpdatingRole(userId);
     try {
+      const patch = buildRolePatch(newRole);
       const { error } = await supabase
         .from('tenant_users')
-        .update({ role: newRole, primary_contact: newRole === 'parent' })
+        .update(patch)
         .eq('tenant_id', tenantId)
         .eq('user_id', userId);
 
       if (error) throw error;
       setMembers(prev => prev.map(m =>
-        m.user_id === userId ? { ...m, role: newRole } : m
+        m.user_id === userId
+          ? { ...m, role: patch.role, primary_contact: patch.primary_contact, secondary_contact: patch.secondary_contact }
+          : m
       ));
       toast.success('Role updated successfully');
     } catch (error) {
@@ -199,6 +220,8 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           user_id,
           role,
           created_at,
+          primary_contact,
+          secondary_contact,
           users!tenant_users_user_id_fkey (
             user_uuid,
             email,
@@ -253,7 +276,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     setEditForm({
       job_title: member.users.job_title || '',
       phone: member.users.phone || '',
-      role: member.role,
+      role: getMemberRoleValue(member),
       disabled: member.users.disabled ?? false,
     });
     setDrawerStats({ totalLogins: 0, lastLogin: null });
@@ -264,7 +287,6 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     if (!editingMember) return;
     setSavingEdit(true);
     try {
-      // Update profile fields on users table
       const { error: userError } = await supabase
         .from('users')
         .update({
@@ -276,22 +298,26 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
       if (userError) throw userError;
 
-      // Update role on tenant_users if changed
-      if (editForm.role !== editingMember.role) {
+      const currentRoleValue = getMemberRoleValue(editingMember);
+      if (editForm.role !== currentRoleValue) {
+        const patch = buildRolePatch(editForm.role);
         const { error: roleError } = await supabase
           .from('tenant_users')
-          .update({ role: editForm.role, primary_contact: editForm.role === 'parent' })
+          .update(patch)
           .eq('tenant_id', tenantId)
           .eq('user_id', editingMember.user_id);
 
         if (roleError) throw roleError;
       }
 
+      const patch = buildRolePatch(editForm.role);
       setMembers(prev => prev.map(m =>
         m.user_id === editingMember.user_id
           ? {
               ...m,
-              role: editForm.role,
+              role: patch.role,
+              primary_contact: patch.primary_contact,
+              secondary_contact: patch.secondary_contact,
               users: {
                 ...m.users,
                 job_title: editForm.job_title || null,
@@ -482,13 +508,13 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                       {/* Role Badge/Selector */}
                       {canChangeRoles && member.user_id !== profile?.user_uuid ? (
                         <Select
-                          value={member.role}
+                          value={getMemberRoleValue(member)}
                           onValueChange={(value) => handleRoleChange(member.user_id, value)}
                           disabled={updatingRole === member.user_id}
                         >
-                          <SelectTrigger className="w-40">
+                          <SelectTrigger className="w-44">
                             <SelectValue>
-                              {getRoleLabel(member.role)}
+                              {getRoleLabel(getMemberRoleValue(member))}
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
@@ -496,6 +522,12 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                               <div className="flex items-center gap-2">
                                 <Shield className="h-3 w-3" />
                                 Primary Contact
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="secondary">
+                              <div className="flex items-center gap-2">
+                                <UserCheck className="h-3 w-3" />
+                                Secondary Contact
                               </div>
                             </SelectItem>
                             <SelectItem value="child">
@@ -507,20 +539,28 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge
-                          variant="outline"
-                          className={
-                            member.role === 'parent'
-                              ? 'bg-primary/10 text-primary border-primary/30'
-                              : 'bg-muted'
+                        (() => {
+                          const v = getMemberRoleValue(member);
+                          if (v === 'parent') {
+                            return (
+                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                                <Shield className="h-3 w-3 mr-1" /> Primary Contact
+                              </Badge>
+                            );
                           }
-                        >
-                          {member.role === 'parent' ? (
-                            <><Shield className="h-3 w-3 mr-1" /> Primary Contact</>
-                          ) : (
-                            <><UserIcon className="h-3 w-3 mr-1" /> User</>
-                          )}
-                        </Badge>
+                          if (v === 'secondary') {
+                            return (
+                              <Badge variant="outline" className="bg-accent/10 text-accent-foreground border-accent/30">
+                                <UserCheck className="h-3 w-3 mr-1" /> Secondary Contact
+                              </Badge>
+                            );
+                          }
+                          return (
+                            <Badge variant="outline" className="bg-muted">
+                              <UserIcon className="h-3 w-3 mr-1" /> User
+                            </Badge>
+                          );
+                        })()
                       )}
 
                       <span className="text-xs text-muted-foreground min-w-20">
@@ -638,6 +678,12 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                       <div className="flex items-center gap-2">
                         <Shield className="h-3 w-3" />
                         Primary Contact
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="secondary">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="h-3 w-3" />
+                        Secondary Contact
                       </div>
                     </SelectItem>
                     <SelectItem value="child">
