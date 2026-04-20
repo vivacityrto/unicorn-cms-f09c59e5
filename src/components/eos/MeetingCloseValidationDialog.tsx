@@ -148,7 +148,22 @@ export function MeetingCloseValidationDialog({
   const [isValidating, setIsValidating] = useState(false);
   const [showForceCloseConfirm, setShowForceCloseConfirm] = useState(false);
 
-  const outcomes = getOutcomesForMeetingType(meetingType);
+  const allOutcomes = getOutcomesForMeetingType(meetingType);
+
+  // Hide opt-out confirmations when the corresponding work was actually captured.
+  const outcomes = allOutcomes.filter((o) => {
+    if (o.outcomeType === 'no_todos_required' && todosCount > 0) return false;
+    if (o.outcomeType === 'no_ids_required' && issuesDiscussed > 0) return false;
+    if (o.outcomeType === 'no_decisions_required' && todosCount > 0) return false;
+    if (o.outcomeType === 'alignment_achieved' && todosCount > 0) return false;
+    if (o.outcomeType === 'no_risks_required' && issuesDiscussed > 0) return false;
+    return true;
+  });
+
+  const capturedItems: string[] = [];
+  if (todosCount > 0) capturedItems.push(`${todosCount} To-Do${todosCount === 1 ? '' : 's'} created`);
+  if (issuesDiscussed > 0) capturedItems.push(`${issuesDiscussed} IDS issue${issuesDiscussed === 1 ? '' : 's'} discussed`);
+
   const userRating = profile?.user_uuid ? getUserRating(profile.user_uuid) : undefined;
 
   // Load initial state when dialog opens
