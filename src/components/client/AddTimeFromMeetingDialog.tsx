@@ -151,7 +151,7 @@ export function AddTimeFromMeetingDialog({
         p_minutes: selectedEvent.duration_minutes,
         p_work_date: workDate,
         p_notes: notes || `Imported from meeting: ${selectedEvent.title}`,
-        p_package_id: selectedPackageId || null,
+        p_package_instance_id: selectedPackageId || null,
         p_save_as_draft: saveAsDraft
       });
 
