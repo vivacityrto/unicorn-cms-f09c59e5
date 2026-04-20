@@ -487,13 +487,13 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                       {/* Role Badge/Selector */}
                       {canChangeRoles && member.user_id !== profile?.user_uuid ? (
                         <Select
-                          value={member.role}
+                          value={getMemberRoleValue(member)}
                           onValueChange={(value) => handleRoleChange(member.user_id, value)}
                           disabled={updatingRole === member.user_id}
                         >
-                          <SelectTrigger className="w-40">
+                          <SelectTrigger className="w-44">
                             <SelectValue>
-                              {getRoleLabel(member.role)}
+                              {getRoleLabel(getMemberRoleValue(member))}
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
@@ -501,6 +501,12 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                               <div className="flex items-center gap-2">
                                 <Shield className="h-3 w-3" />
                                 Primary Contact
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="secondary">
+                              <div className="flex items-center gap-2">
+                                <UserCheck className="h-3 w-3" />
+                                Secondary Contact
                               </div>
                             </SelectItem>
                             <SelectItem value="child">
@@ -512,20 +518,28 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge
-                          variant="outline"
-                          className={
-                            member.role === 'parent'
-                              ? 'bg-primary/10 text-primary border-primary/30'
-                              : 'bg-muted'
+                        (() => {
+                          const v = getMemberRoleValue(member);
+                          if (v === 'parent') {
+                            return (
+                              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                                <Shield className="h-3 w-3 mr-1" /> Primary Contact
+                              </Badge>
+                            );
                           }
-                        >
-                          {member.role === 'parent' ? (
-                            <><Shield className="h-3 w-3 mr-1" /> Primary Contact</>
-                          ) : (
-                            <><UserIcon className="h-3 w-3 mr-1" /> User</>
-                          )}
-                        </Badge>
+                          if (v === 'secondary') {
+                            return (
+                              <Badge variant="outline" className="bg-accent/10 text-accent-foreground border-accent/30">
+                                <UserCheck className="h-3 w-3 mr-1" /> Secondary Contact
+                              </Badge>
+                            );
+                          }
+                          return (
+                            <Badge variant="outline" className="bg-muted">
+                              <UserIcon className="h-3 w-3 mr-1" /> User
+                            </Badge>
+                          );
+                        })()
                       )}
 
                       <span className="text-xs text-muted-foreground min-w-20">
