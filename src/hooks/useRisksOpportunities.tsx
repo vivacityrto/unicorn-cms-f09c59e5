@@ -66,10 +66,25 @@ export const useRisksOpportunities = () => {
       source?: string;
       why_it_matters?: string;
     }) => {
+      // Resolve tenant_id: profile first, fallback to meeting's tenant (Vivacity staff often have null tenant_id)
+      let resolvedTenantId: number | null | undefined = profile?.tenant_id;
+      if (!resolvedTenantId && item.meeting_id) {
+        const { data: mtg, error: mtgErr } = await supabase
+          .from('eos_meetings')
+          .select('tenant_id')
+          .eq('id', item.meeting_id)
+          .maybeSingle();
+        if (mtgErr) throw mtgErr;
+        resolvedTenantId = mtg?.tenant_id;
+      }
+      if (!resolvedTenantId) {
+        throw new Error('Unable to determine tenant for this issue. Please reload and try again.');
+      }
+
       const { data, error } = await supabase
         .from('eos_issues')
         .insert({
-          tenant_id: profile?.tenant_id,
+          tenant_id: resolvedTenantId,
           item_type: item.item_type,
           title: item.title,
           description: item.description,
