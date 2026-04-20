@@ -103,6 +103,7 @@ export default function TenantDetail() {
   const [primaryContactName, setPrimaryContactName] = useState<string>("");
   const [primaryContactEmail, setPrimaryContactEmail] = useState<string>("");
   const [primaryContactAvatar, setPrimaryContactAvatar] = useState<string>("");
+  const [secondaryContactName, setSecondaryContactName] = useState<string>("");
   const [tenantStatus, setTenantStatus] = useState<string>("active");
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const [tenantTypeValue, setTenantTypeValue] = useState<TenantType>("compliance_system");
