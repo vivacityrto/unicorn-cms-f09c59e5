@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus, Trash2 } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -58,6 +59,21 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
     last_name: u.last_name,
     email: u.email,
   }));
+
+  // Fetch linked rock details (title) when present
+  const { data: linkedRock } = useQuery({
+    queryKey: ['eos-rock-linked', issue?.linked_rock_id],
+    enabled: !!issue?.linked_rock_id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eos_rocks')
+        .select('id, title, status')
+        .eq('id', issue!.linked_rock_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   // Map status to IDS tab - auto-sync tab with issue status
   const getTabFromStatus = (status: string): string => {
@@ -290,7 +306,19 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
             {issue.linked_rock_id && (
               <div className="space-y-2">
                 <Label>Linked Rock</Label>
-                <Badge variant="secondary">Rock ID: {issue.linked_rock_id.slice(0, 8)}</Badge>
+                <div>
+                  <Link
+                    to={`/eos/rocks?rock=${issue.linked_rock_id}`}
+                    onClick={() => onOpenChange(false)}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                  >
+                    {linkedRock?.title ?? `Rock ${issue.linked_rock_id.slice(0, 8)}`}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                  {linkedRock?.status && (
+                    <Badge variant="secondary" className="ml-2">{linkedRock.status}</Badge>
+                  )}
+                </div>
               </div>
             )}
 
