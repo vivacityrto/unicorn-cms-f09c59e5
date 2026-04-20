@@ -1,55 +1,93 @@
 
 
-## Two Issues
+## Goal
+Replace the free-text "Training Products in Scope" textarea in New Audit modal Step 2 with a searchable, grouped multi-select populated from `tenant_rto_scope` for the selected client.
 
-### Issue 1 — "Failed to import time" error
-**Root cause** (confirmed via DB logs): `package_id 1027 does not belong to tenant 7532`.
+## Investigation
+<lov-tool-use id="toolu_vrtx_018LEN8EfwjzWBrd6fuMKoCz" name="code--search_files" integration-id="code" data="{\"query\": \"training_products\", \"include_patterns\": \"src/components/audit/**\"}">
+</lov-tool-use>
 
-In `AddTimeFromMeetingDialog.tsx` the `packages` array contains `{ id: package_instance_id, package_id: <base id>, package_name }`. The dialog sends `selectedPackageId` (= `package_instance_id`, e.g. **1027**) into `rpc_import_meeting_time_to_client` as `p_package_id`, but the RPC validates/inserts that value as a **base** `package_id` against `package_instances.package_id`. They never match → the RPC fails the tenant ownership check (and even if it passed, the resulting `time_entries` row would be missing `package_instance_id`, which is the platform standard).
+<lov-tool-use id="toolu_vrtx_017mBPpgdje8gKJKXUVK3Jzb" name="code--search_files" integration-id="code" data="{\"query\": \"NewAuditModal\", \"include_patterns\": \"src/**\"}">
+</lov-tool-use>
 
-**Fix:**
-1. **Frontend** (`AddTimeFromMeetingDialog.tsx`) — rename the RPC param semantically and pass the **package_instance_id**:
-   - Change the call to send `p_package_instance_id: selectedPackageId` (instance id) instead of `p_package_id`.
-   - The default (`defaultPackageId={selectedPackage?.package_id}`) is also wrong — should be `selectedPackage?.id` so the preselected option matches an item in the `packages` list.
+<lov-tool-use id="toolu_vrtx_01H6iEZV8FFEDZP9sx8tPg7c" name="code--search_files" integration-id="code" data="{\"query\": \"training_products\", \"include_patterns\": \"src/**\"}">
+</lov-tool-use>
 
-2. **Backend** — supersede `rpc_import_meeting_time_to_client` with a new signature accepting `p_package_instance_id bigint`:
-   - Resolve `package_instances` row for that id and verify `tenant_id = p_client_id`.
-   - Insert into `time_entries` with **both** `package_id` (derived from the instance) and `package_instance_id` (per `time-tracking-schema-standards`).
-   - Same change for the draft branch (`calendar_time_drafts` already accepts the base `package_id`, but we'll also store the instance via the `suggestion`/`suggested_package_id` field for parity).
-   - Keep the legacy signature as a thin wrapper that errors with a clearer message if called.
+<lov-tool-use id="toolu_vrtx_01WyL1utk6JYuLKxE66tvT2p" name="code--search_files" integration-id="code" data="{\"query\": \"NewAuditModal\", \"include_patterns\": \"src/**\"}">
+</lov-tool-use>
 
-3. Migration is required (new RPC + drop/replace).
+<lov-tool-use id="toolu_vrtx_014YmLS1YsyhoMSf6KswW1xi" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/audit/NewAuditModal.tsx\", \"lines\": \"1-100\"}">
+</lov-tool-use>
 
-### Issue 2 — Add a Secondary Contact to a Tenant
-Currently `tenant_users.primary_contact boolean` flags the primary; the role selector only offers **Primary Contact** / **User**. We'll add a parallel **Secondary Contact** role.
+<lov-tool-use id="toolu_vrtx_01Y5mySTVoVwfjinGRECEusQ" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/audit/NewAuditModal.tsx\", \"lines\": \"200-450\"}">
+</lov-tool-use>
 
-**Schema (migration)**
-- `ALTER TABLE tenant_users ADD COLUMN secondary_contact boolean NOT NULL DEFAULT false;`
-- Partial unique index to enforce at most one secondary per tenant:
-  `CREATE UNIQUE INDEX tenant_users_one_secondary ON tenant_users(tenant_id) WHERE secondary_contact = true;`
-- Add `secondary_contact_name/email/phone` denormalised fields to `tenant_profile` (mirror primary), populated by trigger when a `tenant_users` row is flagged `secondary_contact = true` (mirrors how primary already works).
+<lov-tool-use id="toolu_vrtx_01NsoYW8VZr7rMtna8bNdPrA" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/audit/NewAuditModal.tsx\", \"lines\": \"450-575\"}">
+</lov-tool-use>
+I have enough context. The `useTenantRtoScope` hook already exists and returns the right data shape.
 
-**Frontend (`TenantUsersTab.tsx`)**
-- Add a new role value `secondary` to the role Select (both inline list and Edit Drawer):
-  - `parent` → Primary Contact
-  - `secondary` → Secondary Contact (new, with a distinct icon e.g. `UserCheck`)
-  - `child` → User
-- Update `handleRoleChange` to set `primary_contact` / `secondary_contact` flags based on selection (mutually exclusive — picking Secondary clears Primary on that row, and vice-versa).
-- Update `getRoleLabel` and the read-only badge styling.
-- Update `useClientManagement.tsx` to also surface `secondary_contact_*` fields where primary is shown.
+<lov-plan>
 
-**Display surfaces**
-- `TenantDetail.tsx` header: under "Primary Contact: …" line, show "Secondary Contact: …" when present.
-- `ClientDetail.tsx`: same secondary contact row.
-- Merge fields: register `{{SecondaryContactName}}`, `{{SecondaryContactEmail}}`, `{{SecondaryContactPhone}}` in `resolve_tenant_merge_fields` (parallel to existing primary merge fields).
+## Plan: Scope-aware multi-select for Training Products in New Audit modal
 
-## Files changed
-- New migration: add `tenant_users.secondary_contact`, partial unique index, `tenant_profile.secondary_contact_*` columns, trigger to sync, replacement `rpc_import_meeting_time_to_client(... p_package_instance_id bigint ...)`, update `resolve_tenant_merge_fields`.
-- `src/components/client/AddTimeFromMeetingDialog.tsx` — pass instance id; fix `defaultPackageId` source.
-- `src/components/client/TenantTimeTrackerBar.tsx` — pass `selectedPackage?.id` as default.
-- `src/components/client/TenantUsersTab.tsx` — add Secondary Contact option + role-change logic.
-- `src/hooks/useClientManagement.tsx` — surface secondary contact fields.
-- `src/pages/TenantDetail.tsx`, `src/pages/ClientDetail.tsx` — render secondary contact.
+### Component: `ScopeMultiSelect`
+New file: `src/components/audit/ScopeMultiSelect.tsx`
 
-No changes to RLS or roles enum (Secondary is a tenant-level contact flag, not an app role).
+A combobox-style multi-select built on `Popover` + `Command` (same primitives as Lead Auditor selector area uses Select; we'll use cmdk for searchable behaviour, matching existing `TenantCombobox` pattern).
+
+Props:
+- `tenantId: number | null`
+- `value: string[]` — selected `code` values
+- `onChange: (codes: string[]) => void`
+
+Behaviour:
+- Uses `useTenantRtoScope(tenantId)` (already exists), filters client-side to:
+  - `status.toLowerCase() === 'current'`
+  - `is_superseded === false`
+  - `scope_type ∈ ('qualification', 'accreditedCourse', 'skillset')`
+- While loading: show skeleton/disabled trigger.
+- If zero matching rows: render fallback inline notice + plain text input (comma-separated), wired to same `onChange` (split/join on comma).
+- Otherwise render combobox:
+  - Trigger button shows count (`3 selected` / `Select training products…`).
+  - Popover contains `Command` with `CommandInput` (filters on `code` + `title`).
+  - `CommandGroup` per scope_type with humanised heading:
+    - `qualification` → Qualifications
+    - `skillset` → Skill Sets
+    - `accreditedCourse` → Accredited Courses
+  - Each group has a "Select all in group" item at top (toggles all group codes).
+  - Each `CommandItem` shows `CODE — Title` with a check icon when selected.
+- Selected items render as removable `Badge` chips below the trigger; clicking the × removes that code.
+
+### Wire-up: `NewAuditModal.tsx`
+
+Replace lines 474–479 (Training Products section) with:
+
+```tsx
+{selectedCard?.value !== 'due_diligence' && (
+  <div>
+    <Label>Training Products in Scope</Label>
+    <ScopeMultiSelect
+      tenantId={tenantId}
+      value={trainingProductCodes}
+      onChange={setTrainingProductCodes}
+    />
+  </div>
+)}
+```
+
+State change:
+- Replace `trainingProducts: string` (line ~) with `trainingProductCodes: string[]`.
+- `resetForm` resets it to `[]`.
+- `handleSave` (line 324) becomes:
+  ```ts
+  training_products: trainingProductCodes.length ? trainingProductCodes : undefined,
+  ```
+
+No DB schema changes — `client_audits.training_products` is already `text[]`.
+
+### Files changed
+- New: `src/components/audit/ScopeMultiSelect.tsx`
+- Edit: `src/components/audit/NewAuditModal.tsx` (state type + Step 2 field + save mapping + reset)
+
+No other Step 2 fields (Lead Auditor, Assisted By, Audit Title, Doc Number) are touched.
 
