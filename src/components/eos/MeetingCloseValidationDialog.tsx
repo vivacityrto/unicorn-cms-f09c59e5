@@ -148,7 +148,22 @@ export function MeetingCloseValidationDialog({
   const [isValidating, setIsValidating] = useState(false);
   const [showForceCloseConfirm, setShowForceCloseConfirm] = useState(false);
 
-  const outcomes = getOutcomesForMeetingType(meetingType);
+  const allOutcomes = getOutcomesForMeetingType(meetingType);
+
+  // Hide opt-out confirmations when the corresponding work was actually captured.
+  const outcomes = allOutcomes.filter((o) => {
+    if (o.outcomeType === 'no_todos_required' && todosCount > 0) return false;
+    if (o.outcomeType === 'no_ids_required' && issuesDiscussed > 0) return false;
+    if (o.outcomeType === 'no_decisions_required' && todosCount > 0) return false;
+    if (o.outcomeType === 'alignment_achieved' && todosCount > 0) return false;
+    if (o.outcomeType === 'no_risks_required' && issuesDiscussed > 0) return false;
+    return true;
+  });
+
+  const capturedItems: string[] = [];
+  if (todosCount > 0) capturedItems.push(`${todosCount} To-Do${todosCount === 1 ? '' : 's'} created`);
+  if (issuesDiscussed > 0) capturedItems.push(`${issuesDiscussed} IDS issue${issuesDiscussed === 1 ? '' : 's'} discussed`);
+
   const userRating = profile?.user_uuid ? getUserRating(profile.user_uuid) : undefined;
 
   // Load initial state when dialog opens
@@ -316,6 +331,24 @@ export function MeetingCloseValidationDialog({
                 </p>
               )}
             </div>
+          )}
+
+          {/* Captured Outcomes Summary */}
+          {capturedItems.length > 0 && (
+            <Card className="p-4 border-green-500/30 bg-green-500/5">
+              <h4 className="font-semibold text-green-700 dark:text-green-400 flex items-center gap-2 mb-2">
+                <CheckCircle className="h-4 w-4" />
+                Captured This Meeting
+              </h4>
+              <ul className="space-y-1">
+                {capturedItems.map((item, idx) => (
+                  <li key={idx} className="text-sm flex items-start gap-2">
+                    <span className="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
           )}
 
           {/* Outcome Confirmations */}
