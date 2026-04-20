@@ -1,35 +1,52 @@
 
 
 ## Issue
-The screenshot shows the "Explicit Confirmations (if applicable)" section listing **"NO IDS ITEMS REQUIRED THIS WEEK"** and **"NO TO-DOS REQUIRED"** as available checkboxes. The user reads this as the system *claiming* nothing happened — but actually:
+When a user selects **Work Type = Meeting** in the Add Time Entry dialog, no Sub Type selector appears. The user wants to capture **what kind of meeting** was held, with these options:
 
-- Database confirms **6 To-Dos** and **3 Issues** (1 marked as discussed) exist for this meeting
-- The validation function correctly detected this — the **only** real unmet requirement is *"Not enough ratings: 1 submitted, need 4"*
-- The two yellow-highlighted boxes are just unconditional opt-out checkboxes that the dialog **always** renders for L10 meetings, regardless of whether work was done
+1. Governance Meeting
+2. General Meeting
+3. Regulatory Support Meeting
+4. Compliance Health Check
+5. ASQA Audit/Meeting
 
-## Root cause
-In `MeetingCloseValidationDialog.tsx`, `L10_OUTCOMES` is rendered as a static list under "Explicit Confirmations (if applicable)" — there is no conditional logic to hide them when To-Dos/IDS items already exist. The labels ("No IDS items required", "No To-Dos required") are misleading in that context: a facilitator who *did* create To-Dos sees a checkbox suggesting otherwise.
+## Current state
+- `dd_work_sub_type` already supports categorisation (existing categories: `consultation`, `document`).
+- `AddTimeDialog.tsx` (lines 463–488) only renders the Sub Type select when `workType` is `consultation`, `document_review`, or `document_development`.
+- There is an existing `governance_meeting` sub-type, but it's miscategorised under `consultation` — it should live under the new `meeting` category instead.
+- `EditTimeDialog.tsx` uses the same pattern and needs the same treatment for consistency.
 
-## Fix plan
+## Plan
 
-### Change 1 — Hide irrelevant confirmations (`MeetingCloseValidationDialog.tsx`)
-Filter `L10_OUTCOMES` (and the equivalents for other meeting types) before rendering, based on actual data from the validation result:
-- Hide `no_todos_required` when `validation.todos_count > 0`
-- Hide `no_ids_required` when `validation.issues_discussed > 0`
-- Apply the same pattern to Same Page (`no_decisions_required`, `alignment_achieved`) and Annual (`no_risks_required`) — only hide when the corresponding count is non-zero
+### 1. Database migration — seed `meeting` category in `dd_work_sub_type`
+Insert (idempotent, ON CONFLICT DO NOTHING on `code`):
 
-If **all** outcomes for the meeting type are hidden, hide the entire "Explicit Confirmations" section heading and helper text too.
+| code | label | category | sort_order |
+|---|---|---|---|
+| `governance_meeting_mt` | Governance Meeting | meeting | 1 |
+| `general_meeting` | General Meeting | meeting | 2 |
+| `regulatory_support_meeting` | Regulatory Support Meeting | meeting | 3 |
+| `compliance_health_check_mt` | Compliance Health Check | meeting | 4 |
+| `asqa_audit_meeting` | ASQA Audit/Meeting | meeting | 5 |
 
-### Change 2 — Add a positive summary line
-At the top of the Confirmations section (or replacing it when empty), show a small green confirmation card listing what *was* captured, e.g.:
-- ✓ 6 To-Dos created
-- ✓ 1 IDS issue discussed (3 linked)
+Note: codes are suffixed where they collide with existing consultation-category codes (`governance_meeting`, `compliance_health_check`) so we don't break historical entries. The existing consultation entries stay intact for audit history.
 
-This makes the meeting close feel like an audit-ready summary, not a list of opt-outs.
+### 2. Frontend — extend sub-type filter logic
+In **`src/components/client/AddTimeDialog.tsx`** (lines 464–467) and **`src/components/client/EditTimeDialog.tsx`** (same pattern), extend the category mapping:
 
-### Change 3 — No DB changes required
-`validate_meeting_close` already returns `todos_count` and `issues_discussed` correctly. No migration needed.
+```ts
+const category = workType === 'consultation' ? 'consultation'
+  : (workType === 'document_review' || workType === 'document_development') ? 'document'
+  : workType === 'meeting' ? 'meeting'
+  : null;
+```
 
-## Files to change
-- `src/components/eos/MeetingCloseValidationDialog.tsx` — conditional rendering of outcome checkboxes + new positive-summary block
+When Work Type = Meeting, the Sub Type select will populate with the 5 options above.
+
+### 3. No changes to time entry persistence
+`work_sub_type` (string code) already saves via existing logic. Reporting and audit trail continue to work unchanged because we're using the same `dd_work_sub_type` lookup.
+
+## Files changed
+- New migration: `supabase/migrations/<ts>_add_meeting_work_sub_types.sql`
+- `src/components/client/AddTimeDialog.tsx` — extend category mapping
+- `src/components/client/EditTimeDialog.tsx` — extend category mapping (parity)
 
