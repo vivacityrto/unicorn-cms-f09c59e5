@@ -97,89 +97,100 @@ export function EditStageEmailDialog({ open, onOpenChange, email, onSave }: Edit
             </DialogDescription>
           </DialogHeader>
 
-          <div className="overflow-y-auto scrollbar-hide flex-1 space-y-4 min-h-0">
-            {/* Row 1: Name, Subject, To */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Name *</Label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Internal email name"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Subject</Label>
-                <Input
-                  value={form.subject}
-                  onChange={(e) => setForm({ ...form, subject: e.target.value })}
-                  placeholder="Email subject line"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Default To</Label>
-                <Input
-                  value={form.to}
-                  onChange={(e) => setForm({ ...form, to: e.target.value })}
-                  placeholder="e.g. {{PrimaryContact}}"
-                />
-              </div>
-            </div>
+          <Tabs defaultValue="details" className="flex-1 flex flex-col min-h-0">
+            <TabsList>
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="attachments">Attachments</TabsTrigger>
+            </TabsList>
 
-            {/* Row 2: Description */}
-            <div className="space-y-1">
-              <Label className="text-xs">Description (internal notes)</Label>
-              <Input
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Internal description of this email's purpose"
-              />
-            </div>
+            <TabsContent value="details" className="overflow-y-auto scrollbar-hide flex-1 space-y-4 min-h-0 mt-4">
+              {/* Row 1: Name, Subject, To */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Name *</Label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="Internal email name"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Subject</Label>
+                  <Input
+                    value={form.subject}
+                    onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                    placeholder="Email subject line"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Default To</Label>
+                  <Input
+                    value={form.to}
+                    onChange={(e) => setForm({ ...form, to: e.target.value })}
+                    placeholder="e.g. {{PrimaryContact}}"
+                  />
+                </div>
+              </div>
 
-            {/* Row 3: Order & Toggles */}
-            <div className="flex items-center gap-6 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Label className="text-xs whitespace-nowrap">Order #</Label>
+              {/* Row 2: Description */}
+              <div className="space-y-1">
+                <Label className="text-xs">Description (internal notes)</Label>
                 <Input
-                  type="number"
-                  value={form.order_number}
-                  onChange={(e) => setForm({ ...form, order_number: parseInt(e.target.value) || 0 })}
-                  className="w-20 h-8 text-sm"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Internal description of this email's purpose"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={form.automation_enabled} onCheckedChange={(c) => setForm({ ...form, automation_enabled: c })} className="scale-90" />
-                <Label className="text-xs">Automation</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={form.auth_mode} onCheckedChange={(c) => setForm({ ...form, auth_mode: c })} className="scale-90" />
-                <Label className="text-xs">Auth Mode</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={form.auto_send_on_task_assignment} onCheckedChange={(c) => setForm({ ...form, auto_send_on_task_assignment: c })} className="scale-90" />
-                <Label className="text-xs">Auto on Task Assign</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={form.auto_send_on_document_added} onCheckedChange={(c) => setForm({ ...form, auto_send_on_document_added: c })} className="scale-90" />
-                <Label className="text-xs">Auto on Doc Added</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={form.auto_send_on_document_updated} onCheckedChange={(c) => setForm({ ...form, auto_send_on_document_updated: c })} className="scale-90" />
-                <Label className="text-xs">Auto on Doc Updated</Label>
-              </div>
-            </div>
 
-            {/* Row 4: Rich Text Content */}
-            <div className="space-y-1 flex-1">
-              <Label className="text-xs font-semibold">Content (HTML body)</Label>
-              <RichTextEditor
-                value={form.content}
-                onChange={(html) => setForm({ ...form, content: html })}
-                minHeight="350px"
-                placeholder="Compose email body content..."
-              />
-            </div>
-          </div>
+              {/* Row 3: Order & Toggles */}
+              <div className="flex items-center gap-6 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs whitespace-nowrap">Order #</Label>
+                  <Input
+                    type="number"
+                    value={form.order_number}
+                    onChange={(e) => setForm({ ...form, order_number: parseInt(e.target.value) || 0 })}
+                    className="w-20 h-8 text-sm"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.automation_enabled} onCheckedChange={(c) => setForm({ ...form, automation_enabled: c })} className="scale-90" />
+                  <Label className="text-xs">Automation</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.auth_mode} onCheckedChange={(c) => setForm({ ...form, auth_mode: c })} className="scale-90" />
+                  <Label className="text-xs">Auth Mode</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.auto_send_on_task_assignment} onCheckedChange={(c) => setForm({ ...form, auto_send_on_task_assignment: c })} className="scale-90" />
+                  <Label className="text-xs">Auto on Task Assign</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.auto_send_on_document_added} onCheckedChange={(c) => setForm({ ...form, auto_send_on_document_added: c })} className="scale-90" />
+                  <Label className="text-xs">Auto on Doc Added</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.auto_send_on_document_updated} onCheckedChange={(c) => setForm({ ...form, auto_send_on_document_updated: c })} className="scale-90" />
+                  <Label className="text-xs">Auto on Doc Updated</Label>
+                </div>
+              </div>
+
+              {/* Row 4: Rich Text Content */}
+              <div className="space-y-1 flex-1">
+                <Label className="text-xs font-semibold">Content (HTML body)</Label>
+                <RichTextEditor
+                  value={form.content}
+                  onChange={(html) => setForm({ ...form, content: html })}
+                  minHeight="350px"
+                  placeholder="Compose email body content..."
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="attachments" className="overflow-y-auto scrollbar-hide flex-1 min-h-0 mt-4">
+              <EmailAttachmentsManager emailId={email.id} stageId={(email as any).stage_id ?? null} />
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving} className="hover:bg-[#40c6e524] hover:text-black">
