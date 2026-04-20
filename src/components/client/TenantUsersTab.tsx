@@ -680,6 +680,12 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                         Primary Contact
                       </div>
                     </SelectItem>
+                    <SelectItem value="secondary">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="h-3 w-3" />
+                        Secondary Contact
+                      </div>
+                    </SelectItem>
                     <SelectItem value="child">
                       <div className="flex items-center gap-2">
                         <UserIcon className="h-3 w-3" />
