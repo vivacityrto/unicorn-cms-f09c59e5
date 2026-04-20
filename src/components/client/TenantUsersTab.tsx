@@ -276,7 +276,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     setEditForm({
       job_title: member.users.job_title || '',
       phone: member.users.phone || '',
-      role: member.role,
+      role: getMemberRoleValue(member),
       disabled: member.users.disabled ?? false,
     });
     setDrawerStats({ totalLogins: 0, lastLogin: null });
@@ -287,7 +287,6 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     if (!editingMember) return;
     setSavingEdit(true);
     try {
-      // Update profile fields on users table
       const { error: userError } = await supabase
         .from('users')
         .update({
@@ -299,22 +298,26 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
       if (userError) throw userError;
 
-      // Update role on tenant_users if changed
-      if (editForm.role !== editingMember.role) {
+      const currentRoleValue = getMemberRoleValue(editingMember);
+      if (editForm.role !== currentRoleValue) {
+        const patch = buildRolePatch(editForm.role);
         const { error: roleError } = await supabase
           .from('tenant_users')
-          .update({ role: editForm.role, primary_contact: editForm.role === 'parent' })
+          .update(patch)
           .eq('tenant_id', tenantId)
           .eq('user_id', editingMember.user_id);
 
         if (roleError) throw roleError;
       }
 
+      const patch = buildRolePatch(editForm.role);
       setMembers(prev => prev.map(m =>
         m.user_id === editingMember.user_id
           ? {
               ...m,
-              role: editForm.role,
+              role: patch.role,
+              primary_contact: patch.primary_contact,
+              secondary_contact: patch.secondary_contact,
               users: {
                 ...m.users,
                 job_title: editForm.job_title || null,
