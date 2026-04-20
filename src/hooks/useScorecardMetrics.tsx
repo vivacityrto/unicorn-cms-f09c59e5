@@ -314,7 +314,7 @@ export function useScorecardMetrics(showArchived = false) {
           .from('eos_scorecard_entries')
           .insert({
             metric_id: metric.id,
-            tenant_id: profile?.tenant_id!,
+            tenant_id: metric.tenant_id,
             week_ending: weekEnding,
             value,
             actual_value: value,
