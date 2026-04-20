@@ -591,7 +591,47 @@ export default function ManageDocuments() {
       setSortDirection("asc");
     }
   };
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  // File status counts (derived from full documents list)
+  const needsUploadCount = documents.filter(d => d.file_status === 'needs_upload').length;
+  const readyCount = documents.filter(d => d.file_status === 'file_ready').length;
+
+  const handleInlineFileUpload = async (docId: number, file: File) => {
+    try {
+      setUploadingDocId(docId);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `documents/${docId}/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('document-files')
+        .upload(filePath, file, { upsert: false, contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await supabase
+        .from('document_files')
+        .insert({
+          document_id: docId,
+          file_path: filePath,
+          file_type: file.type || null,
+          original_filename: file.name,
+          file_size: file.size,
+          uploaded_by: user.id,
+        });
+      if (insertError) throw insertError;
+
+      sonnerToast.success('File uploaded');
+      // Optimistic update
+      setDocuments(prev => prev.map(d => d.id === docId ? { ...d, file_status: 'file_ready' as FileStatus } : d));
+    } catch (err: any) {
+      console.error('Inline upload failed:', err);
+      sonnerToast.error(err.message || 'Upload failed');
+    } finally {
+      setUploadingDocId(null);
+    }
+  };
     const files = e.target.files;
     if (files) {
       setUploadedFiles(prev => [...prev, ...Array.from(files)]);
