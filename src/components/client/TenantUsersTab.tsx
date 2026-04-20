@@ -77,6 +77,8 @@ interface TenantMemberInfo {
   user_id: string;
   role: string;
   created_at: string;
+  primary_contact?: boolean | null;
+  secondary_contact?: boolean | null;
   users: TenantUser;
 }
 
@@ -200,6 +202,8 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           user_id,
           role,
           created_at,
+          primary_contact,
+          secondary_contact,
           users!tenant_users_user_id_fkey (
             user_uuid,
             email,
