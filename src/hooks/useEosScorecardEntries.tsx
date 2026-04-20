@@ -38,6 +38,18 @@ export const useEosScorecardEntries = (metricId?: string) => {
 
   const createEntry = useMutation({
     mutationFn: async (entry: Partial<EosScorecardEntry>) => {
+      // Resolve tenant_id: prefer explicit, fall back to metric's tenant, then profile
+      let tenantId = entry.tenant_id ?? profile?.tenant_id ?? null;
+      if (!tenantId && entry.metric_id) {
+        const { data: metric } = await supabase
+          .from('eos_scorecard_metrics')
+          .select('tenant_id')
+          .eq('id', entry.metric_id)
+          .single();
+        tenantId = metric?.tenant_id ?? null;
+      }
+      if (!tenantId) throw new Error('Unable to resolve tenant for scorecard entry');
+
       const { data, error } = await supabase
         .from('eos_scorecard_entries')
         .insert([{
@@ -45,7 +57,7 @@ export const useEosScorecardEntries = (metricId?: string) => {
           week_ending: entry.week_ending!,
           value: entry.value!,
           notes: entry.notes,
-          tenant_id: profile?.tenant_id!,
+          tenant_id: tenantId,
           entered_by: profile?.user_uuid!,
         }])
         .select()
