@@ -111,9 +111,12 @@ Deno.serve(async (req) => {
     }
 
     // Insert audit (service role bypasses RLS — authorisation verified above)
+    // tenant_id = OWNER (auditor's home tenant) → satisfies billing_gate RLS
+    // subject_tenant_id = the RTO being audited (from wizard)
     const { data: inserted, error: insertErr } = await admin
       .from("client_audits")
       .insert({
+        tenant_id: ownerTenantId,
         audit_type,
         subject_tenant_id,
         title,
@@ -151,7 +154,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: insertErr.message }, 500);
     }
 
-    const newAuditId = inserted.id;
+    const newAuditId = inserted?.id;
+    if (!newAuditId) {
+      console.error("client_audits insert returned no id", inserted);
+      return jsonResponse({ error: "Audit insert succeeded but no id returned" }, 500);
+    }
 
     // Back-link stage_instances if provided (non-critical)
     if (linked_stage_instance_id) {
