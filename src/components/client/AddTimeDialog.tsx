@@ -464,6 +464,7 @@ export function AddTimeDialog({
           {(() => {
             const category = workType === 'consultation' ? 'consultation'
               : (workType === 'document_review' || workType === 'document_development') ? 'document'
+              : workType === 'meeting' ? 'meeting'
               : null;
             if (!category) return null;
             const filtered = workSubTypes.filter(st => st.category === category);
