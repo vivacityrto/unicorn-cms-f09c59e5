@@ -1466,6 +1466,34 @@ export default function ManageDocuments() {
         )}
       </div>
 
+      {/* File Status Filter */}
+      {isSuperAdmin && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">File status:</span>
+          <div className="inline-flex rounded-lg border border-border/50 bg-card p-1 shadow-sm">
+            {([
+              { value: 'all', label: `All (${documents.length})` },
+              { value: 'needs_upload', label: `Needs Upload (${needsUploadCount})` },
+              { value: 'ready', label: `Ready (${readyCount})` },
+            ] as const).map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setFileStatusFilter(opt.value)}
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                  fileStatusFilter === opt.value
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-muted"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Documents Table */}
       <div className="rounded-lg border-0 bg-card shadow-lg overflow-x-auto">
           <Table className="min-w-[1600px]">
@@ -1483,6 +1511,11 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-24">
                   ID
                 </TableHead>
+                {isSuperAdmin && (
+                  <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-16 text-center">
+                    File
+                  </TableHead>
+                )}
                 <TableHead className="font-semibold bg-muted/30 text-foreground min-w-[200px] max-w-[300px] h-14 whitespace-nowrap border-r">
                   Name
                 </TableHead>
