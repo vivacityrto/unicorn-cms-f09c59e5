@@ -15,6 +15,7 @@ import { STAGE_AUDIT_TYPE_MAP } from '@/hooks/useStageAuditLink';
 import type { AuditType } from '@/types/clientAudits';
 import { detectRegistrationType, isCricosValid } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
+import { ScopeMultiSelect } from './ScopeMultiSelect';
 
 const STAGE_NAME_MAP: Record<number, string> = {
   24: 'Compliance Health Check',
@@ -167,7 +168,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   const [title, setTitle] = useState('');
   const [leadAuditorId, setLeadAuditorId] = useState('');
   const [assistedById, setAssistedById] = useState('');
-  const [trainingProducts, setTrainingProducts] = useState('');
+  const [trainingProductCodes, setTrainingProductCodes] = useState<string[]>([]);
   const [docNumber, setDocNumber] = useState('');
 
   // Step 3 snapshot
@@ -301,7 +302,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     setSelectedCard(null);
     if (!preselectedTenantId) { setTenantId(null); setTenantName(''); }
     setTitle(''); setLeadAuditorId(''); setAssistedById('');
-    setTrainingProducts(''); setDocNumber('');
+    setTrainingProductCodes([]); setDocNumber('');
     setRtoName(''); setRtoNumber(''); setCricosCode('');
     setSiteAddress(''); setCeo(''); setPhone(''); setEmail(''); setWebsite('');
     setOverseasStudentCount(''); setEducationAgents(''); setPrismsUsers(''); setDhaContact('');
@@ -321,7 +322,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       title: title || undefined,
       lead_auditor_id: leadAuditorId || undefined,
       assisted_by_id: assistedById || undefined,
-      training_products: trainingProducts ? trainingProducts.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      training_products: trainingProductCodes.length ? trainingProductCodes : undefined,
       doc_number: docNumber || undefined,
       linked_stage_instance_id: preselectedStageInstanceId || undefined,
       snapshot_rto_name: rtoName || undefined,
@@ -474,7 +475,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
               {selectedCard?.value !== 'due_diligence' && (
                 <div>
                   <Label>Training Products in Scope</Label>
-                  <Input value={trainingProducts} onChange={e => setTrainingProducts(e.target.value)} placeholder="Comma-separated qualification codes" />
+                  <ScopeMultiSelect tenantId={tenantId} value={trainingProductCodes} onChange={setTrainingProductCodes} />
                 </div>
               )}
             </div>
