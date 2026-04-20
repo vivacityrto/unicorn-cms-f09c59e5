@@ -211,7 +211,7 @@ export function EmailAttachmentsManager({ emailId, stageId }: Props) {
   });
 
   const removeMutation = useMutation({
-    mutationFn: async (rowId: number) => {
+    mutationFn: async (rowId: string) => {
       const { error } = await supabase.from('email_attachments').delete().eq('id', rowId);
       if (error) throw error;
     },
