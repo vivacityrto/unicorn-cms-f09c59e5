@@ -240,8 +240,14 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
     }
   };
 
-  const hasLeaveActive = formData.leave_from && formData.leave_until && 
-    new Date(formData.leave_until) >= new Date();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const hasLeaveScheduled = !!(formData.leave_from && formData.leave_until);
+  const hasLeaveActive = hasLeaveScheduled &&
+    new Date(formData.leave_from) <= today &&
+    new Date(formData.leave_until) >= today;
+  const hasLeaveUpcoming = hasLeaveScheduled && !hasLeaveActive &&
+    new Date(formData.leave_from) > today;
 
   const hasChanges = 
     formData.linkedin_url !== (user.linkedin_url || '') ||
@@ -300,6 +306,15 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-800 dark:text-amber-200">
               <strong>You are currently marked as away</strong> until {new Date(formData.leave_until).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {hasLeaveUpcoming && (
+          <Alert className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+            <AlertTriangle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              <strong>Upcoming leave scheduled</strong> from {new Date(formData.leave_from).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} to {new Date(formData.leave_until).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
             </AlertDescription>
           </Alert>
         )}
