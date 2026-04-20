@@ -306,7 +306,19 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
             {issue.linked_rock_id && (
               <div className="space-y-2">
                 <Label>Linked Rock</Label>
-                <Badge variant="secondary">Rock ID: {issue.linked_rock_id.slice(0, 8)}</Badge>
+                <div>
+                  <Link
+                    to={`/eos/rocks?rock=${issue.linked_rock_id}`}
+                    onClick={() => onOpenChange(false)}
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                  >
+                    {linkedRock?.title ?? `Rock ${issue.linked_rock_id.slice(0, 8)}`}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                  {linkedRock?.status && (
+                    <Badge variant="secondary" className="ml-2">{linkedRock.status}</Badge>
+                  )}
+                </div>
               </div>
             )}
 
