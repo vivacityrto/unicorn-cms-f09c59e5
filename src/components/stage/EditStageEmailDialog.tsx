@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Mail, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StageEmail } from '@/hooks/useStageTemplateContent';
+import { EmailAttachmentsManager } from '@/components/stage/EmailAttachmentsManager';
 
 interface EditStageEmailDialogProps {
   open: boolean;
