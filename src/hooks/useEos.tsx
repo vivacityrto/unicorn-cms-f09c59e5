@@ -326,7 +326,7 @@ export const useEosTodos = () => {
 
 // Hook for EOS Meetings
 export const useEosMeetings = () => {
-  const { profile, isSuperAdmin } = useAuth();
+  const { profile, loading: authLoading, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
   
@@ -335,9 +335,24 @@ export const useEosMeetings = () => {
     profile?.unicorn_role || ''
   );
 
+  // Only run the query once auth/profile has resolved. Once resolved, always
+  // run it — the queryFn will short-circuit for users who shouldn't see data
+  // so we never spin forever on a disabled query.
+  const queryEnabled = !authLoading && !!profile;
+  const canQuery = isSuper || isVivacityTeam || !!profile?.tenant_id;
+
   const { data: meetings, isLoading, error, refetch } = useQuery({
-    queryKey: ['eos-meetings', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
+    queryKey: ['eos-meetings', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id ?? 'none'],
     queryFn: async () => {
+      // Profile loaded but user has no role/tenant context for EOS — return empty.
+      if (!canQuery) {
+        console.warn('[useEosMeetings] Skipping query — user has no Vivacity role and no tenant_id', {
+          unicorn_role: profile?.unicorn_role,
+          tenant_id: profile?.tenant_id,
+        });
+        return [] as EosMeeting[];
+      }
+
       let query = supabase
         .from('eos_meetings')
         .select('*')
@@ -357,7 +372,6 @@ export const useEosMeetings = () => {
           code: error.code,
           hint: error.hint,
         });
-        // Create a new error that includes all details for the UI
         const detailedError = new Error(error.message) as Error & { 
           details?: string; 
           code?: string;
@@ -370,7 +384,7 @@ export const useEosMeetings = () => {
       }
       return data as EosMeeting[];
     },
-    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
+    enabled: queryEnabled,
   });
 
   const createMeeting = useMutation({
