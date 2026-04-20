@@ -160,7 +160,7 @@ export function EmailAttachmentsManager({ emailId, stageId }: Props) {
         .from('documents')
         .select('id, title, format')
         .eq('is_core', true)
-        .eq('stage', stageId!)
+        .eq('stage', String(stageId))
         .order('title', { ascending: true });
       if (error) throw error;
       return (data || []) as CoreDoc[];
