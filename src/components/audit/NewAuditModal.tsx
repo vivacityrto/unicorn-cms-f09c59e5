@@ -168,7 +168,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   const [title, setTitle] = useState('');
   const [leadAuditorId, setLeadAuditorId] = useState('');
   const [assistedById, setAssistedById] = useState('');
-  const [trainingProducts, setTrainingProducts] = useState('');
+  const [trainingProductCodes, setTrainingProductCodes] = useState<string[]>([]);
   const [docNumber, setDocNumber] = useState('');
 
   // Step 3 snapshot
