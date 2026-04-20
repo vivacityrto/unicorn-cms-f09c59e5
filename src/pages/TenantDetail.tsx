@@ -104,6 +104,7 @@ export default function TenantDetail() {
   const [primaryContactEmail, setPrimaryContactEmail] = useState<string>("");
   const [primaryContactAvatar, setPrimaryContactAvatar] = useState<string>("");
   const [secondaryContactName, setSecondaryContactName] = useState<string>("");
+  const [secondaryContactName, setSecondaryContactName] = useState<string>("");
   const [tenantStatus, setTenantStatus] = useState<string>("active");
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const [tenantTypeValue, setTenantTypeValue] = useState<TenantType>("compliance_system");
@@ -449,6 +450,24 @@ export default function TenantDetail() {
           setPrimaryContactAvatar("");
           setPrimaryContactEmail("");
         }
+
+        const { data: secondaryContactData } = await supabase
+          .from("tenant_users")
+          .select("user_id")
+          .eq("tenant_id", parseInt(tenantId))
+          .eq("secondary_contact", true)
+          .limit(1)
+          .maybeSingle();
+        if (secondaryContactData?.user_id) {
+          const { data: scUser } = await supabase
+            .from("users")
+            .select("first_name, last_name")
+            .eq("user_uuid", secondaryContactData.user_id)
+            .maybeSingle();
+          setSecondaryContactName(scUser ? `${scUser.first_name || ''} ${scUser.last_name || ''}`.trim() : "");
+        } else {
+          setSecondaryContactName("");
+        }
       }
       if (activePackage) {
         const packageDate = new Date(tenantData.package_added_at || new Date());
@@ -602,6 +621,12 @@ export default function TenantDetail() {
                       : <span className="text-white/40">No primary contact</span>
                     }
                   </div>
+                  {secondaryContactName && (
+                    <div className="flex items-center gap-2 text-sm text-white/70">
+                      <User className="h-4 w-4" />
+                      Secondary Contact: {secondaryContactName}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex flex-col items-end gap-3">
