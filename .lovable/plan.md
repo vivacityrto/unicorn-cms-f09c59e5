@@ -1,61 +1,48 @@
 
 
-## Plan: Show template attachments in Compose Email modal
+## Plan: SuperAdmin Email Template Attachment Manager
 
-### Data flow
-The `ComposeEmailDialog` receives `emailInstanceId` (FK to `email_instances`). To resolve attachments we need the underlying template `emails.id`:
+### Mounting point
+Add an **Attachments** tab to `EditStageEmailDialog` (the dialog opened from `AdminStageDetail` → Emails → ✏️). This dialog edits rows in the `emails` table whose `id` (bigint) matches `email_attachments.email_id`, and exposes `email.stage_id` for the document filter — exactly what the spec needs.
 
-1. Query `email_instances` for the row's `email_id` (template id), OR have the parent (`StageEmailsSection`) pass `email_id` as a new prop. Cleaner: add an optional `emailTemplateId?: number` prop and pass `email.email_id` from `useStageEmails` (already selected in the hook query).
-2. With the template id, run:
-   ```sql
-   SELECT d.id, d.title, d.format,
-          df.file_path, df.original_filename
-   FROM email_attachments ea
-   JOIN documents d ON d.id = ea.document_id
-   LEFT JOIN document_files df ON df.document_id = d.id
-   WHERE ea.email_id = :emailTemplateId
-   ORDER BY ea.order_number NULLS LAST, ea.created_at
-   ```
-   Note: `document_files` is one-to-many; we'll take the most recent per document (order by `created_at desc`, group client-side, pick first).
+The other "email templates" UI (`EmailTemplateEditorDialog` on `/manage-email-templates`) edits the separate `email_templates` table (uuid id), which has no FK relationship with `email_attachments`, so it's not the right surface here.
 
-### Changes
+### New component: `EmailAttachmentsManager`
+File: `src/components/stage/EmailAttachmentsManager.tsx`
 
-**1. `src/hooks/useEmailAttachments.ts` (new)**
-- React Query hook: `useEmailAttachments(emailTemplateId?: number)`.
-- Returns `{ attachments, loading }` where each item: `{ documentId, title, format, filePath | null, originalFilename | null }`.
-- `enabled: !!emailTemplateId`.
+Props: `{ emailId: number; stageId: number | null }`
 
-**2. `src/components/client/EmailAttachmentChips.tsx` (new)**
-- Renders nothing if `attachments.length === 0`.
-- Otherwise renders an `ATTACHMENTS` label (matching the `To:` / `Subject:` style — `grid-cols-[60px_1fr]`) and a wrap row of chips.
-- Chip:
-  - Icon: `FileSpreadsheet` (green) for `xlsx`, `FileText` (blue) for `docx`, generic `File` otherwise.
-  - Title text + small `Badge` for `format`.
-  - If `filePath` is null → greyed `opacity-50`, `Lock` icon, tooltip "File not yet uploaded to document library", non-clickable.
-  - If `filePath` exists → button that calls `supabase.storage.from('documents').createSignedUrl(filePath, 60)` and opens in new tab.
-- Read-only — no edit/remove controls.
+Behaviour:
+1. **List linked attachments** via React Query — same join the spec describes:
+   - Fetch `email_attachments` rows for `email_id`, ordered by `order_number`.
+   - Resolve `documents` (id, title, format) and most-recent `document_files.file_path` per doc (reuse the pattern from `useEmailAttachments.ts`).
+   - Render rows: drag handle (`GripVertical`) | file icon (xlsx green / docx blue / generic) | title | format badge | remove button (`Trash2`).
+2. **Drag-and-drop reorder** using `@dnd-kit/core` + `@dnd-kit/sortable` (already used in `SortableStaffTaskList.tsx`). On drop, batch-update `email_attachments.order_number` (1..N) and invalidate the query.
+3. **Add attachment** row above the list:
+   - `CommandInput`-style searchable combobox (Popover + cmdk, same pattern as `ScopeMultiSelect`) populated from:
+     ```sql
+     SELECT id, title, format FROM documents
+     WHERE is_core = true AND stage = :stageId
+     ORDER BY title
+     ```
+   - Excludes already-linked document IDs.
+   - "Add" button inserts a new `email_attachments` row with `order_number = max+1`.
+   - If `stageId` is null: show notice "This email is not associated with a stage — no core documents available to attach."
+4. **Remove**: `DELETE FROM email_attachments WHERE id = :rowId` with a small confirm (reuse `ConfirmDialog`, destructive variant).
+5. Read/write happens directly via `supabase` client; SuperAdmin RLS already permits this (staff bypass).
 
-**3. `src/components/client/ComposeEmailDialog.tsx`**
-- Add prop `emailTemplateId?: number`.
-- In Compose tab: insert `<EmailAttachmentChips emailTemplateId={emailTemplateId} />` after the Body block (line 207).
-- In Preview tab: insert the same component below the body preview card (after line 226).
+### Wire-up: `EditStageEmailDialog`
+- Wrap the existing form body in `<Tabs>` with two tabs: **Details** (current content) and **Attachments** (new manager).
+- Pass `emailId={email.id}` and `stageId={email.stage_id}`.
+- No change to the save handler — attachments persist immediately on each action (live, not deferred to Save).
 
-**4. `src/components/client/StageEmailsSection.tsx`**
-- Pass `emailTemplateId={composeEmail.email_id}` to `ComposeEmailDialog`.
-- Update `useStageEmails` `StageEmail` interface to expose `email_id` (already selected in the query — just surface it on the returned object).
+### Files
+- New: `src/components/stage/EmailAttachmentsManager.tsx`
+- Edit: `src/components/stage/EditStageEmailDialog.tsx` (add Tabs wrapper + render the manager)
 
-**5. Other callers** (`StaffTaskActionMenu.tsx`, `ClientStructuredNotesTab.tsx`)
-- No change required — `emailTemplateId` is optional; chips simply won't render when omitted.
-
-### Storage bucket
-Reuse existing `documents` bucket signed-URL pattern (already used elsewhere in the codebase, e.g. `useSuggestAttachments.getAttachmentSignedUrl`). No new bucket / RLS work needed — chips are read-only and client already has read access to `documents` rows their tenant can see.
-
-### Files changed
-- New: `src/hooks/useEmailAttachments.ts`
-- New: `src/components/client/EmailAttachmentChips.tsx`
-- Edit: `src/components/client/ComposeEmailDialog.tsx` (new prop + render in both tabs)
-- Edit: `src/components/client/StageEmailsSection.tsx` (pass `email_id`)
-- Edit: `src/hooks/useStageEmails.ts` (expose `email_id` on returned objects)
-
-No DB changes, no RLS changes, no new buckets.
+### Out of scope / not changed
+- No DB schema changes (table & FKs already exist).
+- No RLS changes (staff already have full access via `is_vivacity()`).
+- `useEmailAttachments.ts` (read-only hook for the Compose modal) is left untouched; the manager uses its own write-aware queries.
+- The `/manage-email-templates` UI (different table) is unchanged.
 
