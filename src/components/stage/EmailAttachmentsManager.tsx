@@ -28,7 +28,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 interface AttachmentRow {
-  id: number;
+  id: string;
   document_id: number;
   order_number: number | null;
   title: string;
