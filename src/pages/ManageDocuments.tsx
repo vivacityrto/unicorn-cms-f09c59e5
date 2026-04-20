@@ -31,8 +31,10 @@ import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocu
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
 import { toast as sonnerToast } from 'sonner';
+type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload';
 interface Document {
   id: number;
+  file_status?: FileStatus;
   title: string;
   description: string | null;
   format: string | null;
@@ -155,6 +157,8 @@ export default function ManageDocuments() {
   // Governance features state
   const [frameworkFilter, setFrameworkFilter] = useState<string>("all");
   const [sharepointFilter, setSharepointFilter] = useState<string>("all");
+  const [fileStatusFilter, setFileStatusFilter] = useState<'all' | 'needs_upload' | 'ready'>('all');
+  const [uploadingDocId, setUploadingDocId] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDocId, setSelectedDocId] = useState<number | null>(() => {
     const docParam = searchParams.get('doc');
@@ -346,7 +350,7 @@ export default function ManageDocuments() {
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1); // Reset to first page when filters change
-  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly, frameworkFilter, sharepointFilter]);
+  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly, frameworkFilter, sharepointFilter, fileStatusFilter]);
   useEffect(() => {
     if (bulkSendSearchQuery) {
       const filtered = bulkSendUsers.filter(user => user.email.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()) || `${user.first_name} ${user.last_name}`.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()));
@@ -418,11 +422,30 @@ export default function ManageDocuments() {
           }
         }
 
-        // Enrich documents with creator info
-        const enrichedDocs = (documentsData || []).map(doc => ({
-          ...doc,
-          creator: doc.created_by ? creatorsMap[doc.created_by] || null : null
-        }));
+        // Fetch document_files presence to derive file_status
+        const docIds = (documentsData || []).map(d => d.id);
+        let readySet = new Set<number>();
+        if (docIds.length > 0) {
+          const { data: filesData } = await supabase
+            .from('document_files')
+            .select('document_id')
+            .in('document_id', docIds);
+          readySet = new Set((filesData || []).map(f => f.document_id as number));
+        }
+
+        // Enrich documents with creator info + file_status
+        const enrichedDocs = (documentsData || []).map(doc => {
+          const fileStatus: FileStatus = readySet.has(doc.id)
+            ? 'file_ready'
+            : (doc.uploaded_files && Array.isArray(doc.uploaded_files) && doc.uploaded_files.length > 0)
+              ? 'legacy_only'
+              : 'needs_upload';
+          return {
+            ...doc,
+            creator: doc.created_by ? creatorsMap[doc.created_by] || null : null,
+            file_status: fileStatus,
+          };
+        });
 
         setDocuments(enrichedDocs);
 
@@ -514,6 +537,13 @@ export default function ManageDocuments() {
       filtered = filtered.filter(doc => !doc.source_template_url);
     }
 
+    // File status filter
+    if (fileStatusFilter === 'needs_upload') {
+      filtered = filtered.filter(doc => doc.file_status === 'needs_upload');
+    } else if (fileStatusFilter === 'ready') {
+      filtered = filtered.filter(doc => doc.file_status === 'file_ready');
+    }
+
     // Sort - when showing duplicates, group by title first
     filtered.sort((a, b) => {
       if (showDuplicatesOnly) {
@@ -561,6 +591,48 @@ export default function ManageDocuments() {
       setSortDirection("asc");
     }
   };
+
+  // File status counts (derived from full documents list)
+  const needsUploadCount = documents.filter(d => d.file_status === 'needs_upload').length;
+  const readyCount = documents.filter(d => d.file_status === 'file_ready').length;
+
+  const handleInlineFileUpload = async (docId: number, file: File) => {
+    try {
+      setUploadingDocId(docId);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `documents/${docId}/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('document-files')
+        .upload(filePath, file, { upsert: false, contentType: file.type });
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await supabase
+        .from('document_files')
+        .insert({
+          document_id: docId,
+          file_path: filePath,
+          file_type: file.type || null,
+          original_filename: file.name,
+          file_size: file.size,
+          uploaded_by: user.id,
+        });
+      if (insertError) throw insertError;
+
+      sonnerToast.success('File uploaded');
+      // Optimistic update
+      setDocuments(prev => prev.map(d => d.id === docId ? { ...d, file_status: 'file_ready' as FileStatus } : d));
+    } catch (err: any) {
+      console.error('Inline upload failed:', err);
+      sonnerToast.error(err.message || 'Upload failed');
+    } finally {
+      setUploadingDocId(null);
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
@@ -1394,6 +1466,34 @@ export default function ManageDocuments() {
         )}
       </div>
 
+      {/* File Status Filter */}
+      {isSuperAdmin && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">File status:</span>
+          <div className="inline-flex rounded-lg border border-border/50 bg-card p-1 shadow-sm">
+            {([
+              { value: 'all', label: `All (${documents.length})` },
+              { value: 'needs_upload', label: `Needs Upload (${needsUploadCount})` },
+              { value: 'ready', label: `Ready (${readyCount})` },
+            ] as const).map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setFileStatusFilter(opt.value)}
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                  fileStatusFilter === opt.value
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground hover:bg-muted"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Documents Table */}
       <div className="rounded-lg border-0 bg-card shadow-lg overflow-x-auto">
           <Table className="min-w-[1600px]">
@@ -1411,6 +1511,11 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-24">
                   ID
                 </TableHead>
+                {isSuperAdmin && (
+                  <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-16 text-center">
+                    File
+                  </TableHead>
+                )}
                 <TableHead className="font-semibold bg-muted/30 text-foreground min-w-[200px] max-w-[300px] h-14 whitespace-nowrap border-r">
                   Name
                 </TableHead>
@@ -1430,7 +1535,7 @@ export default function ManageDocuments() {
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 11 : 10} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 12 : 10} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
@@ -1456,6 +1561,61 @@ export default function ManageDocuments() {
                       <TableCell className="py-6 border-r border-border/50 w-24">
                         <span className="font-semibold text-foreground">{doc.id}</span>
                       </TableCell>
+                      {isSuperAdmin && (
+                        <TableCell className="py-6 border-r border-border/50 w-16 text-center" onClick={e => e.stopPropagation()}>
+                          {doc.file_status === 'file_ready' ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-block w-3 h-3 rounded-full bg-emerald-500" aria-label="File ready" />
+                              </TooltipTrigger>
+                              <TooltipContent>File ready</TooltipContent>
+                            </Tooltip>
+                          ) : doc.file_status === 'legacy_only' ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-block w-3 h-3 rounded-full bg-amber-500" aria-label="Legacy file only" />
+                              </TooltipTrigger>
+                              <TooltipContent>Legacy file only — not yet migrated to document_files</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Popover>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <PopoverTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="inline-flex items-center justify-center w-5 h-5 rounded-full hover:bg-muted transition-colors"
+                                      aria-label="Needs upload"
+                                      disabled={uploadingDocId === doc.id}
+                                    >
+                                      <span className="inline-block w-3 h-3 rounded-full bg-red-500" />
+                                    </button>
+                                  </PopoverTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>Needs upload — click to upload</TooltipContent>
+                              </Tooltip>
+                              <PopoverContent className="w-64 p-3" align="start">
+                                <div className="space-y-2">
+                                  <p className="text-sm font-medium text-foreground">Upload file for #{doc.id}</p>
+                                  <p className="text-xs text-muted-foreground">Saves to document_files</p>
+                                  <Input
+                                    type="file"
+                                    disabled={uploadingDocId === doc.id}
+                                    onChange={e => {
+                                      const f = e.target.files?.[0];
+                                      if (f) handleInlineFileUpload(doc.id, f);
+                                    }}
+                                    className="text-xs"
+                                  />
+                                  {uploadingDocId === doc.id && (
+                                    <p className="text-xs text-muted-foreground">Uploading…</p>
+                                  )}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="py-6 border-r border-border/50" style={{
                 minWidth: '200px',
                 maxWidth: '300px'
