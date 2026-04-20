@@ -291,7 +291,7 @@ function MeetingsContent() {
               Weekly execution meeting to track scorecard results, review Rocks, surface risks and opportunities, and assign actions.
             </p>
             <div className="mt-2 text-xs text-muted-foreground/70">
-              Default: Segue • Scorecard • Rock Review • Risks & Opps • To-Dos • IDS • Conclude
+              Default: Segue • Scorecard • Rock Review • To-Dos • Headlines • IDS • Conclude
             </div>
           </CardContent>
         </Card>
