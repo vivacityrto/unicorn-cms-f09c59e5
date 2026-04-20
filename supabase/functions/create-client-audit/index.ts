@@ -105,12 +105,10 @@ Deno.serve(async (req) => {
     }
 
     // Insert audit (service role bypasses RLS — authorisation verified above)
-    // tenant_id = OWNER (auditor's home tenant) → satisfies billing_gate RLS
     // subject_tenant_id = the RTO being audited (from wizard)
     const { data: inserted, error: insertErr } = await admin
       .from("client_audits")
       .insert({
-        tenant_id: ownerTenantId,
         audit_type,
         subject_tenant_id,
         title,
