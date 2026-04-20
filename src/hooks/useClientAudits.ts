@@ -110,13 +110,11 @@ export function useCreateAudit() {
       const userId = session?.user?.id;
       const templateId = input.template_id || AUDIT_TYPE_TEMPLATE[input.audit_type];
 
-      const { data, error } = await supabase
-        .from('client_audits' as any)
-        .insert({
+      const { data, error } = await supabase.functions.invoke('create-client-audit', {
+        body: {
           audit_type: input.audit_type,
           subject_tenant_id: input.subject_tenant_id,
           title,
-          status: 'draft',
           is_rto: input.is_rto ?? null,
           is_cricos: input.is_cricos ?? null,
           conducted_at: input.conducted_at || null,
@@ -139,42 +137,12 @@ export function useCreateAudit() {
           snapshot_dha_contact: input.snapshot_dha_contact || null,
           template_id: templateId,
           linked_stage_instance_id: input.linked_stage_instance_id || null,
-          ai_analysis_status: 'none',
-          created_by: userId,
-        } as any)
-        .select('id')
-        .single();
+        },
+      });
       if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
 
-      const newAuditId = (data as any).id;
-
-      // Back-link stage_instances if linked
-      if (input.linked_stage_instance_id) {
-        try {
-          await supabase
-            .from('stage_instances' as any)
-            .update({ linked_audit_id: newAuditId } as any)
-            .eq('id', input.linked_stage_instance_id);
-        } catch {
-          // Non-critical
-        }
-      }
-
-      // Insert timeline event
-      try {
-        await supabase.from('client_timeline_events' as any).insert({
-          tenant_id: input.subject_tenant_id,
-          event_type: 'audit_created',
-          title: `Audit started: ${title}`,
-          entity_type: 'client_audit',
-          entity_id: newAuditId,
-          source: 'internal',
-        } as any);
-      } catch {
-        // Non-critical
-      }
-
-      return data as unknown as { id: string };
+      return data as { id: string };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['client-audits-dashboard'] });
