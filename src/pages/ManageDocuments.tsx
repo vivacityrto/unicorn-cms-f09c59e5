@@ -422,11 +422,30 @@ export default function ManageDocuments() {
           }
         }
 
-        // Enrich documents with creator info
-        const enrichedDocs = (documentsData || []).map(doc => ({
-          ...doc,
-          creator: doc.created_by ? creatorsMap[doc.created_by] || null : null
-        }));
+        // Fetch document_files presence to derive file_status
+        const docIds = (documentsData || []).map(d => d.id);
+        let readySet = new Set<number>();
+        if (docIds.length > 0) {
+          const { data: filesData } = await supabase
+            .from('document_files')
+            .select('document_id')
+            .in('document_id', docIds);
+          readySet = new Set((filesData || []).map(f => f.document_id as number));
+        }
+
+        // Enrich documents with creator info + file_status
+        const enrichedDocs = (documentsData || []).map(doc => {
+          const fileStatus: FileStatus = readySet.has(doc.id)
+            ? 'file_ready'
+            : (doc.uploaded_files && Array.isArray(doc.uploaded_files) && doc.uploaded_files.length > 0)
+              ? 'legacy_only'
+              : 'needs_upload';
+          return {
+            ...doc,
+            creator: doc.created_by ? creatorsMap[doc.created_by] || null : null,
+            file_status: fileStatus,
+          };
+        });
 
         setDocuments(enrichedDocs);
 
@@ -516,6 +535,13 @@ export default function ManageDocuments() {
       filtered = filtered.filter(doc => !!doc.source_template_url);
     } else if (sharepointFilter === "no_url") {
       filtered = filtered.filter(doc => !doc.source_template_url);
+    }
+
+    // File status filter
+    if (fileStatusFilter === 'needs_upload') {
+      filtered = filtered.filter(doc => doc.file_status === 'needs_upload');
+    } else if (fileStatusFilter === 'ready') {
+      filtered = filtered.filter(doc => doc.file_status === 'file_ready');
     }
 
     // Sort - when showing duplicates, group by title first
