@@ -128,6 +128,7 @@ export function StageEmailsSection({ stageInstanceId, tenantId, packageId }: Sta
           packageId={packageId}
           stageInstanceId={stageInstanceId}
           emailInstanceId={composeEmail.id}
+          emailTemplateId={composeEmail.email_id}
           defaultTo={resolveDefaultTo()}
           defaultSubject={composeEmail.subject}
           defaultBody={composeEmail.content || ''}
