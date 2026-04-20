@@ -333,6 +333,24 @@ export function MeetingCloseValidationDialog({
             </div>
           )}
 
+          {/* Captured Outcomes Summary */}
+          {capturedItems.length > 0 && (
+            <Card className="p-4 border-green-500/30 bg-green-500/5">
+              <h4 className="font-semibold text-green-700 dark:text-green-400 flex items-center gap-2 mb-2">
+                <CheckCircle className="h-4 w-4" />
+                Captured This Meeting
+              </h4>
+              <ul className="space-y-1">
+                {capturedItems.map((item, idx) => (
+                  <li key={idx} className="text-sm flex items-start gap-2">
+                    <span className="text-green-600 dark:text-green-400 mt-0.5">✓</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
           {/* Outcome Confirmations */}
           {outcomes.length > 0 && (
             <div className="space-y-4">
