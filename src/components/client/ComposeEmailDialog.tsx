@@ -12,6 +12,7 @@ import { useOutlookConnectionStatus } from '@/hooks/useOutlookConnectionStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { Send, Eye, Loader2, Pencil } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import { EmailAttachmentChips } from './EmailAttachmentChips';
 
 interface ComposeEmailDialogProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface ComposeEmailDialogProps {
   packageId?: number;
   stageInstanceId?: number;
   emailInstanceId?: number;
+  emailTemplateId?: number;
   defaultTo: string;
   defaultSubject: string;
   defaultBody: string;
@@ -34,6 +36,7 @@ export function ComposeEmailDialog({
   packageId,
   stageInstanceId,
   emailInstanceId,
+  emailTemplateId,
   defaultTo,
   defaultSubject,
   defaultBody,
@@ -205,6 +208,7 @@ export function ComposeEmailDialog({
                 </p>
               </div>
             </div>
+            <EmailAttachmentChips emailTemplateId={emailTemplateId} />
           </TabsContent>
 
           <TabsContent value="preview" className="flex-1 overflow-auto mt-3">
@@ -224,6 +228,7 @@ export function ComposeEmailDialog({
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview.body_html) }}
                   />
                 </div>
+                <EmailAttachmentChips emailTemplateId={emailTemplateId} />
               </div>
             ) : (
               <p className="text-muted-foreground text-sm text-center py-8">
