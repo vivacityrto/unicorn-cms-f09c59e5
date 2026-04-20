@@ -310,6 +310,15 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
           </Alert>
         )}
 
+        {hasLeaveUpcoming && (
+          <Alert className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+            <AlertTriangle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800 dark:text-blue-200">
+              <strong>Upcoming leave scheduled</strong> from {new Date(formData.leave_from).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })} to {new Date(formData.leave_until).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Links section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
