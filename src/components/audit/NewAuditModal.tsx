@@ -15,6 +15,7 @@ import { STAGE_AUDIT_TYPE_MAP } from '@/hooks/useStageAuditLink';
 import type { AuditType } from '@/types/clientAudits';
 import { detectRegistrationType, isCricosValid } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
+import { ScopeMultiSelect } from './ScopeMultiSelect';
 
 const STAGE_NAME_MAP: Record<number, string> = {
   24: 'Compliance Health Check',
