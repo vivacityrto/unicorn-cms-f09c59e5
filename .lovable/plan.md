@@ -1,73 +1,62 @@
 
 
-## Plan: Fix audit ownership tenant_id + navigation race
+## Plan: Fix audit creation + detail (real root cause — not `audit_runs`)
 
-### Investigation findings
+### Reality check on the user's prompt
 
-Reading the **current** `useClientAudits.ts` (post-Edge-Function refactor) plus the schema:
+The prompt asserts `public.audit_runs` exists and the codebase queries it. **Both are false.** I verified directly:
 
-- `client_audits` has TWO tenant columns:
-  - `tenant_id` — the **owning** (auditor) tenant. RLS `billing_gate` checks this.
-  - `subject_tenant_id` — the **client being audited** (the RTO).
-- The current Edge Function `create-client-audit` inserts using `subject_tenant_id` from the wizard, but does **not** set `tenant_id` (or sets it from the wrong source). That's why RLS blocks the insert: the inserter (Vivacity consultant) is not a member of the subject's tenant, and `tenant_id` isn't being scoped to their own.
-- The frontend `onSuccess` navigates immediately on the React Query mutation success — that part is already gated by the function returning `{ id }`, so the navigation race only exists if the function returns 200 without a real id. Worth tightening anyway.
+- `public.audit_runs` does NOT exist. The actual tables are `client_audits`, `client_audit_findings`, `client_audit_actions` — already correctly used by the frontend (`useAudit`, `useClientAudits`, `useAuditFindings`, etc.).
+- No Postgres logs reference `audit_runs` or "relation does not exist".
+- No edge-function logs exist for `create-client-audit` (it has never executed successfully — the deployment may be failing, or it's failing silently before logging).
 
-The user's prompt template references `profiles.active_tenant_id`, but this project's identity model uses `public.users.tenant_id` (and Vivacity staff are identified via `unicorn_role` / `superadmin_level`, with their home tenant in `users.tenant_id`). I'll use the project's real schema.
+So we will **not** create or rename anything to `audit_runs`. Doing so would break the entire audit module that already works against `client_audits`.
 
-### Fix (server-side, in the Edge Function)
+### Actual root cause of "Audit not found" + create failures
+
+The **previous fix** to the edge function added `tenant_id: ownerTenantId` to the insert. But `client_audits` has **no `tenant_id` column** — only `subject_tenant_id`. Confirmed via `information_schema`:
+
+```
+client_audits columns: id, audit_type, subject_tenant_id, title,
+snapshot_*, lead_auditor_id, ..., created_by, created_at, ...
+(no tenant_id column anywhere)
+```
+
+So every call to `create-client-audit` now fails with a Postgres "column tenant_id does not exist" error. The mutation rejects, no row is created, and any audit the user thinks they created never existed → detail page shows "Audit not found".
+
+The earlier RLS-violation theory was also misdiagnosed. The **only** RLS policy on `client_audits` is `client_audits_tenant_read` (SELECT, USING tenant_members membership on `subject_tenant_id`) — there is **no INSERT policy with a billing_gate**. The original direct-browser insert failed simply because there's no INSERT policy at all. Service-role insert from the edge function is the right path; we just need to stop writing to a phantom column.
+
+A secondary issue: the auth check uses `tenant_users`, but the read RLS policy uses `tenant_members`. Both tables exist. For staff (Vivacity consultants), `unicorn_role` is set so they pass authorization regardless — fine. For non-staff users we should align with the table the rest of the app treats as source of truth (`tenant_users` per project memory). Keep `tenant_users`. No change needed.
+
+### Fix
 
 **File:** `supabase/functions/create-client-audit/index.ts`
 
-1. After verifying the JWT, look up the caller in `public.users` to get their **own** `tenant_id` (the auditor/owner tenant) and `unicorn_role`.
-2. Authorisation (unchanged intent): allow if `unicorn_role` is set (Vivacity staff) OR caller is in `tenant_users` for `subject_tenant_id`.
-3. Reject with 400 if the caller has no `users.tenant_id` (defensive — staff accounts always have a home tenant).
-4. Build the insert payload with:
-   - `tenant_id` = caller's `users.tenant_id` (the **auditor's** tenant — satisfies `billing_gate`)
-   - `subject_tenant_id` = body.subject_tenant_id (the RTO being audited — already passed from the wizard)
-   - all existing snapshot/`audit_type`/etc fields untouched
-   - `created_by` = caller's `user_uuid`
-5. After the service-role insert, **verify** the returned row has an `id` before doing the side-effect writes (stage_instances back-link + timeline event). If `id` is missing, return 500 with a clear error so the frontend toast fires.
-6. Return `{ id }` only on confirmed success.
-
-### Fix (client-side hardening)
+1. Remove the `tenant_id: ownerTenantId` line from the insert payload (column doesn't exist).
+2. Remove the now-unused `ownerTenantId` resolution and the 400 guard for missing home tenant. Keep the `users` lookup only for `unicorn_role` (staff check).
+3. Everything else (auth, side-effects, response shape) stays identical — it's already correct.
 
 **File:** `src/hooks/useClientAudits.ts`
 
-Tighten `useCreateAudit.onSuccess` so navigation only happens when `data?.id` is a non-empty string:
+No change. `useAudit` already queries `client_audits` correctly via `.from('client_audits' as any).select('*').eq('id', auditId).single()`. The "Audit not found" was purely a downstream symptom of the failed insert.
 
-```ts
-onSuccess: (data) => {
-  if (!data?.id) {
-    toast.error('Audit created but ID not returned. Please refresh the Audits list.');
-    queryClient.invalidateQueries({ queryKey: ['client-audits-dashboard'] });
-    return;
-  }
-  queryClient.invalidateQueries({ queryKey: ['client-audits-dashboard'] });
-  queryClient.invalidateQueries({ queryKey: ['client-audits'] });
-  toast.success('Audit created successfully');
-  navigate(`/audits/${data.id}`);
-}
-```
+### Why we ignore the rest of the user's prompt
 
-The existing `onError` already handles thrown errors from `functions.invoke` (function returns non-2xx → mutation rejects → toast fires → no navigation). No change needed there.
+- "Query `audit_runs`" → would 404 against a non-existent table. We keep `client_audits`.
+- "Add `audit_findings(count)` / `audit_tasks(count)` to the detail query" → those tables don't exist either; the code already uses dedicated hooks (`useAuditFindings`, `useAuditActions`) against `client_audit_findings` / `client_audit_actions` and computes counts in JS.
+- "Confirm Create Audit calls the Edge Function" → already true (last fix). Navigation guard on `data?.id` is also already in place.
 
-### Why not the prompt's exact code
-
-- The prompt assumes a direct browser insert. We've already (correctly) moved this to an Edge Function per Framework §4 — direct inserts would re-introduce the original RLS leak path and put service-role logic considerations in the browser bundle. Keeping the fix server-side is the right shape.
-- The prompt references `profiles.active_tenant_id`; this project uses `users.tenant_id`. Using the wrong table would 404.
-
-### Files
-- Edit: `supabase/functions/create-client-audit/index.ts` (resolve owner tenant_id, set both tenant columns, verify id before side-effects)
-- Edit: `src/hooks/useClientAudits.ts` (`onSuccess` guard on `data.id`)
+### Files changed
+- Edit: `supabase/functions/create-client-audit/index.ts` — drop the phantom `tenant_id` field from the insert and the related guard.
 
 ### Out of scope
-- No DB schema or RLS changes — schema already has both `tenant_id` and `subject_tenant_id`; RLS is correct.
-- No wizard UI changes — `subject_tenant_id` is already passed correctly from `NewAuditModal`.
-- No changes to read paths.
+- No DB migrations. Schema is correct as-is.
+- No frontend changes. Reads, navigation guard, mutation wiring are all already correct.
+- No RLS changes.
 
 ### Acceptance
-1. Vivacity consultant (e.g., on `/tenant/7532`) completes the wizard → row lands in `client_audits` with `tenant_id` = consultant's own home tenant and `subject_tenant_id` = 7532.
-2. RLS `billing_gate` passes; no "violates row-level security" error.
-3. Navigation to `/audits/:id` only fires when the function returns a real id.
-4. Failures surface as toasts; wizard stays open; no half-created records visible as "Audit not found".
+1. Vivacity consultant on `/tenant/7532` completes the wizard → row inserts into `client_audits` with `subject_tenant_id = 7532` and no column errors.
+2. Edge function returns `{ id }`; frontend navigates to `/audits/:id`.
+3. `useAudit` loads the row → workspace renders (no "Audit not found").
+4. Findings/Actions counters render as 0 for a fresh audit.
 
