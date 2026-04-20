@@ -40,6 +40,7 @@ import {
   UserPlus, 
   Shield, 
   User as UserIcon, 
+  UserCheck,
   Mail, 
   Clock,
   Phone,
