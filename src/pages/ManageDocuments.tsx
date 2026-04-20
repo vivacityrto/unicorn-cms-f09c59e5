@@ -632,6 +632,8 @@ export default function ManageDocuments() {
       setUploadingDocId(null);
     }
   };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       setUploadedFiles(prev => [...prev, ...Array.from(files)]);
