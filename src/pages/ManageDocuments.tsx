@@ -1535,7 +1535,7 @@ export default function ManageDocuments() {
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 11 : 10} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 12 : 10} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
@@ -1561,6 +1561,61 @@ export default function ManageDocuments() {
                       <TableCell className="py-6 border-r border-border/50 w-24">
                         <span className="font-semibold text-foreground">{doc.id}</span>
                       </TableCell>
+                      {isSuperAdmin && (
+                        <TableCell className="py-6 border-r border-border/50 w-16 text-center" onClick={e => e.stopPropagation()}>
+                          {doc.file_status === 'file_ready' ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-block w-3 h-3 rounded-full bg-emerald-500" aria-label="File ready" />
+                              </TooltipTrigger>
+                              <TooltipContent>File ready</TooltipContent>
+                            </Tooltip>
+                          ) : doc.file_status === 'legacy_only' ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-block w-3 h-3 rounded-full bg-amber-500" aria-label="Legacy file only" />
+                              </TooltipTrigger>
+                              <TooltipContent>Legacy file only — not yet migrated to document_files</TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Popover>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <PopoverTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="inline-flex items-center justify-center w-5 h-5 rounded-full hover:bg-muted transition-colors"
+                                      aria-label="Needs upload"
+                                      disabled={uploadingDocId === doc.id}
+                                    >
+                                      <span className="inline-block w-3 h-3 rounded-full bg-red-500" />
+                                    </button>
+                                  </PopoverTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>Needs upload — click to upload</TooltipContent>
+                              </Tooltip>
+                              <PopoverContent className="w-64 p-3" align="start">
+                                <div className="space-y-2">
+                                  <p className="text-sm font-medium text-foreground">Upload file for #{doc.id}</p>
+                                  <p className="text-xs text-muted-foreground">Saves to document_files</p>
+                                  <Input
+                                    type="file"
+                                    disabled={uploadingDocId === doc.id}
+                                    onChange={e => {
+                                      const f = e.target.files?.[0];
+                                      if (f) handleInlineFileUpload(doc.id, f);
+                                    }}
+                                    className="text-xs"
+                                  />
+                                  {uploadingDocId === doc.id && (
+                                    <p className="text-xs text-muted-foreground">Uploading…</p>
+                                  )}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="py-6 border-r border-border/50" style={{
                 minWidth: '200px',
                 maxWidth: '300px'
