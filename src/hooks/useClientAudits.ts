@@ -145,6 +145,11 @@ export function useCreateAudit() {
       return data as { id: string };
     },
     onSuccess: (data) => {
+      if (!data?.id) {
+        toast.error('Audit created but ID not returned. Please refresh the Audits list.');
+        queryClient.invalidateQueries({ queryKey: ['client-audits-dashboard'] });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ['client-audits-dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['client-audits'] });
       toast.success('Audit created successfully');

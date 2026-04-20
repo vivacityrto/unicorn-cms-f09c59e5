@@ -76,15 +76,21 @@ Deno.serve(async (req) => {
     });
 
     // Authorization: Vivacity staff (unicorn_role set) OR member of subject tenant
+    // Also resolves the caller's OWN tenant_id (auditor/owner tenant) for the insert.
     const { data: userRow, error: userRowErr } = await admin
       .from("users")
-      .select("user_uuid, unicorn_role")
+      .select("user_uuid, unicorn_role, tenant_id")
       .eq("user_uuid", userId)
       .maybeSingle();
 
     if (userRowErr) {
       console.error("users lookup error", userRowErr);
       return jsonResponse({ error: "Identity lookup failed" }, 500);
+    }
+
+    const ownerTenantId = userRow?.tenant_id ?? null;
+    if (!ownerTenantId) {
+      return jsonResponse({ error: "Caller has no home tenant_id; cannot own audit record" }, 400);
     }
 
     const isStaff = !!userRow?.unicorn_role;
@@ -105,9 +111,12 @@ Deno.serve(async (req) => {
     }
 
     // Insert audit (service role bypasses RLS — authorisation verified above)
+    // tenant_id = OWNER (auditor's home tenant) → satisfies billing_gate RLS
+    // subject_tenant_id = the RTO being audited (from wizard)
     const { data: inserted, error: insertErr } = await admin
       .from("client_audits")
       .insert({
+        tenant_id: ownerTenantId,
         audit_type,
         subject_tenant_id,
         title,
@@ -145,7 +154,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: insertErr.message }, 500);
     }
 
-    const newAuditId = inserted.id;
+    const newAuditId = inserted?.id;
+    if (!newAuditId) {
+      console.error("client_audits insert returned no id", inserted);
+      return jsonResponse({ error: "Audit insert succeeded but no id returned" }, 500);
+    }
 
     // Back-link stage_instances if provided (non-critical)
     if (linked_stage_instance_id) {
