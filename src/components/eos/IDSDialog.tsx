@@ -60,6 +60,21 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId 
     email: u.email,
   }));
 
+  // Fetch linked rock details (title) when present
+  const { data: linkedRock } = useQuery({
+    queryKey: ['eos-rock-linked', issue?.linked_rock_id],
+    enabled: !!issue?.linked_rock_id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eos_rocks')
+        .select('id, title, status')
+        .eq('id', issue!.linked_rock_id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Map status to IDS tab - auto-sync tab with issue status
   const getTabFromStatus = (status: string): string => {
     switch (status) {
