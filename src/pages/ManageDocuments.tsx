@@ -31,8 +31,10 @@ import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocu
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
 import { toast as sonnerToast } from 'sonner';
+type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload';
 interface Document {
   id: number;
+  file_status?: FileStatus;
   title: string;
   description: string | null;
   format: string | null;
@@ -155,6 +157,8 @@ export default function ManageDocuments() {
   // Governance features state
   const [frameworkFilter, setFrameworkFilter] = useState<string>("all");
   const [sharepointFilter, setSharepointFilter] = useState<string>("all");
+  const [fileStatusFilter, setFileStatusFilter] = useState<'all' | 'needs_upload' | 'ready'>('all');
+  const [uploadingDocId, setUploadingDocId] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDocId, setSelectedDocId] = useState<number | null>(() => {
     const docParam = searchParams.get('doc');
@@ -346,7 +350,7 @@ export default function ManageDocuments() {
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1); // Reset to first page when filters change
-  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly, frameworkFilter, sharepointFilter]);
+  }, [documents, searchQuery, formatFilter, categoryFilter, sortField, sortDirection, showDuplicatesOnly, frameworkFilter, sharepointFilter, fileStatusFilter]);
   useEffect(() => {
     if (bulkSendSearchQuery) {
       const filtered = bulkSendUsers.filter(user => user.email.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()) || `${user.first_name} ${user.last_name}`.toLowerCase().includes(bulkSendSearchQuery.toLowerCase()));
