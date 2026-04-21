@@ -759,7 +759,6 @@ export default function AcademyLessonViewerPage() {
               You've finished {course.title}. Your certificate is being generated and will appear in your certificates page shortly.
             </AppModalDescription>
           </AppModalHeader>
-          <AppModalBody />
           <AppModalFooter>
             <Button
               variant="outline"
