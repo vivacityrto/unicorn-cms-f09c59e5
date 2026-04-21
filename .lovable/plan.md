@@ -1,54 +1,64 @@
 
 
-## Plan: File status indicator + filter + inline upload
+## Plan: Fix both password reset failures
 
-### Data fetch
-In `fetchDocuments` (Super Admin / Team Leader branch), after fetching `documents`, run a second query:
+### Bug 1 — "Forgot Password?" sends no email (silent failure)
+
+**Root cause** (confirmed in edge function logs):
+`send-self-password-reset/index.ts` line 56 selects a non-existent column:
 ```ts
-const { data: files } = await supabase
-  .from('document_files')
-  .select('document_id')
-  .in('document_id', docIds);
-const readySet = new Set(files.map(f => f.document_id));
+.select("user_uuid, email, first_name, last_name, tenant_id, status")
 ```
-Attach `file_status` to each enriched doc:
-- `file_ready` if `readySet.has(doc.id)`
-- `legacy_only` if not ready AND `doc.uploaded_files?.length > 0`
-- `needs_upload` otherwise
+The `users` table has no `status` column (it has `state` and `disabled`). PostgREST returns an error, the function falls through to "non-existent email" and silently returns success without sending. Logs prove it:
+```
+Password reset requested for non-existent email: carl@vivacity.com.au
+```
+…even though Carl exists with `disabled=false`.
 
-Add `file_status` to the `Document` interface.
+**Fix** — `supabase/functions/send-self-password-reset/index.ts`:
+1. Replace the select column list with valid columns: `user_uuid, email, first_name, last_name, tenant_id, disabled`.
+2. Replace the active-user check (lines 72–79) to use `disabled`:
+   ```ts
+   if (targetUser.disabled) { /* return success silently */ }
+   ```
+3. Use case-insensitive lookup: `.ilike("email", normalizedEmail)` (matches the rest of the codebase pattern) so any casing variant works.
 
-### UI: status column
-Add a new column (leftmost or just after ID) in the documents table — a small colored dot with tooltip:
-- green `bg-emerald-500` → "File ready"
-- amber `bg-amber-500` → "Legacy file only — not yet migrated to document_files"
-- red `bg-red-500` → "Needs upload" (clickable, opens inline upload popover)
+---
 
-For `needs_upload`, dot is wrapped in a button. Clicking opens a small `Popover` containing a hidden `<input type="file">` trigger. On select:
-1. Upload to storage bucket `document-files` at path `documents/{doc.id}/{timestamp}-{filename}`
-2. Insert into `document_files`: `{ document_id, file_path, file_type: file.type, original_filename: file.name, file_size, uploaded_by: auth.uid() }`
-3. Toast success, refetch documents (or optimistically flip status to `file_ready`)
+### Bug 2 — Admin "Send Password Reset Email" link shows "Invalid or expired link"
 
-### Filter toggle
-Add a `ToggleGroup` (or 3 buttons) above the table next to existing filters:
-**All | Needs Upload | Ready** — default `all`.
-
-State: `const [fileStatusFilter, setFileStatusFilter] = useState<'all'|'needs_upload'|'ready'>('all')`.
-
-In `applyFiltersAndSort`, add:
+**Root cause**:
+`send-password-reset` generates a Supabase recovery `action_link` that, when clicked, redirects to `/reset-password` with auth tokens in the **URL hash** (`#access_token=…&type=recovery`). The current `ResetPassword.tsx`:
 ```ts
-if (fileStatusFilter === 'needs_upload') filtered = filtered.filter(d => d.file_status === 'needs_upload');
-else if (fileStatusFilter === 'ready') filtered = filtered.filter(d => d.file_status === 'file_ready');
+useEffect(() => {
+  supabase.auth.getSession().then(...)  // runs immediately on mount
+  if (!session) { /* show invalid + redirect to /login */ }
+}, []);
 ```
-Add `fileStatusFilter` to the effect dependency array.
+This fires **before** Supabase's client has a chance to consume the hash and create a session, so `getSession()` returns null → user is bounced to login with "Invalid or expired link".
 
-Show counts in the toggle labels: `Needs Upload (541)`, `Ready (0)` — derived from `documents.filter(...).length`.
+**Fix** — `src/pages/ResetPassword.tsx`:
+1. Subscribe to `supabase.auth.onAuthStateChange` BEFORE calling `getSession()` (standard Supabase pattern, already documented in the project's auth knowledge).
+2. Specifically watch for the `PASSWORD_RECOVERY` event (Supabase emits this when a recovery hash is consumed) — when received, set `isValidToken=true`.
+3. Keep the `getSession()` call as a fallback for sessions that already exist.
+4. Only show the "Invalid or expired link" toast and redirect if BOTH (a) no session arrives within ~1.5s, AND (b) no `PASSWORD_RECOVERY` event has fired. Use a single `setTimeout` guarded by a ref so the recovery event can cancel it.
+5. Clean up the subscription on unmount.
+
+This matches the pattern Supabase requires for recovery flows and resolves the race condition.
+
+---
 
 ### Files changed
-- `src/pages/ManageDocuments.tsx` — extend `Document` interface, augment `fetchDocuments` with the document_files lookup, add filter state + toggle UI, add status-dot column, add inline upload Popover handler.
+- `supabase/functions/send-self-password-reset/index.ts` — fix column list + use `disabled` + case-insensitive email match.
+- `src/pages/ResetPassword.tsx` — listen for `PASSWORD_RECOVERY` auth event, eliminate race condition.
 
 ### Out of scope
-- No DB schema changes (`document_files` already exists with all required columns).
-- No RLS work — staff already have full access via `is_vivacity()`; storage bucket `document-files` already exists.
-- Migration of legacy `uploaded_files` → `document_files` is intentionally not automated here; the amber state simply flags them for the team to action manually.
+- `send-password-reset` (admin-triggered) edge function is working correctly (email sent successfully per logs) — no changes there.
+- No DB schema changes, no Mailgun config changes, no new routes.
+
+### Verification after fix
+1. Click "Forgot Password?" with `carl@vivacity.com.au` → email arrives within ~30s.
+2. Click the link in either email → `/reset-password` shows the new-password form (not the "Invalid or expired link" toast).
+3. Submit new password → success toast → redirected to `/login`.
+4. Admin "Send Password Reset Email" from a user profile → same successful flow.
 
