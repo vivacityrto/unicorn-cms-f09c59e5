@@ -56166,6 +56166,10 @@ export type Database = {
         Args: { p_meeting_id: string; p_summary: string }
         Returns: string
       }
+      fn_academy_backfill_enrollments_for_rule: {
+        Args: { p_rule_id: number }
+        Returns: number
+      }
       fn_audit_playbook: {
         Args: {
           p_action: string

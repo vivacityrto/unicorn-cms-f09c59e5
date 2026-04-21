@@ -2,21 +2,36 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  GraduationCap, ChevronRight, ChevronLeft, ChevronDown, ChevronUp,
-  Play, BookOpen, FileText, CheckCircle2, Clock, ArrowLeft, ArrowRight, Eye,
+  GraduationCap, ChevronRight, ChevronLeft,
+  Play, BookOpen, FileText, CheckCircle2, Clock, ArrowLeft, ArrowRight, Eye, Lock, AlertTriangle,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import Player from "@vimeo/player";
+import { sanitizeHtml } from "@/lib/sanitize";
+import {
+  AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalDescription, AppModalBody, AppModalFooter,
+} from "@/components/ui/modals";
 
 const ACCENT = "#23c0dd";
+const PROGRESS_THROTTLE_MS = 10_000;
 
 export default function AcademyLessonViewerPage() {
   const { slug, lessonId } = useParams<{ slug: string; lessonId: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [livePercent, setLivePercent] = useState<number>(0);
+  const [livePosition, setLivePosition] = useState<number>(0);
+  const [videoError, setVideoError] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const playerRef = useRef<Player | null>(null);
+  const lastUpsertRef = useRef<number>(0);
+  const autoCompletedRef = useRef<boolean>(false);
+  const prevEnrollmentStatusRef = useRef<string | null>(null);
 
   const numericLessonId = lessonId ? parseInt(lessonId, 10) : null;
 
@@ -42,7 +57,7 @@ export default function AcademyLessonViewerPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("academy_lessons")
-        .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown")
+        .select("id, module_id, course_id, title, description, lesson_type, sort_order, is_published, is_preview, estimated_minutes, video_id, resource_id, content_markdown, completion_threshold")
         .eq("id", numericLessonId!)
         .single();
       if (error) throw error;
@@ -65,14 +80,14 @@ export default function AcademyLessonViewerPage() {
     },
   });
 
-  // Fetch all modules + lessons for sidebar navigation
+  // Fetch all modules + lessons for sidebar navigation (includes is_preview)
   const { data: modules = [] } = useQuery({
     queryKey: ["academy-modules-lessons", course?.id],
     enabled: !!course?.id,
     queryFn: async () => {
       const [{ data: mods, error: mErr }, { data: lessons, error: lErr }] = await Promise.all([
         supabase.from("academy_modules").select("id, course_id, title, sort_order, is_published").eq("course_id", course!.id).order("sort_order"),
-        supabase.from("academy_lessons").select("id, module_id, title, lesson_type, sort_order, is_published, estimated_minutes").eq("course_id", course!.id).order("sort_order"),
+        supabase.from("academy_lessons").select("id, module_id, title, lesson_type, sort_order, is_published, is_preview, estimated_minutes").eq("course_id", course!.id).order("sort_order"),
       ]);
       if (mErr) throw mErr;
       if (lErr) throw lErr;
@@ -90,7 +105,7 @@ export default function AcademyLessonViewerPage() {
     },
   });
 
-  // Fetch enrollment
+  // Fetch enrollment summary (status / progress)
   const { data: enrollment } = useQuery({
     queryKey: ["academy-enrollment-detail", course?.id],
     enabled: !!course?.id,
@@ -107,7 +122,26 @@ export default function AcademyLessonViewerPage() {
     },
   });
 
-  // Completed lesson IDs
+  // Fetch raw enrollment row for expires_at / revoked_at
+  const { data: enrollmentRaw } = useQuery({
+    queryKey: ["academy-enrollment-raw", course?.id],
+    enabled: !!course?.id,
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !course?.id) return null;
+      const { data } = await supabase
+        .from("academy_enrollments")
+        .select("id, status, expires_at, revoked_at")
+        .eq("user_id", user.id)
+        .eq("course_id", course.id)
+        .order("enrolled_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  // Completed lesson IDs + current-lesson progress row
   const { data: completedLessonIds = [] } = useQuery({
     queryKey: ["academy-lesson-progress", enrollment?.enrollment_id],
     enabled: !!enrollment?.enrollment_id,
@@ -121,7 +155,211 @@ export default function AcademyLessonViewerPage() {
     },
   });
 
-  // Mark lesson complete mutation
+  const { data: currentProgress } = useQuery({
+    queryKey: ["academy-lesson-current-progress", enrollment?.enrollment_id, numericLessonId],
+    enabled: !!enrollment?.enrollment_id && !!numericLessonId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("academy_lesson_progress")
+        .select("last_position_seconds, completion_percentage, is_completed")
+        .eq("enrollment_id", enrollment!.enrollment_id)
+        .eq("lesson_id", numericLessonId!)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  // Enrol mutation (preview banner)
+  const enrolMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !course) throw new Error("Not authenticated");
+      const { error } = await supabase.from("academy_enrollments").insert({
+        course_id: course.id,
+        user_id: user.id,
+        status: "active",
+        source: "self_enrol",
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("You're enrolled! Start learning.");
+      qc.invalidateQueries({ queryKey: ["academy-enrollment-detail", course?.id] });
+      qc.invalidateQueries({ queryKey: ["academy-enrollment-raw", course?.id] });
+      qc.invalidateQueries({ queryKey: ["academy-courses"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Failed to enrol"),
+  });
+
+  // Derived flags
+  const isPreview = lesson?.is_preview === true;
+  const isEnrolled = !!enrollment && enrollment.enrollment_status === "active";
+  const isExpired = !!enrollmentRaw?.expires_at && new Date(enrollmentRaw.expires_at) < new Date();
+  const isRevoked = !!enrollmentRaw?.revoked_at;
+  const canTrackProgress = isEnrolled && !isPreview && !isExpired && !isRevoked;
+  const completionThreshold = lesson?.completion_threshold ?? 90;
+
+  // Upsert progress helper
+  const upsertProgress = useCallback(
+    async (fields: Record<string, any>) => {
+      if (!canTrackProgress || !lesson || !course || !enrollment) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from("academy_lesson_progress").upsert(
+        {
+          user_id: user.id,
+          course_id: course.id,
+          lesson_id: lesson.id,
+          enrollment_id: enrollment.enrollment_id,
+          ...fields,
+        } as any,
+        { onConflict: "enrollment_id,lesson_id" }
+      );
+    },
+    [canTrackProgress, lesson, course, enrollment]
+  );
+
+  // Auto-complete (server-side flow + client refetch)
+  const autoCompleteLesson = useCallback(async () => {
+    if (autoCompletedRef.current) return;
+    if (!canTrackProgress || !lesson || !course || !enrollment) return;
+    if (completedLessonIds.includes(lesson.id)) return;
+    autoCompletedRef.current = true;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from("academy_lesson_progress").upsert(
+      {
+        user_id: user.id,
+        course_id: course.id,
+        lesson_id: lesson.id,
+        enrollment_id: enrollment.enrollment_id,
+        is_completed: true,
+        completed_at: new Date().toISOString(),
+        completion_percentage: 100,
+      } as any,
+      { onConflict: "enrollment_id,lesson_id" }
+    );
+
+    // Best-effort: check if all lessons complete and flip enrollment
+    const { data: allLessons } = await supabase
+      .from("academy_lessons")
+      .select("id")
+      .eq("course_id", course.id)
+      .eq("is_published", true);
+    const lessonIds = (allLessons ?? []).map((l: any) => l.id);
+    if (lessonIds.length > 0) {
+      const { count: completedCount } = await supabase
+        .from("academy_lesson_progress")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_completed", true)
+        .in("lesson_id", lessonIds);
+      if ((completedCount ?? 0) >= lessonIds.length) {
+        await supabase
+          .from("academy_enrollments")
+          .update({ status: "completed", completed_at: new Date().toISOString() } as any)
+          .eq("user_id", user.id)
+          .eq("course_id", course.id)
+          .eq("status", "active");
+      }
+    }
+
+    qc.invalidateQueries({ queryKey: ["academy-lesson-progress"] });
+    qc.invalidateQueries({ queryKey: ["academy-enrollment-detail"] });
+  }, [canTrackProgress, lesson, course, enrollment, completedLessonIds, qc]);
+
+  // Build Vimeo embed URL
+  const vimeoEmbedUrl = video?.vimeo_url
+    ? video.vimeo_url.replace("vimeo.com/", "player.vimeo.com/video/").split("?")[0] +
+      "?autoplay=0&title=0&byline=0&portrait=0&texttrack=en"
+    : null;
+
+  // Wire Vimeo SDK
+  useEffect(() => {
+    if (!vimeoEmbedUrl || !iframeRef.current) return;
+    setVideoError(false);
+    const player = new Player(iframeRef.current);
+    playerRef.current = player;
+
+    let started = false;
+    const startPos = currentProgress?.last_position_seconds ?? 0;
+    if (startPos > 5) {
+      player.setCurrentTime(startPos).catch(() => {});
+    }
+
+    const onPlay = () => {
+      if (started) return;
+      started = true;
+      if (canTrackProgress) {
+        upsertProgress({ started_at: new Date().toISOString() });
+      }
+    };
+
+    const onTimeUpdate = (e: { seconds: number; percent: number; duration: number }) => {
+      const pct = Math.floor(e.percent * 100);
+      const secs = Math.floor(e.seconds);
+      setLivePercent(pct);
+      setLivePosition(secs);
+
+      const now = Date.now();
+      if (canTrackProgress && now - lastUpsertRef.current >= PROGRESS_THROTTLE_MS) {
+        lastUpsertRef.current = now;
+        upsertProgress({
+          last_position_seconds: secs,
+          watch_seconds: secs,
+          completion_percentage: pct,
+        });
+      }
+
+      if (pct >= completionThreshold && canTrackProgress && !autoCompletedRef.current) {
+        autoCompleteLesson();
+      }
+    };
+
+    const onEnded = () => {
+      if (canTrackProgress) autoCompleteLesson();
+    };
+
+    const onError = () => setVideoError(true);
+
+    player.on("play", onPlay);
+    player.on("timeupdate", onTimeUpdate);
+    player.on("ended", onEnded);
+    player.on("error", onError);
+
+    return () => {
+      player.off("play", onPlay);
+      player.off("timeupdate", onTimeUpdate);
+      player.off("ended", onEnded);
+      player.off("error", onError);
+      playerRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vimeoEmbedUrl, canTrackProgress, completionThreshold, lesson?.id]);
+
+  // Reset autocomplete latch when lesson changes
+  useEffect(() => {
+    autoCompletedRef.current = false;
+    setLivePercent(currentProgress?.completion_percentage ?? 0);
+    setLivePosition(currentProgress?.last_position_seconds ?? 0);
+    lastUpsertRef.current = 0;
+  }, [lesson?.id, currentProgress?.completion_percentage, currentProgress?.last_position_seconds]);
+
+  // Course completion celebration
+  useEffect(() => {
+    const status = enrollment?.enrollment_status ?? null;
+    if (
+      prevEnrollmentStatusRef.current === "active" &&
+      status === "completed"
+    ) {
+      setShowCelebration(true);
+    }
+    prevEnrollmentStatusRef.current = status;
+  }, [enrollment?.enrollment_status]);
+
+  // Mark lesson complete mutation (manual button)
   const markComplete = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -140,24 +378,13 @@ export default function AcademyLessonViewerPage() {
       );
       if (error) throw error;
 
-      // Check if entire course is now complete
-      const { data: moduleIds } = await supabase
-        .from("academy_modules")
-        .select("id")
-        .eq("course_id", course.id);
-      const modIds = (moduleIds ?? []).map((m: any) => m.id);
-      if (modIds.length === 0) return { courseComplete: false };
-
-      const { count: totalCount } = await supabase
-        .from("academy_lessons")
-        .select("id", { count: "exact", head: true })
-        .in("module_id", modIds);
-
       const { data: allLessonIds } = await supabase
         .from("academy_lessons")
         .select("id")
-        .in("module_id", modIds);
+        .eq("course_id", course.id)
+        .eq("is_published", true);
       const lessonIdList = (allLessonIds ?? []).map((l: any) => l.id);
+      if (lessonIdList.length === 0) return { courseComplete: false };
 
       const { count: completedCount } = await supabase
         .from("academy_lesson_progress")
@@ -166,7 +393,7 @@ export default function AcademyLessonViewerPage() {
         .eq("is_completed", true)
         .in("lesson_id", lessonIdList);
 
-      if ((completedCount ?? 0) >= (totalCount ?? 1)) {
+      if ((completedCount ?? 0) >= lessonIdList.length) {
         await supabase
           .from("academy_enrollments")
           .update({ status: "completed", completed_at: new Date().toISOString() } as any)
@@ -182,8 +409,7 @@ export default function AcademyLessonViewerPage() {
       qc.invalidateQueries({ queryKey: ["academy-lesson-progress"] });
       qc.invalidateQueries({ queryKey: ["academy-enrollment-detail"] });
       if (result?.courseComplete) {
-        toast.success("🎉 Course complete! Your certificate is being generated.");
-        navigate(`/academy/course/${slug}`);
+        setShowCelebration(true);
       }
     },
     onError: (e: any) => toast.error(e?.message || "Failed to update progress"),
@@ -196,6 +422,7 @@ export default function AcademyLessonViewerPage() {
   const nextLesson = currentIdx >= 0 && currentIdx < allLessons.length - 1 ? allLessons[currentIdx + 1] : null;
 
   const isCompleted = numericLessonId != null && completedLessonIds.includes(numericLessonId);
+  const effectivePercent = Math.max(livePercent, currentProgress?.completion_percentage ?? 0);
 
   const lessonIcon = (type: string | null) => {
     if (type === "video") return <Play className="h-3.5 w-3.5" />;
@@ -203,19 +430,35 @@ export default function AcademyLessonViewerPage() {
     return <BookOpen className="h-3.5 w-3.5" />;
   };
 
-  const isPreview = lesson?.is_preview === true;
-  const isEnrolled = !!enrollment && enrollment.enrollment_status === "active";
+  // Flush position before navigating
+  const flushAndNavigate = useCallback(
+    async (path: string) => {
+      if (canTrackProgress && livePosition > 0) {
+        await upsertProgress({
+          last_position_seconds: livePosition,
+          watch_seconds: livePosition,
+          completion_percentage: livePercent,
+        });
+      }
+      navigate(path);
+    },
+    [canTrackProgress, livePosition, livePercent, upsertProgress, navigate]
+  );
 
-  // Access gate: redirect if not preview and not enrolled
+  // Access gate: redirect if not preview and not enrolled, or revoked
   useEffect(() => {
     if (courseLoading || lessonLoading) return;
     if (!course || !lesson) return;
-    if (isPreview) return; // preview lessons are always accessible
-    if (isEnrolled) return; // enrolled users can access
-    // Not preview + not enrolled → redirect
+    if (isRevoked) {
+      toast.error("Your access to this course has been revoked.");
+      navigate(`/academy/course/${slug}`, { replace: true });
+      return;
+    }
+    if (isPreview) return;
+    if (isEnrolled) return;
     toast.error("Please enrol in this course to access this lesson.");
     navigate(`/academy/course/${slug}`, { replace: true });
-  }, [courseLoading, lessonLoading, course, lesson, isPreview, isEnrolled, slug, navigate]);
+  }, [courseLoading, lessonLoading, course, lesson, isPreview, isEnrolled, isRevoked, slug, navigate]);
 
   if (courseLoading || lessonLoading) {
     return (
@@ -239,15 +482,9 @@ export default function AcademyLessonViewerPage() {
     );
   }
 
-  // If not preview and not enrolled, don't render (effect will redirect)
   if (!isPreview && !isEnrolled) {
     return null;
   }
-
-  // Build Vimeo embed URL
-  const vimeoEmbedUrl = video?.vimeo_url
-    ? video.vimeo_url.replace("vimeo.com/", "player.vimeo.com/video/").split("?")[0] + "?autoplay=0&title=0&byline=0&portrait=0"
-    : null;
 
   return (
     <div className="flex gap-0 -mx-6 -mt-2">
@@ -288,16 +525,24 @@ export default function AcademyLessonViewerPage() {
                   {mod.lessons.map((l: any) => {
                     const active = l.id === numericLessonId;
                     const done = completedLessonIds.includes(l.id);
+                    const locked = !isEnrolled && !l.is_preview;
                     return (
                       <li key={l.id}>
                         <button
-                          onClick={() => navigate(`/academy/course/${slug}/lesson/${l.id}`)}
+                          onClick={() => {
+                            if (locked) return;
+                            flushAndNavigate(`/academy/course/${slug}/lesson/${l.id}`);
+                          }}
+                          disabled={locked}
+                          title={locked ? "Enrol to unlock" : undefined}
                           className={`w-full text-left flex items-center gap-2 py-1.5 px-2 rounded text-xs transition-colors ${
-                            active ? "bg-primary/10 font-semibold" : "hover:bg-muted/50"
+                            active ? "bg-primary/10 font-semibold" : locked ? "opacity-50 cursor-not-allowed" : "hover:bg-muted/50"
                           }`}
                           style={active ? { color: ACCENT } : undefined}
                         >
-                          {done ? (
+                          {locked ? (
+                            <Lock className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                          ) : done ? (
                             <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "#22c55e" }} />
                           ) : (
                             <span className="text-muted-foreground">{lessonIcon(l.lesson_type)}</span>
@@ -338,16 +583,62 @@ export default function AcademyLessonViewerPage() {
           <span className="font-medium text-foreground">{lesson.title}</span>
         </nav>
 
+        {/* Preview banner */}
+        {isPreview && !isEnrolled && (
+          <div
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border"
+            style={{ borderColor: `${ACCENT}55`, backgroundColor: `${ACCENT}10` }}
+          >
+            <div className="flex items-start gap-2">
+              <Eye className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: ACCENT }} />
+              <p className="text-sm text-foreground">
+                You're viewing a preview. Enrol in this course to track your progress and earn your certificate.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => enrolMutation.mutate()}
+              isLoading={enrolMutation.isPending}
+              style={{ backgroundColor: ACCENT }}
+              className="text-white hover:opacity-90 flex-shrink-0"
+            >
+              Enrol now
+            </Button>
+          </div>
+        )}
+
+        {/* Expired banner */}
+        {isExpired && (
+          <div className="flex items-start gap-2 p-4 rounded-xl border border-yellow-300 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800">
+            <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-yellow-600 dark:text-yellow-500" />
+            <p className="text-sm text-yellow-900 dark:text-yellow-100">
+              Your access to this course has expired. Contact your admin to restore access.
+            </p>
+          </div>
+        )}
+
         {/* Video Player */}
-        {vimeoEmbedUrl && (
-          <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingBottom: "56.25%", background: "#000" }}>
+        {vimeoEmbedUrl && !videoError && (
+          <div className="relative w-full rounded-xl overflow-hidden shadow-sm" style={{ paddingBottom: "56.25%", background: "#000" }}>
             <iframe
+              ref={iframeRef}
               src={vimeoEmbedUrl}
               className="absolute inset-0 w-full h-full"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
               title={lesson.title}
             />
+          </div>
+        )}
+
+        {/* Video error */}
+        {vimeoEmbedUrl && videoError && (
+          <div className="flex items-center justify-center rounded-xl border border-dashed bg-muted/30" style={{ height: 300 }}>
+            <div className="text-center">
+              <AlertTriangle className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground">Video unavailable</p>
+              <p className="text-xs text-muted-foreground mt-1">Please try again or contact support.</p>
+            </div>
           </div>
         )}
 
@@ -366,11 +657,16 @@ export default function AcademyLessonViewerPage() {
 
         {/* Lesson header */}
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-bold text-foreground">{lesson.title}</h1>
             {isPreview && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-accent/15 text-accent-foreground border border-accent/30">
                 <Eye className="h-3 w-3" /> Preview
+              </span>
+            )}
+            {isCompleted && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide" style={{ backgroundColor: "#22c55e1a", color: "#16a34a" }}>
+                <CheckCircle2 className="h-3 w-3" /> Completed
               </span>
             )}
           </div>
@@ -393,7 +689,7 @@ export default function AcademyLessonViewerPage() {
 
         {lesson.content_markdown && (
           <div className="prose prose-sm max-w-none text-foreground">
-            <div dangerouslySetInnerHTML={{ __html: lesson.content_markdown }} />
+            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(lesson.content_markdown) }} />
           </div>
         )}
 
@@ -404,7 +700,7 @@ export default function AcademyLessonViewerPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate(`/academy/course/${slug}/lesson/${prevLesson.id}`)}
+                onClick={() => flushAndNavigate(`/academy/course/${slug}/lesson/${prevLesson.id}`)}
               >
                 <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> Previous
               </Button>
@@ -412,7 +708,7 @@ export default function AcademyLessonViewerPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {enrollment && !isCompleted && (
+            {isEnrolled && !isCompleted && !isExpired && effectivePercent >= 50 && (
               <Button
                 size="sm"
                 onClick={() => markComplete.mutate()}
@@ -424,9 +720,9 @@ export default function AcademyLessonViewerPage() {
                 {markComplete.isPending ? "Saving…" : "Mark Complete"}
               </Button>
             )}
-            {isCompleted && (
-              <span className="text-xs font-medium flex items-center gap-1" style={{ color: "#22c55e" }}>
-                <CheckCircle2 className="h-4 w-4" /> Completed
+            {isEnrolled && !isCompleted && !isExpired && effectivePercent < 50 && (
+              <span className="text-[11px] text-muted-foreground">
+                Watch at least 50% to mark complete ({effectivePercent}%)
               </span>
             )}
           </div>
@@ -435,7 +731,7 @@ export default function AcademyLessonViewerPage() {
             {nextLesson ? (
               <Button
                 size="sm"
-                onClick={() => navigate(`/academy/course/${slug}/lesson/${nextLesson.id}`)}
+                onClick={() => flushAndNavigate(`/academy/course/${slug}/lesson/${nextLesson.id}`)}
                 style={{ backgroundColor: ACCENT }}
                 className="text-white hover:opacity-90"
               >
@@ -445,7 +741,7 @@ export default function AcademyLessonViewerPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate(`/academy/course/${slug}`)}
+                onClick={() => flushAndNavigate(`/academy/course/${slug}`)}
               >
                 Back to Course
               </Button>
@@ -453,6 +749,39 @@ export default function AcademyLessonViewerPage() {
           </div>
         </div>
       </div>
+
+      {/* Course completion celebration */}
+      <AppModal open={showCelebration} onOpenChange={setShowCelebration}>
+        <AppModalContent size="md">
+          <AppModalHeader>
+            <AppModalTitle>🎉 Course complete!</AppModalTitle>
+            <AppModalDescription>
+              You've finished {course.title}. Your certificate is being generated and will appear in your certificates page shortly.
+            </AppModalDescription>
+          </AppModalHeader>
+          <AppModalFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCelebration(false);
+                navigate("/academy");
+              }}
+            >
+              Back to Academy
+            </Button>
+            <Button
+              onClick={() => {
+                setShowCelebration(false);
+                navigate("/academy/certificates");
+              }}
+              style={{ backgroundColor: ACCENT }}
+              className="text-white hover:opacity-90"
+            >
+              View certificates
+            </Button>
+          </AppModalFooter>
+        </AppModalContent>
+      </AppModal>
     </div>
   );
 }
