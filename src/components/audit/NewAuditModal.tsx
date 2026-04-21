@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCreateAudit } from '@/hooks/useClientAudits';
 import { useAuth } from '@/hooks/useAuth';
@@ -144,6 +147,8 @@ const ALL_CARDS: AuditTypeCard[] = [
 interface TenantRecord {
   id: number;
   name: string;
+  tenant_type: string | null;
+  status: string | null;
   rto_id: string | null;
   rto_name: string | null;
   cricos_id: string | null;
@@ -234,15 +239,45 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     if (!open) return;
     setTenantsLoading(true);
     const fetchTenants = async () => {
-      const { data } = await (supabase as any).from('tenants').select('id, name, rto_id, rto_name, cricos_id, tenant_profile(org_type, cricos_number)').order('name');
-      const mapped = ((data as any[]) || []).map((t: any) => ({
+      // Fetch active tenants — primary list for dropdown
+      const { data: tenantsData, error: tenantsError } = await (supabase as any)
+        .from('tenants')
+        .select('id, name, tenant_type, status, rto_id, rto_name, cricos_id')
+        .eq('status', 'active')
+        .order('name', { ascending: true });
+
+      if (tenantsError) {
+        console.error('[NewAuditModal] Failed to fetch tenants:', tenantsError);
+        setTenants([]);
+        setTenantsLoading(false);
+        return;
+      }
+
+      const rows = (tenantsData as any[]) || [];
+      const ids = rows.map(r => r.id);
+
+      // Enrich with tenant_profile (no FK to embed, so query separately)
+      let profileMap: Record<number, { org_type: string | null; cricos_number: string | null }> = {};
+      if (ids.length) {
+        const { data: profiles } = await (supabase as any)
+          .from('tenant_profile')
+          .select('tenant_id, org_type, cricos_number')
+          .in('tenant_id', ids);
+        for (const p of (profiles as any[]) || []) {
+          profileMap[p.tenant_id] = { org_type: p.org_type ?? null, cricos_number: p.cricos_number ?? null };
+        }
+      }
+
+      const mapped: TenantRecord[] = rows.map((t: any) => ({
         id: t.id,
         name: t.name,
+        tenant_type: t.tenant_type ?? null,
+        status: t.status ?? null,
         rto_id: t.rto_id,
         rto_name: t.rto_name,
         cricos_id: t.cricos_id,
-        org_type: t.tenant_profile?.org_type || null,
-        profile_cricos_number: t.tenant_profile?.cricos_number || null,
+        org_type: profileMap[t.id]?.org_type ?? null,
+        profile_cricos_number: profileMap[t.id]?.cricos_number ?? null,
       }));
       setTenants(mapped);
       setTenantsLoading(false);
@@ -439,16 +474,12 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                 {isClientLocked ? (
                   <Input value={tenantName} disabled />
                 ) : (
-                  <Select value={tenantId?.toString() || ''} onValueChange={v => setTenantId(Number(v))}>
-                    <SelectTrigger><SelectValue placeholder="Select client…" /></SelectTrigger>
-                    <SelectContent>
-                      {tenants.map(t => (
-                        <SelectItem key={t.id} value={t.id.toString()}>
-                          {t.name}{t.rto_id ? ` (${t.rto_id})` : ''}{isCricosValid(t.cricos_id) ? ` [CRICOS: ${t.cricos_id}]` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ClientCombobox
+                    tenants={tenants}
+                    value={tenantId}
+                    onSelect={(id) => setTenantId(id)}
+                    loading={tenantsLoading}
+                  />
                 )}
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -585,5 +616,66 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
         </AppModalFooter>
       </AppModalContent>
     </AppModal>
+  );
+}
+
+interface ClientComboboxProps {
+  tenants: TenantRecord[];
+  value: number | null;
+  onSelect: (id: number) => void;
+  loading?: boolean;
+}
+
+function ClientCombobox({ tenants, value, onSelect, loading }: ClientComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const selected = useMemo(() => tenants.find(t => t.id === value), [tenants, value]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+          disabled={loading}
+        >
+          <span className="truncate">
+            {loading
+              ? 'Loading clients…'
+              : selected
+                ? `${selected.name}${selected.rto_id ? ` (${selected.rto_id})` : ''}${isCricosValid(selected.cricos_id) ? ` [CRICOS: ${selected.cricos_id}]` : ''}`
+                : 'Select client…'}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command
+          filter={(value, search) => value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0}
+        >
+          <CommandInput placeholder="Search clients by name…" />
+          <CommandList className="max-h-[320px]">
+            <CommandEmpty>No client found.</CommandEmpty>
+            <CommandGroup>
+              {tenants.map(t => {
+                const label = `${t.name}${t.rto_id ? ` (${t.rto_id})` : ''}${isCricosValid(t.cricos_id) ? ` [CRICOS: ${t.cricos_id}]` : ''}`;
+                return (
+                  <CommandItem
+                    key={t.id}
+                    value={label}
+                    onSelect={() => { onSelect(t.id); setOpen(false); }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', value === t.id ? 'opacity-100' : 'opacity-0')} />
+                    <span className="truncate">{label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
