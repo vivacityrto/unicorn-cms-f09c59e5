@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,21 +14,52 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isValidToken, setIsValidToken] = useState(false);
+  const recoveryHandledRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Check if we have a valid session from the reset link
+    // Set up the auth state listener BEFORE checking session — Supabase fires
+    // PASSWORD_RECOVERY when it consumes the recovery hash from the URL.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+        recoveryHandledRef.current = true;
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+        setIsValidToken(true);
+      }
+    });
+
+    // Fallback: check for an existing session (covers reload / already-active session)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        recoveryHandledRef.current = true;
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         setIsValidToken(true);
-      } else {
+      }
+    });
+
+    // Give Supabase ~2.5s to process the URL hash and emit PASSWORD_RECOVERY.
+    // If nothing arrives, treat the link as invalid/expired.
+    timeoutRef.current = setTimeout(() => {
+      if (!recoveryHandledRef.current) {
         toast({
           title: "Invalid or expired link",
           description: "Please request a new password reset link",
           variant: "destructive",
         });
-        setTimeout(() => navigate("/login"), 3000);
+        setTimeout(() => navigate("/login"), 2000);
       }
-    });
+    }, 2500);
+
+    return () => {
+      subscription.unsubscribe();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [navigate, toast]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
