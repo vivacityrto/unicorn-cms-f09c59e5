@@ -52,6 +52,7 @@ const TEMPLATE_IDS: Record<AuditType, string> = {
   mock_audit: 'a0025000-0000-0000-0000-000000000001',
   cricos_mock_audit: '788a5beb-93b2-48fd-a262-b313060823f4',
   due_diligence: 'd0025000-0000-0000-0000-000000000001',
+  due_diligence_combined: 'dc025000-0000-0000-0000-000000000001',
 };
 
 // Cards per registration type
