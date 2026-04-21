@@ -50,17 +50,17 @@ serve(async (req: Request): Promise<Response> => {
     // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if user exists in our users table
+    // Check if user exists in our users table (case-insensitive)
     const { data: targetUser, error: targetError } = await supabaseAdmin
       .from("users")
-      .select("user_uuid, email, first_name, last_name, tenant_id, status")
-      .eq("email", normalizedEmail)
+      .select("user_uuid, email, first_name, last_name, tenant_id, disabled")
+      .ilike("email", normalizedEmail)
       .maybeSingle();
 
     // Security: Always return success to prevent email enumeration
     // But only actually send email if user exists and is active
     if (targetError || !targetUser) {
-      console.log(`Password reset requested for non-existent email: ${normalizedEmail}`);
+      console.log(`Password reset requested for non-existent email: ${normalizedEmail}`, targetError ?? "");
       // Return success to prevent email enumeration
       return new Response(
         JSON.stringify({ ok: true, message: "If an account exists, a reset email has been sent." }),
@@ -68,9 +68,9 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user is active
-    if (targetUser.status === "inactive" || targetUser.status === "suspended") {
-      console.log(`Password reset requested for inactive user: ${normalizedEmail}`);
+    // Check if user is active (disabled flag)
+    if (targetUser.disabled) {
+      console.log(`Password reset requested for disabled user: ${normalizedEmail}`);
       // Return success to prevent status enumeration
       return new Response(
         JSON.stringify({ ok: true, message: "If an account exists, a reset email has been sent." }),
