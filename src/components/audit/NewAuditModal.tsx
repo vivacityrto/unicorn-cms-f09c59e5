@@ -618,3 +618,64 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     </AppModal>
   );
 }
+
+interface ClientComboboxProps {
+  tenants: TenantRecord[];
+  value: number | null;
+  onSelect: (id: number) => void;
+  loading?: boolean;
+}
+
+function ClientCombobox({ tenants, value, onSelect, loading }: ClientComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const selected = useMemo(() => tenants.find(t => t.id === value), [tenants, value]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+          disabled={loading}
+        >
+          <span className="truncate">
+            {loading
+              ? 'Loading clients…'
+              : selected
+                ? `${selected.name}${selected.rto_id ? ` (${selected.rto_id})` : ''}${isCricosValid(selected.cricos_id) ? ` [CRICOS: ${selected.cricos_id}]` : ''}`
+                : 'Select client…'}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command
+          filter={(value, search) => value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0}
+        >
+          <CommandInput placeholder="Search clients by name…" />
+          <CommandList className="max-h-[320px]">
+            <CommandEmpty>No client found.</CommandEmpty>
+            <CommandGroup>
+              {tenants.map(t => {
+                const label = `${t.name}${t.rto_id ? ` (${t.rto_id})` : ''}${isCricosValid(t.cricos_id) ? ` [CRICOS: ${t.cricos_id}]` : ''}`;
+                return (
+                  <CommandItem
+                    key={t.id}
+                    value={label}
+                    onSelect={() => { onSelect(t.id); setOpen(false); }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', value === t.id ? 'opacity-100' : 'opacity-0')} />
+                    <span className="truncate">{label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
