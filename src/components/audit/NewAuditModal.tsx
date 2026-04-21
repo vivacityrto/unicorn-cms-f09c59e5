@@ -239,15 +239,45 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     if (!open) return;
     setTenantsLoading(true);
     const fetchTenants = async () => {
-      const { data } = await (supabase as any).from('tenants').select('id, name, rto_id, rto_name, cricos_id, tenant_profile(org_type, cricos_number)').order('name');
-      const mapped = ((data as any[]) || []).map((t: any) => ({
+      // Fetch active tenants — primary list for dropdown
+      const { data: tenantsData, error: tenantsError } = await (supabase as any)
+        .from('tenants')
+        .select('id, name, tenant_type, status, rto_id, rto_name, cricos_id')
+        .eq('status', 'active')
+        .order('name', { ascending: true });
+
+      if (tenantsError) {
+        console.error('[NewAuditModal] Failed to fetch tenants:', tenantsError);
+        setTenants([]);
+        setTenantsLoading(false);
+        return;
+      }
+
+      const rows = (tenantsData as any[]) || [];
+      const ids = rows.map(r => r.id);
+
+      // Enrich with tenant_profile (no FK to embed, so query separately)
+      let profileMap: Record<number, { org_type: string | null; cricos_number: string | null }> = {};
+      if (ids.length) {
+        const { data: profiles } = await (supabase as any)
+          .from('tenant_profile')
+          .select('tenant_id, org_type, cricos_number')
+          .in('tenant_id', ids);
+        for (const p of (profiles as any[]) || []) {
+          profileMap[p.tenant_id] = { org_type: p.org_type ?? null, cricos_number: p.cricos_number ?? null };
+        }
+      }
+
+      const mapped: TenantRecord[] = rows.map((t: any) => ({
         id: t.id,
         name: t.name,
+        tenant_type: t.tenant_type ?? null,
+        status: t.status ?? null,
         rto_id: t.rto_id,
         rto_name: t.rto_name,
         cricos_id: t.cricos_id,
-        org_type: t.tenant_profile?.org_type || null,
-        profile_cricos_number: t.tenant_profile?.cricos_number || null,
+        org_type: profileMap[t.id]?.org_type ?? null,
+        profile_cricos_number: profileMap[t.id]?.cricos_number ?? null,
       }));
       setTenants(mapped);
       setTenantsLoading(false);
