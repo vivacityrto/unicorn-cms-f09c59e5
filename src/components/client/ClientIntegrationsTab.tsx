@@ -782,9 +782,10 @@ export function ClientIntegrationsTab({
   };
 
   const handleLinkToTGA = async () => {
-    if (!profile?.rto_number) return;
+    const rtoNum = effectiveRtoNumber;
+    if (!rtoNum) return;
     setUpdating(true);
-    const result = await onSetTgaLink(profile.rto_number);
+    const result = await onSetTgaLink(rtoNum);
     
     // If auto-verified, trigger the import
     if (result.autoVerified && result.success) {
