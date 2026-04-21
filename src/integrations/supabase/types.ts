@@ -56166,10 +56166,60 @@ export type Database = {
         Args: { p_meeting_id: string; p_summary: string }
         Returns: string
       }
+      fn_academy_admin_extend_expiry: {
+        Args: { p_enrollment_id: number; p_new_expiry: string }
+        Returns: Json
+      }
+      fn_academy_admin_issue_certificate: {
+        Args: { p_enrollment_id: number }
+        Returns: Json
+      }
+      fn_academy_admin_mark_lesson_complete: {
+        Args: { p_enrollment_id: number; p_lesson_id: number }
+        Returns: Json
+      }
+      fn_academy_admin_reactivate_enrollment: {
+        Args: { p_enrollment_id: number }
+        Returns: Json
+      }
+      fn_academy_admin_reset_lesson: {
+        Args: { p_enrollment_id: number; p_lesson_id: number }
+        Returns: Json
+      }
+      fn_academy_admin_revoke_certificate: {
+        Args: { p_certificate_id: number; p_reason?: string }
+        Returns: Json
+      }
+      fn_academy_admin_revoke_enrollment: {
+        Args: { p_enrollment_id: number; p_reason?: string }
+        Returns: Json
+      }
       fn_academy_backfill_enrollments_for_rule: {
         Args: { p_rule_id: number }
         Returns: number
       }
+      fn_academy_enrollment_lesson_detail: {
+        Args: { p_enrollment_id: number }
+        Returns: {
+          completed_at: string
+          completion_percentage: number
+          estimated_minutes: number
+          is_completed: boolean
+          last_position_seconds: number
+          lesson_id: number
+          lesson_sort_order: number
+          lesson_title: string
+          lesson_type: string
+          module_id: number
+          module_sort_order: number
+          module_title: string
+          started_at: string
+          video_duration_seconds: number
+          video_id: string
+          watch_seconds: number
+        }[]
+      }
+      fn_academy_enrollment_stats: { Args: never; Returns: Json }
       fn_academy_rule_dashboard_stats: {
         Args: never
         Returns: {
