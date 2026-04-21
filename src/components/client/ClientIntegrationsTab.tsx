@@ -362,10 +362,80 @@ export function ClientIntegrationsTab({
   const [isTransferringUsers, setIsTransferringUsers] = useState(false);
   const { isSuperAdmin, user } = useAuth();
 
-  const hasRtoNumber = !!profile?.rto_number;
+  // Local override so the inline "Add RTO Number" save can immediately re-render
+  // the TGA section as connected, without requiring a parent refetch / page reload.
+  const [localRtoNumber, setLocalRtoNumber] = useState<string | null>(null);
+  const [rtoInput, setRtoInput] = useState('');
+  const [savingRto, setSavingRto] = useState(false);
+  const [isInitialRegistration, setIsInitialRegistration] = useState(false);
+
+  const effectiveRtoNumber = localRtoNumber ?? profile?.rto_number ?? null;
+  const hasRtoNumber = !!effectiveRtoNumber;
   const currentStatus = registryLink?.link_status || 'not_linked';
   const statusConfig = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.not_linked;
   const isLinked = currentStatus === 'linked';
+
+  // Reset local override when the parent profile catches up
+  useEffect(() => {
+    if (profile?.rto_number) setLocalRtoNumber(null);
+  }, [profile?.rto_number]);
+
+  // Detect "initial registration" context from tenant lifecycle_status or active package names
+  useEffect(() => {
+    if (!profile?.tenant_id) return;
+    let cancelled = false;
+    const check = async () => {
+      const matches = (txt?: string | null) =>
+        !!txt && /initial|registration/i.test(txt);
+
+      const { data: tenantRow } = await supabase
+        .from('tenants')
+        .select('lifecycle_status')
+        .eq('id', profile.tenant_id)
+        .maybeSingle();
+      if (matches((tenantRow as any)?.lifecycle_status)) {
+        if (!cancelled) setIsInitialRegistration(true);
+        return;
+      }
+
+      const { data: ents } = await supabase
+        .from('package_instances')
+        .select('packages(name, slug)')
+        .eq('tenant_id', profile.tenant_id);
+      const hit = (ents || []).some((e: any) =>
+        matches(e?.packages?.name) || matches(e?.packages?.slug)
+      );
+      if (!cancelled) setIsInitialRegistration(hit);
+    };
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.tenant_id]);
+
+  const handleSaveRtoNumber = async () => {
+    if (!profile?.tenant_id) return;
+    const trimmed = rtoInput.trim();
+    if (!trimmed) {
+      toast.error('Please enter an RTO number');
+      return;
+    }
+    setSavingRto(true);
+    try {
+      const { error } = await supabase
+        .from('tenants')
+        .update({ rto_id: trimmed, updated_at: new Date().toISOString() })
+        .eq('id', profile.tenant_id);
+      if (error) throw error;
+      setLocalRtoNumber(trimmed);
+      setRtoInput('');
+      toast.success('RTO number saved');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Failed to save RTO number');
+    } finally {
+      setSavingRto(false);
+    }
+  };
 
   // Check tenant status
   useEffect(() => {
