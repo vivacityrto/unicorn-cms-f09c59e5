@@ -5,6 +5,8 @@ import { XeroCard } from '@/components/client/XeroCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -360,10 +362,87 @@ export function ClientIntegrationsTab({
   const [isTransferringUsers, setIsTransferringUsers] = useState(false);
   const { isSuperAdmin, user } = useAuth();
 
-  const hasRtoNumber = !!profile?.rto_number;
+  // Local override so the inline "Add RTO Number" save can immediately re-render
+  // the TGA section as connected, without requiring a parent refetch / page reload.
+  const [localRtoNumber, setLocalRtoNumber] = useState<string | null>(null);
+  const [rtoInput, setRtoInput] = useState('');
+  const [savingRto, setSavingRto] = useState(false);
+  const [isInitialRegistration, setIsInitialRegistration] = useState(false);
+
+  const effectiveRtoNumber = localRtoNumber ?? profile?.rto_number ?? null;
+  const hasRtoNumber = !!effectiveRtoNumber;
   const currentStatus = registryLink?.link_status || 'not_linked';
   const statusConfig = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.not_linked;
   const isLinked = currentStatus === 'linked';
+
+  // Reset local override when the parent profile catches up
+  useEffect(() => {
+    if (profile?.rto_number) setLocalRtoNumber(null);
+  }, [profile?.rto_number]);
+
+  // Detect "initial registration" context from tenant lifecycle_status or active package names
+  useEffect(() => {
+    if (!profile?.tenant_id) return;
+    let cancelled = false;
+    const check = async () => {
+      const matches = (txt?: string | null) =>
+        !!txt && /initial|registration/i.test(txt);
+
+      const { data: tenantRow } = await supabase
+        .from('tenants')
+        .select('lifecycle_status')
+        .eq('id', profile.tenant_id)
+        .maybeSingle();
+      if (matches((tenantRow as any)?.lifecycle_status)) {
+        if (!cancelled) setIsInitialRegistration(true);
+        return;
+      }
+
+      const { data: ents } = await supabase
+        .from('package_instances')
+        .select('package_id')
+        .eq('tenant_id', profile.tenant_id);
+      const pkgIds = Array.from(new Set((ents || []).map((e: any) => e.package_id).filter(Boolean)));
+      if (pkgIds.length === 0) {
+        if (!cancelled) setIsInitialRegistration(false);
+        return;
+      }
+      const { data: pkgs } = await supabase
+        .from('packages')
+        .select('name, slug')
+        .in('id', pkgIds);
+      const hit = (pkgs || []).some((p: any) => matches(p?.name) || matches(p?.slug));
+      if (!cancelled) setIsInitialRegistration(hit);
+    };
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.tenant_id]);
+
+  const handleSaveRtoNumber = async () => {
+    if (!profile?.tenant_id) return;
+    const trimmed = rtoInput.trim();
+    if (!trimmed) {
+      toast.error('Please enter an RTO number');
+      return;
+    }
+    setSavingRto(true);
+    try {
+      const { error } = await supabase
+        .from('tenants')
+        .update({ rto_id: trimmed, updated_at: new Date().toISOString() })
+        .eq('id', profile.tenant_id);
+      if (error) throw error;
+      setLocalRtoNumber(trimmed);
+      setRtoInput('');
+      toast.success('RTO number saved');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Failed to save RTO number');
+    } finally {
+      setSavingRto(false);
+    }
+  };
 
   // Check tenant status
   useEffect(() => {
@@ -703,9 +782,10 @@ export function ClientIntegrationsTab({
   };
 
   const handleLinkToTGA = async () => {
-    if (!profile?.rto_number) return;
+    const rtoNum = effectiveRtoNumber;
+    if (!rtoNum) return;
     setUpdating(true);
-    const result = await onSetTgaLink(profile.rto_number);
+    const result = await onSetTgaLink(rtoNum);
     
     // If auto-verified, trigger the import
     if (result.autoVerified && result.success) {
@@ -779,24 +859,59 @@ export function ClientIntegrationsTab({
         </CardHeader>
         <CardContent className="space-y-4">
           {!hasRtoNumber ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>TGA link unavailable</AlertTitle>
-              <AlertDescription className="mt-2">
-                <p className="mb-2">
-                  This client does not have an RTO number configured.
+            <div className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>TGA link unavailable</AlertTitle>
+                <AlertDescription className="mt-2">
+                  <p className="mb-2">
+                    This client does not have an RTO number configured.
+                  </p>
+                  {isInitialRegistration && (
+                    <p className="text-xs text-muted-foreground">
+                      Initial registration clients receive their RTO number from ASQA upon successful registration.
+                    </p>
+                  )}
+                </AlertDescription>
+              </Alert>
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                <Label htmlFor="add_rto_number">Add RTO Number</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="add_rto_number"
+                    value={rtoInput}
+                    onChange={(e) => setRtoInput(e.target.value)}
+                    placeholder="e.g. 12345"
+                    disabled={savingRto}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveRtoNumber();
+                      }
+                    }}
+                    className="max-w-xs"
+                  />
+                  <Button onClick={handleSaveRtoNumber} disabled={savingRto || !rtoInput.trim()}>
+                    {savingRto ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
+                    Save
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Once saved, the TGA link will become available immediately.
                 </p>
-              </AlertDescription>
-            </Alert>
+              </div>
+            </div>
           ) : (
             <>
               <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
                 <div>
                   <p className="text-sm text-muted-foreground">RTO Number</p>
-                  <p className="text-lg font-semibold">{profile.rto_number}</p>
+                  <p className="text-lg font-semibold">{effectiveRtoNumber}</p>
                 </div>
                 <a
-                  href={`https://training.gov.au/Organisation/Details/${profile.rto_number}`}
+                  href={`https://training.gov.au/Organisation/Details/${effectiveRtoNumber}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline flex items-center gap-1 text-sm"
