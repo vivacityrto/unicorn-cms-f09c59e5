@@ -858,24 +858,59 @@ export function ClientIntegrationsTab({
         </CardHeader>
         <CardContent className="space-y-4">
           {!hasRtoNumber ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>TGA link unavailable</AlertTitle>
-              <AlertDescription className="mt-2">
-                <p className="mb-2">
-                  This client does not have an RTO number configured.
+            <div className="space-y-4">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>TGA link unavailable</AlertTitle>
+                <AlertDescription className="mt-2">
+                  <p className="mb-2">
+                    This client does not have an RTO number configured.
+                  </p>
+                  {isInitialRegistration && (
+                    <p className="text-xs text-muted-foreground">
+                      Initial registration clients receive their RTO number from ASQA upon successful registration.
+                    </p>
+                  )}
+                </AlertDescription>
+              </Alert>
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                <Label htmlFor="add_rto_number">Add RTO Number</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="add_rto_number"
+                    value={rtoInput}
+                    onChange={(e) => setRtoInput(e.target.value)}
+                    placeholder="e.g. 12345"
+                    disabled={savingRto}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveRtoNumber();
+                      }
+                    }}
+                    className="max-w-xs"
+                  />
+                  <Button onClick={handleSaveRtoNumber} disabled={savingRto || !rtoInput.trim()}>
+                    {savingRto ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
+                    Save
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Once saved, the TGA link will become available immediately.
                 </p>
-              </AlertDescription>
-            </Alert>
+              </div>
+            </div>
           ) : (
             <>
               <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
                 <div>
                   <p className="text-sm text-muted-foreground">RTO Number</p>
-                  <p className="text-lg font-semibold">{profile.rto_number}</p>
+                  <p className="text-lg font-semibold">{effectiveRtoNumber}</p>
                 </div>
                 <a
-                  href={`https://training.gov.au/Organisation/Details/${profile.rto_number}`}
+                  href={`https://training.gov.au/Organisation/Details/${effectiveRtoNumber}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline flex items-center gap-1 text-sm"
