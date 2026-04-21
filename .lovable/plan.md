@@ -1,79 +1,75 @@
 
 
-## Plan: Academy Lesson Viewer — finish the spec
+## Plan: SuperAdmin — Package → Course Mapping
 
-The viewer at `src/pages/client/AcademyLessonViewerPage.tsx` already covers ~70% of the spec (sidebar, prev/next, mark-complete, preview gating, breadcrumb, Vimeo iframe). This plan adds the missing pieces and hardens what's there.
+A new SuperAdmin-only page at `/superadmin/academy/package-course-rules` to control which Academy courses auto-enrol when a client holds a given package. The backfill RPC `fn_academy_backfill_enrollments_for_rule` is already deployed; we'll add one new helper RPC for the dashboard stats.
 
-**Route stays as the existing `/academy/course/:slug/lesson/:lessonId`** — not the spec's `/academy/courses/:courseSlug/lessons/:lessonId`. The existing route is wired into `App.tsx`, the course detail page, and any deep-links already in the system. Renaming would break links.
+### Files created
+1. **`src/pages/superadmin/AcademyPackageCourseRulesPage.tsx`** — main page (header, 4 stat tiles, tabs, FAB).
+2. **`src/components/academy/admin/rules/RulesMatrixTab.tsx`** — courses-as-rows × packages-as-columns toggle grid with frozen first row/column, zebra striping, filters, search, optimistic toggling, bulk actions ("Select row…", "Select column…", "Copy mappings from…").
+3. **`src/components/academy/admin/rules/RulesListTab.tsx`** — sortable/filterable table with Backfill + Archive row actions.
+4. **`src/components/academy/admin/rules/BackfillConfirmModal.tsx`** — preview-count modal that runs the affected-tenants/users/new-enrollments query, then calls the RPC on confirm.
+5. **`src/components/academy/admin/rules/CreateRuleModal.tsx`** — quick-add: 1 package × N courses + optional "Backfill existing clients" checkbox.
+6. **`src/hooks/academy/useAcademyPackageRules.ts`** — react-query hooks: `usePackagesActive`, `usePublishedCourses`, `useAllPackageCourseRules`, `useRuleStats`, `useToggleRule`, `useBackfillRule`, `useArchiveRule`, `useCreateRules`, `useCopyRuleMappings`, `useBackfillPreview`.
 
-### 1. Install Vimeo Player SDK
-- Add `@vimeo/player` (and `@types/vimeo__player` if needed).
+### Files edited
+- **`src/App.tsx`** — register route `/superadmin/academy/package-course-rules` (lazy import, `ProtectedRoute requireSuperAdmin`).
+- **`src/components/DashboardLayout.tsx`** — add nav item "Package → Course Rules" under the Academy Builder section.
 
-### 2. Auto-progress tracking via Vimeo SDK
-In `AcademyLessonViewerPage.tsx`, replace the static iframe with a ref-attached one and wire up the SDK:
+### Migration (one new RPC)
+`fn_academy_rule_dashboard_stats()` — security definer, returns single row:
+```sql
+RETURNS TABLE (
+  active_rules bigint,
+  total_mappings bigint,
+  auto_enrollments_to_date bigint,
+  unmapped_packages bigint
+)
+```
+Body computes the four queries listed in the spec. Restricted to vivacity staff via `is_vivacity()` guard inside the function.
 
-- On `play` → upsert `started_at` (only if enrolled, not preview, not expired).
-- On `timeupdate` (throttled to every 10s) → upsert `last_position_seconds`, `watch_seconds`, `completion_percentage`.
-- Auto-complete when `completion_percentage >= lesson.completion_threshold` (default 90 if null) AND not yet completed.
-- On `ended` → upsert `is_completed: true, completion_percentage: 100`.
-- Append `?texttrack=en&autoplay=0&title=0&byline=0&portrait=0` to the embed URL.
-- Resume from `last_position_seconds` on load via `player.setCurrentTime()`.
+No schema changes to any table. RLS on `academy_package_course_rules` already enforces staff-only writes.
 
-Keep the existing `markComplete` mutation logic for the manual button (it already cascades into course-completion + enrollment status flip).
+### Matrix tab — interaction details
+- Columns grouped by `package_type` with a coloured band (project=blue, membership=purple, regulatory_submission=amber, audit=teal); chips reuse the same palette.
+- Course rows show title + a small audience chip (icon + label). Tap row header → side sheet with course detail (title, audience, lesson count, status).
+- Cell click logic:
+  - No rule → `INSERT (package_id, course_id, is_active=true, created_by=auth.uid())`.
+  - Rule active → `UPDATE is_active = false`.
+  - Rule inactive → `UPDATE is_active = true`.
+- Optimistic update via react-query `onMutate` / rollback in `onError` + sonner toast.
+- Filters: package type (multi), course audience (multi), Show (All/Mapped/Unmapped), search (case-insensitive substring on course title or package name; filters both axes).
+- Sticky first column (course header) and first row (package header) using `position: sticky` with z-index layering.
+- Bulk actions menu (top-right):
+  - **Select row…** → choose course → modal with package checkboxes → batch upsert.
+  - **Select column…** → choose package → modal with course checkboxes → batch upsert.
+  - **Copy mappings from…** → pick source package + target package → copies all active rules (upsert with `ON CONFLICT (package_id, course_id) DO UPDATE SET is_active = true`).
 
-### 3. Manual "Mark complete" — gate at 50%
-Show the button only when enrolled, not already complete, AND `progress.completion_percentage >= 50`. Track local `completion_percentage` state from the SDK so the button enables live.
+### Rules list tab
+- Columns: Package (name + type chip), Course (title + audience chip), Status (toggle), Created (relative time), Created by (resolved via `users` join on `user_uuid`), Enrollments (count of `academy_enrollments` where `course_id = rule.course_id` and `source LIKE 'auto_package%'` and tenant has matching `package_instances`), Actions.
+- Default sort `created_at DESC`; column sort + filters (package, course, status, date range).
+- Row actions:
+  - **Backfill** → opens `BackfillConfirmModal`. Preview query exactly as in spec; on confirm calls `supabase.rpc('fn_academy_backfill_enrollments_for_rule', { p_rule_id })`.
+  - **Archive** → confirmation, sets `is_active = false`.
 
-### 4. Course-completion celebration modal
-- Add a `<Dialog>` (use `AppModal` from the unified modal system) shown when the enrollment status flips from `active` → `completed` during this session.
-- Detect via `useEffect` watching `enrollment.enrollment_status` against a ref of the previous value.
-- Modal: 🎉 "Course complete!" + body + two CTAs: "View certificates" → `/academy/certificates`, "Back to Academy" → `/academy`.
+### Create Rule modal (FAB)
+- Searchable single-select package + searchable multi-select courses + "Backfill existing clients?" checkbox (default off, with explanatory help text).
+- On submit: bulk insert one row per course with `ON CONFLICT (package_id, course_id) DO UPDATE SET is_active = true` (reactivates archived rules). If backfill checked, fan-out RPC calls per newly inserted/reactivated rule and sum the returned counts. Toast: `Created {n} rules. Backfilled {m} enrollments.`
 
-### 5. Expired enrollment banner
-- Fetch `expires_at` and `revoked_at` directly from `academy_enrollments` (current viewer reads from `v_academy_course_progress` which omits these). Add a small parallel query.
-- If `revoked_at` is set → redirect to course page with toast.
-- If `expires_at < now()` → render a yellow banner: "Your access to this course has expired. Contact your admin." Disable mark-complete and progress writes. Preview lessons remain navigable.
+### Real-time sync
+Single channel `rules-changes` subscribed to `postgres_changes` on `academy_package_course_rules` for `event: '*'`. On any payload → invalidate `["academy-package-course-rules"]` query. Cleanup on unmount.
 
-### 6. Sidebar — preview lock for unenrolled users
-The current sidebar lets unenrolled users click any lesson (which then redirects them). Update to:
-- If unenrolled and `lesson.is_preview === false` → render a disabled row with a `Lock` icon + tooltip "Enrol to unlock".
-- Preview lessons stay clickable.
-- Also fetch `is_preview` in the modules sidebar query (currently missing from the select).
+### Stats tiles (top bar)
+Initial implementation calls the new `fn_academy_rule_dashboard_stats` RPC. Skeleton state while loading; refetches on rule mutations.
 
-### 7. Preview banner for unenrolled users
-Add a persistent banner above the video when `isPreview && !isEnrolled`:
-"You're viewing a preview. Enrol in this course to track your progress and earn your certificate." + cyan "Enrol now" button → triggers the same enrol mutation pattern as `AcademyCourseDetailPage`.
-
-### 8. Sanitize `content_markdown`
-Current code uses raw `dangerouslySetInnerHTML` — XSS risk. Wrap with `sanitizeHtml` from `@/lib/sanitize`.
-
-### 9. Save position before navigating
-Hook prev/next button clicks to flush a final `upsertProgress({ last_position_seconds })` before `navigate()`.
-
-### 10. Video unavailable placeholder
-Wrap the iframe in an error boundary listener (`player.on('error', ...)`) → swap to a "Video unavailable. Please try again or contact support." card.
-
-### 11. Database — completion_threshold column (verify + default)
-- Verify `academy_lessons.completion_threshold` exists. If not, add a migration: `ALTER TABLE academy_lessons ADD COLUMN completion_threshold smallint NOT NULL DEFAULT 90;`
-- The frontend reads this per-lesson; falls back to 90 if null.
-
-### 12. RLS sanity
-Already correct — `academy_lesson_progress` enforces `user_id = auth.uid()` for writes. No migration needed.
+### Empty / error / permission states
+- Empty rules: matrix renders all-unchecked + banner "No mappings yet. Click any cell to create your first rule, or use quick-add."
+- Write rejected by RLS: catch the error → toast "You need SuperAdmin access to modify rules."
+- Backfill returns 0: toast "No new enrollments needed — all affected users were already enrolled."
 
 ### Out of scope (per spec)
-- Server-side trigger `trg_academy_complete_enrollment_on_progress` and `trg_issue_academy_certificate` — the spec says these are pre-applied. Current code handles course-completion client-side, which works. Will leave that intact as a fallback; if the triggers do exist server-side they'll just no-op the client logic harmlessly.
-- Assessments, comments, notes, bookmarks, resource downloads.
+- Time-windowed rules, RTO/CRICOS conditional rules, notification email triggers.
 
-### Files changed
-- `src/pages/client/AcademyLessonViewerPage.tsx` — main refactor (Vimeo SDK, banners, modal, sanitization, sidebar locks, expired state).
-- `package.json` — add `@vimeo/player`.
-- (Conditional) Migration: `ALTER TABLE academy_lessons ADD COLUMN completion_threshold ...` if not present.
-
-### Acceptance verification (post-build)
-- Open an enrolled lesson → play 10s → confirm a row in `academy_lesson_progress` with `last_position_seconds > 0`.
-- Watch past threshold → row flips `is_completed = true`, sidebar checkmark appears live.
-- Finish last lesson → enrollment flips to `completed`, celebration modal renders, certificate row appears in `academy_certificates`.
-- Hit a non-preview lesson while unenrolled → toast + redirect to course.
-- Hit a preview lesson while unenrolled → preview banner shown, no progress writes occur.
-- Set `expires_at` in the past on a test enrollment → expiry banner renders, mark-complete disabled.
+### Acceptance verification
+After build, I'll seed-toggle one cell in the matrix to confirm INSERT works, toggle it again to confirm soft-disable, run a backfill in preview mode against one of the 30 active packages, and verify a new `academy_enrollments` row appears with `source = 'auto_package_backfill'`.
 
