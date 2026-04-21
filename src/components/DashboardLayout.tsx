@@ -95,6 +95,7 @@ const administrationMenuItems = [
 // 6. ACADEMY BUILDER Section - Super Admin Only
 const academyBuilderMenuItems = [
   { icon: GraduationCap, label: "Academy Builder", path: "/superadmin/academy/builder" },
+  { icon: GraduationCap, label: "Package → Course Rules", path: "/superadmin/academy/package-course-rules" },
 ];
 
 // 7. SYSTEM CONFIG Section - Super Admin Only
