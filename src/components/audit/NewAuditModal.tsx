@@ -474,16 +474,12 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                 {isClientLocked ? (
                   <Input value={tenantName} disabled />
                 ) : (
-                  <Select value={tenantId?.toString() || ''} onValueChange={v => setTenantId(Number(v))}>
-                    <SelectTrigger><SelectValue placeholder="Select client…" /></SelectTrigger>
-                    <SelectContent>
-                      {tenants.map(t => (
-                        <SelectItem key={t.id} value={t.id.toString()}>
-                          {t.name}{t.rto_id ? ` (${t.rto_id})` : ''}{isCricosValid(t.cricos_id) ? ` [CRICOS: ${t.cricos_id}]` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ClientCombobox
+                    tenants={tenants}
+                    value={tenantId}
+                    onSelect={(id) => setTenantId(id)}
+                    loading={tenantsLoading}
+                  />
                 )}
               </div>
               <div className="grid grid-cols-2 gap-4">
