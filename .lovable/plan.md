@@ -1,75 +1,76 @@
 
 
-## Plan: SuperAdmin — Package → Course Mapping
+## Plan: SuperAdmin — Enrolments Manager (refresh)
 
-A new SuperAdmin-only page at `/superadmin/academy/package-course-rules` to control which Academy courses auto-enrol when a client holds a given package. The backfill RPC `fn_academy_backfill_enrollments_for_rule` is already deployed; we'll add one new helper RPC for the dashboard stats.
+The page at `/superadmin/academy/enrollments` already exists (`AcademyEnrolmentsPage.tsx` + `useAcademyEnrollments.ts` + `EnrolmentProgressDrawer.tsx`). It covers ~50% of the spec (table, filters, status tabs, basic drawer, revoke/reactivate/extend, CSV). This refresh closes the gaps — bulk enrol modal, missing stat tiles, source chips, expiry warnings, lesson-by-lesson drawer with admin overrides, certificate/assessment blocks, real-time, URL-state filters, and 6 admin RPCs.
 
-### Files created
-1. **`src/pages/superadmin/AcademyPackageCourseRulesPage.tsx`** — main page (header, 4 stat tiles, tabs, FAB).
-2. **`src/components/academy/admin/rules/RulesMatrixTab.tsx`** — courses-as-rows × packages-as-columns toggle grid with frozen first row/column, zebra striping, filters, search, optimistic toggling, bulk actions ("Select row…", "Select column…", "Copy mappings from…").
-3. **`src/components/academy/admin/rules/RulesListTab.tsx`** — sortable/filterable table with Backfill + Archive row actions.
-4. **`src/components/academy/admin/rules/BackfillConfirmModal.tsx`** — preview-count modal that runs the affected-tenants/users/new-enrollments query, then calls the RPC on confirm.
-5. **`src/components/academy/admin/rules/CreateRuleModal.tsx`** — quick-add: 1 package × N courses + optional "Backfill existing clients" checkbox.
-6. **`src/hooks/academy/useAcademyPackageRules.ts`** — react-query hooks: `usePackagesActive`, `usePublishedCourses`, `useAllPackageCourseRules`, `useRuleStats`, `useToggleRule`, `useBackfillRule`, `useArchiveRule`, `useCreateRules`, `useCopyRuleMappings`, `useBackfillPreview`.
+### Migrations (one file)
+Add `SECURITY DEFINER` admin RPCs guarded by `is_vivacity()`:
+- `fn_academy_enrollment_stats()` → returns 6-tile counts in one round trip (total / active / completed / expired / revoked / auto_lifetime).
+- `fn_academy_enrollment_lesson_detail(p_enrollment_id bigint)` → returns lessons joined with `academy_lesson_progress` and `training_videos.duration_seconds`, ordered by module + lesson sort.
+- `fn_academy_admin_revoke_enrollment(p_enrollment_id bigint, p_reason text)` → sets status='revoked', revoked_at/by/reason.
+- `fn_academy_admin_reactivate_enrollment(p_enrollment_id bigint)` → clears revoke fields, status='active'.
+- `fn_academy_admin_extend_expiry(p_enrollment_id bigint, p_new_expiry timestamptz)`.
+- `fn_academy_admin_mark_lesson_complete(p_enrollment_id bigint, p_lesson_id bigint)` → idempotent upsert into `academy_lesson_progress` with `is_completed=true, completion_percentage=100`. Lets the existing `trg_academy_complete_enrollment_on_progress` chain to course completion + certificate.
+- `fn_academy_admin_reset_lesson(p_enrollment_id bigint, p_lesson_id bigint)` → deletes the progress row.
+- `fn_academy_admin_issue_certificate(p_enrollment_id bigint)` → inserts into `academy_certificates` if absent (uses existing `fn_generate_certificate_number`).
+- `fn_academy_admin_revoke_certificate(p_certificate_id bigint, p_reason text)`.
+
+All return `jsonb` or affected count; all `RAISE EXCEPTION` if not staff.
 
 ### Files edited
-- **`src/App.tsx`** — register route `/superadmin/academy/package-course-rules` (lazy import, `ProtectedRoute requireSuperAdmin`).
-- **`src/components/DashboardLayout.tsx`** — add nav item "Package → Course Rules" under the Academy Builder section.
+**`src/pages/superadmin/AcademyEnrolmentsPage.tsx`** — refactor:
+- Replace 4 stat tiles with **6 tiles** (Total / Active / Completed / Expired / Revoked / Auto-enrolled lifetime), sourced from `fn_academy_enrollment_stats`.
+- Compute live `expired` = `status='active' AND expires_at <= now()` (treat as separate filter from raw `status` column).
+- **URL-state filters**: persist `search`, `course`, `tenant`, `status`, `source`, `from`, `to` to query string via `useSearchParams`.
+- **Source filter**: change to multi-select chips with values `manual | auto_package | auto_package_backfill` (matches DB).
+- **Date range** (enrolled between).
+- **Status tabs** show live counts per tab.
+- Row visuals:
+  - Source chip with distinct colour per source.
+  - Tenant badge for `tenant_type` (RTO / CRICOS / dual).
+  - Expires red when `< 14 days`, dash when null.
+  - Expired rows: red left-border accent. Revoked rows: strikethrough + opacity-60.
+  - Course thumbnail next to title.
+- **Bulk action bar**: add "Extend expiry for selected" (date picker → applies to all) and "Export selected to CSV"; keep "Revoke selected" but route through new RPC (collect partial-success counts → toast).
+- Wire revoke/reactivate/extend mutations to the new RPCs (replace direct UPDATEs).
+- Empty state with "Clear filters" / "Seed Package → Course rules" deep-link.
+- **Real-time**: subscribe to `academy_enrollments` and `academy_lesson_progress` → invalidate queries.
 
-### Migration (one new RPC)
-`fn_academy_rule_dashboard_stats()` — security definer, returns single row:
-```sql
-RETURNS TABLE (
-  active_rules bigint,
-  total_mappings bigint,
-  auto_enrollments_to_date bigint,
-  unmapped_packages bigint
-)
-```
-Body computes the four queries listed in the spec. Restricted to vivacity staff via `is_vivacity()` guard inside the function.
+**`src/components/academy/admin/EnrolmentProgressDrawer.tsx`** — expand:
+- Width to `~720px` (`sm:max-w-[720px]`).
+- Header: avatar, learner, tenant + type badge, source chip, status chip.
+- Summary block: thumbnail, estimated minutes, enrolled / expires / completed / revoked dates + reason, big % bar from `v_academy_course_progress`, "Last activity" from `last_activity_at`.
+- **Lessons via `fn_academy_enrollment_lesson_detail`**: grouped by module (sticky module headers), each lesson shows status chip, `completion_percentage` bar, `mm:ss` watch_seconds vs total duration, "Resumes at hh:mm" from `last_position_seconds`, `completed_at`.
+- Per-lesson admin actions behind a "Troubleshoot" disclosure: **Mark complete** + **Reset** (call `fn_academy_admin_mark_lesson_complete` / `fn_academy_admin_reset_lesson`).
+- Assessment block (only when course has assessments): list `academy_assessments` with attempts table + "Reset attempts" admin action.
+- Certificate block: cert number / issued / issuer; download via signed URL from `pdf_storage_path`; "Revoke certificate" action; if absent → "Issue certificate" (manual) action calling `fn_academy_admin_issue_certificate`.
 
-No schema changes to any table. RLS on `academy_package_course_rules` already enforces staff-only writes.
+**`src/hooks/academy/useAcademyEnrollments.ts`** — extend:
+- `useEnrollmentStats()` → wraps `fn_academy_enrollment_stats`.
+- `useBulkEnroll()` → bulk INSERT with `ON CONFLICT (course_id, user_id) DO NOTHING`, returns created count for toast.
+- Switch `useRevokeEnrollment`, `useReactivateEnrollment`, `useExtendEnrollment` to call the new admin RPCs.
+- `useLessonDetail(enrollmentId)` → wraps `fn_academy_enrollment_lesson_detail`.
+- `useEnrollmentRealtime()` → channel `admin-enrollments` on both tables.
+- Admin-action hooks: `useMarkLessonComplete`, `useResetLesson`, `useIssueCertificate`, `useRevokeCertificate`, `useResetAssessmentAttempts`.
 
-### Matrix tab — interaction details
-- Columns grouped by `package_type` with a coloured band (project=blue, membership=purple, regulatory_submission=amber, audit=teal); chips reuse the same palette.
-- Course rows show title + a small audience chip (icon + label). Tap row header → side sheet with course detail (title, audience, lesson count, status).
-- Cell click logic:
-  - No rule → `INSERT (package_id, course_id, is_active=true, created_by=auth.uid())`.
-  - Rule active → `UPDATE is_active = false`.
-  - Rule inactive → `UPDATE is_active = true`.
-- Optimistic update via react-query `onMutate` / rollback in `onError` + sonner toast.
-- Filters: package type (multi), course audience (multi), Show (All/Mapped/Unmapped), search (case-insensitive substring on course title or package name; filters both axes).
-- Sticky first column (course header) and first row (package header) using `position: sticky` with z-index layering.
-- Bulk actions menu (top-right):
-  - **Select row…** → choose course → modal with package checkboxes → batch upsert.
-  - **Select column…** → choose package → modal with course checkboxes → batch upsert.
-  - **Copy mappings from…** → pick source package + target package → copies all active rules (upsert with `ON CONFLICT (package_id, course_id) DO UPDATE SET is_active = true`).
-
-### Rules list tab
-- Columns: Package (name + type chip), Course (title + audience chip), Status (toggle), Created (relative time), Created by (resolved via `users` join on `user_uuid`), Enrollments (count of `academy_enrollments` where `course_id = rule.course_id` and `source LIKE 'auto_package%'` and tenant has matching `package_instances`), Actions.
-- Default sort `created_at DESC`; column sort + filters (package, course, status, date range).
-- Row actions:
-  - **Backfill** → opens `BackfillConfirmModal`. Preview query exactly as in spec; on confirm calls `supabase.rpc('fn_academy_backfill_enrollments_for_rule', { p_rule_id })`.
-  - **Archive** → confirmation, sets `is_active = false`.
-
-### Create Rule modal (FAB)
-- Searchable single-select package + searchable multi-select courses + "Backfill existing clients?" checkbox (default off, with explanatory help text).
-- On submit: bulk insert one row per course with `ON CONFLICT (package_id, course_id) DO UPDATE SET is_active = true` (reactivates archived rules). If backfill checked, fan-out RPC calls per newly inserted/reactivated rule and sum the returned counts. Toast: `Created {n} rules. Backfilled {m} enrollments.`
-
-### Real-time sync
-Single channel `rules-changes` subscribed to `postgres_changes` on `academy_package_course_rules` for `event: '*'`. On any payload → invalidate `["academy-package-course-rules"]` query. Cleanup on unmount.
-
-### Stats tiles (top bar)
-Initial implementation calls the new `fn_academy_rule_dashboard_stats` RPC. Skeleton state while loading; refetches on rule mutations.
-
-### Empty / error / permission states
-- Empty rules: matrix renders all-unchecked + banner "No mappings yet. Click any cell to create your first rule, or use quick-add."
-- Write rejected by RLS: catch the error → toast "You need SuperAdmin access to modify rules."
-- Backfill returns 0: toast "No new enrollments needed — all affected users were already enrolled."
+### Files created
+**`src/components/academy/admin/NewEnrolmentModal.tsx`** — bulk-enrol:
+- Searchable multi-select learners across `tenant_users` joined with `users` (label = name + email + tenant).
+- Searchable multi-select courses (published).
+- Optional expiry date picker.
+- Notes textarea.
+- Submit → bulk INSERT with `ON CONFLICT (course_id, user_id) DO NOTHING`, toast `Enrolled N learners across M courses (X skipped — already enrolled).`
 
 ### Out of scope (per spec)
-- Time-windowed rules, RTO/CRICOS conditional rules, notification email triggers.
+- Email notifications (separate Academy email templates module).
+- Tenant-level rollups (covered by AcademyTenantAccessPage).
+- The optional `v_academy_enrollments_admin` view — current batched-fetch hydration in `useAdminEnrollments` performs fine and stays.
 
-### Acceptance verification
-After build, I'll seed-toggle one cell in the matrix to confirm INSERT works, toggle it again to confirm soft-disable, run a backfill in preview mode against one of the 30 active packages, and verify a new `academy_enrollments` row appears with `source = 'auto_package_backfill'`.
+### Acceptance verification (post-build)
+- Insert one new `academy_enrollments` row in the DB → confirm it appears in the table within 2 seconds via real-time.
+- Toggle status tabs and confirm counts match the underlying queries.
+- Open the drawer → click "Mark complete" on the last outstanding lesson → confirm the enrolment flips to `completed` (validates `trg_academy_complete_enrollment_on_progress` chain via admin RPC) and a `academy_certificates` row appears.
+- Bulk-revoke 3 enrolments → confirm 3 update calls succeed and live UI updates.
+- Hit `/superadmin/academy/enrollments` as a non-staff user → redirected by existing `ProtectedRoute requireSuperAdmin` guard.
 
