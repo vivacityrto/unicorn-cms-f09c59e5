@@ -133,6 +133,12 @@ const ALL_CARDS: AuditTypeCard[] = [
     description: 'Combined SRTO 2025 and National Code 2018 audit.',
     is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.rto_cricos_chc,
   },
+  {
+    value: 'due_diligence_combined', label: 'Combined RTO + CRICOS Due Diligence', icon: Building2,
+    description: 'Compliance and risk assessment for dual-registered clients considering purchasing an RTO with CRICOS registration.',
+    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
+    is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence_combined,
+  },
 ];
 
 interface TenantRecord {
