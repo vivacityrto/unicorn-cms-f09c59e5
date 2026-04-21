@@ -400,11 +400,18 @@ export function ClientIntegrationsTab({
 
       const { data: ents } = await supabase
         .from('package_instances')
-        .select('packages(name, slug)')
+        .select('package_id')
         .eq('tenant_id', profile.tenant_id);
-      const hit = (ents || []).some((e: any) =>
-        matches(e?.packages?.name) || matches(e?.packages?.slug)
-      );
+      const pkgIds = Array.from(new Set((ents || []).map((e: any) => e.package_id).filter(Boolean)));
+      if (pkgIds.length === 0) {
+        if (!cancelled) setIsInitialRegistration(false);
+        return;
+      }
+      const { data: pkgs } = await supabase
+        .from('packages')
+        .select('name, slug')
+        .in('id', pkgIds);
+      const hit = (pkgs || []).some((p: any) => matches(p?.name) || matches(p?.slug));
       if (!cancelled) setIsInitialRegistration(hit);
     };
     check();
