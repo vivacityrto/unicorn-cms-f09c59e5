@@ -147,6 +147,8 @@ const ALL_CARDS: AuditTypeCard[] = [
 interface TenantRecord {
   id: number;
   name: string;
+  tenant_type: string | null;
+  status: string | null;
   rto_id: string | null;
   rto_name: string | null;
   cricos_id: string | null;
