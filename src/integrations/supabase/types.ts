@@ -56170,6 +56170,15 @@ export type Database = {
         Args: { p_rule_id: number }
         Returns: number
       }
+      fn_academy_rule_dashboard_stats: {
+        Args: never
+        Returns: {
+          active_rules: number
+          auto_enrollments_to_date: number
+          total_mappings: number
+          unmapped_packages: number
+        }[]
+      }
       fn_audit_playbook: {
         Args: {
           p_action: string
