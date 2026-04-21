@@ -111,6 +111,12 @@ const BOTH_CARDS: AuditTypeCard[] = [
     description: 'Compliance and risk assessment for clients considering purchasing an RTO.',
     is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence,
   },
+  {
+    value: 'due_diligence_combined', label: 'Combined RTO + CRICOS Due Diligence', icon: Building2,
+    description: 'Compliance and risk assessment for dual-registered clients considering purchasing an RTO with CRICOS registration.',
+    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
+    is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence_combined,
+  },
 ];
 
 // Fallback when no client selected
