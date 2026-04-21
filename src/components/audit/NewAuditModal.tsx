@@ -52,6 +52,7 @@ const TEMPLATE_IDS: Record<AuditType, string> = {
   mock_audit: 'a0025000-0000-0000-0000-000000000001',
   cricos_mock_audit: '788a5beb-93b2-48fd-a262-b313060823f4',
   due_diligence: 'd0025000-0000-0000-0000-000000000001',
+  due_diligence_combined: 'dc025000-0000-0000-0000-000000000001',
 };
 
 // Cards per registration type
@@ -110,6 +111,12 @@ const BOTH_CARDS: AuditTypeCard[] = [
     description: 'Compliance and risk assessment for clients considering purchasing an RTO.',
     is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence,
   },
+  {
+    value: 'due_diligence_combined', label: 'Combined RTO + CRICOS Due Diligence', icon: Building2,
+    description: 'Compliance and risk assessment for dual-registered clients considering purchasing an RTO with CRICOS registration.',
+    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
+    is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence_combined,
+  },
 ];
 
 // Fallback when no client selected
@@ -125,6 +132,12 @@ const ALL_CARDS: AuditTypeCard[] = [
     value: 'rto_cricos_chc', label: 'Combined RTO + CRICOS CHC', icon: Award,
     description: 'Combined SRTO 2025 and National Code 2018 audit.',
     is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.rto_cricos_chc,
+  },
+  {
+    value: 'due_diligence_combined', label: 'Combined RTO + CRICOS Due Diligence', icon: Building2,
+    description: 'Compliance and risk assessment for dual-registered clients considering purchasing an RTO with CRICOS registration.',
+    badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
+    is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence_combined,
   },
 ];
 

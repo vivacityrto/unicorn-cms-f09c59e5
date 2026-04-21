@@ -4,7 +4,8 @@ export type AuditType =
   | 'rto_cricos_chc'
   | 'mock_audit'
   | 'cricos_mock_audit'
-  | 'due_diligence';
+  | 'due_diligence'
+  | 'due_diligence_combined';
 
 export type AuditStatus = 'draft' | 'in_progress' | 'review' | 'complete' | 'archived';
 export type AuditRisk = 'low' | 'medium' | 'high' | 'critical';
@@ -77,6 +78,7 @@ export const AUDIT_TYPE_LABELS: Record<AuditType, string> = {
   mock_audit: 'Mock Audit',
   cricos_mock_audit: 'Mock Audit — CRICOS',
   due_diligence: 'Due Diligence',
+  due_diligence_combined: 'Combined RTO + CRICOS Due Diligence',
 };
 
 export const AUDIT_STATUS_LABELS: Record<AuditStatus, string> = {

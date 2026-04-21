@@ -58,6 +58,7 @@ export const AUDIT_TYPE_TEMPLATE: Record<AuditType, string> = {
   mock_audit: 'a0025000-0000-0000-0000-000000000001',
   cricos_mock_audit: '788a5beb-93b2-48fd-a262-b313060823f4',
   due_diligence: 'd0025000-0000-0000-0000-000000000001',
+  due_diligence_combined: 'dc025000-0000-0000-0000-000000000001',
 };
 
 const AUDIT_TYPE_HUMAN: Record<AuditType, string> = {
@@ -67,6 +68,7 @@ const AUDIT_TYPE_HUMAN: Record<AuditType, string> = {
   mock_audit: 'Mock Audit',
   cricos_mock_audit: 'CRICOS Mock Audit',
   due_diligence: 'Due Diligence',
+  due_diligence_combined: 'Combined RTO + CRICOS Due Diligence',
 };
 
 export interface CreateAuditInput {
