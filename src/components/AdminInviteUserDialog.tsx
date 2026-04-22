@@ -173,9 +173,12 @@ export function AdminInviteUserDialog({
                     e.preventDefault();
                   }
                 }}
-                placeholder="John  (or paste 'Name <email>')"
+                placeholder="John"
                 autoFocus
               />
+              <p className="text-[11px] text-muted-foreground leading-tight normal-case font-normal">
+                Tip: paste <code className="font-mono">Name &lt;email@example.com&gt;</code> to auto-fill all fields.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="admin-lastName" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last Name</Label>
