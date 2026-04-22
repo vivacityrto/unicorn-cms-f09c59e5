@@ -109,6 +109,52 @@ export function TenantInviteDialog({
     onOpenChange(false);
   };
 
+  /**
+   * Smart paste: detect "Name <email>", "Name (email)", a bare email, or
+   * "First Last" pasted into the First Name field and distribute across
+   * First/Last/Email accordingly. Returns true if handled.
+   */
+  const handleSmartPaste = (text: string): boolean => {
+    const raw = text.trim();
+    if (!raw) return false;
+
+    const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+
+    // Pattern 1: "Name <email>" or "Name (email)"
+    const nameEmailMatch = raw.match(/^(.+?)\s*[<(]\s*([^<>()\s]+@[^<>()\s]+)\s*[>)]?\s*$/i);
+    if (nameEmailMatch && emailRegex.test(nameEmailMatch[2])) {
+      const namePart = nameEmailMatch[1].trim().replace(/^["']|["']$/g, '').trim();
+      const emailPart = nameEmailMatch[2].trim();
+      const parts = namePart.split(/\s+/);
+      setFirstName(parts[0] || '');
+      setLastName(parts.slice(1).join(' '));
+      setEmail(emailPart);
+      toast.success('Contact details parsed from paste');
+      return true;
+    }
+
+    // Pattern 2: bare email
+    if (emailRegex.test(raw) && !/\s/.test(raw)) {
+      setEmail(raw);
+      if (!firstName) {
+        const local = raw.split('@')[0].split(/[._-]/)[0];
+        if (local) setFirstName(local.charAt(0).toUpperCase() + local.slice(1));
+      }
+      toast.success('Email parsed from paste');
+      return true;
+    }
+
+    // Pattern 3: "First Last" (multi-word, no email)
+    if (!emailRegex.test(raw) && /\s/.test(raw)) {
+      const parts = raw.split(/\s+/);
+      setFirstName(parts[0]);
+      setLastName(parts.slice(1).join(' '));
+      return true;
+    }
+
+    return false;
+  };
+
   const handleSendInvite = async () => {
     if (!firstName.trim() || !email.trim()) {
       toast.error('Please fill in required fields');
@@ -257,8 +303,17 @@ export function TenantInviteDialog({
                   id="firstName"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (handleSmartPaste(pasted)) {
+                      e.preventDefault();
+                    }
+                  }}
                   placeholder="John"
                 />
+                <p className="text-[11px] text-muted-foreground leading-tight">
+                  Tip: paste <code className="font-mono">Name &lt;email@example.com&gt;</code> to auto-fill all fields.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
