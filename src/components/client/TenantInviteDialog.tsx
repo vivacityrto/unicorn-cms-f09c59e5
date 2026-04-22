@@ -303,8 +303,17 @@ export function TenantInviteDialog({
                   id="firstName"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (handleSmartPaste(pasted)) {
+                      e.preventDefault();
+                    }
+                  }}
                   placeholder="John"
                 />
+                <p className="text-[11px] text-muted-foreground leading-tight">
+                  Tip: paste <code className="font-mono">Name &lt;email@example.com&gt;</code> to auto-fill all fields.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
