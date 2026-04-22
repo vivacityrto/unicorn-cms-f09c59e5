@@ -50,9 +50,9 @@ export function AdminInviteUserDialog({
 
     const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
 
-    // Pattern 1: "Name <email>" or "Name (email)"
-    const nameEmailMatch = raw.match(/^(.+?)\s*[<(]\s*([^<>()]+@[^<>()]+)\s*[>)]\s*$/i);
-    if (nameEmailMatch) {
+    // Pattern 1: "Name <email>" or "Name (email)" — closing bracket optional
+    const nameEmailMatch = raw.match(/^(.+?)\s*[<(]\s*([^<>()\s]+@[^<>()\s]+)\s*[>)]?\s*$/i);
+    if (nameEmailMatch && emailRegex.test(nameEmailMatch[2])) {
       const namePart = nameEmailMatch[1].trim().replace(/^["']|["']$/g, '').trim();
       const emailPart = nameEmailMatch[2].trim();
       const parts = namePart.split(/\s+/);
