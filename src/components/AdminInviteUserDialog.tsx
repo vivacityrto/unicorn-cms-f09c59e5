@@ -39,6 +39,51 @@ export function AdminInviteUserDialog({
   const [roleLevel, setRoleLevel] = useState<AdminRole>('User');
   const [sendInvitation, setSendInvitation] = useState(false);
 
+  /**
+   * Smart paste: detect "Name <email>", "email", or "First Last" pasted into
+   * the First Name field and distribute across First/Last/Email accordingly.
+   * Returns true if the paste was handled (caller should preventDefault).
+   */
+  const handleSmartPaste = (text: string): boolean => {
+    const raw = text.trim();
+    if (!raw) return false;
+
+    const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+
+    // Pattern 1: "Name <email>" or "Name (email)"
+    const nameEmailMatch = raw.match(/^(.+?)\s*[<(]\s*([^<>()]+@[^<>()]+)\s*[>)]\s*$/i);
+    if (nameEmailMatch) {
+      const namePart = nameEmailMatch[1].trim().replace(/^["']|["']$/g, '').trim();
+      const emailPart = nameEmailMatch[2].trim();
+      const parts = namePart.split(/\s+/);
+      setFirstName(parts[0] || '');
+      setLastName(parts.slice(1).join(' '));
+      setEmail(emailPart);
+      return true;
+    }
+
+    // Pattern 2: bare email
+    if (emailRegex.test(raw) && !raw.includes(' ')) {
+      setEmail(raw);
+      // Only auto-fill first name if empty, derived from local part
+      if (!firstName) {
+        const local = raw.split('@')[0].split(/[._-]/)[0];
+        if (local) setFirstName(local.charAt(0).toUpperCase() + local.slice(1));
+      }
+      return true;
+    }
+
+    // Pattern 3: "First Last" (multi-word, no email)
+    if (!emailRegex.test(raw) && /\s/.test(raw)) {
+      const parts = raw.split(/\s+/);
+      setFirstName(parts[0]);
+      setLastName(parts.slice(1).join(' '));
+      return true;
+    }
+
+    return false;
+  };
+
   const handleClose = () => {
     setFirstName('');
     setLastName('');
@@ -122,7 +167,13 @@ export function AdminInviteUserDialog({
                 id="admin-firstName"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="John"
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData('text');
+                  if (handleSmartPaste(pasted)) {
+                    e.preventDefault();
+                  }
+                }}
+                placeholder="John  (or paste 'Name <email>')"
                 autoFocus
               />
             </div>
