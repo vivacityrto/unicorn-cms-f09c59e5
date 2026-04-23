@@ -412,10 +412,10 @@
     line-height: 1.5;
   }
   
-  /* Ensure readable line lengths */
-  p, li, dd {
-    max-width: 75ch;
-  }
+  /* Note: previously constrained p/li/dd to 75ch for readability,
+     but that caused note/email content and rich-text editor text to
+     wrap at ~half width inside wide panels. Width is now controlled
+     by container layout instead. */
   
   /* Typography scale: 46 / 37 / 30 / 24 / 18 / 15 / 12 */
   h1 {
