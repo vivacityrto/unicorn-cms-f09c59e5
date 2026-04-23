@@ -1,34 +1,28 @@
 
 
-## Plan: Fix "Unable to determine tenant" when SuperAdmin saves a Suggestion
+## Plan: Add "SharePoint Folder" button to the Audit Documents tab
 
-### Problem
+### Scope
+Add a single button in the Audit workspace → Documents tab that opens the client's SharePoint root folder in a new tab. No file mirroring (deferred for later discussion).
 
-In `src/pages/NewSuggestionForm.tsx` the submit handler reads `profile?.tenant_id` and aborts with a toast if it's missing. Vivacity SuperAdmins (and most internal staff) don't have a single `tenant_id` on their profile because they operate across all tenants — so the form is unusable for the very people who triage suggestions.
+### Change
 
-The Suggestions module is an **internal Vivacity tool**, not a per-client feature, so every suggestion logically belongs to the Vivacity tenant (`VIVACITY_TENANT_ID = 6372`, already exported from `src/hooks/useVivacityTeamUsers`).
+**File:** `src/components/audit/workspace/DocumentsTab.tsx`
 
-### Fix
+- Fetch the client's SharePoint folder URL from `tenant_sharepoint_settings` for the audit's `tenant_id` (same query pattern already used in `ClientSharePointDocumentsTab.tsx` and `SharePointLinkDialog.tsx`):
+  - Select `root_folder_url, manual_folder_url, setup_mode, provisioning_status, validation_status`
+  - Effective URL = `setup_mode === 'manual' ? manual_folder_url : root_folder_url`
+  - Show button only when a URL is resolvable AND (`provisioning_status === 'success'` OR `validation_status === 'valid'`)
+- Render an outline button labelled **"SharePoint Folder"** with the `ExternalLink` lucide icon, top-right of the Documents tab header, opening the URL with `target="_blank" rel="noopener noreferrer"`.
+- If no folder is configured for the client, hide the button (no error, no placeholder) — consistent with how `ClientSharePointDocumentsTab` behaves.
 
-In `src/pages/NewSuggestionForm.tsx`:
-
-1. Import `VIVACITY_TENANT_ID` from `@/hooks/useVivacityTeamUsers` and `useRBAC` (or reuse `profile.unicorn_role` already on the profile) to detect Vivacity staff.
-2. Resolve the effective tenant id with this precedence:
-   - If the user is Vivacity staff → use `VIVACITY_TENANT_ID`.
-   - Else if `profile?.tenant_id` is set → use it.
-   - Else → keep the existing toast (genuine edge case).
-3. Replace the line `const tenantId = profile?.tenant_id;` with the resolved value, and only block submission when `!user` or no tenant could be resolved at all.
-
-No schema, RLS, or hook changes required — `useCreateSuggestItem` already accepts whatever `tenant_id` is passed.
+### Out of scope (deferred)
+- Mirroring uploads to a "VCC Audit Uploads" subfolder in SharePoint.
+- Pushing the generated AI report/findings to SharePoint.
+- Any change to the existing Supabase `audit-documents` storage path or `client_audit_documents` records.
 
 ### Verification
-
-- Logged in as SuperAdmin (no `profile.tenant_id`): create a suggestion → saves successfully, `tenant_id` = 6372, redirects to detail page.
-- Logged in as a tenant Admin: behaviour unchanged, suggestion saved against their tenant.
-- Logged out / no profile: still shows the existing error toast.
-
-### Out of scope
-
-- Adding a tenant picker on the form (suggestions are global to Vivacity by design).
-- Backfilling/migration — no existing data is affected.
+1. Open an audit for a client with a provisioned SharePoint folder → "SharePoint Folder" button appears top-right of the Documents tab and opens the correct folder in a new tab.
+2. Open an audit for a client without SharePoint configured → button is hidden, rest of the tab unchanged.
+3. Existing upload-to-Supabase + AI review flow continues to work unchanged.
 
