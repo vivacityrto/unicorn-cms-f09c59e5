@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Package2, User, Link2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Package2, User, Link2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientPackageInstances } from '@/hooks/useClientPackageInstances';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { getPackageStream, streamsConflict, STREAM_LABELS, type PackageStream } from '@/lib/packageStream';
 
 interface StartPackageDialogProps {
   open: boolean;
@@ -23,8 +25,10 @@ interface Package {
   id: number;
   name: string;
   full_text: string | null;
+  slug: string | null;
   status: string;
   total_hours: number | null;
+  package_type: string | null;
 }
 
 interface CscUser {
@@ -37,6 +41,8 @@ interface ActiveInstance {
   id: number;
   package_id: number;
   package_name: string;
+  package_type: string | null;
+  package_stream: PackageStream;
   manager_id: string | null;
 }
 
