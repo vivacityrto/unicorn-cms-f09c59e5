@@ -59,6 +59,16 @@ export function DocumentsTab({ auditId, tenantId }: DocumentsTabProps) {
 
   return (
     <div className="space-y-6">
+      {showSharePointButton && (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" asChild>
+            <a href={sharePointUrl!} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              SharePoint Folder
+            </a>
+          </Button>
+        </div>
+      )}
       {/* Upload Zone */}
       <div
         className={cn(
