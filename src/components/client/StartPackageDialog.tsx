@@ -78,11 +78,11 @@ export function StartPackageDialog({
       // Fetch active packages
       const { data: packagesData } = await supabase
         .from('packages')
-        .select('id, name, full_text, status, total_hours')
+        .select('id, name, full_text, slug, status, total_hours, package_type')
         .eq('status', 'active')
         .order('name');
 
-      setPackages(packagesData || []);
+      setPackages((packagesData || []) as Package[]);
 
       // Fetch CSC users (users flagged as is_csc)
       const usersResult = await (supabase
@@ -94,29 +94,41 @@ export function StartPackageDialog({
         .order('first_name')) as { data: CscUser[] | null; error: any };
       setCscUsers(usersResult.data || []);
 
-      // Fetch active (non-complete, non-child) package instances for this tenant
+      // Fetch active (non-complete, non-child) package instances for this tenant.
+      // Excludes cancelled membership instances so they don't block re-starts.
       const { data: instancesData } = await (supabase as any)
         .from('package_instances')
-        .select('id, package_id, manager_id')
+        .select('id, package_id, manager_id, membership_state')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false)
         .is('parent_instance_id', null)
         .order('start_date', { ascending: false });
 
-      if (instancesData && instancesData.length > 0) {
-        const pkgIds = [...new Set(instancesData.map((i: any) => i.package_id))] as number[];
-        const { data: pkgNames } = await supabase
+      const liveInstances = (instancesData || []).filter(
+        (i: any) => (i.membership_state ?? 'active') !== 'cancelled'
+      );
+
+      if (liveInstances.length > 0) {
+        const pkgIds = [...new Set(liveInstances.map((i: any) => i.package_id))] as number[];
+        const { data: pkgRows } = await supabase
           .from('packages')
-          .select('id, name, full_text')
+          .select('id, name, full_text, slug, package_type')
           .in('id', pkgIds);
-        const nameMap = new Map((pkgNames || []).map(p => [p.id, (p as any).full_text || p.name]));
-        
-        setActiveInstances(instancesData.map((inst: any) => ({
-          id: inst.id,
-          package_id: inst.package_id,
-          package_name: nameMap.get(inst.package_id) || `Package #${inst.package_id}`,
-          manager_id: inst.manager_id || null,
-        })));
+        const pkgMap = new Map(
+          (pkgRows || []).map((p: any) => [p.id, p])
+        );
+
+        setActiveInstances(liveInstances.map((inst: any) => {
+          const p = pkgMap.get(inst.package_id);
+          return {
+            id: inst.id,
+            package_id: inst.package_id,
+            package_name: (p as any)?.full_text || (p as any)?.name || `Package #${inst.package_id}`,
+            package_type: (p as any)?.package_type ?? null,
+            package_stream: getPackageStream((p as any)?.name, (p as any)?.slug),
+            manager_id: inst.manager_id || null,
+          };
+        }));
       } else {
         setActiveInstances([]);
       }
@@ -126,6 +138,24 @@ export function StartPackageDialog({
       setLoadingData(false);
     }
   };
+
+  // Compute duplicate-type conflict for the selected package, only for stand-alone starts.
+  const selectedPackage = useMemo(
+    () => packages.find(p => p.id === parseInt(selectedPackageId)) || null,
+    [packages, selectedPackageId]
+  );
+  const selectedStream: PackageStream | null = useMemo(
+    () => selectedPackage ? getPackageStream(selectedPackage.name, selectedPackage.slug) : null,
+    [selectedPackage]
+  );
+  const conflictInstance = useMemo(() => {
+    if (!selectedPackage || !selectedStream) return null;
+    if (attachToInstanceId) return null; // add-ons are exempt
+    return activeInstances.find(inst =>
+      inst.package_type === selectedPackage.package_type &&
+      streamsConflict(inst.package_stream, selectedStream)
+    ) || null;
+  }, [selectedPackage, selectedStream, attachToInstanceId, activeInstances]);
 
   // Auto-fill CSC when attaching to a parent package
   const handleAttachChange = (value: string) => {
