@@ -239,7 +239,7 @@ export function AppointmentPanel({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus disabled={(d) => d < new Date()} />
+                  <Calendar mode="single" selected={date} onSelect={setDate} initialFocus disabled={(d) => { const today = new Date(); today.setHours(0, 0, 0, 0); return d < today; }} className={cn('p-3 pointer-events-auto')} />
                 </PopoverContent>
               </Popover>
             </div>
