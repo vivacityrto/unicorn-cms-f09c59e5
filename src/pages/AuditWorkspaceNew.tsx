@@ -183,8 +183,9 @@ export default function AuditWorkspaceNew() {
               </TabsContent>
             </Tabs>
           </div>
+          </div>
         </div>
-      </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </UnsavedAuditWorkProvider>
   );
 }
