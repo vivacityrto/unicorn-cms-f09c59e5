@@ -1,10 +1,11 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { QuestionCard } from './QuestionCard';
+import { useDebouncedAutosave } from './useDebouncedAutosave';
 import type { AuditSection, AuditResponse, TemplateQuestion } from '@/types/auditWorkspace';
 
 interface DocumentReviewPhaseProps {
@@ -258,6 +259,7 @@ function DocumentReviewSection({
 
           {/* Section summary */}
           <SectionSummaryField
+            sectionId={section.id}
             initialValue={section.section_summary || ''}
             onSave={(val) => onUpdateSummary(section.id, val)}
           />
@@ -267,22 +269,22 @@ function DocumentReviewSection({
   );
 }
 
-function SectionSummaryField({ initialValue, onSave }: { initialValue: string; onSave: (val: string) => void }) {
-  const [value, setValue] = useState(initialValue);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-
-  const handleChange = useCallback((v: string) => {
-    setValue(v);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => onSave(v), 800);
-  }, [onSave]);
+function SectionSummaryField({ sectionId, initialValue, onSave }: { sectionId: string; initialValue: string; onSave: (val: string) => void }) {
+  const { value, setValue, bind } = useDebouncedAutosave({
+    serverValue: initialValue,
+    identityKey: sectionId,
+    onSave,
+    debounceMs: 800,
+  });
 
   return (
     <div className="pt-2 space-y-1.5">
       <label className="text-xs font-medium text-muted-foreground">Section assessment notes</label>
       <Textarea
         value={value}
-        onChange={e => handleChange(e.target.value)}
+        onChange={e => setValue(e.target.value)}
+        onFocus={bind.onFocus}
+        onBlur={bind.onBlur}
         placeholder="Auditor's overall narrative for this standard area..."
         rows={3}
         className="text-xs"

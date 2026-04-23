@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { QuestionCard } from './QuestionCard';
+import { useDebouncedAutosave } from './useDebouncedAutosave';
 import type { AuditSection, AuditResponse, TemplateQuestion } from '@/types/auditWorkspace';
 
 interface OpeningMeetingPhaseProps {
@@ -75,6 +75,7 @@ export function OpeningMeetingPhase({
             ))}
 
             <SummaryField
+              sectionId={section.id}
               label="Overall opening meeting notes"
               placeholder="Capture general context, tone, who was present, any red flags from the conversation..."
               initialValue={section.section_summary || ''}
@@ -87,20 +88,19 @@ export function OpeningMeetingPhase({
   );
 }
 
-function SummaryField({ label, placeholder, initialValue, onSave }: {
+function SummaryField({ sectionId, label, placeholder, initialValue, onSave }: {
+  sectionId: string;
   label: string;
   placeholder: string;
   initialValue: string;
   onSave: (val: string) => void;
 }) {
-  const [value, setValue] = useState(initialValue);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-
-  const handleChange = useCallback((v: string) => {
-    setValue(v);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => onSave(v), 800);
-  }, [onSave]);
+  const { value, setValue, bind } = useDebouncedAutosave({
+    serverValue: initialValue,
+    identityKey: sectionId,
+    onSave,
+    debounceMs: 800,
+  });
 
   return (
     <Card className="bg-blue-50/30 border-blue-100">
@@ -108,7 +108,9 @@ function SummaryField({ label, placeholder, initialValue, onSave }: {
         <label className="text-sm font-medium text-foreground">{label}</label>
         <Textarea
           value={value}
-          onChange={e => handleChange(e.target.value)}
+          onChange={e => setValue(e.target.value)}
+          onFocus={bind.onFocus}
+          onBlur={bind.onBlur}
           placeholder={placeholder}
           rows={4}
           className="bg-background"
