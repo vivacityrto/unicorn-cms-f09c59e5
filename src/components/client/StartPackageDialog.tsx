@@ -267,13 +267,39 @@ export function StartPackageDialog({
                   <SelectValue placeholder="Select a package..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {packages.map((pkg) => (
-                    <SelectItem key={pkg.id} value={pkg.id.toString()}>
-                      {pkg.name}{pkg.full_text ? ` — ${pkg.full_text}` : ''}
-                    </SelectItem>
-                  ))}
+                  {packages.map((pkg) => {
+                    const stream = getPackageStream(pkg.name, pkg.slug);
+                    const label = STREAM_LABELS[stream];
+                    return (
+                      <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                        <span className="inline-flex items-center gap-2">
+                          <span>{pkg.name}{pkg.full_text ? ` — ${pkg.full_text}` : ''}</span>
+                          {label && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 leading-4">
+                              {label}
+                            </Badge>
+                          )}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+              {conflictInstance && selectedPackage && (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="font-medium">Cannot start this package</p>
+                    <p className="text-xs leading-relaxed">
+                      This client already has an active{' '}
+                      <strong>{selectedPackage.package_type}</strong>
+                      {STREAM_LABELS[conflictInstance.package_stream] ? ` (${STREAM_LABELS[conflictInstance.package_stream]})` : ''}{' '}
+                      package: <strong>{conflictInstance.package_name}</strong>. Cancel or
+                      complete it first, or attach this as an add-on below.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
