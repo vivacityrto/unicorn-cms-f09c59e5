@@ -150,7 +150,9 @@ export function QuestionCard({
               <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
               <Textarea
                 value={notes}
-                onChange={(e) => handleNotesChange(e.target.value)}
+                onChange={(e) => setNotes(e.target.value)}
+                onFocus={notesBind.onFocus}
+                onBlur={notesBind.onBlur}
                 placeholder={notesPlaceholder}
                 rows={notesRows}
                 className="text-sm"
@@ -234,7 +236,9 @@ export function QuestionCard({
               <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
               <Textarea
                 value={notes}
-                onChange={(e) => handleNotesChange(e.target.value)}
+                onChange={(e) => setNotes(e.target.value)}
+                onFocus={notesBind.onFocus}
+                onBlur={notesBind.onBlur}
                 placeholder={notesPlaceholder}
                 rows={notesRows}
                 className="text-xs"
