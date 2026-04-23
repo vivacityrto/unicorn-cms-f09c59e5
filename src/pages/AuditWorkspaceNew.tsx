@@ -16,7 +16,30 @@ import { DocumentsTab } from '@/components/audit/workspace/DocumentsTab';
 import { FindingsTab } from '@/components/audit/workspace/FindingsTab';
 import { ActionsTab } from '@/components/audit/workspace/ActionsTab';
 import { ReportTab } from '@/components/audit/workspace/ReportTab';
+import { UnsavedAuditWorkProvider, useUnsavedAuditWork } from '@/components/audit/workspace/UnsavedAuditWorkContext';
+import { Loader2, Check } from 'lucide-react';
 import type { AuditStatus } from '@/types/clientAudits';
+
+function SaveIndicator() {
+  const { status } = useUnsavedAuditWork();
+  if (status === 'idle') return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium ml-2">
+      {status === 'saving' && (
+        <>
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">Saving…</span>
+        </>
+      )}
+      {status === 'saved' && (
+        <>
+          <Check className="h-3 w-3 text-green-600" />
+          <span className="text-green-600">All changes saved</span>
+        </>
+      )}
+    </span>
+  );
+}
 
 export default function AuditWorkspaceNew() {
   const { id } = useParams<{ id: string }>();
