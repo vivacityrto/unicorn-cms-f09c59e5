@@ -383,7 +383,7 @@ export function StartPackageDialog({
           </Button>
           <Button
             onClick={handleStart}
-            disabled={!selectedPackageId || starting || loadingData}
+            disabled={!selectedPackageId || starting || loadingData || !!conflictInstance}
           >
             {starting ? (
               <>
