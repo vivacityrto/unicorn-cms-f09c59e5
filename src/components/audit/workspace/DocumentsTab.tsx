@@ -4,22 +4,45 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Upload, FileText, Loader2, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Trash2, Plus } from 'lucide-react';
+import { Upload, FileText, Loader2, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Trash2, Plus, ExternalLink } from 'lucide-react';
 import { useAuditDocuments } from '@/hooks/useAuditWorkspace';
 import { DOCUMENT_TYPES } from '@/types/auditWorkspace';
 import type { AuditDocument } from '@/types/auditWorkspace';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DocumentsTabProps {
   auditId: string;
+  tenantId?: number | null;
 }
 
-export function DocumentsTab({ auditId }: DocumentsTabProps) {
+export function DocumentsTab({ auditId, tenantId }: DocumentsTabProps) {
   const { data: documents, uploadDocument, deleteDocument } = useAuditDocuments(auditId);
   const [docType, setDocType] = useState('other');
   const [qualCode, setQualCode] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: spSettings } = useQuery({
+    queryKey: ['tenant-sharepoint-settings', tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('tenant_sharepoint_settings')
+        .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status, validation_status')
+        .eq('tenant_id', tenantId!)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!tenantId,
+  });
+
+  const sharePointUrl = spSettings?.setup_mode === 'manual'
+    ? spSettings?.manual_folder_url
+    : spSettings?.root_folder_url;
+  const showSharePointButton = !!sharePointUrl && (
+    spSettings?.provisioning_status === 'success' || spSettings?.validation_status === 'valid'
+  );
 
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
