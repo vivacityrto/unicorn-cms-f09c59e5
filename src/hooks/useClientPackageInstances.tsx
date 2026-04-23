@@ -140,9 +140,15 @@ export function useClientPackageInstances() {
 
       return data as number;
     } catch (error: any) {
+      const rawMsg: string = error?.message || '';
+      const isDuplicate = rawMsg.startsWith('DUPLICATE_PACKAGE_TYPE');
+      // Strip the leading "DUPLICATE_PACKAGE_TYPE: " prefix for the user-facing toast.
+      const friendly = isDuplicate
+        ? rawMsg.replace(/^DUPLICATE_PACKAGE_TYPE:\s*/, '')
+        : (rawMsg || 'Failed to start package');
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to start package',
+        title: isDuplicate ? 'Duplicate package blocked' : 'Error',
+        description: friendly,
         variant: 'destructive'
       });
       return null;
