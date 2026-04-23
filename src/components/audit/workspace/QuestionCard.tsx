@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,7 @@ import { RATING_OPTIONS_FULL, RATING_OPTIONS_SAFE, RATING_OPTIONS_CLOSING } from
 import type { TemplateQuestion, AuditResponse, QuestionContext } from '@/types/auditWorkspace';
 import { AddFindingForm } from './AddFindingForm';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useDebouncedAutosave } from './useDebouncedAutosave';
 
 interface QuestionCardProps {
   question: TemplateQuestion;
@@ -33,8 +34,12 @@ export function QuestionCard({
   const ctx = questionContext || question.question_context || 'auditor_assessment';
   const [showEvidence, setShowEvidence] = useState(ctx === 'auditor_assessment');
   const [showFindingForm, setShowFindingForm] = useState(false);
-  const [notes, setNotes] = useState(response?.notes || '');
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const { value: notes, setValue: setNotes, bind: notesBind } = useDebouncedAutosave({
+    serverValue: response?.notes || '',
+    identityKey: response?.id || question.id,
+    onSave: (v) => onNote(question.id, v),
+    debounceMs: 500,
+  });
 
   const ratingOptions = ctx === 'closing_discussion'
     ? RATING_OPTIONS_CLOSING
@@ -60,20 +65,6 @@ export function QuestionCard({
     ) ?? false;
     onRate(question.id, rating, score, isFlagged);
   };
-
-  const handleNotesChange = useCallback((value: string) => {
-    setNotes(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      onNote(question.id, value);
-    }, 500);
-  }, [question.id, onNote]);
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
 
   const isFlagged = response?.is_flagged && question.corrective_action;
   const hasAiSuggestion = response?.ai_suggested_rating && !response?.rating;
@@ -159,7 +150,9 @@ export function QuestionCard({
               <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
               <Textarea
                 value={notes}
-                onChange={(e) => handleNotesChange(e.target.value)}
+                onChange={(e) => setNotes(e.target.value)}
+                onFocus={notesBind.onFocus}
+                onBlur={notesBind.onBlur}
                 placeholder={notesPlaceholder}
                 rows={notesRows}
                 className="text-sm"
@@ -243,7 +236,9 @@ export function QuestionCard({
               <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
               <Textarea
                 value={notes}
-                onChange={(e) => handleNotesChange(e.target.value)}
+                onChange={(e) => setNotes(e.target.value)}
+                onFocus={notesBind.onFocus}
+                onBlur={notesBind.onBlur}
                 placeholder={notesPlaceholder}
                 rows={notesRows}
                 className="text-xs"

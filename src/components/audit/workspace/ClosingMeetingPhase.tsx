@@ -1,8 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { QuestionCard } from './QuestionCard';
+import { useDebouncedAutosave } from './useDebouncedAutosave';
 import { useAuditFindings } from '@/hooks/useAuditWorkspace';
 import type { AuditSection, AuditResponse, TemplateQuestion } from '@/types/auditWorkspace';
 
@@ -132,6 +132,7 @@ export function ClosingMeetingPhase({
                   Overall closing meeting notes
                 </label>
                 <ClosingSummaryField
+                  sectionId={section.id}
                   initialValue={section.section_summary || ''}
                   onSave={(val) => onUpdateSummary(section.id, val)}
                 />
@@ -144,20 +145,20 @@ export function ClosingMeetingPhase({
   );
 }
 
-function ClosingSummaryField({ initialValue, onSave }: { initialValue: string; onSave: (val: string) => void }) {
-  const [value, setValue] = useState(initialValue);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-
-  const handleChange = useCallback((v: string) => {
-    setValue(v);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => onSave(v), 800);
-  }, [onSave]);
+function ClosingSummaryField({ sectionId, initialValue, onSave }: { sectionId: string; initialValue: string; onSave: (val: string) => void }) {
+  const { value, setValue, bind } = useDebouncedAutosave({
+    serverValue: initialValue,
+    identityKey: sectionId,
+    onSave,
+    debounceMs: 800,
+  });
 
   return (
     <Textarea
       value={value}
-      onChange={e => handleChange(e.target.value)}
+      onChange={e => setValue(e.target.value)}
+      onFocus={bind.onFocus}
+      onBlur={bind.onBlur}
       placeholder="Who was present, tone, any off-record comments, agreed next steps..."
       rows={5}
       className="bg-background"

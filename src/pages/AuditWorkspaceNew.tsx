@@ -16,7 +16,30 @@ import { DocumentsTab } from '@/components/audit/workspace/DocumentsTab';
 import { FindingsTab } from '@/components/audit/workspace/FindingsTab';
 import { ActionsTab } from '@/components/audit/workspace/ActionsTab';
 import { ReportTab } from '@/components/audit/workspace/ReportTab';
+import { UnsavedAuditWorkProvider, useUnsavedAuditWork } from '@/components/audit/workspace/UnsavedAuditWorkContext';
+import { Loader2, Check } from 'lucide-react';
 import type { AuditStatus } from '@/types/clientAudits';
+
+function SaveIndicator() {
+  const { status } = useUnsavedAuditWork();
+  if (status === 'idle') return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium ml-2">
+      {status === 'saving' && (
+        <>
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground">Saving…</span>
+        </>
+      )}
+      {status === 'saved' && (
+        <>
+          <Check className="h-3 w-3 text-green-600" />
+          <span className="text-green-600">All changes saved</span>
+        </>
+      )}
+    </span>
+  );
+}
 
 export default function AuditWorkspaceNew() {
   const { id } = useParams<{ id: string }>();
@@ -66,37 +89,39 @@ export default function AuditWorkspaceNew() {
   const actionCount = actions?.length || 0;
 
   return (
-    <DashboardLayout>
-      <div className="flex h-[calc(100vh-64px)]">
-        {/* Sidebar - hidden on small screens */}
-        <div className="hidden lg:block">
-          <AuditSidebar
-            audit={audit}
-            sections={sections || []}
-            responses={responses || []}
-            totalQuestions={totalQuestions}
-            selectedSectionIndex={selectedSection}
-            onSelectSection={(idx) => {
-              setSelectedSection(idx);
-              setActiveTab('form');
-            }}
-            onStatusChange={handleStatusChange}
-            onNavigateToSchedule={() => setActiveTab('schedule')}
-            leadAuditorName={leadAuditor ? `${leadAuditor.first_name} ${leadAuditor.last_name}` : null}
-            leadAuditorAvatar={leadAuditor?.avatar_url}
-          />
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Breadcrumb */}
-          <div className="p-4 border-b flex items-center gap-2 text-sm">
-            <Link to="/audits" className="text-muted-foreground hover:text-foreground flex items-center gap-1">
-              <ArrowLeft className="h-3.5 w-3.5" /> Audits
-            </Link>
-            <span className="text-muted-foreground">/</span>
-            <span className="font-medium truncate">{audit.title || 'Untitled'}</span>
+    <UnsavedAuditWorkProvider>
+      <DashboardLayout>
+        <div className="flex h-[calc(100vh-64px)]">
+          {/* Sidebar - hidden on small screens */}
+          <div className="hidden lg:block">
+            <AuditSidebar
+              audit={audit}
+              sections={sections || []}
+              responses={responses || []}
+              totalQuestions={totalQuestions}
+              selectedSectionIndex={selectedSection}
+              onSelectSection={(idx) => {
+                setSelectedSection(idx);
+                setActiveTab('form');
+              }}
+              onStatusChange={handleStatusChange}
+              onNavigateToSchedule={() => setActiveTab('schedule')}
+              leadAuditorName={leadAuditor ? `${leadAuditor.first_name} ${leadAuditor.last_name}` : null}
+              leadAuditorAvatar={leadAuditor?.avatar_url}
+            />
           </div>
+
+          {/* Main Content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Breadcrumb */}
+            <div className="p-4 border-b flex items-center gap-2 text-sm">
+              <Link to="/audits" className="text-muted-foreground hover:text-foreground flex items-center gap-1">
+                <ArrowLeft className="h-3.5 w-3.5" /> Audits
+              </Link>
+              <span className="text-muted-foreground">/</span>
+              <span className="font-medium truncate">{audit.title || 'Untitled'}</span>
+              <SaveIndicator />
+            </div>
 
           {/* Tabs */}
           <div className="p-4">
@@ -158,8 +183,9 @@ export default function AuditWorkspaceNew() {
               </TabsContent>
             </Tabs>
           </div>
+          </div>
         </div>
-      </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </UnsavedAuditWorkProvider>
   );
 }
