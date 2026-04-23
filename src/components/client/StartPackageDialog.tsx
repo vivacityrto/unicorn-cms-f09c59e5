@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Package2, User, Link2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Package2, User, Link2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientPackageInstances } from '@/hooks/useClientPackageInstances';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { getPackageStream, streamsConflict, STREAM_LABELS, type PackageStream } from '@/lib/packageStream';
 
 interface StartPackageDialogProps {
   open: boolean;
@@ -23,8 +25,10 @@ interface Package {
   id: number;
   name: string;
   full_text: string | null;
+  slug: string | null;
   status: string;
   total_hours: number | null;
+  package_type: string | null;
 }
 
 interface CscUser {
@@ -37,6 +41,8 @@ interface ActiveInstance {
   id: number;
   package_id: number;
   package_name: string;
+  package_type: string | null;
+  package_stream: PackageStream;
   manager_id: string | null;
 }
 
@@ -72,11 +78,11 @@ export function StartPackageDialog({
       // Fetch active packages
       const { data: packagesData } = await supabase
         .from('packages')
-        .select('id, name, full_text, status, total_hours')
+        .select('id, name, full_text, slug, status, total_hours, package_type')
         .eq('status', 'active')
         .order('name');
 
-      setPackages(packagesData || []);
+      setPackages((packagesData || []) as Package[]);
 
       // Fetch CSC users (users flagged as is_csc)
       const usersResult = await (supabase
@@ -88,29 +94,41 @@ export function StartPackageDialog({
         .order('first_name')) as { data: CscUser[] | null; error: any };
       setCscUsers(usersResult.data || []);
 
-      // Fetch active (non-complete, non-child) package instances for this tenant
+      // Fetch active (non-complete, non-child) package instances for this tenant.
+      // Excludes cancelled membership instances so they don't block re-starts.
       const { data: instancesData } = await (supabase as any)
         .from('package_instances')
-        .select('id, package_id, manager_id')
+        .select('id, package_id, manager_id, membership_state')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false)
         .is('parent_instance_id', null)
         .order('start_date', { ascending: false });
 
-      if (instancesData && instancesData.length > 0) {
-        const pkgIds = [...new Set(instancesData.map((i: any) => i.package_id))] as number[];
-        const { data: pkgNames } = await supabase
+      const liveInstances = (instancesData || []).filter(
+        (i: any) => (i.membership_state ?? 'active') !== 'cancelled'
+      );
+
+      if (liveInstances.length > 0) {
+        const pkgIds = [...new Set(liveInstances.map((i: any) => i.package_id))] as number[];
+        const { data: pkgRows } = await supabase
           .from('packages')
-          .select('id, name, full_text')
+          .select('id, name, full_text, slug, package_type')
           .in('id', pkgIds);
-        const nameMap = new Map((pkgNames || []).map(p => [p.id, (p as any).full_text || p.name]));
-        
-        setActiveInstances(instancesData.map((inst: any) => ({
-          id: inst.id,
-          package_id: inst.package_id,
-          package_name: nameMap.get(inst.package_id) || `Package #${inst.package_id}`,
-          manager_id: inst.manager_id || null,
-        })));
+        const pkgMap = new Map(
+          (pkgRows || []).map((p: any) => [p.id, p])
+        );
+
+        setActiveInstances(liveInstances.map((inst: any) => {
+          const p = pkgMap.get(inst.package_id);
+          return {
+            id: inst.id,
+            package_id: inst.package_id,
+            package_name: (p as any)?.full_text || (p as any)?.name || `Package #${inst.package_id}`,
+            package_type: (p as any)?.package_type ?? null,
+            package_stream: getPackageStream((p as any)?.name, (p as any)?.slug),
+            manager_id: inst.manager_id || null,
+          };
+        }));
       } else {
         setActiveInstances([]);
       }
@@ -120,6 +138,24 @@ export function StartPackageDialog({
       setLoadingData(false);
     }
   };
+
+  // Compute duplicate-type conflict for the selected package, only for stand-alone starts.
+  const selectedPackage = useMemo(
+    () => packages.find(p => p.id === parseInt(selectedPackageId)) || null,
+    [packages, selectedPackageId]
+  );
+  const selectedStream: PackageStream | null = useMemo(
+    () => selectedPackage ? getPackageStream(selectedPackage.name, selectedPackage.slug) : null,
+    [selectedPackage]
+  );
+  const conflictInstance = useMemo(() => {
+    if (!selectedPackage || !selectedStream) return null;
+    if (attachToInstanceId) return null; // add-ons are exempt
+    return activeInstances.find(inst =>
+      inst.package_type === selectedPackage.package_type &&
+      streamsConflict(inst.package_stream, selectedStream)
+    ) || null;
+  }, [selectedPackage, selectedStream, attachToInstanceId, activeInstances]);
 
   // Auto-fill CSC when attaching to a parent package
   const handleAttachChange = (value: string) => {
@@ -231,13 +267,39 @@ export function StartPackageDialog({
                   <SelectValue placeholder="Select a package..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {packages.map((pkg) => (
-                    <SelectItem key={pkg.id} value={pkg.id.toString()}>
-                      {pkg.name}{pkg.full_text ? ` — ${pkg.full_text}` : ''}
-                    </SelectItem>
-                  ))}
+                  {packages.map((pkg) => {
+                    const stream = getPackageStream(pkg.name, pkg.slug);
+                    const label = STREAM_LABELS[stream];
+                    return (
+                      <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                        <span className="inline-flex items-center gap-2">
+                          <span>{pkg.name}{pkg.full_text ? ` — ${pkg.full_text}` : ''}</span>
+                          {label && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 leading-4">
+                              {label}
+                            </Badge>
+                          )}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+              {conflictInstance && selectedPackage && (
+                <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="font-medium">Cannot start this package</p>
+                    <p className="text-xs leading-relaxed">
+                      This client already has an active{' '}
+                      <strong>{selectedPackage.package_type}</strong>
+                      {STREAM_LABELS[conflictInstance.package_stream] ? ` (${STREAM_LABELS[conflictInstance.package_stream]})` : ''}{' '}
+                      package: <strong>{conflictInstance.package_name}</strong>. Cancel or
+                      complete it first, or attach this as an add-on below.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -321,7 +383,7 @@ export function StartPackageDialog({
           </Button>
           <Button
             onClick={handleStart}
-            disabled={!selectedPackageId || starting || loadingData}
+            disabled={!selectedPackageId || starting || loadingData || !!conflictInstance}
           >
             {starting ? (
               <>
