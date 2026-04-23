@@ -56292,6 +56292,7 @@ export type Database = {
           reason: string
         }[]
       }
+      fn_package_stream: { Args: { p_package_id: number }; Returns: string }
       fn_preview_broadcast_recipients: {
         Args: {
           p_include_roles?: string[]
