@@ -4,7 +4,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { useCreateSuggestItem } from '@/hooks/useSuggestItems';
 import { useSuggestDropdowns } from '@/hooks/useSuggestDropdowns';
-import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
+import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,7 +86,11 @@ export default function NewSuggestionForm() {
       return;
     }
 
-    const tenantId = profile?.tenant_id;
+    const isVivacityStaff =
+      profile?.unicorn_role === 'Super Admin' ||
+      profile?.unicorn_role === 'Team Leader' ||
+      profile?.unicorn_role === 'Team Member';
+    const tenantId = isVivacityStaff ? VIVACITY_TENANT_ID : profile?.tenant_id;
     if (!tenantId || !user) {
       toast({ title: 'Unable to determine tenant', variant: 'destructive' });
       return;
