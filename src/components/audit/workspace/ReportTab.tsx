@@ -32,6 +32,7 @@ interface ReportTabProps {
 
 export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   const [releaseNotes, setReleaseNotes] = useState('');
+  const [preliminaryOpen, setPreliminaryOpen] = useState(false);
   const releaseReport = useReleaseReport(audit.id);
   const revokeReport = useRevokeReport(audit.id);
   const { openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
