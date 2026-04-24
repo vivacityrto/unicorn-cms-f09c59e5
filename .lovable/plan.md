@@ -1,85 +1,62 @@
 
 
-## Plan: Prevent duplicate active packages of the same type — with regulatory exception
+## Plan: Preliminary Audit Summary — email-only, with CC to creator
 
-### Refinement
-The previous plan blocked any second active package of the same `package_type`. The user has clarified one valid exception: a tenant may legitimately hold **two concurrent regulatory packages** when they cover **different regulatory streams** — RTO, CRICOS, and GTO are distinct compliance regimes and a single client can hold more than one.
+### Refinement (vs. previous plan)
+Per your direction, this is **information-only** correspondence. We will:
+- **Not** persist a new `client_audit_preliminary_summaries` table.
+- **Not** store generated PDFs in the `audit-documents` bucket.
+- **Not** emit `client_timeline_events` for these summaries.
+- **Not** show a "history" of past summaries in the UI.
+- **Not** apply any acknowledgement/governance tracking.
 
-This applies to:
-- **KickStart (KS)** — `package_type = 'regulatory_submission'` — a client can be doing an RTO KickStart and a CRICOS KickStart in parallel.
-- **Memberships** — `package_type = 'membership'` — already modelled as dual (M-RR for RTO + M-CR for CRICOS), with the existing `membership_allocation_groups` weighting infrastructure proving the pattern.
-- **GTO** packages — distinct from both.
+The artefact lives only in the recipients' inboxes. The creator is automatically **CC'd** so they retain a personal copy via their own mail trail.
 
-The differentiator is the package's **regulatory stream** (RTO / CRICOS / GTO), not just its `package_type`.
+### Where it lives
+A single **"Send Preliminary Summary"** button in the **Report** tab of the audit workspace (`/audits/:id`), available in any audit status except after the final report has been released to the client (where the released report supersedes it). No card, no list — just the action.
 
-### How the stream is identified
-Packages already encode their stream via naming convention and code:
-- `M-RR` (Membership RTO), `M-CR` (Membership CRICOS) — already in use for the Davies tenant
-- `KS-RTO`, `KS-CRICOS`, `KS-GTO` — KickStart variants
-- Equivalent codes for audits and other regulatory packages
+### Flow
+1. User clicks **Send Preliminary Summary**.
+2. A dialog opens (reusing `ComposeEmailDialog` patterns) pre-filled with:
+   - **To**: client primary contact(s) — editable, free-text additions allowed for "interested parties".
+   - **CC**: the current user's email address, locked (cannot be removed).
+   - **Subject**: `Preliminary Audit Summary — {client} — {audit title}`.
+   - **Body**: auto-generated HTML summary + mandatory disclaimer paragraph at the top.
+3. Body content is built in-memory from current `client_audits` data:
+   - Audit title, type, client, today's date.
+   - Coverage so far (sections completed, evidence outstanding, opening/closing meeting status).
+   - Findings to date grouped by priority (Critical/High/Medium/Low) — one-line each, AI-generated ones flagged "AI draft, pending review".
+   - Current `risk_rating` if set, otherwise "Not yet rated".
+   - Open action items (top items by priority + due date).
+   - `audit.executive_summary` if populated.
+4. User can edit subject/body in the rich-text editor before sending.
+5. A confirm dialog before send: *"Send PRELIMINARY summary to N recipient(s)? You will be CC'd. They will be told this is a draft, subject to change."*
+6. Send goes through the existing Mailgun/Outlook integration — same path as other staff-initiated emails.
 
-We will derive a **stream tag** for each package from `packages.code` / `packages.name` using a small pure SQL helper (`fn_package_stream(package_id) returns text` → `'rto' | 'cricos' | 'gto' | 'generic'`). The helper inspects the `code`/`name` for the suffix tokens (`-RR`, `-RTO`, `-CR`, `-CRICOS`, `-GR`, `-GTO`). `'generic'` means the package isn't stream-specific (e.g. project work, consultations).
+### Mandatory disclaimer (in two places)
+- **Top of email body** (auto-inserted, editable but warned if removed):  
+  *"PRELIMINARY SUMMARY — This document reflects the current state of an audit in progress. Findings, ratings and recommendations are provisional and may change before the final report is issued."*
+- **Confirm dialog** before sending (as above).
 
-If the user prefers an explicit column over name parsing we can add `packages.regulatory_stream` (text, nullable) and backfill — see Open question.
+### What we explicitly do NOT do
+- No database table, no row written.
+- No file in the `audit-documents` bucket — body is HTML only, no PDF attachment.
+- No `client_timeline_events` entry, no audit-trail row beyond the standard email-send log already produced by the existing email integration.
+- No history list in the UI; no way to "re-download" a previously sent summary.
+- No portal visibility, no governance register entry, no acknowledgement tracking.
+- No flip of `report_client_visible` or any release flag.
 
-### Updated guard logic
+### Files to add / change
+- **New component**: `src/components/audit/workspace/SendPreliminarySummaryDialog.tsx` — composes the email body from audit data, locks the CC, opens compose flow.
+- **New helper**: `src/lib/buildPreliminaryAuditSummary.ts` — pure function that takes the audit + findings + actions and returns the HTML body string with disclaimer.
+- **Edit**: `src/components/audit/workspace/ReportTab.tsx` — add a single **Send Preliminary Summary** button above the existing Report Generation card. Hide once final report is released.
 
-A new active stand-alone package is **blocked** if there is an existing active stand-alone instance for the same tenant where:
-
-```
-existing.package_type = new.package_type
-AND (
-     fn_package_stream(existing.package_id) = 'generic'
-  OR fn_package_stream(new.package_id) = 'generic'
-  OR fn_package_stream(existing.package_id) = fn_package_stream(new.package_id)
-)
-```
-
-Plain English:
-- Two `membership` packages of the **same** stream → blocked (e.g. two RTO Memberships).
-- `M-RR` (RTO Membership) + `M-CR` (CRICOS Membership) → **allowed**.
-- `KS-RTO` + `KS-CRICOS` + `KS-GTO` concurrently → **allowed**.
-- Two `KS-RTO` instances → **blocked**.
-- Stream-less packages (audits without a stream tag, generic projects) fall back to "one active per type" — safe default.
-
-Add-ons (`parent_instance_id IS NOT NULL`) remain unaffected — they always stack on their parent.
-
-### Changes
-
-**1. Migration**
-- Create `public.fn_package_stream(p_package_id bigint) returns text` — pure, `STABLE`, parses `code` then `name`.
-- Update `public.start_client_package` RPC to run the guard above before insert. On conflict raise:
-  ```
-  raise exception 'DUPLICATE_PACKAGE_TYPE: tenant % already has an active % (% stream) package: %. Cancel or complete it first.',
-    p_tenant_id, v_pkg_type, v_stream, v_existing_name
-    using errcode = 'P0001';
-  ```
-
-**2. `src/components/client/StartPackageDialog.tsx`**
-- `fetchData` already loads `activeInstances`; extend it to include each active package's `package_type`, `code`, and `name`.
-- When a package is selected (and `attachToInstanceId` is empty):
-  - Compute its stream client-side using the same suffix rules (small `getPackageStream(code, name)` helper in `src/lib/packageStream.ts`).
-  - Find any active stand-alone instance with the same `package_type` AND a conflicting stream per the rule above.
-  - If found: disable **Start Package** and show inline warning:  
-    *"This client already has an active {Type} ({Stream}) package: **{name}**. Cancel or complete it first, or attach as an add-on."*
-- Show the stream tag (RTO / CRICOS / GTO) as a small badge next to each option in the Package dropdown so the user sees why something is or isn't allowed.
-
-**3. `src/hooks/useClientPackageInstances.tsx`**
-- Detect `error.message?.startsWith('DUPLICATE_PACKAGE_TYPE')` and surface the message verbatim (already user-friendly) via toast.
-
-### Out of scope
-- Auto-cancelling the old instance for upgrades — cancellation stays explicit with a reason.
-- Backfilling existing duplicates — handled separately via the SuperAdmin Package Data Manager.
-- Changing the `membership_allocation_groups` weighting model — this guard sits before allocation, doesn't touch it.
-
-### Open question for the user
-The stream detection relies on package `code`/`name` suffixes (`-RR`, `-CR`, `-RTO`, `-CRICOS`, `-GR`, `-GTO`). This matches every membership and KS package currently in use. If you'd prefer an explicit `packages.regulatory_stream` column instead (more robust for future packages with non-standard codes), say the word and the migration will add + backfill it.
+No edge functions, no migrations, no new hooks beyond a thin wrapper if needed for the existing email sender.
 
 ### Verification
-1. Tenant 6278 (active `M-RR` Ruby): try to start `M-DR` (Diamond RTO Membership) → **blocked** (same membership + RTO stream). Cancel Ruby → Diamond starts. ✓
-2. Same tenant: try to start `M-CD` (Diamond CRICOS Membership) → **allowed** (different stream). ✓
-3. Tenant with active `KS-RTO`: try to start `KS-CRICOS` → **allowed**. Try to start a second `KS-RTO` → **blocked**. ✓
-4. Tenant with active `KS-RTO` AND `KS-CRICOS`: try to start `KS-GTO` → **allowed** (three regulatory streams running in parallel). ✓
-5. Add an extra-time package (`parent_instance_id` set) to any of the above → **always allowed**. ✓
-6. Direct RPC call from SQL editor reproduces all results.
+1. Open `/audits/<in-progress audit>` → Report tab shows **Send Preliminary Summary** button.
+2. Click → dialog opens with client primary contact in **To**, current user in **CC** (locked), disclaimer at top of body, summary content populated.
+3. Add an extra "interested party" address → confirm dialog → send → email arrives at recipients **and** the creator's inbox via CC.
+4. No new rows in any audit/timeline table; only the existing email-send log entry from the standard mail integration.
+5. Open another audit where the final report has been released → button is hidden.
 
