@@ -47,10 +47,16 @@ export function buildPreliminarySummaryHtml({
   clientName,
   openingMeetingStatus,
   closingMeetingStatus,
+  completion,
 }: BuildArgs): string {
   const today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
   const auditTypeLabel = AUDIT_TYPE_LABELS[audit.audit_type] || audit.audit_type;
   const client = clientName || audit.snapshot_rto_name || '—';
+
+  const completionPct =
+    completion && completion.total > 0
+      ? Math.round((completion.answered / completion.total) * 100)
+      : null;
 
   const priorityOrder: Array<AuditFinding['priority']> = ['critical', 'high', 'medium', 'low'];
   const groupedFindings = priorityOrder.map(p => ({
