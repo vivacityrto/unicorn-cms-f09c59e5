@@ -229,19 +229,25 @@ export function SendPreliminarySummaryDialog({
   useEffect(() => {
     if (!open) return;
     setSubject(buildPreliminarySummarySubject(audit, clientName));
+    const actionsWithOwners = actions.map(a => ({
+      ...a,
+      assigned_to_name: a.assigned_to ? actionOwners[a.assigned_to] || null : null,
+    }));
     setBody(
       buildPreliminarySummaryHtml({
         audit,
         findings,
-        actions,
+        actions: actionsWithOwners,
         clientName,
         openingMeetingStatus: openingMeeting?.status,
         closingMeetingStatus: closingMeeting?.status,
         completion,
+        sectionCoverage,
+        outstandingEvidence,
       }),
     );
     setTo(primaryContactEmail || '');
-  }, [open, audit, findings, actions, clientName, primaryContactEmail, openingMeeting?.status, closingMeeting?.status, completion]);
+  }, [open, audit, findings, actions, clientName, primaryContactEmail, openingMeeting?.status, closingMeeting?.status, completion, sectionCoverage, outstandingEvidence, actionOwners]);
 
   const recipientCount = useMemo(() => {
     return to
