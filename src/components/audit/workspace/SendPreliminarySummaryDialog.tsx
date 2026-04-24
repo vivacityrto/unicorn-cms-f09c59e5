@@ -86,6 +86,45 @@ export function SendPreliminarySummaryDialog({
     })();
   }, [open, tenantId]);
 
+  // Fetch audit completion (answered / total questions) when dialog opens
+  useEffect(() => {
+    if (!open || !audit.id) return;
+    (async () => {
+      const { data: sections } = await supabase
+        .from('client_audit_sections' as any)
+        .select('template_section_id')
+        .eq('audit_id', audit.id);
+      const templateSectionIds = ((sections || []) as any[])
+        .map(s => s.template_section_id)
+        .filter(Boolean);
+
+      if (templateSectionIds.length === 0) {
+        setCompletion(null);
+        return;
+      }
+
+      const [{ data: questions }, { data: responses }] = await Promise.all([
+        supabase
+          .from('compliance_template_questions' as any)
+          .select('id')
+          .in('section_id', templateSectionIds)
+          .eq('is_active', true),
+        supabase
+          .from('client_audit_responses' as any)
+          .select('question_id, rating')
+          .eq('audit_id', audit.id)
+          .not('rating', 'is', null),
+      ]);
+
+      const total = (questions || []).length;
+      const questionIds = new Set(((questions || []) as any[]).map(q => q.id));
+      const answered = ((responses || []) as any[]).filter(
+        r => r.question_id && questionIds.has(r.question_id),
+      ).length;
+      setCompletion({ answered, total });
+    })();
+  }, [open, audit.id]);
+
   // Compose subject + body when dialog opens or data changes
   useEffect(() => {
     if (!open) return;
@@ -98,10 +137,11 @@ export function SendPreliminarySummaryDialog({
         clientName,
         openingMeetingStatus: openingMeeting?.status,
         closingMeetingStatus: closingMeeting?.status,
+        completion,
       }),
     );
     setTo(primaryContactEmail || '');
-  }, [open, audit, findings, actions, clientName, primaryContactEmail, openingMeeting?.status, closingMeeting?.status]);
+  }, [open, audit, findings, actions, clientName, primaryContactEmail, openingMeeting?.status, closingMeeting?.status, completion]);
 
   const recipientCount = useMemo(() => {
     return to
