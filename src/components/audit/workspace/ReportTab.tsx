@@ -86,6 +86,29 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
           )}
         </CardContent>
       </Card>
+      {/* Preliminary Summary — info only, hidden once final report is released */}
+      {!isReleased && (
+        <Card className="border-dashed">
+          <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-muted p-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Preliminary summary</p>
+                <p className="text-xs text-muted-foreground">
+                  Email an interim snapshot to the client and interested parties at any point. You will be CC'd. Nothing is saved to the audit record.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" onClick={() => setPreliminaryOpen(true)}>
+              <Mail className="h-4 w-4 mr-2" />
+              Send Preliminary Summary
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Report Generation */}
       <Card>
         <CardHeader>
