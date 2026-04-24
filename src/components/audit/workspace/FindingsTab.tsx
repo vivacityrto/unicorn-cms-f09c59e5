@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Bot, Trash2 } from 'lucide-react';
+import { Plus, Bot, Trash2, Pencil } from 'lucide-react';
 import { useAuditFindings } from '@/hooks/useAuditWorkspace';
 import { useAuth } from '@/hooks/useAuth';
 import { AddFindingForm } from './AddFindingForm';
@@ -22,9 +22,10 @@ const PRIORITY_COLORS: Record<string, string> = {
 const PRIORITY_ORDER = ['critical', 'high', 'medium', 'low'];
 
 export function FindingsTab({ auditId }: FindingsTabProps) {
-  const { data: findings, createFinding, deleteFinding } = useAuditFindings(auditId);
+  const { data: findings, createFinding, updateFinding, deleteFinding } = useAuditFindings(auditId);
   const { session } = useAuth();
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
 
   const filtered = findings?.filter(f => {
@@ -97,37 +98,62 @@ export function FindingsTab({ auditId }: FindingsTabProps) {
               {group.priority} ({group.findings.length})
             </h3>
             {group.findings.map(f => (
-              <Card key={f.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={cn('text-[10px]', PRIORITY_COLORS[f.priority])}>
-                          {f.priority}
-                        </Badge>
-                        {f.standard_reference && (
-                          <span className="text-xs text-muted-foreground">{f.standard_reference}</span>
+              editingId === f.id ? (
+                <AddFindingForm
+                  key={f.id}
+                  auditId={auditId}
+                  mode="edit"
+                  initialValues={{
+                    summary: f.summary,
+                    detail: f.detail,
+                    standard_reference: f.standard_reference,
+                    impact: f.impact,
+                    priority: f.priority,
+                  }}
+                  onSave={(updates) => {
+                    updateFinding.mutate({ id: f.id, ...updates });
+                    setEditingId(null);
+                  }}
+                  onCancel={() => setEditingId(null)}
+                />
+              ) : (
+                <Card key={f.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className={cn('text-[10px]', PRIORITY_COLORS[f.priority])}>
+                            {f.priority}
+                          </Badge>
+                          {f.standard_reference && (
+                            <span className="text-xs text-muted-foreground">{f.standard_reference}</span>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium">{f.summary}</p>
+                        {f.detail && <p className="text-xs text-muted-foreground">{f.detail}</p>}
+                        {f.impact && (
+                          <p className="text-xs text-muted-foreground">
+                            <span className="font-medium">Impact:</span> {f.impact}
+                          </p>
+                        )}
+                        {f.is_auto_generated && (
+                          <div className="flex items-center gap-1 text-xs text-blue-600">
+                            <Bot className="h-3 w-3" /> AI-generated
+                          </div>
                         )}
                       </div>
-                      <p className="text-sm font-medium">{f.summary}</p>
-                      {f.detail && <p className="text-xs text-muted-foreground">{f.detail}</p>}
-                      {f.impact && (
-                        <p className="text-xs text-muted-foreground">
-                          <span className="font-medium">Impact:</span> {f.impact}
-                        </p>
-                      )}
-                      {f.is_auto_generated && (
-                        <div className="flex items-center gap-1 text-xs text-blue-600">
-                          <Bot className="h-3 w-3" /> AI-generated
-                        </div>
-                      )}
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => setEditingId(f.id)} title="Edit finding">
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => deleteFinding.mutate(f.id)} title="Delete finding">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => deleteFinding.mutate(f.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )
             ))}
           </div>
         ))
