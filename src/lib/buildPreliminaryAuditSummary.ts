@@ -157,6 +157,11 @@ export function buildPreliminarySummaryHtml({
 
   <h3 style="font-size:15px;color:#111827;margin:18px 0 6px;">Coverage so far</h3>
   <ul style="margin:0;padding-left:20px;font-size:14px;color:#1F2937;">
+    ${
+      completionPct !== null
+        ? `<li>Audit completion: <strong>${completionPct}%</strong> <span style="color:#6B7280;">(${completion!.answered} of ${completion!.total} questions answered)</span></li>`
+        : ''
+    }
     ${meetingLine('Opening meeting', openingMeetingStatus)}
     ${meetingLine('Closing meeting', closingMeetingStatus)}
     <li>Conducted on: <strong>${formatDate(audit.conducted_at)}</strong></li>
