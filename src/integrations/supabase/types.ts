@@ -9030,6 +9030,13 @@ export type Database = {
             referencedRelation: "client_audit_findings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_audit_actions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_findings_without_actions"
+            referencedColumns: ["finding_id"]
+          },
         ]
       }
       client_audit_documents: {
@@ -9127,10 +9134,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           detail: string | null
+          finding_code: string | null
           id: string
           impact: string | null
           is_auto_generated: boolean
           priority: string
+          regulatory_reference: string | null
           response_id: string | null
           section_id: string | null
           standard_reference: string | null
@@ -9142,10 +9151,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           detail?: string | null
+          finding_code?: string | null
           id?: string
           impact?: string | null
           is_auto_generated?: boolean
           priority?: string
+          regulatory_reference?: string | null
           response_id?: string | null
           section_id?: string | null
           standard_reference?: string | null
@@ -9157,10 +9168,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           detail?: string | null
+          finding_code?: string | null
           id?: string
           impact?: string | null
           is_auto_generated?: boolean
           priority?: string
+          regulatory_reference?: string | null
           response_id?: string | null
           section_id?: string | null
           standard_reference?: string | null
@@ -9553,6 +9566,7 @@ export type Database = {
         Row: {
           audit_id: string
           audit_phase: string
+          code_prefix: string | null
           created_at: string
           description: string | null
           id: string
@@ -9568,6 +9582,7 @@ export type Database = {
         Insert: {
           audit_id: string
           audit_phase?: string
+          code_prefix?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -9583,6 +9598,7 @@ export type Database = {
         Update: {
           audit_id?: string
           audit_phase?: string
+          code_prefix?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -13857,6 +13873,7 @@ export type Database = {
       compliance_template_sections: {
         Row: {
           audit_phase: string
+          code_prefix: string | null
           created_at: string
           id: string
           sort_order: number
@@ -13865,6 +13882,7 @@ export type Database = {
         }
         Insert: {
           audit_phase?: string
+          code_prefix?: string | null
           created_at?: string
           id?: string
           sort_order?: number
@@ -13873,6 +13891,7 @@ export type Database = {
         }
         Update: {
           audit_phase?: string
+          code_prefix?: string | null
           created_at?: string
           id?: string
           sort_order?: number
@@ -51085,6 +51104,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_audit_actions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_findings_without_actions"
+            referencedColumns: ["finding_id"]
+          },
+          {
             foreignKeyName: "client_audits_subject_tenant_id_fkey"
             columns: ["subject_tenant_id"]
             isOneToOne: false
@@ -51666,6 +51692,55 @@ export type Database = {
           unicorn_url: string | null
         }
         Relationships: []
+      }
+      v_client_audit_findings_without_actions: {
+        Row: {
+          audit_id: string | null
+          finding_code: string | null
+          finding_id: string | null
+          priority: string | null
+          section_code_prefix: string | null
+          section_id: string | null
+          section_title: string | null
+          summary: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "client_audit_sections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_client_audits_dashboard: {
         Row: {
