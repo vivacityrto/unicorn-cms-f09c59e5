@@ -177,10 +177,10 @@ export function SendPreliminarySummaryDialog({
           </DialogHeader>
 
           <div className="flex-1 overflow-auto space-y-3 mt-1">
-            <Alert className="border-amber-200 bg-amber-50">
-              <Info className="h-4 w-4 text-amber-700" />
-              <AlertTitle className="text-amber-900">Preliminary — not the final report</AlertTitle>
-              <AlertDescription className="text-amber-900/80 text-xs">
+            <Alert className="border-warning/30 bg-warning/10">
+              <Info className="h-4 w-4 text-warning-foreground" />
+              <AlertTitle>Preliminary — not the final report</AlertTitle>
+              <AlertDescription className="text-xs">
                 Nothing is saved to the audit record. The summary lives only in recipients' inboxes. You will be CC'd for your own records.
               </AlertDescription>
             </Alert>
