@@ -54,6 +54,7 @@ export function SendPreliminarySummaryDialog({
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [completion, setCompletion] = useState<{ answered: number; total: number } | null>(null);
 
   const creatorEmail = profile?.email || '';
   const tenantId = audit.subject_tenant_id;
