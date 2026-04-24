@@ -72,7 +72,7 @@ const RTO_ONLY_CARDS: AuditTypeCard[] = [
   },
   {
     value: 'due_diligence', label: 'RTO Due Diligence', icon: Building2,
-    description: 'Compliance and risk assessment for clients considering purchasing an RTO.',
+    description: 'Compliance and risk assessment for the Purchaser of an RTO.',
     is_rto: true, is_cricos: false, template_id: TEMPLATE_IDS.due_diligence,
   },
 ];
@@ -86,7 +86,7 @@ const CRICOS_ONLY_CARDS: AuditTypeCard[] = [
   },
   {
     value: 'due_diligence', label: 'Due Diligence', icon: Building2,
-    description: 'Compliance and risk assessment for clients considering purchasing a CRICOS provider.',
+    description: 'Compliance and risk assessment for the Purchaser of a CRICOS provider.',
     is_rto: false, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence,
   },
 ];
@@ -111,12 +111,12 @@ const BOTH_CARDS: AuditTypeCard[] = [
   },
   {
     value: 'due_diligence', label: 'Due Diligence', icon: Building2,
-    description: 'Compliance and risk assessment for clients considering purchasing an RTO.',
+    description: 'Compliance and risk assessment for the Purchaser of an RTO.',
     is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence,
   },
   {
     value: 'due_diligence_combined', label: 'Combined RTO + CRICOS Due Diligence', icon: Building2,
-    description: 'Compliance and risk assessment for dual-registered clients considering purchasing an RTO with CRICOS registration.',
+    description: 'Compliance and risk assessment for the Purchaser of a dual-registered RTO with CRICOS registration.',
     badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
     is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence_combined,
   },
@@ -138,7 +138,7 @@ const ALL_CARDS: AuditTypeCard[] = [
   },
   {
     value: 'due_diligence_combined', label: 'Combined RTO + CRICOS Due Diligence', icon: Building2,
-    description: 'Compliance and risk assessment for dual-registered clients considering purchasing an RTO with CRICOS registration.',
+    description: 'Compliance and risk assessment for the Purchaser of a dual-registered RTO with CRICOS registration.',
     badge: 'CRICOS', badgeColor: 'bg-teal-100 text-teal-700 border-teal-200',
     is_rto: true, is_cricos: true, template_id: TEMPLATE_IDS.due_diligence_combined,
   },
