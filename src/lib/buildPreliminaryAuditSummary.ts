@@ -28,6 +28,10 @@ interface BuildArgs {
   clientName?: string | null;
   openingMeetingStatus?: string | null;
   closingMeetingStatus?: string | null;
+  completion?: {
+    answered: number;
+    total: number;
+  } | null;
 }
 
 export function buildPreliminarySummarySubject(audit: ClientAudit, clientName?: string | null) {
@@ -43,10 +47,16 @@ export function buildPreliminarySummaryHtml({
   clientName,
   openingMeetingStatus,
   closingMeetingStatus,
+  completion,
 }: BuildArgs): string {
   const today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
   const auditTypeLabel = AUDIT_TYPE_LABELS[audit.audit_type] || audit.audit_type;
   const client = clientName || audit.snapshot_rto_name || '—';
+
+  const completionPct =
+    completion && completion.total > 0
+      ? Math.round((completion.answered / completion.total) * 100)
+      : null;
 
   const priorityOrder: Array<AuditFinding['priority']> = ['critical', 'high', 'medium', 'low'];
   const groupedFindings = priorityOrder.map(p => ({
@@ -147,6 +157,11 @@ export function buildPreliminarySummaryHtml({
 
   <h3 style="font-size:15px;color:#111827;margin:18px 0 6px;">Coverage so far</h3>
   <ul style="margin:0;padding-left:20px;font-size:14px;color:#1F2937;">
+    ${
+      completionPct !== null
+        ? `<li>Audit completion: <strong>${completionPct}%</strong> <span style="color:#6B7280;">(${completion!.answered} of ${completion!.total} questions answered)</span></li>`
+        : ''
+    }
     ${meetingLine('Opening meeting', openingMeetingStatus)}
     ${meetingLine('Closing meeting', closingMeetingStatus)}
     <li>Conducted on: <strong>${formatDate(audit.conducted_at)}</strong></li>
