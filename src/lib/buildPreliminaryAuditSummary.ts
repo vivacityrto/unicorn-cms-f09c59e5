@@ -21,10 +21,29 @@ const escapeHtml = (s: string | null | undefined) =>
 const formatDate = (d?: string | null) =>
   d ? new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
+const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s);
+
+export interface SectionCoverage {
+  sectionId: string;
+  title: string;
+  answered: number;
+  total: number;
+}
+
+export interface OutstandingEvidenceItem {
+  questionText: string;
+  sectionTitle: string;
+  rating: string;
+}
+
+interface ActionWithExtras extends AuditAction {
+  assigned_to_name?: string | null;
+}
+
 interface BuildArgs {
   audit: ClientAudit;
   findings: AuditFinding[];
-  actions: AuditAction[];
+  actions: ActionWithExtras[];
   clientName?: string | null;
   openingMeetingStatus?: string | null;
   closingMeetingStatus?: string | null;
@@ -32,6 +51,8 @@ interface BuildArgs {
     answered: number;
     total: number;
   } | null;
+  sectionCoverage?: SectionCoverage[];
+  outstandingEvidence?: OutstandingEvidenceItem[];
 }
 
 export function buildPreliminarySummarySubject(audit: ClientAudit, clientName?: string | null) {
@@ -48,6 +69,8 @@ export function buildPreliminarySummaryHtml({
   openingMeetingStatus,
   closingMeetingStatus,
   completion,
+  sectionCoverage,
+  outstandingEvidence,
 }: BuildArgs): string {
   const today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
   const auditTypeLabel = AUDIT_TYPE_LABELS[audit.audit_type] || audit.audit_type;
@@ -64,30 +87,46 @@ export function buildPreliminarySummaryHtml({
     items: findings.filter(f => f.priority === p),
   }));
 
+  const colourMap: Record<string, string> = {
+    critical: '#B91C1C',
+    high: '#C2410C',
+    medium: '#B45309',
+    low: '#15803D',
+  };
+
   const findingsHtml = groupedFindings
     .filter(g => g.items.length > 0)
     .map(g => {
       const rows = g.items
-        .map(
-          f => `
-            <li style="margin:0 0 6px;">
-              ${escapeHtml(f.summary)}
-              ${f.is_auto_generated ? ' <em style="color:#8B5CF6;font-size:12px;">(AI draft, pending review)</em>' : ''}
-            </li>`,
-        )
+        .map(f => {
+          const stdRef = f.standard_reference
+            ? `<span style="display:inline-block;background:#F3F4F6;color:#374151;padding:1px 8px;border-radius:10px;font-size:11px;margin-left:8px;">${escapeHtml(f.standard_reference)}</span>`
+            : '';
+          const detail = f.detail
+            ? `<div style="color:#374151;font-size:13px;margin:4px 0 0 0;">${escapeHtml(f.detail)}</div>`
+            : '';
+          const impact = f.impact
+            ? `<div style="color:#4B5563;font-size:13px;margin:4px 0 0 0;"><strong>Impact:</strong> ${escapeHtml(f.impact)}</div>`
+            : '';
+          const aiTag = f.is_auto_generated
+            ? ' <em style="color:#8B5CF6;font-size:12px;">(AI draft, pending review)</em>'
+            : '';
+          return `
+            <li style="margin:0 0 12px;">
+              <div style="font-weight:500;color:#111827;">
+                ${escapeHtml(f.summary)}${aiTag}${stdRef}
+              </div>
+              ${detail}
+              ${impact}
+            </li>`;
+        })
         .join('');
-      const colourMap: Record<string, string> = {
-        critical: '#B91C1C',
-        high: '#C2410C',
-        medium: '#B45309',
-        low: '#15803D',
-      };
       return `
-        <div style="margin:0 0 12px;">
-          <div style="font-weight:600;color:${colourMap[g.priority]};margin:0 0 6px;text-transform:uppercase;font-size:12px;letter-spacing:0.04em;">
+        <div style="margin:0 0 14px;">
+          <div style="font-weight:600;color:${colourMap[g.priority]};margin:0 0 8px;text-transform:uppercase;font-size:12px;letter-spacing:0.04em;">
             ${g.priority} (${g.items.length})
           </div>
-          <ul style="margin:0;padding-left:20px;color:#1F2937;font-size:14px;">${rows}</ul>
+          <ul style="margin:0;padding-left:20px;color:#1F2937;font-size:14px;list-style:disc;">${rows}</ul>
         </div>
       `;
     })
@@ -101,26 +140,39 @@ export function buildPreliminarySummaryHtml({
     })
     .slice(0, 8);
 
+  // Build a quick lookup for finding summaries to link actions back to their source
+  const findingMap = new Map(findings.map(f => [f.id, f.summary]));
+
   const actionsHtml = topActions.length
     ? `
       <table style="width:100%;border-collapse:collapse;font-size:13px;margin:6px 0 0;">
         <thead>
           <tr style="background:#F3F4F6;">
             <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #E5E7EB;">Action</th>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #E5E7EB;">Owner</th>
             <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #E5E7EB;">Priority</th>
             <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #E5E7EB;">Due</th>
           </tr>
         </thead>
         <tbody>
           ${topActions
-            .map(
-              a => `
+            .map(a => {
+              const linkedFinding = a.finding_id ? findingMap.get(a.finding_id) : null;
+              const linkedLine = linkedFinding
+                ? `<div style="font-size:12px;color:#6B7280;margin-top:2px;">— linked to: ${escapeHtml(truncate(linkedFinding, 60))}</div>`
+                : '';
+              const owner = a.assigned_to_name?.trim() || 'Unassigned';
+              return `
                 <tr>
-                  <td style="padding:6px 8px;border-bottom:1px solid #F3F4F6;">${escapeHtml(a.title)}</td>
-                  <td style="padding:6px 8px;border-bottom:1px solid #F3F4F6;text-transform:capitalize;">${a.priority}</td>
-                  <td style="padding:6px 8px;border-bottom:1px solid #F3F4F6;">${formatDate(a.extended_due_date || a.due_date)}</td>
-                </tr>`,
-            )
+                  <td style="padding:6px 8px;border-bottom:1px solid #F3F4F6;vertical-align:top;">
+                    <div>${escapeHtml(a.title)}</div>
+                    ${linkedLine}
+                  </td>
+                  <td style="padding:6px 8px;border-bottom:1px solid #F3F4F6;vertical-align:top;color:${owner === 'Unassigned' ? '#9CA3AF' : '#1F2937'};">${escapeHtml(owner)}</td>
+                  <td style="padding:6px 8px;border-bottom:1px solid #F3F4F6;text-transform:capitalize;vertical-align:top;">${a.priority}</td>
+                  <td style="padding:6px 8px;border-bottom:1px solid #F3F4F6;vertical-align:top;">${formatDate(a.extended_due_date || a.due_date)}</td>
+                </tr>`;
+            })
             .join('')}
         </tbody>
       </table>
@@ -130,9 +182,84 @@ export function buildPreliminarySummaryHtml({
     `
     : '<p style="color:#6B7280;font-size:13px;margin:6px 0 0;">No open action items recorded yet.</p>';
 
+  // Per-section coverage table
+  const sectionCoverageHtml = sectionCoverage && sectionCoverage.length
+    ? `
+      <div style="margin:10px 0 0;">
+        <div style="font-size:13px;color:#374151;font-weight:600;margin:0 0 6px;">Section-by-section completion</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#F9FAFB;">
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #E5E7EB;">Section</th>
+              <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #E5E7EB;width:120px;">Answered / Total</th>
+              <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #E5E7EB;width:60px;">%</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sectionCoverage
+              .map(s => {
+                const pct = s.total > 0 ? Math.round((s.answered / s.total) * 100) : 0;
+                const pctColor = pct >= 80 ? '#15803D' : pct >= 40 ? '#B45309' : '#B91C1C';
+                return `
+                  <tr>
+                    <td style="padding:5px 8px;border-bottom:1px solid #F3F4F6;color:#1F2937;">${escapeHtml(s.title)}</td>
+                    <td style="padding:5px 8px;border-bottom:1px solid #F3F4F6;text-align:right;color:#4B5563;">${s.answered} / ${s.total}</td>
+                    <td style="padding:5px 8px;border-bottom:1px solid #F3F4F6;text-align:right;color:${pctColor};font-weight:600;">${pct}%</td>
+                  </tr>`;
+              })
+              .join('')}
+          </tbody>
+        </table>
+      </div>
+    `
+    : '';
+
+  // Outstanding evidence section
+  const outstandingHtml = outstandingEvidence && outstandingEvidence.length
+    ? `
+      <h3 style="font-size:15px;color:#111827;margin:18px 0 6px;">Outstanding evidence (${outstandingEvidence.length}${outstandingEvidence.length >= 5 ? '+' : ''})</h3>
+      <p style="font-size:12px;color:#6B7280;margin:0 0 6px;">Items currently rated <em>at risk</em> or <em>non-compliant</em> with no supporting evidence on file.</p>
+      <ul style="margin:0;padding-left:20px;font-size:13px;color:#1F2937;">
+        ${outstandingEvidence
+          .slice(0, 5)
+          .map(
+            e => `
+              <li style="margin:0 0 4px;">
+                ${escapeHtml(e.questionText)}
+                <span style="color:#6B7280;font-size:12px;"> — ${escapeHtml(e.sectionTitle)} · <em>${escapeHtml(e.rating.replace(/_/g, ' '))}</em></span>
+              </li>`,
+          )
+          .join('')}
+      </ul>
+    `
+    : '';
+
+  // Risk + score narrative
+  const criticalCount = findings.filter(f => f.priority === 'critical').length;
+  const highCount = findings.filter(f => f.priority === 'high').length;
   const riskLine = audit.risk_rating
     ? `<strong>${escapeHtml(AUDIT_RISK_LABELS[audit.risk_rating])}</strong>`
     : '<em style="color:#6B7280;">Not yet rated</em>';
+
+  const scoreNarrative = (() => {
+    if (audit.score_pct === null && findings.length === 0) return '';
+    const parts: string[] = [];
+    if (audit.score_pct !== null) {
+      parts.push(`Indicative score <strong>${audit.score_pct}%</strong>`);
+    }
+    if (completion && completion.total > 0) {
+      parts.push(`${completion.answered} of ${completion.total} questions rated`);
+    }
+    if (findings.length > 0) {
+      const breakdownBits: string[] = [];
+      if (criticalCount > 0) breakdownBits.push(`${criticalCount} critical`);
+      if (highCount > 0) breakdownBits.push(`${highCount} high`);
+      const breakdown = breakdownBits.length ? ` (${breakdownBits.join(', ')})` : '';
+      parts.push(`${findings.length} finding${findings.length === 1 ? '' : 's'} raised${breakdown}`);
+    }
+    if (!parts.length) return '';
+    return `<p style="font-size:13px;color:#4B5563;margin:6px 0 0;font-style:italic;">${parts.join(' — ')}.</p>`;
+  })();
 
   const meetingLine = (label: string, status?: string | null) => {
     const done = status === 'completed';
@@ -166,8 +293,11 @@ export function buildPreliminarySummaryHtml({
     ${meetingLine('Closing meeting', closingMeetingStatus)}
     <li>Conducted on: <strong>${formatDate(audit.conducted_at)}</strong></li>
     <li>Current risk rating: ${riskLine}</li>
-    ${audit.score_pct !== null ? `<li>Indicative score: <strong>${audit.score_pct}%</strong></li>` : ''}
   </ul>
+  ${scoreNarrative}
+  ${sectionCoverageHtml}
+
+  ${outstandingHtml}
 
   <h3 style="font-size:15px;color:#111827;margin:18px 0 6px;">Findings to date (${findings.length})</h3>
   ${findings.length ? findingsHtml : '<p style="color:#6B7280;font-size:13px;margin:0;">No findings recorded yet.</p>'}

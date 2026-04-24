@@ -23,6 +23,8 @@ import {
   buildPreliminarySummaryHtml,
   buildPreliminarySummarySubject,
   PRELIMINARY_DISCLAIMER_HTML,
+  type SectionCoverage,
+  type OutstandingEvidenceItem,
 } from '@/lib/buildPreliminaryAuditSummary';
 import type { ClientAudit } from '@/types/clientAudits';
 import type { AuditFinding, AuditAction } from '@/types/auditWorkspace';
@@ -55,6 +57,9 @@ export function SendPreliminarySummaryDialog({
   const [sending, setSending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [completion, setCompletion] = useState<{ answered: number; total: number } | null>(null);
+  const [sectionCoverage, setSectionCoverage] = useState<SectionCoverage[]>([]);
+  const [outstandingEvidence, setOutstandingEvidence] = useState<OutstandingEvidenceItem[]>([]);
+  const [actionOwners, setActionOwners] = useState<Record<string, string>>({});
 
   const creatorEmail = profile?.email || '';
   const tenantId = audit.subject_tenant_id;
@@ -86,62 +91,163 @@ export function SendPreliminarySummaryDialog({
     })();
   }, [open, tenantId]);
 
-  // Fetch audit completion (answered / total questions) when dialog opens
+  // Fetch audit completion + per-section coverage + outstanding evidence when dialog opens
   useEffect(() => {
     if (!open || !audit.id) return;
     (async () => {
       const { data: sections } = await supabase
         .from('client_audit_sections' as any)
-        .select('template_section_id')
-        .eq('audit_id', audit.id);
-      const templateSectionIds = ((sections || []) as any[])
+        .select('id, title, template_section_id')
+        .eq('audit_id', audit.id)
+        .order('sort_order', { ascending: true });
+
+      const sectionRows = (sections || []) as any[];
+      const templateSectionIds = sectionRows
         .map(s => s.template_section_id)
         .filter(Boolean);
 
       if (templateSectionIds.length === 0) {
         setCompletion(null);
+        setSectionCoverage([]);
+        setOutstandingEvidence([]);
         return;
       }
 
       const [{ data: questions }, { data: responses }] = await Promise.all([
         supabase
           .from('compliance_template_questions' as any)
-          .select('id')
+          .select('id, section_id, audit_statement')
           .in('section_id', templateSectionIds)
           .eq('is_active', true),
         supabase
           .from('client_audit_responses' as any)
-          .select('question_id, rating')
-          .eq('audit_id', audit.id)
-          .not('rating', 'is', null),
+          .select('question_id, section_id, rating, evidence_urls')
+          .eq('audit_id', audit.id),
       ]);
 
-      const total = (questions || []).length;
-      const questionIds = new Set(((questions || []) as any[]).map(q => q.id));
-      const answered = ((responses || []) as any[]).filter(
-        r => r.question_id && questionIds.has(r.question_id),
+      const allQuestions = (questions || []) as any[];
+      const allResponses = (responses || []) as any[];
+      const total = allQuestions.length;
+      const questionIds = new Set(allQuestions.map(q => q.id));
+      const answered = allResponses.filter(
+        r => r.rating && r.question_id && questionIds.has(r.question_id),
       ).length;
       setCompletion({ answered, total });
+
+      // Per-section breakdown — group questions by template_section_id, then map to client section title
+      const tplToClientSection = new Map<string, { id: string; title: string }>();
+      sectionRows.forEach(s => {
+        if (s.template_section_id) {
+          tplToClientSection.set(s.template_section_id, { id: s.id, title: s.title });
+        }
+      });
+      const questionToTplSection = new Map<string, string>();
+      const questionTextById = new Map<string, string>();
+      allQuestions.forEach(q => {
+        questionToTplSection.set(q.id, q.section_id);
+        questionTextById.set(q.id, q.audit_statement);
+      });
+
+      const coverageMap = new Map<string, { title: string; answered: number; total: number }>();
+      sectionRows.forEach(s => {
+        coverageMap.set(s.id, { title: s.title, answered: 0, total: 0 });
+      });
+      allQuestions.forEach(q => {
+        const cs = tplToClientSection.get(q.section_id);
+        if (cs) {
+          const entry = coverageMap.get(cs.id);
+          if (entry) entry.total += 1;
+        }
+      });
+      allResponses.forEach(r => {
+        if (!r.rating || !r.question_id) return;
+        const tplSectionId = questionToTplSection.get(r.question_id);
+        if (!tplSectionId) return;
+        const cs = tplToClientSection.get(tplSectionId);
+        if (!cs) return;
+        const entry = coverageMap.get(cs.id);
+        if (entry) entry.answered += 1;
+      });
+      const coverageArr: SectionCoverage[] = sectionRows
+        .map(s => {
+          const e = coverageMap.get(s.id)!;
+          return { sectionId: s.id, title: e.title, answered: e.answered, total: e.total };
+        })
+        .filter(c => c.total > 0);
+      setSectionCoverage(coverageArr);
+
+      // Outstanding evidence: at_risk / non_compliant responses with no evidence files
+      const sectionTitleByClientId = new Map<string, string>();
+      sectionRows.forEach(s => sectionTitleByClientId.set(s.id, s.title));
+      const outstanding: OutstandingEvidenceItem[] = allResponses
+        .filter(r => {
+          const r2 = r as any;
+          const hasEvidence = Array.isArray(r2.evidence_urls) && r2.evidence_urls.length > 0;
+          return (r2.rating === 'at_risk' || r2.rating === 'non_compliant') && !hasEvidence && r2.question_id;
+        })
+        .map(r => {
+          const r2 = r as any;
+          return {
+            questionText: questionTextById.get(r2.question_id) || 'Question',
+            sectionTitle: r2.section_id ? sectionTitleByClientId.get(r2.section_id) || '—' : '—',
+            rating: r2.rating,
+          };
+        })
+        .slice(0, 5);
+      setOutstandingEvidence(outstanding);
     })();
   }, [open, audit.id]);
+
+  // Fetch owner display names for actions when dialog opens
+  useEffect(() => {
+    if (!open || !actions.length) {
+      setActionOwners({});
+      return;
+    }
+    (async () => {
+      const ownerIds = Array.from(
+        new Set(actions.map(a => a.assigned_to).filter((id): id is string => !!id)),
+      );
+      if (ownerIds.length === 0) {
+        setActionOwners({});
+        return;
+      }
+      const { data } = await supabase
+        .from('users')
+        .select('user_uuid, first_name, last_name, email')
+        .in('user_uuid', ownerIds);
+      const map: Record<string, string> = {};
+      ((data || []) as any[]).forEach(u => {
+        const name = [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email || '';
+        if (name) map[u.user_uuid] = name;
+      });
+      setActionOwners(map);
+    })();
+  }, [open, actions]);
 
   // Compose subject + body when dialog opens or data changes
   useEffect(() => {
     if (!open) return;
     setSubject(buildPreliminarySummarySubject(audit, clientName));
+    const actionsWithOwners = actions.map(a => ({
+      ...a,
+      assigned_to_name: a.assigned_to ? actionOwners[a.assigned_to] || null : null,
+    }));
     setBody(
       buildPreliminarySummaryHtml({
         audit,
         findings,
-        actions,
+        actions: actionsWithOwners,
         clientName,
         openingMeetingStatus: openingMeeting?.status,
         closingMeetingStatus: closingMeeting?.status,
         completion,
+        sectionCoverage,
+        outstandingEvidence,
       }),
     );
     setTo(primaryContactEmail || '');
-  }, [open, audit, findings, actions, clientName, primaryContactEmail, openingMeeting?.status, closingMeeting?.status, completion]);
+  }, [open, audit, findings, actions, clientName, primaryContactEmail, openingMeeting?.status, closingMeeting?.status, completion, sectionCoverage, outstandingEvidence, actionOwners]);
 
   const recipientCount = useMemo(() => {
     return to

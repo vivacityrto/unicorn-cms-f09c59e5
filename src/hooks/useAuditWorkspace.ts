@@ -198,6 +198,20 @@ export function useAuditFindings(auditId: string | undefined) {
     },
   });
 
+  const updateFinding = useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<AuditFinding>) => {
+      const { error } = await supabase
+        .from('client_audit_findings' as any)
+        .update(updates as any)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit-findings', auditId] });
+      toast.success('Finding updated');
+    },
+  });
+
   const deleteFinding = useMutation({
     mutationFn: async (findingId: string) => {
       const { error } = await supabase
@@ -212,7 +226,7 @@ export function useAuditFindings(auditId: string | undefined) {
     },
   });
 
-  return { ...query, createFinding, deleteFinding };
+  return { ...query, createFinding, updateFinding, deleteFinding };
 }
 
 // ─── Actions ───
