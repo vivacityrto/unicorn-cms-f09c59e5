@@ -243,9 +243,6 @@ export function buildPreliminarySummaryHtml({
     <li>Current risk rating: ${riskLine}</li>
   </ul>
   ${scoreNarrative}
-  ${sectionCoverageHtml}
-
-  ${outstandingHtml}
 
   <h3 style="font-size:15px;color:#111827;margin:18px 0 6px;">Findings to date (${findings.length})</h3>
   ${findings.length ? findingsHtml : '<p style="color:#6B7280;font-size:13px;margin:0;">No findings recorded yet.</p>'}
