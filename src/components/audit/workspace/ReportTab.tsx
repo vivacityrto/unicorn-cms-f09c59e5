@@ -310,6 +310,14 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
           </Card>
         )}
       </div>
+
+      <SendPreliminarySummaryDialog
+        open={preliminaryOpen}
+        onOpenChange={setPreliminaryOpen}
+        audit={audit}
+        findings={findings}
+        actions={actions}
+      />
     </div>
   );
 }
