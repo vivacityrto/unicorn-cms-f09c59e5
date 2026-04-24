@@ -28,6 +28,10 @@ interface BuildArgs {
   clientName?: string | null;
   openingMeetingStatus?: string | null;
   closingMeetingStatus?: string | null;
+  completion?: {
+    answered: number;
+    total: number;
+  } | null;
 }
 
 export function buildPreliminarySummarySubject(audit: ClientAudit, clientName?: string | null) {
