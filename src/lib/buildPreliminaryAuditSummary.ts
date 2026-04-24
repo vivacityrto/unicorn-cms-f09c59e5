@@ -182,58 +182,6 @@ export function buildPreliminarySummaryHtml({
     `
     : '<p style="color:#6B7280;font-size:13px;margin:6px 0 0;">No open action items recorded yet.</p>';
 
-  // Per-section coverage table
-  const sectionCoverageHtml = sectionCoverage && sectionCoverage.length
-    ? `
-      <div style="margin:10px 0 0;">
-        <div style="font-size:13px;color:#374151;font-weight:600;margin:0 0 6px;">Section-by-section completion</div>
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead>
-            <tr style="background:#F9FAFB;">
-              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid #E5E7EB;">Section</th>
-              <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #E5E7EB;width:120px;">Answered / Total</th>
-              <th style="text-align:right;padding:6px 8px;border-bottom:1px solid #E5E7EB;width:60px;">%</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sectionCoverage
-              .map(s => {
-                const pct = s.total > 0 ? Math.round((s.answered / s.total) * 100) : 0;
-                const pctColor = pct >= 80 ? '#15803D' : pct >= 40 ? '#B45309' : '#B91C1C';
-                return `
-                  <tr>
-                    <td style="padding:5px 8px;border-bottom:1px solid #F3F4F6;color:#1F2937;">${escapeHtml(s.title)}</td>
-                    <td style="padding:5px 8px;border-bottom:1px solid #F3F4F6;text-align:right;color:#4B5563;">${s.answered} / ${s.total}</td>
-                    <td style="padding:5px 8px;border-bottom:1px solid #F3F4F6;text-align:right;color:${pctColor};font-weight:600;">${pct}%</td>
-                  </tr>`;
-              })
-              .join('')}
-          </tbody>
-        </table>
-      </div>
-    `
-    : '';
-
-  // Outstanding evidence section
-  const outstandingHtml = outstandingEvidence && outstandingEvidence.length
-    ? `
-      <h3 style="font-size:15px;color:#111827;margin:18px 0 6px;">Outstanding evidence (${outstandingEvidence.length}${outstandingEvidence.length >= 5 ? '+' : ''})</h3>
-      <p style="font-size:12px;color:#6B7280;margin:0 0 6px;">Items currently rated <em>at risk</em> or <em>non-compliant</em> with no supporting evidence on file.</p>
-      <ul style="margin:0;padding-left:20px;font-size:13px;color:#1F2937;">
-        ${outstandingEvidence
-          .slice(0, 5)
-          .map(
-            e => `
-              <li style="margin:0 0 4px;">
-                ${escapeHtml(e.questionText)}
-                <span style="color:#6B7280;font-size:12px;"> — ${escapeHtml(e.sectionTitle)} · <em>${escapeHtml(e.rating.replace(/_/g, ' '))}</em></span>
-              </li>`,
-          )
-          .join('')}
-      </ul>
-    `
-    : '';
-
   // Risk + score narrative
   const criticalCount = findings.filter(f => f.priority === 'critical').length;
   const highCount = findings.filter(f => f.priority === 'high').length;
