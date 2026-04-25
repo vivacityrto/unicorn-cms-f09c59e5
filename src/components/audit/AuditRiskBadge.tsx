@@ -7,6 +7,7 @@ const colorMap: Record<AuditRisk, string> = {
   medium: 'bg-amber-100 text-amber-800 border-amber-300',
   high: 'bg-orange-100 text-orange-800 border-orange-300',
   critical: 'bg-red-100 text-red-800 border-red-300',
+  extreme: 'bg-red-900 text-red-50 border-red-950',
 };
 
 export function AuditRiskBadge({ risk }: { risk: AuditRisk | null }) {
