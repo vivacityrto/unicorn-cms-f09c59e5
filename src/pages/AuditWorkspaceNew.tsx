@@ -17,6 +17,7 @@ import { DocumentsTab } from '@/components/audit/workspace/DocumentsTab';
 import { FindingsTab } from '@/components/audit/workspace/FindingsTab';
 import { ActionsTab } from '@/components/audit/workspace/ActionsTab';
 import { ReportTab } from '@/components/audit/workspace/ReportTab';
+import { AuditSummaryPills } from '@/components/audit/workspace/AuditSummaryPills';
 import { UnsavedAuditWorkProvider, useUnsavedAuditWork } from '@/components/audit/workspace/UnsavedAuditWorkContext';
 import { Loader2, Check } from 'lucide-react';
 import type { AuditStatus } from '@/types/clientAudits';
