@@ -53,6 +53,7 @@ export interface AuditSection {
   risk_level: string | null;
   section_summary: string | null;
   audit_phase: AuditPhase | null;
+  code_prefix: string | null;
   created_at: string;
 }
 
@@ -83,6 +84,8 @@ export interface AuditFinding {
   summary: string;
   detail: string | null;
   standard_reference: string | null;
+  regulatory_reference: string | null;
+  finding_code: string | null;
   impact: string | null;
   priority: 'low' | 'medium' | 'high' | 'critical';
   is_auto_generated: boolean;

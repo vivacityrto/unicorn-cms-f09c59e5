@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Plus, Trash2, CheckCircle2, RefreshCw, ArrowRight, Wrench, AlertTriangle, Lightbulb, Eye, ChevronDown, ShieldCheck, Pencil } from 'lucide-react';
-import { useAuditActions, useAuditFindings, useInternalUsers } from '@/hooks/useAuditWorkspace';
+import { useAuditActions, useAuditFindings, useInternalUsers, useFindingsWithoutActions } from '@/hooks/useAuditWorkspace';
 import { useSyncAuditActions } from '@/hooks/useAuditActionPlan';
 import { useAuth } from '@/hooks/useAuth';
 import { ACTION_STATUS_OPTIONS, ACTION_TYPE_OPTIONS, DELIVERY_MODEL_OPTIONS, VERIFICATION_STATUS_OPTIONS } from '@/types/auditWorkspace';
@@ -43,6 +43,7 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
   const { data: actions, createAction, updateAction, deleteAction } = useAuditActions(auditId);
   const { data: findings } = useAuditFindings(auditId);
   const { data: users } = useInternalUsers();
+  const { data: findingsWithoutActions } = useFindingsWithoutActions(auditId);
   const { session } = useAuth();
   const syncActions = useSyncAuditActions();
 
@@ -124,6 +125,28 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
                 </Link>
               </Button>
             )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Critical/High findings without actions */}
+      {findingsWithoutActions && findingsWithoutActions.length > 0 && (
+        <Alert className="bg-amber-50 border-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-900">
+            <p className="font-medium mb-1">
+              {findingsWithoutActions.length} finding{findingsWithoutActions.length !== 1 ? 's' : ''} at Critical or High priority {findingsWithoutActions.length === 1 ? 'has' : 'have'} no action items assigned.
+            </p>
+            <p className="text-xs mb-2">
+              Every Critical and High finding should have at least one action item before the report is released.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {findingsWithoutActions.slice(0, 8).map(f => (
+                <span key={f.finding_id} className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-background border">
+                  {f.finding_code || '—'}
+                </span>
+              ))}
+            </div>
           </AlertDescription>
         </Alert>
       )}

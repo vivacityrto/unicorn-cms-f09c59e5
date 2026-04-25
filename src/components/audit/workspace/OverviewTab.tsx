@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useUpdateAudit, useInternalUsers } from '@/hooks/useAuditWorkspace';
 import { EvidenceRequestsSection } from './EvidenceRequestsSection';
+import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import type { ClientAudit, AuditRisk } from '@/types/clientAudits';
 
 interface OverviewTabProps {
@@ -137,26 +138,17 @@ export function OverviewTab({ audit }: OverviewTabProps) {
         <CardContent className="space-y-4">
           <div>
             <Label className="text-xs">Overall Risk Rating</Label>
-            <Select
-              value={audit.risk_rating || '__none__'}
-              onValueChange={(v) => handleBlur('risk_rating', v === '__none__' ? null : v)}
-            >
-              <SelectTrigger><SelectValue placeholder="Not assessed" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Not Assessed</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {audit.score_pct !== null && (
-            <div>
-              <Label className="text-xs">Score</Label>
-              <p className="text-2xl font-bold">{audit.score_pct}%</p>
+            <div className="mt-1 flex items-center gap-2">
+              {audit.risk_rating ? (
+                <AuditRiskBadge risk={audit.risk_rating} />
+              ) : (
+                <span className="text-sm text-muted-foreground">Not yet rated (no findings raised)</span>
+              )}
             </div>
-          )}
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Auto-derived from finding priorities. Add or update findings to change this.
+            </p>
+          </div>
           <div>
             <Label className="text-xs">Executive Summary</Label>
             <Textarea

@@ -259,9 +259,6 @@ export function AuditSidebar({
       {/* Footer */}
       <div className="p-4 border-t space-y-3">
         {audit.risk_rating && <AuditRiskBadge risk={audit.risk_rating} />}
-        {audit.score_pct !== null && (
-          <p className="text-xs font-medium">Score: {audit.score_pct}%</p>
-        )}
         <Select
           value={audit.status}
           onValueChange={(v) => onStatusChange(v as AuditStatus)}

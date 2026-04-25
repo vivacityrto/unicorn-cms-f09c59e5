@@ -8,7 +8,7 @@ export type AuditType =
   | 'due_diligence_combined';
 
 export type AuditStatus = 'draft' | 'in_progress' | 'review' | 'complete' | 'archived';
-export type AuditRisk = 'low' | 'medium' | 'high' | 'critical';
+export type AuditRisk = 'low' | 'medium' | 'high' | 'critical' | 'extreme';
 export type AuditAiStatus = 'none' | 'pending' | 'processing' | 'complete' | 'error';
 
 export interface ClientAudit {
@@ -94,6 +94,7 @@ export const AUDIT_RISK_LABELS: Record<AuditRisk, string> = {
   medium: 'Medium Risk',
   high: 'High Risk',
   critical: 'Critical Risk',
+  extreme: 'Extreme Risk',
 };
 
 export const CRICOS_INVALID_VALUES = [null, '', 'n/a', 'N/A', 'NA', 'na', '-', 'TBC', 'TBA', 'tbc', 'tba', 'none', 'None', 'nil', 'Nil'];

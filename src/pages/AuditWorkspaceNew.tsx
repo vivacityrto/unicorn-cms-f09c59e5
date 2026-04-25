@@ -4,7 +4,8 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, LayoutDashboard, CalendarClock, ClipboardList, FileText, AlertTriangle, CheckSquare, FileBarChart } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, CalendarClock, ClipboardList, FileText, AlertTriangle, CheckSquare, FileBarChart, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAudit } from '@/hooks/useClientAudits';
 import { useAuditSections, useAuditResponses, useAuditFindings, useAuditActions, useAuditStatusTransition, useInternalUsers } from '@/hooks/useAuditWorkspace';
 import { useAuditAppointments } from '@/hooks/useAuditSchedule';
@@ -16,6 +17,7 @@ import { DocumentsTab } from '@/components/audit/workspace/DocumentsTab';
 import { FindingsTab } from '@/components/audit/workspace/FindingsTab';
 import { ActionsTab } from '@/components/audit/workspace/ActionsTab';
 import { ReportTab } from '@/components/audit/workspace/ReportTab';
+import { AuditSummaryPills } from '@/components/audit/workspace/AuditSummaryPills';
 import { UnsavedAuditWorkProvider, useUnsavedAuditWork } from '@/components/audit/workspace/UnsavedAuditWorkContext';
 import { Loader2, Check } from 'lucide-react';
 import type { AuditStatus } from '@/types/clientAudits';
@@ -122,6 +124,13 @@ export default function AuditWorkspaceNew() {
               <span className="font-medium truncate">{audit.title || 'Untitled'}</span>
               <SaveIndicator />
             </div>
+
+            {/* Two-pill summary strip: Completion + Risk Rating */}
+            <AuditSummaryPills
+              audit={audit}
+              sections={sections || []}
+              responses={responses || []}
+            />
 
           {/* Tabs */}
           <div className="p-4">

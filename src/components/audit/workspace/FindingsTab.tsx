@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Bot, Trash2, Pencil } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Plus, Bot, Trash2, Pencil, Search } from 'lucide-react';
 import { useAuditFindings } from '@/hooks/useAuditWorkspace';
 import { useAuth } from '@/hooks/useAuth';
 import { AddFindingForm } from './AddFindingForm';
@@ -15,8 +16,8 @@ interface FindingsTabProps {
 const PRIORITY_COLORS: Record<string, string> = {
   critical: 'bg-red-100 text-red-800 border-red-300',
   high: 'bg-orange-100 text-orange-800 border-orange-300',
-  medium: 'bg-amber-100 text-amber-800 border-amber-300',
-  low: 'bg-green-100 text-green-800 border-green-300',
+  medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  low: 'bg-gray-100 text-gray-700 border-gray-300',
 };
 
 const PRIORITY_ORDER = ['critical', 'high', 'medium', 'low'];
@@ -27,8 +28,10 @@ export function FindingsTab({ auditId }: FindingsTabProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
+  const [codeFilter, setCodeFilter] = useState('');
 
   const filtered = findings?.filter(f => {
+    if (codeFilter.trim() && !(f.finding_code || '').toLowerCase().includes(codeFilter.trim().toLowerCase())) return false;
     if (filter === 'all') return true;
     if (filter === 'ai') return f.is_auto_generated;
     if (filter === 'manual') return !f.is_auto_generated;
@@ -37,7 +40,9 @@ export function FindingsTab({ auditId }: FindingsTabProps) {
 
   const grouped = PRIORITY_ORDER.map(p => ({
     priority: p,
-    findings: filtered.filter(f => f.priority === p),
+    findings: filtered
+      .filter(f => f.priority === p)
+      .sort((a, b) => (a.finding_code || '').localeCompare(b.finding_code || '')),
   })).filter(g => g.findings.length > 0);
 
   const filters = [
@@ -52,8 +57,8 @@ export function FindingsTab({ auditId }: FindingsTabProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-wrap gap-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-1.5">
           {filters.map(f => (
             <button
               key={f.value}
@@ -68,6 +73,15 @@ export function FindingsTab({ auditId }: FindingsTabProps) {
               {f.label}
             </button>
           ))}
+          <div className="relative ml-2">
+            <Search className="h-3 w-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={codeFilter}
+              onChange={(e) => setCodeFilter(e.target.value)}
+              placeholder="Filter by code (e.g. GOV-2)"
+              className="h-7 pl-7 w-[180px] text-xs"
+            />
+          </div>
         </div>
         <Button size="sm" onClick={() => setShowForm(true)}>
           <Plus className="h-3 w-3 mr-1" /> Add Finding
@@ -107,6 +121,8 @@ export function FindingsTab({ auditId }: FindingsTabProps) {
                     summary: f.summary,
                     detail: f.detail,
                     standard_reference: f.standard_reference,
+                    regulatory_reference: f.regulatory_reference,
+                    finding_code: f.finding_code,
                     impact: f.impact,
                     priority: f.priority,
                   }}
@@ -119,28 +135,36 @@ export function FindingsTab({ auditId }: FindingsTabProps) {
               ) : (
                 <Card key={f.id}>
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {f.finding_code && (
+                            <span className="font-mono font-bold text-xs px-2 py-0.5 rounded bg-muted border">
+                              {f.finding_code}
+                            </span>
+                          )}
                           <Badge variant="outline" className={cn('text-[10px]', PRIORITY_COLORS[f.priority])}>
                             {f.priority}
                           </Badge>
-                          {f.standard_reference && (
-                            <span className="text-xs text-muted-foreground">{f.standard_reference}</span>
-                          )}
+                          <p className="text-sm font-medium flex-1 min-w-0">{f.summary}</p>
                         </div>
-                        <p className="text-sm font-medium">{f.summary}</p>
+                        {f.regulatory_reference && (
+                          <p className="text-xs text-muted-foreground">Regulatory: {f.regulatory_reference}</p>
+                        )}
                         {f.detail && <p className="text-xs text-muted-foreground">{f.detail}</p>}
                         {f.impact && (
                           <p className="text-xs text-muted-foreground">
                             <span className="font-medium">Impact:</span> {f.impact}
                           </p>
                         )}
-                        {f.is_auto_generated && (
-                          <div className="flex items-center gap-1 text-xs text-blue-600">
-                            <Bot className="h-3 w-3" /> AI-generated
-                          </div>
-                        )}
+                        <p className="text-[10px] text-muted-foreground">
+                          {new Date(f.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {f.is_auto_generated && (
+                            <span className="ml-2 inline-flex items-center gap-1 text-blue-600">
+                              <Bot className="h-3 w-3" /> AI-generated
+                            </span>
+                          )}
+                        </p>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="sm" onClick={() => setEditingId(f.id)} title="Edit finding">
