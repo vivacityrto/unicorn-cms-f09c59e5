@@ -124,6 +124,13 @@ export default function AuditWorkspaceNew() {
               <SaveIndicator />
             </div>
 
+            {/* Two-pill summary strip: Completion + Risk Rating */}
+            <AuditSummaryPills
+              audit={audit}
+              sections={sections || []}
+              responses={responses || []}
+            />
+
           {/* Tabs */}
           <div className="p-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
