@@ -53,6 +53,7 @@ export interface AuditSection {
   risk_level: string | null;
   section_summary: string | null;
   audit_phase: AuditPhase | null;
+  code_prefix: string | null;
   created_at: string;
 }
 
