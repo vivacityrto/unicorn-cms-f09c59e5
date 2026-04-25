@@ -43,6 +43,7 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
   const { data: actions, createAction, updateAction, deleteAction } = useAuditActions(auditId);
   const { data: findings } = useAuditFindings(auditId);
   const { data: users } = useInternalUsers();
+  const { data: findingsWithoutActions } = useFindingsWithoutActions(auditId);
   const { session } = useAuth();
   const syncActions = useSyncAuditActions();
 
