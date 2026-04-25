@@ -379,9 +379,11 @@ export function useUpdateAudit(auditId: string | undefined) {
   return useMutation({
     mutationFn: async (updates: Partial<ClientAudit>) => {
       if (!auditId) throw new Error('No audit ID');
+      // risk_rating is derived server-side from finding priorities — never write it from the client.
+      const { risk_rating: _rr, ...safeUpdates } = updates as any;
       const { error } = await supabase
         .from('client_audits' as any)
-        .update(updates as any)
+        .update(safeUpdates as any)
         .eq('id', auditId);
       if (error) throw error;
     },
