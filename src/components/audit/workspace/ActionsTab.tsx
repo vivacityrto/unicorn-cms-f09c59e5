@@ -129,6 +129,28 @@ export function ActionsTab({ auditId, auditStatus, subjectTenantId }: ActionsTab
         </Alert>
       )}
 
+      {/* Critical/High findings without actions */}
+      {findingsWithoutActions && findingsWithoutActions.length > 0 && (
+        <Alert className="bg-amber-50 border-amber-200">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-900">
+            <p className="font-medium mb-1">
+              {findingsWithoutActions.length} finding{findingsWithoutActions.length !== 1 ? 's' : ''} at Critical or High priority {findingsWithoutActions.length === 1 ? 'has' : 'have'} no action items assigned.
+            </p>
+            <p className="text-xs mb-2">
+              Every Critical and High finding should have at least one action item before the report is released.
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {findingsWithoutActions.slice(0, 8).map(f => (
+                <span key={f.finding_id} className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-background border">
+                  {f.finding_code || '—'}
+                </span>
+              ))}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Stats */}
       <div className="flex flex-wrap gap-4 text-sm">
         <span>Open: <strong>{statCounts.open}</strong></span>
