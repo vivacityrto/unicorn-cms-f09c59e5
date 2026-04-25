@@ -544,3 +544,37 @@ export function useInternalUsers() {
     },
   });
 }
+
+// ─── Findings without action items (Critical/High) ───
+export interface FindingWithoutAction {
+  finding_id: string;
+  audit_id: string;
+  finding_code: string | null;
+  summary: string;
+  priority: 'critical' | 'high';
+  section_id: string | null;
+  section_title: string | null;
+  section_code_prefix: string | null;
+}
+
+export function useFindingsWithoutActions(auditId: string | undefined) {
+  return useQuery({
+    queryKey: ['audit-findings-without-actions', auditId],
+    enabled: !!auditId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('v_client_audit_findings_without_actions' as any)
+        .select('*')
+        .eq('audit_id', auditId);
+      if (error) throw error;
+      const rows = (data || []) as unknown as FindingWithoutAction[];
+      // Sort: critical first then high, then by finding_code asc
+      return rows.sort((a, b) => {
+        const pa = a.priority === 'critical' ? 1 : 2;
+        const pb = b.priority === 'critical' ? 1 : 2;
+        if (pa !== pb) return pa - pb;
+        return (a.finding_code || '').localeCompare(b.finding_code || '');
+      });
+    },
+  });
+}
