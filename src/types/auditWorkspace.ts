@@ -84,6 +84,8 @@ export interface AuditFinding {
   summary: string;
   detail: string | null;
   standard_reference: string | null;
+  regulatory_reference: string | null;
+  finding_code: string | null;
   impact: string | null;
   priority: 'low' | 'medium' | 'high' | 'critical';
   is_auto_generated: boolean;
