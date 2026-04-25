@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Plus, Trash2, CheckCircle2, RefreshCw, ArrowRight, Wrench, AlertTriangle, Lightbulb, Eye, ChevronDown, ShieldCheck, Pencil } from 'lucide-react';
-import { useAuditActions, useAuditFindings, useInternalUsers } from '@/hooks/useAuditWorkspace';
+import { useAuditActions, useAuditFindings, useInternalUsers, useFindingsWithoutActions } from '@/hooks/useAuditWorkspace';
 import { useSyncAuditActions } from '@/hooks/useAuditActionPlan';
 import { useAuth } from '@/hooks/useAuth';
 import { ACTION_STATUS_OPTIONS, ACTION_TYPE_OPTIONS, DELIVERY_MODEL_OPTIONS, VERIFICATION_STATUS_OPTIONS } from '@/types/auditWorkspace';
