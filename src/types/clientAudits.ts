@@ -94,6 +94,7 @@ export const AUDIT_RISK_LABELS: Record<AuditRisk, string> = {
   medium: 'Medium Risk',
   high: 'High Risk',
   critical: 'Critical Risk',
+  extreme: 'Extreme Risk',
 };
 
 export const CRICOS_INVALID_VALUES = [null, '', 'n/a', 'N/A', 'NA', 'na', '-', 'TBC', 'TBA', 'tbc', 'tba', 'none', 'None', 'nil', 'Nil'];
