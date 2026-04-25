@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useUpdateAudit, useInternalUsers } from '@/hooks/useAuditWorkspace';
 import { EvidenceRequestsSection } from './EvidenceRequestsSection';
+import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import type { ClientAudit, AuditRisk } from '@/types/clientAudits';
 
 interface OverviewTabProps {
