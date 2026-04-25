@@ -266,7 +266,7 @@ export function QuestionCard({
             auditId={auditId}
             sectionId={sectionId}
             responseId={response?.id}
-            defaultStandardRef={`${question.clause} ${question.nc_map || ''}`.trim()}
+            initialValues={{ regulatory_reference: `${question.clause} ${question.nc_map || ''}`.trim() }}
             onSave={(finding) => {
               onAddFinding(finding);
               setShowFindingForm(false);
