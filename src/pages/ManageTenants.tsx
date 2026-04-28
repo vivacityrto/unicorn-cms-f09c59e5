@@ -24,7 +24,7 @@ import { AddTenantDialog } from "@/components/AddTenantDialog";
 import { Unicorn1ImportDialog } from "@/components/Unicorn1ImportDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+
 import { cn } from "@/lib/utils";
 import { CSCQuickAssignDialog } from "@/components/client/CSCQuickAssignDialog";
 
