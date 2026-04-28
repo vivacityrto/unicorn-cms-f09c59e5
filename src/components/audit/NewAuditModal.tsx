@@ -234,6 +234,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
 
   // Determine if audit involves CRICOS
   const auditIsCricos = selectedCard?.is_cricos ?? false;
+  const isDueDiligence = selectedCard?.value === 'due_diligence' || selectedCard?.value === 'due_diligence_combined';
 
   useEffect(() => {
     if (!open) return;
