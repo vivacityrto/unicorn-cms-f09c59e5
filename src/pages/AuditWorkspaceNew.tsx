@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,6 +21,7 @@ import { AuditSummaryPills } from '@/components/audit/workspace/AuditSummaryPill
 import { UnsavedAuditWorkProvider, useUnsavedAuditWork } from '@/components/audit/workspace/UnsavedAuditWorkContext';
 import { Loader2, Check } from 'lucide-react';
 import type { AuditStatus } from '@/types/clientAudits';
+import { supabase } from '@/integrations/supabase/client';
 
 function SaveIndicator() {
   const { status } = useUnsavedAuditWork();
@@ -55,6 +56,20 @@ export default function AuditWorkspaceNew() {
   const statusTransition = useAuditStatusTransition(id);
   const [selectedSection, setSelectedSection] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
+  const [purchaserName, setPurchaserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tid = audit?.subject_tenant_id;
+    if (!tid) return;
+    (supabase as any)
+      .from('tenants')
+      .select('name')
+      .eq('id', tid)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (data?.name) setPurchaserName(data.name);
+      });
+  }, [audit?.subject_tenant_id]);
 
   if (isLoading) {
     return (
@@ -124,6 +139,28 @@ export default function AuditWorkspaceNew() {
               <span className="font-medium truncate">{audit.title || 'Untitled'}</span>
               <SaveIndicator />
             </div>
+
+            {/* Purchaser / Target RTO line for Due Diligence audits */}
+            {(audit.audit_type === 'due_diligence' || audit.audit_type === 'due_diligence_combined') && (
+              <div className="px-4 py-2 border-b bg-muted/30 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                <span>
+                  <span className="text-muted-foreground">Purchaser: </span>
+                  <span className="font-medium">{purchaserName || '—'}</span>
+                </span>
+                <span className="text-muted-foreground">→</span>
+                <span>
+                  <span className="text-muted-foreground">Target RTO: </span>
+                  {audit.snapshot_rto_name ? (
+                    <span className="font-medium">
+                      {audit.snapshot_rto_name}
+                      {audit.snapshot_rto_number ? ` (${audit.snapshot_rto_number})` : ''}
+                    </span>
+                  ) : (
+                    <span className="italic text-muted-foreground">not set — edit snapshot details on the Overview tab to add</span>
+                  )}
+                </span>
+              </div>
+            )}
 
             {/* Two-pill summary strip: Completion + Risk Rating */}
             <AuditSummaryPills

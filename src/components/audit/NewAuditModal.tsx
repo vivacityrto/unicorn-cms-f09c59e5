@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ShieldCheck, ClipboardList, Building2, ArrowRight, ArrowLeft, Loader2, Award, Globe, Info, Link2 } from 'lucide-react';
+import { ShieldCheck, ClipboardList, Building2, ArrowRight, ArrowLeft, Loader2, Award, Globe, Info, Link2, Target } from 'lucide-react';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/modals';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -234,6 +234,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
 
   // Determine if audit involves CRICOS
   const auditIsCricos = selectedCard?.is_cricos ?? false;
+  const isDueDiligence = selectedCard?.value === 'due_diligence' || selectedCard?.value === 'due_diligence_combined';
 
   useEffect(() => {
     if (!open) return;
@@ -317,11 +318,15 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     }
   }, [registrationType, auditTypeCards]);
 
-  // Auto-fetch snapshot from TGA view when tenant selected
+  // Auto-fetch snapshot from TGA view when tenant selected.
+  // For Due Diligence audits the snapshot describes the *Target RTO* (entered separately
+  // via the Target RTO lookup), NOT the Purchaser — so skip the purchaser auto-fill.
   useEffect(() => {
     if (!tenantId) return;
     const t = tenants.find(t => t.id === tenantId);
     if (t) setTenantName(t.name);
+    const isDD = selectedCard?.value === 'due_diligence' || selectedCard?.value === 'due_diligence_combined';
+    if (isDD) return;
     supabase
       .from('v_tga_audit_snapshot' as any)
       .select('*')
@@ -343,7 +348,17 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
           setRtoNumber(t?.rto_id || '');
         }
       });
-  }, [tenantId, tenants]);
+  }, [tenantId, tenants, selectedCard?.value]);
+
+  // Clear snapshot fields when switching into a Due Diligence type so leftover
+  // Purchaser data doesn't masquerade as the Target RTO.
+  useEffect(() => {
+    if (isDueDiligence) {
+      setRtoName(''); setRtoNumber(''); setCricosCode('');
+      setSiteAddress(''); setCeo(''); setPhone(''); setEmail(''); setWebsite('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDueDiligence]);
 
   const resetForm = () => {
     setStep(hasPreselectedType ? 2 : 1);
@@ -470,7 +485,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                 </Alert>
               )}
               <div>
-                <Label>Client *</Label>
+                <Label>{isDueDiligence ? 'Client (Purchaser) *' : 'Client *'}</Label>
                 {isClientLocked ? (
                   <Input value={tenantName} disabled />
                 ) : (
@@ -516,7 +531,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                   </Select>
                 </div>
               </div>
-              {selectedCard?.value !== 'due_diligence' && (
+              {!isDueDiligence && (
                 <div>
                   <Label>Training Products in Scope</Label>
                   <ScopeMultiSelect tenantId={tenantId} value={trainingProductCodes} onChange={setTrainingProductCodes} />
@@ -528,11 +543,48 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
           {step === 3 && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                These details are captured at the time of the audit. They will appear in the final report exactly as shown here.
+                {isDueDiligence
+                  ? <>These details describe the <strong>Target RTO</strong> under review and will appear in the final report exactly as shown here. The client commissioning the audit ({tenantName || 'the Purchaser'}) remains the Purchaser.</>
+                  : 'These details are captured at the time of the audit. They will appear in the final report exactly as shown here.'}
               </p>
+
+              {isDueDiligence && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <h4 className="text-sm font-semibold">Target RTO</h4>
+                    <span className="text-xs text-muted-foreground">— the RTO being assessed for the Purchaser</span>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Lookup by RTO code or name (training.gov.au)</Label>
+                    <TargetRtoCombobox
+                      onSelect={(snap) => {
+                        setRtoName(snap.legal_name || snap.trading_name || '');
+                        setRtoNumber(snap.rto_code || '');
+                        setCricosCode(snap.cricos_codes || '');
+                        setCeo(snap.ceo_name || '');
+                        setSiteAddress(snap.head_office_address || '');
+                        setPhone(snap.contact_phone || '');
+                        setEmail(snap.contact_email || '');
+                        setWebsite(snap.website || '');
+                      }}
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1.5">
+                      If the Target RTO isn't found above, enter the details manually below.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>RTO Name</Label><Input value={rtoName} onChange={e => setRtoName(e.target.value)} /></div>
-                <div><Label>RTO Number</Label><Input value={rtoNumber} onChange={e => setRtoNumber(e.target.value)} /></div>
+                <div>
+                  <Label>{isDueDiligence ? 'Target RTO Name *' : 'RTO Name'}</Label>
+                  <Input value={rtoName} onChange={e => setRtoName(e.target.value)} />
+                  {isDueDiligence && !rtoName.trim() && (
+                    <p className="text-[11px] text-destructive mt-1">Target RTO Name is required for Due Diligence audits.</p>
+                  )}
+                </div>
+                <div><Label>{isDueDiligence ? 'Target RTO Number' : 'RTO Number'}</Label><Input value={rtoNumber} onChange={e => setRtoNumber(e.target.value)} /></div>
                 <div><Label>CRICOS Code</Label><Input value={cricosCode} onChange={e => setCricosCode(e.target.value)} /></div>
                 <div><Label>CEO / Principal</Label><Input value={ceo} onChange={e => setCeo(e.target.value)} /></div>
                 <div className="col-span-2"><Label>Site Address</Label><Input value={siteAddress} onChange={e => setSiteAddress(e.target.value)} /></div>
@@ -608,7 +660,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                 Next <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
-              <Button onClick={handleSave} disabled={createAudit.isPending}>
+              <Button onClick={handleSave} disabled={createAudit.isPending || (isDueDiligence && !rtoName.trim())}>
                 {createAudit.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating…</> : 'Create Audit'}
               </Button>
             )}
@@ -669,6 +721,113 @@ function ClientCombobox({ tenants, value, onSelect, loading }: ClientComboboxPro
                   >
                     <Check className={cn('mr-2 h-4 w-4', value === t.id ? 'opacity-100' : 'opacity-0')} />
                     <span className="truncate">{label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+interface TargetRtoSnapshot {
+  rto_code: string | null;
+  legal_name: string | null;
+  trading_name: string | null;
+  cricos_codes: string | null;
+  ceo_name: string | null;
+  head_office_address: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  website: string | null;
+}
+
+interface TargetRtoComboboxProps {
+  onSelect: (snap: TargetRtoSnapshot) => void;
+}
+
+function TargetRtoCombobox({ onSelect }: TargetRtoComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState<TargetRtoSnapshot[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [picked, setPicked] = useState<TargetRtoSnapshot | null>(null);
+
+  // Debounced search against v_tga_audit_snapshot
+  useEffect(() => {
+    if (!open) return;
+    const term = search.trim();
+    if (term.length < 2) { setResults([]); return; }
+    let cancelled = false;
+    setLoading(true);
+    const handle = setTimeout(async () => {
+      const { data, error } = await (supabase as any)
+        .from('v_tga_audit_snapshot')
+        .select('rto_code, legal_name, trading_name, cricos_codes, ceo_name, head_office_address, contact_phone, contact_email, website')
+        .or(`rto_code.ilike.%${term}%,legal_name.ilike.%${term}%,trading_name.ilike.%${term}%`)
+        .limit(10);
+      if (cancelled) return;
+      if (error) {
+        console.error('[TargetRtoCombobox] search failed', error);
+        setResults([]);
+      } else {
+        setResults((data as TargetRtoSnapshot[]) || []);
+      }
+      setLoading(false);
+    }, 250);
+    return () => { cancelled = true; clearTimeout(handle); };
+  }, [search, open]);
+
+  const label = picked
+    ? `${picked.rto_code || '—'} — ${picked.legal_name || picked.trading_name || ''}`
+    : 'Search RTO code or name…';
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className="truncate">{label}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="e.g. 41020 or Vivacity…"
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList className="max-h-[280px]">
+            {loading && <div className="p-3 text-xs text-muted-foreground">Searching…</div>}
+            {!loading && search.trim().length < 2 && (
+              <div className="p-3 text-xs text-muted-foreground">Type at least 2 characters to search.</div>
+            )}
+            {!loading && search.trim().length >= 2 && results.length === 0 && (
+              <CommandEmpty>No matching RTO found on the national register.</CommandEmpty>
+            )}
+            <CommandGroup>
+              {results.map(r => {
+                const display = `${r.rto_code || '—'} — ${r.legal_name || r.trading_name || 'Unnamed'}`;
+                return (
+                  <CommandItem
+                    key={`${r.rto_code}-${r.legal_name}`}
+                    value={display}
+                    onSelect={() => {
+                      setPicked(r);
+                      onSelect(r);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', picked?.rto_code === r.rto_code ? 'opacity-100' : 'opacity-0')} />
+                    <span className="truncate">{display}</span>
                   </CommandItem>
                 );
               })}

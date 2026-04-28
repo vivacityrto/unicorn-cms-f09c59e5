@@ -180,7 +180,12 @@ export default function AuditsAssessments() {
             {filtered.map(row => (
               <TableRow key={row.id} className="cursor-pointer" onClick={() => navigate(`/audits/${row.id}`)}>
                 <TableCell>
-                  <div className="font-medium">{row.client_name}</div>
+                  <div className="font-medium">
+                    {row.client_name}
+                    {(row.audit_type === 'due_diligence' || row.audit_type === 'due_diligence_combined') && row.snapshot_rto_name && (
+                      <span className="text-muted-foreground font-normal"> → {row.snapshot_rto_name}</span>
+                    )}
+                  </div>
                   {row.rto_number && <div className="text-xs text-muted-foreground">{row.rto_number}</div>}
                 </TableCell>
                 <TableCell><AuditTypeBadge type={row.audit_type} /></TableCell>
