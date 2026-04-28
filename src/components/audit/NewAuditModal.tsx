@@ -559,7 +559,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                     <span className="text-xs text-muted-foreground">— the RTO being assessed for the Purchaser</span>
                   </div>
                   <div>
-                    <Label className="text-xs">Lookup by RTO code or name (training.gov.au)</Label>
+                    <Label className="text-xs">Or search by RTO code or name (training.gov.au)</Label>
                     <TargetRtoCombobox
                       onSelect={(snap) => {
                         setRtoName(snap.legal_name || snap.trading_name || '');
