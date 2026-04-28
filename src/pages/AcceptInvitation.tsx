@@ -277,8 +277,21 @@ unicorn_role: invitationData!.unicornRole,
     );
   }
 
-  if (!invitationData) {
-    return null;
+  if (!invitationData && !validating) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
+        <h2 className="text-xl font-semibold text-center">
+          Invalid or expired invitation
+        </h2>
+        <p className="text-muted-foreground text-center max-w-sm">
+          This invitation link may have expired or already been used.
+          Please contact your administrator for a new invitation.
+        </p>
+        <Button variant="outline" onClick={validateToken}>
+          Try again
+        </Button>
+      </div>
+    );
   }
 
   return (
