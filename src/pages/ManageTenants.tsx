@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantsBasic } from "@/hooks/useTenantsBasic";
+import { useTenantPackages } from "@/hooks/useTenantPackages";
+import { useTenantContacts } from "@/hooks/useTenantContacts";
+import { useCscAssignments } from "@/hooks/useCscAssignments";
+import { useTenantNotes } from "@/hooks/useTenantNotes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
