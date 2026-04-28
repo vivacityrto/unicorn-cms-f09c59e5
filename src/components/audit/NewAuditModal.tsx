@@ -531,7 +531,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                   </Select>
                 </div>
               </div>
-              {selectedCard?.value !== 'due_diligence' && (
+              {!isDueDiligence && (
                 <div>
                   <Label>Training Products in Scope</Label>
                   <ScopeMultiSelect tenantId={tenantId} value={trainingProductCodes} onChange={setTrainingProductCodes} />
