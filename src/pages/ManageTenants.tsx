@@ -75,7 +75,6 @@ interface CSCFilterOption {
 export default function ManageTenants() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [packageFilter, setPackageFilter] = useState<string>("all");
@@ -90,11 +89,6 @@ export default function ManageTenants() {
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [tenantsOffset, setTenantsOffset] = useState(0);
-  const [hasMoreTenants, setHasMoreTenants] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const tenantsRef = useRef<Tenant[]>([]);
   const TENANT_PAGE_SIZE = 100;
   const itemsPerPage = 20;
   const [disconnectDialog, setDisconnectDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
@@ -102,10 +96,10 @@ export default function ManageTenants() {
   const [addTenantDialog, setAddTenantDialog] = useState(false);
   const [cscAssignDialog, setCscAssignDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
   const [u1ImportOpen, setU1ImportOpen] = useState(false);
-  const [stats, setStats] = useState({ total: 0, active: 0, suspended: 0, closed: 0, totalMembers: 0 });
   const { toast } = useToast();
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
 
@@ -113,8 +107,91 @@ export default function ManageTenants() {
   const [accessStatuses, setAccessStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
   const [statusOptions, setStatusOptions] = useState<{ code: number; value: string; description: string }[]>([]);
 
+  // Pagination: track loaded basic-tenant pages and accumulate them.
+  const [page, setPage] = useState(0);
+  const [accumulated, setAccumulated] = useState<any[]>([]);
+
+  const basicQuery = useTenantsBasic({ page, pageSize: TENANT_PAGE_SIZE });
+
+  // Append each new page of basic tenants into the accumulator.
   useEffect(() => {
-    fetchTenants();
+    if (!basicQuery.data) return;
+    setAccumulated(prev => {
+      if (page === 0) return basicQuery.data!;
+      const seen = new Set(prev.map((t: any) => t.id));
+      const additions = basicQuery.data!.filter((t: any) => !seen.has(t.id));
+      return additions.length ? [...prev, ...additions] : prev;
+    });
+  }, [basicQuery.data, page]);
+
+  const tenantIds = useMemo(() => accumulated.map((t: any) => t.id), [accumulated]);
+
+  const packagesQuery = useTenantPackages(tenantIds);
+  const contactsQuery = useTenantContacts(tenantIds);
+  const cscQuery = useCscAssignments(tenantIds);
+  const notesQuery = useTenantNotes(tenantIds);
+
+  // Merge base tenants with the four lookup maps to produce the Tenant[] shape.
+  useEffect(() => {
+    if (accumulated.length === 0) {
+      setTenants([]);
+      return;
+    }
+    const pkgMap = packagesQuery.data || {};
+    const contactsMap = contactsQuery.data || {};
+    const cscMap = cscQuery.data || {};
+    const notesMap = notesQuery.data || {};
+    const merged: Tenant[] = accumulated.map((t: any) => {
+      const pkg = pkgMap[t.id];
+      const contacts = contactsMap[t.id];
+      const csc = cscMap[t.id];
+      const notes = notesMap[t.id];
+      const activePackages = pkg?.all_packages || [];
+      const firstNonKS = activePackages.find(p => !p.name.startsWith('KS'));
+      const firstPackage = firstNonKS || activePackages[0];
+      return {
+        ...t,
+        lifecycle_status: t.lifecycle_status || 'active',
+        access_status: t.access_status || 'enabled',
+        member_count: contacts?.member_count || 0,
+        csc_user_id: csc?.csc_user_id ?? null,
+        csc_name: csc?.csc_name ?? null,
+        csc_avatar: csc?.csc_avatar ?? null,
+        csc_archived: csc?.csc_archived ?? false,
+        package_name: firstPackage?.name || null,
+        package_full_text: firstPackage?.full_text || null,
+        package_id: firstPackage?.id || null,
+        all_packages: activePackages,
+        state: contacts?.state || null,
+        next_renewal_date: pkg?.next_renewal_date || null,
+        last_note_date: notes?.last_note_date || null,
+        last_note_snippet: notes?.last_note_snippet || null,
+        primary_contact_name: contacts?.primary_contact_name || null,
+        hours_used_minutes: pkg?.hours_used_minutes || 0,
+        hours_included_minutes: pkg?.hours_included_minutes || 0,
+        registration_end_date: notes?.registration_end_date || null,
+      } as Tenant;
+    });
+    setTenants(merged);
+  }, [accumulated, packagesQuery.data, contactsQuery.data, cscQuery.data, notesQuery.data]);
+
+  const stats = useMemo(() => {
+    const totalMembers = tenants.reduce((sum, t) => sum + (t.member_count || 0), 0);
+    const active = tenants.filter(t => t.status === "active").length;
+    const suspended = tenants.filter(t => t.status === "inactive" || t.status === "on_hold" || t.status === "disabled").length;
+    const closed = tenants.filter(t => t.status === "terminated" || t.status === "cancelled").length;
+    return { total: tenants.length, active, suspended, closed, totalMembers };
+  }, [tenants]);
+
+  const hasMoreTenants = basicQuery.hasMore;
+  const loadingMore = page > 0 && basicQuery.isFetching;
+
+  const loadMoreTenants = () => {
+    if (loadingMore || !hasMoreTenants) return;
+    setPage(p => p + 1);
+  };
+
+  useEffect(() => {
     fetchPackages();
     fetchCSCOptions();
     checkConnectedTenant();
