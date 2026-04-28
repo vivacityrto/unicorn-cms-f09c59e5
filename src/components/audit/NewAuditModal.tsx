@@ -559,6 +559,36 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                     <span className="text-xs text-muted-foreground">— the RTO being assessed for the Purchaser</span>
                   </div>
                   <div>
+                    <TgaRtoLookupRow
+                      initialCode={rtoNumber}
+                      onResult={(snap: TgaSnapshot) => {
+                        const fields: Array<[string, string, (v: string) => void]> = [
+                          ['rtoName', snap.rto_name, setRtoName],
+                          ['rtoNumber', snap.rto_number, setRtoNumber],
+                          ['siteAddress', snap.site_address, setSiteAddress],
+                          ['phone', snap.phone, setPhone],
+                          ['email', snap.email, setEmail],
+                          ['website', snap.website, setWebsite],
+                          ['ceo', snap.ceo, setCeo],
+                        ];
+                        const current: Record<string, string> = {
+                          rtoName, rtoNumber, siteAddress, phone, email, website, ceo,
+                        };
+                        const conflicts = fields.some(([k, v]) => current[k] && v && current[k] !== v);
+                        const apply = () => fields.forEach(([_, v, setter]) => { if (v) setter(v); });
+                        if (conflicts) {
+                          toast('Overwrite manual entries with TGA data?', {
+                            action: { label: 'Replace', onClick: apply },
+                            cancel: { label: 'Keep mine', onClick: () => {} },
+                          });
+                        } else {
+                          apply();
+                        }
+                      }}
+                      helperText="Fills Target RTO Name, Number, Address, Phone, Email, Website and CEO. CRICOS Code is not included."
+                    />
+                  </div>
+                  <div>
                     <Label className="text-xs">Or search by RTO code or name (training.gov.au)</Label>
                     <TargetRtoCombobox
                       onSelect={(snap) => {
