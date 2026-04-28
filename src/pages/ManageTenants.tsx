@@ -760,7 +760,7 @@ export default function ManageTenants() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTenants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((tenant, index) => {
+                {filteredTenants.map((tenant, index) => {
                   const hasKickStart = (tenant as any)._hasKickStart || tenant.all_packages.some(p => p.name.startsWith('KS'));
                   const nonKSPackages = tenant.all_packages.filter(p => !p.name.startsWith('KS'));
                   const primaryPkg = nonKSPackages[0];
