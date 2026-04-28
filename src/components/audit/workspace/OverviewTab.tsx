@@ -6,10 +6,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Target } from 'lucide-react';
 import { useUpdateAudit, useInternalUsers } from '@/hooks/useAuditWorkspace';
 import { EvidenceRequestsSection } from './EvidenceRequestsSection';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
+import { TgaRtoLookupRow } from '@/components/audit/TgaRtoLookupRow';
+import type { TargetRtoSnapshot } from '@/lib/tga/lookupTargetRto';
+import { toast } from 'sonner';
 import type { ClientAudit, AuditRisk } from '@/types/clientAudits';
 
 interface OverviewTabProps {
