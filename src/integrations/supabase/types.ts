@@ -24981,6 +24981,45 @@ export type Database = {
           },
         ]
       }
+      fk_validation_runs: {
+        Row: {
+          constraint_name: string
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          finished_at: string | null
+          id: number
+          run_id: string
+          started_at: string
+          status: string
+          table_name: string
+        }
+        Insert: {
+          constraint_name: string
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: number
+          run_id?: string
+          started_at?: string
+          status: string
+          table_name: string
+        }
+        Update: {
+          constraint_name?: string
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: number
+          run_id?: string
+          started_at?: string
+          status?: string
+          table_name?: string
+        }
+        Relationships: []
+      }
       generated_documents: {
         Row: {
           client_legacy_id: string | null
@@ -57096,6 +57135,12 @@ export type Database = {
         Args: { p_generated_document_id: string }
         Returns: Json
       }
+      rollback_user_uuid_fk_validation: {
+        Args: { p_run_id?: string }
+        Returns: {
+          reverted: number
+        }[]
+      }
       rpc_add_time_entry: {
         Args: {
           p_client_id: number
@@ -57393,6 +57438,15 @@ export type Database = {
         Returns: Json
       }
       run_seed_compliance_tasks_job: { Args: never; Returns: undefined }
+      run_user_uuid_fk_validation: {
+        Args: never
+        Returns: {
+          failed: number
+          run_id: string
+          succeeded: number
+          total: number
+        }[]
+      }
       save_meeting_minutes: {
         Args: {
           p_change_summary?: string
