@@ -1,4 +1,4 @@
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TenantBasic {
@@ -15,37 +15,24 @@ export interface TenantBasic {
   [key: string]: any;
 }
 
-interface UseTenantsBasicParams {
-  page?: number;
-  pageSize?: number;
-}
-
 /**
- * Fetches a paginated page of tenants ordered by name.
- * Page indices are 0-based.
+ * Fetches ALL tenants ordered by name in a single query.
+ * Pagination is intentionally removed — the dataset is small enough
+ * (well under PostgREST's 1000-row default) that loading it all
+ * gives accurate KPIs/CSC chips without "Load more" UX.
  */
-export function useTenantsBasic({ page = 0, pageSize = 100 }: UseTenantsBasicParams = {}) {
-  const query = useQuery({
-    queryKey: ["tenants", "basic", page, pageSize],
+export function useTenantsBasic() {
+  return useQuery({
+    queryKey: ["tenants", "basic", "all"],
     queryFn: async (): Promise<TenantBasic[]> => {
-      const from = page * pageSize;
-      const to = from + pageSize - 1;
       const { data, error } = await supabase
         .from("tenants")
         .select("*")
         .order("name")
-        .range(from, to);
+        .range(0, 9999);
       if (error) throw error;
       return (data || []) as TenantBasic[];
     },
     staleTime: 5 * 60 * 1000,
-    placeholderData: keepPreviousData,
   });
-
-  const hasMore = (query.data?.length ?? 0) === pageSize;
-
-  return {
-    ...query,
-    hasMore,
-  };
 }
