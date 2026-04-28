@@ -87,15 +87,28 @@ export async function lookupTargetRtoByCode(code: string): Promise<LookupResult>
       body: { rtoId: trimmed },
     });
 
+    // If the function returned a non-2xx, try to read the structured body from the Response context
+    let payload: any = data;
     if (error) {
-      return { ok: false, error: error.message || 'TGA lookup failed.' };
-    }
-    if (!data?.success) {
-      return { ok: false, error: data?.error || `RTO ${trimmed} not found on training.gov.au` };
+      const ctx: any = (error as any).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          payload = await ctx.json();
+        } catch {
+          // ignore parse errors and fall through
+        }
+      }
+      if (!payload) {
+        return { ok: false, error: error.message || 'TGA lookup failed.' };
+      }
     }
 
-    const d = data.data || {};
-    const raw = data.raw_snapshot || {};
+    if (!payload?.success) {
+      return { ok: false, error: payload?.error || `RTO ${trimmed} not found on training.gov.au` };
+    }
+
+    const d = payload.data || {};
+    const raw = payload.raw_snapshot || {};
     const principalContact = pickPrincipalContact(raw.contacts);
 
     const snapshot: TargetRtoSnapshot = {
