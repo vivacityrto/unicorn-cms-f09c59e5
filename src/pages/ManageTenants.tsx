@@ -748,6 +748,15 @@ export default function ManageTenants() {
     );
   };
 
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-muted-foreground">{fetchError}</p>
+        <Button variant="outline" onClick={fetchTenants}>Retry</Button>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="p-6 space-y-6 animate-fade-in">
