@@ -485,7 +485,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                 </Alert>
               )}
               <div>
-                <Label>Client *</Label>
+                <Label>{isDueDiligence ? 'Client (Purchaser) *' : 'Client *'}</Label>
                 {isClientLocked ? (
                   <Input value={tenantName} disabled />
                 ) : (
