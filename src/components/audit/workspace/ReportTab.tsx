@@ -146,6 +146,30 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
           <CardTitle className="text-base">Report Preview</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {(audit.audit_type === 'due_diligence' || audit.audit_type === 'due_diligence_combined') ? (
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Purchaser (commissioning client)</p>
+                <p className="font-medium">{(audit as any).snapshot_purchaser_name || '—'}</p>
+                <p className="text-[11px] text-muted-foreground italic">See header for live purchaser name.</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Target RTO</p>
+                <p className="font-medium">{audit.snapshot_rto_name || '—'}</p>
+                {audit.snapshot_rto_number && (
+                  <p className="text-xs text-muted-foreground">RTO #{audit.snapshot_rto_number}{audit.snapshot_cricos_code ? ` · CRICOS ${audit.snapshot_cricos_code}` : ''}</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Conducted</p>
+                <p>{audit.conducted_at ? new Date(audit.conducted_at).toLocaleDateString('en-AU') : '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Risk Rating</p>
+                {audit.risk_rating ? <AuditRiskBadge risk={audit.risk_rating} /> : <p>—</p>}
+              </div>
+            </div>
+          ) : (
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-xs text-muted-foreground">Client</p>
