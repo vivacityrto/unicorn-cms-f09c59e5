@@ -36888,6 +36888,8 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string | null
+          email: string | null
+          error_message: string | null
           first_name: string
           graph_transcript: Json | null
           id: number
@@ -36911,6 +36913,8 @@ export type Database = {
         Insert: {
           created_at?: string
           display_name?: string | null
+          email?: string | null
+          error_message?: string | null
           first_name: string
           graph_transcript?: Json | null
           id?: number
@@ -36934,6 +36938,8 @@ export type Database = {
         Update: {
           created_at?: string
           display_name?: string | null
+          email?: string | null
+          error_message?: string | null
           first_name?: string
           graph_transcript?: Json | null
           id?: number
@@ -48179,6 +48185,39 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
         ]
+      }
+      user_uuid_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          created_at: string
+          email: string | null
+          id: number
+          new_uuid: string
+          old_uuid: string
+          reason: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string
+          email?: string | null
+          id?: number
+          new_uuid: string
+          old_uuid: string
+          reason: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string
+          email?: string | null
+          id?: number
+          new_uuid?: string
+          old_uuid?: string
+          reason?: string
+        }
+        Relationships: []
       }
       user_win_banner_state: {
         Row: {
