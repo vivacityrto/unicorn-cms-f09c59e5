@@ -350,6 +350,16 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
       });
   }, [tenantId, tenants, selectedCard?.value]);
 
+  // Clear snapshot fields when switching into a Due Diligence type so leftover
+  // Purchaser data doesn't masquerade as the Target RTO.
+  useEffect(() => {
+    if (isDueDiligence) {
+      setRtoName(''); setRtoNumber(''); setCricosCode('');
+      setSiteAddress(''); setCeo(''); setPhone(''); setEmail(''); setWebsite('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDueDiligence]);
+
   const resetForm = () => {
     setStep(hasPreselectedType ? 2 : 1);
     setSelectedCard(null);
