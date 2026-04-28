@@ -1109,10 +1109,10 @@ export default function ManageTenants() {
       </AlertDialog>
 
       {/* Add Tenant Dialog */}
-      <AddTenantDialog open={addTenantDialog} onOpenChange={setAddTenantDialog} onSuccess={fetchTenants} />
+      <AddTenantDialog open={addTenantDialog} onOpenChange={setAddTenantDialog} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tenants'] })} />
 
       {/* Unicorn 1 Import Dialog */}
-      <Unicorn1ImportDialog open={u1ImportOpen} onOpenChange={setU1ImportOpen} onSuccess={fetchTenants} />
+      <Unicorn1ImportDialog open={u1ImportOpen} onOpenChange={setU1ImportOpen} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tenants'] })} />
 
       {/* CSC Quick Assign Dialog */}
       {cscAssignDialog.tenant && (
@@ -1122,7 +1122,7 @@ export default function ManageTenants() {
           tenantId={cscAssignDialog.tenant.id}
           tenantName={cscAssignDialog.tenant.name}
           canRemove={isSuperAdmin}
-          onSuccess={fetchTenants}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tenants'] })}
         />
       )}
     </div>
