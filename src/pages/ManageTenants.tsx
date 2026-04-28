@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +84,12 @@ export default function ManageTenants() {
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [tenantsOffset, setTenantsOffset] = useState(0);
+  const [hasMoreTenants, setHasMoreTenants] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const tenantsRef = useRef<Tenant[]>([]);
+  const TENANT_PAGE_SIZE = 100;
   const itemsPerPage = 20;
   const [disconnectDialog, setDisconnectDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
   const [connectAllDialog, setConnectAllDialog] = useState(false);
@@ -167,257 +173,356 @@ export default function ManageTenants() {
     setCurrentPage(1);
   }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter]);
 
+  // Enrich a page of raw tenants with all derived data (packages, csc, members, notes, time, reg end, etc).
+  // Used by both initial fetch and "Load more" pagination.
+  const enrichTenants = async (tenantsData: any[]) => {
+    const tenantIds = tenantsData.map(t => t.id);
+
+    const { data: packageInstancesData } = await supabase
+      .from("package_instances")
+      .select("tenant_id, package_id, next_renewal_date")
+      .eq("is_complete", false)
+      .in("tenant_id", tenantIds);
+
+    const packageIds = [...new Set((packageInstancesData || []).map(pi => pi.package_id).filter(Boolean))];
+
+    const { data: packagesData } = packageIds.length > 0
+      ? await supabase
+          .from("packages")
+          .select("id, name, full_text, slug, package_type")
+          .in("id", packageIds)
+      : { data: [] as any[] };
+
+    const packageLookup = (packagesData || []).reduce((acc, pkg) => {
+      acc[pkg.id] = { name: pkg.name, full_text: pkg.full_text, slug: pkg.slug, package_type: pkg.package_type };
+      return acc;
+    }, {} as Record<number, { name: string; full_text: string | null; slug: string | null; package_type: string | null }>);
+
+    const tenantPackagesMap = (packageInstancesData || []).reduce((acc, pi) => {
+      if (!acc[pi.tenant_id]) acc[pi.tenant_id] = [];
+      if (pi.package_id && packageLookup[pi.package_id]) {
+        const pkg = packageLookup[pi.package_id];
+        if (!acc[pi.tenant_id].some((p: TenantPackageInfo) => p.id === pi.package_id)) {
+          acc[pi.tenant_id].push({
+            id: pi.package_id,
+            name: pkg.name,
+            full_text: pkg.full_text,
+            slug: pkg.slug
+          });
+        }
+      }
+      return acc;
+    }, {} as Record<number, TenantPackageInfo[]>);
+
+    const tenantRenewalMap = (packageInstancesData || []).reduce((acc, pi) => {
+      if (pi.next_renewal_date && pi.package_id) {
+        const pkg = packageLookup[pi.package_id];
+        if (pkg?.package_type === 'regulatory_submission') return acc;
+        if (!acc[pi.tenant_id] || pi.next_renewal_date < acc[pi.tenant_id]) {
+          acc[pi.tenant_id] = pi.next_renewal_date;
+        }
+      }
+      return acc;
+    }, {} as Record<number, string>);
+
+    const { data: memberCounts } = await supabase.from("tenant_users").select("tenant_id").in("tenant_id", tenantIds);
+    const memberCountMap = (memberCounts || []).reduce((acc, user) => {
+      acc[user.tenant_id] = (acc[user.tenant_id] || 0) + 1;
+      return acc;
+    }, {} as Record<number, number>);
+
+    const { data: cscAssignments } = await supabase
+      .from("tenant_csc_assignments")
+      .select("tenant_id, csc_user_id")
+      .in("tenant_id", tenantIds)
+      .eq("is_primary", true);
+    const cscMap = (cscAssignments || []).reduce((acc, assignment) => {
+      acc[assignment.tenant_id] = assignment.csc_user_id;
+      return acc;
+    }, {} as Record<number, string>);
+
+    const userUuids = Object.values(cscMap).filter(Boolean);
+    const { data: usersData } = userUuids.length > 0
+      ? await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url, archived").in("user_uuid", userUuids)
+      : { data: [] as any[] };
+    const userDataMap = (usersData || []).reduce((acc, user) => {
+      acc[user.user_uuid] = {
+        name: `${user.first_name} ${user.last_name}`,
+        avatar: user.avatar_url,
+        archived: user.archived || false
+      };
+      return acc;
+    }, {} as Record<string, { name: string; avatar: string | null; archived: boolean }>);
+
+    const { data: adminUsersData } = await supabase.from("users").select("tenant_id, state").eq("unicorn_role", "Admin").in("tenant_id", tenantIds);
+    const stateCodes = [...new Set(adminUsersData?.map(u => u.state).filter(Boolean) || [])];
+    const { data: statesData } = stateCodes.length > 0
+      ? await supabase.from("dd_states" as any).select("legacy_code, label").in("legacy_code", stateCodes)
+      : { data: [] as any[] };
+    const stateDescMap = (statesData || []).reduce((acc, state: any) => {
+      acc[state.legacy_code] = state.label;
+      return acc;
+    }, {} as Record<number, string>);
+
+    const stateMap = (adminUsersData || []).reduce((acc, user) => {
+      if (!acc[user.tenant_id] && user.state) {
+        acc[user.tenant_id] = stateDescMap[user.state] || "";
+      }
+      return acc;
+    }, {} as Record<number, string | null>);
+
+    const { data: primaryContactsData } = await supabase
+      .from("tenant_users")
+      .select("tenant_id, user_id")
+      .in("tenant_id", tenantIds)
+      .eq("primary_contact", true)
+      .order("created_at", { ascending: true });
+
+    const primaryContactUserIds = [...new Set((primaryContactsData || []).map(pc => pc.user_id).filter(Boolean))];
+    const { data: primaryContactUsersData } = primaryContactUserIds.length > 0
+      ? await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", primaryContactUserIds)
+      : { data: [] };
+    const primaryContactUserMap = (primaryContactUsersData || []).reduce((acc, u) => {
+      acc[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || null;
+      return acc;
+    }, {} as Record<string, string | null>);
+
+    const primaryContactMap = (primaryContactsData || []).reduce((acc, pc) => {
+      if (!acc[pc.tenant_id]) {
+        acc[pc.tenant_id] = primaryContactUserMap[pc.user_id] || null;
+      }
+      return acc;
+    }, {} as Record<number, string | null>);
+
+    const lastNoteMap: Record<number, { date: string; snippet: string }> = {};
+    const noteBatchSize = 50;
+    for (let i = 0; i < tenantIds.length; i += noteBatchSize) {
+      const batch = tenantIds.slice(i, i + noteBatchSize);
+      const [notesRes, clientNotesRes] = await Promise.all([
+        supabase
+          .from("notes")
+          .select("tenant_id, created_at, title, note_details")
+          .in("tenant_id", batch)
+          .order("created_at", { ascending: false })
+          .limit(batch.length * 2),
+        supabase
+          .from("client_notes")
+          .select("tenant_id, created_at, title, content")
+          .in("tenant_id", batch)
+          .order("created_at", { ascending: false })
+          .limit(batch.length * 2),
+      ]);
+      const allNotes = [
+        ...(notesRes.data || []).map((n: any) => ({ tenant_id: n.tenant_id, created_at: n.created_at, snippet: (n.title || n.note_details || '').substring(0, 50) })),
+        ...(clientNotesRes.data || []).map((n: any) => ({ tenant_id: n.tenant_id, created_at: n.created_at, snippet: (n.title || n.content || '').substring(0, 50) })),
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      allNotes.forEach(note => {
+        if (!lastNoteMap[note.tenant_id]) {
+          lastNoteMap[note.tenant_id] = { date: note.created_at, snippet: note.snippet };
+        }
+      });
+    }
+
+    const { data: piIncludedData } = await (supabase as any)
+      .from('package_instances')
+      .select('id, tenant_id, included_minutes, hours_included')
+      .eq('is_complete', false)
+      .is('parent_instance_id', null)
+      .in('tenant_id', tenantIds);
+
+    const activeInstanceIds = (piIncludedData || []).map(pi => pi.id);
+
+    const tenantIncludedMinutesMap = (piIncludedData || []).reduce((acc, pi) => {
+      const mins = pi.included_minutes || ((pi.hours_included || 0) * 60);
+      acc[pi.tenant_id] = (acc[pi.tenant_id] || 0) + mins;
+      return acc;
+    }, {} as Record<number, number>);
+
+    let tenantTimeUsedMap: Record<number, number> = {};
+    if (activeInstanceIds.length > 0) {
+      const { data: burndownData } = await supabase
+        .from('v_package_burndown')
+        .select('tenant_id, used_minutes, included_minutes')
+        .in('tenant_id', tenantIds)
+        .in('package_instance_id', activeInstanceIds);
+      (burndownData || []).forEach((r: any) => {
+        tenantTimeUsedMap[r.tenant_id] = (tenantTimeUsedMap[r.tenant_id] || 0) + (r.used_minutes || 0);
+      });
+      const tenantIncludedFromBurndown: Record<number, number> = {};
+      (burndownData || []).forEach((r: any) => {
+        tenantIncludedFromBurndown[r.tenant_id] = (tenantIncludedFromBurndown[r.tenant_id] || 0) + (r.included_minutes || 0);
+      });
+      Object.keys(tenantIncludedFromBurndown).forEach(tid => {
+        tenantIncludedMinutesMap[Number(tid)] = tenantIncludedFromBurndown[Number(tid)];
+      });
+    }
+
+    const { data: regEndData } = await supabase
+      .from('tga_rto_summary')
+      .select('tenant_id, registration_end_date')
+      .in('tenant_id', tenantIds)
+      .not('registration_end_date', 'is', null);
+    const regEndMap = (regEndData || []).reduce((acc, r) => {
+      acc[(r as any).tenant_id] = (r as any).registration_end_date;
+      return acc;
+    }, {} as Record<number, string>);
+
+    const enriched = tenantsData.map(tenant => {
+      const activePackages = tenantPackagesMap[tenant.id] || [];
+      const firstNonKS = activePackages.find((p: TenantPackageInfo) => !p.name.startsWith('KS'));
+      const firstPackage = firstNonKS || activePackages[0];
+      const cscUserId = cscMap[tenant.id];
+      const hasKickStart = activePackages.some((p: TenantPackageInfo) => p.name.startsWith('KS'));
+      return {
+        ...tenant,
+        lifecycle_status: tenant.lifecycle_status || 'active',
+        access_status: tenant.access_status || 'enabled',
+        member_count: memberCountMap[tenant.id] || 0,
+        csc_user_id: cscUserId || null,
+        csc_name: cscUserId ? userDataMap[cscUserId]?.name : null,
+        csc_avatar: cscUserId ? userDataMap[cscUserId]?.avatar : null,
+        csc_archived: cscUserId ? userDataMap[cscUserId]?.archived : false,
+        package_name: firstPackage?.name || null,
+        package_full_text: firstPackage?.full_text || null,
+        package_id: firstPackage?.id || null,
+        all_packages: activePackages,
+        state: stateMap[tenant.id] || null,
+        next_renewal_date: tenantRenewalMap[tenant.id] || null,
+        last_note_date: lastNoteMap[tenant.id]?.date || null,
+        last_note_snippet: lastNoteMap[tenant.id]?.snippet || null,
+        primary_contact_name: primaryContactMap[tenant.id] || null,
+        hours_used_minutes: tenantTimeUsedMap[tenant.id] || 0,
+        hours_included_minutes: tenantIncludedMinutesMap[tenant.id] || 0,
+        registration_end_date: regEndMap[tenant.id] || null,
+        _hasKickStart: hasKickStart,
+      } as any;
+    });
+
+    return enriched;
+  };
+
+  const computeStats = (rows: any[]) => {
+    const totalMembers = rows.reduce((sum, t) => sum + (t.member_count || 0), 0);
+    const active = rows.filter(t => t.status === "active").length;
+    const suspended = rows.filter(t => t.status === "inactive" || t.status === "on_hold" || t.status === "disabled").length;
+    const closed = rows.filter(t => t.status === "terminated" || t.status === "cancelled").length;
+    return { total: rows.length, active, suspended, closed, totalMembers };
+  };
+
   const fetchTenants = async () => {
     try {
+      setFetchError(null);
       setLoading(true);
-      const { data: tenantsData, error: tenantsError } = await supabase.from("tenants").select("*").order("name");
+      const { data: tenantsData, error: tenantsError } = await supabase
+        .from("tenants")
+        .select("*")
+        .order("name")
+        .range(0, TENANT_PAGE_SIZE - 1);
       if (tenantsError) throw tenantsError;
       if (!tenantsData || tenantsData.length === 0) {
         setTenants([]);
         setStats({ total: 0, active: 0, suspended: 0, closed: 0, totalMembers: 0 });
-        setLoading(false);
+        setTenantsOffset(0);
+        setHasMoreTenants(false);
         return;
       }
-      const tenantIds = tenantsData.map(t => t.id);
 
-      const { data: packageInstancesData } = await supabase
-        .from("package_instances")
-        .select("tenant_id, package_id, next_renewal_date")
-        .eq("is_complete", false)
-        .in("tenant_id", tenantIds);
+      const enriched = await enrichTenants(tenantsData);
+      setTenants(enriched);
+      setStats(computeStats(enriched));
+      setTenantsOffset(tenantsData.length);
+      setHasMoreTenants(tenantsData.length === TENANT_PAGE_SIZE);
+    } catch (error: any) {
+      console.error("fetchTenants failed:", error);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setFetchError("Failed to load clients. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      const packageIds = [...new Set((packageInstancesData || []).map(pi => pi.package_id).filter(Boolean))];
-      
-      const { data: packagesData } = await supabase
-        .from("packages")
-        .select("id, name, full_text, slug, package_type")
-        .in("id", packageIds);
+  const loadMoreTenants = async () => {
+    if (loadingMore || !hasMoreTenants) return;
+    try {
+      setLoadingMore(true);
+      const from = tenantsOffset;
+      const to = tenantsOffset + TENANT_PAGE_SIZE - 1;
+      const { data: nextPage, error } = await supabase
+        .from("tenants")
+        .select("*")
+        .order("name")
+        .range(from, to);
+      if (error) throw error;
+      if (!nextPage || nextPage.length === 0) {
+        setHasMoreTenants(false);
+        return;
+      }
+      const enriched = await enrichTenants(nextPage);
+      setTenants(prev => {
+        const merged = [...prev, ...enriched];
+        setStats(computeStats(merged));
+        return merged;
+      });
+      setTenantsOffset(prev => prev + nextPage.length);
+      setHasMoreTenants(nextPage.length === TENANT_PAGE_SIZE);
+    } catch (error: any) {
+      console.error("loadMoreTenants failed:", error);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
-      const packageLookup = (packagesData || []).reduce((acc, pkg) => {
-        acc[pkg.id] = { name: pkg.name, full_text: pkg.full_text, slug: pkg.slug, package_type: pkg.package_type };
-        return acc;
-      }, {} as Record<number, { name: string; full_text: string | null; slug: string | null; package_type: string | null }>);
+  // Lightweight refresh used by the realtime CSC channel — only the two CSC queries,
+  // merged into existing tenants state without re-running the full pipeline.
+  const fetchCscAssignmentsOnly = async () => {
+    try {
+      const current = tenantsRef.current;
+      if (!current || current.length === 0) return;
+      const tenantIds = current.map(t => t.id);
 
-      const tenantPackagesMap = (packageInstancesData || []).reduce((acc, pi) => {
-        if (!acc[pi.tenant_id]) acc[pi.tenant_id] = [];
-        if (pi.package_id && packageLookup[pi.package_id]) {
-          const pkg = packageLookup[pi.package_id];
-          // Avoid duplicates (multiple instances of same package)
-          if (!acc[pi.tenant_id].some((p: TenantPackageInfo) => p.id === pi.package_id)) {
-            acc[pi.tenant_id].push({
-              id: pi.package_id,
-              name: pkg.name,
-              full_text: pkg.full_text,
-              slug: pkg.slug
-            });
-          }
-        }
-        return acc;
-      }, {} as Record<number, TenantPackageInfo[]>);
-
-      // Build renewal date map: earliest next_renewal_date per tenant (excluding KickStart packages)
-      const tenantRenewalMap = (packageInstancesData || []).reduce((acc, pi) => {
-        if (pi.next_renewal_date && pi.package_id) {
-          const pkg = packageLookup[pi.package_id];
-          // Skip KickStart (regulatory_submission) packages for anniversary filtering
-          if (pkg?.package_type === 'regulatory_submission') return acc;
-          if (!acc[pi.tenant_id] || pi.next_renewal_date < acc[pi.tenant_id]) {
-            acc[pi.tenant_id] = pi.next_renewal_date;
-          }
-        }
-        return acc;
-      }, {} as Record<number, string>);
-
-      const { data: memberCounts } = await supabase.from("tenant_users").select("tenant_id").in("tenant_id", tenantIds);
-      const memberCountMap = (memberCounts || []).reduce((acc, user) => {
-        acc[user.tenant_id] = (acc[user.tenant_id] || 0) + 1;
-        return acc;
-      }, {} as Record<number, number>);
-
-      const { data: cscAssignments } = await supabase
+      const { data: cscAssignments, error: cscErr } = await supabase
         .from("tenant_csc_assignments")
         .select("tenant_id, csc_user_id")
         .in("tenant_id", tenantIds)
         .eq("is_primary", true);
+      if (cscErr) throw cscErr;
+
       const cscMap = (cscAssignments || []).reduce((acc, assignment) => {
         acc[assignment.tenant_id] = assignment.csc_user_id;
         return acc;
       }, {} as Record<number, string>);
 
       const userUuids = Object.values(cscMap).filter(Boolean);
-      const { data: usersData } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url, archived").in("user_uuid", userUuids);
+      const { data: usersData } = userUuids.length > 0
+        ? await supabase
+            .from("users")
+            .select("user_uuid, first_name, last_name, avatar_url, archived")
+            .in("user_uuid", userUuids)
+        : { data: [] as any[] };
+
       const userDataMap = (usersData || []).reduce((acc, user) => {
         acc[user.user_uuid] = {
           name: `${user.first_name} ${user.last_name}`,
           avatar: user.avatar_url,
-          archived: user.archived || false
+          archived: user.archived || false,
         };
         return acc;
       }, {} as Record<string, { name: string; avatar: string | null; archived: boolean }>);
 
-      const { data: adminUsersData } = await supabase.from("users").select("tenant_id, state").eq("unicorn_role", "Admin").in("tenant_id", tenantIds);
-      const stateCodes = [...new Set(adminUsersData?.map(u => u.state).filter(Boolean) || [])];
-      const { data: statesData } = await supabase.from("dd_states" as any).select("legacy_code, label").in("legacy_code", stateCodes);
-      const stateDescMap = (statesData || []).reduce((acc, state: any) => {
-        acc[state.legacy_code] = state.label;
-        return acc;
-      }, {} as Record<number, string>);
-
-      const stateMap = (adminUsersData || []).reduce((acc, user) => {
-        if (!acc[user.tenant_id] && user.state) {
-          acc[user.tenant_id] = stateDescMap[user.state] || "";
-        }
-        return acc;
-      }, {} as Record<number, string | null>);
-
-      // Fetch primary contacts per tenant
-      const { data: primaryContactsData } = await supabase
-        .from("tenant_users")
-        .select("tenant_id, user_id")
-        .in("tenant_id", tenantIds)
-        .eq("primary_contact", true)
-        .order("created_at", { ascending: true });
-
-      const primaryContactUserIds = [...new Set((primaryContactsData || []).map(pc => pc.user_id).filter(Boolean))];
-      const { data: primaryContactUsersData } = primaryContactUserIds.length > 0
-        ? await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", primaryContactUserIds)
-        : { data: [] };
-      const primaryContactUserMap = (primaryContactUsersData || []).reduce((acc, u) => {
-        acc[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || null;
-        return acc;
-      }, {} as Record<string, string | null>);
-
-      // Build tenant -> primary contact name map (first primary contact per tenant)
-      const primaryContactMap = (primaryContactsData || []).reduce((acc, pc) => {
-        if (!acc[pc.tenant_id]) {
-          acc[pc.tenant_id] = primaryContactUserMap[pc.user_id] || null;
-        }
-        return acc;
-      }, {} as Record<number, string | null>);
-
-      // Fetch last note per tenant from both 'notes' and 'client_notes' tables
-      const lastNoteMap: Record<number, { date: string; snippet: string }> = {};
-      const noteBatchSize = 50;
-      for (let i = 0; i < tenantIds.length; i += noteBatchSize) {
-        const batch = tenantIds.slice(i, i + noteBatchSize);
-        // Fetch from main 'notes' table (tenant & package notes) and 'client_notes' in parallel
-        const [notesRes, clientNotesRes] = await Promise.all([
-          supabase
-            .from("notes")
-            .select("tenant_id, created_at, title, note_details")
-            .in("tenant_id", batch)
-            .order("created_at", { ascending: false })
-            .limit(batch.length * 2),
-          supabase
-            .from("client_notes")
-            .select("tenant_id, created_at, title, content")
-            .in("tenant_id", batch)
-            .order("created_at", { ascending: false })
-            .limit(batch.length * 2),
-        ]);
-        // Merge both sources, picking the most recent per tenant
-        const allNotes = [
-          ...(notesRes.data || []).map((n: any) => ({ tenant_id: n.tenant_id, created_at: n.created_at, snippet: (n.title || n.note_details || '').substring(0, 50) })),
-          ...(clientNotesRes.data || []).map((n: any) => ({ tenant_id: n.tenant_id, created_at: n.created_at, snippet: (n.title || n.content || '').substring(0, 50) })),
-        ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        allNotes.forEach(note => {
-          if (!lastNoteMap[note.tenant_id]) {
-            lastNoteMap[note.tenant_id] = { date: note.created_at, snippet: note.snippet };
-          }
-        });
-      }
-
-      // Fetch included_minutes and IDs from active package_instances (exclude children)
-      const { data: piIncludedData } = await (supabase as any)
-        .from('package_instances')
-        .select('id, tenant_id, included_minutes, hours_included')
-        .eq('is_complete', false)
-        .is('parent_instance_id', null)
-        .in('tenant_id', tenantIds);
-
-      const activeInstanceIds = (piIncludedData || []).map(pi => pi.id);
-
-      const tenantIncludedMinutesMap = (piIncludedData || []).reduce((acc, pi) => {
-        const mins = pi.included_minutes || ((pi.hours_included || 0) * 60);
-        acc[pi.tenant_id] = (acc[pi.tenant_id] || 0) + mins;
-        return acc;
-      }, {} as Record<number, number>);
-
-      // Aggregate renewal-period-scoped usage from v_package_burndown
-      let tenantTimeUsedMap: Record<number, number> = {};
-      if (activeInstanceIds.length > 0) {
-        const { data: burndownData } = await supabase
-          .from('v_package_burndown')
-          .select('tenant_id, used_minutes, included_minutes')
-          .in('tenant_id', tenantIds)
-          .in('package_instance_id', activeInstanceIds);
-        (burndownData || []).forEach((r: any) => {
-          tenantTimeUsedMap[r.tenant_id] = (tenantTimeUsedMap[r.tenant_id] || 0) + (r.used_minutes || 0);
-        });
-        // Also override included from burndown (which accounts for hours_added)
-        const tenantIncludedFromBurndown: Record<number, number> = {};
-        (burndownData || []).forEach((r: any) => {
-          tenantIncludedFromBurndown[r.tenant_id] = (tenantIncludedFromBurndown[r.tenant_id] || 0) + (r.included_minutes || 0);
-        });
-        // Use burndown included if available (more accurate, includes hours_added)
-        Object.keys(tenantIncludedFromBurndown).forEach(tid => {
-          tenantIncludedMinutesMap[Number(tid)] = tenantIncludedFromBurndown[Number(tid)];
-        });
-      }
-
-      // Fetch registration end dates from tga_rto_summary
-      const { data: regEndData } = await supabase
-        .from('tga_rto_summary')
-        .select('tenant_id, registration_end_date')
-        .in('tenant_id', tenantIds)
-        .not('registration_end_date', 'is', null);
-      const regEndMap = (regEndData || []).reduce((acc, r) => {
-        acc[(r as any).tenant_id] = (r as any).registration_end_date;
-        return acc;
-      }, {} as Record<number, string>);
-
-      const tenantsWithCounts = tenantsData.map(tenant => {
-        const activePackages = tenantPackagesMap[tenant.id] || [];
-        const firstNonKS = activePackages.find((p: TenantPackageInfo) => !p.name.startsWith('KS'));
-        const firstPackage = firstNonKS || activePackages[0];
-        const cscUserId = cscMap[tenant.id];
-        const hasKickStart = activePackages.some((p: TenantPackageInfo) => p.name.startsWith('KS'));
+      setTenants(prev => prev.map(t => {
+        const cscUserId = cscMap[t.id] ?? null;
+        const u = cscUserId ? userDataMap[cscUserId] : null;
         return {
-          ...tenant,
-          lifecycle_status: tenant.lifecycle_status || 'active',
-          access_status: tenant.access_status || 'enabled',
-          member_count: memberCountMap[tenant.id] || 0,
-          csc_user_id: cscUserId || null,
-          csc_name: cscUserId ? userDataMap[cscUserId]?.name : null,
-          csc_avatar: cscUserId ? userDataMap[cscUserId]?.avatar : null,
-          csc_archived: cscUserId ? userDataMap[cscUserId]?.archived : false,
-          package_name: firstPackage?.name || null,
-          package_full_text: firstPackage?.full_text || null,
-          package_id: firstPackage?.id || null,
-          all_packages: activePackages,
-          state: stateMap[tenant.id] || null,
-          next_renewal_date: tenantRenewalMap[tenant.id] || null,
-          last_note_date: lastNoteMap[tenant.id]?.date || null,
-          last_note_snippet: lastNoteMap[tenant.id]?.snippet || null,
-          primary_contact_name: primaryContactMap[tenant.id] || null,
-          hours_used_minutes: tenantTimeUsedMap[tenant.id] || 0,
-          hours_included_minutes: tenantIncludedMinutesMap[tenant.id] || 0,
-          registration_end_date: regEndMap[tenant.id] || null,
-          // Override name prefix: if they have a KS, prepend KS indicator
-          _hasKickStart: hasKickStart,
+          ...t,
+          csc_user_id: cscUserId,
+          csc_name: u?.name ?? null,
+          csc_avatar: u?.avatar ?? null,
+          csc_archived: u?.archived ?? false,
         } as any;
-      });
-      setTenants(tenantsWithCounts);
-
-      const totalMembers = tenantsWithCounts.reduce((sum, t) => sum + t.member_count, 0);
-      const active = tenantsWithCounts.filter(t => t.status === "active").length;
-      const suspended = tenantsWithCounts.filter(t => t.status === "inactive" || t.status === "on_hold" || t.status === "disabled").length;
-      const closed = tenantsWithCounts.filter(t => t.status === "terminated" || t.status === "cancelled").length;
-      setStats({ total: tenantsWithCounts.length, active, suspended, closed, totalMembers });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
+      }));
+    } catch (err) {
+      console.error("fetchCscAssignmentsOnly failed:", err);
     }
   };
 
@@ -467,10 +572,15 @@ export default function ManageTenants() {
     return () => { supabase.removeChannel(packagesChannel); };
   }, []);
 
+  // Keep ref in sync so realtime handler can read latest tenants without resubscribing.
+  useEffect(() => {
+    tenantsRef.current = tenants;
+  }, [tenants]);
+
   useEffect(() => {
     const cscChannel = supabase
       .channel('csc-assignments-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenant_csc_assignments' }, () => { fetchTenants(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenant_csc_assignments' }, () => { fetchCscAssignmentsOnly(); })
       .subscribe();
     return () => { supabase.removeChannel(cscChannel); };
   }, []);
@@ -637,6 +747,15 @@ export default function ManageTenants() {
       </Badge>
     );
   };
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-muted-foreground">{fetchError}</p>
+        <Button variant="outline" onClick={fetchTenants}>Retry</Button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -1203,6 +1322,14 @@ export default function ManageTenants() {
               </PaginationItem>
             </PaginationContent>
           </Pagination>
+        </div>
+      )}
+
+      {hasMoreTenants && (
+        <div className="flex justify-center pt-4">
+          <Button variant="outline" onClick={loadMoreTenants} disabled={loadingMore}>
+            {loadingMore ? "Loading…" : "Load more"}
+          </Button>
         </div>
       )}
 

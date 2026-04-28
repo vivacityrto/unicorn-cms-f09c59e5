@@ -1,66 +1,110 @@
-# Due Diligence — Combined: Target RTO Snapshot Relabel + TGA Lookup by RTO Number
+## Patch plan — `src/pages/ManageTenants.tsx` only
 
-This plan integrates the two prior agreed changes into a single implementation pass.
+Scope is strictly limited to this one file. No React Query migration, no schema/RLS changes, no other files touched.
 
-## Goals
-1. Make it visually obvious on the Overview tab and final Report that the snapshot is the **Target RTO** (not the Purchaser) for Due Diligence audits.
-2. Let auditors auto-fill the Target RTO snapshot from training.gov.au by typing the RTO Number and clicking **Lookup TGA**.
+### Heads-up on Problem 1 (loading state)
 
-## Reuse (no new infrastructure)
-- Edge function `tga-rto-preview` (already deployed) → returns legal_name, ABN, web_address, registration dates, and a full `raw_snapshot` with TGA `addresses[]` and `contacts[]`.
-- Existing `TargetRtoCombobox` (name search) stays as-is.
+The current `fetchTenants()` (lines 170–422) **already** has the exact `try/catch/finally` shape requested, with `setLoading(false)` in the `finally` block (line 419–421). The only quirk is a redundant `setLoading(false)` on the early-return branch at line 178 — which is harmless because `finally` runs on early return anyway.
 
-## Changes
+Action: **remove** the redundant line 178 `setLoading(false)` so the finally is the single source of truth, and keep the existing toast in `catch`. No other change to the loading flow is needed.
 
-### 1. New helper — `src/lib/tga/lookupTargetRto.ts`
-Single async `lookupTargetRtoByCode(code: string)`:
-- Validates `^\d{4,6}$`.
-- Calls `supabase.functions.invoke('tga-rto-preview', { body: { rtoId: code } })`.
-- Maps response into the snapshot shape:
-  - `rto_name` ← `data.legal_name` (fallback `data.trading_name`)
-  - `rto_number` ← `data.code`
-  - `website` ← `data.web_address`
-  - `site_address` ← principal/head-office address from `raw_snapshot.addresses` (prefer `type === "Principal"`, else first current; format `street1, suburb STATE postcode`)
-  - `phone` / `email` ← from `raw_snapshot.contacts` (prefer Principal Executive Officer)
-  - `ceo` ← name of Principal Executive Officer contact, if present
-- CRICOS code is NOT returned by this endpoint and stays manual.
-- Returns `{ ok, data?, error? }`.
+If you want me to leave line 178 alone, say so and I'll skip that micro-cleanup.
 
-### 2. New shared component — `src/components/audit/TgaRtoLookupRow.tsx`
-Compact row used in both the modal and the Overview snapshot editor:
-- RTO Number input (4–6 digits, inline validation).
-- **Lookup TGA** button (cyan primary) with loading state.
-- `onResult(snapshot)` callback fires with the mapped fields.
-- Toasts: 404 → "RTO {code} not found on training.gov.au"; other errors → message.
+### Problem 2 — Error UI with Retry
 
-### 3. `src/components/audit/NewAuditModal.tsx` — Step 3 Target RTO panel
-Inside the existing `isDueDiligence` panel, **above** the `TargetRtoCombobox`:
-- Render `<TgaRtoLookupRow />`.
-- On result: if any target field already has user input, show a confirm "Overwrite manual entries?" toast (Replace / Keep). Otherwise fill blank fields directly.
-- Existing combobox remains as the secondary "search by name" path.
-- Keep the conditional "Target RTO Name / Number *" labels already in place.
+Add to the state block (near line 86):
+- `const [fetchError, setFetchError] = useState<string | null>(null);`
+- `const [tenantsOffset, setTenantsOffset] = useState(0);` (used by Problem 4)
+- `const [hasMoreTenants, setHasMoreTenants] = useState(false);` (used by Problem 4)
+- `const [loadingMore, setLoadingMore] = useState(false);` (used by Problem 4)
 
-### 4. `src/components/audit/workspace/OverviewTab.tsx`
-- Compute `isDueDiligence = audit.audit_type === 'due_diligence' || audit.audit_type === 'due_diligence_combined'`.
-- **Card title**: `"Target RTO Snapshot"` (DD) vs `"Client Details Snapshot"` (non-DD).
-- **Helper text** (DD only): `"These details describe the Target RTO being assessed and appear in the final report."`
-- **Read-only label map** (DD): `"RTO Name" → "Target RTO Name"`, `"RTO Number" → "Target RTO Number"`. Other labels unchanged.
-- **Edit-mode auto-generated labels**: special-case `snapshot_rto_name` / `snapshot_rto_number` to render with the "Target" prefix when DD.
-- **Edit mode (DD only)**: render `<TgaRtoLookupRow />` at the top of the edit form so a snapshot can be refreshed/repaired post-creation. Same overwrite-confirmation behaviour.
+In `fetchTenants()`:
+- At the very top of `try`: `setFetchError(null);`
+- In `catch`: keep the existing toast and add `setFetchError("Failed to load clients. Please try again.");`
 
-### 5. `src/components/audit/workspace/ReportTab.tsx`
-- Apply the same DD-conditional relabel to the snapshot RTO Name / RTO Number rows (≈ lines 158, 176) so the released report reads "Target RTO Name / Target RTO Number" for DD audits. Non-DD unchanged.
+In the render, **immediately above** the existing `if (loading)` block (line 641):
+```tsx
+if (fetchError) {
+  return (
+    <div className="flex flex-col items-center justify-center h-64 gap-4">
+      <p className="text-muted-foreground">{fetchError}</p>
+      <Button variant="outline" onClick={fetchTenants}>Retry</Button>
+    </div>
+  );
+}
+```
+`Button` is already imported in this file.
 
-## Out of scope
-- No DB / RLS / schema changes.
-- No edge function changes.
-- CRICOS code lookup (separate TGA endpoint) — manual entry remains.
-- `AuditWorkspaceNew.tsx` sub-header — already shows "Purchaser → Target RTO" framing.
+### Problem 3 — Scoped CSC realtime refresh
 
-## Verification
-1. **Create DD audit** → Step 3 → enter `40888` → **Lookup TGA** → fields fill (legal name, address, website, phone, email); CRICOS stays blank.
-2. Invalid code (`12`) → inline validation blocks request.
-3. Non-existent code (`99999`) → toast "RTO 99999 not found on training.gov.au".
-4. Existing DD audit → Overview → Edit snapshot → Lookup row visible; with manual edits present → confirm-before-overwrite prompt.
-5. Overview card title reads **"Target RTO Snapshot"** with **"Target RTO Name / Number"** for DD; non-DD audits (CHC, Mock) unchanged.
-6. Released DD report → Report tab shows **"Target RTO Name / Number"**.
+Extract a new function `fetchCscAssignmentsOnly()` that runs only the two CSC queries currently at lines 237–256:
+1. `tenant_csc_assignments` filtered by current `tenants.map(t => t.id)` and `is_primary = true`.
+2. `users` lookup for the resulting `csc_user_id` set (`user_uuid, first_name, last_name, avatar_url, archived`).
+
+Then merge into existing state without re-running the other 11 queries:
+```ts
+setTenants(prev => prev.map(t => {
+  const cscUserId = cscMap[t.id] ?? null;
+  const u = cscUserId ? userDataMap[cscUserId] : null;
+  return {
+    ...t,
+    csc_user_id: cscUserId,
+    csc_name: u?.name ?? null,
+    csc_avatar: u?.avatar ?? null,
+    csc_archived: u?.archived ?? false,
+  };
+}));
+```
+No-op early return if `tenants.length === 0`. Wrap in `try/catch` that logs but does not toast (it's a background refresh).
+
+Update the realtime channel handler at line 473 to call `fetchCscAssignmentsOnly()` instead of `fetchTenants()`. Add `fetchCscAssignmentsOnly` and `tenants` to that `useEffect`'s dependency array (currently `[]`) — using a ref or recreating the channel on tenants change is overkill; simplest is to read `tenants` via a ref to avoid resubscribing. I'll use a `tenantsRef = useRef<Tenant[]>([])` updated in a small `useEffect`, and the realtime handler reads `tenantsRef.current` so the channel subscription itself stays mounted with `[]` deps.
+
+### Problem 4 — Real pagination with Load more
+
+In the tenants query at line 173, change:
+```ts
+.from("tenants").select("*").order("name")
+```
+to:
+```ts
+.from("tenants").select("*").order("name").range(0, 99)
+```
+
+After the successful first-page fetch, set:
+- `setTenantsOffset(100);`
+- `setHasMoreTenants((tenantsData?.length ?? 0) === 100);`
+
+Add a new function `loadMoreTenants()`:
+- Set `loadingMore = true`.
+- `supabase.from("tenants").select("*").order("name").range(tenantsOffset, tenantsOffset + 99)`.
+- For the returned page, run the same enrichment pipeline used in `fetchTenants` **scoped to the new tenant IDs only** (package_instances, packages, member counts, csc assignments, users, admin/state, primary contact, notes/structured notes, package burndown, registration end date — same 11 follow-up queries but `.in("tenant_id", newIds)`).
+- `setTenants(prev => [...prev, ...newEnriched]);`
+- `setTenantsOffset(o => o + 100);`
+- `setHasMoreTenants((data?.length ?? 0) === 100);`
+- Recompute `stats` from `[...prev, ...newEnriched]`.
+- Errors → toast only, do not blank the page.
+
+To avoid duplicating the enrichment block, I'll extract a small internal helper `enrichTenants(tenantsData)` returning `{ enriched, totals }` and call it from both `fetchTenants` and `loadMoreTenants`. This stays inside the same file and does not restructure the component.
+
+In the render, below the tenant list (after the existing pagination/grid block, before the dialogs around line 1254), add:
+```tsx
+{hasMoreTenants && (
+  <div className="flex justify-center pt-4">
+    <Button variant="outline" onClick={loadMoreTenants} disabled={loadingMore}>
+      {loadingMore ? "Loading…" : "Load more"}
+    </Button>
+  </div>
+)}
+```
+
+Note: the existing client-side pagination (`currentPage`) and filters operate on the loaded `tenants` array, so they continue to work — they now just operate over the loaded pages. Filters/sort/search will only see loaded rows; this matches the "Load more" model and is consistent with the user's brief.
+
+### Files changed
+
+- `src/pages/ManageTenants.tsx` (only)
+
+### Out of scope (will not touch)
+
+- React Query migration
+- Any other component, page, hook, or edge function
+- Database schema, RLS, or new columns
