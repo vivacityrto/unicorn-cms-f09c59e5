@@ -660,7 +660,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
                 Next <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
-              <Button onClick={handleSave} disabled={createAudit.isPending}>
+              <Button onClick={handleSave} disabled={createAudit.isPending || (isDueDiligence && !rtoName.trim())}>
                 {createAudit.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating…</> : 'Create Audit'}
               </Button>
             )}
