@@ -412,7 +412,7 @@ export default function ManageTenants() {
       }, { onConflict: "user_uuid,tenant_id" });
       if (error) throw error;
       setConnectedTenantIds(prev => [...prev, tenant.id]);
-      fetchTenants();
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
       toast({ title: "Connected", description: `You are now connected to "${tenant.name}" workspace` });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -479,16 +479,16 @@ export default function ManageTenants() {
     );
   };
 
-  if (fetchError) {
+  if (basicQuery.isError) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-muted-foreground">{fetchError}</p>
-        <Button variant="outline" onClick={fetchTenants}>Retry</Button>
+        <p className="text-muted-foreground">Failed to load clients. Please try again.</p>
+        <Button variant="outline" onClick={() => basicQuery.refetch()}>Retry</Button>
       </div>
     );
   }
 
-  if (loading) {
+  if (basicQuery.isLoading) {
     return (
       <div className="p-6 space-y-6 animate-fade-in">
         <Skeleton className="h-12 w-64" />
