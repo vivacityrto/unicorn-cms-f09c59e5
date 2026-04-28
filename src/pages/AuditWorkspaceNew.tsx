@@ -21,6 +21,7 @@ import { AuditSummaryPills } from '@/components/audit/workspace/AuditSummaryPill
 import { UnsavedAuditWorkProvider, useUnsavedAuditWork } from '@/components/audit/workspace/UnsavedAuditWorkContext';
 import { Loader2, Check } from 'lucide-react';
 import type { AuditStatus } from '@/types/clientAudits';
+import { supabase } from '@/integrations/supabase/client';
 
 function SaveIndicator() {
   const { status } = useUnsavedAuditWork();
