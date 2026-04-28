@@ -125,6 +125,28 @@ export default function AuditWorkspaceNew() {
               <SaveIndicator />
             </div>
 
+            {/* Purchaser / Target RTO line for Due Diligence audits */}
+            {(audit.audit_type === 'due_diligence' || audit.audit_type === 'due_diligence_combined') && (
+              <div className="px-4 py-2 border-b bg-muted/30 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                <span>
+                  <span className="text-muted-foreground">Purchaser: </span>
+                  <span className="font-medium">{(audit as any).client_name || '—'}</span>
+                </span>
+                <span className="text-muted-foreground">→</span>
+                <span>
+                  <span className="text-muted-foreground">Target RTO: </span>
+                  {audit.snapshot_rto_name ? (
+                    <span className="font-medium">
+                      {audit.snapshot_rto_name}
+                      {audit.snapshot_rto_number ? ` (${audit.snapshot_rto_number})` : ''}
+                    </span>
+                  ) : (
+                    <span className="italic text-muted-foreground">not set — edit snapshot details on the Overview tab to add</span>
+                  )}
+                </span>
+              </div>
+            )}
+
             {/* Two-pill summary strip: Completion + Risk Rating */}
             <AuditSummaryPills
               audit={audit}
