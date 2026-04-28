@@ -56,6 +56,20 @@ export default function AuditWorkspaceNew() {
   const statusTransition = useAuditStatusTransition(id);
   const [selectedSection, setSelectedSection] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
+  const [purchaserName, setPurchaserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tid = audit?.subject_tenant_id;
+    if (!tid) return;
+    (supabase as any)
+      .from('tenants')
+      .select('name')
+      .eq('id', tid)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (data?.name) setPurchaserName(data.name);
+      });
+  }, [audit?.subject_tenant_id]);
 
   if (isLoading) {
     return (
