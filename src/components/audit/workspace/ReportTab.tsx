@@ -188,6 +188,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
               {audit.risk_rating ? <AuditRiskBadge risk={audit.risk_rating} /> : <p>—</p>}
             </div>
           </div>
+          )}
 
           {audit.score_pct !== null && (
             <div>
