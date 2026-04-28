@@ -1,49 +1,77 @@
-# Fix blank screen on invitation validation failure
-
 ## Problem
-`src/pages/AcceptInvitation.tsx` lines 280–282 currently returns `null` when `invitationData` is null, leaving guest users stranded on a blank white page after a brief toast — no explanation, no retry path.
 
-## Change (single edit, one file)
+On `/audits`, clicking **Create Audit** in Step 3 of the New Audit modal does nothing — no network request fires, no toast appears, no error logs.
 
-**File:** `src/pages/AcceptInvitation.tsx`
-**Lines:** 280–282
+## Root cause
 
-Replace:
-```tsx
-if (!invitationData) {
-  return null;
-}
+In `src/components/audit/NewAuditModal.tsx`:
+
+1. The modal opens with `tenants` empty, so `registrationType` is `null` and `auditTypeCards = ALL_CARDS`.
+2. User picks a card on Step 1 (e.g. "Due Diligence" from `ALL_CARDS`) and advances to Step 2 / Step 3.
+3. Tenants finish loading. For the chosen tenant (e.g. Smart Nation Education, `org_type='rto'`), `registrationType` resolves to `'rto_only'`, and `auditTypeCards` switches to `RTO_ONLY_CARDS`.
+4. The cleanup effect at lines 314–322 then runs:
+
+```ts
+const stillValid = auditTypeCards.some(
+  c => c.value === selectedCard.value
+    && c.is_rto === selectedCard.is_rto
+    && c.is_cricos === selectedCard.is_cricos
+);
+if (!stillValid) setSelectedCard(null);
 ```
 
-With:
-```tsx
-if (!invitationData && !validating) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
-      <h2 className="text-xl font-semibold text-center">
-        Invalid or expired invitation
-      </h2>
-      <p className="text-muted-foreground text-center max-w-sm">
-        This invitation link may have expired or already been used.
-        Please contact your administrator for a new invitation.
-      </p>
-      <Button variant="outline" onClick={validateToken}>
-        Try again
-      </Button>
-    </div>
+The `ALL_CARDS` "Due Diligence" entry has different `is_rto`/`is_cricos` flags from the `RTO_ONLY_CARDS` "Due Diligence" entry, so `stillValid` is false. **`selectedCard` is silently set to `null` while the user is still on Step 3.**
+
+5. `handleSave` immediately returns:
+
+```ts
+if (!selectedCard || !tenantId) return;
+```
+
+No mutation, no toast, no log. Button looks broken.
+
+The same scenario can also be reached when tenantId changes after a card is selected, or when stage-preselection feeds a card that doesn't match the resolved `auditTypeCards` shape.
+
+## Fix
+
+Two small, isolated changes in `src/components/audit/NewAuditModal.tsx`. No other files touched.
+
+### 1. Don't silently null `selectedCard` once the user has advanced past Step 1
+
+Change the cleanup effect (lines 314–322) so it only clears the selection while the user is still on Step 1. Once they're on Step 2 or 3, keep the card they chose — the user already passed the type-selection gate.
+
+```ts
+useEffect(() => {
+  if (step !== 1) return; // don't yank the card out from under the user mid-flow
+  if (!selectedCard) return;
+  const stillValid = auditTypeCards.some(
+    c => c.value === selectedCard.value
+      && c.is_rto === selectedCard.is_rto
+      && c.is_cricos === selectedCard.is_cricos
   );
-}
+  if (!stillValid) setSelectedCard(null);
+}, [registrationType, auditTypeCards, step]);
 ```
 
-## Why the `!validating` guard matters
-`invitationData` starts as `null`, so without the guard the error UI flashes on every page load before the RPC resolves. The existing validating spinner block (lines 270–278) already handles the loading state and remains untouched.
+### 2. Surface a toast if `handleSave` is called without the required state
 
-## Out of scope (untouched)
-- `validateToken` function
-- `useEffect` at lines 37–39
-- Validating spinner branch (lines 270–278)
-- Happy-path form render (line 284 onward)
-- `handleSubmit`, `finalizeInvitation`, `navigate` logic
-- No new state, no React Query, no other files
+Replace the silent `return` in `handleSave` (line 380) so the user sees why nothing happened, and we get a console signal:
 
-`Button` is already imported (line 3), so no new imports required.
+```ts
+const handleSave = () => {
+  if (!selectedCard || !tenantId) {
+    console.warn('[NewAuditModal] Create blocked', { hasCard: !!selectedCard, tenantId });
+    toast.error('Please select an audit type and client before creating.');
+    return;
+  }
+  createAudit.mutate({ /* unchanged */ });
+};
+```
+
+This is a defence-in-depth guard — fix #1 prevents the state from being cleared in the first place; fix #2 ensures any future regression is loud, not silent.
+
+## Out of scope
+
+- No changes to `useCreateAudit`, `client_audits` schema, RLS, or any other component.
+- No restructure of the modal or its step flow.
+- No change to the card selection UI on Step 1 — switching tenant on Step 1 still correctly clears an invalid card.

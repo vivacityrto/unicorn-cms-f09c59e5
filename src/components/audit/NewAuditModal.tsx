@@ -311,15 +311,18 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     }
   }, [stageAuditType, auditTypeCards]);
 
-  // Clear stale card selection when registration type changes
+  // Clear stale card selection when registration type changes — only on Step 1.
+  // After the user has advanced to Step 2/3 the card has already passed the
+  // selection gate; silently nulling it would make the Create Audit button
+  // appear broken (handleSave returns early when selectedCard is null).
   useEffect(() => {
-    if (selectedCard) {
-      const stillValid = auditTypeCards.some(
-        c => c.value === selectedCard.value && c.is_rto === selectedCard.is_rto && c.is_cricos === selectedCard.is_cricos
-      );
-      if (!stillValid) setSelectedCard(null);
-    }
-  }, [registrationType, auditTypeCards]);
+    if (step !== 1) return;
+    if (!selectedCard) return;
+    const stillValid = auditTypeCards.some(
+      c => c.value === selectedCard.value && c.is_rto === selectedCard.is_rto && c.is_cricos === selectedCard.is_cricos
+    );
+    if (!stillValid) setSelectedCard(null);
+  }, [registrationType, auditTypeCards, step]);
 
   // Auto-fetch snapshot from TGA view when tenant selected.
   // For Due Diligence audits the snapshot describes the *Target RTO* (entered separately
