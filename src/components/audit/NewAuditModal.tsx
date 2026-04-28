@@ -731,3 +731,110 @@ function ClientCombobox({ tenants, value, onSelect, loading }: ClientComboboxPro
     </Popover>
   );
 }
+
+interface TargetRtoSnapshot {
+  rto_code: string | null;
+  legal_name: string | null;
+  trading_name: string | null;
+  cricos_codes: string | null;
+  ceo_name: string | null;
+  head_office_address: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  website: string | null;
+}
+
+interface TargetRtoComboboxProps {
+  onSelect: (snap: TargetRtoSnapshot) => void;
+}
+
+function TargetRtoCombobox({ onSelect }: TargetRtoComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState<TargetRtoSnapshot[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [picked, setPicked] = useState<TargetRtoSnapshot | null>(null);
+
+  // Debounced search against v_tga_audit_snapshot
+  useEffect(() => {
+    if (!open) return;
+    const term = search.trim();
+    if (term.length < 2) { setResults([]); return; }
+    let cancelled = false;
+    setLoading(true);
+    const handle = setTimeout(async () => {
+      const { data, error } = await (supabase as any)
+        .from('v_tga_audit_snapshot')
+        .select('rto_code, legal_name, trading_name, cricos_codes, ceo_name, head_office_address, contact_phone, contact_email, website')
+        .or(`rto_code.ilike.%${term}%,legal_name.ilike.%${term}%,trading_name.ilike.%${term}%`)
+        .limit(10);
+      if (cancelled) return;
+      if (error) {
+        console.error('[TargetRtoCombobox] search failed', error);
+        setResults([]);
+      } else {
+        setResults((data as TargetRtoSnapshot[]) || []);
+      }
+      setLoading(false);
+    }, 250);
+    return () => { cancelled = true; clearTimeout(handle); };
+  }, [search, open]);
+
+  const label = picked
+    ? `${picked.rto_code || '—'} — ${picked.legal_name || picked.trading_name || ''}`
+    : 'Search RTO code or name…';
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className="truncate">{label}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="e.g. 41020 or Vivacity…"
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList className="max-h-[280px]">
+            {loading && <div className="p-3 text-xs text-muted-foreground">Searching…</div>}
+            {!loading && search.trim().length < 2 && (
+              <div className="p-3 text-xs text-muted-foreground">Type at least 2 characters to search.</div>
+            )}
+            {!loading && search.trim().length >= 2 && results.length === 0 && (
+              <CommandEmpty>No matching RTO found on the national register.</CommandEmpty>
+            )}
+            <CommandGroup>
+              {results.map(r => {
+                const display = `${r.rto_code || '—'} — ${r.legal_name || r.trading_name || 'Unnamed'}`;
+                return (
+                  <CommandItem
+                    key={`${r.rto_code}-${r.legal_name}`}
+                    value={display}
+                    onSelect={() => {
+                      setPicked(r);
+                      onSelect(r);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', picked?.rto_code === r.rto_code ? 'opacity-100' : 'opacity-0')} />
+                    <span className="truncate">{display}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
