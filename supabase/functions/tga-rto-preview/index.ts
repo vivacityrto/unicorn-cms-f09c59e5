@@ -53,7 +53,7 @@ serve(async (req) => {
             source_url: apiUrl,
             http_status: 404
           }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       throw new Error(`TGA API error: ${response.status}`);
