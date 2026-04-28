@@ -6,10 +6,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Target } from 'lucide-react';
 import { useUpdateAudit, useInternalUsers } from '@/hooks/useAuditWorkspace';
 import { EvidenceRequestsSection } from './EvidenceRequestsSection';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
+import { TgaRtoLookupRow } from '@/components/audit/TgaRtoLookupRow';
+import type { TargetRtoSnapshot } from '@/lib/tga/lookupTargetRto';
+import { toast } from 'sonner';
 import type { ClientAudit, AuditRisk } from '@/types/clientAudits';
 
 interface OverviewTabProps {
@@ -38,6 +41,39 @@ export function OverviewTab({ audit }: OverviewTabProps) {
   const saveSnapshot = () => {
     updateAudit.mutate(snapshot as any);
     setShowSnapshot(false);
+  };
+
+  const isDueDiligence =
+    audit.audit_type === 'due_diligence' || audit.audit_type === 'due_diligence_combined';
+
+  const applyTgaSnapshot = (incoming: TargetRtoSnapshot) => {
+    const fieldMap: Array<[keyof typeof snapshot, string]> = [
+      ['snapshot_rto_name', incoming.rto_name],
+      ['snapshot_rto_number', incoming.rto_number],
+      ['snapshot_site_address', incoming.site_address],
+      ['snapshot_phone', incoming.phone],
+      ['snapshot_email', incoming.email],
+      ['snapshot_website', incoming.website],
+      ['snapshot_ceo', incoming.ceo],
+    ];
+    const hasManualEntry = fieldMap.some(([key, val]) => snapshot[key] && val && snapshot[key] !== val);
+    const apply = () => {
+      setSnapshot(prev => {
+        const next = { ...prev };
+        fieldMap.forEach(([key, val]) => {
+          if (val) next[key] = val;
+        });
+        return next;
+      });
+    };
+    if (hasManualEntry) {
+      toast('Overwrite manual entries with TGA data?', {
+        action: { label: 'Replace', onClick: apply },
+        cancel: { label: 'Keep mine', onClick: () => {} },
+      });
+    } else {
+      apply();
+    }
   };
 
   return (
@@ -170,26 +206,31 @@ export function OverviewTab({ audit }: OverviewTabProps) {
         </CardContent>
       </Card>
 
-      {/* Client Snapshot */}
+      {/* Snapshot — Target RTO for DD audits, Client Details otherwise */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Client Details Snapshot</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              {isDueDiligence && <Target className="h-4 w-4 text-primary" />}
+              {isDueDiligence ? 'Target RTO Snapshot' : 'Client Details Snapshot'}
+            </CardTitle>
             <Button variant="ghost" size="sm" onClick={() => setShowSnapshot(!showSnapshot)}>
               {showSnapshot ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               {showSnapshot ? 'Close' : 'Edit'}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            These details are captured at the time of the audit and appear in the final report.
+            {isDueDiligence
+              ? 'These details describe the Target RTO being assessed and appear in the final report.'
+              : 'These details are captured at the time of the audit and appear in the final report.'}
           </p>
         </CardHeader>
         <CardContent>
           {!showSnapshot ? (
             <div className="grid grid-cols-2 gap-2 text-sm">
               {[
-                ['RTO Name', audit.snapshot_rto_name],
-                ['RTO Number', audit.snapshot_rto_number],
+                [isDueDiligence ? 'Target RTO Name' : 'RTO Name', audit.snapshot_rto_name],
+                [isDueDiligence ? 'Target RTO Number' : 'RTO Number', audit.snapshot_rto_number],
                 ['CRICOS Code', audit.snapshot_cricos_code],
                 ['Site Address', audit.snapshot_site_address],
                 ['CEO', audit.snapshot_ceo],
@@ -205,15 +246,35 @@ export function OverviewTab({ audit }: OverviewTabProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {Object.entries(snapshot).map(([key, val]) => (
-                <div key={key}>
-                  <Label className="text-xs">{key.replace('snapshot_', '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</Label>
-                  <Input
-                    value={val}
-                    onChange={(e) => setSnapshot(s => ({ ...s, [key]: e.target.value }))}
+              {isDueDiligence && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <TgaRtoLookupRow
+                    initialCode={snapshot.snapshot_rto_number}
+                    onResult={applyTgaSnapshot}
+                    helperText="Refreshes Target RTO Name, Number, Address, Phone, Email, Website and CEO from training.gov.au. CRICOS Code is not included."
                   />
                 </div>
-              ))}
+              )}
+              {Object.entries(snapshot).map(([key, val]) => {
+                const baseLabel = key
+                  .replace('snapshot_', '')
+                  .replace(/_/g, ' ')
+                  .replace(/\b\w/g, c => c.toUpperCase());
+                const label = isDueDiligence && key === 'snapshot_rto_name'
+                  ? 'Target RTO Name'
+                  : isDueDiligence && key === 'snapshot_rto_number'
+                  ? 'Target RTO Number'
+                  : baseLabel;
+                return (
+                  <div key={key}>
+                    <Label className="text-xs">{label}</Label>
+                    <Input
+                      value={val}
+                      onChange={(e) => setSnapshot(s => ({ ...s, [key]: e.target.value }))}
+                    />
+                  </div>
+                );
+              })}
               <Button size="sm" onClick={saveSnapshot}>Save Snapshot</Button>
             </div>
           )}
