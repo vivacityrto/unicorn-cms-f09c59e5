@@ -380,7 +380,11 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   useEffect(() => { if (!open) resetForm(); }, [open]);
 
   const handleSave = () => {
-    if (!selectedCard || !tenantId) return;
+    if (!selectedCard || !tenantId) {
+      console.warn('[NewAuditModal] Create blocked', { hasCard: !!selectedCard, tenantId });
+      toast.error('Please select an audit type and client before creating.');
+      return;
+    }
     createAudit.mutate({
       audit_type: selectedCard.value,
       subject_tenant_id: tenantId,
