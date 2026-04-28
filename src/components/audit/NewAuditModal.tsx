@@ -317,11 +317,15 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     }
   }, [registrationType, auditTypeCards]);
 
-  // Auto-fetch snapshot from TGA view when tenant selected
+  // Auto-fetch snapshot from TGA view when tenant selected.
+  // For Due Diligence audits the snapshot describes the *Target RTO* (entered separately
+  // via the Target RTO lookup), NOT the Purchaser — so skip the purchaser auto-fill.
   useEffect(() => {
     if (!tenantId) return;
     const t = tenants.find(t => t.id === tenantId);
     if (t) setTenantName(t.name);
+    const isDD = selectedCard?.value === 'due_diligence' || selectedCard?.value === 'due_diligence_combined';
+    if (isDD) return;
     supabase
       .from('v_tga_audit_snapshot' as any)
       .select('*')
@@ -343,7 +347,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
           setRtoNumber(t?.rto_id || '');
         }
       });
-  }, [tenantId, tenants]);
+  }, [tenantId, tenants, selectedCard?.value]);
 
   const resetForm = () => {
     setStep(hasPreselectedType ? 2 : 1);
