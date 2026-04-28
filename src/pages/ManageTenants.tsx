@@ -88,9 +88,6 @@ export default function ManageTenants() {
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
-  const [currentPage, setCurrentPage] = useState(1);
-  const TENANT_PAGE_SIZE = 100;
-  const itemsPerPage = 20;
   const [disconnectDialog, setDisconnectDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
   const [connectAllDialog, setConnectAllDialog] = useState(false);
   const [addTenantDialog, setAddTenantDialog] = useState(false);
@@ -107,22 +104,8 @@ export default function ManageTenants() {
   const [accessStatuses, setAccessStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
   const [statusOptions, setStatusOptions] = useState<{ code: number; value: string; description: string }[]>([]);
 
-  // Pagination: track loaded basic-tenant pages and accumulate them.
-  const [page, setPage] = useState(0);
-  const [accumulated, setAccumulated] = useState<any[]>([]);
-
-  const basicQuery = useTenantsBasic({ page, pageSize: TENANT_PAGE_SIZE });
-
-  // Append each new page of basic tenants into the accumulator.
-  useEffect(() => {
-    if (!basicQuery.data) return;
-    setAccumulated(prev => {
-      if (page === 0) return basicQuery.data!;
-      const seen = new Set(prev.map((t: any) => t.id));
-      const additions = basicQuery.data!.filter((t: any) => !seen.has(t.id));
-      return additions.length ? [...prev, ...additions] : prev;
-    });
-  }, [basicQuery.data, page]);
+  const basicQuery = useTenantsBasic();
+  const accumulated = useMemo(() => basicQuery.data ?? [], [basicQuery.data]);
 
   const tenantIds = useMemo(() => accumulated.map((t: any) => t.id), [accumulated]);
 
@@ -182,14 +165,6 @@ export default function ManageTenants() {
     const closed = tenants.filter(t => t.status === "terminated" || t.status === "cancelled").length;
     return { total: tenants.length, active, suspended, closed, totalMembers };
   }, [tenants]);
-
-  const hasMoreTenants = basicQuery.hasMore;
-  const loadingMore = page > 0 && basicQuery.isFetching;
-
-  const loadMoreTenants = () => {
-    if (loadingMore || !hasMoreTenants) return;
-    setPage(p => p + 1);
-  };
 
   useEffect(() => {
     fetchPackages();
@@ -253,7 +228,6 @@ export default function ManageTenants() {
 
   useEffect(() => {
     applyFiltersAndSort();
-    setCurrentPage(1);
   }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter]);
 
   const fetchPackages = async () => {
@@ -1014,53 +988,9 @@ export default function ManageTenants() {
         </div>
       )}
 
-      {/* Pagination */}
       {filteredTenants.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6">
-          <div className="text-sm text-muted-foreground whitespace-nowrap">
-            Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredTenants.length)}–{Math.min(currentPage * itemsPerPage, filteredTenants.length)} of {filteredTenants.length} results
-          </div>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
-              </PaginationItem>
-              {Array.from({ length: Math.ceil(filteredTenants.length / itemsPerPage) }, (_, i) => i + 1)
-                .filter(page => {
-                  const totalPages = Math.ceil(filteredTenants.length / itemsPerPage);
-                  if (totalPages <= 7) return true;
-                  if (page === 1 || page === totalPages) return true;
-                  if (page >= currentPage - 1 && page <= currentPage + 1) return true;
-                  return false;
-                })
-                .map((page, index, array) => {
-                  if (index > 0 && array[index - 1] !== page - 1) {
-                    return [
-                      <PaginationItem key={`ellipsis-${page}`}><span className="px-4">...</span></PaginationItem>,
-                      <PaginationItem key={page}>
-                        <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">{page}</PaginationLink>
-                      </PaginationItem>
-                    ];
-                  }
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">{page}</PaginationLink>
-                    </PaginationItem>
-                  );
-                })}
-              <PaginationItem>
-                <PaginationNext onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredTenants.length / itemsPerPage), p + 1))} className={currentPage === Math.ceil(filteredTenants.length / itemsPerPage) ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
-
-      {hasMoreTenants && (
-        <div className="flex justify-center pt-4">
-          <Button variant="outline" onClick={loadMoreTenants} disabled={loadingMore}>
-            {loadingMore ? "Loading…" : "Load more"}
-          </Button>
+        <div className="text-sm text-muted-foreground mt-6">
+          Showing {filteredTenants.length} {filteredTenants.length === 1 ? 'result' : 'results'}
         </div>
       )}
 
