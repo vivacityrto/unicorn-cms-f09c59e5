@@ -1,96 +1,68 @@
+## Plan — Target RTO for Due Diligence audits
 
+For Due Diligence audits, the **client (Purchaser)** commissions the audit but the audit is *about* a different RTO (the **Target RTO** being acquired). Today the New Audit wizard auto-fills the snapshot fields (RTO Name, RTO Number, CRICOS, CEO, address, contacts, website) from the *Purchaser's* TGA record, which is wrong for DD — those snapshot fields should describe the Target.
 
-## Plan — Audit finding codes + derived risk rating in the UI
+This change adds an explicit "Target RTO" capture step for `due_diligence` and `due_diligence_combined` audits, keyed by RTO code with a TGA lookup so the snapshot can be auto-populated. No schema changes — we reuse the existing `snapshot_*` columns on `client_audits` (which is exactly what they're for: details captured at audit time that flow through to the report).
 
-Pure additive UI work. Schema, trigger, view, and backfill are already live. The DB owns `finding_code` (auto-generated on INSERT) and `risk_rating` (auto-derived from finding priorities). The UI must stop writing those fields and start displaying them properly.
+### 1. `src/components/audit/NewAuditModal.tsx`
 
-### 1. Type updates (`src/types/auditWorkspace.ts` + `src/types/clientAudits.ts`)
-
-- Add `finding_code: string | null` and `regulatory_reference: string | null` to `AuditFinding`.
-- Add `code_prefix: string | null` to `AuditSection`.
-- Extend `AuditRisk` to include `'extreme'` and add a label.
-
-### 2. Finding create/edit form (`AddFindingForm.tsx`)
-
-- **Create mode**: remove the "Standard Reference" input. Show a small read-only banner "Finding code: will be auto-generated on save". Do NOT include `finding_code` or `standard_reference` in the payload sent up.
-- **Edit mode**: show the existing `finding_code` as a bold monospace pill at the top (e.g. `GOV-2`). Show legacy `standard_reference` only if non-null, labelled "Legacy reference (read-only)".
-- Add a new **Regulatory Reference** input bound to `regulatory_reference`, with helper text *"SRTO 2025 clause, National Code 2018 Standard, or ESOS section. e.g. Std 1.1, NC 7.2, ESOS s.22"*.
-- Keep existing fields: summary, detail, impact, priority.
-
-### 3. Finding card / list (`FindingsTab.tsx`)
-
-- Replace the current header row with: monospace bold `{finding_code}` pill → priority badge (colour-coded per spec: critical red, high orange, medium yellow, low grey) → summary → muted `regulatory_reference` → created date.
-- Add a new top-bar text filter that filters by `finding_code` substring (in addition to existing priority/AI/manual chips).
-- Sort within each priority group by `finding_code` ascending.
-
-### 4. `useAuditFindings` mutation guard (`src/hooks/useAuditWorkspace.ts`)
-
-- In `createFinding`, strip `finding_code` and `standard_reference` from the payload before INSERT — let the trigger generate the code.
-- After the INSERT succeeds, invalidate `audit-findings` (already happens) so the new row with the DB-assigned code renders immediately.
-- In `updateFinding`, allow `regulatory_reference` through; existing fields unchanged.
-
-### 5. Stop the UI from writing `risk_rating` (`OverviewTab.tsx`)
-
-- Replace the editable "Overall Risk Rating" Select with a read-only `AuditRiskBadge` plus a one-line explainer: *"Auto-derived from finding priorities. Add or update findings to change this."*
-- Remove the "Score" 2xl number from this card (it's confusing next to a derived risk rating).
-
-### 6. Audit summary header — two-pill bar (`AuditWorkspaceNew.tsx`)
-
-Insert a new strip immediately under the breadcrumb, above the Tabs:
+**a. New "Target RTO" panel rendered above the snapshot grid in Step 3, only when `selectedCard.value` is `due_diligence` or `due_diligence_combined`:**
 
 ```text
-┌──────────────────────────────┐  ┌──────────────────────────┐
-│ COMPLETION                   │  │ RISK RATING              │
-│ 14 of 31 answered (45%)      │  │ EXTREME  ⚠               │
-└──────────────────────────────┘  └──────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ Target RTO (the RTO being assessed for the Purchaser)        │
+│                                                              │
+│ Lookup by RTO code or name  [ 12345  ▼ Search ]              │
+│  └ pulls v_tga_audit_snapshot by rto_code → fills below      │
+│                                                              │
+│ ☐ Not yet on the national register (enter manually)          │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-- **Completion pill** — slate background. Counts answered vs. total document-review questions (reuse the same calc the sidebar uses; lift it to a small `useAuditCompletion(auditId)` hook so header + sidebar share one source of truth).
-- **Risk Rating pill** — uses `audit.risk_rating`. Colour map: low=green, medium=yellow, high=orange, critical=red, extreme=maroon (`bg-red-900 text-red-50`) with `AlertTriangle` icon. NULL → slate "Not yet rated (no findings raised)".
-- Tooltip on the Risk Rating pill explains the rubric (Extreme: 3+ Critical OR 2+ Critical with 2+ High; Critical: 2 Critical; High: 1 Critical or any High; Medium: any Medium; Low: only Low).
-- The footer block in `AuditSidebar.tsx` keeps its small `AuditRiskBadge` but loses the "Score: X%" line (moved out of risk context). Score % can still appear inside `DocumentReviewPhase` per-section which is purely a question-progress meter.
+- Combobox `TargetRtoCombobox` queries `v_tga_audit_snapshot` filtered by `rto_code ilike` or `legal_name ilike` (debounced, top 10 results), shows `rto_code — legal_name`. On select, populate `rtoName`, `rtoNumber`, `cricosCode`, `ceo`, `siteAddress`, `phone`, `email`, `website` from the chosen TGA row (overwriting whatever was pre-filled from the Purchaser).
+- Manual checkbox simply skips the lookup; the user types into the snapshot fields below.
+- Helper text under the panel: *"These details describe the RTO under review and will appear in the final report. The client commissioning the audit ({tenantName}) remains the Purchaser."*
 
-### 7. Open Action Items warning banner (`ActionsTab.tsx`)
+**b. Suppress the Purchaser auto-fill for DD audits.** In the existing `useEffect` at lines 320-346 that pre-fills snapshot fields from the Purchaser's TGA row: when `selectedCard?.value` is a DD type, leave `rtoName`/`rtoNumber`/`cricosCode`/`ceo`/`siteAddress`/`phone`/`email`/`website` blank so the user explicitly chooses the Target.
 
-- Add a query `useFindingsWithoutActions(auditId)` against `v_client_audit_findings_without_actions` (filtered by `audit_id`, ordered by priority then `finding_code`).
-- If it returns rows, render an amber warning banner above the existing filter bar:
+**c. Step 2 wording.** Where the modal currently labels the client field `Client *`, render `Client (Purchaser) *` for DD audits — to match the rest of the UI and the memory of the prior "Purchaser" terminology fix.
 
-  > ⚠ {count} finding(s) at Critical or High priority have no action items assigned. Every Critical and High finding should have at least one action item before the report is released.
-  > [ Review findings → ] [ Generate suggested actions → ]
+**d. Step 3 heading.** For DD audits, change the existing Step 3 helper line *"These details are captured at the time of the audit…"* to *"These details describe the **Target RTO** under review and will appear in the report exactly as shown here."*
 
-- "Review findings" jumps to the Findings tab.
-- "Generate suggested actions" opens `ActionDrawer` pre-filled per spec for the **first** unaddressed finding (then closes & reopens for the next when saved). Pre-fill values: `action_type='corrective_action'`, `priority=finding.priority`, `title="Address: " + finding.summary` (truncated to 120 chars), `due_date=today+30d`, `evidence_required=true`, `delivery_model='client_self'`, `finding_id=finding.id`, `standard_reference=finding.finding_code`.
+**e. Validation.** For DD audits, require `rtoName` to be non-empty before allowing Save (currently no per-field validation; add a small inline error and disable the Save button when missing).
 
-### 8. Document Review phase — section prefix pill (`DocumentReviewPhase.tsx`)
+### 2. Audit header & report surfaces (read-only display)
 
-- Inside `DocumentReviewSection`, render a small monospace pill (e.g. `GOV`) next to `section.title` when `section.code_prefix` is non-null. Read-only.
-- No structural changes elsewhere in the three-phase header.
+The header already shows the Purchaser as the client. We add a Target RTO line where the audit header / report identifies the audit subject.
 
-### 9. Report preview (`ReportTab.tsx`)
+- **`src/pages/AuditWorkspaceNew.tsx`** (header strip, immediately under the breadcrumb): for DD audits, render a small inline pill:
 
-- Risk Rating row: keep using `AuditRiskBadge` — it now needs to support `extreme` (extend `AuditRiskBadge.tsx` colour map and `AUDIT_RISK_LABELS`).
-- Findings list section: change each heading from `{standard_reference} — {summary}` to `{finding_code} — {summary.slice(0,80)}`. If `regulatory_reference` is set, render a sub-line *"Regulatory: {regulatory_reference}"*.
-- Below the findings list, query `v_client_audit_findings_without_actions` for this audit; if rows exist, append: *"Note: {count} Critical/High findings above do not yet have corrective actions assigned. Action items will be added before the final report is released."*
+  ```text
+  Purchaser: {client_name}        Target RTO: {snapshot_rto_name} ({snapshot_rto_number})
+  ```
 
-### 10. Client-facing reports (`ClientAuditReportsSection.tsx`) and risk badge
+  Only shown when `audit.audit_type` starts with `due_diligence`. If `snapshot_rto_name` is null, show a muted "Target RTO not set — edit snapshot details to add".
 
-- `AuditRiskBadge.tsx`: add `extreme` to the colour map (`bg-red-900 text-red-50 border-red-950`) and add label "Extreme" to `AUDIT_RISK_LABELS`. Update `AuditRisk` union type in `src/types/clientAudits.ts`.
+- **`src/components/audit/workspace/ReportTab.tsx`**: in the report header block, for DD audits, replace the single client line with a two-row block — `Purchaser: …` and `Target RTO: …` (Name, RTO #, CRICOS if present). Non-DD audits unchanged.
 
-### What this plan does NOT touch
+- **`src/components/audit/AuditTypeBadge.tsx`** / DD listing rows in `src/pages/AuditsAssessments.tsx`: where each audit row shows the client name, append `→ {snapshot_rto_name}` for DD types when present. Keeps the dashboard scannable.
 
-- No DB migrations, no edge functions, no changes to the audit module embedded in stage instances.
-- `useAuditScore` keeps writing `score_pct` for analytics/section meters — only its visual placement next to risk rating is removed.
-- The Preliminary Summary email (`buildPreliminaryAuditSummary.ts`) is **not** changed in this plan; risk rating already reads from `audit.risk_rating`. Adding `finding_code` to the email body can be a follow-up if needed.
+### 3. Editing after creation
 
-### Verification (matches the acceptance checklist)
+The Overview tab already exposes the snapshot fields for editing post-creation (existing behaviour). No change needed there — the same `snapshot_rto_*` fields are now the Target RTO fields for DD audits.
 
-1. Open Smart Education DD audit (`3b1fbbee-...`). Header pills now show `14 of 31 answered (45%)` and `EXTREME` (red/maroon, with tooltip rubric).
-2. Findings tab lists `SCOPE-1 / GOV-1 / GOV-2 / FIN-1 / FIN-2 / TAQ-1 / TAQ-2` — bold monospace pills, no duplicates, sorted within priority.
-3. Click "Add Finding" → no Standard Reference text field; "Regulatory Reference" field present; banner says code will be auto-generated. Save → new card appears immediately with its DB-assigned code (e.g. `GOV-3`).
-4. Edit an existing finding → finding_code shown as read-only pill at top; legacy `standard_reference` shown only if present.
-5. Actions tab shows the amber warning banner ("5 Critical/High findings have no action items"); "Generate suggested actions" pre-fills the drawer correctly.
-6. Document Review phase shows `GOV` / `TAQ` / `FIN` pills next to section titles.
-7. Overview tab no longer lets the user edit risk rating — it's a read-only badge with explainer.
-8. Network panel: `INSERT` to `client_audit_findings` payload contains no `finding_code` and no `standard_reference`; `UPDATE` to `client_audits` never includes `risk_rating`.
-9. Report preview shows finding headings as `{finding_code} — {summary}` with `Regulatory: {regulatory_reference}` sub-line when present.
+### What this does NOT change
 
+- No DB migrations. `client_audits.snapshot_*` columns are reused.
+- No change to `subject_tenant_id` semantics — it remains the Purchaser/commissioning client.
+- No change to the existing Purchaser auto-fill behaviour for non-DD audit types (CHC, Mock Audit, etc.).
+- No change to the AI / report generators beyond the visible header tweak in ReportTab.
+
+### Verification
+
+1. Open New Audit → pick a Purchaser → choose **RTO Due Diligence**. Step 3 shows the new "Target RTO" panel at the top; the snapshot fields below are blank.
+2. In the Target RTO combobox, type `41020` → selects "Vivacity Coaching & Consulting" → snapshot fields auto-populate with that RTO's TGA data.
+3. Save → audit row appears with Purchaser name and `→ Target RTO name` suffix on the dashboard.
+4. Open the saved DD audit → header shows both `Purchaser: …` and `Target RTO: …` pills. Report tab header shows the same two-row block.
+5. Open a CHC audit (non-DD) → no "Target RTO" panel; Purchaser auto-fill still pre-populates snapshot fields as today.
+6. Try Save on a DD audit with empty Target RTO Name → Save disabled with inline error.
