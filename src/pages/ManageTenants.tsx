@@ -1325,6 +1325,14 @@ export default function ManageTenants() {
         </div>
       )}
 
+      {hasMoreTenants && (
+        <div className="flex justify-center pt-4">
+          <Button variant="outline" onClick={loadMoreTenants} disabled={loadingMore}>
+            {loadingMore ? "Loading…" : "Load more"}
+          </Button>
+        </div>
+      )}
+
       {/* Disconnect Confirmation Dialog */}
       <AlertDialog open={disconnectDialog.open} onOpenChange={open => setDisconnectDialog({ open, tenant: null })}>
         <AlertDialogContent className="max-w-md">
