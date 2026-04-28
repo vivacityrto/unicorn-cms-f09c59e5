@@ -572,10 +572,15 @@ export default function ManageTenants() {
     return () => { supabase.removeChannel(packagesChannel); };
   }, []);
 
+  // Keep ref in sync so realtime handler can read latest tenants without resubscribing.
+  useEffect(() => {
+    tenantsRef.current = tenants;
+  }, [tenants]);
+
   useEffect(() => {
     const cscChannel = supabase
       .channel('csc-assignments-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenant_csc_assignments' }, () => { fetchTenants(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenant_csc_assignments' }, () => { fetchCscAssignmentsOnly(); })
       .subscribe();
     return () => { supabase.removeChannel(cscChannel); };
   }, []);
