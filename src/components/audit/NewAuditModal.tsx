@@ -20,7 +20,7 @@ import { detectRegistrationType, isCricosValid } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
 import { ScopeMultiSelect } from './ScopeMultiSelect';
 import { TgaRtoLookupRow } from './TgaRtoLookupRow';
-import type { TargetRtoSnapshot } from '@/lib/tga/lookupTargetRto';
+import type { TargetRtoSnapshot as TgaSnapshot } from '@/lib/tga/lookupTargetRto';
 import { toast } from 'sonner';
 
 const STAGE_NAME_MAP: Record<number, string> = {
