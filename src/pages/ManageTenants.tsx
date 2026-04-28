@@ -84,6 +84,12 @@ export default function ManageTenants() {
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [tenantsOffset, setTenantsOffset] = useState(0);
+  const [hasMoreTenants, setHasMoreTenants] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const tenantsRef = useRef<Tenant[]>([]);
+  const TENANT_PAGE_SIZE = 100;
   const itemsPerPage = 20;
   const [disconnectDialog, setDisconnectDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
   const [connectAllDialog, setConnectAllDialog] = useState(false);
