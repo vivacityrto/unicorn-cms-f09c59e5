@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenantsBasic } from "@/hooks/useTenantsBasic";
+import { useTenantPackages } from "@/hooks/useTenantPackages";
+import { useTenantContacts } from "@/hooks/useTenantContacts";
+import { useCscAssignments } from "@/hooks/useCscAssignments";
+import { useTenantNotes } from "@/hooks/useTenantNotes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,7 +75,6 @@ interface CSCFilterOption {
 export default function ManageTenants() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [packageFilter, setPackageFilter] = useState<string>("all");
@@ -84,11 +89,6 @@ export default function ManageTenants() {
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [tenantsOffset, setTenantsOffset] = useState(0);
-  const [hasMoreTenants, setHasMoreTenants] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const tenantsRef = useRef<Tenant[]>([]);
   const TENANT_PAGE_SIZE = 100;
   const itemsPerPage = 20;
   const [disconnectDialog, setDisconnectDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
@@ -96,10 +96,10 @@ export default function ManageTenants() {
   const [addTenantDialog, setAddTenantDialog] = useState(false);
   const [cscAssignDialog, setCscAssignDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
   const [u1ImportOpen, setU1ImportOpen] = useState(false);
-  const [stats, setStats] = useState({ total: 0, active: 0, suspended: 0, closed: 0, totalMembers: 0 });
   const { toast } = useToast();
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
 
@@ -107,8 +107,91 @@ export default function ManageTenants() {
   const [accessStatuses, setAccessStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
   const [statusOptions, setStatusOptions] = useState<{ code: number; value: string; description: string }[]>([]);
 
+  // Pagination: track loaded basic-tenant pages and accumulate them.
+  const [page, setPage] = useState(0);
+  const [accumulated, setAccumulated] = useState<any[]>([]);
+
+  const basicQuery = useTenantsBasic({ page, pageSize: TENANT_PAGE_SIZE });
+
+  // Append each new page of basic tenants into the accumulator.
   useEffect(() => {
-    fetchTenants();
+    if (!basicQuery.data) return;
+    setAccumulated(prev => {
+      if (page === 0) return basicQuery.data!;
+      const seen = new Set(prev.map((t: any) => t.id));
+      const additions = basicQuery.data!.filter((t: any) => !seen.has(t.id));
+      return additions.length ? [...prev, ...additions] : prev;
+    });
+  }, [basicQuery.data, page]);
+
+  const tenantIds = useMemo(() => accumulated.map((t: any) => t.id), [accumulated]);
+
+  const packagesQuery = useTenantPackages(tenantIds);
+  const contactsQuery = useTenantContacts(tenantIds);
+  const cscQuery = useCscAssignments(tenantIds);
+  const notesQuery = useTenantNotes(tenantIds);
+
+  // Merge base tenants with the four lookup maps to produce the Tenant[] shape.
+  useEffect(() => {
+    if (accumulated.length === 0) {
+      setTenants([]);
+      return;
+    }
+    const pkgMap = packagesQuery.data || {};
+    const contactsMap = contactsQuery.data || {};
+    const cscMap = cscQuery.data || {};
+    const notesMap = notesQuery.data || {};
+    const merged: Tenant[] = accumulated.map((t: any) => {
+      const pkg = pkgMap[t.id];
+      const contacts = contactsMap[t.id];
+      const csc = cscMap[t.id];
+      const notes = notesMap[t.id];
+      const activePackages = pkg?.all_packages || [];
+      const firstNonKS = activePackages.find(p => !p.name.startsWith('KS'));
+      const firstPackage = firstNonKS || activePackages[0];
+      return {
+        ...t,
+        lifecycle_status: t.lifecycle_status || 'active',
+        access_status: t.access_status || 'enabled',
+        member_count: contacts?.member_count || 0,
+        csc_user_id: csc?.csc_user_id ?? null,
+        csc_name: csc?.csc_name ?? null,
+        csc_avatar: csc?.csc_avatar ?? null,
+        csc_archived: csc?.csc_archived ?? false,
+        package_name: firstPackage?.name || null,
+        package_full_text: firstPackage?.full_text || null,
+        package_id: firstPackage?.id || null,
+        all_packages: activePackages,
+        state: contacts?.state || null,
+        next_renewal_date: pkg?.next_renewal_date || null,
+        last_note_date: notes?.last_note_date || null,
+        last_note_snippet: notes?.last_note_snippet || null,
+        primary_contact_name: contacts?.primary_contact_name || null,
+        hours_used_minutes: pkg?.hours_used_minutes || 0,
+        hours_included_minutes: pkg?.hours_included_minutes || 0,
+        registration_end_date: notes?.registration_end_date || null,
+      } as Tenant;
+    });
+    setTenants(merged);
+  }, [accumulated, packagesQuery.data, contactsQuery.data, cscQuery.data, notesQuery.data]);
+
+  const stats = useMemo(() => {
+    const totalMembers = tenants.reduce((sum, t) => sum + (t.member_count || 0), 0);
+    const active = tenants.filter(t => t.status === "active").length;
+    const suspended = tenants.filter(t => t.status === "inactive" || t.status === "on_hold" || t.status === "disabled").length;
+    const closed = tenants.filter(t => t.status === "terminated" || t.status === "cancelled").length;
+    return { total: tenants.length, active, suspended, closed, totalMembers };
+  }, [tenants]);
+
+  const hasMoreTenants = basicQuery.hasMore;
+  const loadingMore = page > 0 && basicQuery.isFetching;
+
+  const loadMoreTenants = () => {
+    if (loadingMore || !hasMoreTenants) return;
+    setPage(p => p + 1);
+  };
+
+  useEffect(() => {
     fetchPackages();
     fetchCSCOptions();
     checkConnectedTenant();
@@ -173,359 +256,6 @@ export default function ManageTenants() {
     setCurrentPage(1);
   }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter, regEndFilter]);
 
-  // Enrich a page of raw tenants with all derived data (packages, csc, members, notes, time, reg end, etc).
-  // Used by both initial fetch and "Load more" pagination.
-  const enrichTenants = async (tenantsData: any[]) => {
-    const tenantIds = tenantsData.map(t => t.id);
-
-    const { data: packageInstancesData } = await supabase
-      .from("package_instances")
-      .select("tenant_id, package_id, next_renewal_date")
-      .eq("is_complete", false)
-      .in("tenant_id", tenantIds);
-
-    const packageIds = [...new Set((packageInstancesData || []).map(pi => pi.package_id).filter(Boolean))];
-
-    const { data: packagesData } = packageIds.length > 0
-      ? await supabase
-          .from("packages")
-          .select("id, name, full_text, slug, package_type")
-          .in("id", packageIds)
-      : { data: [] as any[] };
-
-    const packageLookup = (packagesData || []).reduce((acc, pkg) => {
-      acc[pkg.id] = { name: pkg.name, full_text: pkg.full_text, slug: pkg.slug, package_type: pkg.package_type };
-      return acc;
-    }, {} as Record<number, { name: string; full_text: string | null; slug: string | null; package_type: string | null }>);
-
-    const tenantPackagesMap = (packageInstancesData || []).reduce((acc, pi) => {
-      if (!acc[pi.tenant_id]) acc[pi.tenant_id] = [];
-      if (pi.package_id && packageLookup[pi.package_id]) {
-        const pkg = packageLookup[pi.package_id];
-        if (!acc[pi.tenant_id].some((p: TenantPackageInfo) => p.id === pi.package_id)) {
-          acc[pi.tenant_id].push({
-            id: pi.package_id,
-            name: pkg.name,
-            full_text: pkg.full_text,
-            slug: pkg.slug
-          });
-        }
-      }
-      return acc;
-    }, {} as Record<number, TenantPackageInfo[]>);
-
-    const tenantRenewalMap = (packageInstancesData || []).reduce((acc, pi) => {
-      if (pi.next_renewal_date && pi.package_id) {
-        const pkg = packageLookup[pi.package_id];
-        if (pkg?.package_type === 'regulatory_submission') return acc;
-        if (!acc[pi.tenant_id] || pi.next_renewal_date < acc[pi.tenant_id]) {
-          acc[pi.tenant_id] = pi.next_renewal_date;
-        }
-      }
-      return acc;
-    }, {} as Record<number, string>);
-
-    const { data: memberCounts } = await supabase.from("tenant_users").select("tenant_id").in("tenant_id", tenantIds);
-    const memberCountMap = (memberCounts || []).reduce((acc, user) => {
-      acc[user.tenant_id] = (acc[user.tenant_id] || 0) + 1;
-      return acc;
-    }, {} as Record<number, number>);
-
-    const { data: cscAssignments } = await supabase
-      .from("tenant_csc_assignments")
-      .select("tenant_id, csc_user_id")
-      .in("tenant_id", tenantIds)
-      .eq("is_primary", true);
-    const cscMap = (cscAssignments || []).reduce((acc, assignment) => {
-      acc[assignment.tenant_id] = assignment.csc_user_id;
-      return acc;
-    }, {} as Record<number, string>);
-
-    const userUuids = Object.values(cscMap).filter(Boolean);
-    const { data: usersData } = userUuids.length > 0
-      ? await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url, archived").in("user_uuid", userUuids)
-      : { data: [] as any[] };
-    const userDataMap = (usersData || []).reduce((acc, user) => {
-      acc[user.user_uuid] = {
-        name: `${user.first_name} ${user.last_name}`,
-        avatar: user.avatar_url,
-        archived: user.archived || false
-      };
-      return acc;
-    }, {} as Record<string, { name: string; avatar: string | null; archived: boolean }>);
-
-    const { data: adminUsersData } = await supabase.from("users").select("tenant_id, state").eq("unicorn_role", "Admin").in("tenant_id", tenantIds);
-    const stateCodes = [...new Set(adminUsersData?.map(u => u.state).filter(Boolean) || [])];
-    const { data: statesData } = stateCodes.length > 0
-      ? await supabase.from("dd_states" as any).select("legacy_code, label").in("legacy_code", stateCodes)
-      : { data: [] as any[] };
-    const stateDescMap = (statesData || []).reduce((acc, state: any) => {
-      acc[state.legacy_code] = state.label;
-      return acc;
-    }, {} as Record<number, string>);
-
-    const stateMap = (adminUsersData || []).reduce((acc, user) => {
-      if (!acc[user.tenant_id] && user.state) {
-        acc[user.tenant_id] = stateDescMap[user.state] || "";
-      }
-      return acc;
-    }, {} as Record<number, string | null>);
-
-    const { data: primaryContactsData } = await supabase
-      .from("tenant_users")
-      .select("tenant_id, user_id")
-      .in("tenant_id", tenantIds)
-      .eq("primary_contact", true)
-      .order("created_at", { ascending: true });
-
-    const primaryContactUserIds = [...new Set((primaryContactsData || []).map(pc => pc.user_id).filter(Boolean))];
-    const { data: primaryContactUsersData } = primaryContactUserIds.length > 0
-      ? await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", primaryContactUserIds)
-      : { data: [] };
-    const primaryContactUserMap = (primaryContactUsersData || []).reduce((acc, u) => {
-      acc[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || null;
-      return acc;
-    }, {} as Record<string, string | null>);
-
-    const primaryContactMap = (primaryContactsData || []).reduce((acc, pc) => {
-      if (!acc[pc.tenant_id]) {
-        acc[pc.tenant_id] = primaryContactUserMap[pc.user_id] || null;
-      }
-      return acc;
-    }, {} as Record<number, string | null>);
-
-    const lastNoteMap: Record<number, { date: string; snippet: string }> = {};
-    const noteBatchSize = 50;
-    for (let i = 0; i < tenantIds.length; i += noteBatchSize) {
-      const batch = tenantIds.slice(i, i + noteBatchSize);
-      const [notesRes, clientNotesRes] = await Promise.all([
-        supabase
-          .from("notes")
-          .select("tenant_id, created_at, title, note_details")
-          .in("tenant_id", batch)
-          .order("created_at", { ascending: false })
-          .limit(batch.length * 2),
-        supabase
-          .from("client_notes")
-          .select("tenant_id, created_at, title, content")
-          .in("tenant_id", batch)
-          .order("created_at", { ascending: false })
-          .limit(batch.length * 2),
-      ]);
-      const allNotes = [
-        ...(notesRes.data || []).map((n: any) => ({ tenant_id: n.tenant_id, created_at: n.created_at, snippet: (n.title || n.note_details || '').substring(0, 50) })),
-        ...(clientNotesRes.data || []).map((n: any) => ({ tenant_id: n.tenant_id, created_at: n.created_at, snippet: (n.title || n.content || '').substring(0, 50) })),
-      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      allNotes.forEach(note => {
-        if (!lastNoteMap[note.tenant_id]) {
-          lastNoteMap[note.tenant_id] = { date: note.created_at, snippet: note.snippet };
-        }
-      });
-    }
-
-    const { data: piIncludedData } = await (supabase as any)
-      .from('package_instances')
-      .select('id, tenant_id, included_minutes, hours_included')
-      .eq('is_complete', false)
-      .is('parent_instance_id', null)
-      .in('tenant_id', tenantIds);
-
-    const activeInstanceIds = (piIncludedData || []).map(pi => pi.id);
-
-    const tenantIncludedMinutesMap = (piIncludedData || []).reduce((acc, pi) => {
-      const mins = pi.included_minutes || ((pi.hours_included || 0) * 60);
-      acc[pi.tenant_id] = (acc[pi.tenant_id] || 0) + mins;
-      return acc;
-    }, {} as Record<number, number>);
-
-    let tenantTimeUsedMap: Record<number, number> = {};
-    if (activeInstanceIds.length > 0) {
-      const { data: burndownData } = await supabase
-        .from('v_package_burndown')
-        .select('tenant_id, used_minutes, included_minutes')
-        .in('tenant_id', tenantIds)
-        .in('package_instance_id', activeInstanceIds);
-      (burndownData || []).forEach((r: any) => {
-        tenantTimeUsedMap[r.tenant_id] = (tenantTimeUsedMap[r.tenant_id] || 0) + (r.used_minutes || 0);
-      });
-      const tenantIncludedFromBurndown: Record<number, number> = {};
-      (burndownData || []).forEach((r: any) => {
-        tenantIncludedFromBurndown[r.tenant_id] = (tenantIncludedFromBurndown[r.tenant_id] || 0) + (r.included_minutes || 0);
-      });
-      Object.keys(tenantIncludedFromBurndown).forEach(tid => {
-        tenantIncludedMinutesMap[Number(tid)] = tenantIncludedFromBurndown[Number(tid)];
-      });
-    }
-
-    const { data: regEndData } = await supabase
-      .from('tga_rto_summary')
-      .select('tenant_id, registration_end_date')
-      .in('tenant_id', tenantIds)
-      .not('registration_end_date', 'is', null);
-    const regEndMap = (regEndData || []).reduce((acc, r) => {
-      acc[(r as any).tenant_id] = (r as any).registration_end_date;
-      return acc;
-    }, {} as Record<number, string>);
-
-    const enriched = tenantsData.map(tenant => {
-      const activePackages = tenantPackagesMap[tenant.id] || [];
-      const firstNonKS = activePackages.find((p: TenantPackageInfo) => !p.name.startsWith('KS'));
-      const firstPackage = firstNonKS || activePackages[0];
-      const cscUserId = cscMap[tenant.id];
-      const hasKickStart = activePackages.some((p: TenantPackageInfo) => p.name.startsWith('KS'));
-      return {
-        ...tenant,
-        lifecycle_status: tenant.lifecycle_status || 'active',
-        access_status: tenant.access_status || 'enabled',
-        member_count: memberCountMap[tenant.id] || 0,
-        csc_user_id: cscUserId || null,
-        csc_name: cscUserId ? userDataMap[cscUserId]?.name : null,
-        csc_avatar: cscUserId ? userDataMap[cscUserId]?.avatar : null,
-        csc_archived: cscUserId ? userDataMap[cscUserId]?.archived : false,
-        package_name: firstPackage?.name || null,
-        package_full_text: firstPackage?.full_text || null,
-        package_id: firstPackage?.id || null,
-        all_packages: activePackages,
-        state: stateMap[tenant.id] || null,
-        next_renewal_date: tenantRenewalMap[tenant.id] || null,
-        last_note_date: lastNoteMap[tenant.id]?.date || null,
-        last_note_snippet: lastNoteMap[tenant.id]?.snippet || null,
-        primary_contact_name: primaryContactMap[tenant.id] || null,
-        hours_used_minutes: tenantTimeUsedMap[tenant.id] || 0,
-        hours_included_minutes: tenantIncludedMinutesMap[tenant.id] || 0,
-        registration_end_date: regEndMap[tenant.id] || null,
-        _hasKickStart: hasKickStart,
-      } as any;
-    });
-
-    return enriched;
-  };
-
-  const computeStats = (rows: any[]) => {
-    const totalMembers = rows.reduce((sum, t) => sum + (t.member_count || 0), 0);
-    const active = rows.filter(t => t.status === "active").length;
-    const suspended = rows.filter(t => t.status === "inactive" || t.status === "on_hold" || t.status === "disabled").length;
-    const closed = rows.filter(t => t.status === "terminated" || t.status === "cancelled").length;
-    return { total: rows.length, active, suspended, closed, totalMembers };
-  };
-
-  const fetchTenants = async () => {
-    try {
-      setFetchError(null);
-      setLoading(true);
-      const { data: tenantsData, error: tenantsError } = await supabase
-        .from("tenants")
-        .select("*")
-        .order("name")
-        .range(0, TENANT_PAGE_SIZE - 1);
-      if (tenantsError) throw tenantsError;
-      if (!tenantsData || tenantsData.length === 0) {
-        setTenants([]);
-        setStats({ total: 0, active: 0, suspended: 0, closed: 0, totalMembers: 0 });
-        setTenantsOffset(0);
-        setHasMoreTenants(false);
-        return;
-      }
-
-      const enriched = await enrichTenants(tenantsData);
-      setTenants(enriched);
-      setStats(computeStats(enriched));
-      setTenantsOffset(tenantsData.length);
-      setHasMoreTenants(tenantsData.length === TENANT_PAGE_SIZE);
-    } catch (error: any) {
-      console.error("fetchTenants failed:", error);
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-      setFetchError("Failed to load clients. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMoreTenants = async () => {
-    if (loadingMore || !hasMoreTenants) return;
-    try {
-      setLoadingMore(true);
-      const from = tenantsOffset;
-      const to = tenantsOffset + TENANT_PAGE_SIZE - 1;
-      const { data: nextPage, error } = await supabase
-        .from("tenants")
-        .select("*")
-        .order("name")
-        .range(from, to);
-      if (error) throw error;
-      if (!nextPage || nextPage.length === 0) {
-        setHasMoreTenants(false);
-        return;
-      }
-      const enriched = await enrichTenants(nextPage);
-      setTenants(prev => {
-        const merged = [...prev, ...enriched];
-        setStats(computeStats(merged));
-        return merged;
-      });
-      setTenantsOffset(prev => prev + nextPage.length);
-      setHasMoreTenants(nextPage.length === TENANT_PAGE_SIZE);
-    } catch (error: any) {
-      console.error("loadMoreTenants failed:", error);
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
-      setLoadingMore(false);
-    }
-  };
-
-  // Lightweight refresh used by the realtime CSC channel — only the two CSC queries,
-  // merged into existing tenants state without re-running the full pipeline.
-  const fetchCscAssignmentsOnly = async () => {
-    try {
-      const current = tenantsRef.current;
-      if (!current || current.length === 0) return;
-      const tenantIds = current.map(t => t.id);
-
-      const { data: cscAssignments, error: cscErr } = await supabase
-        .from("tenant_csc_assignments")
-        .select("tenant_id, csc_user_id")
-        .in("tenant_id", tenantIds)
-        .eq("is_primary", true);
-      if (cscErr) throw cscErr;
-
-      const cscMap = (cscAssignments || []).reduce((acc, assignment) => {
-        acc[assignment.tenant_id] = assignment.csc_user_id;
-        return acc;
-      }, {} as Record<number, string>);
-
-      const userUuids = Object.values(cscMap).filter(Boolean);
-      const { data: usersData } = userUuids.length > 0
-        ? await supabase
-            .from("users")
-            .select("user_uuid, first_name, last_name, avatar_url, archived")
-            .in("user_uuid", userUuids)
-        : { data: [] as any[] };
-
-      const userDataMap = (usersData || []).reduce((acc, user) => {
-        acc[user.user_uuid] = {
-          name: `${user.first_name} ${user.last_name}`,
-          avatar: user.avatar_url,
-          archived: user.archived || false,
-        };
-        return acc;
-      }, {} as Record<string, { name: string; avatar: string | null; archived: boolean }>);
-
-      setTenants(prev => prev.map(t => {
-        const cscUserId = cscMap[t.id] ?? null;
-        const u = cscUserId ? userDataMap[cscUserId] : null;
-        return {
-          ...t,
-          csc_user_id: cscUserId,
-          csc_name: u?.name ?? null,
-          csc_avatar: u?.avatar ?? null,
-          csc_archived: u?.archived ?? false,
-        } as any;
-      }));
-    } catch (err) {
-      console.error("fetchCscAssignmentsOnly failed:", err);
-    }
-  };
-
   const fetchPackages = async () => {
     try {
       const { data, error } = await supabase.from("packages").select("id, name, created_at").order("name");
@@ -544,15 +274,15 @@ export default function ManageTenants() {
         .eq("disabled", false)
         .order("archived", { ascending: true })
         .order("first_name", { ascending: true });
-      
+
       if (error) throw error;
-      
+
       const cscUsers = (data || []).filter(user => {
         const hasInTeams = user.staff_teams?.includes('client_success');
         const hasInTeam = user.staff_team === 'client_success';
         return hasInTeams || hasInTeam;
       });
-      
+
       setCscFilterOptions(cscUsers.map(u => ({
         user_uuid: u.user_uuid,
         first_name: u.first_name,
@@ -564,26 +294,27 @@ export default function ManageTenants() {
     }
   };
 
+  // Realtime: invalidate the relevant React Query caches; React Query handles the refresh.
   useEffect(() => {
     const packagesChannel = supabase
       .channel('packages-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'packages' }, () => { fetchPackages(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'packages' }, () => {
+        fetchPackages();
+        queryClient.invalidateQueries({ queryKey: ['tenants', 'packages'] });
+      })
       .subscribe();
     return () => { supabase.removeChannel(packagesChannel); };
-  }, []);
-
-  // Keep ref in sync so realtime handler can read latest tenants without resubscribing.
-  useEffect(() => {
-    tenantsRef.current = tenants;
-  }, [tenants]);
+  }, [queryClient]);
 
   useEffect(() => {
     const cscChannel = supabase
       .channel('csc-assignments-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenant_csc_assignments' }, () => { fetchCscAssignmentsOnly(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenant_csc_assignments' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['tenants', 'csc-assignments'] });
+      })
       .subscribe();
     return () => { supabase.removeChannel(cscChannel); };
-  }, []);
+  }, [queryClient]);
 
   const applyFiltersAndSort = () => {
     let filtered = [...tenants];
@@ -681,7 +412,7 @@ export default function ManageTenants() {
       }, { onConflict: "user_uuid,tenant_id" });
       if (error) throw error;
       setConnectedTenantIds(prev => [...prev, tenant.id]);
-      fetchTenants();
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
       toast({ title: "Connected", description: `You are now connected to "${tenant.name}" workspace` });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -748,16 +479,16 @@ export default function ManageTenants() {
     );
   };
 
-  if (fetchError) {
+  if (basicQuery.isError) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-muted-foreground">{fetchError}</p>
-        <Button variant="outline" onClick={fetchTenants}>Retry</Button>
+        <p className="text-muted-foreground">Failed to load clients. Please try again.</p>
+        <Button variant="outline" onClick={() => basicQuery.refetch()}>Retry</Button>
       </div>
     );
   }
 
-  if (loading) {
+  if (basicQuery.isLoading) {
     return (
       <div className="p-6 space-y-6 animate-fade-in">
         <Skeleton className="h-12 w-64" />
@@ -1378,10 +1109,10 @@ export default function ManageTenants() {
       </AlertDialog>
 
       {/* Add Tenant Dialog */}
-      <AddTenantDialog open={addTenantDialog} onOpenChange={setAddTenantDialog} onSuccess={fetchTenants} />
+      <AddTenantDialog open={addTenantDialog} onOpenChange={setAddTenantDialog} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tenants'] })} />
 
       {/* Unicorn 1 Import Dialog */}
-      <Unicorn1ImportDialog open={u1ImportOpen} onOpenChange={setU1ImportOpen} onSuccess={fetchTenants} />
+      <Unicorn1ImportDialog open={u1ImportOpen} onOpenChange={setU1ImportOpen} onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tenants'] })} />
 
       {/* CSC Quick Assign Dialog */}
       {cscAssignDialog.tenant && (
@@ -1391,7 +1122,7 @@ export default function ManageTenants() {
           tenantId={cscAssignDialog.tenant.id}
           tenantName={cscAssignDialog.tenant.name}
           canRemove={isSuperAdmin}
-          onSuccess={fetchTenants}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tenants'] })}
         />
       )}
     </div>

@@ -1,110 +1,99 @@
-## Patch plan — `src/pages/ManageTenants.tsx` only
+# Migrate ManageTenants to React Query
 
-Scope is strictly limited to this one file. No React Query migration, no schema/RLS changes, no other files touched.
+Replace the monolithic `fetchTenants()` waterfall in `src/pages/ManageTenants.tsx` with five dedicated `useQuery` hooks. The QueryClient already exists in `src/App.tsx` and stays untouched. Phase 1 manual patterns (`fetchError`, `fetchCscAssignmentsOnly`, `loadingMore`, manual `setLoading`) are deleted in favour of React Query equivalents.
 
-### Heads-up on Problem 1 (loading state)
+## New hook files
 
-The current `fetchTenants()` (lines 170–422) **already** has the exact `try/catch/finally` shape requested, with `setLoading(false)` in the `finally` block (line 419–421). The only quirk is a redundant `setLoading(false)` on the early-return branch at line 178 — which is harmless because `finally` runs on early return anyway.
+All hooks use the singleton `supabase` client from `@/integrations/supabase/client` and the `[domain, subentity, ...args]` query-key convention.
 
-Action: **remove** the redundant line 178 `setLoading(false)` so the finally is the single source of truth, and keep the existing toast in `catch`. No other change to the loading flow is needed.
+### 1. `src/hooks/useTenantsBasic.ts`
 
-If you want me to leave line 178 alone, say so and I'll skip that micro-cleanup.
+- Param: `{ page: number; pageSize?: number }` (default pageSize 100).
+- Query key: `['tenants', 'basic', page, pageSize]`.
+- Fetches `tenants.select('*').order('name').range(from, to)`.
+- Returns `{ data, isLoading, isError, error, refetch }` plus a derived `hasMore` (true when returned rows === pageSize).
+- `staleTime: 5 * 60 * 1000`, `placeholderData: keepPreviousData` so paging doesn't blank the list.
 
-### Problem 2 — Error UI with Retry
+### 2. `src/hooks/useTenantPackages.ts`
 
-Add to the state block (near line 86):
-- `const [fetchError, setFetchError] = useState<string | null>(null);`
-- `const [tenantsOffset, setTenantsOffset] = useState(0);` (used by Problem 4)
-- `const [hasMoreTenants, setHasMoreTenants] = useState(false);` (used by Problem 4)
-- `const [loadingMore, setLoadingMore] = useState(false);` (used by Problem 4)
+- Param: `tenantIds: number[]`.
+- Query key: `['tenants', 'packages', tenantIds]`.
+- `enabled: tenantIds.length > 0`.
+- Internally runs the existing 3-call sequence: `package_instances` (open) → `packages` lookup → `v_package_burndown` for active instances. Returns a normalised map keyed by `tenant_id` containing: `all_packages`, `next_renewal_date`, `hours_used_minutes`, `hours_included_minutes`.
+- `staleTime: 3 * 60 * 1000`.
 
-In `fetchTenants()`:
-- At the very top of `try`: `setFetchError(null);`
-- In `catch`: keep the existing toast and add `setFetchError("Failed to load clients. Please try again.");`
+### 3. `src/hooks/useTenantContacts.ts`
 
-In the render, **immediately above** the existing `if (loading)` block (line 641):
-```tsx
-if (fetchError) {
-  return (
-    <div className="flex flex-col items-center justify-center h-64 gap-4">
-      <p className="text-muted-foreground">{fetchError}</p>
-      <Button variant="outline" onClick={fetchTenants}>Retry</Button>
-    </div>
-  );
-}
-```
-`Button` is already imported in this file.
+- Param: `tenantIds: number[]`.
+- Query key: `['tenants', 'contacts', tenantIds]`.
+- `enabled: tenantIds.length > 0`.
+- Runs `tenant_users` (`primary_contact = true`) → `users` for those uuids and also `tenant_users` raw count for `member_count` plus the admin `users` + `dd_states` lookup (currently in `enrichTenants`). Returns a per-tenant map: `{ primary_contact_name, member_count, state }`.
+- `staleTime: 5 * 60 * 1000`.
 
-### Problem 3 — Scoped CSC realtime refresh
+### 4. `src/hooks/useCscAssignments.ts`
 
-Extract a new function `fetchCscAssignmentsOnly()` that runs only the two CSC queries currently at lines 237–256:
-1. `tenant_csc_assignments` filtered by current `tenants.map(t => t.id)` and `is_primary = true`.
-2. `users` lookup for the resulting `csc_user_id` set (`user_uuid, first_name, last_name, avatar_url, archived`).
+- Param: `tenantIds: number[]`.
+- Query key: `['tenants', 'csc-assignments', tenantIds]`.
+- `enabled: tenantIds.length > 0`.
+- Runs `tenant_csc_assignments` (`is_primary = true`) → `users` for `csc_user_id`s. Returns a map: `tenant_id → { csc_user_id, csc_name, csc_avatar, csc_archived }`.
+- `staleTime: 2 * 60 * 1000`. Replaces `fetchCscAssignmentsOnly()`.
 
-Then merge into existing state without re-running the other 11 queries:
+### 5. `src/hooks/useTenantNotes.ts`
+
+- Param: `tenantIds: number[]`.
+- Query key: `['tenants', 'notes', tenantIds]`.
+- `enabled: tenantIds.length > 0`.
+- Runs the existing 50-row batched loop against `notes` and `client_notes`, plus `tga_rto_summary` for `registration_end_date`. Returns a map: `tenant_id → { last_note_date, last_note_snippet, registration_end_date }`. (Reg-end is grouped here because it's a small per-tenant lookup that fits the "notes / activity" cadence.)
+- `staleTime: 5 * 60 * 1000`.
+
+> Note: the original `enrichTenants` had 11 follow-up queries. We group them into 4 logical hooks (packages, contacts, csc, notes) per the spec — the `tga_rto_summary` lookup needs a home and notes/activity is the closest cadence. If the user prefers a 6th hook for it, easy to split later.
+
+## ManageTenants.tsx changes
+
+- Delete state: `loading`, `fetchError`, `loadingMore`, `tenantsOffset`, `hasMoreTenants`, `tenantsRef`, the `tenants` and `stats` `useState`, and the two `useEffect`s that maintain them.
+- Delete functions: `fetchTenants`, `loadMoreTenants`, `fetchCscAssignmentsOnly`, `enrichTenants`, `computeStats` (replaced by `useMemo`).
+- Add `const [page, setPage] = useState(0)` and `const queryClient = useQueryClient()`.
+- Call the 5 hooks. `useTenantsBasic({ page })` drives loading/error UI. The other 4 hooks receive `tenantIds = basic?.map(t => t.id) ?? []`.
+- Build the merged `tenants` array with `useMemo` from the 5 hook results, mapping each base tenant through the four lookup maps to produce the existing `Tenant` shape (preserves all downstream filter/sort code unchanged).
+- Build `stats` with `useMemo` from the merged tenants.
+- Loading skeleton: `if (basicQuery.isLoading) ...`.
+- Error card + Retry: `if (basicQuery.isError) ... <Button onClick={() => basicQuery.refetch()}>Retry</Button>`.
+- Load more: clicking the existing button calls `setPage(p => p + 1)`. To preserve the "append" behaviour across pages, accumulate basic pages with a `useState<Tenant[]>` cache keyed off seen ids, OR (cleaner) keep a `pages` state that tracks loaded page numbers and run `useTenantsBasic` for each. Simplest approach: keep an accumulating `loadedTenants` in a `useRef`/`useState` that appends each new `basicQuery.data` when it arrives. The lookup hooks then receive the full accumulated id list.
+
+## Realtime handler
+
+Replace the `tenant_csc_assignments` realtime subscription body with:
+
 ```ts
-setTenants(prev => prev.map(t => {
-  const cscUserId = cscMap[t.id] ?? null;
-  const u = cscUserId ? userDataMap[cscUserId] : null;
-  return {
-    ...t,
-    csc_user_id: cscUserId,
-    csc_name: u?.name ?? null,
-    csc_avatar: u?.avatar ?? null,
-    csc_archived: u?.archived ?? false,
-  };
-}));
+queryClient.invalidateQueries({ queryKey: ['tenants', 'csc-assignments'] });
 ```
-No-op early return if `tenants.length === 0`. Wrap in `try/catch` that logs but does not toast (it's a background refresh).
 
-Update the realtime channel handler at line 473 to call `fetchCscAssignmentsOnly()` instead of `fetchTenants()`. Add `fetchCscAssignmentsOnly` and `tenants` to that `useEffect`'s dependency array (currently `[]`) — using a ref or recreating the channel on tenants change is overkill; simplest is to read `tenants` via a ref to avoid resubscribing. I'll use a `tenantsRef = useRef<Tenant[]>([])` updated in a small `useEffect`, and the realtime handler reads `tenantsRef.current` so the channel subscription itself stays mounted with `[]` deps.
+The `packages` realtime channel similarly invalidates `['tenants', 'packages']`. No direct fetch calls.
 
-### Problem 4 — Real pagination with Load more
+## Mutation/refresh callers
 
-In the tenants query at line 173, change:
+`AddTenantDialog`, `Unicorn1ImportDialog`, and `CSCQuickAssignDialog` currently receive `onSuccess={fetchTenants}`. Replace with:
+
 ```ts
-.from("tenants").select("*").order("name")
-```
-to:
-```ts
-.from("tenants").select("*").order("name").range(0, 99)
+onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tenants'] })}
 ```
 
-After the successful first-page fetch, set:
-- `setTenantsOffset(100);`
-- `setHasMoreTenants((tenantsData?.length ?? 0) === 100);`
+This invalidates all 5 hook caches in one call (prefix match).
 
-Add a new function `loadMoreTenants()`:
-- Set `loadingMore = true`.
-- `supabase.from("tenants").select("*").order("name").range(tenantsOffset, tenantsOffset + 99)`.
-- For the returned page, run the same enrichment pipeline used in `fetchTenants` **scoped to the new tenant IDs only** (package_instances, packages, member counts, csc assignments, users, admin/state, primary contact, notes/structured notes, package burndown, registration end date — same 11 follow-up queries but `.in("tenant_id", newIds)`).
-- `setTenants(prev => [...prev, ...newEnriched]);`
-- `setTenantsOffset(o => o + 100);`
-- `setHasMoreTenants((data?.length ?? 0) === 100);`
-- Recompute `stats` from `[...prev, ...newEnriched]`.
-- Errors → toast only, do not blank the page.
+## Out of scope
 
-To avoid duplicating the enrichment block, I'll extract a small internal helper `enrichTenants(tenantsData)` returning `{ enriched, totals }` and call it from both `fetchTenants` and `loadMoreTenants`. This stays inside the same file and does not restructure the component.
+- No changes to `src/App.tsx` or QueryClient config.
+- No DB/RLS/schema changes.
+- No edits outside `ManageTenants.tsx` and the 5 new hook files.
+- No AI/LLM calls in hooks or components.
 
-In the render, below the tenant list (after the existing pagination/grid block, before the dialogs around line 1254), add:
-```tsx
-{hasMoreTenants && (
-  <div className="flex justify-center pt-4">
-    <Button variant="outline" onClick={loadMoreTenants} disabled={loadingMore}>
-      {loadingMore ? "Loading…" : "Load more"}
-    </Button>
-  </div>
-)}
-```
+## Files touched
 
-Note: the existing client-side pagination (`currentPage`) and filters operate on the loaded `tenants` array, so they continue to work — they now just operate over the loaded pages. Filters/sort/search will only see loaded rows; this matches the "Load more" model and is consistent with the user's brief.
+- Created: `src/hooks/useTenantsBasic.ts`
+- Created: `src/hooks/useTenantPackages.ts`
+- Created: `src/hooks/useTenantContacts.ts`
+- Created: `src/hooks/useCscAssignments.ts`
+- Created: `src/hooks/useTenantNotes.ts`
+- Edited: `src/pages/ManageTenants.tsx`
 
-### Files changed
-
-- `src/pages/ManageTenants.tsx` (only)
-
-### Out of scope (will not touch)
-
-- React Query migration
-- Any other component, page, hook, or edge function
-- Database schema, RLS, or new columns
+Approve to proceed.
