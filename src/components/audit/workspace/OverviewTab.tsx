@@ -43,6 +43,39 @@ export function OverviewTab({ audit }: OverviewTabProps) {
     setShowSnapshot(false);
   };
 
+  const isDueDiligence =
+    audit.audit_type === 'due_diligence' || audit.audit_type === 'due_diligence_combined';
+
+  const applyTgaSnapshot = (incoming: TargetRtoSnapshot) => {
+    const fieldMap: Array<[keyof typeof snapshot, string]> = [
+      ['snapshot_rto_name', incoming.rto_name],
+      ['snapshot_rto_number', incoming.rto_number],
+      ['snapshot_site_address', incoming.site_address],
+      ['snapshot_phone', incoming.phone],
+      ['snapshot_email', incoming.email],
+      ['snapshot_website', incoming.website],
+      ['snapshot_ceo', incoming.ceo],
+    ];
+    const hasManualEntry = fieldMap.some(([key, val]) => snapshot[key] && val && snapshot[key] !== val);
+    const apply = () => {
+      setSnapshot(prev => {
+        const next = { ...prev };
+        fieldMap.forEach(([key, val]) => {
+          if (val) next[key] = val;
+        });
+        return next;
+      });
+    };
+    if (hasManualEntry) {
+      toast('Overwrite manual entries with TGA data?', {
+        action: { label: 'Replace', onClick: apply },
+        cancel: { label: 'Keep mine', onClick: () => {} },
+      });
+    } else {
+      apply();
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Audit Details */}
