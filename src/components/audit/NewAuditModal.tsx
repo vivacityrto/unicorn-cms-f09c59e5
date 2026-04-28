@@ -219,13 +219,21 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
   const selectedTenant = useMemo(() => tenants.find(t => t.id === tenantId), [tenants, tenantId]);
   const registrationType = useMemo(() => {
     if (!selectedTenant) return null;
-    // Use org_type from tenant_profile as primary source (matches the OrgTypeBadge)
+    // Match OrgTypeBadge logic in useClientManagement.tsx — a tenant with both
+    // rto_id and cricos_id is dual-registered even when tenant_profile.org_type
+    // only says 'rto'. Derive from registration fields first.
+    const hasRto = !!selectedTenant.rto_id;
+    const cricosVal = selectedTenant.profile_cricos_number || selectedTenant.cricos_id;
+    const hasCricos = !!cricosVal;
+    if (hasRto && hasCricos) return 'both' as const;
+    if (hasCricos && !hasRto) return 'cricos_only' as const;
+    if (hasRto && !hasCricos) return 'rto_only' as const;
+    // Fallback to stored org_type only when registration fields are absent
     const ot = selectedTenant.org_type;
     if (ot === 'rto_cricos') return 'both' as const;
     if (ot === 'cricos') return 'cricos_only' as const;
     if (ot === 'rto') return 'rto_only' as const;
-    // Fallback to field-level detection
-    return detectRegistrationType(selectedTenant.rto_id, selectedTenant.profile_cricos_number || selectedTenant.cricos_id);
+    return detectRegistrationType(selectedTenant.rto_id, cricosVal);
   }, [selectedTenant]);
 
   const auditTypeCards = useMemo(() => {
