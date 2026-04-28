@@ -145,7 +145,7 @@ export default function AuditWorkspaceNew() {
               <div className="px-4 py-2 border-b bg-muted/30 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                 <span>
                   <span className="text-muted-foreground">Purchaser: </span>
-                  <span className="font-medium">{(audit as any).client_name || '—'}</span>
+                  <span className="font-medium">{purchaserName || '—'}</span>
                 </span>
                 <span className="text-muted-foreground">→</span>
                 <span>
