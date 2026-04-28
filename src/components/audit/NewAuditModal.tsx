@@ -19,6 +19,9 @@ import type { AuditType } from '@/types/clientAudits';
 import { detectRegistrationType, isCricosValid } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
 import { ScopeMultiSelect } from './ScopeMultiSelect';
+import { TgaRtoLookupRow } from './TgaRtoLookupRow';
+import type { TargetRtoSnapshot } from '@/lib/tga/lookupTargetRto';
+import { toast } from 'sonner';
 
 const STAGE_NAME_MAP: Record<number, string> = {
   24: 'Compliance Health Check',
