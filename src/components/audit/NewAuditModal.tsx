@@ -543,11 +543,48 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
           {step === 3 && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                These details are captured at the time of the audit. They will appear in the final report exactly as shown here.
+                {isDueDiligence
+                  ? <>These details describe the <strong>Target RTO</strong> under review and will appear in the final report exactly as shown here. The client commissioning the audit ({tenantName || 'the Purchaser'}) remains the Purchaser.</>
+                  : 'These details are captured at the time of the audit. They will appear in the final report exactly as shown here.'}
               </p>
+
+              {isDueDiligence && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <h4 className="text-sm font-semibold">Target RTO</h4>
+                    <span className="text-xs text-muted-foreground">— the RTO being assessed for the Purchaser</span>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Lookup by RTO code or name (training.gov.au)</Label>
+                    <TargetRtoCombobox
+                      onSelect={(snap) => {
+                        setRtoName(snap.legal_name || snap.trading_name || '');
+                        setRtoNumber(snap.rto_code || '');
+                        setCricosCode(snap.cricos_codes || '');
+                        setCeo(snap.ceo_name || '');
+                        setSiteAddress(snap.head_office_address || '');
+                        setPhone(snap.contact_phone || '');
+                        setEmail(snap.contact_email || '');
+                        setWebsite(snap.website || '');
+                      }}
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1.5">
+                      If the Target RTO isn't found above, enter the details manually below.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>RTO Name</Label><Input value={rtoName} onChange={e => setRtoName(e.target.value)} /></div>
-                <div><Label>RTO Number</Label><Input value={rtoNumber} onChange={e => setRtoNumber(e.target.value)} /></div>
+                <div>
+                  <Label>{isDueDiligence ? 'Target RTO Name *' : 'RTO Name'}</Label>
+                  <Input value={rtoName} onChange={e => setRtoName(e.target.value)} />
+                  {isDueDiligence && !rtoName.trim() && (
+                    <p className="text-[11px] text-destructive mt-1">Target RTO Name is required for Due Diligence audits.</p>
+                  )}
+                </div>
+                <div><Label>{isDueDiligence ? 'Target RTO Number' : 'RTO Number'}</Label><Input value={rtoNumber} onChange={e => setRtoNumber(e.target.value)} /></div>
                 <div><Label>CRICOS Code</Label><Input value={cricosCode} onChange={e => setCricosCode(e.target.value)} /></div>
                 <div><Label>CEO / Principal</Label><Input value={ceo} onChange={e => setCeo(e.target.value)} /></div>
                 <div className="col-span-2"><Label>Site Address</Label><Input value={siteAddress} onChange={e => setSiteAddress(e.target.value)} /></div>
