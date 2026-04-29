@@ -1,4 +1,4 @@
-import { BookOpen, Shield, Info, Eye } from "lucide-react";
+import { BookOpen, Shield, Info, Eye, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { AskVivMode } from "@/hooks/useAskViv";
@@ -24,6 +24,14 @@ const modeConfig = {
     badges: ["Tenant data", "Read-only", "Audit logged"],
     color: "from-blue-500/5 to-blue-500/10",
     borderColor: "border-blue-500/20",
+  },
+  web: {
+    icon: Globe,
+    label: "Web Research",
+    description: "Web research with live citations.",
+    badges: ["Web sources", "Citations included", "Live data"],
+    color: "from-emerald-500/5 to-emerald-500/10",
+    borderColor: "border-emerald-500/20",
   },
 };
 
