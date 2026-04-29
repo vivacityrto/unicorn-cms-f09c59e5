@@ -28,6 +28,7 @@ export function AuditFormTab({ audit, selectedSectionId }: AuditFormTabProps) {
   const { createFinding } = useAuditFindings(audit.id);
   const updateSummary = useUpdateSectionSummary(audit.id);
   const updateRiskLevel = useUpdateSectionRiskLevel(audit.id);
+  const { data: framework } = useAuditTemplateFramework(audit.template_id);
   const [initialized, setInitialized] = useState(false);
   const [activePhase, setActivePhase] = useState<AuditPhase>('opening_meeting');
 
