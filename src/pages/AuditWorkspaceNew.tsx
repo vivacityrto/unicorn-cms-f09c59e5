@@ -19,9 +19,16 @@ import { ActionsTab } from '@/components/audit/workspace/ActionsTab';
 import { ReportTab } from '@/components/audit/workspace/ReportTab';
 import { AuditSummaryPills } from '@/components/audit/workspace/AuditSummaryPills';
 import { UnsavedAuditWorkProvider, useUnsavedAuditWork } from '@/components/audit/workspace/UnsavedAuditWorkContext';
-import { Loader2, Check } from 'lucide-react';
+import { Loader2, Check, MoreVertical, Trash2 } from 'lucide-react';
 import type { AuditStatus } from '@/types/clientAudits';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { DeleteAuditDialog, canDeleteAudit } from '@/components/audit/DeleteAuditDialog';
 
 function SaveIndicator() {
   const { status } = useUnsavedAuditWork();
@@ -57,6 +64,7 @@ export default function AuditWorkspaceNew() {
   const [selectedSection, setSelectedSection] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
   const [purchaserName, setPurchaserName] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     const tid = audit?.subject_tenant_id;
@@ -139,7 +147,40 @@ export default function AuditWorkspaceNew() {
               <span className="text-muted-foreground">/</span>
               <span className="font-medium truncate">{audit.title || 'Untitled'}</span>
               <SaveIndicator />
+              {canDeleteAudit(audit) && (
+                <div className="ml-auto">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" aria-label="Audit actions">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => setDeleteOpen(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete audit
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
             </div>
+            <DeleteAuditDialog
+              open={deleteOpen}
+              onOpenChange={setDeleteOpen}
+              audit={{
+                id: audit.id,
+                title: audit.title,
+                audit_type: audit.audit_type,
+                status: audit.status,
+                client_name: purchaserName,
+                created_at: audit.created_at,
+              }}
+              onDeleted={() => navigate('/audits')}
+            />
 
             {/* Purchaser / Target RTO line for Due Diligence audits */}
             {(audit.audit_type === 'due_diligence' || audit.audit_type === 'due_diligence_combined') && (

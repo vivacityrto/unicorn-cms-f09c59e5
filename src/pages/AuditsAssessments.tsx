@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardCheck, Plus, Search, X, Calendar, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
+import { ClipboardCheck, Plus, Search, X, Calendar, AlertTriangle, CheckCircle2, BarChart3, MoreVertical, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DeleteAuditDialog, canDeleteAudit } from '@/components/audit/DeleteAuditDialog';
 import { format, isPast, startOfYear } from 'date-fns';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatCard } from '@/components/ui/stat-card';
@@ -30,6 +32,7 @@ export default function AuditsAssessments() {
   const [schedulerCHCTenantId, setSchedulerCHCTenantId] = useState<number | null>(null);
   const [schedulerCHCTenantName, setSchedulerCHCTenantName] = useState('');
   const [schedulerCHCAuditType, setSchedulerCHCAuditType] = useState<AuditType | undefined>(undefined);
+  const [deleteTarget, setDeleteTarget] = useState<AuditDashboardRow | null>(null);
 
   const handleStartCHC = (tenantId: number, tenantName: string, auditType?: AuditType) => {
     setSchedulerCHCTenantId(tenantId);
@@ -226,9 +229,29 @@ export default function AuditsAssessments() {
                   {row.open_action_count}
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); navigate(`/audits/${row.id}`); }}>
-                    Open
-                  </Button>
+                  <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/audits/${row.id}`)}>
+                      Open
+                    </Button>
+                    {canDeleteAudit(row) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label="Audit actions">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setDeleteTarget(row)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete audit
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -254,6 +277,20 @@ export default function AuditsAssessments() {
         preselectedTenantName={schedulerCHCTenantName || undefined}
         preselectedAuditType={schedulerCHCAuditType}
       />
+      {deleteTarget && (
+        <DeleteAuditDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+          audit={{
+            id: deleteTarget.id,
+            title: deleteTarget.title,
+            audit_type: deleteTarget.audit_type,
+            status: deleteTarget.status,
+            client_name: deleteTarget.client_name,
+            created_at: deleteTarget.created_at,
+          }}
+        />
+      )}
     </div>
     </DashboardLayout>
   );
