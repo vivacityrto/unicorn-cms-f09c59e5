@@ -823,6 +823,11 @@ function generateFactBasedAnswer(
       warnings: validationResult.warnings.length,
       sanitized: modifications.length > 0,
     },
+    // Internal-only: stripped before returning to client; used to build explain payload
+    safety_meta: {
+      validation: validationResult,
+      modifications,
+    },
   };
 }
 
