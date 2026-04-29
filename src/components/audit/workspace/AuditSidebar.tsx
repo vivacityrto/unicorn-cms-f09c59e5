@@ -252,11 +252,26 @@ export function AuditSidebar({
                 )}
               </div>
               {group.sections.map(section => {
-                const comp = getSectionCompletion(section);
-                const dotColor = comp.status === 'complete' ? 'bg-green-500'
-                  : comp.status === 'partial' ? 'bg-amber-500'
+                const row = sectionCompletion?.[section.id];
+                const state = row?.section_state ?? 'empty';
+                const total = row?.total_questions ?? 0;
+                const complete = row?.complete_count ?? 0;
+                const sectionFindingsRequired = row?.findings_required ?? 0;
+                const sectionNotesRequired = row?.notes_required ?? 0;
+
+                const dotColor =
+                  state === 'complete' ? 'bg-green-500'
+                  : state === 'rated_incomplete' ? 'bg-amber-500'
+                  : state === 'in_progress' ? 'bg-muted-foreground/40'
                   : 'bg-muted-foreground/30';
-                return (
+
+                const showWarn = state === 'rated_incomplete';
+                const tooltipParts: string[] = [];
+                if (sectionFindingsRequired > 0) tooltipParts.push(`${sectionFindingsRequired} finding(s) required`);
+                if (sectionNotesRequired > 0) tooltipParts.push(`${sectionNotesRequired} note(s) required`);
+                const tooltipText = tooltipParts.join(', ');
+
+                const button = (
                   <button
                     key={section.id}
                     onClick={() => onSelectSection(section.originalIndex)}
@@ -267,15 +282,30 @@ export function AuditSidebar({
                         : 'hover:bg-muted text-muted-foreground'
                     )}
                   >
-                    <span className={cn('w-2 h-2 rounded-full mt-1 flex-shrink-0', dotColor)} />
+                    <span className="flex items-center gap-1 mt-1 flex-shrink-0">
+                      <span className={cn('w-2 h-2 rounded-full', dotColor)} />
+                      {showWarn && <AlertTriangle className="h-3 w-3 text-amber-600" />}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <span className="line-clamp-2">{section.title}</span>
-                      {comp.total > 0 && (
-                        <span className="text-[10px] text-muted-foreground/70">{comp.answered}/{comp.total}</span>
+                      {total > 0 && (
+                        <span className="text-[10px] text-muted-foreground/70">{complete}/{total}</span>
                       )}
                     </div>
                   </button>
                 );
+
+                if (showWarn && tooltipText) {
+                  return (
+                    <TooltipProvider key={section.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>{button}</TooltipTrigger>
+                        <TooltipContent side="right" className="text-xs">{tooltipText}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                }
+                return button;
               })}
             </div>
           );
