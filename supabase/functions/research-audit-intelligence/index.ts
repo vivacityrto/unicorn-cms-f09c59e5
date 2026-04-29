@@ -29,6 +29,13 @@ const AUDIT_TYPE_LABELS: Record<string, string> = {
   extension_to_scope: "Extension to Scope",
   strategic_review: "Strategic Compliance Review",
   post_audit_response: "Post-Audit Rectification",
+  compliance_health_check: "CHC",
+  cricos_chc: "CHC — CRICOS",
+  rto_cricos_chc: "CHC — RTO + CRICOS",
+  mock_audit: "Mock Audit",
+  cricos_mock_audit: "Mock Audit — CRICOS",
+  due_diligence: "Due Diligence",
+  due_diligence_combined: "Combined RTO + CRICOS Due Diligence",
 };
 
 Deno.serve(async (req) => {
