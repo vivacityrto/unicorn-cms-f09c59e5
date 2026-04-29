@@ -413,24 +413,25 @@ export function QuestionCard({
 
             {/* Finding guide now lives inside <QuestionGuidance /> above; auto-opens via defaultOpen.findingGuide. */}
 
-            {/* AI Suggestion */}
-            {hasAiSuggestion && (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-xs space-y-2">
-                <div className="flex items-center gap-1.5 text-blue-700 font-medium">
-                  <Bot className="h-3.5 w-3.5" />
-                  AI pre-fill suggestion
-                  {response?.ai_confidence && (
-                    <span className="text-blue-500">
-                      (confidence: {Math.round(response.ai_confidence * 100)}%)
-                    </span>
-                  )}
-                </div>
-                <p className="text-blue-800">Rating: {response?.ai_suggested_rating}</p>
-                {response?.ai_suggested_notes && (
-                  <p className="text-blue-800">{response.ai_suggested_notes}</p>
-                )}
-              </div>
-            )}
+            {/* Evidence linking + AI-suggested rating panel (Wave 4 #1) */}
+            <EvidencePanel
+              auditId={auditId}
+              responseId={response?.id}
+              subjectTenantId={auditMeta?.subject_tenant_id ?? null}
+              currentRating={currentRating}
+              aiSuggestion={{
+                rating: (response as any)?.ai_suggested_rating ?? null,
+                notes: (response as any)?.ai_suggested_notes ?? null,
+                confidence: (response as any)?.ai_confidence ?? null,
+                analyzedAt: (response as any)?.ai_analyzed_at ?? null,
+                excerpts: (response as any)?.ai_excerpts ?? null,
+                gaps: (response as any)?.ai_gaps ?? null,
+              }}
+              onAcceptRating={handleAcceptAi}
+              onOverrideRating={handleAcceptAi}
+              onDiscardSuggestion={handleDiscardAi}
+            />
+
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
