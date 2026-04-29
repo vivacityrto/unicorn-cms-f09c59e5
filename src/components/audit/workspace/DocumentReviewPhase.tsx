@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { QuestionCard } from './QuestionCard';
 import { useDebouncedAutosave } from './useDebouncedAutosave';
 import type { AuditSection, AuditResponse, TemplateQuestion } from '@/types/auditWorkspace';
+import { useAuditSectionCompletion } from '@/hooks/useAuditCompletion';
+import { AlertTriangle } from 'lucide-react';
 
 interface DocumentReviewPhaseProps {
   sections: AuditSection[];
@@ -178,12 +180,20 @@ function DocumentReviewSection({
 }) {
   const [open, setOpen] = useState(true);
 
+  const { data: sectionCompletion } = useAuditSectionCompletion(auditId);
+  const sectionRow = sectionCompletion?.[section.id];
+
   useEffect(() => {
     if (!isSelected) return;
     const el = document.getElementById(`section-${section.id}`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [isSelected, section.id]);
-  const answered = questions.filter(q => responses.find(r => r.question_id === q.id && r.rating)).length;
+
+  // Prefer authoritative counts from the completion view; fall back to local while it loads.
+  const total = sectionRow?.total_questions ?? questions.length;
+  const complete = sectionRow?.complete_count
+    ?? questions.filter(q => responses.find(r => r.question_id === q.id && r.rating)).length;
+  const findingsRequired = sectionRow?.findings_required ?? 0;
 
   return (
     <Card id={`section-${section.id}`}>
@@ -191,8 +201,14 @@ function DocumentReviewSection({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-sm">{section.title}</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {answered} of {questions.length} assessed
+            <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1.5">
+              <span>{complete} of {total} complete</span>
+              {findingsRequired > 0 && (
+                <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 text-[10px] gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  {findingsRequired} finding{findingsRequired === 1 ? '' : 's'} required
+                </Badge>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">

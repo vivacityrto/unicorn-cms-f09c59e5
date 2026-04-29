@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { ClientAudit } from '@/types/clientAudits';
 import type { AuditFinding, AuditAction } from '@/types/auditWorkspace';
+import { useAuditProgress } from '@/hooks/useAuditCompletion';
+import { toast } from 'sonner';
 
 interface ReportTabProps {
   audit: ClientAudit;
@@ -33,9 +35,34 @@ interface ReportTabProps {
 export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   const [releaseNotes, setReleaseNotes] = useState('');
   const [preliminaryOpen, setPreliminaryOpen] = useState(false);
+  const [softGuardOpen, setSoftGuardOpen] = useState(false);
   const releaseReport = useReleaseReport(audit.id);
   const revokeReport = useRevokeReport(audit.id);
   const { openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
+  const { data: progress } = useAuditProgress(audit.id);
+  const findingsRequired = progress?.findings_required ?? 0;
+  const notesRequired = progress?.notes_required ?? 0;
+  const incompleteCount = findingsRequired + notesRequired;
+
+  const handleGenerateClick = () => {
+    if (incompleteCount > 0) {
+      setSoftGuardOpen(true);
+      return;
+    }
+    // Backend generation is still pending — show a friendly notice.
+    toast.info('Report generation is coming soon.');
+  };
+
+  const proceedToGenerate = () => {
+    setSoftGuardOpen(false);
+    toast.info('Report generation is coming soon.');
+  };
+
+  const scrollToFirstIncomplete = () => {
+    setSoftGuardOpen(false);
+    // Best-effort: jump to the form tab. Sidebar amber dots will lead the eye.
+    document.querySelector('[data-value="form"]')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const findingsByPriority = {
     critical: findings.filter(f => f.priority === 'critical').length,
@@ -130,15 +157,43 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
               <Clock className="h-4 w-4" /> No report generated yet
             </div>
           )}
-          <Button disabled>
+          <Button onClick={handleGenerateClick}>
             <FileText className="h-4 w-4 mr-2" />
             Generate Report
           </Button>
           <p className="text-xs text-muted-foreground">
-            Report generation coming soon. The edge function for generating PDF reports will be built in a follow-up.
+            {incompleteCount > 0
+              ? `${incompleteCount} response(s) still need attention before this audit is complete.`
+              : 'Report generation is coming soon. The edge function will be built in a follow-up.'}
           </p>
         </CardContent>
       </Card>
+
+      <AlertDialog open={softGuardOpen} onOpenChange={setSoftGuardOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>This audit isn't complete yet</AlertDialogTitle>
+            <AlertDialogDescription>
+              {findingsRequired > 0 && (
+                <span>
+                  {findingsRequired} finding{findingsRequired === 1 ? '' : 's'} required
+                </span>
+              )}
+              {findingsRequired > 0 && notesRequired > 0 && <span>, </span>}
+              {notesRequired > 0 && (
+                <span>
+                  {notesRequired} note{notesRequired === 1 ? '' : 's'} required
+                </span>
+              )}
+              . Generating the report now will mark these incomplete in the document. Continue anyway?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={scrollToFirstIncomplete}>Review incomplete items</AlertDialogCancel>
+            <AlertDialogAction onClick={proceedToGenerate}>Generate anyway</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Report Preview */}
       <Card>

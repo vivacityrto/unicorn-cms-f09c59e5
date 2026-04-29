@@ -3636,6 +3636,13 @@ export type Database = {
             foreignKeyName: "audit_appointments_audit_id_fkey"
             columns: ["audit_id"]
             isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "audit_appointments_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -9013,6 +9020,13 @@ export type Database = {
             foreignKeyName: "client_audit_actions_audit_id_fkey"
             columns: ["audit_id"]
             isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_actions_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -9123,6 +9137,13 @@ export type Database = {
             foreignKeyName: "client_audit_documents_audit_id_fkey"
             columns: ["audit_id"]
             isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_documents_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -9206,6 +9227,13 @@ export type Database = {
             foreignKeyName: "client_audit_findings_audit_id_fkey"
             columns: ["audit_id"]
             isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -9217,11 +9245,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_audit_findings_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_response_completion"
+            referencedColumns: ["response_id"]
+          },
+          {
             foreignKeyName: "client_audit_findings_section_id_fkey"
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "client_audit_sections"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_section_completion"
+            referencedColumns: ["section_id"]
           },
         ]
       }
@@ -9543,6 +9585,13 @@ export type Database = {
             foreignKeyName: "client_audit_responses_audit_id_fkey"
             columns: ["audit_id"]
             isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -9559,6 +9608,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "client_audit_sections"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_section_completion"
+            referencedColumns: ["section_id"]
           },
         ]
       }
@@ -9632,6 +9688,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_audit_schedule"
             referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_sections_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
           },
           {
             foreignKeyName: "client_audit_sections_audit_id_fkey"
@@ -24186,6 +24249,13 @@ export type Database = {
             referencedRelation: "client_audit_sections"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "evidence_request_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_section_completion"
+            referencedColumns: ["section_id"]
+          },
         ]
       }
       evidence_request_template_items: {
@@ -24432,6 +24502,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_audit_schedule"
             referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
           },
           {
             foreignKeyName: "evidence_requests_audit_id_fkey"
@@ -32387,6 +32464,13 @@ export type Database = {
             foreignKeyName: "portal_documents_linked_audit_id_fkey"
             columns: ["linked_audit_id"]
             isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "portal_documents_linked_audit_id_fkey"
+            columns: ["linked_audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -37635,6 +37719,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_audit_schedule"
             referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "stage_instances_linked_audit_id_fkey"
+            columns: ["linked_audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
           },
           {
             foreignKeyName: "stage_instances_linked_audit_id_fkey"
@@ -51202,6 +51293,13 @@ export type Database = {
             foreignKeyName: "client_audit_actions_audit_id_fkey"
             columns: ["audit_id"]
             isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_actions_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -51846,6 +51944,13 @@ export type Database = {
             foreignKeyName: "client_audit_findings_audit_id_fkey"
             columns: ["audit_id"]
             isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
             referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
@@ -51854,6 +51959,169 @@ export type Database = {
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "client_audit_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_findings_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_section_completion"
+            referencedColumns: ["section_id"]
+          },
+        ]
+      }
+      v_client_audit_progress: {
+        Row: {
+          audit_id: string | null
+          complete_count: number | null
+          findings_required: number | null
+          notes_required: number | null
+          total_questions: number | null
+          unanswered: number | null
+        }
+        Relationships: []
+      }
+      v_client_audit_response_completion: {
+        Row: {
+          audit_id: string | null
+          completion_state: string | null
+          has_finding: boolean | null
+          has_notes: boolean | null
+          is_complete: boolean | null
+          question_id: string | null
+          rating: string | null
+          response_id: string | null
+          section_id: string | null
+        }
+        Insert: {
+          audit_id?: string | null
+          completion_state?: never
+          has_finding?: never
+          has_notes?: never
+          is_complete?: never
+          question_id?: string | null
+          rating?: string | null
+          response_id?: string | null
+          section_id?: string | null
+        }
+        Update: {
+          audit_id?: string | null
+          completion_state?: never
+          has_finding?: never
+          has_notes?: never
+          is_complete?: never
+          question_id?: string | null
+          rating?: string | null
+          response_id?: string | null
+          section_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_template_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "client_audit_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_section_completion"
+            referencedColumns: ["section_id"]
+          },
+        ]
+      }
+      v_client_audit_section_completion: {
+        Row: {
+          audit_id: string | null
+          audit_phase: string | null
+          complete_count: number | null
+          findings_required: number | null
+          notes_required: number | null
+          section_id: string | null
+          section_state: string | null
+          sort_order: number | null
+          title: string | null
+          total_questions: number | null
+          unanswered: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_sections_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_sections_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_sections_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_sections_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_sections_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
             referencedColumns: ["id"]
           },
         ]

@@ -6,7 +6,7 @@ import { AuditTypeBadge } from '@/components/audit/AuditTypeBadge';
 import { AuditStatusBadge } from '@/components/audit/AuditStatusBadge';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { cn } from '@/lib/utils';
-import { Check, CalendarClock, ClipboardList } from 'lucide-react';
+import { Check, CalendarClock, ClipboardList, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { ClientAudit, AuditStatus } from '@/types/clientAudits';
 import type { AuditSection, AuditResponse, AuditPhase, AuditAppointment } from '@/types/auditWorkspace';
@@ -15,6 +15,8 @@ import { STAGE_LABEL_MAP } from '@/hooks/useStageAuditLink';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { useAuditProgress, useAuditSectionCompletion } from '@/hooks/useAuditCompletion';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface AuditSidebarProps {
   audit: ClientAudit;
@@ -51,6 +53,8 @@ export function AuditSidebar({
 }: AuditSidebarProps) {
   const navigate = useNavigate();
   const { documentDeadline, openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
+  const { data: progress } = useAuditProgress(audit.id);
+  const { data: sectionCompletion } = useAuditSectionCompletion(audit.id);
 
   // Fetch stage_id for dynamic label
   const { data: stageLink } = useQuery({
@@ -83,35 +87,41 @@ export function AuditSidebar({
     }
   });
 
-  // Progress: count only document_review questions
-  const reviewSections = phaseGroups.find(g => g.key === 'document_review')?.sections || [];
-  const reviewResponses = responses.filter(r => 
-    reviewSections.some(s => s.id === r.section_id)
-  );
-  const reviewAnswered = reviewResponses.filter(r => r.rating).length;
-  const reviewTotal = reviewResponses.length || totalQuestions;
-  const progressPct = reviewTotal > 0 ? Math.round((reviewAnswered / reviewTotal) * 100) : 0;
-  const progressColor = progressPct >= 90 ? 'bg-green-500' : progressPct >= 50 ? 'bg-blue-500' : 'bg-amber-500';
+  // Progress sourced from v_client_audit_progress (true completion = rating + notes + finding for flagged ratings).
+  const completeCount = progress?.complete_count ?? 0;
+  const totalCount = progress?.total_questions ?? totalQuestions ?? 0;
+  const findingsRequired = progress?.findings_required ?? 0;
+  const notesRequired = progress?.notes_required ?? 0;
+  const unanswered = progress?.unanswered ?? 0;
+  const needsAttention = findingsRequired + notesRequired;
+  const progressPct = totalCount > 0 ? Math.round((completeCount / totalCount) * 100) : 0;
+  const fullyComplete = totalCount > 0 && completeCount === totalCount;
+  // Green only when truly complete; amber whenever any item still needs attention or is unanswered.
+  const progressColor = fullyComplete ? 'bg-green-500' : 'bg-amber-500';
 
-  const getSectionCompletion = (section: AuditSection) => {
-    const sectionResponses = responses.filter(r => r.section_id === section.id);
-    const answered = sectionResponses.filter(r => r.rating).length;
-    const total = sectionResponses.length;
-    if (total === 0) return { status: 'none' as const, answered: 0, total: 0 };
-    if (answered === total) return { status: 'complete' as const, answered, total };
-    return { status: 'partial' as const, answered, total };
+  const getSectionRow = (section: AuditSection) => {
+    const row = sectionCompletion?.[section.id];
+    if (!row) return null;
+    return row;
   };
 
   const getPhaseCompletion = (group: PhaseGroup) => {
-    let totalAnswered = 0;
-    let totalCount = 0;
+    if (group.sections.length === 0) return 'Not started';
+    let total = 0;
+    let complete = 0;
+    let allLoaded = true;
     for (const s of group.sections) {
-      const comp = getSectionCompletion(s);
-      totalAnswered += comp.answered;
-      totalCount += comp.total;
+      const row = getSectionRow(s);
+      if (!row) {
+        allLoaded = false;
+        continue;
+      }
+      total += row.total_questions;
+      complete += row.complete_count;
     }
-    if (totalCount === 0) return 'Not started';
-    if (totalAnswered === totalCount) return 'Complete';
+    if (!allLoaded && total === 0) return 'Not started';
+    if (total === 0) return 'Not started';
+    if (complete === total) return 'Complete';
     return 'In progress';
   };
 
@@ -153,14 +163,28 @@ export function AuditSidebar({
         </p>
       </div>
 
-      {/* Progress — document review only */}
+      {/* Progress — true completion (rating + notes + finding for flagged ratings) */}
       <div className="p-4 border-b space-y-2">
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Progress</span>
-          <span className="font-medium">{reviewAnswered} of {reviewTotal}</span>
+          <span className="font-medium">{completeCount} of {totalCount}</span>
         </div>
         <Progress value={progressPct} className="h-2" indicatorClassName={progressColor} />
-        <p className="text-[10px] text-muted-foreground">{reviewAnswered} of {reviewTotal} evidence items assessed</p>
+        <p className="text-[10px] text-muted-foreground flex flex-wrap gap-x-1.5 gap-y-0.5">
+          <span>{completeCount} complete</span>
+          {needsAttention > 0 && (
+            <>
+              <span className="text-muted-foreground/50">·</span>
+              <span className="text-amber-700 font-medium">{needsAttention} need attention</span>
+            </>
+          )}
+          {unanswered > 0 && (
+            <>
+              <span className="text-muted-foreground/50">·</span>
+              <span>{unanswered} unanswered</span>
+            </>
+          )}
+        </p>
       </div>
 
       {/* Schedule Summary */}
@@ -228,11 +252,26 @@ export function AuditSidebar({
                 )}
               </div>
               {group.sections.map(section => {
-                const comp = getSectionCompletion(section);
-                const dotColor = comp.status === 'complete' ? 'bg-green-500'
-                  : comp.status === 'partial' ? 'bg-amber-500'
+                const row = sectionCompletion?.[section.id];
+                const state = row?.section_state ?? 'empty';
+                const total = row?.total_questions ?? 0;
+                const complete = row?.complete_count ?? 0;
+                const sectionFindingsRequired = row?.findings_required ?? 0;
+                const sectionNotesRequired = row?.notes_required ?? 0;
+
+                const dotColor =
+                  state === 'complete' ? 'bg-green-500'
+                  : state === 'rated_incomplete' ? 'bg-amber-500'
+                  : state === 'in_progress' ? 'bg-muted-foreground/40'
                   : 'bg-muted-foreground/30';
-                return (
+
+                const showWarn = state === 'rated_incomplete';
+                const tooltipParts: string[] = [];
+                if (sectionFindingsRequired > 0) tooltipParts.push(`${sectionFindingsRequired} finding(s) required`);
+                if (sectionNotesRequired > 0) tooltipParts.push(`${sectionNotesRequired} note(s) required`);
+                const tooltipText = tooltipParts.join(', ');
+
+                const button = (
                   <button
                     key={section.id}
                     onClick={() => onSelectSection(section.originalIndex)}
@@ -243,15 +282,30 @@ export function AuditSidebar({
                         : 'hover:bg-muted text-muted-foreground'
                     )}
                   >
-                    <span className={cn('w-2 h-2 rounded-full mt-1 flex-shrink-0', dotColor)} />
+                    <span className="flex items-center gap-1 mt-1 flex-shrink-0">
+                      <span className={cn('w-2 h-2 rounded-full', dotColor)} />
+                      {showWarn && <AlertTriangle className="h-3 w-3 text-amber-600" />}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <span className="line-clamp-2">{section.title}</span>
-                      {comp.total > 0 && (
-                        <span className="text-[10px] text-muted-foreground/70">{comp.answered}/{comp.total}</span>
+                      {total > 0 && (
+                        <span className="text-[10px] text-muted-foreground/70">{complete}/{total}</span>
                       )}
                     </div>
                   </button>
                 );
+
+                if (showWarn && tooltipText) {
+                  return (
+                    <TooltipProvider key={section.id}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>{button}</TooltipTrigger>
+                        <TooltipContent side="right" className="text-xs">{tooltipText}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                }
+                return button;
               })}
             </div>
           );
