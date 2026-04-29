@@ -1,13 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronDown, ChevronUp, Plus, AlertTriangle, Bot, HelpCircle } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  AlertTriangle,
+  Bot,
+  HelpCircle,
+  Flag,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { RATING_OPTIONS_FULL, RATING_OPTIONS_SAFE, RATING_OPTIONS_CLOSING } from '@/types/auditWorkspace';
-import type { TemplateQuestion, AuditResponse, QuestionContext } from '@/types/auditWorkspace';
+import {
+  RATING_OPTIONS_FULL,
+  RATING_OPTIONS_SAFE,
+  RATING_OPTIONS_CLOSING,
+} from '@/types/auditWorkspace';
+import type {
+  TemplateQuestion,
+  AuditResponse,
+  QuestionContext,
+  AuditFinding,
+} from '@/types/auditWorkspace';
 import { AddFindingForm } from './AddFindingForm';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useDebouncedAutosave } from './useDebouncedAutosave';
 
 interface QuestionCardProps {
@@ -16,10 +39,14 @@ interface QuestionCardProps {
   auditId: string;
   sectionId: string;
   questionContext?: QuestionContext;
+  /** All findings for this audit; the card filters to its own response. */
+  findings?: AuditFinding[];
   onRate: (questionId: string, rating: string, score: number, isFlagged: boolean) => void;
   onNote: (questionId: string, notes: string) => void;
   onAddFinding: (finding: any) => void;
 }
+
+const FLAGGED_RATINGS = new Set(['at_risk', 'non_compliant']);
 
 export function QuestionCard({
   question,
@@ -27,6 +54,7 @@ export function QuestionCard({
   auditId,
   sectionId,
   questionContext,
+  findings,
   onRate,
   onNote,
   onAddFinding,
@@ -34,6 +62,8 @@ export function QuestionCard({
   const ctx = questionContext || question.question_context || 'auditor_assessment';
   const [showEvidence, setShowEvidence] = useState(ctx === 'auditor_assessment');
   const [showFindingForm, setShowFindingForm] = useState(false);
+  const [pulse, setPulse] = useState(false);
+  const previousRatingRef = useRef<string | null | undefined>(response?.rating);
   const { value: notes, setValue: setNotes, bind: notesBind } = useDebouncedAutosave({
     serverValue: response?.notes || '',
     identityKey: response?.id || question.id,
@@ -41,58 +71,166 @@ export function QuestionCard({
     debounceMs: 500,
   });
 
-  const ratingOptions = ctx === 'closing_discussion'
-    ? RATING_OPTIONS_CLOSING
-    : question.response_set === 'safe_at_risk'
-    ? RATING_OPTIONS_SAFE
-    : RATING_OPTIONS_FULL;
+  const ratingOptions =
+    ctx === 'closing_discussion'
+      ? RATING_OPTIONS_CLOSING
+      : question.response_set === 'safe_at_risk'
+      ? RATING_OPTIONS_SAFE
+      : RATING_OPTIONS_FULL;
 
   const currentRating = response?.rating;
 
+  // Findings linked to this response
+  const responseFindings = (findings || []).filter(
+    (f) => response?.id && f.response_id === response.id
+  );
+  const findingCount = responseFindings.length;
+  const ratingNeedsFinding =
+    !!currentRating && FLAGGED_RATINGS.has(currentRating) && findingCount === 0;
+
   const getScore = (rating: string) => {
     switch (rating) {
-      case 'compliant': return question.score_compliant;
-      case 'at_risk': return question.score_at_risk;
-      case 'non_compliant': return question.score_non_compliant;
-      default: return 0;
+      case 'compliant':
+        return question.score_compliant;
+      case 'at_risk':
+        return question.score_at_risk;
+      case 'non_compliant':
+        return question.score_non_compliant;
+      default:
+        return 0;
     }
   };
 
   const handleRate = (rating: string) => {
+    const previous = previousRatingRef.current;
     const score = getScore(rating);
-    const isFlagged = question.flagged_responses?.includes(
-      rating === 'at_risk' ? 'At Risk' : rating === 'non_compliant' ? 'Non-Compliant' : ''
-    ) ?? false;
+    const isFlagged =
+      question.flagged_responses?.includes(
+        rating === 'at_risk'
+          ? 'At Risk'
+          : rating === 'non_compliant'
+          ? 'Non-Compliant'
+          : ''
+      ) ?? false;
     onRate(question.id, rating, score, isFlagged);
+
+    // If we transitioned INTO a flagged rating with no finding yet, pulse the button.
+    if (FLAGGED_RATINGS.has(rating) && (!previous || !FLAGGED_RATINGS.has(previous)) && findingCount === 0) {
+      setPulse(true);
+      // Clear pulse after the keyframe completes (~2s).
+      window.setTimeout(() => setPulse(false), 2100);
+    }
+
+    // If we transitioned OUT of a flagged rating with findings still attached, warn the user.
+    if (
+      previous &&
+      FLAGGED_RATINGS.has(previous) &&
+      !FLAGGED_RATINGS.has(rating) &&
+      findingCount > 0
+    ) {
+      toast(
+        `Rating changed to ${rating}. ${findingCount} linked finding${
+          findingCount === 1 ? '' : 's'
+        } remain.`,
+        {
+          action: {
+            label: 'Review findings',
+            onClick: () => setShowFindingForm(true),
+          },
+        }
+      );
+    }
+
+    previousRatingRef.current = rating;
   };
+
+  // Keep the ref in sync if the parent updates the response from elsewhere.
+  useEffect(() => {
+    previousRatingRef.current = response?.rating;
+  }, [response?.rating]);
 
   const isFlagged = response?.is_flagged && question.corrective_action;
   const hasAiSuggestion = response?.ai_suggested_rating && !response?.rating;
 
-  const notesLabel = ctx === 'client_discussion' ? 'Client response / notes:'
-    : ctx === 'closing_discussion' ? 'Client response:'
-    : 'Auditor notes:';
+  const notesLabel =
+    ctx === 'client_discussion'
+      ? 'Client response / notes:'
+      : ctx === 'closing_discussion'
+      ? 'Client response:'
+      : 'Auditor notes:';
 
   const ratingLabel = ctx === 'auditor_assessment' ? 'Assessment:' : 'Rating:';
 
-  const notesPlaceholder = ctx === 'client_discussion'
-    ? 'Capture the client\'s response...'
-    : ctx === 'closing_discussion'
-    ? 'Record the client\'s response to findings...'
-    : 'Add notes...';
+  const notesPlaceholder =
+    ctx === 'client_discussion'
+      ? "Capture the client's response..."
+      : ctx === 'closing_discussion'
+      ? "Record the client's response to findings..."
+      : 'Add notes...';
 
-  const notesRows = ctx === 'client_discussion' ? 4
-    : ctx === 'closing_discussion' ? 4
-    : 2;
+  const notesRows = ctx === 'client_discussion' ? 4 : ctx === 'closing_discussion' ? 4 : 2;
 
   // Warm tint for conversation phases
-  const cardBg = ctx === 'client_discussion' || ctx === 'closing_discussion'
-    ? 'bg-blue-50/20 border-blue-100'
-    : '';
+  const cardBg =
+    ctx === 'client_discussion' || ctx === 'closing_discussion'
+      ? 'bg-blue-50/20 border-blue-100'
+      : '';
 
-  // For client_discussion: notes first, then rating
-  // For auditor_assessment: evidence → rating → notes
-  // For closing_discussion: notes first, rating below
+  // Action-row Raise Finding button — state machine
+  const renderFindingButton = (fullWidth = false) => {
+    if (!currentRating) return null;
+    const flagged = FLAGGED_RATINGS.has(currentRating);
+
+    if (!flagged && findingCount === 0) return null;
+
+    if (!flagged && findingCount > 0) {
+      return (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="text-xs h-7"
+          onClick={() => setShowFindingForm((v) => !v)}
+        >
+          <Flag className="h-3 w-3 mr-1.5" />
+          {findingCount} finding{findingCount === 1 ? '' : 's'}
+        </Button>
+      );
+    }
+
+    if (flagged && findingCount === 0) {
+      return (
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className={cn(
+            'text-xs h-8 font-medium',
+            fullWidth && 'w-full sm:w-auto',
+            pulse && 'animate-pulse-once'
+          )}
+          onClick={() => setShowFindingForm((v) => !v)}
+        >
+          <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+          Raise finding
+        </Button>
+      );
+    }
+
+    // flagged && findingCount > 0
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="text-xs h-7"
+        onClick={() => setShowFindingForm((v) => !v)}
+      >
+        <Flag className="h-3 w-3 mr-1.5" />
+        {findingCount} finding{findingCount === 1 ? '' : 's'} · Add another
+      </Button>
+    );
+  };
 
   return (
     <Card className={cardBg}>
@@ -162,7 +300,7 @@ export function QuestionCard({
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">{ratingLabel}</label>
               <div className="flex flex-wrap gap-1.5">
-                {ratingOptions.map(opt => (
+                {ratingOptions.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => handleRate(opt.value)}
@@ -187,7 +325,7 @@ export function QuestionCard({
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">{ratingLabel}</label>
               <div className="flex flex-wrap gap-1.5">
-                {ratingOptions.map(opt => (
+                {ratingOptions.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => handleRate(opt.value)}
@@ -222,7 +360,9 @@ export function QuestionCard({
                   <Bot className="h-3.5 w-3.5" />
                   AI pre-fill suggestion
                   {response?.ai_confidence && (
-                    <span className="text-blue-500">(confidence: {Math.round(response.ai_confidence * 100)}%)</span>
+                    <span className="text-blue-500">
+                      (confidence: {Math.round(response.ai_confidence * 100)}%)
+                    </span>
                   )}
                 </div>
                 <p className="text-blue-800">Rating: {response?.ai_suggested_rating}</p>
@@ -247,17 +387,42 @@ export function QuestionCard({
           </>
         )}
 
+        {/* In-card amber banner — only when a finding is required */}
+        {ratingNeedsFinding && !showFindingForm && (
+          <div className="flex flex-col gap-2 rounded-md border-l-4 border-amber-500 bg-amber-50 p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2 text-amber-900">
+              <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-600" />
+              <span>This response requires a finding before the audit is complete.</span>
+            </div>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className={cn('text-xs h-8 font-medium w-full sm:w-auto', pulse && 'animate-pulse-once')}
+              onClick={() => setShowFindingForm(true)}
+            >
+              <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+              Raise finding
+            </Button>
+          </div>
+        )}
+
         {/* Actions */}
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs h-7"
-            onClick={() => setShowFindingForm(!showFindingForm)}
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            {ctx === 'auditor_assessment' ? 'Raise Finding' : 'Add Finding'}
-          </Button>
+        <div className="flex flex-wrap gap-2">
+          {currentRating ? (
+            renderFindingButton(true)
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-xs h-7 text-muted-foreground"
+              onClick={() => setShowFindingForm((v) => !v)}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              {ctx === 'auditor_assessment' ? 'Raise Finding' : 'Add Finding'}
+            </Button>
+          )}
         </div>
 
         {/* Inline finding form */}
@@ -266,7 +431,9 @@ export function QuestionCard({
             auditId={auditId}
             sectionId={sectionId}
             responseId={response?.id}
-            initialValues={{ regulatory_reference: `${question.clause} ${question.nc_map || ''}`.trim() }}
+            initialValues={{
+              regulatory_reference: `${question.clause} ${question.nc_map || ''}`.trim(),
+            }}
             onSave={(finding) => {
               onAddFinding(finding);
               setShowFindingForm(false);
