@@ -1,73 +1,50 @@
-# Convert `audit_type` to `dd_audit_type` lookup
+## Make DocumentCard clickable to open file
 
-## 1. Migration (single file, single transaction)
+Update `src/components/audit/workspace/DocumentsTab.tsx` only. No new imports needed.
 
-New file: `supabase/migrations/<timestamp>_dd_audit_type_lookup.sql`
+### Changes inside `DocumentCard` (lines 136–222)
 
-Header comment block contains the rollback SQL (drop FK → restore original CHECK → drop table).
-
-Body, in order:
-
-1. **Safety check** — `DO $$ ... $$` block raising an exception if any `client_audits.audit_type` row is outside the 7 known values. Aborts the transaction before any structural change.
-2. **Create table** `public.dd_audit_type`:
-   - `code serial PRIMARY KEY`
-   - `value text NOT NULL UNIQUE`
-   - `label text NOT NULL`
-   - `sort_order integer NOT NULL DEFAULT 0`
-   - `is_active boolean NOT NULL DEFAULT true`
-3. **Seed 7 rows** with the exact value/label/sort_order list provided.
-4. **RLS** — enable RLS, add a single SELECT-to-authenticated `USING (true)` policy named `"Authenticated users can read dd_audit_type"`. No write policy.
-5. **Swap constraint** — `DROP CONSTRAINT client_audits_audit_type_check`, then `ADD CONSTRAINT client_audits_audit_type_fkey FOREIGN KEY (audit_type) REFERENCES public.dd_audit_type(value)`.
-
-Postgres DDL is transactional; if any step fails the entire migration rolls back atomically. The sandbox migration runner wraps the file in a transaction by default.
-
-## 2. New hook
-
-New file: `src/hooks/useAuditTypeOptions.ts` — built to match `useActionStatusOptions.ts` line-for-line:
-
-- `AuditTypeOption` interface: `{ value: string; label: string; sort_order: number }`
-- Module-level `cachedTypes` and `fetchPromise`
-- `loadTypes()` queries `dd_audit_type` selecting `code, value, label, sort_order`, filters `is_active = true`, orders by `sort_order` ascending, maps and caches the result. Reuses in-flight promise; clears `fetchPromise` and returns `[]` on error.
-- `useAuditTypeOptions()` initialises state from `cachedTypes` if present, calls `loadTypes()` in `useEffect`, returns `{ auditTypes, loading }`.
-
-## 3. Frontend wiring — `src/pages/AuditsAssessments.tsx`
-
-Three localised edits:
-
-1. Add import:
+1. **Add state** alongside `expanded`:
    ```ts
-   import { useAuditTypeOptions } from '@/hooks/useAuditTypeOptions';
+   const [isOpening, setIsOpening] = useState(false);
    ```
-2. Inside the component (next to the existing filter useStates around line 42):
+
+2. **Add open handler**:
    ```ts
-   const { auditTypes, loading: typesLoading } = useAuditTypeOptions();
+   const handleOpen = async () => {
+     setIsOpening(true);
+     const { data } = await supabase.storage
+       .from('audit-documents')
+       .createSignedUrl(doc.file_path, 3600);
+     setIsOpening(false);
+     if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+   };
    ```
-   (`typesLoading` is intentionally unused for rendering — kept available, no spinner per spec.)
-3. In the type-filter `<SelectContent>` (lines 115–122), keep the hardcoded `<SelectItem value="all">All Types</SelectItem>` and replace the 7 hardcoded items with:
+
+3. **Make `<Card>` clickable** (line 153):
    ```tsx
-   {auditTypes.map(type => (
-     <SelectItem key={type.value} value={type.value}>
-       {type.label}
-     </SelectItem>
-   ))}
+   <Card
+     onClick={handleOpen}
+     className={cn('cursor-pointer hover:shadow-md transition-shadow', isOpening && 'opacity-60')}
+   >
    ```
 
-Nothing else in this file changes — `typeFilter` state, `filtered` useMemo, `hasFilters`, the four stat cards, and all other JSX remain identical.
+4. **Stop propagation** on expand button (line 179) and delete button (line 183):
+   ```tsx
+   <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>
+   <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+   ```
 
-## What will NOT change
+5. **Stop propagation on AI results panel wrapper** (line 191):
+   ```tsx
+   <div className="mt-4 space-y-3 border-t pt-3" onClick={(e) => e.stopPropagation()}>
+   ```
 
-- `src/types/clientAudits.ts` — `AuditType` union and `AUDIT_TYPE_LABELS` left intact.
-- `AuditTypeBadge.tsx`, `NewAuditModal.tsx`, `useClientAudits.ts`, `AuditSchedulerSection`, `ReferenceLibrarySection`, `v_audit_schedule`.
-- `research-audit-intelligence` edge function (its local `AUDIT_TYPE_LABELS` continues to work; values are identical).
-- Any other `dd_*` table, RLS policy, trigger, or constraint.
+### Will NOT change
+- Imports, parent `DocumentsTab`, upload zone, SharePoint button, hooks/types.
 
-## Risks / notes
+### Notes
+- Bucket `audit-documents` matches existing delete flow.
+- Signed URL TTL: 3600s (1h).
 
-- Verified pre-flight: 0 orphan rows in `client_audits.audit_type` today. The Step-1 guard re-checks at migration time so a race between now and apply is still caught.
-- `dd_audit_type.value` is `UNIQUE NOT NULL` (FK target requirement).
-- The hook's module-level cache is process-local; no invalidation API is needed because the lookup is effectively static for clients (SuperAdmin edits via Code Tables Management would require a hard refresh — same behaviour as `useActionStatusOptions`).
-- Rollback is a 3-statement block in the header comment; safe to execute at any time because the original CHECK definition matches the seed values exactly.
-
-## Recommendation
-
-GO. Single migration file, single transaction, one new hook, three-line edit in one page. No other surfaces touched.
+GO.

@@ -135,7 +135,19 @@ export function DocumentsTab({ auditId, tenantId }: DocumentsTabProps) {
 
 function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
   const typeLabel = DOCUMENT_TYPES.find(t => t.value === doc.document_type)?.label || doc.document_type;
+
+  const handleOpen = async () => {
+    setIsOpening(true);
+    const { data } = await supabase.storage
+      .from('audit-documents')
+      .createSignedUrl(doc.file_path, 3600);
+    setIsOpening(false);
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, '_blank');
+    }
+  };
 
   const statusDisplay = {
     pending: { icon: <FileText className="h-3.5 w-3.5 text-gray-400" />, text: 'Queued for analysis', color: 'text-gray-500' },
@@ -150,7 +162,10 @@ function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => v
   const recsCount = doc.ai_recommendations?.length || 0;
 
   return (
-    <Card>
+    <Card
+      onClick={handleOpen}
+      className={cn('cursor-pointer hover:shadow-md transition-shadow', isOpening && 'opacity-60')}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
@@ -176,11 +191,11 @@ function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => v
           </div>
           <div className="flex items-center gap-1">
             {doc.ai_status === 'complete' && (findingsCount > 0 || recsCount > 0) && (
-              <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>
                 {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={onDelete}>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
@@ -188,7 +203,7 @@ function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => v
 
         {/* AI Results */}
         {expanded && doc.ai_status === 'complete' && (
-          <div className="mt-4 space-y-3 border-t pt-3">
+          <div className="mt-4 space-y-3 border-t pt-3" onClick={(e) => e.stopPropagation()}>
             {doc.ai_risk_summary && (
               <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-800">
                 {doc.ai_risk_summary}
