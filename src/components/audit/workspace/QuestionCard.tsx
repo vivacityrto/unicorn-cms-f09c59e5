@@ -39,6 +39,8 @@ interface QuestionCardProps {
   auditId: string;
   sectionId: string;
   questionContext?: QuestionContext;
+  /** Template framework, used to resolve the Quality Area chip in QuestionGuidance. */
+  framework?: string | null;
   /** Optional pre-loaded findings list. If omitted the card subscribes via useAuditFindings. */
   findings?: AuditFinding[];
   onRate: (questionId: string, rating: string, score: number, isFlagged: boolean) => void;
@@ -54,13 +56,13 @@ export function QuestionCard({
   auditId,
   sectionId,
   questionContext,
+  framework = null,
   findings: findingsProp,
   onRate,
   onNote,
   onAddFinding,
 }: QuestionCardProps) {
   const ctx = questionContext || question.question_context || 'auditor_assessment';
-  const [showEvidence, setShowEvidence] = useState(ctx === 'auditor_assessment');
   const [showFindingForm, setShowFindingForm] = useState(false);
   const [pulse, setPulse] = useState(false);
   const previousRatingRef = useRef<string | null | undefined>(response?.rating);
