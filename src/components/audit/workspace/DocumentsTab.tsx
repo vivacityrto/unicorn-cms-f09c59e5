@@ -135,7 +135,19 @@ export function DocumentsTab({ auditId, tenantId }: DocumentsTabProps) {
 
 function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
   const typeLabel = DOCUMENT_TYPES.find(t => t.value === doc.document_type)?.label || doc.document_type;
+
+  const handleOpen = async () => {
+    setIsOpening(true);
+    const { data } = await supabase.storage
+      .from('audit-documents')
+      .createSignedUrl(doc.file_path, 3600);
+    setIsOpening(false);
+    if (data?.signedUrl) {
+      window.open(data.signedUrl, '_blank');
+    }
+  };
 
   const statusDisplay = {
     pending: { icon: <FileText className="h-3.5 w-3.5 text-gray-400" />, text: 'Queued for analysis', color: 'text-gray-500' },
