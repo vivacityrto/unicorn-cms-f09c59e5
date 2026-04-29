@@ -251,7 +251,7 @@ export function DeleteAuditDialog({
                 {submitting && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
-                Confirm permanent deletion
+                {submitting ? 'Deleting…' : 'Confirm permanent deletion'}
               </Button>
             </DialogFooter>
           </>
