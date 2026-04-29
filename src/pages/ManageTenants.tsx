@@ -298,9 +298,14 @@ export default function ManageTenants() {
       filtered = filtered.filter(tenant => tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) || tenant.slug.toLowerCase().includes(searchQuery.toLowerCase()));
     }
 
-    // Status filter (using tenants.status column)
+    // Status filter — "all" and "active" match raw status;
+    // "suspended" and "closed" match lifecycle_status (derived column)
     if (statusFilter !== "all") {
-      filtered = filtered.filter(tenant => tenant.status === statusFilter);
+      filtered = filtered.filter(tenant =>
+        statusFilter === "active"
+          ? tenant.status === statusFilter
+          : tenant.lifecycle_status === statusFilter
+      );
     }
 
     // Package filter
