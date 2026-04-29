@@ -397,6 +397,14 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route
+              path="/admin/ai-insights"
+              element={
+                <ProtectedRoute>
+                  <AiInsightsPage />
+                </ProtectedRoute>
+              }
+            />
             <Route 
               path="/manage-categories"
               element={
