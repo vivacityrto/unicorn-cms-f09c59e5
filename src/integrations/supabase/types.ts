@@ -56056,6 +56056,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      can_delete_incomplete_audit: {
+        Args: { p_audit_id: string }
+        Returns: boolean
+      }
       can_edit_certified_stage: { Args: { p_stage_id: number }; Returns: Json }
       can_facilitate_eos: {
         Args: { _tenant_id: number; _user_id: string }
