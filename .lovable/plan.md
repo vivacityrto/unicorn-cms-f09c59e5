@@ -1,16 +1,25 @@
-# Fix ReferenceError in ask-viv-prompts/index.ts
+# Fix audit workspace sidebar UX bugs
 
-## Problem
-`buildPromptPack()` and `buildFullPrompt()` in `supabase/functions/_shared/ask-viv-prompts/index.ts` reference `GLOBAL_SYSTEM_PROMPT`, `COMPLIANCE_SYSTEM_PROMPT`, `COMPLIANCE_DEVELOPER_PROMPT`, `KNOWLEDGE_SYSTEM_PROMPT`, and `KNOWLEDGE_DEVELOPER_PROMPT` as local bindings, but they are declared via `export { ... } from "./..."` re-export syntax, which does not create local bindings. Deno throws `ReferenceError: GLOBAL_SYSTEM_PROMPT is not defined` at runtime in `compliance-assistant`.
+## Bug 1 — Section card scroll on selection
+**File:** `src/components/audit/workspace/DocumentReviewPhase.tsx`
+- Line 1: change `import { useState } from 'react'` → `import { useEffect, useState } from 'react'`.
+- Inside `DocumentReviewSection`, after `const [open, setOpen] = useState(true);` (line 179), add:
+  ```ts
+  useEffect(() => {
+    if (!isSelected) return;
+    const el = document.getElementById(`section-${section.id}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [isSelected, section.id]);
+  ```
 
-## Change
-Single file: `supabase/functions/_shared/ask-viv-prompts/index.ts`
+## Bug 2 — Sidebar should not highlight section when not on Audit Form tab
+**File:** `src/pages/AuditWorkspaceNew.tsx` (line 127)
+- Add `activeTab={activeTab}` prop to `<AuditSidebar>` after `leadAuditorAvatar`.
 
-Convert each of the three `export { ... } from "./x.ts"` blocks into `import { ... } from "./x.ts"` followed by a separate `export { ... }` statement. This keeps the public API of the module identical while creating local bindings for `buildPromptPack` and `buildFullPrompt` to consume.
+**File:** `src/components/audit/workspace/AuditSidebar.tsx`
+- In `AuditSidebarProps` (line 19–30), add `activeTab?: string;`.
+- In destructuring (line 38–49), add `activeTab,`.
+- Line 239: change highlight condition to `section.originalIndex === selectedSectionIndex && activeTab === 'form'`.
 
-### Edits
-1. Global prompt block → import then export `GLOBAL_SYSTEM_PROMPT`, `GLOBAL_SYSTEM_PROMPT_COMPACT`.
-2. Compliance prompt block → import then export `COMPLIANCE_SYSTEM_PROMPT`, `COMPLIANCE_DEVELOPER_PROMPT`, `buildCompliancePrompt`.
-3. Knowledge prompt block → import then export `KNOWLEDGE_SYSTEM_PROMPT`, `KNOWLEDGE_DEVELOPER_PROMPT`, `buildKnowledgePrompt`.
-
-No other files modified. No schema, RLS, or frontend changes. Public exports unchanged.
+## Out of scope
+No DB / RLS / edge function changes. No edits to other tabs, page scroll behaviour, or the legacy `AuditWorkspace.tsx`.
