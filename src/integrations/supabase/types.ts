@@ -9820,6 +9820,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "client_audits_audit_type_fkey"
+            columns: ["audit_type"]
+            isOneToOne: false
+            referencedRelation: "dd_audit_type"
+            referencedColumns: ["value"]
+          },
+          {
             foreignKeyName: "client_audits_intelligence_pack_id_fkey"
             columns: ["intelligence_pack_id"]
             isOneToOne: false
@@ -15631,6 +15638,30 @@ export type Database = {
         }
         Update: {
           id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_audit_type: {
+        Row: {
+          code: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          code?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          code?: number
           is_active?: boolean
           label?: string
           sort_order?: number
@@ -51189,6 +51220,13 @@ export type Database = {
             referencedColumns: ["finding_id"]
           },
           {
+            foreignKeyName: "client_audits_audit_type_fkey"
+            columns: ["audit_type"]
+            isOneToOne: false
+            referencedRelation: "dd_audit_type"
+            referencedColumns: ["value"]
+          },
+          {
             foreignKeyName: "client_audits_subject_tenant_id_fkey"
             columns: ["subject_tenant_id"]
             isOneToOne: false
@@ -51849,6 +51887,13 @@ export type Database = {
           updated_at: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "client_audits_audit_type_fkey"
+            columns: ["audit_type"]
+            isOneToOne: false
+            referencedRelation: "dd_audit_type"
+            referencedColumns: ["value"]
+          },
           {
             foreignKeyName: "client_audits_subject_tenant_id_fkey"
             columns: ["subject_tenant_id"]
