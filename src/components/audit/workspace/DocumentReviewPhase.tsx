@@ -74,6 +74,7 @@ export function DocumentReviewPhase({
   questionsBySection,
   userId,
   auditId,
+  framework = null,
   onUpsertResponse,
   onAddFinding,
   onUpdateSummary,
