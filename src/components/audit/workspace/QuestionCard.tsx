@@ -210,7 +210,7 @@ export function QuestionCard({
     previousRatingRef.current = response?.rating;
   }, [response?.rating]);
 
-  const hasAiSuggestion = response?.ai_suggested_rating && !response?.rating;
+  
 
   const notesLabel =
     ctx === 'client_discussion'
