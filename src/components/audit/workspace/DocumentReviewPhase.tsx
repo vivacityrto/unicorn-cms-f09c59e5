@@ -164,6 +164,7 @@ function DocumentReviewSection({
   responses,
   userId,
   auditId,
+  framework,
   onUpsertResponse,
   onAddFinding,
   onUpdateSummary,
@@ -175,6 +176,7 @@ function DocumentReviewSection({
   responses: AuditResponse[];
   userId: string | undefined;
   auditId: string;
+  framework: string | null;
   onUpsertResponse: (data: any) => void;
   onAddFinding: (f: any) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
