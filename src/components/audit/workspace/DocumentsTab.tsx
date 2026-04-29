@@ -162,7 +162,10 @@ function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => v
   const recsCount = doc.ai_recommendations?.length || 0;
 
   return (
-    <Card>
+    <Card
+      onClick={handleOpen}
+      className={cn('cursor-pointer hover:shadow-md transition-shadow', isOpening && 'opacity-60')}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
