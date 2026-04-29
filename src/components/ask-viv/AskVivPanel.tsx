@@ -353,6 +353,7 @@ export function AskVivPanel() {
       scope_lock: result.scope_lock ?? undefined,
       freshness: result.freshness ?? undefined,
       explain: result.explain ?? undefined,
+      ai_interaction_log_id: result.ai_interaction_log_id ?? null,
     };
   }
 
@@ -521,6 +522,7 @@ export function AskVivPanel() {
           scope_lock: result.scope_lock,
           freshness: result.freshness,
           explain: result.explain,
+          ai_interaction_log_id: result.ai_interaction_log_id,
           created_at: new Date().toISOString(),
         };
       }

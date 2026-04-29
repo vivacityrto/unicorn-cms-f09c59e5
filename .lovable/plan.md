@@ -1,36 +1,47 @@
-# Fix Suspended/Closed stat tile filters in ManageTenants
+# Restore `ai_interaction_log_id` for AskVivFlagButton
 
-## Problem
+## Background
 
-The Suspended and Closed/Archived stat tiles set `statusFilter` to `"suspended"` or `"closed"`, but the filter block compares against `tenant.status` (raw column). Those lifecycle values only exist on the derived `lifecycle_status` column, so the filtered list is always empty.
+`AskVivFlagButton` needs an `ai_interaction_log_id` plus `scope_lock` to render. V4 already calls `logInteraction()` (line 406 of `compliance-assistant/index.ts`) which inserts into `ai_interaction_logs`, but the function returns `void` so the row id is lost and never sent to the client.
 
-## Change
+Service-client access is already in place (`const supabase = createServiceClient();` at line 153) — no new client needed.
 
-Single edit in `src/pages/ManageTenants.tsx`, lines 301–304:
+## Edge function — `supabase/functions/compliance-assistant/index.ts`
 
-Replace:
-```ts
-// Status filter (using tenants.status column)
-if (statusFilter !== "all") {
-  filtered = filtered.filter(tenant => tenant.status === statusFilter);
-}
-```
+1. Change `logInteraction` signature from `Promise<void>` to `Promise<string | null>` and chain `.select("id").single()` on the existing insert. Return the id (or `null` on failure). Keep it non-blocking — any error is swallowed and returns `null`.
 
-With:
-```ts
-// Status filter — "all" and "active" match raw status;
-// "suspended" and "closed" match lifecycle_status (derived column)
-if (statusFilter !== "all") {
-  filtered = filtered.filter(tenant =>
-    statusFilter === "active"
-      ? tenant.status === statusFilter
-      : tenant.lifecycle_status === statusFilter
-  );
-}
-```
+2. In the handler (line 406), capture the result:
+   ```ts
+   const aiInteractionLogId = await logInteraction(...);
+   ```
+
+3. Include it in the final return (line 420):
+   ```ts
+   return jsonRaw({
+     ...responseClean,
+     scope_lock,
+     freshness,
+     explain,
+     ai_interaction_log_id: aiInteractionLogId,
+   });
+   ```
+
+## Frontend — `src/components/ask-viv/AskVivPanel.tsx`
+
+4. In `sendComplianceMessage` return, add:
+   ```ts
+   ai_interaction_log_id: result.ai_interaction_log_id ?? null,
+   ```
+
+5. In the `sendMessage` compliance branch `assistantResponse`, add:
+   ```ts
+   ai_interaction_log_id: result.ai_interaction_log_id,
+   ```
+
+The `Message.ai_interaction_log_id?: string | null` type and the `AskVivFlagButton` render guard (`message.scope_lock && context.tenant_id && ...` at ~line 898) are already wired.
 
 ## Out of scope
 
-- onClick handlers on the stat tiles
-- Other filter blocks (search, package, CSC)
-- Schema, migrations, RLS, edge functions
+- Schema, RLS, or migrations on `ai_interaction_logs`
+- `AskVivFlagButton` component itself
+- Other modes (knowledge / web)
