@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { ClientAudit } from '@/types/clientAudits';
 import type { AuditFinding, AuditAction } from '@/types/auditWorkspace';
+import { useAuditProgress } from '@/hooks/useAuditCompletion';
+import { toast } from 'sonner';
 
 interface ReportTabProps {
   audit: ClientAudit;
