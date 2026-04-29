@@ -3,8 +3,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  ChevronDown,
-  ChevronUp,
   Plus,
   AlertTriangle,
   Bot,
@@ -13,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { QuestionGuidance } from './QuestionGuidance';
 import {
   RATING_OPTIONS_FULL,
   RATING_OPTIONS_SAFE,
