@@ -292,3 +292,9 @@ verify_jwt = false
 
 [functions.retrieve-srto-context]
 verify_jwt = false
+
+[functions.draft-finding]
+verify_jwt = false
+
+[functions.record-finding-decision]
+verify_jwt = false
