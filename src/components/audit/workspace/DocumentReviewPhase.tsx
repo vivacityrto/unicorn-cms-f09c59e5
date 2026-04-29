@@ -133,6 +133,7 @@ export function DocumentReviewPhase({
                 responses={responses}
                 userId={userId}
                 auditId={auditId}
+                framework={framework}
                 onUpsertResponse={onUpsertResponse}
                 onAddFinding={onAddFinding}
                 onUpdateSummary={onUpdateSummary}
