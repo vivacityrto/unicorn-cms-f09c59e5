@@ -32,6 +32,9 @@ import {
 } from '@/components/ui/tooltip';
 import { useDebouncedAutosave } from './useDebouncedAutosave';
 import { useAuditFindings } from '@/hooks/useAuditWorkspace';
+import { EvidencePanel } from './EvidencePanel';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface QuestionCardProps {
   question: TemplateQuestion;
@@ -76,6 +79,58 @@ export function QuestionCard({
   // Fetch findings for this audit if not supplied (cached by react-query, so no extra fetch).
   const { data: fetchedFindings } = useAuditFindings(findingsProp ? undefined : auditId);
   const findings = findingsProp ?? fetchedFindings;
+
+  // Lookup the audit's subject_tenant_id once for the EvidencePanel linker.
+  // Cached by react-query — every QuestionCard for this audit shares one fetch.
+  const { data: auditMeta } = useQuery({
+    queryKey: ['audit-tenant-meta', auditId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('client_audits' as any)
+        .select('subject_tenant_id')
+        .eq('id', auditId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown) as { subject_tenant_id: number | null } | null;
+    },
+    enabled: ctx === 'auditor_assessment',
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const queryClient = useQueryClient();
+
+  const handleAcceptAi = (rating: string, notes: string) => {
+    const score = getScore(rating);
+    const ratingLabel =
+      rating === 'at_risk' ? 'At Risk' : rating === 'non_compliant' ? 'Non-Compliant' : '';
+    const isFlagged = question.flagged_responses?.includes(ratingLabel) ?? false;
+    onRate(question.id, rating, score, isFlagged);
+    if (notes && notes !== response?.notes) {
+      setNotes(notes);
+      onNote(question.id, notes);
+    }
+  };
+
+  const handleDiscardAi = async () => {
+    if (!response?.id) return;
+    const { error } = await supabase
+      .from('client_audit_responses' as any)
+      .update({
+        ai_suggested_rating: null,
+        ai_suggested_notes: null,
+        ai_confidence: null,
+        ai_excerpts: null,
+        ai_gaps: null,
+      })
+      .eq('id', response.id);
+    if (!error) {
+      queryClient.invalidateQueries({ queryKey: ['audit-responses', auditId] });
+      queryClient.invalidateQueries({ queryKey: ['audit-workspace', auditId] });
+      toast.success('Suggestion discarded.');
+    } else {
+      toast.error(error.message);
+    }
+  };
 
   const ratingOptions =
     ctx === 'closing_discussion'
@@ -155,7 +210,7 @@ export function QuestionCard({
     previousRatingRef.current = response?.rating;
   }, [response?.rating]);
 
-  const hasAiSuggestion = response?.ai_suggested_rating && !response?.rating;
+  
 
   const notesLabel =
     ctx === 'client_discussion'
@@ -358,24 +413,25 @@ export function QuestionCard({
 
             {/* Finding guide now lives inside <QuestionGuidance /> above; auto-opens via defaultOpen.findingGuide. */}
 
-            {/* AI Suggestion */}
-            {hasAiSuggestion && (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-xs space-y-2">
-                <div className="flex items-center gap-1.5 text-blue-700 font-medium">
-                  <Bot className="h-3.5 w-3.5" />
-                  AI pre-fill suggestion
-                  {response?.ai_confidence && (
-                    <span className="text-blue-500">
-                      (confidence: {Math.round(response.ai_confidence * 100)}%)
-                    </span>
-                  )}
-                </div>
-                <p className="text-blue-800">Rating: {response?.ai_suggested_rating}</p>
-                {response?.ai_suggested_notes && (
-                  <p className="text-blue-800">{response.ai_suggested_notes}</p>
-                )}
-              </div>
-            )}
+            {/* Evidence linking + AI-suggested rating panel (Wave 4 #1) */}
+            <EvidencePanel
+              auditId={auditId}
+              responseId={response?.id}
+              subjectTenantId={auditMeta?.subject_tenant_id ?? null}
+              currentRating={currentRating}
+              aiSuggestion={{
+                rating: (response as any)?.ai_suggested_rating ?? null,
+                notes: (response as any)?.ai_suggested_notes ?? null,
+                confidence: (response as any)?.ai_confidence ?? null,
+                analyzedAt: (response as any)?.ai_analyzed_at ?? null,
+                excerpts: (response as any)?.ai_excerpts ?? null,
+                gaps: (response as any)?.ai_gaps ?? null,
+              }}
+              onAcceptRating={handleAcceptAi}
+              onOverrideRating={handleAcceptAi}
+              onDiscardSuggestion={handleDiscardAi}
+            />
+
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
