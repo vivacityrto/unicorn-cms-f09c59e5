@@ -232,6 +232,7 @@ function DocumentReviewSection({
               response={responses.find(r => r.question_id === q.id)}
               auditId={auditId}
               sectionId={section.id}
+              framework={framework}
               onRate={(questionId, rating, score, isFlagged) => {
                 if (!userId) return;
                 onUpsertResponse({
