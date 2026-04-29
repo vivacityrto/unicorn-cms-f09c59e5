@@ -125,6 +125,7 @@ export default function AuditWorkspaceNew() {
               onNavigateToSchedule={() => setActiveTab('schedule')}
               leadAuditorName={leadAuditor ? `${leadAuditor.first_name} ${leadAuditor.last_name}` : null}
               leadAuditorAvatar={leadAuditor?.avatar_url}
+              activeTab={activeTab}
             />
           </div>
 

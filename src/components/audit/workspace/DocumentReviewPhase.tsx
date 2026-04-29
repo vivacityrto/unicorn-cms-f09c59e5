@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -177,6 +177,12 @@ function DocumentReviewSection({
   isSelected: boolean;
 }) {
   const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    if (!isSelected) return;
+    const el = document.getElementById(`section-${section.id}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [isSelected, section.id]);
   const answered = questions.filter(q => responses.find(r => r.question_id === q.id && r.rating)).length;
 
   return (

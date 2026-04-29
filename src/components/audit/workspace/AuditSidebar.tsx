@@ -27,6 +27,7 @@ interface AuditSidebarProps {
   onNavigateToSchedule?: () => void;
   leadAuditorName?: string | null;
   leadAuditorAvatar?: string | null;
+  activeTab?: string;
 }
 
 interface PhaseGroup {
@@ -46,6 +47,7 @@ export function AuditSidebar({
   onNavigateToSchedule,
   leadAuditorName,
   leadAuditorAvatar,
+  activeTab,
 }: AuditSidebarProps) {
   const navigate = useNavigate();
   const { documentDeadline, openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
@@ -236,7 +238,7 @@ export function AuditSidebar({
                     onClick={() => onSelectSection(section.originalIndex)}
                     className={cn(
                       'w-full text-left px-2 py-1.5 rounded-md text-xs flex items-start gap-2 transition-colors',
-                      section.originalIndex === selectedSectionIndex
+                      section.originalIndex === selectedSectionIndex && activeTab === 'form'
                         ? 'bg-primary/10 text-primary font-medium'
                         : 'hover:bg-muted text-muted-foreground'
                     )}
