@@ -277,6 +277,20 @@ export default function AuditsAssessments() {
         preselectedTenantName={schedulerCHCTenantName || undefined}
         preselectedAuditType={schedulerCHCAuditType}
       />
+      {deleteTarget && (
+        <DeleteAuditDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+          audit={{
+            id: deleteTarget.id,
+            title: deleteTarget.title,
+            audit_type: deleteTarget.audit_type,
+            status: deleteTarget.status,
+            client_name: deleteTarget.client_name,
+            created_at: deleteTarget.created_at,
+          }}
+        />
+      )}
     </div>
     </DashboardLayout>
   );
