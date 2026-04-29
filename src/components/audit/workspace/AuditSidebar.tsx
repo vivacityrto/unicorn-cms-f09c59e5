@@ -53,6 +53,8 @@ export function AuditSidebar({
 }: AuditSidebarProps) {
   const navigate = useNavigate();
   const { documentDeadline, openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
+  const { data: progress } = useAuditProgress(audit.id);
+  const { data: sectionCompletion } = useAuditSectionCompletion(audit.id);
 
   // Fetch stage_id for dynamic label
   const { data: stageLink } = useQuery({
