@@ -128,20 +128,21 @@ export function QuestionGuidance({
   const docs = parseUnicornDocs(question.unicorn_documents);
   const area = qualityArea(framework, question.clause);
 
-  // Empty fallback: nothing to show. Parent renders the "No standards mapping" badge.
-  const hasAnyContent = !!evidenceText || !!findingGuideText || docs.length > 0 || !!question.clause;
-  if (!hasAnyContent) return null;
-
   // Per-block open state. Evidence defaults expanded; everything else collapsed.
+  // Hooks must run unconditionally — keep them above any early return.
   const [evidenceOpen, setEvidenceOpen] = useState(true);
   const [findingOpen, setFindingOpen] = useState(!!defaultOpen?.findingGuide);
   const [docsOpen, setDocsOpen] = useState(false);
 
-  // If the parent later flags the question as needing a finding, auto-open the guide
-  // (echoes the warning-amber state without being noisy if the user already has it open).
+  // If the parent flips ratingNeedsFinding to true after first render, auto-open the guide
+  // so the colour story echoes the in-card amber warning banner.
   useEffect(() => {
     if (defaultOpen?.findingGuide) setFindingOpen(true);
   }, [defaultOpen?.findingGuide]);
+
+  // Empty fallback — nothing to show. Parent renders the "No standards mapping" badge.
+  const hasAnyContent = !!evidenceText || !!findingGuideText || docs.length > 0 || !!question.clause;
+  if (!hasAnyContent) return null;
 
   return (
     <div className="space-y-3">
