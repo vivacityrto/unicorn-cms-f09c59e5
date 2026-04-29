@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { AuditType, AuditStatus, AuditDashboardRow } from '@/types/clientAudits';
 import { cn } from '@/lib/utils';
 import { ReferenceLibrarySection } from '@/components/audit/references/ReferenceLibrarySection';
+import { useAuditTypeOptions } from '@/hooks/useAuditTypeOptions';
 
 export default function AuditsAssessments() {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ export default function AuditsAssessments() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [auditorFilter, setAuditorFilter] = useState<string>('all');
+  const { auditTypes, loading: typesLoading } = useAuditTypeOptions();
 
   const auditors = useMemo(() => {
     const unique = new Map<string, string>();
@@ -113,13 +115,11 @@ export default function AuditsAssessments() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="compliance_health_check">CHC</SelectItem>
-            <SelectItem value="mock_audit">Mock Audit</SelectItem>
-            <SelectItem value="due_diligence">Due Diligence</SelectItem>
-            <SelectItem value="cricos_chc">CHC — CRICOS</SelectItem>
-            <SelectItem value="rto_cricos_chc">CHC — RTO + CRICOS</SelectItem>
-            <SelectItem value="cricos_mock_audit">Mock Audit — CRICOS</SelectItem>
-            <SelectItem value="due_diligence_combined">Combined RTO + CRICOS Due Diligence</SelectItem>
+            {auditTypes.map(type => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
