@@ -93,6 +93,7 @@ export function AuditFormTab({ audit, selectedSectionId }: AuditFormTabProps) {
       activePhase={activePhase}
       setActivePhase={setActivePhase}
       userId={userId}
+      framework={framework ?? null}
       onUpsertResponse={upsertResponse.mutate}
       onAddFinding={(f: any) => createFinding.mutate(f)}
       onUpdateSummary={(sectionId, summary) => updateSummary.mutate({ sectionId, summary })}
