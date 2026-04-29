@@ -16,6 +16,7 @@ interface DocumentReviewPhaseProps {
   questionsBySection: Record<string, TemplateQuestion[]>;
   userId: string | undefined;
   auditId: string;
+  framework?: string | null;
   onUpsertResponse: (data: any) => void;
   onAddFinding: (f: any) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
