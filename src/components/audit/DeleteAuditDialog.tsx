@@ -45,6 +45,7 @@ export function DeleteAuditDialog({
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [step, setStep] = useState<'reason' | 'confirm'>('reason');
   const queryClient = useQueryClient();
 
   // Reset state whenever the dialog opens.
@@ -53,6 +54,7 @@ export function DeleteAuditDialog({
       setReason('');
       setInlineError(null);
       setSubmitting(false);
+      setStep('reason');
     }
   }, [open]);
 
@@ -107,106 +109,153 @@ export function DeleteAuditDialog({
     }
   };
 
+  const SummaryBlock = (
+    <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+      <div>
+        <span className="text-muted-foreground">Title: </span>
+        <span className="font-medium">{audit.title || 'Untitled'}</span>
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        {audit.audit_type && (
+          <span>
+            <span className="text-muted-foreground">Type: </span>
+            {audit.audit_type}
+          </span>
+        )}
+        {audit.client_name && (
+          <span>
+            <span className="text-muted-foreground">Client: </span>
+            {audit.client_name}
+          </span>
+        )}
+        {audit.status && (
+          <span>
+            <span className="text-muted-foreground">Status: </span>
+            <span className="font-medium uppercase tracking-wide">
+              {audit.status.replace('_', ' ')}
+            </span>
+          </span>
+        )}
+        {audit.created_at && (
+          <span>
+            <span className="text-muted-foreground">Created: </span>
+            {format(new Date(audit.created_at), 'd MMM yyyy')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={(next) => !submitting && onOpenChange(next)}>
       <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Delete this audit?</DialogTitle>
-          <DialogDescription>
-            This will permanently remove the audit and all linked sections,
-            responses, findings, documents, and scheduled appointments. This
-            cannot be undone. Audits that are closed or have a generated report
-            cannot be deleted.
-          </DialogDescription>
-        </DialogHeader>
+        {step === 'reason' ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Delete this audit?</DialogTitle>
+              <DialogDescription>
+                This will permanently remove the audit and all linked sections,
+                responses, findings, documents, and scheduled appointments. This
+                cannot be undone. Audits that are closed or have a generated
+                report cannot be deleted.
+              </DialogDescription>
+            </DialogHeader>
 
-        <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
-          <div>
-            <span className="text-muted-foreground">Title: </span>
-            <span className="font-medium">{audit.title || 'Untitled'}</span>
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            {audit.audit_type && (
-              <span>
-                <span className="text-muted-foreground">Type: </span>
-                {audit.audit_type}
-              </span>
-            )}
-            {audit.client_name && (
-              <span>
-                <span className="text-muted-foreground">Client: </span>
-                {audit.client_name}
-              </span>
-            )}
-            {audit.status && (
-              <span>
-                <span className="text-muted-foreground">Status: </span>
-                {audit.status.replace('_', ' ')}
-              </span>
-            )}
-            {audit.created_at && (
-              <span>
-                <span className="text-muted-foreground">Created: </span>
-                {format(new Date(audit.created_at), 'd MMM yyyy')}
-              </span>
-            )}
-          </div>
-        </div>
+            {SummaryBlock}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="delete-audit-reason">
-            Reason for deletion <span className="text-destructive">*</span>
-          </Label>
-          <Textarea
-            id="delete-audit-reason"
-            value={reason}
-            onChange={(e) => setReason(e.target.value.slice(0, MAX_LEN))}
-            placeholder="e.g. Duplicate of audit XYZ created in error"
-            rows={4}
-            disabled={submitting}
-            autoFocus
-          />
-          <div className="flex items-center justify-between text-xs">
-            <span
-              className={
-                trimmed.length > 0 && trimmed.length < MIN_LEN
-                  ? 'text-destructive'
-                  : 'text-muted-foreground'
-              }
-            >
-              {trimmed.length < MIN_LEN
-                ? `Please enter at least ${MIN_LEN} characters.`
-                : 'Looks good.'}
-            </span>
-            <span className="text-muted-foreground">
-              {reason.length}/{MAX_LEN}
-            </span>
-          </div>
-        </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="delete-audit-reason">
+                Reason for deletion <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="delete-audit-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value.slice(0, MAX_LEN))}
+                placeholder="e.g. Duplicate of audit XYZ created in error"
+                rows={4}
+                autoFocus
+              />
+              <div className="flex items-center justify-between text-xs">
+                <span
+                  className={
+                    trimmed.length > 0 && trimmed.length < MIN_LEN
+                      ? 'text-destructive'
+                      : 'text-muted-foreground'
+                  }
+                >
+                  {trimmed.length < MIN_LEN
+                    ? `Please enter at least ${MIN_LEN} characters.`
+                    : 'Looks good.'}
+                </span>
+                <span className="text-muted-foreground">
+                  {reason.length}/{MAX_LEN}
+                </span>
+              </div>
+            </div>
 
-        {inlineError && (
-          <p className="text-sm text-destructive" role="alert">
-            {inlineError}
-          </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setStep('confirm')}
+                disabled={!valid}
+              >
+                Continue
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Confirm permanent deletion</DialogTitle>
+              <DialogDescription>
+                Please review the details below. Once you confirm, the audit
+                and all linked records will be permanently removed. This action
+                cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+
+            {SummaryBlock}
+
+            <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-destructive">
+                Reason that will be recorded in the audit log
+              </div>
+              <p className="whitespace-pre-wrap text-foreground">{trimmed}</p>
+            </div>
+
+            {inlineError && (
+              <p className="text-sm text-destructive" role="alert">
+                {inlineError}
+              </p>
+            )}
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setInlineError(null);
+                  setStep('reason');
+                }}
+                disabled={submitting}
+              >
+                Back
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={!valid || submitting}
+              >
+                {submitting && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                Confirm permanent deletion
+              </Button>
+            </DialogFooter>
+          </>
         )}
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={submitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={!valid || submitting}
-          >
-            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Delete audit
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
