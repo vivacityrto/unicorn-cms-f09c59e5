@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardCheck, Plus, Search, X, Calendar, AlertTriangle, CheckCircle2, BarChart3 } from 'lucide-react';
+import { ClipboardCheck, Plus, Search, X, Calendar, AlertTriangle, CheckCircle2, BarChart3, MoreVertical, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DeleteAuditDialog, canDeleteAudit } from '@/components/audit/DeleteAuditDialog';
 import { format, isPast, startOfYear } from 'date-fns';
 import { PageHeader } from '@/components/ui/page-header';
 import { StatCard } from '@/components/ui/stat-card';
@@ -30,6 +32,7 @@ export default function AuditsAssessments() {
   const [schedulerCHCTenantId, setSchedulerCHCTenantId] = useState<number | null>(null);
   const [schedulerCHCTenantName, setSchedulerCHCTenantName] = useState('');
   const [schedulerCHCAuditType, setSchedulerCHCAuditType] = useState<AuditType | undefined>(undefined);
+  const [deleteTarget, setDeleteTarget] = useState<AuditDashboardRow | null>(null);
 
   const handleStartCHC = (tenantId: number, tenantName: string, auditType?: AuditType) => {
     setSchedulerCHCTenantId(tenantId);
