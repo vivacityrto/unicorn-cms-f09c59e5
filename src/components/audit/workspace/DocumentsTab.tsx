@@ -203,7 +203,7 @@ function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => v
 
         {/* AI Results */}
         {expanded && doc.ai_status === 'complete' && (
-          <div className="mt-4 space-y-3 border-t pt-3">
+          <div className="mt-4 space-y-3 border-t pt-3" onClick={(e) => e.stopPropagation()}>
             {doc.ai_risk_summary && (
               <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-800">
                 {doc.ai_risk_summary}
