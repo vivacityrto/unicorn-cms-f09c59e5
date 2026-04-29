@@ -36981,6 +36981,63 @@ export type Database = {
         }
         Relationships: []
       }
+      srto_corpus: {
+        Row: {
+          chunk_index: number
+          chunk_total: number
+          clause: string | null
+          content: string
+          content_hash: string
+          created_at: string
+          embedding: string
+          heading: string | null
+          id: string
+          metadata: Json
+          quality_area: string | null
+          source_document: string
+          source_type: Database["public"]["Enums"]["srto_source_type"]
+          source_version: string | null
+          token_count: number
+          updated_at: string
+        }
+        Insert: {
+          chunk_index: number
+          chunk_total: number
+          clause?: string | null
+          content: string
+          content_hash: string
+          created_at?: string
+          embedding: string
+          heading?: string | null
+          id?: string
+          metadata?: Json
+          quality_area?: string | null
+          source_document: string
+          source_type: Database["public"]["Enums"]["srto_source_type"]
+          source_version?: string | null
+          token_count: number
+          updated_at?: string
+        }
+        Update: {
+          chunk_index?: number
+          chunk_total?: number
+          clause?: string | null
+          content?: string
+          content_hash?: string
+          created_at?: string
+          embedding?: string
+          heading?: string | null
+          id?: string
+          metadata?: Json
+          quality_area?: string | null
+          source_document?: string
+          source_type?: Database["public"]["Enums"]["srto_source_type"]
+          source_version?: string | null
+          token_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staff_provisioning_rules: {
         Row: {
           calendars: string[]
@@ -57255,6 +57312,25 @@ export type Database = {
         Returns: string
       }
       mark_all_present: { Args: { p_meeting_id: string }; Returns: Json }
+      match_srto_chunks: {
+        Args: {
+          filter_clause?: string
+          filter_source_type?: Database["public"]["Enums"]["srto_source_type"]
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          clause: string
+          content: string
+          heading: string
+          id: string
+          quality_area: string
+          similarity: number
+          source_document: string
+          source_type: Database["public"]["Enums"]["srto_source_type"]
+        }[]
+      }
       merge_tenants: {
         Args: {
           p_reason?: string
@@ -58259,6 +58335,11 @@ export type Database = {
         | "todos"
         | "ids"
         | "conclude"
+      srto_source_type:
+        | "outcome_standards"
+        | "compliance_requirements"
+        | "credential_policy"
+        | "practice_guide"
       staff_team_type:
         | "none"
         | "business_growth"
@@ -58538,6 +58619,12 @@ export const Constants = {
         "todos",
         "ids",
         "conclude",
+      ],
+      srto_source_type: [
+        "outcome_standards",
+        "compliance_requirements",
+        "credential_policy",
+        "practice_guide",
       ],
       staff_team_type: [
         "none",

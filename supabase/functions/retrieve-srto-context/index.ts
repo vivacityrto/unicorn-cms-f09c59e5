@@ -1,0 +1,186 @@
+/**
+ * retrieve-srto-context
+ *
+ * Caller-JWT semantic retrieval over the SRTO 2025 corpus. Embeds the
+ * incoming query via the Lovable AI Gateway (text-embedding-3-small) and
+ * calls the security-invoker `match_srto_chunks` RPC, which enforces RLS
+ * against `srto_corpus` (any signed-in Vivacity user with a `users` row).
+ *
+ * Input:
+ *   {
+ *     query:         string  (5..4000 chars),
+ *     top_k?:        number  (1..20, default 8),
+ *     threshold?:    number  (0..1, default 0.7),
+ *     source_type?:  'outcome_standards' | 'compliance_requirements'
+ *                  | 'credential_policy' | 'practice_guide',
+ *     clause?:       string
+ *   }
+ */
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
+
+const EMBED_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/embeddings';
+const EMBED_MODEL = 'text-embedding-3-small';
+
+const VALID_SOURCE_TYPES = new Set([
+  'outcome_standards',
+  'compliance_requirements',
+  'credential_policy',
+  'practice_guide',
+]);
+
+function json(body: unknown, status: number) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  const t0 = Date.now();
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) return json({ error: 'Missing authorisation header' }, 401);
+
+  const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  if (!LOVABLE_API_KEY) {
+    return json({ error: 'LOVABLE_API_KEY is not configured' }, 500);
+  }
+
+  // Caller-JWT client. RLS via match_srto_chunks (security invoker).
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  // Verify the JWT resolves to a real auth user (cheap sanity check;
+  // the RPC will additionally fail if the user has no `users` row).
+  const { data: userRes, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !userRes?.user) {
+    return json({ error: 'Not authenticated' }, 401);
+  }
+
+  // Parse + validate body.
+  let body: {
+    query?: unknown;
+    top_k?: unknown;
+    threshold?: unknown;
+    source_type?: unknown;
+    clause?: unknown;
+  };
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const query = typeof body.query === 'string' ? body.query.trim() : '';
+  if (query.length < 5 || query.length > 4000) {
+    return json({ error: 'query must be a string of 5..4000 characters' }, 400);
+  }
+
+  let topK = 8;
+  if (body.top_k !== undefined) {
+    const n = Number(body.top_k);
+    if (!Number.isFinite(n) || n < 1 || n > 20) {
+      return json({ error: 'top_k must be 1..20' }, 400);
+    }
+    topK = Math.floor(n);
+  }
+
+  let threshold = 0.7;
+  if (body.threshold !== undefined) {
+    const n = Number(body.threshold);
+    if (!Number.isFinite(n) || n < 0 || n > 1) {
+      return json({ error: 'threshold must be 0..1' }, 400);
+    }
+    threshold = n;
+  }
+
+  let sourceType: string | null = null;
+  if (body.source_type !== undefined && body.source_type !== null) {
+    if (typeof body.source_type !== 'string' || !VALID_SOURCE_TYPES.has(body.source_type)) {
+      return json({ error: 'source_type invalid' }, 400);
+    }
+    sourceType = body.source_type;
+  }
+
+  let clause: string | null = null;
+  if (body.clause !== undefined && body.clause !== null) {
+    if (typeof body.clause !== 'string' || body.clause.length > 32) {
+      return json({ error: 'clause invalid' }, 400);
+    }
+    clause = body.clause;
+  }
+
+  // Embed the query via the Lovable AI Gateway.
+  let embedding: number[];
+  let embedTokens = 0;
+  try {
+    const res = await fetch(EMBED_GATEWAY_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: EMBED_MODEL,
+        input: query,
+      }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 429) {
+        return json({ error: 'Rate limit exceeded, please try again shortly.' }, 429);
+      }
+      if (res.status === 402) {
+        return json({ error: 'AI credits exhausted. Top up at Settings > Workspace > Usage.' }, 402);
+      }
+      const text = await res.text();
+      console.error('Embedding gateway error', res.status, text);
+      return json({ error: 'Embedding gateway error', detail: text }, 502);
+    }
+
+    const data = await res.json();
+    embedding = data.data?.[0]?.embedding;
+    embedTokens = data.usage?.total_tokens ?? data.usage?.prompt_tokens ?? 0;
+    if (!Array.isArray(embedding) || embedding.length !== 1536) {
+      return json({ error: 'Embedding response malformed' }, 502);
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('Embedding fetch failed', msg);
+    return json({ error: 'Failed to embed query', detail: msg }, 502);
+  }
+
+  // Call the RPC.
+  const { data: results, error: rpcErr } = await supabase.rpc('match_srto_chunks', {
+    query_embedding: embedding,
+    match_threshold: threshold,
+    match_count: topK,
+    filter_source_type: sourceType,
+    filter_clause: clause,
+  });
+
+  if (rpcErr) {
+    console.error('match_srto_chunks RPC failed', rpcErr.message);
+    return json({ error: 'Retrieval failed', detail: rpcErr.message }, 500);
+  }
+
+  return json(
+    {
+      query,
+      top_k: topK,
+      threshold,
+      results: results ?? [],
+      embedding_tokens: embedTokens,
+      duration_ms: Date.now() - t0,
+    },
+    200,
+  );
+});
