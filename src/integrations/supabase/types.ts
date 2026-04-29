@@ -2327,6 +2327,45 @@ export type Database = {
           },
         ]
       }
+      ai_evidence_analysis_usage: {
+        Row: {
+          audit_id: string | null
+          created_at: string
+          document_count: number | null
+          error: string | null
+          id: string
+          model: string | null
+          response_id: string | null
+          status: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          audit_id?: string | null
+          created_at?: string
+          document_count?: number | null
+          error?: string | null
+          id?: string
+          model?: string | null
+          response_id?: string | null
+          status?: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          audit_id?: string | null
+          created_at?: string
+          document_count?: number | null
+          error?: string | null
+          id?: string
+          model?: string | null
+          response_id?: string | null
+          status?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_feature_overrides: {
         Row: {
           created_at: string
@@ -9501,9 +9540,62 @@ export type Database = {
           },
         ]
       }
+      client_audit_response_documents: {
+        Row: {
+          created_at: string
+          document_id: number
+          id: string
+          linked_at: string
+          linked_by: string
+          note: string | null
+          response_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: number
+          id?: string
+          linked_at?: string
+          linked_by: string
+          note?: string | null
+          response_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: number
+          id?: string
+          linked_at?: string
+          linked_by?: string
+          note?: string | null
+          response_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_response_documents_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "client_audit_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_response_documents_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_response_completion"
+            referencedColumns: ["response_id"]
+          },
+        ]
+      }
       client_audit_responses: {
         Row: {
+          ai_analysis_id: string | null
+          ai_analyzed_at: string | null
           ai_confidence: number | null
+          ai_excerpts: Json | null
+          ai_gaps: Json | null
+          ai_model: string | null
           ai_suggested_notes: string | null
           ai_suggested_rating: string | null
           audit_id: string
@@ -9522,7 +9614,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_analysis_id?: string | null
+          ai_analyzed_at?: string | null
           ai_confidence?: number | null
+          ai_excerpts?: Json | null
+          ai_gaps?: Json | null
+          ai_model?: string | null
           ai_suggested_notes?: string | null
           ai_suggested_rating?: string | null
           audit_id: string
@@ -9541,7 +9638,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_analysis_id?: string | null
+          ai_analyzed_at?: string | null
           ai_confidence?: number | null
+          ai_excerpts?: Json | null
+          ai_gaps?: Json | null
+          ai_model?: string | null
           ai_suggested_notes?: string | null
           ai_suggested_rating?: string | null
           audit_id?: string
