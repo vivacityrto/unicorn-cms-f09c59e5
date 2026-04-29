@@ -87,35 +87,41 @@ export function AuditSidebar({
     }
   });
 
-  // Progress: count only document_review questions
-  const reviewSections = phaseGroups.find(g => g.key === 'document_review')?.sections || [];
-  const reviewResponses = responses.filter(r => 
-    reviewSections.some(s => s.id === r.section_id)
-  );
-  const reviewAnswered = reviewResponses.filter(r => r.rating).length;
-  const reviewTotal = reviewResponses.length || totalQuestions;
-  const progressPct = reviewTotal > 0 ? Math.round((reviewAnswered / reviewTotal) * 100) : 0;
-  const progressColor = progressPct >= 90 ? 'bg-green-500' : progressPct >= 50 ? 'bg-blue-500' : 'bg-amber-500';
+  // Progress sourced from v_client_audit_progress (true completion = rating + notes + finding for flagged ratings).
+  const completeCount = progress?.complete_count ?? 0;
+  const totalCount = progress?.total_questions ?? totalQuestions ?? 0;
+  const findingsRequired = progress?.findings_required ?? 0;
+  const notesRequired = progress?.notes_required ?? 0;
+  const unanswered = progress?.unanswered ?? 0;
+  const needsAttention = findingsRequired + notesRequired;
+  const progressPct = totalCount > 0 ? Math.round((completeCount / totalCount) * 100) : 0;
+  const fullyComplete = totalCount > 0 && completeCount === totalCount;
+  // Green only when truly complete; amber whenever any item still needs attention or is unanswered.
+  const progressColor = fullyComplete ? 'bg-green-500' : 'bg-amber-500';
 
-  const getSectionCompletion = (section: AuditSection) => {
-    const sectionResponses = responses.filter(r => r.section_id === section.id);
-    const answered = sectionResponses.filter(r => r.rating).length;
-    const total = sectionResponses.length;
-    if (total === 0) return { status: 'none' as const, answered: 0, total: 0 };
-    if (answered === total) return { status: 'complete' as const, answered, total };
-    return { status: 'partial' as const, answered, total };
+  const getSectionRow = (section: AuditSection) => {
+    const row = sectionCompletion?.[section.id];
+    if (!row) return null;
+    return row;
   };
 
   const getPhaseCompletion = (group: PhaseGroup) => {
-    let totalAnswered = 0;
-    let totalCount = 0;
+    if (group.sections.length === 0) return 'Not started';
+    let total = 0;
+    let complete = 0;
+    let allLoaded = true;
     for (const s of group.sections) {
-      const comp = getSectionCompletion(s);
-      totalAnswered += comp.answered;
-      totalCount += comp.total;
+      const row = getSectionRow(s);
+      if (!row) {
+        allLoaded = false;
+        continue;
+      }
+      total += row.total_questions;
+      complete += row.complete_count;
     }
-    if (totalCount === 0) return 'Not started';
-    if (totalAnswered === totalCount) return 'Complete';
+    if (!allLoaded && total === 0) return 'Not started';
+    if (total === 0) return 'Not started';
+    if (complete === total) return 'Complete';
     return 'In progress';
   };
 
