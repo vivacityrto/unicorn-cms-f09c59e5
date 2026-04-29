@@ -191,11 +191,11 @@ function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => v
           </div>
           <div className="flex items-center gap-1">
             {doc.ai_status === 'complete' && (findingsCount > 0 || recsCount > 0) && (
-              <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>
                 {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={onDelete}>
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
