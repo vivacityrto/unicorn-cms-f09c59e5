@@ -40,7 +40,7 @@ interface QuestionCardProps {
   auditId: string;
   sectionId: string;
   questionContext?: QuestionContext;
-  /** All findings for this audit; the card filters to its own response. */
+  /** Optional pre-loaded findings list. If omitted the card subscribes via useAuditFindings. */
   findings?: AuditFinding[];
   onRate: (questionId: string, rating: string, score: number, isFlagged: boolean) => void;
   onNote: (questionId: string, notes: string) => void;
@@ -55,7 +55,7 @@ export function QuestionCard({
   auditId,
   sectionId,
   questionContext,
-  findings,
+  findings: findingsProp,
   onRate,
   onNote,
   onAddFinding,
@@ -71,6 +71,10 @@ export function QuestionCard({
     onSave: (v) => onNote(question.id, v),
     debounceMs: 500,
   });
+
+  // Fetch findings for this audit if not supplied (cached by react-query, so no extra fetch).
+  const { data: fetchedFindings } = useAuditFindings(findingsProp ? undefined : auditId);
+  const findings = findingsProp ?? fetchedFindings;
 
   const ratingOptions =
     ctx === 'closing_discussion'
