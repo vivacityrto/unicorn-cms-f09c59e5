@@ -91,7 +91,7 @@ export function QuestionCard({
         .eq('id', auditId)
         .maybeSingle();
       if (error) throw error;
-      return data as { subject_tenant_id: number | null } | null;
+      return (data as unknown) as { subject_tenant_id: number | null } | null;
     },
     enabled: ctx === 'auditor_assessment',
     staleTime: 5 * 60 * 1000,
