@@ -47,6 +47,10 @@ import {
   type AskVivFactsResult,
   type DerivedFact,
 } from "../_shared/ask-viv-fact-builder/index.ts";
+import {
+  buildScopeLock,
+  type ScopeLock,
+} from "../_shared/ask-viv-fact-builder/scope-lock.ts";
 
 // V4: Tiered Prompt System imports
 import {
