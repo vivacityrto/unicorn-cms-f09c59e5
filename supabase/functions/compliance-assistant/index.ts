@@ -51,6 +51,10 @@ import {
   buildScopeLock,
   type ScopeLock,
 } from "../_shared/ask-viv-fact-builder/scope-lock.ts";
+import {
+  buildExplainPayload,
+  type ExplainPayload,
+} from "../_shared/ask-viv-prompts/explain-types.ts";
 
 // V4: Tiered Prompt System imports
 import {
@@ -358,6 +362,46 @@ Deno.serve(async (req) => {
       freshness = null;
     }
 
+    // V4 restore: build explain payload from data already computed
+    let explain: ExplainPayload | null = null;
+    try {
+      const safetyMeta = (response as { safety_meta?: { validation: unknown; modifications: string[] } }).safety_meta;
+      explain = buildExplainPayload(
+        tenantId,
+        {
+          client_id: factsResult.context.scope.client_id,
+          package_id: factsResult.context.scope.package_id,
+          phase_id: factsResult.context.scope.phase_id,
+        },
+        profile.unicorn_role || "unknown",
+        Array.from(new Set([
+          ...factsResult.audit.tables_queried,
+          ...(response.source_types_used ?? []),
+        ])),
+        response.records_accessed.map(r => ({
+          table: r.table,
+          id: String(r.id),
+          label: r.label,
+        })),
+        factsResult.facts,
+        factsResult.gaps,
+        null,
+        (safetyMeta?.validation ?? null) as Parameters<typeof buildExplainPayload>[8],
+        (safetyMeta?.modifications?.length ?? 0) > 0,
+      );
+      if (freshness) {
+        explain.freshness = {
+          last_activity_at: freshness.last_activity_at,
+          days_since_activity: freshness.days_since_activity,
+          status: freshness.status,
+          confidence_downgraded: false,
+        };
+      }
+    } catch (eErr) {
+      console.warn("V4: explain payload derivation failed:", eErr);
+      explain = null;
+    }
+
     // Log interaction with enhanced audit trail
     await logInteraction(
       supabase, 
@@ -371,7 +415,9 @@ Deno.serve(async (req) => {
       brainResult
     );
 
-    return jsonRaw({ ...response, scope_lock, freshness });
+    // Strip internal safety_meta before returning to client
+    const { safety_meta: _safetyMeta, ...responseClean } = response as typeof response & { safety_meta?: unknown };
+    return jsonRaw({ ...responseClean, scope_lock, freshness, explain });
 
   } catch (err) {
     console.error("Compliance assistant error:", err);
@@ -818,6 +864,11 @@ function generateFactBasedAnswer(
       valid: validationResult.valid,
       warnings: validationResult.warnings.length,
       sanitized: modifications.length > 0,
+    },
+    // Internal-only: stripped before returning to client; used to build explain payload
+    safety_meta: {
+      validation: validationResult,
+      modifications,
     },
   };
 }

@@ -352,6 +352,7 @@ export function AskVivPanel() {
       validation: result.validation,
       scope_lock: result.scope_lock ?? undefined,
       freshness: result.freshness ?? undefined,
+      explain: result.explain ?? undefined,
     };
   }
 
@@ -519,6 +520,7 @@ export function AskVivPanel() {
           validation: result.validation,
           scope_lock: result.scope_lock,
           freshness: result.freshness,
+          explain: result.explain,
           created_at: new Date().toISOString(),
         };
       }

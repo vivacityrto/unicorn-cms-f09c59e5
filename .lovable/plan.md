@@ -1,124 +1,90 @@
-# Restore scope_lock + freshness in compliance-assistant V4
+# Restore `explain` payload in V4 compliance-assistant
 
-The frontend (`AskVivScopeBanner`, `AskVivFreshnessChip`) is already wired to consume `scope_lock` and `freshness` on assistant messages, but V4 stopped emitting them. This plan restores both fields end-to-end without touching the banner/chip components.
+## Background
 
-## 1. Edge function: `supabase/functions/compliance-assistant/index.ts`
+`AskVivExplainPanel` expects an `ExplainPayload` on each compliance message and the toggle (`explainSourcesEnabled`) is already wired. The V4 edge function stopped returning `explain`, so the panel never renders. We need to construct it from data already computed in V4 and pass it through `AskVivPanel`.
 
-### 1a. Build `scope_lock` from fact-builder output
+## Important shape note
 
-The shared helper `_shared/ask-viv-fact-builder/scope-lock.ts` already produces the exact `ScopeLock` shape the frontend `AskVivScopeBanner` expects (`tenant_id`, `client`, `package`, `phase`, `derived_at`, `inference_notes`). Reuse it.
+The user's prompt suggested a simplified `safety` shape (`{ phrase_filter: { applied, count }, banned_phrases_found, validation_passed }`). That does **not** match the panel — `AskVivExplainPanel` reads `explain.safety.phrase_filter.blocked` and `explain.safety.validator.ok/repaired`. We will use the canonical `ExplainSafety` shape (already defined in `_shared/ask-viv-prompts/explain-types.ts` and matched by the panel) and populate it from V4's `validationResult` and `sanitizeResponse` `modifications`. This delivers the user's intent (light up the panel) without breaking the existing UI.
 
-- Add import next to the existing fact-builder import:
-  ```ts
-  import { buildScopeLock, type ScopeLock } from "../_shared/ask-viv-fact-builder/scope-lock.ts";
-  ```
-- After `buildAskVivFacts(...)` returns (around line 215), derive labels and the scope lock:
-  - Pull `tenant_name` from `factsResult.facts` (key `tenant_name`).
-  - Pull a `package_label` by finding the first `package_*` fact whose `source_ids[0]` matches the resolved `package_id`, falling back to its `reason` / package fact value, or `null`.
-  - Pull a `phase_label` similarly from the `phase_*` facts for the resolved `phase_id`.
-  - Call `buildScopeLock({...})` passing:
-    - `tenantId: tenantId`
-    - `tenantName`
-    - `providedScope`: the IDs *as sent in the request body* (`context.client_id`, `context.package_id`, `context.phase_id` — all stringified or null)
-    - `resolvedScope`: `factsResult.context.scope` (these are the post-inference values)
-    - `decisions: factsResult.audit.inference_decisions`
-    - `labels: { client_label: tenantName, package_label, phase_label }`
-- If no client scope is resolved (`resolvedScope.client_id` is null AND no tenant fact), set `scope_lock = null`.
+## Edge function changes — `supabase/functions/compliance-assistant/index.ts`
 
-### 1b. Build `freshness`
+1. Import the existing helper:
+   ```ts
+   import { buildExplainPayload, type ExplainPayload } from "../_shared/ask-viv-prompts/explain-types.ts";
+   ```
 
-Derive last activity from data the fact-builder already pulled — no new query needed in the common path:
+2. Thread `validationResult` and `modifications` out of `generateFactBasedAnswer` so the main handler can build the explain payload. Two clean options — pick the smaller one:
+   - Add them to the function's return object (e.g. `_validation_raw`, `_modifications`), or
+   - Return a small `safetyMeta` field used only to build explain.
 
-- Inspect `factsResult.audit.record_ids_accessed` and the underlying derived facts. The fact-builder retrieves tasks, evidence, consults, packages, phases. For each, the fact-builder stores `value_at` / source rows with `updated_at` already loaded.
-- Simpler and more reliable: run one lightweight query bounded by tenant + (optional) package:
-  ```ts
-  const { data: activityRow } = await supabase
-    .from("audit_events")
-    .select("created_at")
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  ```
-  If `audit_events` doesn't yield a row, fall back to `tasks.updated_at` (filtered by tenant_id and, if present, package_instance_id) — `.order("updated_at", desc).limit(1)`.
-- Compute:
-  ```ts
-  const lastActivityAt = activityRow?.created_at ?? null;
-  const days = lastActivityAt
-    ? Math.floor((Date.now() - new Date(lastActivityAt).getTime()) / 86_400_000)
-    : null;
-  const status: "fresh" | "aging" | "stale" =
-    days === null ? "stale" : days <= 14 ? "fresh" : days <= 30 ? "aging" : "stale";
-  const freshness = {
-    last_activity_at: lastActivityAt,
-    days_since_activity: days,
-    status,
-    derived_at: new Date().toISOString(),
-  };
-  ```
-- Wrap the query in try/catch; on error set `freshness = null` and continue (must never break the response).
+   Implementation: extend the return at line ~798 with `safety_meta: { validation: validationResult, modifications }`. Strip it before sending to the client (or just leave it — it is harmless metadata; safer to strip).
 
-### 1c. Wire into `generateFactBasedAnswer` return (line 690)
+3. After `response = generateFactBasedAnswer(...)` and after `scope_lock` / `freshness` are derived (around line 360), build:
+   ```ts
+   const explain: ExplainPayload = buildExplainPayload(
+     tenantId,
+     {
+       client_id: factsResult.context.scope.client_id,
+       package_id: factsResult.context.scope.package_id,
+       phase_id: factsResult.context.scope.phase_id,
+     },
+     profile.unicorn_role || "unknown",
+     Array.from(new Set([
+       ...factsResult.audit.tables_queried,
+       ...(response.source_types_used ?? []),
+     ])),
+     response.records_accessed.map(r => ({
+       table: r.table,
+       id: String(r.id),
+       label: r.label,
+     })),
+     factsResult.facts,            // helper builds safe previews
+     factsResult.gaps,              // canonical gaps from fact builder
+     null,                          // phraseFilterResult — not run separately in V4
+     response.safety_meta?.validation ?? null,
+     (response.safety_meta?.modifications?.length ?? 0) > 0,
+   );
+   ```
 
-`generateFactBasedAnswer` is the function whose return becomes the response body (`return jsonRaw(response)` at line 266). Two clean options:
+   `buildExplainPayload` already produces `facts_used` previews capped at 120 chars (the user asked for 80; 120 is the existing tested standard — keeping it avoids drift across the rest of the system).
 
-- **Preferred**: compute `scope_lock` and `freshness` in the request handler (after `buildAskVivFacts` succeeds and before `generateFactBasedAnswer` is called), then merge them into the response object after the call:
-  ```ts
-  const response = generateFactBasedAnswer(...);
-  return jsonRaw({ ...response, scope_lock, freshness });
-  ```
-  This keeps `generateFactBasedAnswer` pure and avoids changing its signature.
+4. Optionally attach `freshness` to `explain.freshness` (panel supports it), mapping the V4 `freshness` object to `{ last_activity_at, days_since_activity, status, confidence_downgraded: false }`.
 
-This option is what we'll use.
+5. Return shape (line 374) becomes:
+   ```ts
+   const { safety_meta, ...responseClean } = response;
+   return jsonRaw({ ...responseClean, scope_lock, freshness, explain });
+   ```
 
-## 2. Frontend: `src/components/ask-viv/AskVivPanel.tsx`
+## Frontend changes — `src/components/ask-viv/AskVivPanel.tsx`
 
-### 2a. `sendComplianceMessage` return (~line 345)
-Add the two fields back to the returned object:
-```ts
-return {
-  content: result.answer_markdown,
-  records_accessed: result.records_accessed,
-  confidence: result.confidence,
-  gaps: result.gaps,
-  reasoning_tiers: result.reasoning_tiers,
-  governance: result.governance,
-  validation: result.validation,
-  scope_lock: result.scope_lock ?? undefined,
-  freshness: result.freshness ?? undefined,
-};
-```
+1. In `sendComplianceMessage` (lines 345–355), add:
+   ```ts
+   explain: result.explain ?? undefined,
+   ```
 
-### 2b. `assistantResponse` construction in `sendMessage` (~line 508)
-Add the two fields back to the compliance branch:
-```ts
-assistantResponse = {
-  id: "compliance-" + Date.now(),
-  role: "assistant",
-  content: result.content,
-  records_accessed: result.records_accessed,
-  confidence: result.confidence,
-  gaps: result.gaps,
-  reasoning_tiers: result.reasoning_tiers,
-  governance: result.governance,
-  validation: result.validation,
-  scope_lock: result.scope_lock,
-  freshness: result.freshness,
-  created_at: new Date().toISOString(),
-};
-```
+2. In `sendMessage` compliance branch (lines 510–523), add:
+   ```ts
+   explain: result.explain,
+   ```
+   on the `assistantResponse` object.
 
-No other frontend changes — the `Message` interface (line 65), the banner render block (line 765) and the freshness chip render block (line 776) already consume these fields.
+The `Message.explain?: ExplainPayload` type is already declared (line 73), and the render block at lines 888–889 already conditionally mounts `<AskVivExplainPanel explain={message.explain} />` when `explainSourcesEnabled`.
 
-## 3. Out of scope (explicitly not changing)
+## Out of scope
 
-- `AskVivScopeBanner.tsx`, `AskVivFreshnessChip.tsx` — already correct.
-- Knowledge / web modes — only compliance mode regressed.
-- Fact-builder internals and `scope-lock.ts` helper — used as-is.
-- Database schema, RLS, audit logging.
+- No DB / RLS / migration changes.
+- No changes to `AskVivExplainPanel`, `MicroExplainPanel`, or the `explainSourcesEnabled` toggle.
+- No changes to the `safety` shape in the panel — we use the canonical shape.
+- No new shared modules — reusing `buildExplainPayload` and `ExplainPayload` from `_shared/ask-viv-prompts/explain-types.ts`.
 
-## 4. Verification
+## Files touched
 
-- After edits, deploy `compliance-assistant` and send a question with explicit `tenant_id` only (no client/package/phase) — `scope_lock` should return with `inferred: true` for any fields the fact-builder inferred, and `AskVivScopeBanner` should appear.
-- Send a question for a tenant whose latest activity is >30 days old — `AskVivFreshnessChip` should render in `stale` style.
-- Confirm no regression to existing fields (`reasoning_tiers`, `governance.caution_banners`, `validation.sanitized`).
+- `supabase/functions/compliance-assistant/index.ts` (imports, ~5 lines in answer return, ~15 lines in handler, modify final return)
+- `src/components/ask-viv/AskVivPanel.tsx` (2 small additions)
+
+## After approval
+
+Deploy `compliance-assistant`, then verify in preview that the "Source Explanation (CSC Review)" panel renders under a compliance answer when the toggle is on.
