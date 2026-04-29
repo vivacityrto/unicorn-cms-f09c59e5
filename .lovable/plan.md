@@ -1,47 +1,73 @@
-# Restore `ai_interaction_log_id` for AskVivFlagButton
+# Convert `audit_type` to `dd_audit_type` lookup
 
-## Background
+## 1. Migration (single file, single transaction)
 
-`AskVivFlagButton` needs an `ai_interaction_log_id` plus `scope_lock` to render. V4 already calls `logInteraction()` (line 406 of `compliance-assistant/index.ts`) which inserts into `ai_interaction_logs`, but the function returns `void` so the row id is lost and never sent to the client.
+New file: `supabase/migrations/<timestamp>_dd_audit_type_lookup.sql`
 
-Service-client access is already in place (`const supabase = createServiceClient();` at line 153) — no new client needed.
+Header comment block contains the rollback SQL (drop FK → restore original CHECK → drop table).
 
-## Edge function — `supabase/functions/compliance-assistant/index.ts`
+Body, in order:
 
-1. Change `logInteraction` signature from `Promise<void>` to `Promise<string | null>` and chain `.select("id").single()` on the existing insert. Return the id (or `null` on failure). Keep it non-blocking — any error is swallowed and returns `null`.
+1. **Safety check** — `DO $$ ... $$` block raising an exception if any `client_audits.audit_type` row is outside the 7 known values. Aborts the transaction before any structural change.
+2. **Create table** `public.dd_audit_type`:
+   - `code serial PRIMARY KEY`
+   - `value text NOT NULL UNIQUE`
+   - `label text NOT NULL`
+   - `sort_order integer NOT NULL DEFAULT 0`
+   - `is_active boolean NOT NULL DEFAULT true`
+3. **Seed 7 rows** with the exact value/label/sort_order list provided.
+4. **RLS** — enable RLS, add a single SELECT-to-authenticated `USING (true)` policy named `"Authenticated users can read dd_audit_type"`. No write policy.
+5. **Swap constraint** — `DROP CONSTRAINT client_audits_audit_type_check`, then `ADD CONSTRAINT client_audits_audit_type_fkey FOREIGN KEY (audit_type) REFERENCES public.dd_audit_type(value)`.
 
-2. In the handler (line 406), capture the result:
+Postgres DDL is transactional; if any step fails the entire migration rolls back atomically. The sandbox migration runner wraps the file in a transaction by default.
+
+## 2. New hook
+
+New file: `src/hooks/useAuditTypeOptions.ts` — built to match `useActionStatusOptions.ts` line-for-line:
+
+- `AuditTypeOption` interface: `{ value: string; label: string; sort_order: number }`
+- Module-level `cachedTypes` and `fetchPromise`
+- `loadTypes()` queries `dd_audit_type` selecting `code, value, label, sort_order`, filters `is_active = true`, orders by `sort_order` ascending, maps and caches the result. Reuses in-flight promise; clears `fetchPromise` and returns `[]` on error.
+- `useAuditTypeOptions()` initialises state from `cachedTypes` if present, calls `loadTypes()` in `useEffect`, returns `{ auditTypes, loading }`.
+
+## 3. Frontend wiring — `src/pages/AuditsAssessments.tsx`
+
+Three localised edits:
+
+1. Add import:
    ```ts
-   const aiInteractionLogId = await logInteraction(...);
+   import { useAuditTypeOptions } from '@/hooks/useAuditTypeOptions';
+   ```
+2. Inside the component (next to the existing filter useStates around line 42):
+   ```ts
+   const { auditTypes, loading: typesLoading } = useAuditTypeOptions();
+   ```
+   (`typesLoading` is intentionally unused for rendering — kept available, no spinner per spec.)
+3. In the type-filter `<SelectContent>` (lines 115–122), keep the hardcoded `<SelectItem value="all">All Types</SelectItem>` and replace the 7 hardcoded items with:
+   ```tsx
+   {auditTypes.map(type => (
+     <SelectItem key={type.value} value={type.value}>
+       {type.label}
+     </SelectItem>
+   ))}
    ```
 
-3. Include it in the final return (line 420):
-   ```ts
-   return jsonRaw({
-     ...responseClean,
-     scope_lock,
-     freshness,
-     explain,
-     ai_interaction_log_id: aiInteractionLogId,
-   });
-   ```
+Nothing else in this file changes — `typeFilter` state, `filtered` useMemo, `hasFilters`, the four stat cards, and all other JSX remain identical.
 
-## Frontend — `src/components/ask-viv/AskVivPanel.tsx`
+## What will NOT change
 
-4. In `sendComplianceMessage` return, add:
-   ```ts
-   ai_interaction_log_id: result.ai_interaction_log_id ?? null,
-   ```
+- `src/types/clientAudits.ts` — `AuditType` union and `AUDIT_TYPE_LABELS` left intact.
+- `AuditTypeBadge.tsx`, `NewAuditModal.tsx`, `useClientAudits.ts`, `AuditSchedulerSection`, `ReferenceLibrarySection`, `v_audit_schedule`.
+- `research-audit-intelligence` edge function (its local `AUDIT_TYPE_LABELS` continues to work; values are identical).
+- Any other `dd_*` table, RLS policy, trigger, or constraint.
 
-5. In the `sendMessage` compliance branch `assistantResponse`, add:
-   ```ts
-   ai_interaction_log_id: result.ai_interaction_log_id,
-   ```
+## Risks / notes
 
-The `Message.ai_interaction_log_id?: string | null` type and the `AskVivFlagButton` render guard (`message.scope_lock && context.tenant_id && ...` at ~line 898) are already wired.
+- Verified pre-flight: 0 orphan rows in `client_audits.audit_type` today. The Step-1 guard re-checks at migration time so a race between now and apply is still caught.
+- `dd_audit_type.value` is `UNIQUE NOT NULL` (FK target requirement).
+- The hook's module-level cache is process-local; no invalidation API is needed because the lookup is effectively static for clients (SuperAdmin edits via Code Tables Management would require a hard refresh — same behaviour as `useActionStatusOptions`).
+- Rollback is a 3-statement block in the header comment; safe to execute at any time because the original CHECK definition matches the seed values exactly.
 
-## Out of scope
+## Recommendation
 
-- Schema, RLS, or migrations on `ai_interaction_logs`
-- `AskVivFlagButton` component itself
-- Other modes (knowledge / web)
+GO. Single migration file, single transaction, one new hook, three-line edit in one page. No other surfaces touched.
