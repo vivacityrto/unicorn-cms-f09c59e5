@@ -403,7 +403,7 @@ Deno.serve(async (req) => {
     }
 
     // Log interaction with enhanced audit trail
-    await logInteraction(
+    const aiInteractionLogId = await logInteraction(
       supabase, 
       user.id, 
       tenantId, 
@@ -417,7 +417,7 @@ Deno.serve(async (req) => {
 
     // Strip internal safety_meta before returning to client
     const { safety_meta: _safetyMeta, ...responseClean } = response as typeof response & { safety_meta?: unknown };
-    return jsonRaw({ ...responseClean, scope_lock, freshness, explain });
+    return jsonRaw({ ...responseClean, scope_lock, freshness, explain, ai_interaction_log_id: aiInteractionLogId });
 
   } catch (err) {
     console.error("Compliance assistant error:", err);
@@ -1153,7 +1153,7 @@ async function logInteraction(
     reasoning: ReasoningOutput;
     confidence: ConfidenceResult;
   }
-): Promise<void> {
+): Promise<string | null> {
   try {
     // V3: Build records_accessed from Fact Builder audit data
     const recordsAccessed = factsResult 
@@ -1162,39 +1162,50 @@ async function logInteraction(
         )
       : response.records_accessed;
 
-    await supabase.from("ai_interaction_logs").insert({
-      user_id: userId,
-      tenant_id: tenantId,
-      mode: "compliance",
-      prompt_text: question,
-      response_text: response.answer_markdown,
-      records_accessed: recordsAccessed,
-      request_context: {
+    const { data, error } = await supabase
+      .from("ai_interaction_logs")
+      .insert({
+        user_id: userId,
         tenant_id: tenantId,
-        client_id: context.client_id || null,
-        package_id: context.package_id || null,
-        phase_id: context.phase_id || null,
-        user_role: profile.unicorn_role,
-        confidence: response.confidence,
-        gaps_count: response.gaps.length,
-        // V3: Fact Builder tracking
-        ai_brain_version: "3.0",
-        fact_builder_version: "1.0",
-        reasoning_tiers: response.reasoning_tiers,
-        escalation_count: response.escalation_count,
-        fact_count: factsResult?.facts.length || brainResult?.factSet.fact_count || 0,
-        categories_analyzed: brainResult?.factSet.categories || [],
-        // V3: Audit trail from Fact Builder
-        tables_queried: factsResult?.audit.tables_queried || [],
-        inference_decisions: factsResult?.audit.inference_decisions || [],
-        query_duration_ms: factsResult?.audit.duration_ms || 0,
-        gaps: factsResult?.gaps || [],
-      },
-      chunks_used: response.chunks_used || 0,
-      source_types_used: response.source_types_used || [],
-    });
+        mode: "compliance",
+        prompt_text: question,
+        response_text: response.answer_markdown,
+        records_accessed: recordsAccessed,
+        request_context: {
+          tenant_id: tenantId,
+          client_id: context.client_id || null,
+          package_id: context.package_id || null,
+          phase_id: context.phase_id || null,
+          user_role: profile.unicorn_role,
+          confidence: response.confidence,
+          gaps_count: response.gaps.length,
+          // V3: Fact Builder tracking
+          ai_brain_version: "3.0",
+          fact_builder_version: "1.0",
+          reasoning_tiers: response.reasoning_tiers,
+          escalation_count: response.escalation_count,
+          fact_count: factsResult?.facts.length || brainResult?.factSet.fact_count || 0,
+          categories_analyzed: brainResult?.factSet.categories || [],
+          // V3: Audit trail from Fact Builder
+          tables_queried: factsResult?.audit.tables_queried || [],
+          inference_decisions: factsResult?.audit.inference_decisions || [],
+          query_duration_ms: factsResult?.audit.duration_ms || 0,
+          gaps: factsResult?.gaps || [],
+        },
+        chunks_used: response.chunks_used || 0,
+        source_types_used: response.source_types_used || [],
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Failed to log interaction:", error);
+      return null;
+    }
+    return (data?.id as string) ?? null;
   } catch (err) {
     console.error("Failed to log interaction:", err);
     // Non-blocking - don't fail the request
+    return null;
   }
 }
