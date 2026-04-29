@@ -43,7 +43,7 @@ import {
   Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import vivIcon from "@/assets/viv-icon.png";
 
 // Local storage key for explain sources toggle
@@ -97,6 +97,7 @@ export function AskVivPanel() {
   const { isSuperAdmin, isVivacityTeam } = useRBAC();
   const { isOpen, closePanel, selectedMode } = useAskViv();
   const { flags } = useAskVivFeatureFlags();
+  const location = useLocation();
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentThread, setCurrentThread] = useState<Thread | null>(null);
@@ -182,6 +183,23 @@ export function AskVivPanel() {
             tenant_id: tenantMember.tenant_id,
             tenant_name: tenantData?.name || `Tenant ${tenantMember.tenant_id}`,
           });
+        } else if (!tenantMember) {
+          // Fallback: parse tenant ID from URL (e.g. /tenant/7505)
+          const match = location.pathname.match(/\/tenant\/(\d+)/);
+          if (match) {
+            const urlTenantId = parseInt(match[1], 10);
+            const { data: tenantData } = await supabase
+              .from("tenants")
+              .select("id, name")
+              .eq("id", urlTenantId)
+              .single();
+            if (tenantData) {
+              setContext({
+                tenant_id: tenantData.id,
+                tenant_name: tenantData.name,
+              });
+            }
+          }
         }
       } catch (err) {
         console.debug("No tenant context available:", err);
@@ -189,7 +207,7 @@ export function AskVivPanel() {
     }
 
     loadTenantContext();
-  }, [user?.id, selectedMode]);
+  }, [user?.id, selectedMode, location]);
 
   // Wait for auth to load before checking access
   if (loading || !profile) {
