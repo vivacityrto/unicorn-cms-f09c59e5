@@ -229,9 +229,29 @@ export default function AuditsAssessments() {
                   {row.open_action_count}
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); navigate(`/audits/${row.id}`); }}>
-                    Open
-                  </Button>
+                  <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/audits/${row.id}`)}>
+                      Open
+                    </Button>
+                    {canDeleteAudit(row) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label="Audit actions">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setDeleteTarget(row)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete audit
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
