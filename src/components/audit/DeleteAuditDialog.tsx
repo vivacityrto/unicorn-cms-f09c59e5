@@ -45,6 +45,7 @@ export function DeleteAuditDialog({
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [step, setStep] = useState<'reason' | 'confirm'>('reason');
   const queryClient = useQueryClient();
 
   // Reset state whenever the dialog opens.
@@ -53,6 +54,7 @@ export function DeleteAuditDialog({
       setReason('');
       setInlineError(null);
       setSubmitting(false);
+      setStep('reason');
     }
   }, [open]);
 
