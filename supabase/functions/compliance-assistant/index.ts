@@ -51,6 +51,10 @@ import {
   buildScopeLock,
   type ScopeLock,
 } from "../_shared/ask-viv-fact-builder/scope-lock.ts";
+import {
+  buildExplainPayload,
+  type ExplainPayload,
+} from "../_shared/ask-viv-prompts/explain-types.ts";
 
 // V4: Tiered Prompt System imports
 import {
