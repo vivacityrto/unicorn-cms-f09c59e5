@@ -155,7 +155,6 @@ export function QuestionCard({
     previousRatingRef.current = response?.rating;
   }, [response?.rating]);
 
-  const isFlagged = response?.is_flagged && question.corrective_action;
   const hasAiSuggestion = response?.ai_suggested_rating && !response?.rating;
 
   const notesLabel =
