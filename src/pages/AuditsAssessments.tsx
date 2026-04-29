@@ -116,6 +116,10 @@ export default function AuditsAssessments() {
             <SelectItem value="compliance_health_check">CHC</SelectItem>
             <SelectItem value="mock_audit">Mock Audit</SelectItem>
             <SelectItem value="due_diligence">Due Diligence</SelectItem>
+            <SelectItem value="cricos_chc">CHC — CRICOS</SelectItem>
+            <SelectItem value="rto_cricos_chc">CHC — RTO + CRICOS</SelectItem>
+            <SelectItem value="cricos_mock_audit">Mock Audit — CRICOS</SelectItem>
+            <SelectItem value="due_diligence_combined">Combined RTO + CRICOS Due Diligence</SelectItem>
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
