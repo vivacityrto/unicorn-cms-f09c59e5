@@ -77,6 +77,9 @@ interface Message {
   ai_interaction_log_id?: string | null;
   web_citations?: WebCitation[];
   research_job_id?: string;
+  reasoning_tiers?: { tier: string; finding_count: number; critical_count: number }[];
+  governance?: { caution_banners: string[] };
+  validation?: { sanitized: boolean };
   created_at: string;
 }
 
@@ -326,6 +329,9 @@ export function AskVivPanel() {
       records_accessed: result.records_accessed,
       confidence: result.confidence,
       gaps: result.gaps,
+      reasoning_tiers: result.reasoning_tiers,
+      governance: result.governance,
+      validation: result.validation,
     };
   }
 
@@ -488,6 +494,9 @@ export function AskVivPanel() {
           records_accessed: result.records_accessed,
           confidence: result.confidence,
           gaps: result.gaps,
+          reasoning_tiers: result.reasoning_tiers,
+          governance: result.governance,
+          validation: result.validation,
           created_at: new Date().toISOString(),
         };
       }
@@ -760,6 +769,17 @@ export function AskVivPanel() {
                     />
                   )}
 
+                  {/* Governance caution banners */}
+                  {message.role === "assistant" && isComplianceMode && message.governance?.caution_banners &&
+                    message.governance.caution_banners.length > 0 &&
+                    message.governance.caution_banners.map((banner, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-2">
+                        <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>{banner}</span>
+                      </div>
+                    ))
+                  }
+
                   <div
                     className={cn(
                       "rounded-2xl px-4 py-2.5 text-sm",
@@ -792,6 +812,23 @@ export function AskVivPanel() {
                             ))}
                           </ul>
                         </div>
+                      )}
+
+                      {/* Reasoning tiers summary */}
+                      {message.reasoning_tiers && message.reasoning_tiers.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-medium">Reasoning:</span>{" "}
+                          {message.reasoning_tiers.length} tier
+                          {message.reasoning_tiers.length > 1 ? "s" : ""} ·{" "}
+                          {message.reasoning_tiers.reduce((n, t) => n + t.critical_count, 0)} critical
+                        </div>
+                      )}
+
+                      {/* Sanitisation notice */}
+                      {message.validation?.sanitized && (
+                        <p className="text-xs text-muted-foreground italic">
+                          Response was automatically sanitised.
+                        </p>
                       )}
 
                       {/* Records accessed */}
