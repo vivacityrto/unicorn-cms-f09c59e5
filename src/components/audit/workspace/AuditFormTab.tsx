@@ -191,6 +191,7 @@ function TemplatePhaseView({
           questionsBySection={questionsBySection}
           userId={userId}
           auditId={audit.id}
+          framework={framework}
           onUpsertResponse={onUpsertResponse}
           onAddFinding={onAddFinding}
           onUpdateSummary={onUpdateSummary}
@@ -204,6 +205,7 @@ function TemplatePhaseView({
           questionsBySection={questionsBySection}
           userId={userId}
           auditId={audit.id}
+          framework={framework}
           onUpsertResponse={onUpsertResponse}
           onAddFinding={onAddFinding}
           onUpdateSummary={onUpdateSummary}
@@ -219,6 +221,7 @@ function TemplatePhaseView({
           questionsBySection={questionsBySection}
           userId={userId}
           auditId={audit.id}
+          framework={framework}
           onUpsertResponse={onUpsertResponse}
           onAddFinding={onAddFinding}
           onUpdateSummary={onUpdateSummary}
