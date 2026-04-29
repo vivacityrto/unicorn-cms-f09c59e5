@@ -169,9 +169,21 @@ function DocumentCard({ doc, onDelete }: { doc: AuditDocument; onDelete: () => v
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
-            <FileText className="h-8 w-8 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+            {isOpening ? (
+              <Loader2 className="h-8 w-8 text-primary flex-shrink-0 mt-0.5 animate-spin" />
+            ) : (
+              <FileText className="h-8 w-8 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+            )}
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{doc.file_name}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-sm truncate">{doc.file_name}</p>
+                {isOpening && (
+                  <span className="text-xs text-primary flex items-center gap-1 flex-shrink-0">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Opening…
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mt-1">
                 <span>{typeLabel}</span>
                 {doc.qualification_code && <span>· {doc.qualification_code}</span>}
