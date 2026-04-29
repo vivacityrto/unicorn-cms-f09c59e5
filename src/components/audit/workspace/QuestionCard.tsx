@@ -80,6 +80,58 @@ export function QuestionCard({
   const { data: fetchedFindings } = useAuditFindings(findingsProp ? undefined : auditId);
   const findings = findingsProp ?? fetchedFindings;
 
+  // Lookup the audit's subject_tenant_id once for the EvidencePanel linker.
+  // Cached by react-query — every QuestionCard for this audit shares one fetch.
+  const { data: auditMeta } = useQuery({
+    queryKey: ['audit-tenant-meta', auditId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('client_audits' as any)
+        .select('subject_tenant_id')
+        .eq('id', auditId)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { subject_tenant_id: number | null } | null;
+    },
+    enabled: ctx === 'auditor_assessment',
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const queryClient = useQueryClient();
+
+  const handleAcceptAi = (rating: string, notes: string) => {
+    const score = getScore(rating);
+    const ratingLabel =
+      rating === 'at_risk' ? 'At Risk' : rating === 'non_compliant' ? 'Non-Compliant' : '';
+    const isFlagged = question.flagged_responses?.includes(ratingLabel) ?? false;
+    onRate(question.id, rating, score, isFlagged);
+    if (notes && notes !== response?.notes) {
+      setNotes(notes);
+      onNote(question.id, notes);
+    }
+  };
+
+  const handleDiscardAi = async () => {
+    if (!response?.id) return;
+    const { error } = await supabase
+      .from('client_audit_responses' as any)
+      .update({
+        ai_suggested_rating: null,
+        ai_suggested_notes: null,
+        ai_confidence: null,
+        ai_excerpts: null,
+        ai_gaps: null,
+      })
+      .eq('id', response.id);
+    if (!error) {
+      queryClient.invalidateQueries({ queryKey: ['audit-responses', auditId] });
+      queryClient.invalidateQueries({ queryKey: ['audit-workspace', auditId] });
+      toast.success('Suggestion discarded.');
+    } else {
+      toast.error(error.message);
+    }
+  };
+
   const ratingOptions =
     ctx === 'closing_discussion'
       ? RATING_OPTIONS_CLOSING
