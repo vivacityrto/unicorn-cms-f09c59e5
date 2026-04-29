@@ -300,6 +300,70 @@ Deno.serve(async (req) => {
     return json({ error: 'Super Admin role required' }, 403);
   }
 
+  // 1b. Health-check short-circuit.
+  // Order is intentional: Authorization parsed -> user resolved -> Super Admin
+  // gate enforced -> only THEN do we branch on the health request. This keeps
+  // the health endpoint strictly more restrictive than (never weaker than) the
+  // main embed path, so it can never become a cheaper auth-bypass surface.
+  // We accept BOTH triggers because some `supabase functions invoke` versions
+  // strip custom headers; the path suffix is the more reliable trigger.
+  const url = new URL(req.url);
+  const isHealthCheck =
+    url.pathname.endsWith('/health') ||
+    url.pathname.endsWith('/health/') ||
+    req.headers.get('x-srto-health') === '1';
+  if (isHealthCheck) {
+    const tPing = Date.now();
+    try {
+      const res = await fetch(EMBED_GATEWAY_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ model: EMBED_MODEL, input: 'ping' }),
+      });
+      const latency_ms = Date.now() - tPing;
+      if (res.ok) {
+        const data = await res.json();
+        const dims: number | null = data?.data?.[0]?.embedding?.length ?? null;
+        return json(
+          {
+            ok: true,
+            gateway: 'lovable',
+            model: EMBED_MODEL,
+            embedding_dims: dims,
+            expected_dims: EMBED_DIMS,
+            dims_match: dims === EMBED_DIMS,
+            latency_ms,
+          },
+          200,
+        );
+      }
+      const text = await res.text();
+      return json(
+        {
+          ok: false,
+          gateway: 'lovable',
+          status: res.status,
+          latency_ms,
+          error:
+            res.status === 402
+              ? 'Lovable AI Gateway out of credits. Top up before invoking embed.'
+              : `Gateway responded ${res.status}`,
+          detail: text.slice(0, 500),
+        },
+        res.status === 402 ? 402 : 502,
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return json(
+        { ok: false, gateway: 'lovable', error: 'Gateway unreachable', detail: msg },
+        502,
+      );
+    }
+  }
+
   // 2. Parse body.
   let body: { source_document?: string; source_type?: string; force_reembed?: boolean } = {};
   try {

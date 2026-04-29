@@ -19,6 +19,74 @@ corpus into `public.srto_corpus` for semantic retrieval by audit-AI features.
 }
 ```
 
+## Health check (no DB writes, no embed run)
+
+Use this **before** any real embed run to confirm the Lovable AI Gateway has
+credits, the API key is valid, and the embedding shape matches what the corpus
+expects. The auth gate is identical to the main path — Authorization is parsed,
+the user is resolved, and `unicorn_role = 'Super Admin'` is enforced **before**
+the health branch executes. The health endpoint is strictly more restrictive
+than the main embed path, never weaker.
+
+The function accepts **either** trigger. The path suffix is the more reliable
+one because some `supabase functions invoke` versions strip custom headers:
+
+**Path suffix (preferred):**
+```bash
+curl -X POST \
+  "$SUPABASE_URL/functions/v1/embed-srto-corpus/health" \
+  -H "Authorization: Bearer $SUPER_ADMIN_JWT"
+```
+
+**Header trigger (fallback):**
+```bash
+supabase functions invoke embed-srto-corpus \
+  --method POST \
+  --header 'x-srto-health: 1' \
+  --body '{}'
+```
+
+Successful response:
+```json
+{
+  "ok": true,
+  "gateway": "lovable",
+  "model": "text-embedding-3-small",
+  "embedding_dims": 1536,
+  "expected_dims": 1536,
+  "dims_match": true,
+  "latency_ms": 312
+}
+```
+
+If the gateway returns **402**, the response is
+`{ "ok": false, "error": "Lovable AI Gateway out of credits. Top up before invoking embed." }`.
+Top up before proceeding — embedding 22 PDFs mid-run on an empty wallet is the
+failure mode this check exists to prevent.
+
+## Canary embed before full corpus run
+
+After health check passes, embed **two** documents only and spot-check the
+chunks before uploading the rest:
+
+1. **`practice_guide/Practice_Guide__Assessment.pdf`** — structurally complex
+   layout, and assessment is the most-audited Quality Area. This is the
+   worst-case for the chunker and the right doc to validate against.
+2. **`outcome_standards/F2025L00354.pdf`** — clean, structured standards
+   text. Validates clause detection (1.1, 1.2, …) and quality-area mapping.
+
+Then inspect:
+
+```sql
+select source_document, clause, quality_area, heading,
+       left(content, 120) as preview
+from srto_corpus
+where source_document in ('Practice_Guide__Assessment', 'F2025L00354')
+order by source_document, clause;
+```
+
+Only proceed to embed the remaining 20 PDFs once the canary looks clean.
+
 ## Operations
 
 ### 1. Initial seed
