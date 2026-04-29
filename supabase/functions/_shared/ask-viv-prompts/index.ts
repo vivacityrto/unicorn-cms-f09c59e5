@@ -24,24 +24,27 @@ export {
 } from "./types.ts";
 
 // Global prompt
-export {
+import {
   GLOBAL_SYSTEM_PROMPT,
   GLOBAL_SYSTEM_PROMPT_COMPACT,
 } from "./global-prompt.ts";
+export { GLOBAL_SYSTEM_PROMPT, GLOBAL_SYSTEM_PROMPT_COMPACT };
 
 // Compliance prompts
-export {
+import {
   COMPLIANCE_SYSTEM_PROMPT,
   COMPLIANCE_DEVELOPER_PROMPT,
   buildCompliancePrompt,
 } from "./compliance-prompt.ts";
+export { COMPLIANCE_SYSTEM_PROMPT, COMPLIANCE_DEVELOPER_PROMPT, buildCompliancePrompt };
 
 // Knowledge prompts
-export {
+import {
   KNOWLEDGE_SYSTEM_PROMPT,
   KNOWLEDGE_DEVELOPER_PROMPT,
   buildKnowledgePrompt,
 } from "./knowledge-prompt.ts";
+export { KNOWLEDGE_SYSTEM_PROMPT, KNOWLEDGE_DEVELOPER_PROMPT, buildKnowledgePrompt };
 
 // Response validation
 export {
