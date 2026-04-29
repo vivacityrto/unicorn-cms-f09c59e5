@@ -357,16 +357,7 @@ export function QuestionCard({
               </div>
             </div>
 
-            {/* Flagged response panel */}
-            {isFlagged && (
-              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs space-y-2">
-                <div className="flex items-center gap-1.5 text-amber-700 font-medium">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  Finding guide:
-                </div>
-                <p className="text-amber-800">{question.corrective_action}</p>
-              </div>
-            )}
+            {/* Finding guide now lives inside <QuestionGuidance /> above; auto-opens via defaultOpen.findingGuide. */}
 
             {/* AI Suggestion */}
             {hasAiSuggestion && (
