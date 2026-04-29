@@ -93,6 +93,24 @@ export function useAuditQuestions(templateSectionId: string | null | undefined) 
   });
 }
 
+// ─── Template Framework (for Quality Area mapping in QuestionGuidance) ───
+export function useAuditTemplateFramework(templateId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['audit-template-framework', templateId],
+    enabled: !!templateId,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('compliance_templates' as any)
+        .select('framework')
+        .eq('id', templateId)
+        .maybeSingle();
+      if (error) throw error;
+      return ((data as any)?.framework ?? null) as string | null;
+    },
+  });
+}
+
 // ─── Responses ───
 export function useAuditResponses(auditId: string | undefined) {
   const queryClient = useQueryClient();
