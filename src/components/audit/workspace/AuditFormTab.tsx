@@ -113,6 +113,7 @@ function TemplatePhaseView({
   activePhase,
   setActivePhase,
   userId,
+  framework,
   onUpsertResponse,
   onAddFinding,
   onUpdateSummary,
@@ -128,6 +129,7 @@ function TemplatePhaseView({
   activePhase: AuditPhase;
   setActivePhase: (phase: AuditPhase) => void;
   userId: string | undefined;
+  framework: string | null;
   onUpsertResponse: (data: any) => void;
   onAddFinding: (f: any) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
