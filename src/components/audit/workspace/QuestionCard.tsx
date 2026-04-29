@@ -32,6 +32,9 @@ import {
 } from '@/components/ui/tooltip';
 import { useDebouncedAutosave } from './useDebouncedAutosave';
 import { useAuditFindings } from '@/hooks/useAuditWorkspace';
+import { EvidencePanel } from './EvidencePanel';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface QuestionCardProps {
   question: TemplateQuestion;
