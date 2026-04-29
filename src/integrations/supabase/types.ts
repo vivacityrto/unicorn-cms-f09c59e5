@@ -51286,6 +51286,88 @@ export type Database = {
           },
         ]
       }
+      v_ai_finding_draft_outcomes: {
+        Row: {
+          audit_id: string | null
+          audit_title: string | null
+          audit_type: string | null
+          auditor_note: string | null
+          clause: string | null
+          completion_tokens: number | null
+          confidence: string | null
+          corpus_chunks_used: Json | null
+          corpus_empty: boolean | null
+          decided_at: string | null
+          decision: string | null
+          draft_json: Json | null
+          draft_log_id: string | null
+          drafted_at: string | null
+          drafted_by: string | null
+          duration_ms: number | null
+          edit_distance_pct: number | null
+          final_priority: string | null
+          final_summary: string | null
+          model: string | null
+          outcome_bucket: string | null
+          prompt_tokens: number | null
+          quality_area: string | null
+          question_id: string | null
+          response_id: string | null
+          snapshot_rto_name: string | null
+          tenant_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "client_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["active_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["last_audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audit_progress"
+            referencedColumns: ["audit_id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_audits_dashboard"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audit_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_template_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_audits_audit_type_fkey"
+            columns: ["audit_type"]
+            isOneToOne: false
+            referencedRelation: "dd_audit_type"
+            referencedColumns: ["value"]
+          },
+        ]
+      }
       v_audit_action_plan: {
         Row: {
           action_type: string | null
@@ -56202,6 +56284,36 @@ export type Database = {
         Returns: Json
       }
       advance_segment: { Args: { p_meeting_id: string }; Returns: string }
+      ai_drafting_by_clause: {
+        Args: { p_min_drafts?: number; p_window_days?: number }
+        Returns: {
+          acceptance_rate_pct: number
+          avg_edit_distance_pct: number
+          clause: string
+          low_confidence_pct: number
+          quality_area: string
+          rejection_rate_pct: number
+          total_drafts: number
+        }[]
+      }
+      ai_drafting_summary: {
+        Args: { p_window_days?: number }
+        Returns: {
+          acceptance_rate_pct: number
+          accepted_heavy_edit: number
+          accepted_light_edit: number
+          accepted_moderate_edit: number
+          accepted_unchanged: number
+          avg_edit_distance_pct: number
+          cap_hit_users: number
+          pending: number
+          rejected: number
+          total_completion_tokens: number
+          total_drafts: number
+          total_prompt_tokens: number
+          unique_users: number
+        }[]
+      }
       allocate_time_entry: {
         Args: { p_actor?: string; p_reason?: string; p_time_entry_id: string }
         Returns: undefined
