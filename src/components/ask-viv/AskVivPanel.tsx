@@ -326,11 +326,6 @@ export function AskVivPanel() {
       records_accessed: result.records_accessed,
       confidence: result.confidence,
       gaps: result.gaps,
-      explain: result.explain,
-      scope_lock: result.scope_lock,
-      freshness: result.freshness,
-      micro_explain: result.micro_explain,
-      ai_interaction_log_id: result.ai_interaction_log_id,
     };
   }
 
@@ -493,11 +488,6 @@ export function AskVivPanel() {
           records_accessed: result.records_accessed,
           confidence: result.confidence,
           gaps: result.gaps,
-          explain: result.explain,
-          scope_lock: result.scope_lock,
-          freshness: result.freshness,
-          micro_explain: result.micro_explain,
-          ai_interaction_log_id: result.ai_interaction_log_id,
           created_at: new Date().toISOString(),
         };
       }
