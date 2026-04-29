@@ -350,6 +350,8 @@ export function AskVivPanel() {
       reasoning_tiers: result.reasoning_tiers,
       governance: result.governance,
       validation: result.validation,
+      scope_lock: result.scope_lock ?? undefined,
+      freshness: result.freshness ?? undefined,
     };
   }
 
@@ -515,6 +517,8 @@ export function AskVivPanel() {
           reasoning_tiers: result.reasoning_tiers,
           governance: result.governance,
           validation: result.validation,
+          scope_lock: result.scope_lock,
+          freshness: result.freshness,
           created_at: new Date().toISOString(),
         };
       }
