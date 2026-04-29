@@ -6,7 +6,7 @@ import { AuditTypeBadge } from '@/components/audit/AuditTypeBadge';
 import { AuditStatusBadge } from '@/components/audit/AuditStatusBadge';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
 import { cn } from '@/lib/utils';
-import { Check, CalendarClock, ClipboardList } from 'lucide-react';
+import { Check, CalendarClock, ClipboardList, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { ClientAudit, AuditStatus } from '@/types/clientAudits';
 import type { AuditSection, AuditResponse, AuditPhase, AuditAppointment } from '@/types/auditWorkspace';
@@ -15,6 +15,8 @@ import { STAGE_LABEL_MAP } from '@/hooks/useStageAuditLink';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { useAuditProgress, useAuditSectionCompletion } from '@/hooks/useAuditCompletion';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface AuditSidebarProps {
   audit: ClientAudit;
