@@ -47,6 +47,10 @@ import {
   type AskVivFactsResult,
   type DerivedFact,
 } from "../_shared/ask-viv-fact-builder/index.ts";
+import {
+  buildScopeLock,
+  type ScopeLock,
+} from "../_shared/ask-viv-fact-builder/scope-lock.ts";
 
 // V4: Tiered Prompt System imports
 import {
@@ -250,6 +254,110 @@ Deno.serve(async (req) => {
       context
     );
 
+    // V4 restore: build scope_lock from fact-builder result
+    let scope_lock: ScopeLock | null = null;
+    try {
+      const resolvedScope = factsResult.context.scope;
+      const tenantNameFact = factsResult.facts.find(f => f.key === "tenant_name");
+      const tenantName = tenantNameFact ? String(tenantNameFact.value) : null;
+
+      const findLabelForId = (prefix: string, id: string | null): string | null => {
+        if (!id) return null;
+        const fact = factsResult.facts.find(
+          f => f.key.startsWith(prefix) && f.source_ids.includes(id)
+        );
+        if (!fact) return null;
+        if (typeof fact.value === "string") return fact.value;
+        if (fact.value && typeof fact.value === "object") {
+          const v = fact.value as Record<string, unknown>;
+          if (typeof v.name === "string") return v.name;
+          if (typeof v.label === "string") return v.label;
+          if (typeof v.title === "string") return v.title;
+        }
+        return fact.reason ?? null;
+      };
+
+      const packageLabel = findLabelForId("package_", resolvedScope.package_id);
+      const phaseLabel = findLabelForId("phase_", resolvedScope.phase_id);
+
+      const hasAnyScope =
+        !!resolvedScope.client_id ||
+        !!resolvedScope.package_id ||
+        !!resolvedScope.phase_id ||
+        !!tenantName;
+
+      if (hasAnyScope) {
+        scope_lock = buildScopeLock({
+          tenantId,
+          tenantName,
+          providedScope: {
+            client_id: context.client_id?.toString() ?? null,
+            package_id: context.package_id?.toString() ?? null,
+            phase_id: context.phase_id?.toString() ?? null,
+          },
+          resolvedScope,
+          decisions: factsResult.audit.inference_decisions,
+          labels: {
+            client_label: tenantName,
+            package_label: packageLabel,
+            phase_label: phaseLabel,
+          },
+        });
+      }
+    } catch (slErr) {
+      console.warn("V4: scope_lock derivation failed:", slErr);
+      scope_lock = null;
+    }
+
+    // V4 restore: derive freshness from latest activity for tenant
+    let freshness: {
+      last_activity_at: string | null;
+      days_since_activity: number | null;
+      status: "fresh" | "aging" | "stale";
+      derived_at: string;
+    } | null = null;
+    try {
+      let lastActivityAt: string | null = null;
+      const { data: auditRow } = await supabase
+        .from("audit_events")
+        .select("created_at")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      lastActivityAt = auditRow?.created_at ?? null;
+
+      if (!lastActivityAt) {
+        let q = supabase
+          .from("tasks")
+          .select("updated_at")
+          .eq("tenant_id", tenantId)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        if (context.package_id) {
+          q = q.eq("package_instance_id", context.package_id);
+        }
+        const { data: taskRow } = await q.maybeSingle();
+        lastActivityAt = taskRow?.updated_at ?? null;
+      }
+
+      const days = lastActivityAt
+        ? Math.floor((Date.now() - new Date(lastActivityAt).getTime()) / 86_400_000)
+        : null;
+      const status: "fresh" | "aging" | "stale" =
+        days === null ? "stale" : days <= 14 ? "fresh" : days <= 30 ? "aging" : "stale";
+
+      freshness = {
+        last_activity_at: lastActivityAt,
+        days_since_activity: days,
+        status,
+        derived_at: new Date().toISOString(),
+      };
+    } catch (fErr) {
+      console.warn("V4: freshness derivation failed:", fErr);
+      freshness = null;
+    }
+
     // Log interaction with enhanced audit trail
     await logInteraction(
       supabase, 
@@ -263,7 +371,7 @@ Deno.serve(async (req) => {
       brainResult
     );
 
-    return jsonRaw(response);
+    return jsonRaw({ ...response, scope_lock, freshness });
 
   } catch (err) {
     console.error("Compliance assistant error:", err);
