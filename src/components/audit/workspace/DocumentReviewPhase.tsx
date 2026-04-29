@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { QuestionCard } from './QuestionCard';
 import { useDebouncedAutosave } from './useDebouncedAutosave';
 import type { AuditSection, AuditResponse, TemplateQuestion } from '@/types/auditWorkspace';
+import { useAuditSectionCompletion } from '@/hooks/useAuditCompletion';
+import { AlertTriangle } from 'lucide-react';
 
 interface DocumentReviewPhaseProps {
   sections: AuditSection[];
