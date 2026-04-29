@@ -10,6 +10,7 @@ interface OpeningMeetingPhaseProps {
   questionsBySection: Record<string, TemplateQuestion[]>;
   userId: string | undefined;
   auditId: string;
+  framework?: string | null;
   onUpsertResponse: (data: any) => void;
   onAddFinding: (f: any) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
@@ -21,6 +22,7 @@ export function OpeningMeetingPhase({
   questionsBySection,
   userId,
   auditId,
+  framework = null,
   onUpsertResponse,
   onAddFinding,
   onUpdateSummary,
@@ -46,6 +48,7 @@ export function OpeningMeetingPhase({
                 response={responses.find(r => r.question_id === q.id)}
                 auditId={auditId}
                 sectionId={section.id}
+                framework={framework}
                 onRate={(questionId, rating, score, isFlagged) => {
                   if (!userId) return;
                   onUpsertResponse({

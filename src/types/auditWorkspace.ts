@@ -187,6 +187,7 @@ export interface TemplateQuestion {
   score_non_compliant: number;
   evidence_to_sight: string | null;
   corrective_action: string | null;
+  unicorn_documents: string | null;
   nc_map: string | null;
   sort_order: number;
   is_active: boolean;

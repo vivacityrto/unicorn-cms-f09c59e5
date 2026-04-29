@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Plus, Info } from 'lucide-react';
-import { useAuditSections, useInitializeSections, useAuditQuestions, useAuditResponses, useAuditFindings, useAuditScore, useUpdateSectionSummary, useUpdateSectionRiskLevel } from '@/hooks/useAuditWorkspace';
+import { useAuditSections, useInitializeSections, useAuditQuestions, useAuditResponses, useAuditFindings, useAuditScore, useUpdateSectionSummary, useUpdateSectionRiskLevel, useAuditTemplateFramework } from '@/hooks/useAuditWorkspace';
 import { useAuth } from '@/hooks/useAuth';
 import { QuestionCard } from './QuestionCard';
 import { AddFindingForm } from './AddFindingForm';
@@ -28,6 +28,7 @@ export function AuditFormTab({ audit, selectedSectionId }: AuditFormTabProps) {
   const { createFinding } = useAuditFindings(audit.id);
   const updateSummary = useUpdateSectionSummary(audit.id);
   const updateRiskLevel = useUpdateSectionRiskLevel(audit.id);
+  const { data: framework } = useAuditTemplateFramework(audit.template_id);
   const [initialized, setInitialized] = useState(false);
   const [activePhase, setActivePhase] = useState<AuditPhase>('opening_meeting');
 
@@ -92,6 +93,7 @@ export function AuditFormTab({ audit, selectedSectionId }: AuditFormTabProps) {
       activePhase={activePhase}
       setActivePhase={setActivePhase}
       userId={userId}
+      framework={framework ?? null}
       onUpsertResponse={upsertResponse.mutate}
       onAddFinding={(f: any) => createFinding.mutate(f)}
       onUpdateSummary={(sectionId, summary) => updateSummary.mutate({ sectionId, summary })}
@@ -111,6 +113,7 @@ function TemplatePhaseView({
   activePhase,
   setActivePhase,
   userId,
+  framework,
   onUpsertResponse,
   onAddFinding,
   onUpdateSummary,
@@ -126,6 +129,7 @@ function TemplatePhaseView({
   activePhase: AuditPhase;
   setActivePhase: (phase: AuditPhase) => void;
   userId: string | undefined;
+  framework: string | null;
   onUpsertResponse: (data: any) => void;
   onAddFinding: (f: any) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
@@ -187,6 +191,7 @@ function TemplatePhaseView({
           questionsBySection={questionsBySection}
           userId={userId}
           auditId={audit.id}
+          framework={framework}
           onUpsertResponse={onUpsertResponse}
           onAddFinding={onAddFinding}
           onUpdateSummary={onUpdateSummary}
@@ -200,6 +205,7 @@ function TemplatePhaseView({
           questionsBySection={questionsBySection}
           userId={userId}
           auditId={audit.id}
+          framework={framework}
           onUpsertResponse={onUpsertResponse}
           onAddFinding={onAddFinding}
           onUpdateSummary={onUpdateSummary}
@@ -215,6 +221,7 @@ function TemplatePhaseView({
           questionsBySection={questionsBySection}
           userId={userId}
           auditId={audit.id}
+          framework={framework}
           onUpsertResponse={onUpsertResponse}
           onAddFinding={onAddFinding}
           onUpdateSummary={onUpdateSummary}

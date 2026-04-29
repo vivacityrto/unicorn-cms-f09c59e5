@@ -16,6 +16,7 @@ interface DocumentReviewPhaseProps {
   questionsBySection: Record<string, TemplateQuestion[]>;
   userId: string | undefined;
   auditId: string;
+  framework?: string | null;
   onUpsertResponse: (data: any) => void;
   onAddFinding: (f: any) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
@@ -73,6 +74,7 @@ export function DocumentReviewPhase({
   questionsBySection,
   userId,
   auditId,
+  framework = null,
   onUpsertResponse,
   onAddFinding,
   onUpdateSummary,
@@ -131,6 +133,7 @@ export function DocumentReviewPhase({
                 responses={responses}
                 userId={userId}
                 auditId={auditId}
+                framework={framework}
                 onUpsertResponse={onUpsertResponse}
                 onAddFinding={onAddFinding}
                 onUpdateSummary={onUpdateSummary}
@@ -161,6 +164,7 @@ function DocumentReviewSection({
   responses,
   userId,
   auditId,
+  framework,
   onUpsertResponse,
   onAddFinding,
   onUpdateSummary,
@@ -172,6 +176,7 @@ function DocumentReviewSection({
   responses: AuditResponse[];
   userId: string | undefined;
   auditId: string;
+  framework: string | null;
   onUpsertResponse: (data: any) => void;
   onAddFinding: (f: any) => void;
   onUpdateSummary: (sectionId: string, summary: string) => void;
@@ -227,6 +232,7 @@ function DocumentReviewSection({
               response={responses.find(r => r.question_id === q.id)}
               auditId={auditId}
               sectionId={section.id}
+              framework={framework}
               onRate={(questionId, rating, score, isFlagged) => {
                 if (!userId) return;
                 onUpsertResponse({
