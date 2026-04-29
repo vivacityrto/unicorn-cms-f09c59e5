@@ -243,16 +243,18 @@ export function QuestionCard({
       <CardContent className="p-4 space-y-3">
         {/* Header */}
         <div className="flex items-start gap-2">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <span className="font-mono font-medium">{question.clause}</span>
-              {question.nc_map && (
-                <span className="text-muted-foreground/60">| {question.nc_map}</span>
-              )}
-              {ctx === 'client_discussion' && (
-                <span className="text-blue-600 text-[10px] font-medium">Context</span>
-              )}
-            </div>
+          <div className="flex-1 space-y-1">
+            {ctx !== 'auditor_assessment' && question.clause && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="font-mono font-medium">{question.clause}</span>
+                {question.nc_map && (
+                  <span className="text-muted-foreground/60">| {question.nc_map}</span>
+                )}
+                {ctx === 'client_discussion' && (
+                  <span className="text-blue-600 text-[10px] font-medium">Context</span>
+                )}
+              </div>
+            )}
             <p className="text-sm">{question.audit_statement}</p>
           </div>
           {ctx === 'auditor_assessment' && (
@@ -269,23 +271,30 @@ export function QuestionCard({
           )}
         </div>
 
-        {/* Evidence to sight — shown for auditor_assessment, expanded by default */}
-        {ctx === 'auditor_assessment' && question.evidence_to_sight && (
-          <div>
-            <button
-              onClick={() => setShowEvidence(!showEvidence)}
-              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 font-medium"
-            >
-              ▼ Evidence to sight
-              {showEvidence ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </button>
-            {showEvidence && (
-              <p className="text-xs text-muted-foreground italic mt-1 pl-2 border-l-2 border-amber-300">
-                {question.evidence_to_sight}
-              </p>
-            )}
-          </div>
-        )}
+        {/* Universal guidance block (chips, evidence, finding guide, Unicorn docs) */}
+        {ctx === 'auditor_assessment' && (() => {
+          const hasGuidance =
+            !!question.clause ||
+            !!question.evidence_to_sight ||
+            !!question.corrective_action ||
+            !!question.unicorn_documents;
+
+          if (!hasGuidance) {
+            return (
+              <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                No standards mapping
+              </span>
+            );
+          }
+
+          return (
+            <QuestionGuidance
+              question={question}
+              framework={framework}
+              defaultOpen={{ findingGuide: ratingNeedsFinding }}
+            />
+          );
+        })()}
 
         {/* For conversation phases: notes FIRST, then rating */}
         {(ctx === 'client_discussion' || ctx === 'closing_discussion') && (
