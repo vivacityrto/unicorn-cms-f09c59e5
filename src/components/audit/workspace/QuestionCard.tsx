@@ -436,6 +436,8 @@ export function QuestionCard({
             auditId={auditId}
             sectionId={sectionId}
             responseId={response?.id}
+            enableAiDraft={!!currentRating && FLAGGED_RATINGS.has(currentRating)}
+            auditorNote={notes}
             initialValues={{
               regulatory_reference: `${question.clause} ${question.nc_map || ''}`.trim(),
             }}
