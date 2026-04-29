@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useDebouncedAutosave } from './useDebouncedAutosave';
+import { useAuditFindings } from '@/hooks/useAuditWorkspace';
 
 interface QuestionCardProps {
   question: TemplateQuestion;
