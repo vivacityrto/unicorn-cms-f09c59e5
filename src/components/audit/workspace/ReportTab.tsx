@@ -157,15 +157,43 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
               <Clock className="h-4 w-4" /> No report generated yet
             </div>
           )}
-          <Button disabled>
+          <Button onClick={handleGenerateClick}>
             <FileText className="h-4 w-4 mr-2" />
             Generate Report
           </Button>
           <p className="text-xs text-muted-foreground">
-            Report generation coming soon. The edge function for generating PDF reports will be built in a follow-up.
+            {incompleteCount > 0
+              ? `${incompleteCount} response(s) still need attention before this audit is complete.`
+              : 'Report generation is coming soon. The edge function will be built in a follow-up.'}
           </p>
         </CardContent>
       </Card>
+
+      <AlertDialog open={softGuardOpen} onOpenChange={setSoftGuardOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>This audit isn't complete yet</AlertDialogTitle>
+            <AlertDialogDescription>
+              {findingsRequired > 0 && (
+                <span>
+                  {findingsRequired} finding{findingsRequired === 1 ? '' : 's'} required
+                </span>
+              )}
+              {findingsRequired > 0 && notesRequired > 0 && <span>, </span>}
+              {notesRequired > 0 && (
+                <span>
+                  {notesRequired} note{notesRequired === 1 ? '' : 's'} required
+                </span>
+              )}
+              . Generating the report now will mark these incomplete in the document. Continue anyway?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={scrollToFirstIncomplete}>Review incomplete items</AlertDialogCancel>
+            <AlertDialogAction onClick={proceedToGenerate}>Generate anyway</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Report Preview */}
       <Card>
