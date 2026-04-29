@@ -286,3 +286,9 @@ verify_jwt = false
 
 [functions.import-unicorn1-client]
 verify_jwt = false
+
+[functions.embed-srto-corpus]
+verify_jwt = false
+
+[functions.retrieve-srto-context]
+verify_jwt = false
