@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Plus, Info } from 'lucide-react';
-import { useAuditSections, useInitializeSections, useAuditQuestions, useAuditResponses, useAuditFindings, useAuditScore, useUpdateSectionSummary, useUpdateSectionRiskLevel } from '@/hooks/useAuditWorkspace';
+import { useAuditSections, useInitializeSections, useAuditQuestions, useAuditResponses, useAuditFindings, useAuditScore, useUpdateSectionSummary, useUpdateSectionRiskLevel, useAuditTemplateFramework } from '@/hooks/useAuditWorkspace';
 import { useAuth } from '@/hooks/useAuth';
 import { QuestionCard } from './QuestionCard';
 import { AddFindingForm } from './AddFindingForm';
