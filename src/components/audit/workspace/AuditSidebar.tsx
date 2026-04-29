@@ -163,14 +163,28 @@ export function AuditSidebar({
         </p>
       </div>
 
-      {/* Progress — document review only */}
+      {/* Progress — true completion (rating + notes + finding for flagged ratings) */}
       <div className="p-4 border-b space-y-2">
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Progress</span>
-          <span className="font-medium">{reviewAnswered} of {reviewTotal}</span>
+          <span className="font-medium">{completeCount} of {totalCount}</span>
         </div>
         <Progress value={progressPct} className="h-2" indicatorClassName={progressColor} />
-        <p className="text-[10px] text-muted-foreground">{reviewAnswered} of {reviewTotal} evidence items assessed</p>
+        <p className="text-[10px] text-muted-foreground flex flex-wrap gap-x-1.5 gap-y-0.5">
+          <span>{completeCount} complete</span>
+          {needsAttention > 0 && (
+            <>
+              <span className="text-muted-foreground/50">·</span>
+              <span className="text-amber-700 font-medium">{needsAttention} need attention</span>
+            </>
+          )}
+          {unanswered > 0 && (
+            <>
+              <span className="text-muted-foreground/50">·</span>
+              <span>{unanswered} unanswered</span>
+            </>
+          )}
+        </p>
       </div>
 
       {/* Schedule Summary */}
