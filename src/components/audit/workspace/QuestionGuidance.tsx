@@ -188,9 +188,9 @@ export function QuestionGuidance({
           open={isPrint ? true : evidenceOpen}
           onToggle={() => setEvidenceOpen((v) => !v)}
           isPrint={isPrint}
-          bodyClassName="border-l-2 pl-3 text-xs italic text-muted-foreground"
+          bodyClassName="text-xs italic text-muted-foreground"
         >
-          <div style={{ borderLeftColor: '#23C0DD' }} className="border-l-2 -ml-3 pl-3">
+          <div className="border-l-2 pl-3" style={{ borderLeftColor: '#23C0DD' }}>
             {evidenceText}
           </div>
         </GuidanceBlock>
