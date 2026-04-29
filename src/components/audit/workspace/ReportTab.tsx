@@ -33,9 +33,34 @@ interface ReportTabProps {
 export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   const [releaseNotes, setReleaseNotes] = useState('');
   const [preliminaryOpen, setPreliminaryOpen] = useState(false);
+  const [softGuardOpen, setSoftGuardOpen] = useState(false);
   const releaseReport = useReleaseReport(audit.id);
   const revokeReport = useRevokeReport(audit.id);
   const { openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
+  const { data: progress } = useAuditProgress(audit.id);
+  const findingsRequired = progress?.findings_required ?? 0;
+  const notesRequired = progress?.notes_required ?? 0;
+  const incompleteCount = findingsRequired + notesRequired;
+
+  const handleGenerateClick = () => {
+    if (incompleteCount > 0) {
+      setSoftGuardOpen(true);
+      return;
+    }
+    // Backend generation is still pending — show a friendly notice.
+    toast.info('Report generation is coming soon.');
+  };
+
+  const proceedToGenerate = () => {
+    setSoftGuardOpen(false);
+    toast.info('Report generation is coming soon.');
+  };
+
+  const scrollToFirstIncomplete = () => {
+    setSoftGuardOpen(false);
+    // Best-effort: jump to the form tab. Sidebar amber dots will lead the eye.
+    document.querySelector('[data-value="form"]')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const findingsByPriority = {
     critical: findings.filter(f => f.priority === 'critical').length,
