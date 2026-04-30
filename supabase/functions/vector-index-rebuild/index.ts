@@ -12,6 +12,7 @@ import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth, checkSuperAdmin, UserProfile } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
+import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
 import {
   buildClientSummary,
   buildPhaseSummary,
@@ -98,10 +99,9 @@ Deno.serve(async (req) => {
 
     console.log(`Starting index rebuild for tenant ${tenant_id}, types: ${typesToIndex.join(", ")}`);
 
-    // Get embedding API key
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return jsonError(500, "CONFIG_ERROR", "Embedding API not configured");
+    // Embedding key check (OpenAI direct via shared helper)
+    if (!Deno.env.get("OPENAI_API_KEY")) {
+      return jsonError(500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
     }
 
     const result: IndexResult = {
@@ -128,7 +128,6 @@ Deno.serve(async (req) => {
           supabase,
           tenant_id,
           sourceType,
-          LOVABLE_API_KEY
         );
         result.recordsIndexed += indexed;
       } catch (err) {
@@ -171,7 +170,6 @@ async function indexSourceType(
   supabase: any,
   tenantId: number,
   sourceType: string,
-  apiKey: string
 ): Promise<number> {
   let records: any[] = [];
 
@@ -211,7 +209,7 @@ async function indexSourceType(
       
       for (const chunk of chunks) {
         // Generate embedding
-        const embedding = await generateEmbedding(chunk.text, apiKey);
+        const embedding = await generateEmbedding(chunk.text);
         
         if (!embedding) {
           console.error(`Failed to generate embedding for ${sourceType}:${record.id}`);
