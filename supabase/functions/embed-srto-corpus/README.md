@@ -165,7 +165,7 @@ supabase functions invoke embed-srto-corpus \
 
 ### 3. Re-embed everything after a model upgrade
 
-1. Update `EMBED_MODEL` / `EMBED_DIMS` constants in `index.ts`.
+1. Update `EMBEDDING_MODEL` / `EMBEDDING_DIM` constants in `_shared/openai-embeddings.ts`.
 2. Migration to alter `embedding` dimension if needed (drop and recreate the HNSW index).
 3. Invoke with `{"force_reembed": true}`.
 
