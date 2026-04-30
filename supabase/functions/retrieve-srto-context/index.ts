@@ -12,8 +12,10 @@
  *     top_k?:        number  (1..20, default 8),
  *     threshold?:    number  (0..1, default 0.7),
  *     source_type?:  'outcome_standards' | 'compliance_requirements'
- *                  | 'credential_policy' | 'practice_guide',
- *     clause?:       string
+ *                  | 'credential_policy' | 'practice_guide'
+ *                  | 'national_code' | 'cricos_practice_guide' | 'esos_act',
+ *     clause?:       string,
+ *     framework?:    'SRTO_2025' | 'NATIONAL_CODE_2018' | 'ESOS_ACT_2000'
  *   }
  */
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -27,7 +29,12 @@ const VALID_SOURCE_TYPES = new Set([
   'compliance_requirements',
   'credential_policy',
   'practice_guide',
+  'national_code',
+  'cricos_practice_guide',
+  'esos_act',
 ]);
+
+const VALID_FRAMEWORKS = new Set(['SRTO_2025', 'NATIONAL_CODE_2018', 'ESOS_ACT_2000']);
 
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
@@ -72,6 +79,7 @@ Deno.serve(async (req) => {
     threshold?: unknown;
     source_type?: unknown;
     clause?: unknown;
+    framework?: unknown;
   };
   try {
     body = await req.json();
@@ -116,6 +124,14 @@ Deno.serve(async (req) => {
       return json({ error: 'clause invalid' }, 400);
     }
     clause = body.clause;
+  }
+
+  let framework: string | null = null;
+  if (body.framework !== undefined && body.framework !== null) {
+    if (typeof body.framework !== 'string' || !VALID_FRAMEWORKS.has(body.framework)) {
+      return json({ error: 'framework invalid' }, 400);
+    }
+    framework = body.framework;
   }
 
   // Embed the query via the Lovable AI Gateway.
@@ -165,6 +181,7 @@ Deno.serve(async (req) => {
     match_count: topK,
     filter_source_type: sourceType,
     filter_clause: clause,
+    filter_framework: framework,
   });
 
   if (rpcErr) {
@@ -177,6 +194,7 @@ Deno.serve(async (req) => {
       query,
       top_k: topK,
       threshold,
+      framework,
       results: results ?? [],
       embedding_tokens: embedTokens,
       duration_ms: Date.now() - t0,

@@ -31,11 +31,17 @@ type SrtoSourceType =
   | 'outcome_standards'
   | 'compliance_requirements'
   | 'credential_policy'
-  | 'practice_guide';
+  | 'practice_guide'
+  | 'national_code'
+  | 'cricos_practice_guide'
+  | 'esos_act';
+
+type Framework = 'SRTO_2025' | 'NATIONAL_CODE_2018' | 'ESOS_ACT_2000';
 
 interface ChunkRow {
   source_document: string;
   source_type: SrtoSourceType;
+  framework: Framework;
   source_version: string | null;
   clause: string | null;
   quality_area: string | null;
@@ -58,6 +64,21 @@ const CLAUSE_QA_PREFIX: Record<string, string> = {
   '4': 'Governance',
 };
 
+// ----- Quality area mapping (National Code 2018) -------------------
+const NATIONAL_CODE_QUALITY_AREAS: Record<string, string> = {
+  '1':  'Marketing Information and Practices',
+  '2':  'Recruitment of an Overseas Student',
+  '3':  'Formalisation of Enrolment',
+  '4':  'Education Agents',
+  '5':  'Younger Overseas Students',
+  '6':  'Overseas Student Support Services',
+  '7':  'Transfer Between Registered Providers',
+  '8':  'Overseas Student Visa Requirements',
+  '9':  'Deferring, Suspending or Cancelling Enrolment',
+  '10': 'Complaints and Appeals',
+  '11': 'Additional Registration Requirements',
+};
+
 const PRACTICE_GUIDE_QA: Array<[RegExp, string]> = [
   [/assessment/i, 'Training & Assessment'],
   [/training(?!_support)/i, 'Training & Assessment'],
@@ -67,9 +88,13 @@ const PRACTICE_GUIDE_QA: Array<[RegExp, string]> = [
   [/governance|leadership|accountability|risk|continuous|fit_and_proper|credential|information|transparency|facilities|resources|equipment/i, 'Governance'],
 ];
 
-function qualityAreaForClause(clause: string | null): string | null {
+function qualityAreaForClause(clause: string | null, framework: Framework): string | null {
   if (!clause) return null;
   const top = clause.split('.')[0];
+  if (framework === 'NATIONAL_CODE_2018') {
+    return NATIONAL_CODE_QUALITY_AREAS[top] ?? null;
+  }
+  // Default to SRTO 2025 mapping (also covers ESOS for now — null fallback).
   return CLAUSE_QA_PREFIX[top] ?? null;
 }
 
@@ -240,16 +265,20 @@ async function embedBatch(texts: string[], apiKey: string): Promise<number[][]> 
   }
 }
 
-// ----- Source-type detection from path -----------------------------
-function sourceTypeFromPath(path: string): SrtoSourceType | null {
+// ----- Source-type and framework detection from path --------------
+const PATH_PREFIX_MAP: Record<string, { source_type: SrtoSourceType; framework: Framework }> = {
+  outcome_standards:        { source_type: 'outcome_standards',        framework: 'SRTO_2025' },
+  compliance_requirements:  { source_type: 'compliance_requirements',  framework: 'SRTO_2025' },
+  credential_policy:        { source_type: 'credential_policy',        framework: 'SRTO_2025' },
+  practice_guide:           { source_type: 'practice_guide',           framework: 'SRTO_2025' },
+  national_code:            { source_type: 'national_code',            framework: 'NATIONAL_CODE_2018' },
+  cricos_practice_guide:    { source_type: 'cricos_practice_guide',    framework: 'NATIONAL_CODE_2018' },
+  esos_act:                 { source_type: 'esos_act',                 framework: 'ESOS_ACT_2000' },
+};
+
+function metadataFromPath(path: string): { source_type: SrtoSourceType; framework: Framework } | null {
   const folder = path.split('/')[0];
-  const map: Record<string, SrtoSourceType> = {
-    outcome_standards: 'outcome_standards',
-    compliance_requirements: 'compliance_requirements',
-    credential_policy: 'credential_policy',
-    practice_guide: 'practice_guide',
-  };
-  return map[folder] ?? null;
+  return PATH_PREFIX_MAP[folder] ?? null;
 }
 
 function documentKeyFromPath(path: string): string {
@@ -384,7 +413,15 @@ Deno.serve(async (req) => {
   // 4. List PDFs in the bucket (recurse through known folders).
   const folders: SrtoSourceType[] = body.source_type
     ? [body.source_type as SrtoSourceType]
-    : ['outcome_standards', 'compliance_requirements', 'credential_policy', 'practice_guide'];
+    : [
+        'outcome_standards',
+        'compliance_requirements',
+        'credential_policy',
+        'practice_guide',
+        'national_code',
+        'cricos_practice_guide',
+        'esos_act',
+      ];
 
   const targets: string[] = [];
   for (const folder of folders) {
@@ -426,11 +463,13 @@ Deno.serve(async (req) => {
   // 5. Per-document pipeline.
   for (const path of targets) {
     try {
-      const sourceType = sourceTypeFromPath(path);
-      if (!sourceType) {
+      const meta = metadataFromPath(path);
+      if (!meta) {
         errors.push(`Unknown source_type for path: ${path}`);
         continue;
       }
+      const sourceType = meta.source_type;
+      const framework = meta.framework;
       const sourceDocument = documentKeyFromPath(path);
 
       // Download.
@@ -468,12 +507,13 @@ Deno.serve(async (req) => {
         const hash = await sha256Hex(normaliseForHash(c.content));
         const clause = detectClause(c.heading, c.content);
         const qa =
-          qualityAreaForClause(clause) ??
+          qualityAreaForClause(clause, framework) ??
           (sourceType === 'practice_guide' ? qualityAreaForPracticeGuide(sourceDocument) : null);
 
         provisional.push({
           source_document: sourceDocument,
           source_type: sourceType,
+          framework,
           source_version: sourceVersion,
           clause,
           quality_area: qa,
