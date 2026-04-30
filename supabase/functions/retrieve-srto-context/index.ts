@@ -133,43 +133,20 @@ Deno.serve(async (req) => {
     framework = body.framework;
   }
 
-  // Embed the query via the Lovable AI Gateway.
+  // Embed the query via OpenAI direct.
   let embedding: number[];
-  let embedTokens = 0;
+  const embedTokens = Math.ceil(query.length / 4);
   try {
-    const res = await fetch(EMBED_GATEWAY_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: EMBED_MODEL,
-        input: query,
-      }),
-    });
-
-    if (!res.ok) {
-      if (res.status === 429) {
-        return json({ error: 'Rate limit exceeded, please try again shortly.' }, 429);
-      }
-      if (res.status === 402) {
-        return json({ error: 'AI credits exhausted. Top up at Settings > Workspace > Usage.' }, 402);
-      }
-      const text = await res.text();
-      console.error('Embedding gateway error', res.status, text);
-      return json({ error: 'Embedding gateway error', detail: text }, 502);
-    }
-
-    const data = await res.json();
-    embedding = data.data?.[0]?.embedding;
-    embedTokens = data.usage?.total_tokens ?? data.usage?.prompt_tokens ?? 0;
-    if (!Array.isArray(embedding) || embedding.length !== 1536) {
-      return json({ error: 'Embedding response malformed' }, 502);
-    }
+    embedding = await generateEmbedding(query);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('Embedding fetch failed', msg);
+    if (/\b429\b/.test(msg)) {
+      return json({ error: 'Rate limit exceeded, please try again shortly.' }, 429);
+    }
+    if (/\b402\b/.test(msg)) {
+      return json({ error: 'OpenAI credits exhausted or quota exceeded.' }, 402);
+    }
     return json({ error: 'Failed to embed query', detail: msg }, 502);
   }
 
