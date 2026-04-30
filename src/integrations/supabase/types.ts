@@ -37092,6 +37092,7 @@ export type Database = {
           content_hash: string
           created_at: string
           embedding: string
+          framework: string
           heading: string | null
           id: string
           metadata: Json
@@ -37110,6 +37111,7 @@ export type Database = {
           content_hash: string
           created_at?: string
           embedding: string
+          framework?: string
           heading?: string | null
           id?: string
           metadata?: Json
@@ -37128,6 +37130,7 @@ export type Database = {
           content_hash?: string
           created_at?: string
           embedding?: string
+          framework?: string
           heading?: string | null
           id?: string
           metadata?: Json
@@ -57529,6 +57532,7 @@ export type Database = {
       match_srto_chunks: {
         Args: {
           filter_clause?: string
+          filter_framework?: string
           filter_source_type?: Database["public"]["Enums"]["srto_source_type"]
           match_count?: number
           match_threshold?: number
@@ -57537,6 +57541,7 @@ export type Database = {
         Returns: {
           clause: string
           content: string
+          framework: string
           heading: string
           id: string
           quality_area: string
@@ -58554,6 +58559,9 @@ export type Database = {
         | "compliance_requirements"
         | "credential_policy"
         | "practice_guide"
+        | "national_code"
+        | "cricos_practice_guide"
+        | "esos_act"
       staff_team_type:
         | "none"
         | "business_growth"
@@ -58839,6 +58847,9 @@ export const Constants = {
         "compliance_requirements",
         "credential_policy",
         "practice_guide",
+        "national_code",
+        "cricos_practice_guide",
+        "esos_act",
       ],
       staff_team_type: [
         "none",
