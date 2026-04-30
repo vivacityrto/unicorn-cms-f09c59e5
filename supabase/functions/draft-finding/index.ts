@@ -388,7 +388,7 @@ Deno.serve(async (req) => {
     .select(
       `id, rating, notes, audit_id, section_id, question_id,
        compliance_template_questions:question_id (
-         clause, quality_area, audit_statement, evidence_to_sight,
+         clause, audit_statement, evidence_to_sight,
          corrective_action, unicorn_documents, response_set, flagged_responses
        ),
        client_audit_sections:section_id ( title, standard_code )`,
