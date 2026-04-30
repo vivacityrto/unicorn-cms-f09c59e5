@@ -143,7 +143,6 @@ interface FindingRow {
   impact: string | null;
   priority: string;
   clause: string | null;
-  quality_area: string | null;
   section_title: string | null;
   code_prefix: string | null;
 }
@@ -279,7 +278,6 @@ Deno.serve(async (req) => {
     impact: row.impact ?? null,
     priority: row.priority ?? 'medium',
     clause: row.client_audit_responses?.compliance_template_questions?.clause ?? null,
-    quality_area: row.client_audit_responses?.compliance_template_questions?.quality_area ?? null,
     section_title: row.client_audit_sections?.title ?? null,
     code_prefix: row.client_audit_sections?.code_prefix ?? null,
   }));
@@ -423,7 +421,6 @@ Deno.serve(async (req) => {
 FINDING_ID: ${f.id}
 PRIORITY: ${f.priority}
 CLAUSE: ${f.clause ?? 'n/a'}
-QUALITY_AREA: ${f.quality_area ?? 'n/a'}
 SECTION: ${f.section_title ?? 'n/a'} (${f.code_prefix ?? 'n/a'})
 SUMMARY: ${f.summary}
 DETAIL: ${f.detail ?? '(none)'}

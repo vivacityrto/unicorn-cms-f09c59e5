@@ -156,7 +156,6 @@ interface AssembledContext {
   rating: string;
   existing_notes: string | null;
   clause: string | null;
-  quality_area: string | null;
   audit_statement: string;
   evidence_to_sight: string | null;
   corrective_action: string | null;
@@ -202,7 +201,7 @@ CLIENT
 - Audit type: ${ctx.audit_type ?? 'unknown'}
 - Scope: ${scope}
 
-QUESTION (clause ${ctx.clause ?? 'n/a'}, ${ctx.quality_area ?? 'n/a'})
+QUESTION (clause ${ctx.clause ?? 'n/a'})
 ${ctx.audit_statement}
 
 AUDITOR'S RATING: ${ctx.rating}
@@ -389,7 +388,7 @@ Deno.serve(async (req) => {
     .select(
       `id, rating, notes, audit_id, section_id, question_id,
        compliance_template_questions:question_id (
-         clause, quality_area, audit_statement, evidence_to_sight,
+         clause, audit_statement, evidence_to_sight,
          corrective_action, unicorn_documents, response_set, flagged_responses
        ),
        client_audit_sections:section_id ( title, standard_code )`,
@@ -398,6 +397,7 @@ Deno.serve(async (req) => {
     .eq('audit_id', auditId)
     .maybeSingle();
   if (respErr || !responseRow) {
+    if (respErr) console.error('draft-finding: response lookup failed', respErr.message);
     return json({ error: 'Response not found or not in this audit', detail: respErr?.message ?? null }, 404);
   }
   const r = responseRow as Record<string, any>;
@@ -415,7 +415,6 @@ Deno.serve(async (req) => {
     rating: r.rating,
     existing_notes: r.notes ?? null,
     clause: q.clause ?? null,
-    quality_area: q.quality_area ?? null,
     audit_statement: q.audit_statement ?? '',
     evidence_to_sight: q.evidence_to_sight ?? null,
     corrective_action: q.corrective_action ?? null,

@@ -214,7 +214,7 @@ Deno.serve(async (req) => {
     .select(`
       id, audit_id, question_id, rating, notes,
       compliance_template_questions:question_id (
-        clause, quality_area, audit_statement, evidence_to_sight,
+        clause, audit_statement, evidence_to_sight,
         corrective_action, response_set, flagged_responses
       )
     `)
@@ -296,7 +296,7 @@ CLIENT
 - Audit type: ${audit.audit_type ?? 'unknown'}
 - Scope: ${scope}
 
-QUESTION (clause ${q.clause ?? 'n/a'}, ${q.quality_area ?? 'n/a'})
+QUESTION (clause ${q.clause ?? 'n/a'})
 ${q.audit_statement ?? '(no statement)'}
 
 EVIDENCE THAT SHOULD BE SIGHTED
