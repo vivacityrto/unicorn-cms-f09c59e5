@@ -12,6 +12,7 @@ import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth, checkSuperAdmin, checkVivacityTeam } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
+import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
 import {
   buildClientSummary,
   buildPhaseSummary,
@@ -88,8 +89,8 @@ Deno.serve(async (req) => {
     console.log(`Updating index for ${source_type}:${record_id} in tenant ${tenant_id}`);
 
     // Get embedding API key
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
       return jsonError(500, "CONFIG_ERROR", "Embedding API not configured");
     }
 
