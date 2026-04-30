@@ -554,7 +554,7 @@ Deno.serve(async (req) => {
       // Batch embed.
       for (let i = 0; i < toEmbed.length; i += EMBED_BATCH) {
         const slice = toEmbed.slice(i, i + EMBED_BATCH);
-        const vectors = await embedBatch(slice.map((r) => r.content), LOVABLE_API_KEY);
+        const vectors = await embedBatch(slice.map((r) => r.content));
 
         if (vectors.length !== slice.length) {
           throw new Error(`Embedding count mismatch: got ${vectors.length}, expected ${slice.length}`);
