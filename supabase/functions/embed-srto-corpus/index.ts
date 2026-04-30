@@ -292,10 +292,10 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
-  if (!LOVABLE_API_KEY) {
-    return json({ error: 'LOVABLE_API_KEY is not configured' }, 500);
+  if (!OPENAI_API_KEY) {
+    return json({ error: 'OPENAI_API_KEY is not configured in edge function secrets' }, 500);
   }
 
   // 1. Validate caller JWT and Super Admin role.
@@ -335,52 +335,68 @@ Deno.serve(async (req) => {
     req.headers.get('x-srto-health') === '1';
   if (isHealthCheck) {
     const tPing = Date.now();
+
+    // Check storage bucket reachability.
+    let bucket_reachable = false;
     try {
-      const res = await fetch(EMBED_GATEWAY_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ model: EMBED_MODEL, input: 'ping' }),
-      });
+      const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { error: bucketErr } = await adminClient.storage
+        .from('srto-source-documents')
+        .list('', { limit: 1 });
+      bucket_reachable = !bucketErr;
+    } catch {
+      bucket_reachable = false;
+    }
+
+    // Check DB writability via a no-op authenticated select on srto_corpus.
+    let db_writable = false;
+    try {
+      const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { error: dbErr } = await adminClient
+        .from('srto_corpus')
+        .select('id', { count: 'exact', head: true })
+        .limit(1);
+      db_writable = !dbErr;
+    } catch {
+      db_writable = false;
+    }
+
+    // Real test embedding via OpenAI direct.
+    try {
+      const vec = await generateEmbedding('health check');
       const latency_ms = Date.now() - tPing;
-      if (res.ok) {
-        const data = await res.json();
-        const dims: number | null = data?.data?.[0]?.embedding?.length ?? null;
-        return json(
-          {
-            ok: true,
-            gateway: 'lovable',
-            model: EMBED_MODEL,
-            embedding_dims: dims,
-            expected_dims: EMBED_DIMS,
-            dims_match: dims === EMBED_DIMS,
-            latency_ms,
-          },
-          200,
-        );
-      }
-      const text = await res.text();
       return json(
         {
-          ok: false,
-          gateway: 'lovable',
-          status: res.status,
+          ok: true,
+          embedding_provider: EMBEDDING_PROVIDER,
+          model: EMBEDDING_MODEL_NAME,
+          dim: vec.length,
+          expected_dim: EMBED_DIMS,
+          dims_match: vec.length === EMBED_DIMS,
+          openai_reachable: true,
+          bucket_reachable,
+          db_writable,
           latency_ms,
-          error:
-            res.status === 402
-              ? 'Lovable AI Gateway out of credits. Top up before invoking embed.'
-              : `Gateway responded ${res.status}`,
-          detail: text.slice(0, 500),
         },
-        res.status === 402 ? 402 : 502,
+        200,
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      const isCredits = /\b402\b/.test(msg);
       return json(
-        { ok: false, gateway: 'lovable', error: 'Gateway unreachable', detail: msg },
-        502,
+        {
+          ok: false,
+          embedding_provider: EMBEDDING_PROVIDER,
+          model: EMBEDDING_MODEL_NAME,
+          openai_reachable: false,
+          bucket_reachable,
+          db_writable,
+          error: isCredits
+            ? 'OpenAI account out of credits or quota exceeded.'
+            : 'OpenAI embeddings unreachable',
+          detail: msg.slice(0, 500),
+        },
+        isCredits ? 402 : 502,
       );
     }
   }
