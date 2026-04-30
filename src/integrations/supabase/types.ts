@@ -9848,6 +9848,7 @@ export type Database = {
           report_released_at: string | null
           report_released_by: string | null
           risk_rating: string | null
+          risk_rationale: string | null
           score_max: number | null
           score_pct: number | null
           score_total: number | null
@@ -9904,6 +9905,7 @@ export type Database = {
           report_released_at?: string | null
           report_released_by?: string | null
           risk_rating?: string | null
+          risk_rationale?: string | null
           score_max?: number | null
           score_pct?: number | null
           score_total?: number | null
@@ -9960,6 +9962,7 @@ export type Database = {
           report_released_at?: string | null
           report_released_by?: string | null
           risk_rating?: string | null
+          risk_rationale?: string | null
           score_max?: number | null
           score_pct?: number | null
           score_total?: number | null
