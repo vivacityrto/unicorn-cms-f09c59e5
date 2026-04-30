@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     topK = Math.floor(n);
   }
 
-  let threshold = 0.7;
+  let threshold = DEFAULT_THRESHOLD;
   if (body.threshold !== undefined) {
     const n = Number(body.threshold);
     if (!Number.isFinite(n) || n < 0 || n > 1) {
