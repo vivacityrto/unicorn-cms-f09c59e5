@@ -385,7 +385,8 @@ Deno.serve(async (req) => {
  * Mirrors the compliance-assistant helper exactly, including model name.
  */
 async function performVectorSearch(
-  supabase: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
   tenantId: number,
   query: string,
   apiKey: string,
@@ -518,7 +519,8 @@ function translateGaps(rawGaps: string[]): string[] {
 
 /** Derive freshness using the same rules as compliance-assistant V4. */
 async function deriveFreshness(
-  supabase: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
   tenantId: number,
 ): Promise<ClientResponse["freshness"]> {
   try {
