@@ -188,13 +188,19 @@ Deno.serve(async (req) => {
   const { data: auditRow, error: auditErr } = await userClient
     .from('client_audits' as any)
     .select(
-      `id, title, audit_type, framework, risk_rating, score_total, score_max, score_pct,
+      `id, title, audit_type, risk_rating, score_total, score_max, score_pct,
        snapshot_rto_name, snapshot_rto_number, snapshot_cricos_code,
        is_rto, is_cricos, training_products, subject_tenant_id, template_id`,
     )
     .eq('id', auditId)
     .maybeSingle();
   if (auditErr || !auditRow) {
+    console.error('[draft-executive-summary] audit access denied', {
+      auditId,
+      callerUserId,
+      errorMessage: auditErr?.message ?? null,
+      errorCode: (auditErr as any)?.code ?? null,
+    });
     return json({ error: "You don't have access to this audit." }, 403);
   }
   const audit = auditRow as Record<string, any>;
@@ -442,7 +448,7 @@ CLIENT
 - RTO code: ${audit.snapshot_rto_number ?? 'N/A'}
 - CRICOS code: ${audit.snapshot_cricos_code ?? 'N/A'}
 - Audit type: ${audit.audit_type ?? 'unknown'}
-- Framework: ${templateFramework ?? audit.framework ?? 'unknown'}
+- Framework: ${templateFramework ?? 'unknown'}
 - Scope: ${scope}
 - Training products on scope: ${trainingProducts}
 
@@ -560,7 +566,7 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
     total_findings: findingRows.length,
     findings_by_priority: findingsByPriority,
     risk_rating: audit.risk_rating,
-    framework: templateFramework ?? audit.framework ?? null,
+    framework: templateFramework ?? null,
   };
 
   // 11. Append-only audit log via service role.
@@ -574,7 +580,7 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
       entity_id: auditId,
       details: {
         audit_type: audit.audit_type,
-        framework: templateFramework ?? audit.framework ?? null,
+        framework: templateFramework ?? null,
         total_findings: findingRows.length,
         findings_by_priority: findingsByPriority,
         risk_rating: audit.risk_rating,
