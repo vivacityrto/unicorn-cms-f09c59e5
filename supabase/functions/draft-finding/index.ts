@@ -454,6 +454,7 @@ Deno.serve(async (req) => {
         top_k: 6,
         threshold: 0.65,
         clause: ctx.clause || undefined,
+        framework: corpusFramework ?? undefined,
       }),
     });
     if (retrievalRes.ok) {
