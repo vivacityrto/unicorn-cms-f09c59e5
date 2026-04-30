@@ -165,7 +165,8 @@ Deno.serve(async (req) => {
     // 2. Build the two clients
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(SUPABASE_URL, ANON_KEY, {
+    // deno-lint-ignore no-explicit-any
+    const supabase: any = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: `Bearer ${token}` } },
       auth: { autoRefreshToken: false, persistSession: false },
     });
