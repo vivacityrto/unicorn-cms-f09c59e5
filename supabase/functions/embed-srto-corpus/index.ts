@@ -31,11 +31,17 @@ type SrtoSourceType =
   | 'outcome_standards'
   | 'compliance_requirements'
   | 'credential_policy'
-  | 'practice_guide';
+  | 'practice_guide'
+  | 'national_code'
+  | 'cricos_practice_guide'
+  | 'esos_act';
+
+type Framework = 'SRTO_2025' | 'NATIONAL_CODE_2018' | 'ESOS_ACT_2000';
 
 interface ChunkRow {
   source_document: string;
   source_type: SrtoSourceType;
+  framework: Framework;
   source_version: string | null;
   clause: string | null;
   quality_area: string | null;
@@ -58,6 +64,21 @@ const CLAUSE_QA_PREFIX: Record<string, string> = {
   '4': 'Governance',
 };
 
+// ----- Quality area mapping (National Code 2018) -------------------
+const NATIONAL_CODE_QUALITY_AREAS: Record<string, string> = {
+  '1':  'Marketing Information and Practices',
+  '2':  'Recruitment of an Overseas Student',
+  '3':  'Formalisation of Enrolment',
+  '4':  'Education Agents',
+  '5':  'Younger Overseas Students',
+  '6':  'Overseas Student Support Services',
+  '7':  'Transfer Between Registered Providers',
+  '8':  'Overseas Student Visa Requirements',
+  '9':  'Deferring, Suspending or Cancelling Enrolment',
+  '10': 'Complaints and Appeals',
+  '11': 'Additional Registration Requirements',
+};
+
 const PRACTICE_GUIDE_QA: Array<[RegExp, string]> = [
   [/assessment/i, 'Training & Assessment'],
   [/training(?!_support)/i, 'Training & Assessment'],
@@ -67,9 +88,13 @@ const PRACTICE_GUIDE_QA: Array<[RegExp, string]> = [
   [/governance|leadership|accountability|risk|continuous|fit_and_proper|credential|information|transparency|facilities|resources|equipment/i, 'Governance'],
 ];
 
-function qualityAreaForClause(clause: string | null): string | null {
+function qualityAreaForClause(clause: string | null, framework: Framework): string | null {
   if (!clause) return null;
   const top = clause.split('.')[0];
+  if (framework === 'NATIONAL_CODE_2018') {
+    return NATIONAL_CODE_QUALITY_AREAS[top] ?? null;
+  }
+  // Default to SRTO 2025 mapping (also covers ESOS for now — null fallback).
   return CLAUSE_QA_PREFIX[top] ?? null;
 }
 
