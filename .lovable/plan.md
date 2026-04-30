@@ -1,40 +1,47 @@
-## Goal
+# Fix: `quality_area` does not exist on `compliance_template_questions`
 
-Two small fixes to SRTO retrieval so downstream consumers (Ask Viv, Wave 3 finding draft, Wave 4 #2 exec summary) work without having to pass overrides:
+## Scope (audit results)
 
-1. Default similarity threshold drops from `0.7` → `0.5`.
-2. `chunk_index` is actually returned from `match_srto_chunks` (currently the RPC doesn't select it, so any consumer reading `result.chunk_index` gets `undefined`).
+I grepped all six AI functions for `quality_area`. Only **two** functions actually `SELECT quality_area` from `compliance_template_questions` — the others either reference it on `srto_corpus` (valid), only define it in TS interfaces, or read it from a JS object that just resolves to `undefined` without hitting SQL.
+
+| Function | Status |
+|---|---|
+| `draft-finding` | **Broken** — selects `quality_area` from `compliance_template_questions` (line 392). |
+| `analyse-evidence` | **Broken** — selects `quality_area` from `compliance_template_questions` (line 217). |
+| `draft-executive-summary` | Safe — SELECT is `( clause )` only (line 265); JS mapping reads `quality_area` and silently gets `undefined`. No SQL error. Will clean up for consistency. |
+| `embed-srto-corpus` | Safe — `quality_area` is on `srto_corpus`. Leave untouched. |
+| `analyze-document` | Safe — only an optional TS interface field, never queried. Leave untouched. |
+| `compliance-assistant` / `compliance-assistant-client` | Safe — no `quality_area` references at all. |
 
 ## Changes
 
-### 1. `supabase/functions/retrieve-srto-context/index.ts`
+### 1. `supabase/functions/draft-finding/index.ts`
+- Line 392: remove `quality_area` from the `compliance_template_questions:question_id (...)` select list. New list: `clause, audit_statement, evidence_to_sight, corrective_action, unicorn_documents, response_set, flagged_responses`.
+- Line 159: remove `quality_area` from the `AssembledContext` interface.
+- Line 418: remove `quality_area: q.quality_area ?? null,` from the `ctx` assembly.
+- Line 205: change the prompt header from `QUESTION (clause ${ctx.clause ?? 'n/a'}, ${ctx.quality_area ?? 'n/a'})` to `QUESTION (clause ${ctx.clause ?? 'n/a'})`. The `clause` already carries the standards-mapping signal the model needs; SRTO retrieval (which runs separately and is what actually grounds the draft) keeps its own `quality_area` filtering against `srto_corpus` unchanged.
+- Improve the catch-all at line 400-401: log `respErr.message` at `console.error` level before returning the 404, so future PG errors surface in function logs instead of being buried in the response `detail`.
 
-- Introduce a named constant `const DEFAULT_THRESHOLD = 0.5;` at module top (alongside the existing validation sets) and use it in place of the inline `0.7`.
-- Update the JSDoc header comment to read `threshold?: number (0..1, default 0.5)`.
-- No change to the validation range (still `0..1`) or to the override behaviour — explicit overrides still win.
+### 2. `supabase/functions/analyse-evidence/index.ts`
+- Line 217: remove `quality_area` from the same select list. New list: `clause, audit_statement, evidence_to_sight, corrective_action, response_set, flagged_responses`.
+- Line 299: change prompt header from `QUESTION (clause ${q.clause ?? 'n/a'}, ${q.quality_area ?? 'n/a'})` to `QUESTION (clause ${q.clause ?? 'n/a'})`.
 
-### 2. New migration: extend `match_srto_chunks` to return `chunk_index`
-
-Add a migration `supabase/migrations/<ts>_match_srto_chunks_return_chunk_index.sql` that:
-
-- `drop function if exists public.match_srto_chunks(vector, float, integer, public.srto_source_type, text, text);`
-- `create or replace function public.match_srto_chunks(...)` with the **same signature and body**, but the `returns table (...)` list gains `chunk_index integer` (placed right after `id`), and the `select` adds `c.chunk_index`.
-- Re-add the existing `comment on function` line.
-- Re-run the existing smoke check at the bottom of the prior migration (zero-vector probe across each framework) to confirm the function still resolves.
-
-`srto_corpus.chunk_index` already exists (`integer not null`) per `20260429073239_*.sql`, so no table change is needed.
-
-### 3. Generated types
-
-`src/integrations/supabase/types.ts` will regenerate to include `chunk_index: number` on the `match_srto_chunks` Returns row. No hand edits — left to the standard regeneration step.
+### 3. `supabase/functions/draft-executive-summary/index.ts` (cleanup, non-functional)
+- Line 146: remove `quality_area` from the `FindingRow` interface.
+- Line 282: remove the `quality_area:` mapping line that always resolves to `undefined`.
+- Line 426: drop the `QUALITY_AREA: ...` line from the prompt block (it's already always `n/a` today).
 
 ## Out of scope
+- No schema changes to `compliance_template_questions`.
+- No changes to `srto_corpus` or `audit_question_bank` — `quality_area` is valid on both.
+- No changes to `embed-srto-corpus`, `analyze-document`, `compliance-assistant*`.
 
-- No change to `embed-srto-corpus`, `compliance-assistant`, or `compliance-assistant-client`. They don't currently read `chunk_index`; this just makes the field available so Wave 3/4 consumers can cite chunks precisely.
-- No change to the threshold validation bounds, RLS, or the `security invoker` posture of the RPC.
-
-## Verification
-
-- After deploy, `supabase.rpc('match_srto_chunks', { query_embedding, match_threshold: 0.5, match_count: 1, ... })` returns rows that include a numeric `chunk_index`.
-- Calling `retrieve-srto-context` with no `threshold` in the body returns `threshold: 0.5` in the response envelope.
-- Existing callers passing an explicit `threshold` are unaffected.
+## Validation
+Once deployed, this should return a structured AI draft (not a 500/404):
+```bash
+curl -X POST "https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/draft-finding" \
+  -H "Authorization: Bearer <super-admin-jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"audit_id":"3b1fbbee-0c1d-4c9b-9b59-f2d6205ecbdd","response_id":"5ee3ed7f-0dbb-4a68-a5b4-a29e3720fe1f"}'
+```
+And `analyse-evidence` invocations against any response with linked documents will no longer 500.

@@ -156,7 +156,6 @@ interface AssembledContext {
   rating: string;
   existing_notes: string | null;
   clause: string | null;
-  quality_area: string | null;
   audit_statement: string;
   evidence_to_sight: string | null;
   corrective_action: string | null;
