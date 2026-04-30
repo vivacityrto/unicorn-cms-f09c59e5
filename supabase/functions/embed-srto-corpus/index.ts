@@ -413,7 +413,15 @@ Deno.serve(async (req) => {
   // 4. List PDFs in the bucket (recurse through known folders).
   const folders: SrtoSourceType[] = body.source_type
     ? [body.source_type as SrtoSourceType]
-    : ['outcome_standards', 'compliance_requirements', 'credential_policy', 'practice_guide'];
+    : [
+        'outcome_standards',
+        'compliance_requirements',
+        'credential_policy',
+        'practice_guide',
+        'national_code',
+        'cricos_practice_guide',
+        'esos_act',
+      ];
 
   const targets: string[] = [];
   for (const folder of folders) {
