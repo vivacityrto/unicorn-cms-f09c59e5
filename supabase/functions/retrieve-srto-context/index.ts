@@ -2,7 +2,7 @@
  * retrieve-srto-context
  *
  * Caller-JWT semantic retrieval over the SRTO 2025 corpus. Embeds the
- * incoming query via the Lovable AI Gateway (openai/text-embedding-3-small) and
+ * incoming query via OpenAI direct (text-embedding-3-small, 1536 dims) and
  * calls the security-invoker `match_srto_chunks` RPC, which enforces RLS
  * against `srto_corpus` (any signed-in Vivacity user with a `users` row).
  *

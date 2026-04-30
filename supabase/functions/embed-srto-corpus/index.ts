@@ -2,9 +2,14 @@
  * embed-srto-corpus
  *
  * Admin operation. Reads source PDFs from the `srto-source-documents`
- * Storage bucket, extracts text, chunks it, embeds each chunk via the
- * Lovable AI Gateway (openai/text-embedding-3-small, 1536 dims), and upserts
- * into public.srto_corpus.
+ * Storage bucket, extracts text, chunks it, embeds each chunk via OpenAI
+ * direct (text-embedding-3-small, 1536 dims), and upserts into
+ * public.srto_corpus.
+ *
+ * Note: The Lovable AI Gateway does NOT support embedding models — only
+ * chat/completion. Embeddings call OpenAI directly via the shared helper
+ * `_shared/openai-embeddings.ts`. Chat/completion calls elsewhere still use
+ * the gateway.
  *
  * Caller must authenticate as a Vivacity Super Admin (users.unicorn_role
  * = 'Super Admin'). DB writes are performed with the service role key.
