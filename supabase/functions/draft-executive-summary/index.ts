@@ -421,7 +421,6 @@ Deno.serve(async (req) => {
 FINDING_ID: ${f.id}
 PRIORITY: ${f.priority}
 CLAUSE: ${f.clause ?? 'n/a'}
-QUALITY_AREA: ${f.quality_area ?? 'n/a'}
 SECTION: ${f.section_title ?? 'n/a'} (${f.code_prefix ?? 'n/a'})
 SUMMARY: ${f.summary}
 DETAIL: ${f.detail ?? '(none)'}
