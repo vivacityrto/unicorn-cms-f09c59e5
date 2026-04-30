@@ -19,10 +19,13 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { extractText, getDocumentProxy } from 'npm:unpdf@^0.12.0';
 import { encode as encodeTokens } from 'npm:gpt-tokenizer@^2.5.0';
 import { corsHeaders } from '../_shared/cors.ts';
-
-const EMBED_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/embeddings';
-const EMBED_MODEL = 'openai/text-embedding-3-small';
-const EMBED_DIMS = 1536;
+import {
+  generateEmbedding,
+  generateEmbeddingsBatch,
+  EMBEDDING_PROVIDER,
+  EMBEDDING_MODEL_NAME,
+  EMBEDDING_DIMENSIONS as EMBED_DIMS,
+} from '../_shared/openai-embeddings.ts';
 const TARGET_TOKENS = 800;
 const OVERLAP_TOKENS = 150;
 const EMBED_BATCH = 100;
@@ -232,36 +235,25 @@ function chunkDocument(fullText: string): PreparedChunk[] {
   return out.filter((c) => c.token_count >= 25);
 }
 
-// ----- Embedding (Lovable AI Gateway, OpenAI-shape) ---------------
-async function embedBatch(texts: string[], apiKey: string): Promise<number[][]> {
+// ----- Embedding (OpenAI direct via shared helper) ---------------
+// _apiKey kept in signature for backwards compatibility with existing
+// callers — the shared helper reads OPENAI_API_KEY from env directly.
+async function embedBatch(texts: string[], _apiKey?: string): Promise<number[][]> {
   let attempt = 0;
   const delays = [1000, 2000, 4000];
   while (true) {
-    const res = await fetch(EMBED_GATEWAY_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: EMBED_MODEL,
-        input: texts,
-      }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return data.data.map((d: { embedding: number[] }) => d.embedding);
+    try {
+      return await generateEmbeddingsBatch(texts);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Retry on transient 429 from OpenAI.
+      if (msg.includes(' 429 ') && attempt < delays.length) {
+        await new Promise((r) => setTimeout(r, delays[attempt]));
+        attempt++;
+        continue;
+      }
+      throw e;
     }
-
-    if (res.status === 429 && attempt < delays.length) {
-      await new Promise((r) => setTimeout(r, delays[attempt]));
-      attempt++;
-      continue;
-    }
-
-    const text = await res.text();
-    throw new Error(`Embedding gateway error ${res.status}: ${text}`);
   }
 }
 
