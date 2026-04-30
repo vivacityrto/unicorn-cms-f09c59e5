@@ -51,7 +51,7 @@ Successful response:
 {
   "ok": true,
   "gateway": "lovable",
-  "model": "text-embedding-3-small",
+  "model": "openai/text-embedding-3-small",
   "embedding_dims": 1536,
   "expected_dims": 1536,
   "dims_match": true,
