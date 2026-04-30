@@ -9,6 +9,14 @@ import { ClientRouteGuard } from "@/components/client/ClientRouteGuard";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { DocumentRequestModal } from "@/components/client/DocumentRequestModal";
 import { CompliancePulseBanner } from "@/components/client/CompliancePulseBanner";
+import { ClientAskVivPanel } from "@/components/ask-viv/ClientAskVivPanel";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import vivIcon from "@/assets/viv-icon.png";
 import { useClientRequestActions } from "@/hooks/useClientRequestActions";
 import type { DocumentRequestPrefill } from "@/components/client/DocumentRequestModal";
 import { cn } from "@/lib/utils";
@@ -20,6 +28,7 @@ export const useOpenDocumentRequest = () => useContext(ClientRequestContext);
 
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isAskVivOpen, setIsAskVivOpen] = useState(false);
   const { isPreview } = useClientTenant();
   const { requestModalOpen, setRequestModalOpen, prefill, openDocumentRequest } = useClientRequestActions();
 
@@ -78,6 +87,35 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         open={requestModalOpen}
         onOpenChange={setRequestModalOpen}
         prefill={prefill}
+      />
+
+      {/*
+        Ask Viv (client surface)
+        - Standalone trigger + panel; does NOT use the staff useAskViv() context.
+        - Calls compliance-assistant-client only.
+        - Visual matches the staff AskVivButton (round, vivIcon, status dot).
+      */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="default"
+            size="icon"
+            onClick={() => setIsAskVivOpen(true)}
+            aria-label="Open Ask Viv"
+            className="fixed bottom-6 right-24 z-40 h-12 w-12 rounded-full shadow-lg p-1 bg-primary hover:bg-primary/90"
+          >
+            <img src={vivIcon} alt="Ask Viv" className="h-9 w-9 object-contain" />
+            <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-[hsl(var(--success,142_76%_36%))] border border-background" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="left">
+          <p>Ask Viv</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <ClientAskVivPanel
+        isOpen={isAskVivOpen}
+        onClose={() => setIsAskVivOpen(false)}
       />
     </div>
   );
