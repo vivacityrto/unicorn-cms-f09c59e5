@@ -195,6 +195,12 @@ Deno.serve(async (req) => {
     .eq('id', auditId)
     .maybeSingle();
   if (auditErr || !auditRow) {
+    console.error('[draft-executive-summary] audit access denied', {
+      auditId,
+      callerUserId,
+      errorMessage: auditErr?.message ?? null,
+      errorCode: (auditErr as any)?.code ?? null,
+    });
     return json({ error: "You don't have access to this audit." }, 403);
   }
   const audit = auditRow as Record<string, any>;
