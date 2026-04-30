@@ -201,7 +201,7 @@ CLIENT
 - Audit type: ${ctx.audit_type ?? 'unknown'}
 - Scope: ${scope}
 
-QUESTION (clause ${ctx.clause ?? 'n/a'}, ${ctx.quality_area ?? 'n/a'})
+QUESTION (clause ${ctx.clause ?? 'n/a'})
 ${ctx.audit_statement}
 
 AUDITOR'S RATING: ${ctx.rating}
