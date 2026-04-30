@@ -415,7 +415,6 @@ Deno.serve(async (req) => {
     rating: r.rating,
     existing_notes: r.notes ?? null,
     clause: q.clause ?? null,
-    quality_area: q.quality_area ?? null,
     audit_statement: q.audit_statement ?? '',
     evidence_to_sight: q.evidence_to_sight ?? null,
     corrective_action: q.corrective_action ?? null,
