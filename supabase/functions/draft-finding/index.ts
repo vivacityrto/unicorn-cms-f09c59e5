@@ -397,6 +397,7 @@ Deno.serve(async (req) => {
     .eq('audit_id', auditId)
     .maybeSingle();
   if (respErr || !responseRow) {
+    if (respErr) console.error('draft-finding: response lookup failed', respErr.message);
     return json({ error: 'Response not found or not in this audit', detail: respErr?.message ?? null }, 404);
   }
   const r = responseRow as Record<string, any>;
