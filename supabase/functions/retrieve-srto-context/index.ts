@@ -194,6 +194,7 @@ Deno.serve(async (req) => {
       query,
       top_k: topK,
       threshold,
+      framework,
       results: results ?? [],
       embedding_tokens: embedTokens,
       duration_ms: Date.now() - t0,
