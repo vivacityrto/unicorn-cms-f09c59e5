@@ -296,7 +296,7 @@ CLIENT
 - Audit type: ${audit.audit_type ?? 'unknown'}
 - Scope: ${scope}
 
-QUESTION (clause ${q.clause ?? 'n/a'}, ${q.quality_area ?? 'n/a'})
+QUESTION (clause ${q.clause ?? 'n/a'})
 ${q.audit_statement ?? '(no statement)'}
 
 EVIDENCE THAT SHOULD BE SIGHTED
