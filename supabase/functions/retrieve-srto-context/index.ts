@@ -126,6 +126,14 @@ Deno.serve(async (req) => {
     clause = body.clause;
   }
 
+  let framework: string | null = null;
+  if (body.framework !== undefined && body.framework !== null) {
+    if (typeof body.framework !== 'string' || !VALID_FRAMEWORKS.has(body.framework)) {
+      return json({ error: 'framework invalid' }, 400);
+    }
+    framework = body.framework;
+  }
+
   // Embed the query via the Lovable AI Gateway.
   let embedding: number[];
   let embedTokens = 0;
@@ -173,6 +181,7 @@ Deno.serve(async (req) => {
     match_count: topK,
     filter_source_type: sourceType,
     filter_clause: clause,
+    filter_framework: framework,
   });
 
   if (rpcErr) {
