@@ -453,7 +453,11 @@ Deno.serve(async (req) => {
         top_k: 6,
         // threshold omitted: rely on retrieve-srto-context DEFAULT_THRESHOLD (0.5),
         // which matches the score distribution of text-embedding-3-small.
-        clause: ctx.clause || undefined,
+        // clause intentionally NOT passed: audit templates (e.g. RTO Due Diligence)
+        // use template-internal section codes (Gov-1, TAQ-1...) that don't exist in
+        // srto_corpus.clause, which would zero out retrieval. The audit_statement
+        // already encodes the regulatory subject in the embedding. Clause is still
+        // surfaced to Gemini in the prompt for context (see line ~204).
         framework: corpusFramework ?? undefined,
       }),
     });
