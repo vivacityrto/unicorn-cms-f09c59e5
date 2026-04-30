@@ -12,8 +12,10 @@
  *     top_k?:        number  (1..20, default 8),
  *     threshold?:    number  (0..1, default 0.7),
  *     source_type?:  'outcome_standards' | 'compliance_requirements'
- *                  | 'credential_policy' | 'practice_guide',
- *     clause?:       string
+ *                  | 'credential_policy' | 'practice_guide'
+ *                  | 'national_code' | 'cricos_practice_guide' | 'esos_act',
+ *     clause?:       string,
+ *     framework?:    'SRTO_2025' | 'NATIONAL_CODE_2018' | 'ESOS_ACT_2000'
  *   }
  */
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -27,7 +29,12 @@ const VALID_SOURCE_TYPES = new Set([
   'compliance_requirements',
   'credential_policy',
   'practice_guide',
+  'national_code',
+  'cricos_practice_guide',
+  'esos_act',
 ]);
+
+const VALID_FRAMEWORKS = new Set(['SRTO_2025', 'NATIONAL_CODE_2018', 'ESOS_ACT_2000']);
 
 function json(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
