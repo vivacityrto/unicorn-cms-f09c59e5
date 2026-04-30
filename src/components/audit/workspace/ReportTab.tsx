@@ -4,11 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileText, Download, Clock, Send, CheckCircle2, AlertTriangle, Shield, X, Info, Mail } from 'lucide-react';
+import { FileText, Download, Clock, Send, CheckCircle2, AlertTriangle, Shield, X, Info, Mail, Sparkles, Copy, Loader2 } from 'lucide-react';
 import { SendPreliminarySummaryDialog } from './SendPreliminarySummaryDialog';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
-import { useReleaseReport, useRevokeReport } from '@/hooks/useAuditReport';
-import { useAuditActions } from '@/hooks/useAuditWorkspace';
+import {
+  useReleaseReport,
+  useRevokeReport,
+  useDraftExecutiveSummary,
+  useRecordExecutiveSummaryDecision,
+  type ExecSummaryResponse,
+} from '@/hooks/useAuditReport';
+import { useAuditActions, useUpdateAudit } from '@/hooks/useAuditWorkspace';
 import { useAuditAppointments } from '@/hooks/useAuditSchedule';
 import {
   AlertDialog,
@@ -26,6 +32,36 @@ import type { AuditFinding, AuditAction } from '@/types/auditWorkspace';
 import { useAuditProgress } from '@/hooks/useAuditCompletion';
 import { toast } from 'sonner';
 
+// Levenshtein-style edit distance percent (0-100). Cheap implementation —
+// we only need it for a coarse "how much did the auditor change" telemetry
+// signal, not for diffing.
+function editDistancePct(original: string, edited: string): number {
+  if (original === edited) return 0;
+  if (!original) return edited.length > 0 ? 100 : 0;
+  const a = original;
+  const b = edited;
+  const m = a.length;
+  const n = b.length;
+  // Bounded matrix to keep memory sane on long summaries.
+  if (m * n > 1_000_000) {
+    // Fallback: rough length-delta proxy.
+    return Math.min(100, Math.round((Math.abs(m - n) / Math.max(m, n)) * 100));
+  }
+  const dp: number[] = Array(n + 1).fill(0).map((_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1]
+        ? prev
+        : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = tmp;
+    }
+  }
+  return Math.min(100, Math.round((dp[n] / Math.max(m, n)) * 100));
+}
+
 interface ReportTabProps {
   audit: ClientAudit;
   findings: AuditFinding[];
@@ -38,11 +74,91 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   const [softGuardOpen, setSoftGuardOpen] = useState(false);
   const releaseReport = useReleaseReport(audit.id);
   const revokeReport = useRevokeReport(audit.id);
+  const updateAudit = useUpdateAudit(audit.id);
+  const draftExecSummary = useDraftExecutiveSummary(audit.id);
+  const recordDecision = useRecordExecutiveSummaryDecision();
   const { openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
   const { data: progress } = useAuditProgress(audit.id);
   const findingsRequired = progress?.findings_required ?? 0;
   const notesRequired = progress?.notes_required ?? 0;
   const incompleteCount = findingsRequired + notesRequired;
+
+  // ─── AI draft local state ─────────────────────────────────────────
+  // Drafts live in component state until the auditor accepts each field
+  // (which writes to client_audits) or discards them. The action_plan_rollup
+  // is render-only / clipboard-only — it never persists to client_audits.
+  const [draft, setDraft] = useState<ExecSummaryResponse | null>(null);
+  const [editedExec, setEditedExec] = useState('');
+  const [editedFinding, setEditedFinding] = useState('');
+  const [editedRationale, setEditedRationale] = useState('');
+  const [decisions, setDecisions] = useState<{
+    executive_summary?: 'accepted' | 'edited' | 'rejected';
+    overall_finding?: 'accepted' | 'edited' | 'rejected';
+    risk_rationale?: 'accepted' | 'edited' | 'rejected';
+  }>({});
+
+  const handleDraftClick = async () => {
+    try {
+      const res = await draftExecSummary.mutateAsync();
+      setDraft(res);
+      setEditedExec(res.draft.executive_summary);
+      setEditedFinding(res.draft.overall_finding);
+      setEditedRationale(res.draft.risk_rationale);
+      setDecisions({});
+      toast.success('Draft ready for review.');
+    } catch {
+      // useDraftExecutiveSummary already toasts the server message.
+    }
+  };
+
+  const acceptField = (
+    field: 'executive_summary' | 'overall_finding' | 'risk_rationale',
+    original: string,
+    edited: string,
+  ) => {
+    if (!draft) return;
+    const decision: 'accepted' | 'edited' = original === edited ? 'accepted' : 'edited';
+    updateAudit.mutate({ [field]: edited } as any, {
+      onSuccess: () => {
+        setDecisions((d) => ({ ...d, [field]: decision }));
+        recordDecision.mutate({
+          draft_log_id: draft.log_id,
+          audit_id: audit.id,
+          [field]: { decision, edit_distance_pct: editDistancePct(original, edited) },
+        } as any);
+        toast.success(decision === 'accepted' ? 'Accepted.' : 'Saved your edits.');
+      },
+      onError: (err: any) => toast.error('Save failed: ' + (err?.message || 'unknown')),
+    });
+  };
+
+  const discardField = (
+    field: 'executive_summary' | 'overall_finding' | 'risk_rationale',
+  ) => {
+    if (!draft) return;
+    setDecisions((d) => ({ ...d, [field]: 'rejected' }));
+    recordDecision.mutate({
+      draft_log_id: draft.log_id,
+      audit_id: audit.id,
+      [field]: { decision: 'rejected', edit_distance_pct: null },
+    } as any);
+  };
+
+  const copyRollupToClipboard = () => {
+    if (!draft) return;
+    const rollup = draft.draft.action_plan_rollup;
+    const lines: string[] = [];
+    lines.push(rollup.introduction, '');
+    for (const group of rollup.priority_groups) {
+      lines.push(`${group.priority.toUpperCase()} PRIORITY`);
+      lines.push(group.narrative);
+      for (const a of group.actions) lines.push(`  • ${a.summary}`);
+      lines.push('');
+    }
+    lines.push(rollup.closing);
+    navigator.clipboard.writeText(lines.join('\n'));
+    toast.success('Action plan copied to clipboard.');
+  };
 
   const handleGenerateClick = () => {
     if (incompleteCount > 0) {
@@ -195,7 +311,140 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* ─── AI-Drafted Executive Summary (Wave 4 #2) ─────────────── */}
+      <Card className="border-[#7130A0]/30">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[#7130A0]" />
+            AI-drafted executive summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!draft && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Synthesise the executive summary, overall finding, risk rationale, and an action-plan rollup from every finding in this audit. The draft is yours to accept, edit, or discard — nothing persists until you act on it.
+              </p>
+              <Button
+                onClick={handleDraftClick}
+                disabled={draftExecSummary.isPending || findings.length < 3}
+                style={{ backgroundColor: '#7130A0' }}
+                className="text-white hover:opacity-90"
+              >
+                {draftExecSummary.isPending ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Drafting…</>
+                ) : (
+                  <><Sparkles className="h-4 w-4 mr-2" /> Draft executive summary with AI</>
+                )}
+              </Button>
+              {findings.length < 3 && (
+                <p className="text-xs text-muted-foreground">
+                  Requires at least 3 findings ({findings.length} so far).
+                </p>
+              )}
+            </>
+          )}
+
+          {draft && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="outline" className="capitalize">{draft.draft.confidence} confidence</Badge>
+                <span>·</span>
+                <span>{draft.source_summary.total_findings} findings synthesised</span>
+                <span>·</span>
+                <span>{draft.ai_metadata.model.split('/').pop()}</span>
+              </div>
+
+              {draft.draft.uncertainty_notes && (
+                <Alert className="bg-amber-50 border-amber-200">
+                  <Info className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-xs text-amber-800">
+                    <span className="font-medium">Uncertainty notes: </span>{draft.draft.uncertainty_notes}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Executive Summary */}
+              <DraftField
+                label="Executive Summary"
+                original={draft.draft.executive_summary}
+                value={editedExec}
+                onChange={setEditedExec}
+                decision={decisions.executive_summary}
+                onAccept={() => acceptField('executive_summary', draft.draft.executive_summary, editedExec)}
+                onDiscard={() => discardField('executive_summary')}
+                rows={10}
+              />
+
+              {/* Overall Finding */}
+              <DraftField
+                label="Overall Finding"
+                original={draft.draft.overall_finding}
+                value={editedFinding}
+                onChange={setEditedFinding}
+                decision={decisions.overall_finding}
+                onAccept={() => acceptField('overall_finding', draft.draft.overall_finding, editedFinding)}
+                onDiscard={() => discardField('overall_finding')}
+                rows={3}
+              />
+
+              {/* Risk Rationale */}
+              <DraftField
+                label="Risk Rationale"
+                original={draft.draft.risk_rationale}
+                value={editedRationale}
+                onChange={setEditedRationale}
+                decision={decisions.risk_rationale}
+                onAccept={() => acceptField('risk_rationale', draft.draft.risk_rationale, editedRationale)}
+                onDiscard={() => discardField('risk_rationale')}
+                rows={5}
+              />
+
+              {/* Action Plan Rollup — render-only / clipboard-only */}
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">Action Plan Rollup</p>
+                    <p className="text-xs text-muted-foreground">Render-only synthesis. Copy to clipboard for use in remediation comms — does not modify your live action items.</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={copyRollupToClipboard}>
+                    <Copy className="h-3 w-3 mr-1" /> Copy
+                  </Button>
+                </div>
+                <p className="text-sm whitespace-pre-wrap">{draft.draft.action_plan_rollup.introduction}</p>
+                {draft.draft.action_plan_rollup.priority_groups.map((g, i) => (
+                  <div key={i} className="space-y-1">
+                    <Badge variant={g.priority === 'critical' ? 'destructive' : g.priority === 'high' ? 'default' : 'secondary'} className="capitalize">
+                      {g.priority}
+                    </Badge>
+                    <p className="text-sm whitespace-pre-wrap">{g.narrative}</p>
+                    <ul className="text-sm list-disc pl-5 space-y-0.5">
+                      {g.actions.map((a, j) => (
+                        <li key={j}>
+                          {a.summary}
+                          {a.linked_finding_ids.length > 0 && (
+                            <span className="text-xs text-muted-foreground"> · {a.linked_finding_ids.length} finding{a.linked_finding_ids.length === 1 ? '' : 's'}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+                <p className="text-sm whitespace-pre-wrap italic">{draft.draft.action_plan_rollup.closing}</p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={() => setDraft(null)}>
+                  Dismiss draft
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Report Preview */}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Report Preview</CardTitle>
@@ -398,6 +647,70 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
         findings={findings}
         actions={actions}
       />
+    </div>
+  );
+}
+
+// ─── DraftField — per-field accept/edit/discard control for AI drafts ──
+interface DraftFieldProps {
+  label: string;
+  original: string;
+  value: string;
+  onChange: (v: string) => void;
+  decision: 'accepted' | 'edited' | 'rejected' | undefined;
+  onAccept: () => void;
+  onDiscard: () => void;
+  rows?: number;
+}
+
+function DraftField({
+  label,
+  original,
+  value,
+  onChange,
+  decision,
+  onAccept,
+  onDiscard,
+  rows = 5,
+}: DraftFieldProps) {
+  const isEdited = value !== original;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+        {decision === 'accepted' && (
+          <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50">
+            <CheckCircle2 className="h-3 w-3 mr-1" /> Accepted
+          </Badge>
+        )}
+        {decision === 'edited' && (
+          <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50">
+            <CheckCircle2 className="h-3 w-3 mr-1" /> Saved with edits
+          </Badge>
+        )}
+        {decision === 'rejected' && (
+          <Badge variant="outline" className="text-muted-foreground">
+            <X className="h-3 w-3 mr-1" /> Discarded
+          </Badge>
+        )}
+      </div>
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        disabled={decision === 'accepted' || decision === 'edited' || decision === 'rejected'}
+        className="text-sm"
+      />
+      {!decision && (
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={onAccept}>
+            {isEdited ? 'Save edits' : 'Accept'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onDiscard}>
+            Discard
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
