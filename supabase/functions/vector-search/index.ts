@@ -189,36 +189,9 @@ async function validateTenantAccess(
   return !!data;
 }
 
-/**
- * Generate embedding using Lovable AI
- */
-async function generateEmbedding(text: string, apiKey: string): Promise<number[] | null> {
-  try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/text-embedding-3-small",
-        input: text,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Embedding API error:", response.status, errorText);
-      return null;
-    }
-
-    const data = await response.json();
-    return data.data?.[0]?.embedding || null;
-  } catch (err) {
-    console.error("Embedding generation error:", err);
-    return null;
-  }
-}
+// Local generateEmbedding helper removed — replaced by shared
+// _shared/openai-embeddings.ts which calls OpenAI directly. The Lovable
+// AI Gateway no longer accepts embedding models.
 
 /**
  * Deduplicate results by record_id, keeping highest similarity
