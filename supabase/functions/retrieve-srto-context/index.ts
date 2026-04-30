@@ -23,6 +23,11 @@ import { corsHeaders } from '../_shared/cors.ts';
 
 import { generateEmbedding } from '../_shared/openai-embeddings.ts';
 
+// Default similarity threshold. Lowered from 0.7 to 0.5 so downstream
+// consumers (Ask Viv, Wave 3 finding draft, Wave 4 #2 exec summary) get
+// non-empty retrieval without each one having to pass an override.
+const DEFAULT_THRESHOLD = 0.5;
+
 const VALID_SOURCE_TYPES = new Set([
   'outcome_standards',
   'compliance_requirements',
