@@ -278,7 +278,6 @@ Deno.serve(async (req) => {
     impact: row.impact ?? null,
     priority: row.priority ?? 'medium',
     clause: row.client_audit_responses?.compliance_template_questions?.clause ?? null,
-    quality_area: row.client_audit_responses?.compliance_template_questions?.quality_area ?? null,
     section_title: row.client_audit_sections?.title ?? null,
     code_prefix: row.client_audit_sections?.code_prefix ?? null,
   }));
