@@ -10,7 +10,7 @@
  *   {
  *     query:         string  (5..4000 chars),
  *     top_k?:        number  (1..20, default 8),
- *     threshold?:    number  (0..1, default 0.7),
+ *     threshold?:    number  (0..1, default 0.5),
  *     source_type?:  'outcome_standards' | 'compliance_requirements'
  *                  | 'credential_policy' | 'practice_guide'
  *                  | 'national_code' | 'cricos_practice_guide' | 'esos_act',
