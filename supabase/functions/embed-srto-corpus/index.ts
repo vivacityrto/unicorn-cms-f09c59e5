@@ -507,12 +507,13 @@ Deno.serve(async (req) => {
         const hash = await sha256Hex(normaliseForHash(c.content));
         const clause = detectClause(c.heading, c.content);
         const qa =
-          qualityAreaForClause(clause) ??
+          qualityAreaForClause(clause, framework) ??
           (sourceType === 'practice_guide' ? qualityAreaForPracticeGuide(sourceDocument) : null);
 
         provisional.push({
           source_document: sourceDocument,
           source_type: sourceType,
+          framework,
           source_version: sourceVersion,
           clause,
           quality_area: qa,
