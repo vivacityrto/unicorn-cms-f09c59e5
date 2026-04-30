@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
       `id, summary, detail, regulatory_reference, standard_reference, impact, priority,
        response_id, section_id,
        client_audit_responses:response_id (
-         compliance_template_questions:question_id ( clause, quality_area )
+         compliance_template_questions:question_id ( clause )
        ),
        client_audit_sections:section_id ( title, code_prefix )`,
     )
