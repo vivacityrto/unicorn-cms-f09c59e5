@@ -251,30 +251,12 @@ async function indexSourceType(
 }
 
 /**
- * Generate embedding using Lovable AI
+ * Generate embedding via shared OpenAI direct helper.
+ * Returns null on failure to preserve existing per-chunk error handling.
  */
-async function generateEmbedding(text: string, apiKey: string): Promise<number[] | null> {
+async function generateEmbedding(text: string): Promise<number[] | null> {
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/text-embedding-3-small",
-        input: text,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Embedding API error:", response.status, errorText);
-      return null;
-    }
-
-    const data = await response.json();
-    return data.data?.[0]?.embedding || null;
+    return await generateEmbeddingShared(text);
   } catch (err) {
     console.error("Embedding generation error:", err);
     return null;
