@@ -10,7 +10,7 @@
  * detects, including the highest-leverage check: fabricated finding IDs.
  */
 import { assert, assertEquals } from 'jsr:@std/assert@1';
-import { validateDraft, type DraftJson } from './index.ts';
+import { validateDraft, type DraftJson } from './_validation.ts';
 
 const A = '11111111-1111-1111-1111-111111111111';
 const B = '22222222-2222-2222-2222-222222222222';
