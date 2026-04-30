@@ -298,3 +298,9 @@ verify_jwt = false
 
 [functions.record-finding-decision]
 verify_jwt = false
+
+[functions.draft-executive-summary]
+verify_jwt = false
+
+[functions.record-executive-summary-decision]
+verify_jwt = false
