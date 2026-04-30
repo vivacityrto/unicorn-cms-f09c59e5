@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
     threshold?: unknown;
     source_type?: unknown;
     clause?: unknown;
+    framework?: unknown;
   };
   try {
     body = await req.json();
