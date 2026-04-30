@@ -311,7 +311,140 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* ─── AI-Drafted Executive Summary (Wave 4 #2) ─────────────── */}
+      <Card className="border-[#7130A0]/30">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[#7130A0]" />
+            AI-drafted executive summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!draft && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Synthesise the executive summary, overall finding, risk rationale, and an action-plan rollup from every finding in this audit. The draft is yours to accept, edit, or discard — nothing persists until you act on it.
+              </p>
+              <Button
+                onClick={handleDraftClick}
+                disabled={draftExecSummary.isPending || findings.length < 3}
+                style={{ backgroundColor: '#7130A0' }}
+                className="text-white hover:opacity-90"
+              >
+                {draftExecSummary.isPending ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Drafting…</>
+                ) : (
+                  <><Sparkles className="h-4 w-4 mr-2" /> Draft executive summary with AI</>
+                )}
+              </Button>
+              {findings.length < 3 && (
+                <p className="text-xs text-muted-foreground">
+                  Requires at least 3 findings ({findings.length} so far).
+                </p>
+              )}
+            </>
+          )}
+
+          {draft && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="outline" className="capitalize">{draft.draft.confidence} confidence</Badge>
+                <span>·</span>
+                <span>{draft.source_summary.total_findings} findings synthesised</span>
+                <span>·</span>
+                <span>{draft.ai_metadata.model.split('/').pop()}</span>
+              </div>
+
+              {draft.draft.uncertainty_notes && (
+                <Alert className="bg-amber-50 border-amber-200">
+                  <Info className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-xs text-amber-800">
+                    <span className="font-medium">Uncertainty notes: </span>{draft.draft.uncertainty_notes}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Executive Summary */}
+              <DraftField
+                label="Executive Summary"
+                original={draft.draft.executive_summary}
+                value={editedExec}
+                onChange={setEditedExec}
+                decision={decisions.executive_summary}
+                onAccept={() => acceptField('executive_summary', draft.draft.executive_summary, editedExec)}
+                onDiscard={() => discardField('executive_summary')}
+                rows={10}
+              />
+
+              {/* Overall Finding */}
+              <DraftField
+                label="Overall Finding"
+                original={draft.draft.overall_finding}
+                value={editedFinding}
+                onChange={setEditedFinding}
+                decision={decisions.overall_finding}
+                onAccept={() => acceptField('overall_finding', draft.draft.overall_finding, editedFinding)}
+                onDiscard={() => discardField('overall_finding')}
+                rows={3}
+              />
+
+              {/* Risk Rationale */}
+              <DraftField
+                label="Risk Rationale"
+                original={draft.draft.risk_rationale}
+                value={editedRationale}
+                onChange={setEditedRationale}
+                decision={decisions.risk_rationale}
+                onAccept={() => acceptField('risk_rationale', draft.draft.risk_rationale, editedRationale)}
+                onDiscard={() => discardField('risk_rationale')}
+                rows={5}
+              />
+
+              {/* Action Plan Rollup — render-only / clipboard-only */}
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">Action Plan Rollup</p>
+                    <p className="text-xs text-muted-foreground">Render-only synthesis. Copy to clipboard for use in remediation comms — does not modify your live action items.</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={copyRollupToClipboard}>
+                    <Copy className="h-3 w-3 mr-1" /> Copy
+                  </Button>
+                </div>
+                <p className="text-sm whitespace-pre-wrap">{draft.draft.action_plan_rollup.introduction}</p>
+                {draft.draft.action_plan_rollup.priority_groups.map((g, i) => (
+                  <div key={i} className="space-y-1">
+                    <Badge variant={g.priority === 'critical' ? 'destructive' : g.priority === 'high' ? 'default' : 'secondary'} className="capitalize">
+                      {g.priority}
+                    </Badge>
+                    <p className="text-sm whitespace-pre-wrap">{g.narrative}</p>
+                    <ul className="text-sm list-disc pl-5 space-y-0.5">
+                      {g.actions.map((a, j) => (
+                        <li key={j}>
+                          {a.summary}
+                          {a.linked_finding_ids.length > 0 && (
+                            <span className="text-xs text-muted-foreground"> · {a.linked_finding_ids.length} finding{a.linked_finding_ids.length === 1 ? '' : 's'}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+                <p className="text-sm whitespace-pre-wrap italic">{draft.draft.action_plan_rollup.closing}</p>
+              </div>
+
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={() => setDraft(null)}>
+                  Dismiss draft
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Report Preview */}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Report Preview</CardTitle>
