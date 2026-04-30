@@ -463,11 +463,13 @@ Deno.serve(async (req) => {
   // 5. Per-document pipeline.
   for (const path of targets) {
     try {
-      const sourceType = sourceTypeFromPath(path);
-      if (!sourceType) {
+      const meta = metadataFromPath(path);
+      if (!meta) {
         errors.push(`Unknown source_type for path: ${path}`);
         continue;
       }
+      const sourceType = meta.source_type;
+      const framework = meta.framework;
       const sourceDocument = documentKeyFromPath(path);
 
       // Download.
