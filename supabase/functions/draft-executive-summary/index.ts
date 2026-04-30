@@ -448,7 +448,7 @@ CLIENT
 - RTO code: ${audit.snapshot_rto_number ?? 'N/A'}
 - CRICOS code: ${audit.snapshot_cricos_code ?? 'N/A'}
 - Audit type: ${audit.audit_type ?? 'unknown'}
-- Framework: ${templateFramework ?? audit.framework ?? 'unknown'}
+- Framework: ${templateFramework ?? 'unknown'}
 - Scope: ${scope}
 - Training products on scope: ${trainingProducts}
 
@@ -566,7 +566,7 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
     total_findings: findingRows.length,
     findings_by_priority: findingsByPriority,
     risk_rating: audit.risk_rating,
-    framework: templateFramework ?? audit.framework ?? null,
+    framework: templateFramework ?? null,
   };
 
   // 11. Append-only audit log via service role.
@@ -580,7 +580,7 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
       entity_id: auditId,
       details: {
         audit_type: audit.audit_type,
-        framework: templateFramework ?? audit.framework ?? null,
+        framework: templateFramework ?? null,
         total_findings: findingRows.length,
         findings_by_priority: findingsByPriority,
         risk_rating: audit.risk_rating,
