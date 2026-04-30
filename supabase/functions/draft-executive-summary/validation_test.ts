@@ -163,6 +163,31 @@ Deno.test('validateDraft: rejects invalid priority_group priority', () => {
   assert(result.reason.includes('priority'));
 });
 
+Deno.test('validateDraft: overlong quote reason exposes parseable word count', () => {
+  const longQuote =
+    '"' + Array.from({ length: 35 }, (_, i) => `word${i}`).join(' ') + '"';
+  const result = validateDraft(
+    goodDraft({ risk_rationale: `Standard says ${longQuote}.` }),
+    validIds,
+  );
+  assert(!result.ok);
+  const m = !result.ok && result.reason.match(/quote exceeds 30 words \((\d+) words, (\d+) over\)/);
+  assert(m, `reason should expose word count, got: ${!result.ok && result.reason}`);
+  assertEquals(Number((m as RegExpMatchArray)[1]), 35);
+  assertEquals(Number((m as RegExpMatchArray)[2]), 5);
+});
+
+Deno.test('validateDraft: word-count regex does NOT match non-quote failures', () => {
+  // Banned-term failure must not accidentally satisfy the quote-retry parser.
+  const result = validateDraft(
+    goodDraft({ executive_summary: 'The directors accepted the audit findings.' }),
+    validIds,
+  );
+  assert(!result.ok);
+  const m = !result.ok && result.reason.match(/quote exceeds 30 words \((\d+) words, (\d+) over\)/);
+  assertEquals(m, null, `non-quote reason must not match the quote-retry regex: ${!result.ok && result.reason}`);
+});
+
 Deno.test('validateDraft: accepts empty linked_finding_ids array', () => {
   // Action with no linked findings is legitimate (general remediation steps).
   const draft = goodDraft();

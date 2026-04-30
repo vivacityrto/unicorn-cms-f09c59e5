@@ -2,7 +2,7 @@
  * retrieve-srto-context
  *
  * Caller-JWT semantic retrieval over the SRTO 2025 corpus. Embeds the
- * incoming query via the Lovable AI Gateway (text-embedding-3-small) and
+ * incoming query via the Lovable AI Gateway (openai/text-embedding-3-small) and
  * calls the security-invoker `match_srto_chunks` RPC, which enforces RLS
  * against `srto_corpus` (any signed-in Vivacity user with a `users` row).
  *
@@ -22,7 +22,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const EMBED_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/embeddings';
-const EMBED_MODEL = 'text-embedding-3-small';
+const EMBED_MODEL = 'openai/text-embedding-3-small';
 
 const VALID_SOURCE_TYPES = new Set([
   'outcome_standards',

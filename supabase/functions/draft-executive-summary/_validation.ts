@@ -30,12 +30,12 @@ function findBannedTerm(text: string): string | null {
   return null;
 }
 
-function findOverlongQuote(text: string): string | null {
+function findOverlongQuote(text: string): { snippet: string; words: number } | null {
   const re = /["“]([^"”]{30,})["”]/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
-    const wordCount = m[1].trim().split(/\s+/).length;
-    if (wordCount > 30) return m[1].slice(0, 80) + '…';
+    const words = m[1].trim().split(/\s+/).length;
+    if (words > 30) return { snippet: m[1].slice(0, 80) + '…', words };
   }
   return null;
 }
@@ -140,7 +140,13 @@ export function validateDraft(
   if (banned) return { ok: false, reason: `banned term: "${banned}"` };
 
   const overlong = findOverlongQuote(combined);
-  if (overlong) return { ok: false, reason: `quote exceeds 30 words: "${overlong}"` };
+  if (overlong) {
+    const over = overlong.words - 30;
+    return {
+      ok: false,
+      reason: `quote exceeds 30 words (${overlong.words} words, ${over} over): "${overlong.snippet}"`,
+    };
+  }
 
   return { ok: true, draft: r as unknown as DraftJson };
 }
