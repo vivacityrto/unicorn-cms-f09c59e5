@@ -265,16 +265,20 @@ async function embedBatch(texts: string[], apiKey: string): Promise<number[][]> 
   }
 }
 
-// ----- Source-type detection from path -----------------------------
-function sourceTypeFromPath(path: string): SrtoSourceType | null {
+// ----- Source-type and framework detection from path --------------
+const PATH_PREFIX_MAP: Record<string, { source_type: SrtoSourceType; framework: Framework }> = {
+  outcome_standards:        { source_type: 'outcome_standards',        framework: 'SRTO_2025' },
+  compliance_requirements:  { source_type: 'compliance_requirements',  framework: 'SRTO_2025' },
+  credential_policy:        { source_type: 'credential_policy',        framework: 'SRTO_2025' },
+  practice_guide:           { source_type: 'practice_guide',           framework: 'SRTO_2025' },
+  national_code:            { source_type: 'national_code',            framework: 'NATIONAL_CODE_2018' },
+  cricos_practice_guide:    { source_type: 'cricos_practice_guide',    framework: 'NATIONAL_CODE_2018' },
+  esos_act:                 { source_type: 'esos_act',                 framework: 'ESOS_ACT_2000' },
+};
+
+function metadataFromPath(path: string): { source_type: SrtoSourceType; framework: Framework } | null {
   const folder = path.split('/')[0];
-  const map: Record<string, SrtoSourceType> = {
-    outcome_standards: 'outcome_standards',
-    compliance_requirements: 'compliance_requirements',
-    credential_policy: 'credential_policy',
-    practice_guide: 'practice_guide',
-  };
-  return map[folder] ?? null;
+  return PATH_PREFIX_MAP[folder] ?? null;
 }
 
 function documentKeyFromPath(path: string): string {
