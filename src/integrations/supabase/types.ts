@@ -45396,6 +45396,7 @@ export type Database = {
       }
       tenant_users: {
         Row: {
+          access_scope: string
           created_at: string
           created_by: string | null
           id: number
@@ -45406,6 +45407,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          access_scope?: string
           created_at?: string
           created_by?: string | null
           id?: number
@@ -45416,6 +45418,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          access_scope?: string
           created_at?: string
           created_by?: string | null
           id?: number
