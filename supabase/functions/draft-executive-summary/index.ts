@@ -143,7 +143,6 @@ interface FindingRow {
   impact: string | null;
   priority: string;
   clause: string | null;
-  quality_area: string | null;
   section_title: string | null;
   code_prefix: string | null;
 }
