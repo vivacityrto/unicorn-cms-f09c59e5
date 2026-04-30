@@ -4,11 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileText, Download, Clock, Send, CheckCircle2, AlertTriangle, Shield, X, Info, Mail } from 'lucide-react';
+import { FileText, Download, Clock, Send, CheckCircle2, AlertTriangle, Shield, X, Info, Mail, Sparkles, Copy, Loader2 } from 'lucide-react';
 import { SendPreliminarySummaryDialog } from './SendPreliminarySummaryDialog';
 import { AuditRiskBadge } from '@/components/audit/AuditRiskBadge';
-import { useReleaseReport, useRevokeReport } from '@/hooks/useAuditReport';
-import { useAuditActions } from '@/hooks/useAuditWorkspace';
+import {
+  useReleaseReport,
+  useRevokeReport,
+  useDraftExecutiveSummary,
+  useRecordExecutiveSummaryDecision,
+  type ExecSummaryResponse,
+} from '@/hooks/useAuditReport';
+import { useAuditActions, useUpdateAudit } from '@/hooks/useAuditWorkspace';
 import { useAuditAppointments } from '@/hooks/useAuditSchedule';
 import {
   AlertDialog,
@@ -26,6 +32,36 @@ import type { AuditFinding, AuditAction } from '@/types/auditWorkspace';
 import { useAuditProgress } from '@/hooks/useAuditCompletion';
 import { toast } from 'sonner';
 
+// Levenshtein-style edit distance percent (0-100). Cheap implementation —
+// we only need it for a coarse "how much did the auditor change" telemetry
+// signal, not for diffing.
+function editDistancePct(original: string, edited: string): number {
+  if (original === edited) return 0;
+  if (!original) return edited.length > 0 ? 100 : 0;
+  const a = original;
+  const b = edited;
+  const m = a.length;
+  const n = b.length;
+  // Bounded matrix to keep memory sane on long summaries.
+  if (m * n > 1_000_000) {
+    // Fallback: rough length-delta proxy.
+    return Math.min(100, Math.round((Math.abs(m - n) / Math.max(m, n)) * 100));
+  }
+  const dp: number[] = Array(n + 1).fill(0).map((_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1]
+        ? prev
+        : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = tmp;
+    }
+  }
+  return Math.min(100, Math.round((dp[n] / Math.max(m, n)) * 100));
+}
+
 interface ReportTabProps {
   audit: ClientAudit;
   findings: AuditFinding[];
@@ -38,11 +74,91 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   const [softGuardOpen, setSoftGuardOpen] = useState(false);
   const releaseReport = useReleaseReport(audit.id);
   const revokeReport = useRevokeReport(audit.id);
+  const updateAudit = useUpdateAudit(audit.id);
+  const draftExecSummary = useDraftExecutiveSummary(audit.id);
+  const recordDecision = useRecordExecutiveSummaryDecision();
   const { openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
   const { data: progress } = useAuditProgress(audit.id);
   const findingsRequired = progress?.findings_required ?? 0;
   const notesRequired = progress?.notes_required ?? 0;
   const incompleteCount = findingsRequired + notesRequired;
+
+  // ─── AI draft local state ─────────────────────────────────────────
+  // Drafts live in component state until the auditor accepts each field
+  // (which writes to client_audits) or discards them. The action_plan_rollup
+  // is render-only / clipboard-only — it never persists to client_audits.
+  const [draft, setDraft] = useState<ExecSummaryResponse | null>(null);
+  const [editedExec, setEditedExec] = useState('');
+  const [editedFinding, setEditedFinding] = useState('');
+  const [editedRationale, setEditedRationale] = useState('');
+  const [decisions, setDecisions] = useState<{
+    executive_summary?: 'accepted' | 'edited' | 'rejected';
+    overall_finding?: 'accepted' | 'edited' | 'rejected';
+    risk_rationale?: 'accepted' | 'edited' | 'rejected';
+  }>({});
+
+  const handleDraftClick = async () => {
+    try {
+      const res = await draftExecSummary.mutateAsync();
+      setDraft(res);
+      setEditedExec(res.draft.executive_summary);
+      setEditedFinding(res.draft.overall_finding);
+      setEditedRationale(res.draft.risk_rationale);
+      setDecisions({});
+      toast.success('Draft ready for review.');
+    } catch {
+      // useDraftExecutiveSummary already toasts the server message.
+    }
+  };
+
+  const acceptField = (
+    field: 'executive_summary' | 'overall_finding' | 'risk_rationale',
+    original: string,
+    edited: string,
+  ) => {
+    if (!draft) return;
+    const decision: 'accepted' | 'edited' = original === edited ? 'accepted' : 'edited';
+    updateAudit.mutate({ [field]: edited } as any, {
+      onSuccess: () => {
+        setDecisions((d) => ({ ...d, [field]: decision }));
+        recordDecision.mutate({
+          draft_log_id: draft.log_id,
+          audit_id: audit.id,
+          [field]: { decision, edit_distance_pct: editDistancePct(original, edited) },
+        } as any);
+        toast.success(decision === 'accepted' ? 'Accepted.' : 'Saved your edits.');
+      },
+      onError: (err: any) => toast.error('Save failed: ' + (err?.message || 'unknown')),
+    });
+  };
+
+  const discardField = (
+    field: 'executive_summary' | 'overall_finding' | 'risk_rationale',
+  ) => {
+    if (!draft) return;
+    setDecisions((d) => ({ ...d, [field]: 'rejected' }));
+    recordDecision.mutate({
+      draft_log_id: draft.log_id,
+      audit_id: audit.id,
+      [field]: { decision: 'rejected', edit_distance_pct: null },
+    } as any);
+  };
+
+  const copyRollupToClipboard = () => {
+    if (!draft) return;
+    const rollup = draft.draft.action_plan_rollup;
+    const lines: string[] = [];
+    lines.push(rollup.introduction, '');
+    for (const group of rollup.priority_groups) {
+      lines.push(`${group.priority.toUpperCase()} PRIORITY`);
+      lines.push(group.narrative);
+      for (const a of group.actions) lines.push(`  • ${a.summary}`);
+      lines.push('');
+    }
+    lines.push(rollup.closing);
+    navigator.clipboard.writeText(lines.join('\n'));
+    toast.success('Action plan copied to clipboard.');
+  };
 
   const handleGenerateClick = () => {
     if (incompleteCount > 0) {
