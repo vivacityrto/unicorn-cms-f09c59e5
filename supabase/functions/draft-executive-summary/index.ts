@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
   const { data: auditRow, error: auditErr } = await userClient
     .from('client_audits' as any)
     .select(
-      `id, title, audit_type, framework, risk_rating, score_total, score_max, score_pct,
+      `id, title, audit_type, risk_rating, score_total, score_max, score_pct,
        snapshot_rto_name, snapshot_rto_number, snapshot_cricos_code,
        is_rto, is_cricos, training_products, subject_tenant_id, template_id`,
     )
