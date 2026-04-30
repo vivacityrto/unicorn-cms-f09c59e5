@@ -37,6 +37,7 @@ import {
   type PhaseData,
   type DataForFacts,
 } from "../_shared/ai-brain/index.ts";
+import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
 
 // ============= CORS =============
 const corsHeaders = {
@@ -248,11 +249,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 7. Vector search (best-effort)
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // 7. Vector search (best-effort) — uses OpenAI direct for embeddings
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     let vectorResults: VectorResult[] = [];
-    if (LOVABLE_API_KEY) {
-      vectorResults = await performVectorSearch(supabase, gateTenantId, question, LOVABLE_API_KEY);
+    if (OPENAI_API_KEY) {
+      vectorResults = await performVectorSearch(supabase, gateTenantId, question);
     }
 
     // 8. Fact builder (RLS-scoped via supabase user-auth client)
@@ -389,28 +390,13 @@ async function performVectorSearch(
   supabase: any,
   tenantId: number,
   query: string,
-  apiKey: string,
 ): Promise<VectorResult[]> {
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/text-embedding-3-small",
-        input: query,
-      }),
-    });
-    if (!resp.ok) {
-      console.error("Embedding API error:", resp.status, await resp.text().catch(() => ""));
-      return [];
-    }
-    const json = await resp.json();
-    const embedding = json?.data?.[0]?.embedding;
-    if (!embedding) {
-      console.error("No embedding returned");
+    let embedding: number[];
+    try {
+      embedding = await generateEmbeddingShared(query);
+    } catch (err) {
+      console.error("Embedding generation failed:", err);
       return [];
     }
     const { data, error } = await supabase.rpc("search_vector_embeddings", {
