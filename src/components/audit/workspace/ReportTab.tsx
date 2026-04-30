@@ -650,3 +650,67 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
     </div>
   );
 }
+
+// ─── DraftField — per-field accept/edit/discard control for AI drafts ──
+interface DraftFieldProps {
+  label: string;
+  original: string;
+  value: string;
+  onChange: (v: string) => void;
+  decision: 'accepted' | 'edited' | 'rejected' | undefined;
+  onAccept: () => void;
+  onDiscard: () => void;
+  rows?: number;
+}
+
+function DraftField({
+  label,
+  original,
+  value,
+  onChange,
+  decision,
+  onAccept,
+  onDiscard,
+  rows = 5,
+}: DraftFieldProps) {
+  const isEdited = value !== original;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+        {decision === 'accepted' && (
+          <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50">
+            <CheckCircle2 className="h-3 w-3 mr-1" /> Accepted
+          </Badge>
+        )}
+        {decision === 'edited' && (
+          <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50">
+            <CheckCircle2 className="h-3 w-3 mr-1" /> Saved with edits
+          </Badge>
+        )}
+        {decision === 'rejected' && (
+          <Badge variant="outline" className="text-muted-foreground">
+            <X className="h-3 w-3 mr-1" /> Discarded
+          </Badge>
+        )}
+      </div>
+      <Textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        disabled={decision === 'accepted' || decision === 'edited' || decision === 'rejected'}
+        className="text-sm"
+      />
+      {!decision && (
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={onAccept}>
+            {isEdited ? 'Save edits' : 'Accept'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onDiscard}>
+            Discard
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
