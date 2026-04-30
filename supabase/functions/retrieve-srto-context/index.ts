@@ -10,7 +10,7 @@
  *   {
  *     query:         string  (5..4000 chars),
  *     top_k?:        number  (1..20, default 8),
- *     threshold?:    number  (0..1, default 0.7),
+ *     threshold?:    number  (0..1, default 0.5),
  *     source_type?:  'outcome_standards' | 'compliance_requirements'
  *                  | 'credential_policy' | 'practice_guide'
  *                  | 'national_code' | 'cricos_practice_guide' | 'esos_act',
@@ -22,6 +22,11 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
 import { generateEmbedding } from '../_shared/openai-embeddings.ts';
+
+// Default similarity threshold. Lowered from 0.7 to 0.5 so downstream
+// consumers (Ask Viv, Wave 3 finding draft, Wave 4 #2 exec summary) get
+// non-empty retrieval without each one having to pass an override.
+const DEFAULT_THRESHOLD = 0.5;
 
 const VALID_SOURCE_TYPES = new Set([
   'outcome_standards',
@@ -100,7 +105,7 @@ Deno.serve(async (req) => {
     topK = Math.floor(n);
   }
 
-  let threshold = 0.7;
+  let threshold = DEFAULT_THRESHOLD;
   if (body.threshold !== undefined) {
     const n = Number(body.threshold);
     if (!Number.isFinite(n) || n < 0 || n > 1) {

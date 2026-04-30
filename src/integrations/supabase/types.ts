@@ -57737,6 +57737,7 @@ export type Database = {
           query_embedding: string
         }
         Returns: {
+          chunk_index: number
           clause: string
           content: string
           framework: string
