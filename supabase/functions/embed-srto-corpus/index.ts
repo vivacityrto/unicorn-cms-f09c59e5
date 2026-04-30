@@ -3,7 +3,7 @@
  *
  * Admin operation. Reads source PDFs from the `srto-source-documents`
  * Storage bucket, extracts text, chunks it, embeds each chunk via the
- * Lovable AI Gateway (text-embedding-3-small, 1536 dims), and upserts
+ * Lovable AI Gateway (openai/text-embedding-3-small, 1536 dims), and upserts
  * into public.srto_corpus.
  *
  * Caller must authenticate as a Vivacity Super Admin (users.unicorn_role
@@ -21,7 +21,7 @@ import { encode as encodeTokens } from 'npm:gpt-tokenizer@^2.5.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const EMBED_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/embeddings';
-const EMBED_MODEL = 'text-embedding-3-small';
+const EMBED_MODEL = 'openai/text-embedding-3-small';
 const EMBED_DIMS = 1536;
 const TARGET_TOKENS = 800;
 const OVERLAP_TOKENS = 150;

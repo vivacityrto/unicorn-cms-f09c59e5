@@ -1,136 +1,55 @@
-# Add `validateClientAskVivAccess` to `_shared/ask-viv-access.ts`
+# Final plan — embedding namespace fix + retry hardening + Ask Viv smoke
 
-## Goal
+## 1. Six embedding callsites → namespaced model name
 
-Add a sibling helper to the existing `validateAskVivAccess` that gates the new **client-mode** Ask Viv endpoints. It returns the resolved `tenant_id` on success so callers can immediately use it for the daily-cap RPC against `ai_client_query_usage`.
+Bare `text-embedding-3-small` → `openai/text-embedding-3-small`.
 
-## File touched
+| File | Line(s) |
+|---|---|
+| `supabase/functions/retrieve-srto-context/index.ts` | 5 (comment), 25 (`EMBED_MODEL`) |
+| `supabase/functions/embed-srto-corpus/index.ts` | 6 (comment), 24 (`EMBED_MODEL`) |
+| `supabase/functions/vector-search/index.ts` | 202 |
+| `supabase/functions/vector-index-update/index.ts` | 313 |
+| `supabase/functions/vector-index-rebuild/index.ts` | 267 |
+| `supabase/functions/compliance-assistant/index.ts` | 473 |
 
-- `supabase/functions/_shared/ask-viv-access.ts` — append one new exported function. Do **not** modify `validateAskVivAccess`, `logDeniedAccess`, `isVivacityInternal`, or `askVivAccessDeniedResponse`.
+The `embedding.length !== 1536` guardrail in `retrieve-srto-context` stays as the primary defence against silent vector-space drift — same underlying OpenAI model regardless of prefix, but the guardrail is the contract.
 
-## Audit findings (read-only verification)
+## 2. Validator surfaces a parseable word count
 
-1. **Membership table**: Both `tenant_members` and `tenant_users` exist in `public`. The user's instructions say to query `tenant_members`. Confirmed schema:
-   - `tenant_id bigint`, `user_id uuid`, `role text`, `status text`, …
-   - 391 rows currently with `status = 'active'`.
-2. **Column name correction**: The user's spec says "`user_uuid = userId`" — but `tenant_members` has no `user_uuid` column; the FK is `user_id uuid`. Plan uses `user_id = userId` (which is what the spec clearly intends — the auth uid).
-3. **Roles in DB**: `Admin` (397), `User` (70), `Super Admin` (13), `Team Member` (7). Gating on `Admin`/`User` is correct for client-mode.
-4. **`profile.state` vs `.status`**: Confirmed `UserProfile` interface (line ~28-35 of the file) exposes `state`, not `status`. The existing `validateAskVivAccess` reads `profile?.status` which is always `undefined` — that's the latent bug the user called out. We will **not** fix it in that function (out of scope), but the new function will use `state` correctly.
-5. **`logDeniedAccess` signature**: `(supabase, userId, userRole, endpoint, reason)` — reused as-is.
+`supabase/functions/draft-executive-summary/_validation.ts`:
+- `findOverlongQuote` → returns `{ snippet: string; words: number } | null`.
+- Reason string format: `quote exceeds 30 words (N words, M over): "<snippet>"` where `M = N - 30`.
 
-## Implementation
+## 3. Quote-aware corrective retry
 
-Append the following to the bottom of `supabase/functions/_shared/ask-viv-access.ts` (before or after `askVivAccessDeniedResponse`, doesn't matter — placed right after `validateAskVivAccess` for readability):
+`supabase/functions/draft-executive-summary/index.ts` retry block (~516–518):
+- Match `validation.reason` against `/quote exceeds 30 words \((\d+) words, (\d+) over\)/`.
+- On match, prepend:
+  > Your previous response quoted a Standard for N words — M over the limit. Paraphrase the Standard's intent in your own words; do not reproduce more than 30 consecutive words from any Standard.
+- On miss, fall through to the existing generic retry — graceful degradation.
+- Keep the existing trailing guardrail (banned terms, finding-id integrity, no self-reference).
 
-```ts
-/**
- * Client roles that may use Ask Viv in client mode.
- */
-const CLIENT_ASK_VIV_ROLES = ["Admin", "User"];
+## 4. Round-trip parsing tests — both halves of the contract
 
-/**
- * Validate Ask Viv access for CLIENT mode.
- *
- * Distinct from validateAskVivAccess (which is for Vivacity internal staff).
- * On success, returns the resolved tenant_id so callers can scope the
- * daily-cap RPC against ai_client_query_usage without a second lookup.
- *
- * Fail-fast checks:
- *  1. unicorn_role must be 'Admin' or 'User'.
- *  2. profile.state must not be 'inactive' or 'suspended'.
- *  3. Exactly one active tenant_members row must exist for the user.
- */
-export async function validateClientAskVivAccess(
-  supabase: SupabaseClient,
-  userId: string,
-  profile: UserProfile | null,
-  endpoint: string
-): Promise<
-  | { allowed: true; tenant_id: number }
-  | { allowed: false; reason: string }
-> {
-  // 1. Role gate
-  const role = profile?.unicorn_role ?? null;
-  if (!role || !CLIENT_ASK_VIV_ROLES.includes(role)) {
-    await logDeniedAccess(supabase, userId, role ?? "unknown", endpoint, "not_client_role");
-    return { allowed: false, reason: "not_client_role" };
-  }
+Append to `supabase/functions/draft-executive-summary/validation_test.ts`:
 
-  // 2. Account state gate (NOTE: UserProfile uses `state`, not `status`)
-  if (profile?.state === "inactive" || profile?.state === "suspended") {
-    await logDeniedAccess(supabase, userId, role, endpoint, "user_archived");
-    return { allowed: false, reason: "user_archived" };
-  }
+**Positive** — overlong-quote reason exposes parseable N and M (N=35, M=5).
 
-  // 3. Tenant membership resolution — must be exactly one active membership
-  const { data: memberships, error } = await supabase
-    .from("tenant_members")
-    .select("tenant_id")
-    .eq("user_id", userId)
-    .eq("status", "active");
+**Negative** — a non-quote failure (banned-term reason) does NOT match the quote-retry regex. This locks the contract so a future validator refactor can't silently route every failure into the quote-paraphrase prompt.
 
-  if (error) {
-    console.error("validateClientAskVivAccess: tenant_members query failed", error);
-    await logDeniedAccess(supabase, userId, role, endpoint, "membership_lookup_failed");
-    return { allowed: false, reason: "membership_lookup_failed" };
-  }
+## 5. Verification
 
-  const rows = memberships ?? [];
-  if (rows.length === 0) {
-    await logDeniedAccess(supabase, userId, role, endpoint, "no_tenant_membership");
-    return { allowed: false, reason: "no_tenant_membership" };
-  }
-  if (rows.length > 1) {
-    await logDeniedAccess(supabase, userId, role, endpoint, "multiple_memberships");
-    return { allowed: false, reason: "multiple_memberships" };
-  }
+1. `supabase--test_edge_functions` filtered to `draft-executive-summary` — both new tests pass.
+2. **Smart Education smoke**: re-run `draft-executive-summary` end-to-end. Expect `retrieve-srto-context` 200 with chunks (or `[]` if SRTO corpus not yet embedded — still passes the gateway check), draft validates first try, log row written, 200 to caller.
+3. **Ask Viv smoke (hard requirement)**: from `AskVivPanel`, query *"What does SRTO 2025 say about validation requirements?"* — expect a citation of Standard 1.5 with paraphrased context. Generic compliance advice with no Standard citation = still broken; investigate before declaring done.
 
-  return { allowed: true, tenant_id: Number(rows[0].tenant_id) };
-}
+## 6. Rollback / contingency
 
-/**
- * Map an internal denial reason code to a user-friendly message string
- * suitable for the response body. Use with askVivAccessDeniedResponse().
- */
-export function clientAskVivDenialMessage(reason: string): string {
-  switch (reason) {
-    case "not_client_role":
-      return "Ask Viv client mode is for client-tenant users only.";
-    case "user_archived":
-      return "Your account is no longer active.";
-    case "no_tenant_membership":
-      return "No active tenant membership was found for your account.";
-    case "multiple_memberships":
-      return "Your account is linked to multiple tenants. Contact support to resolve.";
-    case "membership_lookup_failed":
-      return "We couldn't verify your tenant membership. Please try again.";
-    default:
-      return "Ask Viv access denied.";
-  }
-}
-```
+If the `openai/` prefix is also rejected post-deploy:
+1. **Read the gateway error response body first** — it typically lists accepted model names. The prefix may simply be different (e.g. `lovable/text-embedding-3-small`) rather than absent. One-line revert per file to try the alternate prefix.
+2. Only if no namespaced form is accepted at all does the picture flip to "embedding support dropped from the gateway", at which point a direct OpenAI fallback would be in scope (out of scope here).
 
-## Caller usage pattern (informational, not part of this change)
+## Dependency note
 
-```ts
-const check = await validateClientAskVivAccess(supabase, user.id, profile, "compliance-assistant-client");
-if (!check.allowed) {
-  return askVivAccessDeniedResponse(clientAskVivDenialMessage(check.reason));
-}
-const tenantId = check.tenant_id; // bigint, ready for ai_client_query_usage
-```
-
-## Backward compatibility / risk
-
-- Pure addition; no existing exports modified. Zero impact on `validateAskVivAccess` or any current Ask Viv internal endpoint.
-- No DB schema, RLS, FK, or migration impact. Read-only query against `tenant_members`.
-- Bigint safety: `tenant_members.tenant_id` is `bigint`; PostgREST returns it as a JS number for values within safe-int range (current max tenant_id is well within), then explicitly coerced via `Number(...)`.
-- The new function intentionally does **not** fix the latent `profile.status` bug in the existing `validateAskVivAccess` (out of scope per instructions).
-
-## Risk assessment
-
-- **Low**. Single additive helper in a shared file. No call sites yet wired up — adding it cannot regress current behaviour. The only behavioural assumption is that v1 client users have exactly one active `tenant_members` row, which matches current data (391 active rows, no multi-tenant client users today).
-
-## Decisions needed
-
-None. The user spec said `user_uuid` but the column is `user_id` — proceeding with `user_id` because that's the actual schema and matches the spec's clear intent (auth uid lookup).
+The four non-roadmap functions touched (`vector-search`, `vector-index-update`, `vector-index-rebuild`, `compliance-assistant`) all power Ask Viv — confirmed via `AskVivPanel.tsx:327` (invokes `compliance-assistant`) and the shared `validateAskVivAccess` gating. `vector-index-remove` does not embed and is unaffected. The Ask Viv smoke in §5.3 is what proves the silent degradation is actually fixed.

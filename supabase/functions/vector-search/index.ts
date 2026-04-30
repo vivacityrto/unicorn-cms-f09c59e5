@@ -199,7 +199,7 @@ async function generateEmbedding(text: string, apiKey: string): Promise<number[]
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "text-embedding-3-small",
+        model: "openai/text-embedding-3-small",
         input: text,
       }),
     });
