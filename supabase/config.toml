@@ -304,3 +304,6 @@ verify_jwt = false
 
 [functions.record-executive-summary-decision]
 verify_jwt = false
+
+[functions.compliance-assistant-client]
+verify_jwt = false
