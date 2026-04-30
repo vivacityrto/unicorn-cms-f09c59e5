@@ -50,17 +50,20 @@ Successful response:
 ```json
 {
   "ok": true,
-  "gateway": "lovable",
-  "model": "openai/text-embedding-3-small",
-  "embedding_dims": 1536,
-  "expected_dims": 1536,
+  "embedding_provider": "openai",
+  "model": "text-embedding-3-small",
+  "dim": 1536,
+  "expected_dim": 1536,
   "dims_match": true,
+  "openai_reachable": true,
+  "bucket_reachable": true,
+  "db_writable": true,
   "latency_ms": 312
 }
 ```
 
-If the gateway returns **402**, the response is
-`{ "ok": false, "error": "Lovable AI Gateway out of credits. Top up before invoking embed." }`.
+If OpenAI returns **402**, the response is
+`{ "ok": false, "error": "OpenAI account out of credits or quota exceeded." }`.
 Top up before proceeding — embedding 22 PDFs mid-run on an empty wallet is the
 failure mode this check exists to prevent.
 
@@ -162,7 +165,7 @@ supabase functions invoke embed-srto-corpus \
 
 ### 3. Re-embed everything after a model upgrade
 
-1. Update `EMBED_MODEL` / `EMBED_DIMS` constants in `index.ts`.
+1. Update `EMBEDDING_MODEL` / `EMBEDDING_DIM` constants in `_shared/openai-embeddings.ts`.
 2. Migration to alter `embedding` dimension if needed (drop and recreate the HNSW index).
 3. Invoke with `{"force_reembed": true}`.
 
@@ -175,11 +178,10 @@ reports `chunks_inserted`, `chunks_skipped`, and `chunks_deleted`.
 ## Costs
 
 Re-embedding the full corpus (~80,000 tokens) costs roughly **AUD $0.003** via
-the Lovable AI Gateway with `text-embedding-3-small`.
+OpenAI's `text-embedding-3-small`.
 
 ## Secrets used
 
-- `LOVABLE_API_KEY` — embedding gateway (auto-provisioned).
+- `OPENAI_API_KEY` — OpenAI direct embeddings. The Lovable AI Gateway no
+  longer supports embedding models, so embeddings call OpenAI directly.
 - `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` — auto-provisioned.
-
-No `OPENAI_API_KEY` is required — the Lovable AI Gateway is OpenAI-compatible.

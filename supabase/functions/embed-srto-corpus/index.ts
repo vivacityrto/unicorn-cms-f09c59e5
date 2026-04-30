@@ -2,9 +2,14 @@
  * embed-srto-corpus
  *
  * Admin operation. Reads source PDFs from the `srto-source-documents`
- * Storage bucket, extracts text, chunks it, embeds each chunk via the
- * Lovable AI Gateway (openai/text-embedding-3-small, 1536 dims), and upserts
- * into public.srto_corpus.
+ * Storage bucket, extracts text, chunks it, embeds each chunk via OpenAI
+ * direct (text-embedding-3-small, 1536 dims), and upserts into
+ * public.srto_corpus.
+ *
+ * Note: The Lovable AI Gateway does NOT support embedding models — only
+ * chat/completion. Embeddings call OpenAI directly via the shared helper
+ * `_shared/openai-embeddings.ts`. Chat/completion calls elsewhere still use
+ * the gateway.
  *
  * Caller must authenticate as a Vivacity Super Admin (users.unicorn_role
  * = 'Super Admin'). DB writes are performed with the service role key.
@@ -19,10 +24,13 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { extractText, getDocumentProxy } from 'npm:unpdf@^0.12.0';
 import { encode as encodeTokens } from 'npm:gpt-tokenizer@^2.5.0';
 import { corsHeaders } from '../_shared/cors.ts';
-
-const EMBED_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/embeddings';
-const EMBED_MODEL = 'openai/text-embedding-3-small';
-const EMBED_DIMS = 1536;
+import {
+  generateEmbedding,
+  generateEmbeddingsBatch,
+  EMBEDDING_PROVIDER,
+  EMBEDDING_MODEL_NAME,
+  EMBEDDING_DIMENSIONS as EMBED_DIMS,
+} from '../_shared/openai-embeddings.ts';
 const TARGET_TOKENS = 800;
 const OVERLAP_TOKENS = 150;
 const EMBED_BATCH = 100;
@@ -232,36 +240,25 @@ function chunkDocument(fullText: string): PreparedChunk[] {
   return out.filter((c) => c.token_count >= 25);
 }
 
-// ----- Embedding (Lovable AI Gateway, OpenAI-shape) ---------------
-async function embedBatch(texts: string[], apiKey: string): Promise<number[][]> {
+// ----- Embedding (OpenAI direct via shared helper) ---------------
+// _apiKey kept in signature for backwards compatibility with existing
+// callers — the shared helper reads OPENAI_API_KEY from env directly.
+async function embedBatch(texts: string[], _apiKey?: string): Promise<number[][]> {
   let attempt = 0;
   const delays = [1000, 2000, 4000];
   while (true) {
-    const res = await fetch(EMBED_GATEWAY_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: EMBED_MODEL,
-        input: texts,
-      }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return data.data.map((d: { embedding: number[] }) => d.embedding);
+    try {
+      return await generateEmbeddingsBatch(texts);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Retry on transient 429 from OpenAI.
+      if (msg.includes(' 429 ') && attempt < delays.length) {
+        await new Promise((r) => setTimeout(r, delays[attempt]));
+        attempt++;
+        continue;
+      }
+      throw e;
     }
-
-    if (res.status === 429 && attempt < delays.length) {
-      await new Promise((r) => setTimeout(r, delays[attempt]));
-      attempt++;
-      continue;
-    }
-
-    const text = await res.text();
-    throw new Error(`Embedding gateway error ${res.status}: ${text}`);
   }
 }
 
@@ -300,10 +297,10 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 
-  if (!LOVABLE_API_KEY) {
-    return json({ error: 'LOVABLE_API_KEY is not configured' }, 500);
+  if (!OPENAI_API_KEY) {
+    return json({ error: 'OPENAI_API_KEY is not configured in edge function secrets' }, 500);
   }
 
   // 1. Validate caller JWT and Super Admin role.
@@ -343,52 +340,68 @@ Deno.serve(async (req) => {
     req.headers.get('x-srto-health') === '1';
   if (isHealthCheck) {
     const tPing = Date.now();
+
+    // Check storage bucket reachability.
+    let bucket_reachable = false;
     try {
-      const res = await fetch(EMBED_GATEWAY_URL, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ model: EMBED_MODEL, input: 'ping' }),
-      });
+      const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { error: bucketErr } = await adminClient.storage
+        .from('srto-source-documents')
+        .list('', { limit: 1 });
+      bucket_reachable = !bucketErr;
+    } catch {
+      bucket_reachable = false;
+    }
+
+    // Check DB writability via a no-op authenticated select on srto_corpus.
+    let db_writable = false;
+    try {
+      const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const { error: dbErr } = await adminClient
+        .from('srto_corpus')
+        .select('id', { count: 'exact', head: true })
+        .limit(1);
+      db_writable = !dbErr;
+    } catch {
+      db_writable = false;
+    }
+
+    // Real test embedding via OpenAI direct.
+    try {
+      const vec = await generateEmbedding('health check');
       const latency_ms = Date.now() - tPing;
-      if (res.ok) {
-        const data = await res.json();
-        const dims: number | null = data?.data?.[0]?.embedding?.length ?? null;
-        return json(
-          {
-            ok: true,
-            gateway: 'lovable',
-            model: EMBED_MODEL,
-            embedding_dims: dims,
-            expected_dims: EMBED_DIMS,
-            dims_match: dims === EMBED_DIMS,
-            latency_ms,
-          },
-          200,
-        );
-      }
-      const text = await res.text();
       return json(
         {
-          ok: false,
-          gateway: 'lovable',
-          status: res.status,
+          ok: true,
+          embedding_provider: EMBEDDING_PROVIDER,
+          model: EMBEDDING_MODEL_NAME,
+          dim: vec.length,
+          expected_dim: EMBED_DIMS,
+          dims_match: vec.length === EMBED_DIMS,
+          openai_reachable: true,
+          bucket_reachable,
+          db_writable,
           latency_ms,
-          error:
-            res.status === 402
-              ? 'Lovable AI Gateway out of credits. Top up before invoking embed.'
-              : `Gateway responded ${res.status}`,
-          detail: text.slice(0, 500),
         },
-        res.status === 402 ? 402 : 502,
+        200,
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      const isCredits = /\b402\b/.test(msg);
       return json(
-        { ok: false, gateway: 'lovable', error: 'Gateway unreachable', detail: msg },
-        502,
+        {
+          ok: false,
+          embedding_provider: EMBEDDING_PROVIDER,
+          model: EMBEDDING_MODEL_NAME,
+          openai_reachable: false,
+          bucket_reachable,
+          db_writable,
+          error: isCredits
+            ? 'OpenAI account out of credits or quota exceeded.'
+            : 'OpenAI embeddings unreachable',
+          detail: msg.slice(0, 500),
+        },
+        isCredits ? 402 : 502,
       );
     }
   }
@@ -546,7 +559,7 @@ Deno.serve(async (req) => {
       // Batch embed.
       for (let i = 0; i < toEmbed.length; i += EMBED_BATCH) {
         const slice = toEmbed.slice(i, i + EMBED_BATCH);
-        const vectors = await embedBatch(slice.map((r) => r.content), LOVABLE_API_KEY);
+        const vectors = await embedBatch(slice.map((r) => r.content));
 
         if (vectors.length !== slice.length) {
           throw new Error(`Embedding count mismatch: got ${vectors.length}, expected ${slice.length}`);

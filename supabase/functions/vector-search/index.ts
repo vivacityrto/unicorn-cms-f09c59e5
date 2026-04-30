@@ -12,6 +12,7 @@ import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth, checkSuperAdmin, checkVivacityTeam } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
+import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -105,15 +106,16 @@ Deno.serve(async (req) => {
       return jsonError(403, "FORBIDDEN", "You do not have access to this tenant");
     }
 
-    // Get embedding API key
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return jsonError(500, "CONFIG_ERROR", "Embedding API not configured");
+    // Generate query embedding via OpenAI direct
+    if (!Deno.env.get("OPENAI_API_KEY")) {
+      return jsonError(500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
     }
 
-    // Generate query embedding
-    const queryEmbedding = await generateEmbedding(query, LOVABLE_API_KEY);
-    if (!queryEmbedding) {
+    let queryEmbedding: number[];
+    try {
+      queryEmbedding = await generateEmbeddingShared(query);
+    } catch (err) {
+      console.error("Embedding generation error:", err);
       return jsonError(500, "EMBEDDING_ERROR", "Failed to generate query embedding");
     }
 
@@ -187,36 +189,9 @@ async function validateTenantAccess(
   return !!data;
 }
 
-/**
- * Generate embedding using Lovable AI
- */
-async function generateEmbedding(text: string, apiKey: string): Promise<number[] | null> {
-  try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/text-embedding-3-small",
-        input: text,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Embedding API error:", response.status, errorText);
-      return null;
-    }
-
-    const data = await response.json();
-    return data.data?.[0]?.embedding || null;
-  } catch (err) {
-    console.error("Embedding generation error:", err);
-    return null;
-  }
-}
+// Local generateEmbedding helper removed — replaced by shared
+// _shared/openai-embeddings.ts which calls OpenAI directly. The Lovable
+// AI Gateway no longer accepts embedding models.
 
 /**
  * Deduplicate results by record_id, keeping highest similarity

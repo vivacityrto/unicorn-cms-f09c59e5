@@ -12,6 +12,7 @@ import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth, checkSuperAdmin, checkVivacityTeam } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
+import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
 import {
   buildClientSummary,
   buildPhaseSummary,
@@ -88,9 +89,9 @@ Deno.serve(async (req) => {
     console.log(`Updating index for ${source_type}:${record_id} in tenant ${tenant_id}`);
 
     // Get embedding API key
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return jsonError(500, "CONFIG_ERROR", "Embedding API not configured");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      return jsonError(500, "CONFIG_ERROR", "OPENAI_API_KEY not configured in edge function secrets");
     }
 
     // Fetch the record
@@ -135,7 +136,7 @@ Deno.serve(async (req) => {
     let indexedCount = 0;
 
     for (const chunk of chunks) {
-      const embedding = await generateEmbedding(chunk.text, LOVABLE_API_KEY);
+      const embedding = await generateEmbedding(chunk.text);
       
       if (!embedding) {
         console.error(`Failed to generate embedding for chunk ${chunk.index}`);
@@ -299,30 +300,12 @@ async function fetchRecord(
 }
 
 /**
- * Generate embedding using Lovable AI
+ * Generate embedding via shared OpenAI direct helper.
+ * Returns null on failure to preserve existing per-chunk error handling.
  */
-async function generateEmbedding(text: string, apiKey: string): Promise<number[] | null> {
+async function generateEmbedding(text: string): Promise<number[] | null> {
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/text-embedding-3-small",
-        input: text,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Embedding API error:", response.status, errorText);
-      return null;
-    }
-
-    const data = await response.json();
-    return data.data?.[0]?.embedding || null;
+    return await generateEmbeddingShared(text);
   } catch (err) {
     console.error("Embedding generation error:", err);
     return null;
