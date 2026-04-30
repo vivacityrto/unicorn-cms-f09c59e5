@@ -21,8 +21,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
-const EMBED_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/embeddings';
-const EMBED_MODEL = 'openai/text-embedding-3-small';
+import { generateEmbedding } from '../_shared/openai-embeddings.ts';
 
 const VALID_SOURCE_TYPES = new Set([
   'outcome_standards',
@@ -55,9 +54,9 @@ Deno.serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  if (!LOVABLE_API_KEY) {
-    return json({ error: 'LOVABLE_API_KEY is not configured' }, 500);
+  const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+  if (!OPENAI_API_KEY) {
+    return json({ error: 'OPENAI_API_KEY is not configured in edge function secrets' }, 500);
   }
 
   // Caller-JWT client. RLS via match_srto_chunks (security invoker).
