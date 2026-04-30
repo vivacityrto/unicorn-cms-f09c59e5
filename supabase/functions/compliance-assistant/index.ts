@@ -18,6 +18,7 @@ import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth, checkVivacityTeam, checkSuperAdmin, UserProfile } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError, jsonRaw } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
+import { generateEmbedding as generateEmbeddingShared } from "../_shared/openai-embeddings.ts";
 
 // AI Brain imports (for reasoning engine)
 import {
@@ -188,19 +189,19 @@ Deno.serve(async (req) => {
       return jsonError(403, "FORBIDDEN", "You do not have access to this tenant");
     }
 
-    // Get API key for vector search
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Vector search uses OpenAI direct for embeddings (gateway no longer supports them).
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
-    // Perform vector search if API key is available
     let vectorResults: VectorResult[] = [];
-    if (LOVABLE_API_KEY) {
+    if (OPENAI_API_KEY) {
       vectorResults = await performVectorSearch(
         supabase,
         tenantId,
         question,
-        LOVABLE_API_KEY
       );
       console.log(`Vector search returned ${vectorResults.length} results`);
+    } else {
+      console.warn("OPENAI_API_KEY not set — skipping vector search");
     }
 
     // V3: Use Fact Builder service as the ONLY source of facts
@@ -459,32 +460,14 @@ async function performVectorSearch(
   supabase: any,
   tenantId: number,
   query: string,
-  apiKey: string
 ): Promise<VectorResult[]> {
   try {
-    // Generate query embedding
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/text-embedding-3-small",
-        input: query,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Embedding API error:", response.status);
-      return [];
-    }
-
-    const embeddingData = await response.json();
-    const queryEmbedding = embeddingData.data?.[0]?.embedding;
-    
-    if (!queryEmbedding) {
-      console.error("No embedding returned");
+    // Generate query embedding via OpenAI direct (Lovable gateway does not support embeddings)
+    let queryEmbedding: number[];
+    try {
+      queryEmbedding = await generateEmbeddingShared(query);
+    } catch (err) {
+      console.error("Embedding generation failed:", err);
       return [];
     }
 
