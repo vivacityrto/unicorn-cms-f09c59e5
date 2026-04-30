@@ -181,11 +181,14 @@ Deno.serve(async (req) => {
   // 3. Audit access gate via JWT (RLS filters).
   const { data: auditRow, error: auditErr } = await userClient
     .from('client_audits' as any)
-    .select('id, audit_type, snapshot_rto_name, snapshot_rto_number, snapshot_cricos_code, is_cricos, is_rto, subject_tenant_id')
+    .select('id, audit_type, snapshot_rto_name, snapshot_rto_number, snapshot_cricos_code, is_cricos, is_rto, subject_tenant_id, template_id')
     .eq('id', auditId)
     .maybeSingle();
   if (auditErr || !auditRow) return json({ error: "You don't have access to this audit." }, 403);
   const audit = auditRow as Record<string, any>;
+  // Note: when corpus retrieval is added here, resolve framework via
+  // compliance_templates.framework and pass `framework` to
+  // retrieve-srto-context (see draft-finding for the canonical mapping).
 
   // 4. Service-role admin client for usage cap, log, suggestion write.
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
