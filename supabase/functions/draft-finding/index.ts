@@ -322,13 +322,43 @@ Deno.serve(async (req) => {
   // rows for unauthorised callers.
   const { data: auditRow, error: auditErr } = await userClient
     .from('client_audits' as any)
-    .select('id, audit_type, snapshot_rto_name, snapshot_rto_number, snapshot_cricos_code, is_cricos, is_rto, subject_tenant_id')
+    .select('id, audit_type, snapshot_rto_name, snapshot_rto_number, snapshot_cricos_code, is_cricos, is_rto, subject_tenant_id, template_id')
     .eq('id', auditId)
     .maybeSingle();
   if (auditErr || !auditRow) {
     return json({ error: "You don't have access to this audit." }, 403);
   }
   const auditRowTyped = auditRow as Record<string, any>;
+
+  // 3b. Resolve the audit's compliance framework so we can route corpus
+  // retrieval to the right regulatory framework. CRICOS-only audits go to
+  // the National Code; combined audits pass no filter and let cosine
+  // similarity surface the right chunks across both frameworks.
+  let corpusFramework: 'SRTO_2025' | 'NATIONAL_CODE_2018' | null = null;
+  if (auditRowTyped.template_id) {
+    const { data: tplRow } = await userClient
+      .from('compliance_templates' as any)
+      .select('framework')
+      .eq('id', auditRowTyped.template_id)
+      .maybeSingle();
+    const tplFramework = (tplRow as Record<string, any> | null)?.framework as string | undefined;
+    switch (tplFramework) {
+      case 'SRTO_2025_CHC':
+      case 'SRTO_2025_MOCK':
+      case 'DUE_DILIGENCE':
+        corpusFramework = 'SRTO_2025';
+        break;
+      case 'CRICOS':
+        corpusFramework = 'NATIONAL_CODE_2018';
+        break;
+      case 'DUE_DILIGENCE_COMBINED':
+      case 'RTO_CRICOS_CHC':
+        corpusFramework = null; // combined: no filter
+        break;
+      default:
+        corpusFramework = null;
+    }
+  }
 
   // 4. Service-role admin client for log writes + daily cap query.
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
