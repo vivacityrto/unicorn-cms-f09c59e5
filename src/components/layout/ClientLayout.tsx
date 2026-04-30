@@ -4,7 +4,7 @@ import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 import { ClientSidebar } from "@/components/client/ClientSidebar";
 import { ClientTopbar } from "@/components/client/ClientTopbar";
 import { ClientFooter } from "@/components/client/ClientFooter";
-import { ClientChatbotLauncher } from "@/components/client/ClientChatbotLauncher";
+
 import { ClientRouteGuard } from "@/components/client/ClientRouteGuard";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { DocumentRequestModal } from "@/components/client/DocumentRequestModal";
@@ -73,9 +73,6 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
           {/* Footer */}
           <ClientFooter />
-
-          {/* Floating Chatbot */}
-          <ClientChatbotLauncher />
         </ClientRequestContext.Provider>
       </div>
 
