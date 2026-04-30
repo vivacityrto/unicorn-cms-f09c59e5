@@ -451,7 +451,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         query: retrievalQuery.length >= 5 ? retrievalQuery : ctx.audit_statement,
         top_k: 6,
-        threshold: 0.65,
+        // threshold omitted: rely on retrieve-srto-context DEFAULT_THRESHOLD (0.5),
+        // which matches the score distribution of text-embedding-3-small.
         clause: ctx.clause || undefined,
         framework: corpusFramework ?? undefined,
       }),
