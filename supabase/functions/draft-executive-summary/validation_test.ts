@@ -192,15 +192,15 @@ Deno.test('validateDraft: rejects invalid priority_group priority', () => {
   assert(result.reason.includes('priority'));
 });
 
-Deno.test('validateDraft: overlong quote reason exposes parseable word count', () => {
+Deno.test('validateDraft: overlong Standards-excerpt reason exposes parseable word count', () => {
   const longQuote =
     '"' + Array.from({ length: 35 }, (_, i) => `word${i}`).join(' ') + '"';
   const result = validateDraft(
-    goodDraft({ risk_rationale: `Standard says ${longQuote}.` }),
+    goodDraft({ risk_rationale: `Std 1.5 says ${longQuote}.` }),
     validIds,
   );
   assert(!result.ok);
-  const m = !result.ok && result.reason.match(/quote exceeds 30 words \((\d+) words, (\d+) over\)/);
+  const m = !result.ok && result.reason.match(/verbatim Standards excerpt exceeds 30 words \((\d+) words, (\d+) over\)/);
   assert(m, `reason should expose word count, got: ${!result.ok && result.reason}`);
   assertEquals(Number((m as RegExpMatchArray)[1]), 35);
   assertEquals(Number((m as RegExpMatchArray)[2]), 5);
@@ -213,7 +213,7 @@ Deno.test('validateDraft: word-count regex does NOT match non-quote failures', (
     validIds,
   );
   assert(!result.ok);
-  const m = !result.ok && result.reason.match(/quote exceeds 30 words \((\d+) words, (\d+) over\)/);
+  const m = !result.ok && result.reason.match(/verbatim Standards excerpt exceeds 30 words \((\d+) words, (\d+) over\)/);
   assertEquals(m, null, `non-quote reason must not match the quote-retry regex: ${!result.ok && result.reason}`);
 });
 
