@@ -1,159 +1,48 @@
-# Unify Client Inbox Hub (Revised)
+# Wire "Release Report to Client" to the edge function
 
-Collapse three side-nav items (Inbox, Communications, Notifications) into a single **Inbox** hub at `/client/inbox` with three tabs: **All / Messages / Notifications**. Old URLs redirect; the topbar bell stays as a quick-peek popover. Frontend-only — no DB, RLS, edge function, or new RPC changes.
+The Report tab UI (confirmation dialog, notes textarea, success state, action count) is already built in `src/components/audit/workspace/ReportTab.tsx`. It calls `useReleaseReport` from `src/hooks/useAuditReport.ts`, which today invokes the Supabase RPC `release_audit_report`. We need to point that hook at the `release-audit-report` edge function and handle its documented status codes. No component changes required beyond a tiny notes-length guard.
 
-## Key corrections vs. prior draft
+## Changes
 
-- **Announcements tab dropped.** No `announcement` value exists in `user_notifications.type` and no announcements table exists. Tabs are 3, not 4.
-- **`rpc_get_inbox_items` is never called.** That RPC doesn't exist and has been silently 404'ing. The All tab is built by client-side merging the two working hooks.
-- Legacy `?type=announcement` traffic redirects to `?tab=all`.
+### 1. `src/hooks/useAuditReport.ts` — rewrite `useReleaseReport`
 
-## Files touched
+Replace the RPC call with a `fetch` to the edge function (so we can read non-2xx JSON bodies cleanly; `supabase.functions.invoke` swallows status codes into a generic `FunctionsHttpError`).
 
-**Modified**
-- `src/components/client/ClientSidebar.tsx` — remove Notifications + Communications nav items
-- `src/components/client/ClientTopbar.tsx` — repoint "View all" + per-row fallback to `/client/inbox?tab=notifications`; cap popover list to 5
-- `src/pages/ClientInboxPage.tsx` — rebuild as a 3-tab hub
-- `src/hooks/useClientInbox.ts` — replace RPC call with client-side merge of `useClientCommunications` + `useClientNotifications`
-- `src/App.tsx` — replace the two routes with `<Navigate>` redirects; drop now-unused lazy imports
+- Build URL from `SUPABASE_URL` + `/functions/v1/release-audit-report`.
+- Send `Authorization: Bearer <session.access_token>` from `supabase.auth.getSession()`.
+- Body: `{ audit_id: auditId, release_notes: trimmedNotes || null }`.
+- Parse JSON regardless of status; branch on `response.status`:
 
-**Deleted**
-- `src/pages/ClientCommunicationsPage.tsx`
-- `src/pages/ClientNotifications.tsx`
-- `src/pages/client/ClientCommunicationsWrapper.tsx`
-- `src/pages/client/ClientNotificationsWrapper.tsx`
-- `src/pages/ClientNotificationsWrapper.tsx` (legacy wrapper)
+  | Status | Behaviour |
+  |---|---|
+  | 200 | `toast.success("Report released to client")`; invalidate `['client-audit', auditId]` and `['audit', auditId]`; call existing `autoCompleteStageTasks(auditId, 'report_released')`. |
+  | 409 | `toast.info("This report was already released on " + formatted released_at)`; still invalidate so UI flips to released state. |
+  | 422 | `toast.error(body.error)` — do not throw past onError generic; mutation resolves so the button stays enabled. |
+  | 403 | `toast.error(body.error || "You don't have access to this audit.")` |
+  | 401 / 500 / network | `toast.error("Couldn't release the report. Try again, or contact support.")` |
 
-**Preserved (reused inside tabs)**
-- `src/hooks/useClientCommunications.ts` — Messages tab + All-tab merge source
-- `src/hooks/useClientNotifications.tsx` — Notifications tab + All-tab merge source + bell
-- `src/hooks/useNotificationPrefs.ts` — category filtering inside Notifications tab
-- `src/components/client/NewConversationDialog.tsx` — New Message dialog
-- `src/components/inbox/InboxItemRow.tsx` — All-tab rows (visual source tag)
+- Mutation input shape stays `{ releaseNotes?: string }` so `ReportTab.tsx` does not change.
+- Add a 4000-char guard: if `trimmedNotes.length > 4000`, toast error and return early before fetching.
 
-## Page architecture
+### 2. `src/components/audit/workspace/ReportTab.tsx` — minor cleanup
 
-`ClientInboxPage.tsx` becomes a controlled-tab container driven by `?tab=` query param.
-
-```text
-/client/inbox?tab=<all|messages|notifications>
-┌─────────────────────────────────────────────────────────┐
-│ Inbox                       [tab-aware action button]   │
-│ [ All ] [ Messages ] [ Notifications ]                  │
-├─────────────────────────────────────────────────────────┤
-│   <tab content>                                         │
-└─────────────────────────────────────────────────────────┘
-```
-
-**Tab contents**
-- **All** — merged feed from rewritten `useClientInbox`. Each row tagged `Message | Notification` via `InboxItemRow`. Newest first.
-- **Messages** — full two-pane layout lifted from `ClientCommunicationsPage.tsx`, using `useClientCommunications`.
-- **Notifications** — list lifted from `ClientNotifications.tsx` (Today / This Week / Older grouping, dismissable, prefs honoured), using `useClientNotifications`.
-
-**Header action button (right side)**
-- Messages tab → `+ New Message` (opens `NewConversationDialog`); hidden when read-only.
-- Notifications tab → `Mark all read` (calls `markAllAsRead`); hidden when `unreadCount === 0`.
-- All tab → no action button.
-
-**Tab state**
-- Initialise from `searchParams.get("tab")`, default `"all"`. Valid: `all | messages | notifications`. Anything else falls back to `all`.
-- On tab change, `setSearchParams({ tab })` so URLs stay shareable.
-- Legacy `?type=` mapping (used by current InboxPage):
-  - `?type=message` → `tab=messages`
-  - `?type=announcement` → `tab=all` *(no dedicated tab)*
-  - `?type=task` → `tab=all` *(tasks live on `/client/tasks`)*
-  - anything else → `tab=all`
-
-## Rewritten `useClientInbox.ts`
-
-No RPC. Compose the two existing hooks and normalise.
-
-```ts
-type UnifiedInboxItem = {
-  item_type: 'message' | 'notification';
-  id: string;
-  title: string;
-  body: string | null;
-  link: string | null;
-  created_at: string;
-  is_read: boolean;
-};
-
-export function useClientInbox() {
-  const comms = useClientCommunications();   // { conversations, isLoading, ... }
-  const notif = useClientNotifications();    // { notifications, isLoading, ... }
-
-  const items: UnifiedInboxItem[] = useMemo(() => {
-    const m = comms.conversations.map(c => ({
-      item_type: 'message' as const,
-      id: c.id,
-      title: c.subject || c.topic || 'General',
-      body: c.last_message_preview ?? null,
-      link: `/client/inbox?tab=messages&thread=${c.id}`,
-      created_at: c.last_message_at ?? c.created_at,
-      is_read: !c.isUnread,
-    }));
-    const n = notif.notifications.map(x => ({
-      item_type: 'notification' as const,
-      id: x.id,
-      title: x.title,
-      body: x.message ?? null,
-      link: x.link ?? '/client/inbox?tab=notifications',
-      created_at: x.created_at,
-      is_read: x.is_read,
-    }));
-    return [...m, ...n].sort(
-      (a, b) => +new Date(b.created_at) - +new Date(a.created_at)
-    );
-  }, [comms.conversations, notif.notifications]);
-
-  return {
-    items,
-    isLoading: comms.isLoading || notif.isLoading,
-    unreadCount: items.filter(i => !i.is_read).length,
-  };
-}
-```
-
-`InboxItemRow` currently expects the full `InboxItem` shape (`inbox_id`, `preview`, `unread`, `due_at`, `status`, `action_required`). Two minimal changes to keep it working with the new merged shape:
-- Map unified items into a compatible adapter (`inbox_id=id`, `preview=body`, `unread=!is_read`, `due_at=null`, `status=null`, `action_required=false`, `source_id=id`) when rendering inside the All tab. No edits to `InboxItemRow` itself.
-- Existing `TYPE_CONFIG.message` / fallback keeps the visual tag-by-source treatment.
-
-## Routing changes (`src/App.tsx`)
-
-Replace the two existing route elements with `<Navigate>` redirects (preserves bookmarks):
-
-```tsx
-<Route path="/client/communications"
-  element={<Navigate to="/client/inbox?tab=messages" replace />} />
-<Route path="/client/notifications"
-  element={<Navigate to="/client/inbox?tab=notifications" replace />} />
-```
-
-Drop the now-unused lazy imports for the two deleted wrappers.
-
-## Sidebar (`ClientSidebar.tsx`)
-
-Remove the Notifications + Communications entries. The existing **Inbox** entry is the unified hub. Drop unused icon imports.
-
-## Topbar bell (`ClientTopbar.tsx`)
-
-- "View all" link → `/client/inbox?tab=notifications`.
-- Per-row fallback link → `/client/inbox?tab=notifications`.
-- Cap displayed list to 5: `filteredClientNotifications.slice(0, 5)`.
-- Otherwise unchanged.
-
-## Acceptance verification
-
-- Side nav shows one inbox-related item; Communications and Notifications gone.
-- `/client/inbox` loads with **3** tabs: All / Messages / Notifications.
-- All tab shows merged messages + notifications, newest first; no `rpc_get_inbox_items` 404 in console.
-- `/client/communications` and `/client/notifications` redirect correctly.
-- `?type=announcement` resolves to `tab=all`.
-- Bell popover look/data unchanged, capped at 5, "View all" routes into the new tab.
-- "New Message" appears only on Messages tab; "Mark all read" only on Notifications tab when there are unreads.
-- `/client/tasks` and bell unread-count logic untouched.
+- Pass `auditId` into the hook (already does: `useReleaseReport(audit.id)`).
+- Remove the amber `<Alert>` warning banner at lines 559–564 (the AlertDialog at 572–588 already states the same thing). Keep the textarea, helper copy, and dialog as-is.
+- Add `maxLength={4000}` to the notes `<Textarea>` to mirror the server limit.
+- The existing released-state card (lines 592+) already shows "Released on …" and a revoke control, satisfying the "disabled released state with timestamp" requirement.
 
 ## Out of scope
 
-DB schema, RLS, edge functions, server-side inbox aggregation RPC (logged as post-launch enhancement), `priority_inbox_actions`, Tasks page.
+- No edge-function code changes (it already exists and is tested).
+- No DB migrations.
+- No changes to the revoke flow, PDF generation, or client notifications.
+- "View release log" link: skipped — there is no audit-log surface on this page today; adding one is a separate task.
+
+## Acceptance
+
+- Clicking "Release Report to Client" opens the confirmation dialog, then POSTs to `/functions/v1/release-audit-report` with the user's JWT.
+- 200 → success toast, page refetches, card flips to green "Released on …" state.
+- 409 → info toast with prior release date, card flips to released state.
+- 422 → error toast with server message, button remains enabled.
+- 403 / 401 / 500 / network → generic error toast, button remains enabled.
+- Notes >4000 chars are rejected client-side before the request fires.
