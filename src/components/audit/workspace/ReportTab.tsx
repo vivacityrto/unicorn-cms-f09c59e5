@@ -12,8 +12,10 @@ import {
   useRevokeReport,
   useDraftExecutiveSummary,
   useRecordExecutiveSummaryDecision,
+  useGenerateClientAuditReport,
   type ExecSummaryResponse,
 } from '@/hooks/useAuditReport';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuditActions, useUpdateAudit } from '@/hooks/useAuditWorkspace';
 import { useAuditAppointments } from '@/hooks/useAuditSchedule';
 import {
@@ -77,6 +79,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   const updateAudit = useUpdateAudit(audit.id);
   const draftExecSummary = useDraftExecutiveSummary(audit.id);
   const recordDecision = useRecordExecutiveSummaryDecision();
+  const generateReport = useGenerateClientAuditReport(audit.id);
   const { openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
   const { data: progress } = useAuditProgress(audit.id);
   const findingsRequired = progress?.findings_required ?? 0;
@@ -165,13 +168,28 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
       setSoftGuardOpen(true);
       return;
     }
-    // Backend generation is still pending — show a friendly notice.
-    toast.info('Report generation is coming soon.');
+    generateReport.mutate();
   };
 
   const proceedToGenerate = () => {
     setSoftGuardOpen(false);
-    toast.info('Report generation is coming soon.');
+    generateReport.mutate();
+  };
+
+  const handleDownloadPdf = async () => {
+    const path = (audit as any).report_pdf_path as string | null | undefined;
+    if (!path) {
+      toast.error('No PDF available yet.');
+      return;
+    }
+    const { data, error } = await supabase.storage
+      .from('audit-reports')
+      .createSignedUrl(path, 60);
+    if (error || !data?.signedUrl) {
+      toast.error("Couldn't open the PDF. Try regenerating it.");
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener');
   };
 
   const scrollToFirstIncomplete = () => {
@@ -264,7 +282,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
                 <FileText className="h-4 w-4" />
                 Last generated: {new Date(audit.report_generated_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
               </div>
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
                 <Download className="h-3 w-3 mr-1" /> Download PDF
               </Button>
             </div>
@@ -273,15 +291,24 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
               <Clock className="h-4 w-4" /> No report generated yet
             </div>
           )}
-          <Button onClick={handleGenerateClick}>
-            <FileText className="h-4 w-4 mr-2" />
-            Generate Report
+          <Button onClick={handleGenerateClick} disabled={generateReport.isPending}>
+            {generateReport.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating PDF report...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                {audit.report_generated_at ? 'Regenerate Report' : 'Generate Report'}
+              </>
+            )}
           </Button>
-          <p className="text-xs text-muted-foreground">
-            {incompleteCount > 0
-              ? `${incompleteCount} response(s) still need attention before this audit is complete.`
-              : 'Report generation is coming soon. The edge function will be built in a follow-up.'}
-          </p>
+          {incompleteCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {incompleteCount} response(s) still need attention before this audit is complete.
+            </p>
+          )}
         </CardContent>
       </Card>
 

@@ -183,6 +183,66 @@ export function useReleaseReport(auditId: string | undefined) {
   });
 }
 
+export function useGenerateClientAuditReport(auditId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!auditId) throw new Error('No audit ID');
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        toast.error("Couldn't generate the report. Try again in a moment.");
+        throw new Error('NO_SESSION');
+      }
+
+      let response: Response;
+      try {
+        response = await fetch(`${SUPABASE_URL}/functions/v1/generate-client-audit-report`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ audit_id: auditId }),
+        });
+      } catch {
+        toast.error("Couldn't generate the report. Try again in a moment.");
+        throw new Error('NETWORK');
+      }
+
+      let body: any = {};
+      try { body = await response.json(); } catch { /* empty body */ }
+
+      if (response.status === 200) {
+        const pages = body?.pages;
+        toast.success(pages ? `Report generated (${pages} pages)` : 'Report generated');
+        if (body?.download_url) {
+          try { window.open(body.download_url, '_blank', 'noopener'); } catch { /* popup blocked */ }
+        }
+        return body;
+      }
+
+      if (response.status === 403) {
+        toast.error(body?.error || "You don't have access to this audit.");
+        throw new Error('FORBIDDEN');
+      }
+
+      // 401, 500, network, other
+      toast.error("Couldn't generate the report. Try again in a moment.");
+      throw new Error(`HTTP_${response.status}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit-details', auditId] });
+      queryClient.invalidateQueries({ queryKey: ['audit', auditId] });
+      queryClient.invalidateQueries({ queryKey: ['client-audit', auditId] });
+      queryClient.invalidateQueries({ queryKey: ['audits'] });
+    },
+  });
+}
+
 export function useAcknowledgeReport(auditId: string | undefined) {
   const queryClient = useQueryClient();
 
