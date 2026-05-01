@@ -10,16 +10,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 const ACCENT = "#7130A0";
 const AUDIENCE_KEY = "administration_assistant";
 
-const categoryTabs = ["All", "Strategic Planning", "Branding & Marketing", "Business Operations", "Governance"];
+const categoryTabs: { label: string; tags: string[] }[] = [
+  { label: "All", tags: [] },
+  { label: "Strategic Planning", tags: ["strategic-planning"] },
+  { label: "Marketing & Brand", tags: ["marketing", "branding"] },
+  { label: "Customer Experience", tags: ["customer-experience"] },
+  { label: "Induction", tags: ["induction"] },
+];
+
+const matchesTab = (course: { tags?: string[] | null }, tags: string[]) =>
+  tags.length === 0 || (course.tags ?? []).some((t) => tags.includes(t));
 
 export default function AdministrationAssistantPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const navigate = useNavigate();
   const { data: courses = [], isLoading } = useAcademyCourses({ audienceKey: AUDIENCE_KEY });
 
-  const filtered = activeFilter === "All"
-    ? courses
-    : courses.filter((c) => (c.tags ?? []).some(t => t === activeFilter));
+  const activeTab = categoryTabs.find((t) => t.label === activeFilter) ?? categoryTabs[0];
+  const filtered = courses.filter((c) => matchesTab(c, activeTab.tags));
 
   return (
     <AcademyPageWrapper
@@ -30,20 +38,23 @@ export default function AdministrationAssistantPage() {
     >
       {/* Filter tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b">
-        {categoryTabs.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActiveFilter(cat)}
-            className={cn(
-              "px-3 py-2 text-sm font-medium whitespace-nowrap rounded-t-md transition-colors",
-              activeFilter === cat
-                ? "text-[#7130A0] border-b-2 border-[#7130A0]"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {cat}
-          </button>
-        ))}
+        {categoryTabs.map((cat) => {
+          const count = courses.filter((c) => matchesTab(c, cat.tags)).length;
+          return (
+            <button
+              key={cat.label}
+              onClick={() => setActiveFilter(cat.label)}
+              className={cn(
+                "px-3 py-2 text-sm font-medium whitespace-nowrap rounded-t-md transition-colors",
+                activeFilter === cat.label
+                  ? "text-[#7130A0] border-b-2 border-[#7130A0]"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {cat.label} ({count})
+            </button>
+          );
+        })}
       </div>
 
       {/* Loading state */}
