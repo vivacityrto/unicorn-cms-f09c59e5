@@ -288,7 +288,7 @@ function validateDraft(raw: unknown): { ok: true; draft: DraftJson } | { ok: fal
     return { ok: false, reason: 'uncertainty_notes must be string or null' };
   }
 
-  // Combined text for content-policy checks.
+  // Combined text for banned-term scan.
   const combined = [r.summary, r.detail, r.standard_reference, r.impact, r.suggested_corrective_action, r.uncertainty_notes ?? '']
     .filter((v): v is string => typeof v === 'string')
     .join('\n');
@@ -296,8 +296,26 @@ function validateDraft(raw: unknown): { ok: true; draft: DraftJson } | { ok: fal
   const banned = findBannedTerm(combined);
   if (banned) return { ok: false, reason: `banned term: "${banned}"` };
 
-  const overlong = findOverlongQuote(combined);
-  if (overlong) return { ok: false, reason: `quote exceeds 30 words: "${overlong}"` };
+  // Per-field scan so the error message names which field tripped the rule.
+  const fields: Array<[string, string]> = [
+    ['summary', r.summary as string],
+    ['detail', r.detail as string],
+    ['standard_reference', r.standard_reference as string],
+    ['impact', r.impact as string],
+    ['suggested_corrective_action', r.suggested_corrective_action as string],
+    ['uncertainty_notes', (r.uncertainty_notes as string) ?? ''],
+  ];
+  for (const [field, text] of fields) {
+    if (!text) continue;
+    const overlong = findOverlongStandardsExcerpt(text);
+    if (overlong) {
+      const over = overlong.words - 30;
+      return {
+        ok: false,
+        reason: `Field '${field}': verbatim Standards excerpt exceeds 30 words (${overlong.words} words, ${over} over). Excerpt: "${overlong.snippet}". Clause citation found nearby: "${overlong.citation}". Suggested fix: paraphrase the Standard's intent, or split into two short quotations of ≤30 words each.`,
+      };
+    }
+  }
 
   return { ok: true, draft: r as unknown as DraftJson };
 }
