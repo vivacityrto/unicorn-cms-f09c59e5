@@ -1,34 +1,58 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useClientTenant } from "@/contexts/ClientTenantContext";
-import type { InboxItem, InboxFilterType } from "@/types/inbox";
+import { useMemo } from "react";
+import { useClientCommunications } from "./useClientCommunications";
+import { useClientNotifications } from "./useClientNotifications";
 
-export function useClientInbox(filter: InboxFilterType = "all") {
-  const { activeTenantId } = useClientTenant();
+/**
+ * Unified shape for the client Inbox "All" tab.
+ * Built client-side by merging conversations + notifications.
+ * No server RPC is involved (a server-side aggregator is logged
+ * as a post-launch enhancement).
+ */
+export interface UnifiedInboxItem {
+  item_type: "message" | "notification";
+  id: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  created_at: string;
+  is_read: boolean;
+}
 
-  const { data: items = [], isLoading, error } = useQuery({
-    queryKey: ["client-inbox", activeTenantId, filter],
-    queryFn: async () => {
-      if (!activeTenantId) return [];
+export function useClientInbox() {
+  const comms = useClientCommunications();
+  const notif = useClientNotifications();
 
-      const params: Record<string, unknown> = {
-        p_tenant_id: activeTenantId,
-        p_limit: 100,
-        p_offset: 0,
-      };
-      if (filter !== "all") {
-        params.p_item_type = filter;
-      }
+  const items: UnifiedInboxItem[] = useMemo(() => {
+    const messageItems: UnifiedInboxItem[] = (comms.conversations || []).map((c) => ({
+      item_type: "message",
+      id: c.id,
+      title: c.subject || c.topic || "General",
+      body: c.last_message_preview ?? null,
+      link: `/client/inbox?tab=messages&thread=${c.id}`,
+      created_at: c.last_message_at ?? c.created_at,
+      is_read: !c.isUnread,
+    }));
 
-      const { data, error } = await (supabase.rpc as any)("rpc_get_inbox_items", params);
-      if (error) throw error;
-      return (data || []) as unknown as InboxItem[];
-    },
-    enabled: !!activeTenantId,
-  });
+    const notificationItems: UnifiedInboxItem[] = (notif.notifications || []).map((n) => ({
+      item_type: "notification",
+      id: n.id,
+      title: n.title,
+      body: n.message ?? null,
+      link: n.link ?? "/client/inbox?tab=notifications",
+      created_at: n.created_at,
+      is_read: n.is_read,
+    }));
 
-  const unreadCount = items.filter((i) => i.unread).length;
-  const actionCount = items.filter((i) => i.action_required).length;
+    return [...messageItems, ...notificationItems].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [comms.conversations, notif.notifications]);
 
-  return { items, isLoading, error, unreadCount, actionCount };
+  const unreadCount = items.filter((i) => !i.is_read).length;
+
+  return {
+    items,
+    isLoading: comms.isLoading || notif.isLoading,
+    unreadCount,
+  };
 }

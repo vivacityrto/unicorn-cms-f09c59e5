@@ -6,7 +6,7 @@ import {
   FolderOpen,
   Library,
   Calendar,
-  Bell,
+  // Bell removed — Notifications consolidated into Inbox
   BarChart3,
   Users,
   Menu,
@@ -16,7 +16,7 @@ import {
   Bot,
   ShieldCheck,
   CheckSquare,
-  MessageSquare,
+  // MessageSquare removed — Communications consolidated into Inbox
   Package2,
   Inbox,
   GraduationCap,
@@ -56,8 +56,6 @@ const academySubItems: SidebarMenuItem[] = [
 const clientMenuItemsAfter: SidebarMenuItem[] = [
   { icon: Library, label: "Resource Hub", path: "/client/resource-hub" },
   { icon: Calendar, label: "Calendar", path: "/client/calendar" },
-  { icon: Bell, label: "Notifications", path: "/client/notifications" },
-  { icon: MessageSquare, label: "Communications", path: "/client/communications" },
   { icon: BarChart3, label: "Reports", path: "/client/reports" },
   { icon: Users, label: "Team", path: "/client/team", adminOnly: true },
   { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },

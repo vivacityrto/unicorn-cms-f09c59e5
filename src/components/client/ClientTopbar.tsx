@@ -171,10 +171,10 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
                   {notifFilter ? 'No notifications of this type' : 'No notifications'}
                 </p>
               ) : (
-                filteredClientNotifications.map((n: any) => (
+                filteredClientNotifications.slice(0, 5).map((n: any) => (
                   <Link
                     key={n.id}
-                    to={n.link || '/client/notifications'}
+                    to={n.link || '/client/inbox?tab=notifications'}
                     onClick={() => { if (!n.is_read) markAsRead(n.id); }}
                     className="block px-3 py-2.5 border-b last:border-0 hover:bg-muted/50 transition-colors border-border"
                   >
@@ -198,7 +198,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
             </div>
             <div className="p-2 border-t border-border">
               <Button variant="ghost" size="sm" className="w-full text-xs" asChild>
-                <Link to="/client/notifications">View all notifications</Link>
+                <Link to="/client/inbox?tab=notifications">View all notifications</Link>
               </Button>
             </div>
           </PopoverContent>

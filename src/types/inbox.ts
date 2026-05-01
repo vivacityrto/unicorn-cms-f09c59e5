@@ -2,7 +2,7 @@ export interface InboxItem {
   inbox_id: string;
   tenant_id: number;
   user_id: string | null;
-  item_type: 'message' | 'task' | 'announcement' | 'rock';
+  item_type: 'message' | 'task' | 'announcement' | 'rock' | 'notification';
   item_source: string;
   source_id: string;
   title: string;
