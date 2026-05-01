@@ -195,14 +195,14 @@ const AcademySettings = lazy(() => import("./pages/academy/AcademySettings"));
 const ClientPreview = lazy(() => import("./pages/ClientPreview"));
 const ClientPreviewAcademy = lazy(() => import("./pages/ClientPreviewAcademy"));
 const ClientCalendarWrapperLegacy = lazy(() => import("./pages/ClientCalendarWrapper"));
-const ClientNotificationsWrapperLegacy = lazy(() => import("./pages/ClientNotificationsWrapper"));
+// ClientNotificationsWrapperLegacy removed — /client/notifications now redirects to /client/inbox?tab=notifications
 
 // Client Portal pages (isolated layout)
 const ClientHomeWrapperNew = lazy(() => import("./pages/client/ClientHomeWrapper"));
 const ClientDocumentsWrapperNew = lazy(() => import("./pages/client/ClientDocumentsWrapper"));
 const ClientResourceHubWrapperNew = lazy(() => import("./pages/client/ClientResourceHubWrapper"));
 const ClientCalendarWrapperNew = lazy(() => import("./pages/client/ClientCalendarWrapper"));
-const ClientNotificationsWrapperNew = lazy(() => import("./pages/client/ClientNotificationsWrapper"));
+// ClientNotificationsWrapperNew removed — consolidated into ClientInboxPage
 const ClientReportsWrapperNew = lazy(() => import("./pages/client/ClientReportsWrapper"));
 const ClientUsersWrapperNew = lazy(() => import("./pages/client/ClientUsersWrapper"));
 const ClientSettingsWrapperNew = lazy(() => import("./pages/client/ClientSettingsWrapper"));
@@ -211,7 +211,7 @@ const ClientProfileWrapperNew = lazy(() => import("./pages/client/ClientProfileW
 const ClientTgaDetailsWrapperNew = lazy(() => import("./pages/client/ClientTgaDetailsWrapper"));
 const ClientFilesWrapperNew = lazy(() => import("./pages/client/ClientFilesWrapper"));
 const ClientTasksWrapperNew = lazy(() => import("./pages/client/ClientTasksWrapper"));
-const ClientCommunicationsWrapperNew = lazy(() => import("./pages/client/ClientCommunicationsWrapper"));
+// ClientCommunicationsWrapperNew removed — consolidated into ClientInboxPage
 const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackagesWrapper"));
 const ClientInboxWrapperNew = lazy(() => import("./pages/client/ClientInboxWrapper"));
 const TeamInboxWrapper = lazy(() => import("./pages/TeamInboxWrapper"));
