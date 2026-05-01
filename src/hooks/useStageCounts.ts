@@ -37,7 +37,8 @@ export function useStageCounts(stageInstanceId: number): StageCounts {
           supabase
             .from('client_task_instances')
             .select('id', { count: 'exact', head: true })
-            .eq('stageinstance_id', stageInstanceId),
+            .eq('stageinstance_id', stageInstanceId)
+            .eq('is_archived', false),
           supabase
             .from('document_instances')
             .select('id', { count: 'exact', head: true })

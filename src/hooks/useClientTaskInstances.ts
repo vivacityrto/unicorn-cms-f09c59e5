@@ -37,6 +37,7 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
         .from('client_task_instances' as any)
         .select('id, clienttask_id, status, due_date, completion_date')
         .eq('stageinstance_id', stageInstanceId)
+        .eq('is_archived', false)
         .order('id')) as { data: any[] | null; error: any };
 
       if (taskResult.error) throw taskResult.error;
