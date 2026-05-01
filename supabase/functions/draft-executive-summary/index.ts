@@ -486,6 +486,10 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
         model: MODEL,
         messages,
         response_format: { type: 'json_object' },
+        generationConfig: {
+          response_mime_type: 'application/json',
+          max_output_tokens: 8192,
+        },
       }),
     });
     if (!res.ok) {
@@ -496,14 +500,14 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
     }
     const data = await res.json();
     const content: string = data.choices?.[0]?.message?.content ?? '';
-    let parsed: unknown = null;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      const m = content.match(/\{[\s\S]*\}/);
-      if (m) {
-        try { parsed = JSON.parse(m[0]); } catch { parsed = null; }
-      }
+    const finishReason = data.choices?.[0]?.finish_reason;
+    const parsed = safeParse(content);
+    if (parsed === null || finishReason === 'length') {
+      console.error('Gemini synthesis unparseable', {
+        finish_reason: finishReason,
+        contentPreview: content.slice(0, 500),
+        usage: data.usage,
+      });
     }
     return { raw: parsed, usage: data.usage ?? {} };
   }
