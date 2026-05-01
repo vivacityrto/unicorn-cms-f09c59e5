@@ -1,50 +1,82 @@
-## Fix: clause filter zeroes out retrieval for non-SRTO-clause audit templates
+## Fix: draft-executive-summary 502 "response not an object"
 
 ### Root cause
 
-`srto_corpus.clause` holds real SRTO 2025 clause numbers (1.1, 1.5, 2.6, 4.1...) plus 102 NULL chunks for legislative instruments. Audit templates like RTO Due Diligence use their own internal section codes (Gov-1, TAQ-1...). When `draft-finding` and `draft-executive-summary` pass these template-internal codes as `clause` to `retrieve-srto-context`, the RPC predicate `c.clause = filter_clause` matches nothing → zero chunks → ungrounded draft with `confidence: "low"`.
+`callModel()` in `draft-executive-summary/index.ts` (lines 474–509) currently sends only OpenAI-style `response_format: { type: 'json_object' }`. The Lovable AI Gateway routes to `google/gemini-2.5-pro`, which does not always honour the OpenAI flag and can return:
 
-The clause string is still useful as **prompt context** (so Gemini knows which audit standard the question maps to). It is **not** a reliable SQL filter because the audit template vocabulary and the corpus vocabulary don't align.
+- JSON wrapped in ```` ```json ```` fences
+- A natural-language preamble ("Here is the executive summary: …")
+- Truncated JSON when the synthesis exceeds the implicit output token cap (17-finding rollup is large)
 
-### Audit of `retrieve-srto-context` (verified, no change needed)
+When `JSON.parse(content)` fails, the regex fallback `content.match(/\{[\s\S]*\}/)` either returns `null` or grabs a malformed slice, so `parsed` ends up as `null`. `validateDraft(null, …)` returns `response not an object`. The retry hits the same conditions and fails identically — hence the 134s wall clock and opaque 502.
 
-- Edge function (`supabase/functions/retrieve-srto-context/index.ts`): `clause` is optional input, only validated when present, and forwarded to the RPC as `filter_clause` (null when absent).
-- RPC (`match_srto_chunks`, latest migration `20260430231030_...sql`, line 48): predicate is `(filter_clause is null or c.clause = filter_clause)` — correct "no filter when null" semantics.
+The same `callModel` shape exists in `draft-finding/index.ts` (lines 486–522). It works today only because its outputs are smaller and luckier; one prompt growth away from the same bug.
 
-So the fix is purely in the two callers. The retrieval service is already well-behaved.
+`analyse-evidence/index.ts` (lines 316–357) has the same vulnerability in a thinner form: `JSON.parse(content)` with no normalisation and no fallback at all.
 
 ### Changes
 
-**1. `supabase/functions/draft-finding/index.ts`** (line ~456)
-Remove `clause: ctx.clause || undefined,` from the body of the `retrieve-srto-context` fetch. Keep `query`, `top_k: 6`, and `framework`. The embedded `audit_statement` already carries the regulatory subject for vector similarity to do its work.
+**1. `supabase/functions/draft-executive-summary/index.ts`**
 
-The `clause` value continues to be passed into the Gemini prompt template (line 204: `QUESTION (clause ${ctx.clause ?? 'n/a'})`) — that is unchanged.
+In the `callModel` body (line 485):
+- Add Gemini-native structured-output hints alongside the existing OpenAI-style flag, so whichever the gateway forwards is honoured:
+  ```ts
+  body: JSON.stringify({
+    model: MODEL,
+    messages,
+    response_format: { type: 'json_object' },
+    generationConfig: {
+      response_mime_type: 'application/json',
+      max_output_tokens: 8192,
+    },
+  })
+  ```
+- Replace the inline `JSON.parse` + regex fallback with a shared `safeParse(raw)` helper (defined once near the top of the file):
+  ```ts
+  function safeParse(raw: string): unknown {
+    let s = (raw ?? '').trim();
+    s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    const firstStruct = s.search(/[{[]/);
+    if (firstStruct > 0) s = s.slice(firstStruct);
+    try { return JSON.parse(s); } catch { /* fall through */ }
+    const m = s.match(/[{[][\s\S]*[}\]]/);
+    if (m) { try { return JSON.parse(m[0]); } catch { /* noop */ } }
+    return null;
+  }
+  ```
+- When `safeParse` returns `null` OR `data.choices?.[0]?.finish_reason === 'length'`, log `console.error('Gemini synthesis unparseable', { finish_reason, contentPreview: content.slice(0, 500), usage: data.usage })` before returning, so future failures are diagnosable from logs.
 
-**2. `supabase/functions/draft-executive-summary/index.ts`** (line ~360)
-Remove `clause,` from the per-clause retrieval body inside the `Promise.allSettled` loop. Keep `query`, `top_k: 4`, and `framework`. The query text already concatenates `summary + detail + clause` (line 348), so the clause string still influences the embedding — it just stops acting as a hard SQL filter.
+**2. `supabase/functions/draft-finding/index.ts`**
 
-The clause continues to appear in the assembled prompt (line 424, 437) and in the `clauses_retrieved` audit log payload (line 597). Unchanged.
+Apply the same three changes defensively in its `callModel` (lines 486–522): add `generationConfig` block, swap to the same `safeParse` helper (duplicated locally — these functions don't share a module), and log `finish_reason` + 500-char content preview when parsing fails. Existing retry/validation flow stays intact.
+
+**3. `supabase/functions/analyse-evidence/index.ts`**
+
+Quick parity hardening at lines 325–353:
+- Add the `generationConfig` block to the request body.
+- Replace `try { raw = JSON.parse(content); } catch { return json({ error: 'AI response was not valid JSON' }, 502); }` with the same `safeParse` helper plus a `console.error` of `finish_reason` and content preview before the 502.
+
+No retry loop is added here — analyse-evidence intentionally fails fast and the user can re-run. The fix purely makes the parse forgiving and the failure observable.
 
 ### Out of scope (confirmed)
 
-- `srto_corpus.clause` column — fine as-is.
-- `retrieve-srto-context` — already treats clause as optional exact-match. No code or doc change required; behaviour already matches the brief's expectation.
-- `match_srto_chunks` RPC — already implements null-safe filter.
-- `analyse-evidence` — does not pass `clause` (already correct).
-- `compliance-assistant` / `compliance-assistant-client` — different RPC, different corpus.
-- Threshold (still 0.5 default), prompt templates, embeddings, and corpus content — all unchanged.
+- Retrieval logic (`retrieve-srto-context`, clause filtering, threshold) — already correct from the prior plan.
+- Prompt templates, system prompts, exemplars (`EXEMPLARS_PENDING` is Phase 1.3).
+- `validateDraft` in `_validation.ts` — its contract is fine; the fix is upstream of it.
+- `compliance-assistant` / `compliance-assistant-client` — different parsing path, not in scope.
+- Model selection — staying on `google/gemini-2.5-pro`.
 
 ### Validation
 
-Re-run the same draft-finding call against Smart Nation's RTO Due Diligence audit:
+After deploy, re-run:
 
 ```bash
-curl -X POST "https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/draft-finding" \
+curl -X POST "https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/draft-executive-summary" \
   -H "Authorization: Bearer <super-admin-jwt>" \
   -H "Content-Type: application/json" \
-  -d '{"audit_id":"3b1fbbee-0c1d-4c9b-9b59-f2d6205ecbdd","response_id":"5ee3ed7f-0dbb-4a68-a5b4-a29e3720fe1f"}'
+  -d '{"audit_id":"3b1fbbee-0c1d-4c9b-9b59-f2d6205ecbdd"}'
 ```
 
-Expected: `corpus_chunks_used` populated with 3-6 entries (likely Practice Guide on Fit and Proper Person Requirements + related), `confidence` is `medium`/`high`, and `uncertainty_notes` no longer reports empty retrieval. `standard_reference` should cite a specific standard or Practice Guide section drawn from the retrieved chunks.
+Expected: 200 with `executive_summary`, `overall_finding`, `risk_rationale`, `action_plan_rollup`, `confidence`, `uncertainty_notes` populated and persisted to `client_audit_log`. If Gemini still emits unparseable output, the edge function logs will now show `finish_reason` + the first 500 chars of the response, turning future failures from opaque 502s into a one-look diagnosis.
 
-`draft-executive-summary` will similarly start populating per-clause excerpts in the prompt block for DD-style audits, while continuing to work for SRTO-clause audits (where the embedded query naturally surfaces the matching clause anyway).
+`draft-finding` and `analyse-evidence` should continue passing their existing flows; the changes are additive and defensive.

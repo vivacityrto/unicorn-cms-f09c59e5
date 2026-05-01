@@ -43,6 +43,22 @@ function json(body: unknown, status: number) {
   });
 }
 
+/**
+ * Defensive parser for Gemini output. Handles markdown fences, natural-language
+ * preambles, and trailing chatter — returns null only if no JSON object/array
+ * can be recovered. Belt-and-braces alongside response_mime_type=application/json.
+ */
+function safeParse(raw: string): unknown {
+  let s = (raw ?? '').trim();
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  const firstStruct = s.search(/[{[]/);
+  if (firstStruct > 0) s = s.slice(firstStruct);
+  try { return JSON.parse(s); } catch { /* fall through */ }
+  const m = s.match(/[{[][\s\S]*[}\]]/);
+  if (m) { try { return JSON.parse(m[0]); } catch { /* noop */ } }
+  return null;
+}
+
 // validateDraft + types now live in _validation.ts (extracted so the test
 // suite can import them without transitively executing Deno.serve()).
 
@@ -486,6 +502,10 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
         model: MODEL,
         messages,
         response_format: { type: 'json_object' },
+        generationConfig: {
+          response_mime_type: 'application/json',
+          max_output_tokens: 8192,
+        },
       }),
     });
     if (!res.ok) {
@@ -496,14 +516,14 @@ Return your synthesis as JSON matching the schema in the system prompt. Every li
     }
     const data = await res.json();
     const content: string = data.choices?.[0]?.message?.content ?? '';
-    let parsed: unknown = null;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      const m = content.match(/\{[\s\S]*\}/);
-      if (m) {
-        try { parsed = JSON.parse(m[0]); } catch { parsed = null; }
-      }
+    const finishReason = data.choices?.[0]?.finish_reason;
+    const parsed = safeParse(content);
+    if (parsed === null || finishReason === 'length') {
+      console.error('Gemini synthesis unparseable', {
+        finish_reason: finishReason,
+        contentPreview: content.slice(0, 500),
+        usage: data.usage,
+      });
     }
     return { raw: parsed, usage: data.usage ?? {} };
   }
