@@ -12,8 +12,10 @@ import {
   useRevokeReport,
   useDraftExecutiveSummary,
   useRecordExecutiveSummaryDecision,
+  useGenerateClientAuditReport,
   type ExecSummaryResponse,
 } from '@/hooks/useAuditReport';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuditActions, useUpdateAudit } from '@/hooks/useAuditWorkspace';
 import { useAuditAppointments } from '@/hooks/useAuditSchedule';
 import {
