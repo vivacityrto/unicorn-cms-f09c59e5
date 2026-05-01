@@ -6,7 +6,7 @@ import {
   FolderOpen,
   Library,
   Calendar,
-  Bell,
+  // Bell removed — Notifications consolidated into Inbox
   BarChart3,
   Users,
   Menu,
@@ -16,7 +16,7 @@ import {
   Bot,
   ShieldCheck,
   CheckSquare,
-  MessageSquare,
+  // MessageSquare removed — Communications consolidated into Inbox
   Package2,
   Inbox,
   GraduationCap,
