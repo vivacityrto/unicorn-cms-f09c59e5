@@ -161,13 +161,24 @@ export function validateDraft(
   const banned = findBannedTerm(combined);
   if (banned) return { ok: false, reason: `banned term: "${banned}"` };
 
-  const overlong = findOverlongQuote(combined);
-  if (overlong) {
-    const over = overlong.words - 30;
-    return {
-      ok: false,
-      reason: `quote exceeds 30 words (${overlong.words} words, ${over} over): "${overlong.snippet}"`,
-    };
+  // Per-field scan so the error message names which field tripped the rule.
+  const fields: Array<[string, string]> = [
+    ['executive_summary', r.executive_summary as string],
+    ['overall_finding', r.overall_finding as string],
+    ['risk_rationale', r.risk_rationale as string],
+    ['action_plan_rollup', JSON.stringify(rollup)],
+    ['uncertainty_notes', (r.uncertainty_notes as string) ?? ''],
+  ];
+  for (const [field, text] of fields) {
+    if (!text) continue;
+    const overlong = findOverlongStandardsExcerpt(text);
+    if (overlong) {
+      const over = overlong.words - 30;
+      return {
+        ok: false,
+        reason: `Field '${field}': verbatim Standards excerpt exceeds 30 words (${overlong.words} words, ${over} over). Excerpt: "${overlong.snippet}". Clause citation found nearby: "${overlong.citation}". Suggested fix: paraphrase the Standard's intent, or split into two short quotations of ≤30 words each.`,
+      };
+    }
   }
 
   return { ok: true, draft: r as unknown as DraftJson };
