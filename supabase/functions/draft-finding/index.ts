@@ -74,16 +74,33 @@ function findBannedTerm(text: string): string | null {
 }
 
 /**
- * Reject any quoted span (text inside straight or curly double-quotes)
- * longer than 30 words. Allows short verbatim quotes from the Standards;
- * blocks wholesale copy-paste.
+ * Detect a verbatim Standards excerpt longer than 30 words.
+ *
+ * Discriminates Standards excerpts (quoted span sitting next to a clause
+ * citation) from AI prose-in-quotes (stylistic emphasis without a citation).
+ * Only the former is rejected — the 30-word cap is a copyright/compliance
+ * guard for verbatim Standards reproduction, not a stylistic constraint.
  */
-function findOverlongQuote(text: string): string | null {
+const CLAUSE_CITATION = /\b(?:Std|Standard|Clause|Section|s\.?)\s*\d+(?:\.\d+)?(?:\([a-z]\))?/i;
+const FRAMEWORK_CITATION = /\b(?:SRTOs?\s*2025|National\s*Code\s*2018|ESOS\s*Act)\s+(?:Standard|Clause|Section|s\.?)\s*\d/i;
+const ADJACENT_WINDOW = 50;
+
+function findOverlongStandardsExcerpt(
+  text: string,
+): { snippet: string; words: number; citation: string } | null {
   const re = /["“]([^"”]{30,})["”]/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
-    const wordCount = m[1].trim().split(/\s+/).length;
-    if (wordCount > 30) return m[1].slice(0, 80) + '…';
+    const words = m[1].trim().split(/\s+/).length;
+    if (words <= 30) continue;
+    const start = m.index;
+    const end = m.index + m[0].length;
+    const before = text.slice(Math.max(0, start - ADJACENT_WINDOW), start);
+    const after = text.slice(end, end + ADJACENT_WINDOW);
+    const ctx = before + ' ' + after;
+    const citation = ctx.match(FRAMEWORK_CITATION)?.[0] ?? ctx.match(CLAUSE_CITATION)?.[0];
+    if (!citation) continue; // AI prose-in-quotes — not a Standards excerpt; skip.
+    return { snippet: m[1].slice(0, 120) + '…', words, citation };
   }
   return null;
 }
@@ -106,7 +123,13 @@ WHAT YOU MAY DO
 
 WHAT YOU MUST NOT DO
 - Invent facts the auditor did not observe. If the auditor's note says "no evidence of validation", do NOT write "validation has not been conducted in the past three years" — that is fabrication.
-- Place more than 30 whitespace-delimited words inside any single pair of double quotes (straight " or curly " "). The validator counts words inside each quoted span; a 31-word quote fails the draft. If a passage is longer, paraphrase the Standard's intent in your own words, or split it into two short quotations with a paraphrase between them.
+- Quote a Standards excerpt longer than 30 words. The validator rejects any double-quoted span over 30 words when it sits next to a clause citation; paraphrase, or split into two short quotations.
+
+QUOTATION CONVENTIONS — STRICT
+- Use double quotes ONLY for verbatim excerpts from Standards documents (SRTOs 2025, National Code 2018, ESOS Act). Always include the clause citation immediately before or after the quoted span, e.g. "...continuous improvement..." (Std 1.5).
+- For your own emphasis, characterisation, or framing, use NO markup. Write directly in your own voice without quotation marks.
+- For terms of art or technical labels, use italics or no markup — never double quotes.
+- A double-quoted span without a nearby clause citation will be treated as a malformed Standards excerpt.
 - Generate findings for compliant or NA responses — only at_risk and non_compliant ratings warrant a finding.
 - Output anything other than valid JSON matching the schema below.
 - Mention that you are an AI, that this is a draft, or that a human will review — the calling system handles those signals.
@@ -271,7 +294,7 @@ function validateDraft(raw: unknown): { ok: true; draft: DraftJson } | { ok: fal
     return { ok: false, reason: 'uncertainty_notes must be string or null' };
   }
 
-  // Combined text for content-policy checks.
+  // Combined text for banned-term scan.
   const combined = [r.summary, r.detail, r.standard_reference, r.impact, r.suggested_corrective_action, r.uncertainty_notes ?? '']
     .filter((v): v is string => typeof v === 'string')
     .join('\n');
@@ -279,8 +302,26 @@ function validateDraft(raw: unknown): { ok: true; draft: DraftJson } | { ok: fal
   const banned = findBannedTerm(combined);
   if (banned) return { ok: false, reason: `banned term: "${banned}"` };
 
-  const overlong = findOverlongQuote(combined);
-  if (overlong) return { ok: false, reason: `quote exceeds 30 words: "${overlong}"` };
+  // Per-field scan so the error message names which field tripped the rule.
+  const fields: Array<[string, string]> = [
+    ['summary', r.summary as string],
+    ['detail', r.detail as string],
+    ['standard_reference', r.standard_reference as string],
+    ['impact', r.impact as string],
+    ['suggested_corrective_action', r.suggested_corrective_action as string],
+    ['uncertainty_notes', (r.uncertainty_notes as string) ?? ''],
+  ];
+  for (const [field, text] of fields) {
+    if (!text) continue;
+    const overlong = findOverlongStandardsExcerpt(text);
+    if (overlong) {
+      const over = overlong.words - 30;
+      return {
+        ok: false,
+        reason: `Field '${field}': verbatim Standards excerpt exceeds 30 words (${overlong.words} words, ${over} over). Excerpt: "${overlong.snippet}". Clause citation found nearby: "${overlong.citation}". Suggested fix: paraphrase the Standard's intent, or split into two short quotations of ≤30 words each.`,
+      };
+    }
+  }
 
   return { ok: true, draft: r as unknown as DraftJson };
 }

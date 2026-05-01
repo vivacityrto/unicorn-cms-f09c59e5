@@ -104,20 +104,49 @@ Deno.test('validateDraft: rejects banned term — board', () => {
   assert(result.reason.toLowerCase().includes('banned'));
 });
 
-Deno.test('validateDraft: rejects overlong verbatim quote', () => {
-  // 35-word quote inside straight double-quotes.
+Deno.test('validateDraft: rejects overlong verbatim Standards excerpt (with citation)', () => {
+  // 35-word quote inside straight double-quotes, with a clause citation adjacent.
   const longQuote =
     '"' +
     Array.from({ length: 35 }, (_, i) => `word${i}`).join(' ') +
     '"';
   const result = validateDraft(
     goodDraft({
-      risk_rationale: `The Standard says ${longQuote}, which the RTO has not met.`,
+      risk_rationale: `SRTOs 2025 Standard 1.5 says ${longQuote}, which the RTO has not met.`,
     }),
     validIds,
   );
   assert(!result.ok);
-  assert(result.reason.includes('quote'));
+  assert(result.reason.includes('Standards excerpt exceeds 30 words'));
+  assert(result.reason.includes("Field 'risk_rationale'"));
+});
+
+Deno.test('validateDraft: ACCEPTS overlong AI prose-in-quotes (no citation)', () => {
+  // 50-word quoted span with NO clause citation nearby — this is AI stylistic
+  // emphasis, not a Standards excerpt, and must pass.
+  const longProse =
+    '"' +
+    Array.from({ length: 50 }, (_, i) => `phrase${i}`).join(' ') +
+    '"';
+  const result = validateDraft(
+    goodDraft({
+      risk_rationale: `The auditor characterised the gap as ${longProse} — a framing the RTO accepted.`,
+    }),
+    validIds,
+  );
+  assert(result.ok, `expected ok, got: ${!result.ok && result.reason}`);
+});
+
+Deno.test('validateDraft: accepts a 30-word Standards excerpt at the cap', () => {
+  const exactly30 =
+    '"' + Array.from({ length: 30 }, (_, i) => `word${i}`).join(' ') + '"';
+  const result = validateDraft(
+    goodDraft({
+      risk_rationale: `Std 1.5 reads ${exactly30}, which the RTO has not met.`,
+    }),
+    validIds,
+  );
+  assert(result.ok, `expected ok, got: ${!result.ok && result.reason}`);
 });
 
 Deno.test('validateDraft: rejects fabricated finding ID — highest-leverage guardrail', () => {
@@ -163,15 +192,15 @@ Deno.test('validateDraft: rejects invalid priority_group priority', () => {
   assert(result.reason.includes('priority'));
 });
 
-Deno.test('validateDraft: overlong quote reason exposes parseable word count', () => {
+Deno.test('validateDraft: overlong Standards-excerpt reason exposes parseable word count', () => {
   const longQuote =
     '"' + Array.from({ length: 35 }, (_, i) => `word${i}`).join(' ') + '"';
   const result = validateDraft(
-    goodDraft({ risk_rationale: `Standard says ${longQuote}.` }),
+    goodDraft({ risk_rationale: `Std 1.5 says ${longQuote}.` }),
     validIds,
   );
   assert(!result.ok);
-  const m = !result.ok && result.reason.match(/quote exceeds 30 words \((\d+) words, (\d+) over\)/);
+  const m = !result.ok && result.reason.match(/verbatim Standards excerpt exceeds 30 words \((\d+) words, (\d+) over\)/);
   assert(m, `reason should expose word count, got: ${!result.ok && result.reason}`);
   assertEquals(Number((m as RegExpMatchArray)[1]), 35);
   assertEquals(Number((m as RegExpMatchArray)[2]), 5);
@@ -184,7 +213,7 @@ Deno.test('validateDraft: word-count regex does NOT match non-quote failures', (
     validIds,
   );
   assert(!result.ok);
-  const m = !result.ok && result.reason.match(/quote exceeds 30 words \((\d+) words, (\d+) over\)/);
+  const m = !result.ok && result.reason.match(/verbatim Standards excerpt exceeds 30 words \((\d+) words, (\d+) over\)/);
   assertEquals(m, null, `non-quote reason must not match the quote-retry regex: ${!result.ok && result.reason}`);
 });
 
