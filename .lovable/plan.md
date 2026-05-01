@@ -1,42 +1,79 @@
-## Wire "Generate Report" to `generate-client-audit-report` edge function
+## Wire `/client/reports` to display released audit reports
 
-The Report tab's "Generate Report" button currently shows a "coming soon" toast (`ReportTab.tsx` line 169 / 174). The "Download PDF" button next to "Last generated" is also a stub with no `onClick`. Wire both to the new edge function and surface real status.
+Replace the placeholder card in `src/pages/client/ClientReportsWrapper.tsx` with a real list of released audits, gated by the existing `tenant_read_v2` RLS policy. Page header stays untouched.
 
-### 1. New hook: `useGenerateClientAuditReport(auditId)` in `src/hooks/useAuditReport.ts`
+### 1. New hook: `src/hooks/useReleasedAudits.ts`
 
-Mirror the pattern of `useReleaseReport` (raw `fetch` so we can branch on status codes cleanly).
+```ts
+useQuery({
+  queryKey: ['client-released-audits'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('client_audits')
+      .select(`
+        id, audit_type, snapshot_rto_name, snapshot_rto_number,
+        snapshot_cricos_code, conducted_at, score_pct, score_total,
+        score_max, risk_rating, report_pdf_path, report_released_at,
+        report_release_notes, report_acknowledged_at
+      `)
+      .order('report_released_at', { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  },
+  staleTime: 60_000,
+})
+```
 
-- POST to `${SUPABASE_URL}/functions/v1/generate-client-audit-report` with `Authorization: Bearer <session.access_token>`, `apikey`, `Content-Type: application/json`.
-- Body: `{ audit_id: auditId }`.
-- Status handling:
-  | Status | Behaviour |
-  |---|---|
-  | 200 | `toast.success("Report generated (${pages} pages)")`. Open `download_url` in new tab via `window.open(download_url, '_blank', 'noopener')`. Invalidate `['audit-details', auditId]`, `['audit', auditId]`, `['client-audit', auditId]`, `['audits']` so `report_pdf_path` / `report_generated_at` flow back in. Return body so the caller can use `download_url`. |
-  | 403 | `toast.error(body.error \|\| "You don't have access to this audit.")` |
-  | 401 / 500 / network / other | `toast.error("Couldn't generate the report. Try again in a moment.")` |
-- Per-status toasts emitted inside `mutationFn` (matches `useReleaseReport` style). No `onError` toast to avoid double-fire.
+No client-side filter — RLS filters to released, tenant-visible rows.
 
-### 2. `src/components/audit/workspace/ReportTab.tsx` — wire the buttons
+### 2. New component: `src/components/client/ReleasedAuditCard.tsx`
 
-- Import and instantiate `const generateReport = useGenerateClientAuditReport(audit.id);`
-- Replace `proceedToGenerate` and the `else` branch in `handleGenerateClick` (lines 168–169 and 172–175) with `generateReport.mutate()` — keep the existing `softGuardOpen` confirmation flow for incomplete audits (`incompleteCount > 0`); on "Generate anyway" call `generateReport.mutate()`.
-- "Generate Report" button (line 276):
-  - `disabled={generateReport.isPending}`
-  - When `isPending`, swap label/icon to `<Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating PDF report...`
-- "Download PDF" button (lines 267–269): wire `onClick` to open `audit.report_pdf_path` via a signed URL. Simplest approach matching the rest of the codebase: call the edge function again is overkill — instead, generate a short-lived signed URL on click using `supabase.storage.from('audit-reports').createSignedUrl(audit.report_pdf_path, 60)` and `window.open(signed.signedUrl, '_blank')`. Bucket name comes from the 200 response (`bucket: 'audit-reports'`) and is stable.
-- Update the helper copy under the button (line 280–284): when `incompleteCount === 0`, drop the "coming soon" sentence and show nothing (or `"Generates a timestamped PDF and stores it on the audit."`).
+Single card per audit. Composition:
 
-### 3. Out of scope (leave untouched)
+- **Header row** (flex, wraps): `AUDIT_TYPE_LABELS[audit_type]` as bold title + `<AuditRiskBadge risk={risk_rating} />` + (right-aligned) `Released DD MMM YYYY` from `report_released_at`.
+- **Sub-line**: `snapshot_rto_name` (fallback "—") · `RTO {snapshot_rto_number}` if present · `CRICOS {snapshot_cricos_code}` if present. Muted text.
+- **Score line** (only if `score_pct != null`): `"{score_pct}%"` plus `" ({score_total}/{score_max})"` if both numerator/denominator present. Bold percent, muted parenthetical.
+- **Release notes** (only if `report_release_notes`): italic, `text-sm text-muted-foreground`, max 3 lines via `line-clamp-3`.
+- **Footer actions** (right-aligned):
+  - `Download PDF` — primary cyan button. Disabled when `!report_pdf_path`. On click: `supabase.storage.from('audit-reports').createSignedUrl(report_pdf_path, 600)` → `window.open(signedUrl, '_blank', 'noopener')`. Toast on error: "Couldn't open the PDF. Try again in a moment."
+  - `Acknowledge` — `variant="outline"`, only rendered when `report_acknowledged_at == null`. Wrapped in a `Tooltip` saying "Coming soon — acknowledge flow ships in Phase 3." `disabled` + onClick noop. When `report_acknowledged_at` is set, render a small green check chip: `Acknowledged DD MMM YYYY`.
 
-- The legacy `generate-audit-report` edge function — orphan it; not called from anywhere we're touching.
-- Versioning of historical PDFs — each click overwrites `report_pdf_path` server-side, old files remain in the bucket.
-- Re-generate confirmation dialog — single click is fine per brief.
+Date helper inline: `new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })`.
+
+### 3. Rewrite `src/pages/client/ClientReportsWrapper.tsx`
+
+```text
+ClientLayout
+  Header (existing — keep "Reports" + subtitle)
+  ── if isLoading: 3 × skeleton cards (Card + CardContent w/ Skeleton lines)
+  ── if error: Card with red AlertTriangle + "Couldn't load your reports. Try refreshing."
+  ── if data.length === 0:
+       Existing empty-state Card (BarChart3 icon + "Reports will be
+       available here.") + new subtitle paragraph: "Once your consultant
+       releases an audit report, it will appear here."
+  ── else:
+       <div className="space-y-4">
+         {data.map(a => <ReleasedAuditCard key={a.id} audit={a} />)}
+       </div>
+  Coming-soon block (always rendered, below):
+    Card (border-dashed)
+      Title: "Assessment Validation"
+      Body: "We're building an assessment validation tool to give you
+             deeper insight into how your assessments are performing.
+             Coming soon."
+      No action button.
+```
+
+### 4. No DB / RLS / storage changes
+
+- Read query relies on the existing `tenant_read_v2` policy on `client_audits`.
+- Storage bucket `audit-reports` is private; signed URLs are generated client-side. The brief flags storage-RLS verification as a Phase 2 follow-up — leave as-is since paths embed the audit UUID and aren't guessable.
+- No migrations, no edge functions, no edits to `useAuditReport.ts`.
 
 ### Acceptance
 
-- Click "Generate Report" with a complete audit → spinner appears, button disabled, ~3–15s later toast `"Report generated (N pages)"`, the PDF opens in a new tab, and the card flips to show "Last generated: <today>" with a working "Download PDF" button.
-- Click "Generate Report" with incomplete responses → existing soft-guard dialog appears; "Generate anyway" triggers the same flow.
-- 403 → error toast with server message; button re-enabled.
-- 401 / 500 / network → generic error toast; button re-enabled.
-- "Release Report to Client" subsequently succeeds because `report_pdf_path` is now populated.
-- No call to the old `generate-audit-report` function from the Report tab.
+- Empty tenant → original placeholder card with the new subtitle, plus the "Assessment Validation — Coming soon" card below.
+- Tenant with N released audits → N cards, newest first, each with audit type, risk badge, RTO/CRICOS line, release date, score line (when present), optional release notes, working `Download PDF` opening the signed URL in a new tab, and an `Acknowledge` button that's disabled with a "coming soon" tooltip when `report_acknowledged_at IS NULL`.
+- Audits without `report_pdf_path` show a disabled Download PDF button (tooltip: "PDF not generated yet").
+- Loading and error states render gracefully (skeletons / error card).
+- No client-side `.eq('report_client_visible', true)` filters — RLS does that.
