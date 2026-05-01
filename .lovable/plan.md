@@ -1,112 +1,159 @@
-# Migrate Ask Viv to srto_corpus
+# Unify Client Inbox Hub (Revised)
 
-## Goal
+Collapse three side-nav items (Inbox, Communications, Notifications) into a single **Inbox** hub at `/client/inbox` with three tabs: **All / Messages / Notifications**. Old URLs redirect; the topbar bell stays as a quick-peek popover. Frontend-only — no DB, RLS, edge function, or new RPC changes.
 
-Both `compliance-assistant` and `compliance-assistant-client` currently call `search_vector_embeddings` against `vector_embeddings` (0 rows → ungrounded answers). Re-point them at `match_srto_chunks` over `srto_corpus` (24 docs / 121 chunks), matching the pattern used by `retrieve-srto-context`, `draft-finding`, and `draft-executive-summary`.
+## Key corrections vs. prior draft
 
-No DB changes. No RLS changes. `match_srto_chunks` is security-invoker; the existing user-JWT supabase client is already passed into `performVectorSearch`, so RLS is preserved.
+- **Announcements tab dropped.** No `announcement` value exists in `user_notifications.type` and no announcements table exists. Tabs are 3, not 4.
+- **`rpc_get_inbox_items` is never called.** That RPC doesn't exist and has been silently 404'ing. The All tab is built by client-side merging the two working hooks.
+- Legacy `?type=announcement` traffic redirects to `?tab=all`.
 
-## Files
+## Files touched
 
-- `supabase/functions/compliance-assistant/index.ts`
-- `supabase/functions/compliance-assistant-client/index.ts`
+**Modified**
+- `src/components/client/ClientSidebar.tsx` — remove Notifications + Communications nav items
+- `src/components/client/ClientTopbar.tsx` — repoint "View all" + per-row fallback to `/client/inbox?tab=notifications`; cap popover list to 5
+- `src/pages/ClientInboxPage.tsx` — rebuild as a 3-tab hub
+- `src/hooks/useClientInbox.ts` — replace RPC call with client-side merge of `useClientCommunications` + `useClientNotifications`
+- `src/App.tsx` — replace the two routes with `<Navigate>` redirects; drop now-unused lazy imports
 
-## Changes per file
+**Deleted**
+- `src/pages/ClientCommunicationsPage.tsx`
+- `src/pages/ClientNotifications.tsx`
+- `src/pages/client/ClientCommunicationsWrapper.tsx`
+- `src/pages/client/ClientNotificationsWrapper.tsx`
+- `src/pages/ClientNotificationsWrapper.tsx` (legacy wrapper)
 
-Both functions have an almost-identical `performVectorSearch(supabase, tenantId, query)` helper and a local `VectorResult` interface. Changes mirror across both.
+**Preserved (reused inside tabs)**
+- `src/hooks/useClientCommunications.ts` — Messages tab + All-tab merge source
+- `src/hooks/useClientNotifications.tsx` — Notifications tab + All-tab merge source + bell
+- `src/hooks/useNotificationPrefs.ts` — category filtering inside Notifications tab
+- `src/components/client/NewConversationDialog.tsx` — New Message dialog
+- `src/components/inbox/InboxItemRow.tsx` — All-tab rows (visual source tag)
 
-### 1. Swap the RPC call
+## Page architecture
 
-`compliance-assistant/index.ts` lines 474–485 and `compliance-assistant-client/index.ts` lines 402–409.
+`ClientInboxPage.tsx` becomes a controlled-tab container driven by `?tab=` query param.
 
-Replace the `supabase.rpc("search_vector_embeddings", { p_tenant_id, p_query_embedding, p_mode, p_source_types, p_limit, p_similarity_threshold })` call with:
-
-```ts
-const { data: results, error } = await supabase.rpc("match_srto_chunks", {
-  query_embedding: queryEmbedding,
-  match_threshold: 0.5,
-  match_count: 6,
-  filter_source_type: null,
-  filter_framework: null,
-  filter_clause: null,
-});
+```text
+/client/inbox?tab=<all|messages|notifications>
+┌─────────────────────────────────────────────────────────┐
+│ Inbox                       [tab-aware action button]   │
+│ [ All ] [ Messages ] [ Notifications ]                  │
+├─────────────────────────────────────────────────────────┤
+│   <tab content>                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
-`tenantId` is no longer passed — the corpus is global reference content, not tenant-scoped. Keep the parameter on `performVectorSearch` for now (caller signature stays stable); add a `// tenantId unused for srto_corpus` comment.
+**Tab contents**
+- **All** — merged feed from rewritten `useClientInbox`. Each row tagged `Message | Notification` via `InboxItemRow`. Newest first.
+- **Messages** — full two-pane layout lifted from `ClientCommunicationsPage.tsx`, using `useClientCommunications`.
+- **Notifications** — list lifted from `ClientNotifications.tsx` (Today / This Week / Older grouping, dismissable, prefs honoured), using `useClientNotifications`.
 
-### 2. Update VectorResult shape and result mapping
+**Header action button (right side)**
+- Messages tab → `+ New Message` (opens `NewConversationDialog`); hidden when read-only.
+- Notifications tab → `Mark all read` (calls `markAllAsRead`); hidden when `unreadCount === 0`.
+- All tab → no action button.
 
-Replace the interface in both files:
+**Tab state**
+- Initialise from `searchParams.get("tab")`, default `"all"`. Valid: `all | messages | notifications`. Anything else falls back to `all`.
+- On tab change, `setSearchParams({ tab })` so URLs stay shareable.
+- Legacy `?type=` mapping (used by current InboxPage):
+  - `?type=message` → `tab=messages`
+  - `?type=announcement` → `tab=all` *(no dedicated tab)*
+  - `?type=task` → `tab=all` *(tasks live on `/client/tasks`)*
+  - anything else → `tab=all`
+
+## Rewritten `useClientInbox.ts`
+
+No RPC. Compose the two existing hooks and normalise.
 
 ```ts
-interface VectorResult {
+type UnifiedInboxItem = {
+  item_type: 'message' | 'notification';
   id: string;
-  source_type: string;        // outcome_standards | compliance_requirements | credential_policy | practice_guide | national_code | cricos_practice_guide | esos_act
-  source_document: string;    // e.g. "Practice Guide - Assessment"
-  framework: string;          // SRTO_2025 | NATIONAL_CODE_2018 | ESOS_ACT_2000
-  clause: string | null;      // e.g. "1.5"
-  chunk_index: number;
-  heading: string | null;
-  content: string;
-  similarity: number;
+  title: string;
+  body: string | null;
+  link: string | null;
+  created_at: string;
+  is_read: boolean;
+};
+
+export function useClientInbox() {
+  const comms = useClientCommunications();   // { conversations, isLoading, ... }
+  const notif = useClientNotifications();    // { notifications, isLoading, ... }
+
+  const items: UnifiedInboxItem[] = useMemo(() => {
+    const m = comms.conversations.map(c => ({
+      item_type: 'message' as const,
+      id: c.id,
+      title: c.subject || c.topic || 'General',
+      body: c.last_message_preview ?? null,
+      link: `/client/inbox?tab=messages&thread=${c.id}`,
+      created_at: c.last_message_at ?? c.created_at,
+      is_read: !c.isUnread,
+    }));
+    const n = notif.notifications.map(x => ({
+      item_type: 'notification' as const,
+      id: x.id,
+      title: x.title,
+      body: x.message ?? null,
+      link: x.link ?? '/client/inbox?tab=notifications',
+      created_at: x.created_at,
+      is_read: x.is_read,
+    }));
+    return [...m, ...n].sort(
+      (a, b) => +new Date(b.created_at) - +new Date(a.created_at)
+    );
+  }, [comms.conversations, notif.notifications]);
+
+  return {
+    items,
+    isLoading: comms.isLoading || notif.isLoading,
+    unreadCount: items.filter(i => !i.is_read).length,
+  };
 }
 ```
 
-Replace the `.map((r) => ({...}))` block to read the new fields (drop `record_id`, `record_label`, `chunk_text`, `metadata`).
+`InboxItemRow` currently expects the full `InboxItem` shape (`inbox_id`, `preview`, `unread`, `due_at`, `status`, `action_required`). Two minimal changes to keep it working with the new merged shape:
+- Map unified items into a compatible adapter (`inbox_id=id`, `preview=body`, `unread=!is_read`, `due_at=null`, `status=null`, `action_required=false`, `source_id=id`) when rendering inside the All tab. No edits to `InboxItemRow` itself.
+- Existing `TYPE_CONFIG.message` / fallback keeps the visual tag-by-source treatment.
 
-### 3. Update every downstream consumer of VectorResult
+## Routing changes (`src/App.tsx`)
 
-Both files use `record_label` and `chunk_text` to format the AI prompt and to build `records_accessed`. Replace with a single citation-label helper:
+Replace the two existing route elements with `<Navigate>` redirects (preserves bookmarks):
 
-```ts
-function citationLabel(vr: VectorResult): string {
-  return vr.clause
-    ? `${vr.source_document}, clause ${vr.clause}`
-    : `${vr.source_document}, chunk ${vr.chunk_index}`;
-}
+```tsx
+<Route path="/client/communications"
+  element={<Navigate to="/client/inbox?tab=messages" replace />} />
+<Route path="/client/notifications"
+  element={<Navigate to="/client/inbox?tab=notifications" replace />} />
 ```
 
-Touch points:
+Drop the now-unused lazy imports for the two deleted wrappers.
 
-- `compliance-assistant/index.ts` lines 624–642 and 975–991 (the two "Relevant Context (indexed)" prompt-builders): use `citationLabel(r)` in place of `r.record_label`, and `r.content` in place of `r.chunk_text`.
-- `compliance-assistant/index.ts` lines 791–798 and 1091–1098 (records_accessed): set `table: vr.source_type`, `id: vr.id`, `label: citationLabel(vr)`.
-- `compliance-assistant/index.ts` line 833 + `compliance-assistant-client/index.ts` line 360 (`source_types_used`): no change — `source_type` field still exists, values just come from the new enum.
-- `compliance-assistant-client/index.ts` lines 615–617 ("Related material found"): use `citationLabel(top)`.
+## Sidebar (`ClientSidebar.tsx`)
 
-### 4. Update system-prompt citation guidance
+Remove the Notifications + Communications entries. The existing **Inbox** entry is the unified hub. Drop unused icon imports.
 
-Both functions feed retrieval into a Gemini prompt (compliance-assistant via the tier-prompt system in `_shared/ask-viv-prompts/`, compliance-assistant-client via its inline prompt builder). Wherever the prompt instructs the model to cite sources, insert:
+## Topbar bell (`ClientTopbar.tsx`)
 
-> When citing sources, use `[<source_document>, clause <clause>]` for chunks with a clause; otherwise `[<source_document>, chunk <chunk_index>]`. Example: "...validation of assessment is required quarterly [Practice Guide - Assessment, clause 1.5]."
+- "View all" link → `/client/inbox?tab=notifications`.
+- Per-row fallback link → `/client/inbox?tab=notifications`.
+- Cap displayed list to 5: `filteredClientNotifications.slice(0, 5)`.
+- Otherwise unchanged.
 
-I'll grep `_shared/ask-viv-prompts/` for the existing citation instruction and update it in one place; the inline prompt in `compliance-assistant-client/index.ts` will be updated directly.
+## Acceptance verification
 
-### 5. Add QUOTATION CONVENTIONS — STRICT block
+- Side nav shows one inbox-related item; Communications and Notifications gone.
+- `/client/inbox` loads with **3** tabs: All / Messages / Notifications.
+- All tab shows merged messages + notifications, newest first; no `rpc_get_inbox_items` 404 in console.
+- `/client/communications` and `/client/notifications` redirect correctly.
+- `?type=announcement` resolves to `tab=all`.
+- Bell popover look/data unchanged, capped at 5, "View all" routes into the new tab.
+- "New Message" appears only on Messages tab; "Mark all read" only on Notifications tab when there are unreads.
+- `/client/tasks` and bell unread-count logic untouched.
 
-Copy the block verbatim from `supabase/functions/draft-finding/index.ts` lines 128–132 into the system prompts of both Ask Viv functions (in `_shared/ask-viv-prompts/` for the internal variant, inline for the client variant).
+## Out of scope
 
-### 6. JSON output / safeParse / generationConfig
-
-Out of scope. Both Ask Viv functions stream conversational replies, not structured JSON drafts. The QUOTATION CONVENTIONS apply but the structured-output parsing pattern from Wave 3/4 does not. Per the user's note: "the JSON parsing changes don't" apply if the function isn't structured.
-
-### 7. Diagnostic envelope
-
-Both functions already expose `chunks_used` and `source_types_used` in their response — these will populate correctly from the new mapping. No new fields needed.
-
-## What we are NOT touching
-
-- `vector_embeddings` table — leave for Phase 3 cleanup.
-- `search_vector_embeddings` RPC — leave for Phase 3 cleanup.
-- `srto_corpus` schema, RLS, indexes, embeddings — already validated by Wave 3/4.
-- `match_srto_chunks` RPC — already correct.
-- Other callers of `search_vector_embeddings` (`vector-search`, `analyse-evidence`, `vector-index-update`, `vector-index-remove`, `vector-index-rebuild`) — those touch the indexing pipeline, not Ask Viv retrieval, and are out of scope per the brief.
-
-## Validation after deploy
-
-Ask Viv query: *"What does SRTO 2025 say about validation of assessment?"*
-
-Expect:
-- Substantive grounded answer.
-- Citation in the form `[Practice Guide - Assessment, clause 1.5]` (or similar).
-- `chunks_used > 0` and `source_types_used` populated in the response envelope.
-- Edge function logs show `match_srto_chunks` returning 4–6 rows with similarity ≥ 0.5.
+DB schema, RLS, edge functions, server-side inbox aggregation RPC (logged as post-launch enhancement), `priority_inbox_actions`, Tasks page.
