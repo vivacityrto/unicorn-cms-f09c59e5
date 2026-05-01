@@ -98,12 +98,24 @@ interface RecordAccessed {
 
 interface VectorResult {
   id: string;
-  source_type: string;
-  record_id: string;
-  record_label: string;
-  chunk_text: string;
+  source_type: string;        // outcome_standards | compliance_requirements | credential_policy | practice_guide | national_code | cricos_practice_guide | esos_act
+  source_document: string;    // e.g. "Practice Guide - Assessment"
+  framework: string;          // SRTO_2025 | NATIONAL_CODE_2018 | ESOS_ACT_2000
+  clause: string | null;      // e.g. "1.5"
+  chunk_index: number;
+  heading: string | null;
+  content: string;
   similarity: number;
-  metadata: Record<string, unknown>;
+}
+
+/**
+ * Build a human-readable citation label for a corpus chunk.
+ * Use clause when available; otherwise fall back to chunk index.
+ */
+function citationLabel(vr: VectorResult): string {
+  return vr.clause
+    ? `${vr.source_document}, clause ${vr.clause}`
+    : `${vr.source_document}, chunk ${vr.chunk_index}`;
 }
 
 interface ComplianceResponse {
@@ -471,18 +483,17 @@ async function performVectorSearch(
       return [];
     }
 
-    // Search vector embeddings
-    const { data: results, error } = await supabase.rpc(
-      "search_vector_embeddings",
-      {
-        p_tenant_id: tenantId,
-        p_query_embedding: queryEmbedding,
-        p_mode: "compliance",
-        p_source_types: null,
-        p_limit: 10,
-        p_similarity_threshold: 0.7,
-      }
-    );
+    // Search the SRTO corpus (global reference content; not tenant-scoped).
+    // tenantId is unused for srto_corpus but kept on the helper signature for caller stability.
+    void tenantId;
+    const { data: results, error } = await supabase.rpc("match_srto_chunks", {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.5,
+      match_count: 6,
+      filter_source_type: null,
+      filter_framework: null,
+      filter_clause: null,
+    });
 
     if (error) {
       console.error("Vector search error:", error);
@@ -492,11 +503,13 @@ async function performVectorSearch(
     return (results || []).map((r: any) => ({
       id: r.id,
       source_type: r.source_type,
-      record_id: r.record_id,
-      record_label: r.record_label,
-      chunk_text: r.chunk_text,
+      source_document: r.source_document,
+      framework: r.framework,
+      clause: r.clause ?? null,
+      chunk_index: r.chunk_index,
+      heading: r.heading ?? null,
+      content: r.content,
       similarity: r.similarity,
-      metadata: r.metadata || {},
     }));
   } catch (err) {
     console.error("Vector search failed:", err);
@@ -635,7 +648,7 @@ function generateFactBasedAnswer(
       const sourceLabel = sourceType.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
       bullets.push(`*${sourceLabel}:*`);
       for (const r of results) {
-        bullets.push(`- ${r.record_label}: ${r.chunk_text.slice(0, 100)}...`);
+        bullets.push(`- ${citationLabel(r)}: ${r.content.slice(0, 160)}...`);
       }
     }
     bullets.push("");
@@ -792,8 +805,8 @@ function generateFactBasedAnswer(
   for (const vr of vectorResults) {
     records.push({
       table: vr.source_type,
-      id: vr.record_id,
-      label: vr.record_label,
+      id: vr.id,
+      label: citationLabel(vr),
     });
   }
 
@@ -986,7 +999,7 @@ function generateBrainPoweredAnswer(
       const sourceLabel = sourceType.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
       bullets.push(`*${sourceLabel}:*`);
       for (const r of results) {
-        bullets.push(`- ${r.record_label}: ${r.chunk_text.slice(0, 100)}...`);
+        bullets.push(`- ${citationLabel(r)}: ${r.content.slice(0, 160)}...`);
       }
     }
     bullets.push("");
@@ -1092,8 +1105,8 @@ function generateBrainPoweredAnswer(
   for (const vr of vectorResults) {
     records.push({
       table: vr.source_type,
-      id: vr.record_id,
-      label: vr.record_label,
+      id: vr.id,
+      label: citationLabel(vr),
     });
   }
 

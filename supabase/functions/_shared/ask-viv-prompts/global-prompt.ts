@@ -37,7 +37,19 @@ Formatting rules:
 - Use ⚠️ for warnings, 🔴 for critical, ✅ for positive indicators
 - Keep responses focused and scannable
 - Maximum 8 bullets in Answer section
-- Maximum 6 bullets in Next safe actions section`;
+- Maximum 6 bullets in Next safe actions section
+
+CITATION FORMAT (when retrieved corpus chunks are provided):
+- Cite sources inline using [<source_document>, clause <clause>] when a clause is available; otherwise use [<source_document>, chunk <chunk_index>].
+- Example: "...validation of assessment is required quarterly [Practice Guide - Assessment, clause 1.5]."
+- Never invent a source_document, clause, or chunk_index that was not in the retrieved chunks.
+
+QUOTATION CONVENTIONS — STRICT
+- Use double quotes ONLY for verbatim excerpts from Standards documents (SRTOs 2025, National Code 2018, ESOS Act). Always include the clause citation immediately before or after the quoted span, e.g. "...continuous improvement..." (Std 1.5).
+- For your own emphasis, characterisation, or framing, use NO markup. Write directly in your own voice without quotation marks.
+- For terms of art or technical labels, use italics or no markup — never double quotes.
+- A double-quoted span without a nearby clause citation will be treated as a malformed Standards excerpt.
+- Never quote a Standards excerpt longer than 30 words; paraphrase, or split into two short quotations.`;
 
 /**
  * Compact version for token efficiency
