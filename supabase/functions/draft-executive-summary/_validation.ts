@@ -30,12 +30,34 @@ function findBannedTerm(text: string): string | null {
   return null;
 }
 
-function findOverlongQuote(text: string): { snippet: string; words: number } | null {
+/**
+ * Detect a verbatim Standards excerpt longer than 30 words.
+ *
+ * Discriminates Standards excerpts (quoted span sitting next to a clause
+ * citation) from AI prose-in-quotes (stylistic emphasis without a citation).
+ * Only the former is rejected — the 30-word cap is a copyright/compliance
+ * guard for verbatim Standards reproduction, not a stylistic constraint.
+ */
+const CLAUSE_CITATION = /\b(?:Std|Standard|Clause|Section|s\.?)\s*\d+(?:\.\d+)?(?:\([a-z]\))?/i;
+const FRAMEWORK_CITATION = /\b(?:SRTOs?\s*2025|National\s*Code\s*2018|ESOS\s*Act)\s+(?:Standard|Clause|Section|s\.?)\s*\d/i;
+const ADJACENT_WINDOW = 50;
+
+function findOverlongStandardsExcerpt(
+  text: string,
+): { snippet: string; words: number; citation: string } | null {
   const re = /["“]([^"”]{30,})["”]/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     const words = m[1].trim().split(/\s+/).length;
-    if (words > 30) return { snippet: m[1].slice(0, 80) + '…', words };
+    if (words <= 30) continue;
+    const start = m.index;
+    const end = m.index + m[0].length;
+    const before = text.slice(Math.max(0, start - ADJACENT_WINDOW), start);
+    const after = text.slice(end, end + ADJACENT_WINDOW);
+    const ctx = before + ' ' + after;
+    const citation = ctx.match(FRAMEWORK_CITATION)?.[0] ?? ctx.match(CLAUSE_CITATION)?.[0];
+    if (!citation) continue; // AI prose-in-quotes — not a Standards excerpt; skip.
+    return { snippet: m[1].slice(0, 120) + '…', words, citation };
   }
   return null;
 }
