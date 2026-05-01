@@ -79,6 +79,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   const updateAudit = useUpdateAudit(audit.id);
   const draftExecSummary = useDraftExecutiveSummary(audit.id);
   const recordDecision = useRecordExecutiveSummaryDecision();
+  const generateReport = useGenerateClientAuditReport(audit.id);
   const { openingMeeting, closingMeeting } = useAuditAppointments(audit.id);
   const { data: progress } = useAuditProgress(audit.id);
   const findingsRequired = progress?.findings_required ?? 0;
