@@ -345,6 +345,10 @@ Return your suggestion as JSON matching the schema in the system prompt. Every q
           { role: 'user', content: userPrompt },
         ],
         response_format: { type: 'json_object' },
+        generationConfig: {
+          response_mime_type: 'application/json',
+          max_output_tokens: 8192,
+        },
       }),
     });
 
@@ -365,8 +369,17 @@ Return your suggestion as JSON matching the schema in the system prompt. Every q
     }
     const aiJson = await aiResp.json();
     const content = aiJson?.choices?.[0]?.message?.content;
+    const finishReason = aiJson?.choices?.[0]?.finish_reason;
     if (!content) return json({ error: 'AI returned no content' }, 502);
-    try { raw = JSON.parse(content); } catch { return json({ error: 'AI response was not valid JSON' }, 502); }
+    raw = safeParse(content);
+    if (raw === null || finishReason === 'length') {
+      console.error('Gemini analyse-evidence unparseable', {
+        finish_reason: finishReason,
+        contentPreview: typeof content === 'string' ? content.slice(0, 500) : content,
+        usage: aiJson?.usage,
+      });
+      if (raw === null) return json({ error: 'AI response was not valid JSON' }, 502);
+    }
   } catch (e) {
     console.error('Gemini call threw:', (e as Error).message);
     return json({ error: 'AI call failed' }, 502);
