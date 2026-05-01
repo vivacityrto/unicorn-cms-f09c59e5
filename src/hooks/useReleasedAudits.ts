@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useClientTenant } from '@/contexts/ClientTenantContext';
 import type { AuditType, AuditRisk } from '@/types/clientAudits';
 
 export interface ReleasedAuditRow {
@@ -21,13 +22,20 @@ export interface ReleasedAuditRow {
 
 /**
  * Returns released audit reports visible to the current client tenant.
- * RLS (tenant_read_v2) gates rows: report_client_visible = true AND
- * report_released_at IS NOT NULL AND user belongs to the audit's tenant.
+ *
+ * SECURITY: Explicit tenant filter is required because staff bypass
+ * tenant RLS via get_current_user_tenant_id(). Without this filter,
+ * a staff member impersonating a client would see every released audit
+ * across every tenant.
  */
 export function useReleasedAudits() {
+  const { activeTenantId } = useClientTenant();
+
   return useQuery({
-    queryKey: ['client-released-audits'],
+    queryKey: ['client-released-audits', activeTenantId],
     queryFn: async (): Promise<ReleasedAuditRow[]> => {
+      if (!activeTenantId) return [];
+
       const { data, error } = await (supabase as any)
         .from('client_audits')
         .select(
@@ -36,11 +44,15 @@ export function useReleasedAudits() {
            score_max, risk_rating, report_pdf_path, report_released_at,
            report_release_notes, report_acknowledged_at`
         )
+        .eq('subject_tenant_id', activeTenantId)
+        .eq('report_client_visible', true)
+        .not('report_released_at', 'is', null)
         .order('report_released_at', { ascending: false });
 
       if (error) throw error;
       return (data ?? []) as ReleasedAuditRow[];
     },
+    enabled: !!activeTenantId,
     staleTime: 60_000,
   });
 }
