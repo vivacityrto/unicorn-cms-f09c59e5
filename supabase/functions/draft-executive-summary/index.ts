@@ -79,7 +79,7 @@ VOICE
 - Use "Governing Persons" for the people who govern the RTO. Never use "directors", "board", or "board members".
 
 WHAT YOU MAY DO
-- Quote up to ~30 words from any single Standard.
+- Quote short fragments from a Standard when precision matters — strictly ≤30 words per quoted span, in straight double quotes, with the clause cited inline.
 - Reference clauses by their full identifier (for example SRTOs 2025 Standard 1.5; National Code 2018 Standard 7.1).
 - Weight critical findings as the dominant narrative thread.
 - Justify the auto-derived risk rating by reference to the specific findings that drove it.
