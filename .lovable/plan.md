@@ -1,60 +1,74 @@
-# Hide archived client tasks in the client portal
+# Wire Academy hub sub-tabs to actually filter by tag
 
 ## Goal
 
-Apply `is_archived = false` as the default filter on every client-portal query against `client_task_instances`. On `/client/tasks`, add a "Show archived" toggle (default OFF) that drops the filter when ON and visually distinguishes archived rows. No RLS or schema changes.
+Replace the hard-coded sub-tab labels in each Vivacity Academy hub with the agreed labels mapped to real `academy_courses.tags` values, filter the course grid via array overlap, and show counts per tab. Default "All" preserves current behaviour. No DB or RLS changes.
 
-## Reference audit (verified)
+## Approach
 
-Complete client-portal consumers of `client_task_instances`:
+Each hub already calls `useAcademyCourses({ audienceKey })`, which returns the full per-persona course list with `tags: string[]` included. Since the per-persona list is small (≤27 published courses) and already in memory, **filtering happens client-side via array overlap**. This:
 
-1. `src/hooks/useClientAllTasks.ts` — Tasks page + AttentionPanel
-2. `src/hooks/useClientTaskInstances.ts` — Per-stage client task list
-3. `src/hooks/useClientPackageInstances.tsx` — Package/stage detail
-4. `src/hooks/useStageCounts.ts` — Stage tile counters
+- avoids extra round-trips per tab click,
+- lets us render accurate counts on every tab without additional queries,
+- is functionally equivalent to a server-side `.overlaps('tags', [...])` filter.
 
-Excluded (staff-only, intentionally unchanged): `Unicorn1ImportDialog.tsx`, `tenant/CloseClientModal.tsx`, `client/PackageDataManager.tsx` (admin bulk-delete despite folder), edge functions.
+A shared shape is used in each hub:
+```ts
+const categoryTabs: { label: string; tags: string[] }[] = [
+  { label: "All", tags: [] },
+  // ...
+];
+const matchesTab = (c, tags) => tags.length === 0 || (c.tags ?? []).some(t => tags.includes(t));
+```
 
-## Changes
+Tab labels render as `"<Label> (<count>)"` where count is the courses on that hub matching the tab's tag list. Empty-state and loading-state markup is unchanged.
 
-### 1. `src/hooks/useClientAllTasks.ts`
+## Files to change
 
-- Accept `includeArchived: boolean = false` argument.
-- Add `is_archived, archived_at` to the `select(...)` on `client_task_instances`.
-- When `!includeArchived`, chain `.eq('is_archived', false)`.
-- Add `includeArchived` to `queryKey` so toggling refetches without reload.
-- Extend `ClientAllTask` with `isArchived: boolean` and `archivedAt: string | null`; map from row.
+### 1. `src/pages/client/TrainerHubPage.tsx`
+Replace `categoryTabs` with:
+- All
+- TAS → `['tas']`
+- Assessment → `['assessment','assessment-validation','assessment-tools']`
+- Online Delivery → `['online-delivery']`
+- Job Trainer → `['job-trainer']`
+- PD → `['trainer-pd','professional-development']`
 
-### 2. `src/pages/ClientTasksPage.tsx`
+Update `filtered` derivation and the tab `<button>` map to render counts.
 
-- Local `useState<boolean>` for `showArchived`; pass to `useClientAllTasks(showArchived)`.
-- Add a `Switch` (shadcn `@/components/ui/switch`) labelled **"Show archived"** in a flex row directly **above** the four counter pills, right-aligned with muted helper text ("Hidden by default").
-- Pill counters (All / Overdue / Due Soon / Completed) derive from the hook's `tasks` array, so they recount automatically.
-- In `TaskRow`, when `task.isArchived`:
-  - Add `opacity-60` to the `<tr>` and `line-through` to the task name span.
-  - In Status column, render `<Badge variant="outline" className="ml-1.5">Archived</Badge>` next to the existing status badge.
+### 2. `src/pages/client/ComplianceManagerPage.tsx`
+- All
+- Standards → `['standards','srto-2025','standards-2025']`
+- CRICOS → `['cricos']`
+- Audits → `['audit']`
+- Workshops → `['workshop']`
+- Webinars → `['webinar']`
 
-### 3. `src/hooks/useClientTaskInstances.ts`
+### 3. `src/pages/client/GovernancePersonPage.tsx`
+- All
+- Strategic Planning → `['strategic-planning']`
+- Leadership → `['leadership']`
+- Marketing & Brand → `['marketing','branding']`
+- RTO Startup → `['rto-startup']`
 
-- Add `.eq('is_archived', false)` to the `select` on `client_task_instances` (line ~37). Archived rows never appear in the per-stage view; no toggle.
+### 4. `src/pages/client/StudentSupportOfficerPage.tsx`
+- All
+- Online Delivery → `['online-delivery']`
+- Induction → `['induction']`
 
-### 4. `src/hooks/useClientPackageInstances.tsx`
+### 5. `src/pages/client/AdministrationAssistantPage.tsx`
+- All
+- Strategic Planning → `['strategic-planning']`
+- Marketing & Brand → `['marketing','branding']`
+- Customer Experience → `['customer-experience']`
+- Induction → `['induction']`
 
-- Add `.eq('is_archived', false)` to the parallel `client_task_instances` `select` around line 273-276.
-- The `updateClientTaskStatus` mutation (line 477) targets a known id and needs no filter.
-
-### 5. `src/hooks/useStageCounts.ts`
-
-- Add `.eq('is_archived', false)` to the `client_task_instances` count query so stage tiles exclude archived instances.
-
-### 6. `src/components/client/AttentionPanel.tsx`
-
-- No change. It consumes `useClientAllTasks()` and inherits the default-hidden behaviour.
+In every hub, the count next to each tab is derived from the in-memory `courses` array using the same `matchesTab` helper. The empty state already exists ("No courses available yet — More courses coming soon — check back shortly") and is reused for empty sub-tabs.
 
 ## Acceptance
 
-- AHMRC `/client/tasks` shows ~13 tasks by default; pill counters reflect the subset.
-- Toggling "Show archived" ON instantly re-renders to ~59 tasks (React Query refetch on key change).
-- Archived rows are dimmed with strikethrough title and "Archived" badge in Status.
-- Stage tiles in client portal package view exclude archived tasks from counts.
-- No RLS, no migrations.
+- Each "All" tab shows the same courses as today.
+- Each sub-tab shows only courses whose `tags` overlap the configured list.
+- Tab labels show counts, e.g. "TAS (2)".
+- Empty sub-tabs render the existing friendly empty state.
+- No DB, RLS, or hook changes.
