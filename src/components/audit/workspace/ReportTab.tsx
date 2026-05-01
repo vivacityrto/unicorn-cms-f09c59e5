@@ -552,16 +552,10 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
                   value={releaseNotes}
                   onChange={(e) => setReleaseNotes(e.target.value)}
                   rows={3}
+                  maxLength={4000}
                   placeholder="Please review the attached Compliance Health Check report and action plan. Contact your consultant if you have any questions."
                 />
               </div>
-
-              <Alert className="bg-amber-50 border-amber-200">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-800 text-sm">
-                  This will make the report and all {openActions} action item{openActions !== 1 ? 's' : ''} visible to the client in their portal.
-                </AlertDescription>
-              </Alert>
 
               <AlertDialog>
                 <AlertDialogTrigger asChild>

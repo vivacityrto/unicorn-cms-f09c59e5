@@ -91,31 +91,95 @@ export function useRecordExecutiveSummaryDecision() {
   });
 }
 
+function formatReleasedAt(iso: string | undefined | null): string {
+  if (!iso) return 'an earlier date';
+  try {
+    return new Date(iso).toLocaleString('en-AU', {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return 'an earlier date';
+  }
+}
+
+const SUPABASE_URL = 'https://yxkgdalkbrriasiyyrwk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4a2dkYWxrYnJyaWFzaXl5cndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc2MjQwMzEsImV4cCI6MjA2MzIwMDAzMX0.bBFTaO-6Afko1koQqx-PWdzl2mu5qmE0xWNTvneqyqY';
+
 export function useReleaseReport(auditId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ releaseNotes }: { releaseNotes?: string }) => {
       if (!auditId) throw new Error('No audit ID');
-      const user = (await supabase.auth.getUser()).data.user;
-      const { error } = await supabase
-        .rpc('release_audit_report', {
-          p_audit_id: auditId,
-          p_released_by: user?.id,
-          p_release_notes: releaseNotes || null,
-        } as any);
-      if (error) throw error;
 
-      // Auto-complete stage tasks on report release
-      await autoCompleteStageTasks(auditId, 'report_released');
+      const trimmed = (releaseNotes ?? '').trim();
+      if (trimmed.length > 4000) {
+        toast.error('Release notes must be 4000 characters or fewer.');
+        throw new Error('NOTES_TOO_LONG');
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        toast.error("Couldn't release the report. Try again, or contact support.");
+        throw new Error('NO_SESSION');
+      }
+
+      let response: Response;
+      try {
+        response = await fetch(`${SUPABASE_URL}/functions/v1/release-audit-report`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            audit_id: auditId,
+            release_notes: trimmed.length > 0 ? trimmed : null,
+          }),
+        });
+      } catch {
+        toast.error("Couldn't release the report. Try again, or contact support.");
+        throw new Error('NETWORK');
+      }
+
+      let body: any = {};
+      try { body = await response.json(); } catch { /* empty body */ }
+
+      if (response.status === 200) {
+        toast.success('Report released to client');
+        try { await autoCompleteStageTasks(auditId, 'report_released'); } catch { /* non-fatal */ }
+        return { status: 200, body };
+      }
+
+      if (response.status === 409) {
+        toast.info(`This report was already released on ${formatReleasedAt(body?.released_at)}`);
+        return { status: 409, body };
+      }
+
+      if (response.status === 422) {
+        toast.error(body?.error || 'This audit has no score yet — complete the audit first.');
+        throw new Error('NO_SCORE');
+      }
+
+      if (response.status === 403) {
+        toast.error(body?.error || "You don't have access to this audit.");
+        throw new Error('FORBIDDEN');
+      }
+
+      // 401, 500, anything else
+      toast.error("Couldn't release the report. Try again, or contact support.");
+      throw new Error(`HTTP_${response.status}`);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      // Invalidate so the page reflects released state (covers both 200 and 409 refetch).
       queryClient.invalidateQueries({ queryKey: ['client-audit', auditId] });
-      toast.success('Report released to client');
+      queryClient.invalidateQueries({ queryKey: ['audit', auditId] });
+      queryClient.invalidateQueries({ queryKey: ['audits'] });
     },
-    onError: (err: any) => {
-      toast.error('Failed to release report: ' + (err.message || 'Unknown error'));
-    },
+    // onError intentionally omitted — toasts are emitted inside mutationFn so we control
+    // per-status copy. A generic onError toast would double-fire.
   });
 }
 
