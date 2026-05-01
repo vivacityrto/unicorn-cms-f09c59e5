@@ -56,8 +56,6 @@ const academySubItems: SidebarMenuItem[] = [
 const clientMenuItemsAfter: SidebarMenuItem[] = [
   { icon: Library, label: "Resource Hub", path: "/client/resource-hub" },
   { icon: Calendar, label: "Calendar", path: "/client/calendar" },
-  { icon: Bell, label: "Notifications", path: "/client/notifications" },
-  { icon: MessageSquare, label: "Communications", path: "/client/communications" },
   { icon: BarChart3, label: "Reports", path: "/client/reports" },
   { icon: Users, label: "Team", path: "/client/team", adminOnly: true },
   { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },

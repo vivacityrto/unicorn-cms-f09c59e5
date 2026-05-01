@@ -1076,12 +1076,12 @@ const App = () => (
             <Route path="/client/inbox" element={<ProtectedRoute><ClientInboxWrapperNew /></ProtectedRoute>} />
             <Route path="/client/tasks" element={<ProtectedRoute><ClientTasksWrapperNew /></ProtectedRoute>} />
             <Route path="/client/packages" element={<ProtectedRoute><ClientPackagesWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/communications" element={<ProtectedRoute><ClientCommunicationsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/communications" element={<Navigate to="/client/inbox?tab=messages" replace />} />
             <Route path="/client/documents" element={<ProtectedRoute><ClientDocumentsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/resource-hub" element={<ProtectedRoute><ClientResourceHubWrapperNew /></ProtectedRoute>} />
             <Route path="/client/resource-hub/:categoryId" element={<ProtectedRoute><ClientResourceHubWrapperNew /></ProtectedRoute>} />
             <Route path="/client/calendar" element={<ProtectedRoute><ClientCalendarWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/notifications" element={<ProtectedRoute><ClientNotificationsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/notifications" element={<Navigate to="/client/inbox?tab=notifications" replace />} />
             <Route path="/client/reports" element={<ProtectedRoute><ClientReportsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/users" element={<ProtectedRoute><ClientUsersWrapperNew /></ProtectedRoute>} />
             <Route path="/client/team" element={<ProtectedRoute><ClientTeamWrapperNew /></ProtectedRoute>} />
