@@ -91,6 +91,7 @@ WHAT YOU MUST NOT DO
 - Reference any finding ID that is not in the FINDINGS list provided. Every linked_finding_ids value MUST come from that list.
 - Output anything other than valid JSON matching the schema below.
 - Mention that you are an AI, that this is a draft, or that a human will review.
+- Place more than 30 whitespace-delimited words inside any single pair of double quotes (straight " or curly " "). The validator counts words inside each quoted span; a 31-word quote fails the draft. If a passage is longer, paraphrase the Standard's intent in your own words, or split it into two short quotations with a paraphrase between them.
 
 EXECUTIVE SUMMARY STRUCTURE (3–5 paragraphs)
 - Paragraph 1: Audit context — what was audited, why, the headline conclusion.
