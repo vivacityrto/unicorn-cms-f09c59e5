@@ -14,13 +14,15 @@ export interface ClientAllTask {
   attachmentRequired: boolean;
   isOverdue: boolean;
   isDueSoon: boolean;
+  isArchived: boolean;
+  archivedAt: string | null;
 }
 
-export function useClientAllTasks() {
+export function useClientAllTasks(includeArchived: boolean = false) {
   const { activeTenantId } = useClientTenant();
 
   return useQuery({
-    queryKey: ["client-all-tasks", activeTenantId],
+    queryKey: ["client-all-tasks", activeTenantId, includeArchived],
     queryFn: async (): Promise<ClientAllTask[]> => {
       if (!activeTenantId) return [];
 
@@ -49,11 +51,16 @@ export function useClientAllTasks() {
       const stageIds = [...new Set(stageInstances.map((s) => s.stage_id).filter(Boolean))] as number[];
 
       // 3. Fetch task instances, metadata, packages, and stages in parallel
+      let taskQuery = supabase
+        .from("client_task_instances" as any)
+        .select("id, clienttask_id, stageinstance_id, status, due_date, completion_date, is_archived, archived_at")
+        .in("stageinstance_id", stageInstanceIds);
+      if (!includeArchived) {
+        taskQuery = taskQuery.eq("is_archived", false);
+      }
+
       const [taskRes, clientTaskRes, packageRes, stageRes] = await Promise.all([
-        supabase
-          .from("client_task_instances" as any)
-          .select("id, clienttask_id, stageinstance_id, status, due_date, completion_date")
-          .in("stageinstance_id", stageInstanceIds),
+        taskQuery,
         supabase
           .from("client_tasks")
           .select("id, name, priority, attachment_required"),
@@ -106,6 +113,8 @@ export function useClientAllTasks() {
           attachmentRequired: meta?.attachmentRequired ?? false,
           isOverdue: !isCompleted && !!dueDate && dueDate < now,
           isDueSoon: !isCompleted && !!dueDate && dueDate >= now && dueDate <= sevenDaysFromNow,
+          isArchived: !!row.is_archived,
+          archivedAt: row.archived_at ?? null,
         };
       }).sort((a, b) => {
         // Overdue first, then due soon, then rest

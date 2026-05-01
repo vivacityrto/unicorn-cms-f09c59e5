@@ -273,7 +273,8 @@ export function useClientPackageInstances() {
         supabase
           .from('client_task_instances')
           .select('id, clienttask_id, stageinstance_id, status, due_date, completion_date, created_at')
-          .in('stageinstance_id', stageInstanceIds),
+          .in('stageinstance_id', stageInstanceIds)
+          .eq('is_archived', false),
         supabase
           .from('document_instances' as any)
           .select('id, document_id, stageinstance_id, tenant_id, status, isgenerated')

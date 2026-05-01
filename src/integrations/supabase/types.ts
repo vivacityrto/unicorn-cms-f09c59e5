@@ -12128,33 +12128,39 @@ export type Database = {
       }
       client_task_instances: {
         Row: {
+          archived_at: string | null
           clienttask_id: number
           completion_date: string | null
           created_at: string | null
           due_date: string | null
           id: number
+          is_archived: boolean
           stageinstance_id: number
           status: number
           u1_id: number | null
           updated_at: string | null
         }
         Insert: {
+          archived_at?: string | null
           clienttask_id: number
           completion_date?: string | null
           created_at?: string | null
           due_date?: string | null
           id?: number
+          is_archived?: boolean
           stageinstance_id: number
           status?: number
           u1_id?: number | null
           updated_at?: string | null
         }
         Update: {
+          archived_at?: string | null
           clienttask_id?: number
           completion_date?: string | null
           created_at?: string | null
           due_date?: string | null
           id?: number
+          is_archived?: boolean
           stageinstance_id?: number
           status?: number
           u1_id?: number | null

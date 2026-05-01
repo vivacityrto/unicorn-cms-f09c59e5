@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { AlertTriangle, Clock, CheckCircle2, ListFilter, Paperclip } from "lucide-react";
 import { format } from "date-fns";
 
@@ -21,7 +23,8 @@ function priorityLabel(p: number | null | undefined) {
 }
 
 export default function ClientTasksPage() {
-  const { data: tasks = [], isLoading } = useClientAllTasks();
+  const [showArchived, setShowArchived] = useState(false);
+  const { data: tasks = [], isLoading } = useClientAllTasks(showArchived);
   const { statuses } = useTaskStatusOptions();
   const { getTenantRole } = useAuth();
   const { activeTenantId } = useClientTenant();
@@ -70,6 +73,21 @@ export default function ClientTasksPage() {
         <p className="text-sm text-muted-foreground mt-1">
           All your tasks across every package and stage.
         </p>
+      </div>
+
+      {/* Show archived toggle */}
+      <div className="flex items-center justify-end gap-2">
+        <Label htmlFor="show-archived-toggle" className="text-sm text-muted-foreground cursor-pointer">
+          Show archived
+        </Label>
+        <Switch
+          id="show-archived-toggle"
+          checked={showArchived}
+          onCheckedChange={setShowArchived}
+        />
+        {!showArchived && (
+          <span className="text-xs text-muted-foreground">(hidden by default)</span>
+        )}
       </div>
 
       {/* Filter tabs */}
@@ -174,7 +192,7 @@ function TaskRow({
   showCheckbox?: boolean;
 }) {
   return (
-    <tr className="border-b last:border-0 hover:bg-muted/30 transition-colors border-border">
+    <tr className={`border-b last:border-0 hover:bg-muted/30 transition-colors border-border ${task.isArchived ? "opacity-60" : ""}`}>
       {showCheckbox && (
         <td className="px-4 py-3">
           <Checkbox checked={isSelected} onCheckedChange={onToggle} />
@@ -188,7 +206,7 @@ function TaskRow({
           {task.attachmentRequired && (
             <Paperclip className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
           )}
-          <span className="font-medium text-foreground">{task.taskName}</span>
+          <span className={`font-medium text-foreground ${task.isArchived ? "line-through" : ""}`}>{task.taskName}</span>
         </div>
         <div className="md:hidden text-xs text-muted-foreground mt-0.5">
           {task.packageName} · {task.stageName}
@@ -207,12 +225,19 @@ function TaskRow({
         )}
       </td>
       <td className="px-4 py-3">
-        <Badge
-          variant={task.status === 2 ? "default" : task.isOverdue ? "destructive" : "secondary"}
-          className="text-xs"
-        >
-          {getStatusLabel(task.status, statuses)}
-        </Badge>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge
+            variant={task.status === 2 ? "default" : task.isOverdue ? "destructive" : "secondary"}
+            className="text-xs"
+          >
+            {getStatusLabel(task.status, statuses)}
+          </Badge>
+          {task.isArchived && (
+            <Badge variant="outline" className="text-xs">
+              Archived
+            </Badge>
+          )}
+        </div>
       </td>
     </tr>
   );
