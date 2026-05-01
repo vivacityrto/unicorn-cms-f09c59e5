@@ -514,6 +514,10 @@ Deno.serve(async (req) => {
         model: MODEL,
         messages,
         response_format: { type: 'json_object' },
+        generationConfig: {
+          response_mime_type: 'application/json',
+          max_output_tokens: 8192,
+        },
       }),
     });
     if (!res.ok) {
@@ -524,15 +528,14 @@ Deno.serve(async (req) => {
     }
     const data = await res.json();
     const content: string = data.choices?.[0]?.message?.content ?? '';
-    let parsed: unknown = null;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      // Try to extract a JSON block if the model wrapped it.
-      const m = content.match(/\{[\s\S]*\}/);
-      if (m) {
-        try { parsed = JSON.parse(m[0]); } catch { parsed = null; }
-      }
+    const finishReason = data.choices?.[0]?.finish_reason;
+    const parsed = safeParse(content);
+    if (parsed === null || finishReason === 'length') {
+      console.error('Gemini draft unparseable', {
+        finish_reason: finishReason,
+        contentPreview: content.slice(0, 500),
+        usage: data.usage,
+      });
     }
     return { raw: parsed, usage: data.usage ?? {} };
   }
