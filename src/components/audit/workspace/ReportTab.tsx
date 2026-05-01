@@ -168,13 +168,28 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
       setSoftGuardOpen(true);
       return;
     }
-    // Backend generation is still pending — show a friendly notice.
-    toast.info('Report generation is coming soon.');
+    generateReport.mutate();
   };
 
   const proceedToGenerate = () => {
     setSoftGuardOpen(false);
-    toast.info('Report generation is coming soon.');
+    generateReport.mutate();
+  };
+
+  const handleDownloadPdf = async () => {
+    const path = (audit as any).report_pdf_path as string | null | undefined;
+    if (!path) {
+      toast.error('No PDF available yet.');
+      return;
+    }
+    const { data, error } = await supabase.storage
+      .from('audit-reports')
+      .createSignedUrl(path, 60);
+    if (error || !data?.signedUrl) {
+      toast.error("Couldn't open the PDF. Try regenerating it.");
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener');
   };
 
   const scrollToFirstIncomplete = () => {
