@@ -43,6 +43,22 @@ function json(body: unknown, status: number) {
   });
 }
 
+/**
+ * Defensive parser for Gemini output. Handles markdown fences, natural-language
+ * preambles, and trailing chatter — returns null only if no JSON object/array
+ * can be recovered. Belt-and-braces alongside response_mime_type=application/json.
+ */
+function safeParse(raw: string): unknown {
+  let s = (raw ?? '').trim();
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+  const firstStruct = s.search(/[{[]/);
+  if (firstStruct > 0) s = s.slice(firstStruct);
+  try { return JSON.parse(s); } catch { /* fall through */ }
+  const m = s.match(/[{[][\s\S]*[}\]]/);
+  if (m) { try { return JSON.parse(m[0]); } catch { /* noop */ } }
+  return null;
+}
+
 // validateDraft + types now live in _validation.ts (extracted so the test
 // suite can import them without transitively executing Deno.serve()).
 
