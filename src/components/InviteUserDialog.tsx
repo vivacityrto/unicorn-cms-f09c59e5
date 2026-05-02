@@ -8,16 +8,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox } from '@/components/ui/combobox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Users, Mail, Send, Shield, UserCog, User, UserPlus, Database, Search, Loader2, UserCheck } from 'lucide-react';
+import { Building2, Users, Mail, Send, Shield, UserCog, User, UserPlus, Database, Search, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  type RelationshipRole,
-  RELATIONSHIP_ROLE_OPTIONS,
-  isValidEmail,
-  unicornRoleFromRelationship,
-} from '@/lib/roles/relationshipRole';
 
 interface InviteUserDialogProps {
   open: boolean;
