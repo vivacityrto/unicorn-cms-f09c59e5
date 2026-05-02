@@ -77,8 +77,8 @@ const [invitationData, setInvitationData] = useState<{
         throw new Error('This invitation has expired');
       }
 
-      // Determine user type based on tenant_id (319 is Vivacity tenant)
-      const VIVACITY_TENANT_ID = 319;
+      // Determine user type based on tenant_id (6372 is Vivacity tenant)
+      const VIVACITY_TENANT_ID = 6372;
       const isVivacity = data.tenant_id === VIVACITY_TENANT_ID;
       
       // Fetch tenant name
@@ -130,13 +130,17 @@ setInvitationData({
 
   interface InvitationAcceptResult {
     ok: boolean;
-    code: string;
+    code: 'SUCCESS' | 'ALREADY_ACCEPTED' | 'EXPIRED' | 'INVALID_TOKEN' | 'INVALID_PARAMS' | string;
     message?: string;
     tenant_id?: number;
     role?: string;
+    primary_contact?: boolean;
   }
 
-  const finalizeInvitation = async (userId: string, tokenHash: string): Promise<boolean> => {
+  const finalizeInvitation = async (
+    userId: string,
+    tokenHash: string
+  ): Promise<{ ok: boolean; code: string; message?: string }> => {
     try {
       const { data: acceptResult, error: rpcError } = await supabase.rpc('accept_invitation_v2', {
         p_token_hash: tokenHash,
@@ -145,22 +149,25 @@ setInvitationData({
 
       if (rpcError) {
         console.error('RPC error finalizing invitation:', rpcError);
-        // Non-fatal: user account was created, just membership setup failed
-        return false;
+        return { ok: false, code: 'RPC_ERROR', message: rpcError.message };
       }
 
       const result = acceptResult as unknown as InvitationAcceptResult | null;
-      
-      if (!result?.ok && result?.code !== 'ALREADY_ACCEPTED') {
-        console.error('Failed to finalize invitation:', result);
-        return false;
+
+      if (!result) {
+        return { ok: false, code: 'NO_RESULT' };
       }
 
-      console.log('Invitation finalized successfully:', result);
-      return true;
-    } catch (error) {
+      if (result.code === 'SUCCESS' || result.code === 'ALREADY_ACCEPTED') {
+        console.log('Invitation finalized:', result);
+        return { ok: true, code: result.code, message: result.message };
+      }
+
+      console.error('Failed to finalize invitation:', result);
+      return { ok: false, code: result.code, message: result.message };
+    } catch (error: any) {
       console.error('Error in finalizeInvitation:', error);
-      return false;
+      return { ok: false, code: 'EXCEPTION', message: error?.message };
     }
   };
 
@@ -227,8 +234,17 @@ unicorn_role: invitationData!.unicornRole,
 
         // Sign in successful - finalize invitation and redirect
         if (signInData.user) {
-          await finalizeInvitation(signInData.user.id, tokenHash);
-          
+          const result = await finalizeInvitation(signInData.user.id, tokenHash);
+
+          if (!result.ok && result.code === 'EXPIRED') {
+            toast({
+              title: 'Invitation expired',
+              description: 'This invitation has expired. Please ask your admin for a new one.',
+              variant: 'destructive',
+            });
+            return;
+          }
+
           toast({
             title: 'Welcome back!',
             description: 'Your account was already set up. Redirecting to dashboard...',
@@ -242,10 +258,26 @@ unicorn_role: invitationData!.unicornRole,
 
       // Finalize invitation - create tenant membership
       if (authData.user) {
-        const membershipCreated = await finalizeInvitation(authData.user.id, tokenHash);
-        
-        if (!membershipCreated) {
-          console.warn('Membership creation may have failed - user should check with admin if access issues occur');
+        const result = await finalizeInvitation(authData.user.id, tokenHash);
+
+        if (!result.ok) {
+          if (result.code === 'EXPIRED') {
+            toast({
+              title: 'Invitation expired',
+              description: 'This invitation has expired. Please ask your admin for a new one.',
+              variant: 'destructive',
+            });
+            return;
+          }
+          if (result.code === 'INVALID_TOKEN') {
+            toast({
+              title: 'Invalid invitation',
+              description: 'This invitation link is no longer valid.',
+              variant: 'destructive',
+            });
+            return;
+          }
+          console.warn('Membership creation failed - contact admin if access issues occur:', result);
         }
       }
 
