@@ -339,6 +339,20 @@ export default function BulkInvite() {
         return next;
       });
 
+      // Surface any per-row PRIMARY_EXISTS conflicts (HTTP 409 from invite-user)
+      // so the operator can fix the affected tenant and retry — non-blocking.
+      const primaryExistsRows = (data.details || []).filter(
+        (d: any) => d.code === "PRIMARY_EXISTS" || /primary.*exist/i.test(d.detail || ""),
+      );
+      for (const d of primaryExistsRows) {
+        const r = selectedRows.find((row) => row.tenant_id === d.tenant_id);
+        toast({
+          title: r ? `Primary contact conflict — ${r.tenant_name}` : "Primary contact conflict",
+          description: d.detail || "This tenant already has a primary contact.",
+          variant: "destructive",
+        });
+      }
+
       const s = data.summary;
       toast({
         title: data.partial_failure ? "Bulk send partial" : "Bulk send complete",
