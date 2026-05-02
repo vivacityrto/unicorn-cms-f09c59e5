@@ -257,6 +257,18 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
           isError={hoursByType.isError}
         />
 
+        {/* Hours over time — burndown chart: actual cumulative vs ideal pacing.
+            Hidden entirely when there are no time entries. */}
+        <PackageBurndownChart
+          points={timeline.data ?? []}
+          hoursTotal={Number(dashboard?.hours_total ?? 0)}
+          hoursUsed={Number(dashboard?.hours_used ?? 0)}
+          startDate={dashboard?.start_date ?? null}
+          endDate={dashboard?.end_date ?? null}
+          isLoading={timeline.isLoading}
+          isError={timeline.isError}
+        />
+
         {/* Your journey — stage stepper (replaces phase accordion) */}
         <PackageStageStepper
           stages={stages.data ?? []}
