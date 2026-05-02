@@ -218,11 +218,25 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
   const handleSendInvite = async () => {
     if (!email || !firstName || !userType || !roleLevel || !tenantId) return;
 
+    if (!isValidEmail(email)) {
+      toast({ title: 'Invalid email', description: 'Please enter a valid email address.', variant: 'destructive' });
+      return;
+    }
+
     setIsLoading(true);
     try {
       if (userType === 'client' && !tenantId) {
         throw new Error('Please select a tenant for client invites');
       }
+
+      // Client invites use the new relationship_role; derive legacy unicorn_role.
+      const isClient = userType === 'client';
+      const relationshipRole: RelationshipRole | null = isClient
+        ? (roleLevel as RelationshipRole)
+        : null;
+      const unicornRole = isClient
+        ? unicornRoleFromRelationship(relationshipRole as RelationshipRole)
+        : roleLevel;
 
       const payload = {
         email: email.trim().toLowerCase(),
@@ -230,7 +244,8 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
         last_name: lastName.trim() || '-',
         invite_as: userType?.toUpperCase() as 'VIVACITY' | 'CLIENT',
         tenant_id: tenantId,
-        unicorn_role: roleLevel,
+        unicorn_role: unicornRole,
+        relationship_role: relationshipRole,
         skip_email: !sendInvitation,
       };
 
