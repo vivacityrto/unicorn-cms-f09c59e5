@@ -11,17 +11,30 @@ interface Props {
   severity: ClientPackageDashboardRow['pinned_note_severity'];
 }
 
-const SEVERITY_CLASS: Record<NonNullable<Props['severity']>, string> = {
-  info:   'bg-slate-100 border-slate-300 text-slate-900 hover:bg-slate-200',
-  hold:   'bg-amber-100 border-amber-300 text-amber-900 hover:bg-amber-200',
-  urgent: 'bg-red-100 border-red-300 text-red-900 hover:bg-red-200',
-};
+function deriveBannerMessage(severity: 'hold' | 'urgent' | 'info' | null): string {
+  switch (severity) {
+    case 'hold':
+      return 'Package on hold. All client activity is currently paused. Contact your CSC to resume.';
+    case 'urgent':
+      return 'Action required on this package. Open the note for details.';
+    case 'info':
+    default:
+      return 'There is a pinned note on this package. Open it for details.';
+  }
+}
 
 export function PinnedNoteBanner({ title, text, severity }: Props) {
   const [open, setOpen] = useState(false);
 
   if (!text && !title) return null;
-  const sev = severity ?? 'info';
+
+  const isUrgent = severity === 'urgent';
+  const containerClass = isUrgent
+    ? 'bg-red-50 dark:bg-red-950/30 border-l-2 border-red-500 hover:bg-red-100 dark:hover:bg-red-950/50'
+    : 'bg-amber-50 dark:bg-amber-950/30 border-l-2 border-amber-500 hover:bg-amber-100 dark:hover:bg-amber-950/50';
+  const iconClass = isUrgent ? 'text-red-600' : 'text-amber-600';
+
+  const message = deriveBannerMessage(severity);
 
   return (
     <>
@@ -29,15 +42,12 @@ export function PinnedNoteBanner({ title, text, severity }: Props) {
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          'flex items-start gap-2 w-full text-left p-3 rounded-md border transition-colors cursor-pointer',
-          SEVERITY_CLASS[sev],
+          'flex items-start gap-2 w-full text-left rounded-md px-3 py-2 transition-colors cursor-pointer',
+          containerClass,
         )}
       >
-        <Pin className="h-4 w-4 shrink-0 mt-0.5" />
-        <div className="min-w-0 text-sm">
-          <span className="font-semibold">Pinned: </span>
-          <span className="font-medium">{title || 'Pinned note'}</span>
-        </div>
+        <Pin className={cn('h-4 w-4 shrink-0 mt-0.5', iconClass)} />
+        <div className="min-w-0 text-sm font-medium text-foreground">{message}</div>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
