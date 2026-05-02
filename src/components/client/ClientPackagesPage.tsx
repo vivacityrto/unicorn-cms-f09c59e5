@@ -73,20 +73,17 @@ export default function ClientPackagesPage() {
 
 function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
   const packageInstanceId = Number(pkg.id);
-  const { phases, isLoading } = usePhaseProgress(packageInstanceId);
   const {
     data: dashboard,
     isLoading: dashboardLoading,
     error: dashboardError,
   } = useClientPackageDashboard(packageInstanceId);
-
-  const completedPhases = phases.filter((p) => String(p.status) === "2" || p.status === "completed").length;
-  const totalPhases = phases.length;
-  const pct = totalPhases > 0 ? Math.round((completedPhases / totalPhases) * 100) : 0;
+  const stages = useClientPackageStages(packageInstanceId);
+  const whatsNext = useClientPackageWhatsNext(packageInstanceId);
 
   return (
     <Card>
-      <CardContent className="p-5 space-y-4">
+      <CardContent className="p-5 space-y-6">
         {/* Package header */}
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -119,7 +116,7 @@ function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
           )}
         </div>
 
-        {/* Pinned-note banner (only when present) — inside card, below header */}
+        {/* Pinned-note banner (only when present) */}
         {dashboard?.pinned_note_text || dashboard?.pinned_note_title ? (
           <PinnedNoteBanner
             title={dashboard.pinned_note_title}
@@ -143,81 +140,26 @@ function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
           <PackageStatTiles dashboard={dashboard ?? null} />
         )}
 
+        {/* Your journey — stage stepper (replaces phase accordion) */}
+        <PackageStageStepper
+          stages={stages.data ?? []}
+          isLoading={stages.isLoading}
+          isError={stages.isError}
+        />
+
+        {/* What's next for you */}
+        <PackageWhatsNextPanel
+          items={whatsNext.data ?? []}
+          isLoading={whatsNext.isLoading}
+          isError={whatsNext.isError}
+          packageInstanceId={packageInstanceId}
+        />
+
         {/* Action buttons */}
         <PackageActionRow
           packageInstanceId={packageInstanceId}
           managerId={dashboard?.manager_id ?? null}
         />
-
-        {/* Progress bar */}
-        {totalPhases > 0 && (
-          <div>
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-muted-foreground">Overall progress</span>
-              <span className="font-medium text-foreground">{pct}%</span>
-            </div>
-            <Progress value={pct} className="h-2" />
-          </div>
-        )}
-
-        {/* Phase accordion */}
-        {isLoading ? (
-          <Skeleton className="h-20 w-full" />
-        ) : phases.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No phases configured.</p>
-        ) : (
-          <Accordion type="multiple" className="space-y-1">
-            {phases.map((phase, idx) => {
-              const isComplete = String(phase.status) === "2" || phase.status === "completed";
-              const isLocked = !phase.is_passable && idx > 0 && !isComplete;
-
-              return (
-                <AccordionItem key={phase.phase_instance_id} value={phase.phase_instance_id} className="border rounded-lg px-1">
-                  <AccordionTrigger className="py-3 px-3 hover:no-underline">
-                    <div className="flex items-center gap-2 text-sm">
-                      {isComplete ? (
-                        <CheckCircle2 className="h-4 w-4 text-primary" />
-                      ) : isLocked ? (
-                        <Lock className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Clock className="h-4 w-4 text-amber-500" />
-                      )}
-                      <span className={isLocked ? "text-muted-foreground" : "font-medium text-foreground"}>
-                        {phase.phase_title}
-                      </span>
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {phase.completed_stages}/{phase.total_stages} stages
-                      </Badge>
-                      {phase.gate_type !== "none" && (
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {phase.gate_type} gate
-                        </Badge>
-                      )}
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-3">
-                    {isLocked ? (
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/60 text-sm text-muted-foreground">
-                        <Lock className="h-4 w-4" />
-                        This phase is locked. Complete the previous phase to proceed.
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p>{phase.completed_stages} of {phase.total_stages} stages complete ({phase.completed_required} of {phase.required_stages} required)</p>
-                        {!phase.is_passable && phase.gate_type === "hard" && (
-                          <div className="flex items-center gap-2 p-2 rounded bg-destructive/10 text-destructive text-xs mt-2">
-                            <Lock className="h-3.5 w-3.5" />
-                            Hard gate — all required stages must be complete before proceeding.
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
-        )}
       </CardContent>
     </Card>
   );
