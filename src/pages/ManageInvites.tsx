@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck, Calendar } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck, Calendar, Ban } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
