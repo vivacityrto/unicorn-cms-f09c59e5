@@ -15,6 +15,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send, AlertCircle, CheckCircle2, Loader2, Pencil, MailCheck, Sparkles } from "lucide-react";
+import {
+  type RelationshipRole,
+  RELATIONSHIP_ROLE_OPTIONS,
+  relationshipRoleLabel,
+  unicornRoleFromRelationship,
+  isValidEmail,
+} from "@/lib/roles/relationshipRole";
 
 type LaunchRow = {
   tenant_id: number;
@@ -24,7 +31,10 @@ type LaunchRow = {
   suggested_email: string | null;
   suggested_first_name: string | null;
   suggested_last_name: string | null;
-  suggested_role: string | null;
+  /** Legacy unicorn_role of the suggested user (kept for the email payload). */
+  suggested_unicorn_role: string | null;
+  /** New canonical role from tenant_users.relationship_role. */
+  suggested_relationship_role: RelationshipRole | null;
   suggested_user_id: string | null;
 };
 
@@ -33,6 +43,7 @@ type Override = {
   first_name: string;
   last_name: string;
   unicorn_role: "Admin" | "User";
+  relationship_role: RelationshipRole;
 };
 
 type LiveStatus = "queued" | "sent" | "skipped" | "failed";
@@ -43,7 +54,7 @@ type TenantUserOption = {
   first_name: string | null;
   last_name: string | null;
   unicorn_role: string | null;
-  primary_contact: boolean;
+  relationship_role: RelationshipRole | null;
   created_at: string;
 };
 
@@ -144,17 +155,17 @@ export default function BulkInvite() {
         const tenantNameMap = new Map<number, string>();
         (tenants || []).forEach((t: any) => tenantNameMap.set(t.id, t.name));
 
-        // 3. Most recent primary_contact tenant_users row per tenant
+        // 3. Most recent relationship_role='primary_contact' tenant_users row per tenant
         const { data: tus } = await supabase
           .from("tenant_users")
-          .select("tenant_id, user_id, created_at")
+          .select("tenant_id, user_id, relationship_role, created_at")
           .in("tenant_id", activeIds)
-          .eq("primary_contact", true)
+          .eq("relationship_role", "primary_contact")
           .order("created_at", { ascending: false });
 
-        const pickedTu = new Map<number, { user_id: string }>();
+        const pickedTu = new Map<number, { user_id: string; relationship_role: RelationshipRole | null }>();
         for (const tu of (tus || []) as any[]) {
-          if (!pickedTu.has(tu.tenant_id)) pickedTu.set(tu.tenant_id, { user_id: tu.user_id });
+          if (!pickedTu.has(tu.tenant_id)) pickedTu.set(tu.tenant_id, { user_id: tu.user_id, relationship_role: tu.relationship_role });
         }
 
         const userIds = Array.from(pickedTu.values()).map((v) => v.user_id).filter(Boolean);
@@ -180,7 +191,8 @@ export default function BulkInvite() {
               suggested_email: u?.email ?? null,
               suggested_first_name: u?.first_name ?? null,
               suggested_last_name: u?.last_name ?? null,
-              suggested_role: u?.unicorn_role ?? null,
+              suggested_unicorn_role: u?.unicorn_role ?? null,
+              suggested_relationship_role: tu?.relationship_role ?? null,
               suggested_user_id: tu?.user_id ?? null,
             };
           })
@@ -203,15 +215,29 @@ export default function BulkInvite() {
     return () => { cancelled = true; };
   }, [isSuperAdmin, toast]);
 
-  const effectiveContact = (r: LaunchRow): { email: string; first_name: string; last_name: string; role: string } | null => {
+  const effectiveContact = (r: LaunchRow): {
+    email: string;
+    first_name: string;
+    last_name: string;
+    relationship_role: RelationshipRole;
+    unicorn_role: string;
+  } | null => {
     const ov = overrides.get(r.tenant_id);
-    if (ov) return { email: ov.email, first_name: ov.first_name, last_name: ov.last_name || "-", role: ov.unicorn_role };
+    if (ov) return {
+      email: ov.email,
+      first_name: ov.first_name,
+      last_name: ov.last_name || "-",
+      relationship_role: ov.relationship_role,
+      unicorn_role: ov.unicorn_role,
+    };
     if (r.suggested_email) {
       return {
         email: r.suggested_email,
         first_name: r.suggested_first_name || "there",
         last_name: r.suggested_last_name || "-",
-        role: r.suggested_role || "Admin",
+        // Backfill ensures every active tenant has a primary_contact; default to that.
+        relationship_role: r.suggested_relationship_role || "primary_contact",
+        unicorn_role: r.suggested_unicorn_role || "Admin",
       };
     }
     return null;
@@ -250,7 +276,7 @@ export default function BulkInvite() {
     return {
       first_name: c.first_name,
       tenant_name: r.tenant_name,
-      role_label: c.role,
+      role_label: relationshipRoleLabel(c.relationship_role),
       inviter_name: profile ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "The Vivacity team" : "The Vivacity team",
       expiry_date: `${dd}/${mm}/${expiry.getFullYear()}`,
       invite_url: "https://unicorn-cms.au/accept-invitation?token=…",
@@ -312,6 +338,20 @@ export default function BulkInvite() {
         }
         return next;
       });
+
+      // Surface any per-row PRIMARY_EXISTS conflicts (HTTP 409 from invite-user)
+      // so the operator can fix the affected tenant and retry — non-blocking.
+      const primaryExistsRows = (data.details || []).filter(
+        (d: any) => d.code === "PRIMARY_EXISTS" || /primary.*exist/i.test(d.detail || ""),
+      );
+      for (const d of primaryExistsRows) {
+        const r = selectedRows.find((row) => row.tenant_id === d.tenant_id);
+        toast({
+          title: r ? `Primary contact conflict — ${r.tenant_name}` : "Primary contact conflict",
+          description: d.detail || "This tenant already has a primary contact.",
+          variant: "destructive",
+        });
+      }
 
       const s = data.summary;
       toast({
@@ -436,7 +476,7 @@ export default function BulkInvite() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {c ? <Badge variant="secondary">{c.role}</Badge> : <span className="text-muted-foreground">—</span>}
+                          {c ? <Badge variant="secondary">{relationshipRoleLabel(c.relationship_role)}</Badge> : <span className="text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button size="sm" variant="ghost" onClick={() => setOverrideOpenFor(r)} disabled={sending}>
@@ -577,7 +617,8 @@ function OverrideModal({
   const [newEmail, setNewEmail] = useState("");
   const [newFirst, setNewFirst] = useState("");
   const [newLast, setNewLast] = useState("");
-  const [newRole, setNewRole] = useState<"Admin" | "User">("Admin");
+  const [newRelationshipRole, setNewRelationshipRole] = useState<RelationshipRole>("primary_contact");
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!row) return;
@@ -585,16 +626,16 @@ function OverrideModal({
     setNewEmail(existingOverride?.email || "");
     setNewFirst(existingOverride?.first_name || "");
     setNewLast(existingOverride?.last_name || "");
-    setNewRole((existingOverride?.unicorn_role as any) || "Admin");
+    setNewRelationshipRole(existingOverride?.relationship_role || "primary_contact");
+    setEmailError(null);
     setTab("existing");
     (async () => {
       setLoading(true);
       try {
         const { data: tus } = await supabase
           .from("tenant_users")
-          .select("user_id, primary_contact, created_at")
+          .select("user_id, relationship_role, created_at")
           .eq("tenant_id", row.tenant_id)
-          .order("primary_contact", { ascending: false })
           .order("created_at", { ascending: false });
         const uids = (tus || []).map((t: any) => t.user_id).filter(Boolean);
         if (uids.length === 0) { setMembers([]); return; }
@@ -614,11 +655,17 @@ function OverrideModal({
               first_name: u.first_name,
               last_name: u.last_name,
               unicorn_role: u.unicorn_role,
-              primary_contact: !!t.primary_contact,
+              relationship_role: (t.relationship_role as RelationshipRole | null) ?? null,
               created_at: t.created_at,
             } as TenantUserOption;
           })
           .filter(Boolean) as TenantUserOption[];
+        // Surface primary_contact rows first.
+        opts.sort((a, b) => {
+          const ap = a.relationship_role === "primary_contact" ? 0 : 1;
+          const bp = b.relationship_role === "primary_contact" ? 0 : 1;
+          return ap - bp;
+        });
         setMembers(opts);
       } finally {
         setLoading(false);
@@ -631,22 +678,32 @@ function OverrideModal({
   const saveExisting = () => {
     const m = members.find((x) => x.user_id === selectedUserId);
     if (!m) return;
+    // Default existing-user override to the user's current relationship role,
+    // falling back to primary_contact (the launch list is keyed off primary).
+    const rr: RelationshipRole = m.relationship_role || "primary_contact";
     onSave(row.tenant_id, {
       email: m.email,
       first_name: m.first_name || "there",
       last_name: m.last_name || "-",
-      unicorn_role: (m.unicorn_role === "Admin" ? "Admin" : "User"),
+      relationship_role: rr,
+      unicorn_role: unicornRoleFromRelationship(rr),
     });
     onClose();
   };
 
   const saveNew = () => {
     if (!newEmail.trim() || !newFirst.trim()) return;
+    if (!isValidEmail(newEmail)) {
+      setEmailError("Enter a valid email address (e.g. name@example.com).");
+      return;
+    }
+    setEmailError(null);
     onSave(row.tenant_id, {
       email: newEmail.trim().toLowerCase(),
       first_name: newFirst.trim(),
       last_name: newLast.trim() || "-",
-      unicorn_role: newRole,
+      relationship_role: newRelationshipRole,
+      unicorn_role: unicornRoleFromRelationship(newRelationshipRole),
     });
     onClose();
   };
@@ -687,14 +744,17 @@ function OverrideModal({
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-medium" style={{ color: BRAND.acai }}>{m.first_name} {m.last_name || ""}</span>
-                          {m.primary_contact && (
+                          {m.relationship_role === "primary_contact" && (
                             <Badge style={{ backgroundColor: BRAND.fuchsia, color: "white" }}>Primary</Badge>
+                          )}
+                          {m.relationship_role === "secondary_contact" && (
+                            <Badge variant="outline">Secondary</Badge>
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground">{m.email}</span>
                       </div>
                     </div>
-                    <Badge variant="outline">{m.unicorn_role || "User"}</Badge>
+                    <Badge variant="outline">{relationshipRoleLabel(m.relationship_role)}</Badge>
                   </label>
                 ))}
               </div>
@@ -720,15 +780,28 @@ function OverrideModal({
             </div>
             <div>
               <label className="text-xs font-medium">Email</label>
-              <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="contact@example.com" />
+              <Input
+                type="email"
+                value={newEmail}
+                onChange={(e) => { setNewEmail(e.target.value); if (emailError) setEmailError(null); }}
+                placeholder="contact@example.com"
+                aria-invalid={!!emailError}
+              />
+              {emailError && <p className="text-xs text-destructive mt-1">{emailError}</p>}
             </div>
             <div>
               <label className="text-xs font-medium">Role</label>
-              <Select value={newRole} onValueChange={(v) => setNewRole(v as any)}>
+              <Select value={newRelationshipRole} onValueChange={(v) => setNewRelationshipRole(v as RelationshipRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="User">User</SelectItem>
+                  {RELATIONSHIP_ROLE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      <div className="flex flex-col">
+                        <span>{opt.label}</span>
+                        <span className="text-xs text-muted-foreground">{opt.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

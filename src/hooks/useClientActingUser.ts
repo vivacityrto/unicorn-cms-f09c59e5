@@ -68,12 +68,12 @@ export function useClientActingUser(): UseClientActingUserResult {
     setError(null);
 
     try {
-      // Strategy 1: Check tenant_users for primary_contact = true
+      // Strategy 1: Check tenant_users for relationship_role='primary_contact'
       const { data: primaryContact } = await supabase
         .from("tenant_users")
         .select("user_id")
         .eq("tenant_id", tenantId)
-        .eq("primary_contact", true)
+        .eq("relationship_role", "primary_contact")
         .limit(1)
         .maybeSingle();
 

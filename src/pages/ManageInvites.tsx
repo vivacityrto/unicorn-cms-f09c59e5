@@ -19,6 +19,7 @@ import ReInviteDialog from "@/components/admin/ReInviteDialog";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { relationshipRoleLabel, relationshipLabelFromUnicornRole } from "@/lib/roles/relationshipRole";
 
 type InviteRow = {
   id: string;
@@ -26,6 +27,7 @@ type InviteRow = {
   email: string;
   tenant_id: number;
   unicorn_role: string;
+  relationship_role: import('@/lib/roles/relationshipRole').RelationshipRole | null;
   status: 'pending' | 'expired' | 'failed' | 'sent' | 'successful';
   error_message?: string | null;
   invited_by?: string | null;
@@ -309,9 +311,10 @@ export default function ManageInvites() {
     return { hours, label, variant };
   };
 
-  const labelForRole = (r: string) => {
-    // The role is now already in the correct format (unicorn_role)
-    return r;
+  const labelForRole = (invite: InviteRow) => {
+    // Prefer the new relationship_role; fall back to legacy unicorn_role mapping.
+    if (invite.relationship_role) return relationshipRoleLabel(invite.relationship_role);
+    return relationshipLabelFromUnicornRole(invite.unicorn_role);
   };
 
   const getUserTypeBadgeVariant = (userType: string | null) => {
@@ -813,7 +816,7 @@ export default function ManageInvites() {
                       </TableCell>
                       <TableCell className="py-6 border-r border-border/50">
                         <Badge variant="outline" className="text-xs">
-                          {userStatus?.unicorn_role || labelForRole(invite.unicorn_role)}
+                          {labelForRole(invite)}
                         </Badge>
                       </TableCell>
                       <TableCell className={`py-6 ${isSuperAdmin ? 'border-r border-border/50' : ''}`}>

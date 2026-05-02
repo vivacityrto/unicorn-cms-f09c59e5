@@ -32,12 +32,12 @@ export function useTenantContacts(tenantIds: number[]) {
         memberCount[m.tenant_id] = (memberCount[m.tenant_id] || 0) + 1;
       });
 
-      // Primary contacts: earliest primary_contact = true per tenant.
+      // Primary contacts: earliest relationship_role='primary_contact' per tenant.
       const { data: primary, error: primaryErr } = await supabase
         .from("tenant_users")
         .select("tenant_id, user_id, created_at")
         .in("tenant_id", sortedIds)
-        .eq("primary_contact", true)
+        .eq("relationship_role", "primary_contact")
         .order("created_at", { ascending: true });
       if (primaryErr) throw primaryErr;
 
