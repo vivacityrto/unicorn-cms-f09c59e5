@@ -23,10 +23,16 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Shield, User as UserIcon, AlertTriangle, ArrowUpRight, Users, UserPlus } from 'lucide-react';
+import { Loader2, Shield, User as UserIcon, AlertTriangle, ArrowUpRight, Users, UserPlus, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TenantType } from '@/contexts/TenantTypeContext';
 import { UpgradeModal } from '@/components/billing/UpgradeModal';
+import {
+  type RelationshipRole,
+  RELATIONSHIP_ROLE_OPTIONS,
+  isValidEmail,
+  unicornRoleFromRelationship,
+} from '@/lib/roles/relationshipRole';
 
 interface TenantInviteDialogProps {
   open: boolean;
