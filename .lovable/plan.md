@@ -1,95 +1,79 @@
-# Active packages vs Package history
+## Client Burndown Chart
 
-Splits `/packages` into two zones so closed packages stop rendering as broken-looking active cards:
+Adds a third hours surface to the client `/packages` cards: a compact line chart plotting cumulative hours used over time vs. an ideal pacing line. Strictly additive — one new view, one new hook, one new component, one wire-up.
 
-- **Your active packages** — full `PackageCard` treatment (with the existing Section A collapse logic for multi-package tenants).
-- **Package history** — collapsed-by-default section of compact one-line rows showing tenure only.
+### 1. Migration — `v_client_package_hours_timeline`
 
-Filter rule: `is_complete === true` → history; everything else → active. The dashboard view already exposes `is_complete` (verified in `ClientPackageDashboardRow`).
+New file: `supabase/migrations/<timestamp>_v_client_package_hours_timeline.sql`
 
-UI-only. No SQL, no view changes, no hook changes.
+- `CREATE OR REPLACE VIEW public.v_client_package_hours_timeline WITH (security_invoker = true)`
+- CTE `daily` aggregates `time_entries.duration_minutes` → hours, bucketed by `(start_at AT TIME ZONE 'Australia/Sydney')::date`, joined to `package_instances` for `tenant_id`
+- Filters: `package_instance_id NOT NULL`, `duration_minutes > 0`, `start_at >= pi.start_date` (when set)
+- Outer SELECT adds `cumulative_hours_used` via window `SUM ... ROWS UNBOUNDED PRECEDING` and `point_rank` via `ROW_NUMBER`
+- `GRANT SELECT ... TO authenticated` + `COMMENT ON VIEW`
+- Sparse: only days with activity. No DDL on existing tables. No modifications to any existing view.
 
-## Files
+### 2. RLS sanity test
 
-**New:** `src/components/client/package-dashboard/HistoricalPackageRow.tsx` — single compact row.
+New file: `supabase/tests/v_client_package_hours_timeline.sql` — three-persona pattern (tenant A, tenant B, super_admin) mirroring existing dashboard view tests.
 
-**New:** `src/components/client/package-dashboard/PackageHistorySection.tsx` — collapsible wrapper with header, count badge, chevron toggle, and tenure footer.
+### 3. Hook — `useClientPackageHoursTimeline`
 
-**Modified:** `src/components/client/ClientPackagesPage.tsx` — partition `dashboards` into `activePackages` / `historicalPackages` via `useMemo`; render active list (preserving existing collapse/expand logic untouched) followed by `<PackageHistorySection>` when history exists.
+New file: `src/hooks/use-client-package-hours-timeline.ts`
 
-## `HistoricalPackageRow`
+- Exports `ClientPackageHoursTimelinePoint` interface (typed, no `any`)
+- `useQuery` keyed on `['client_package_hours_timeline', activeTenantId, packageInstanceId]`, `staleTime: 60_000`
+- Explicit `.eq('tenant_id', activeTenantId)` AND `.eq('package_instance_id', packageInstanceId)`, ordered by `activity_date asc`
+- `enabled` only when both IDs present
+- Mirrors `use-client-package-hours-by-type.ts` patterns
 
-`flex items-center gap-3 p-3 rounded-md border bg-card/50`. Left to right:
+### 4. Component — `PackageBurndownChart`
 
-1. `Archive` (lucide) icon, size 16, `text-muted-foreground`.
-2. `dashboard.package_name` — `text-sm font-medium`, truncated.
-3. `<Badge variant="secondary">{package_type}</Badge>` — omitted when `package_type === package_name` (same dedup rule used in `PackageCard`).
-4. Period text in `text-sm text-muted-foreground`:
-   - both dates: `{format(start, 'd MMM yyyy')} → {format(end, 'd MMM yyyy')}`
-   - start only: `Started {format(start, 'd MMM yyyy')}`
-   - neither: omitted
-5. `ml-auto` duration tag in `text-xs text-muted-foreground` — `formatDistanceStrict(end, start)` when both dates present (e.g. "12 months", "2 years"). Omitted otherwise.
-6. `<Badge variant="outline">Completed</Badge>` — single muted badge regardless of how the package ended. Does **not** reuse `PackageStatusPill` palette.
+New file: `src/components/client/package-dashboard/PackageBurndownChart.tsx`
 
-Non-interactive in v1. No loading/error states (parent passes resolved data).
+Props: `points`, `hoursTotal`, `hoursUsed`, `startDate`, `endDate`, `isLoading`, `isError`.
 
-## `PackageHistorySection`
+- Section heading: small uppercase muted **"Hours over time"** (matches sibling sections)
+- `ResponsiveContainer` height ~180px
+- `LineChart` with merged data array combining ideal endpoints + actual points, sorted + deduped by date, `connectNulls`
+- **Actual line:** solid emerald, `type="stepAfter"`, plots `cumulative_hours_used`
+- **Ideal line:** dashed slate-400, only when `startDate && endDate && hoursTotal > 0` (two endpoints: `(startDate, 0)` and `(endDate, hoursTotal)`)
+- **Today marker:** `ReferenceLine` dashed fuchsia `#ED1878`, only when today falls inside plotted x-range
+- X axis: `d MMM` if span ≤ 6mo else `MMM yyyy` (date-fns)
+- Y axis: integers, domain `[0, ceil(max(hoursTotal, hoursUsed) * 1.1)]`
+- Custom tooltip: date (`d MMM yyyy`), actual via `formatHours`, interpolated ideal at hovered date, delta — emerald "ahead", amber "behind", muted "On pace" (±0.5h band)
+- No grid (or single muted horizontal), no legend, tight margins
 
-```text
-<section> (rounded-md border bg-card/30)
-  <button>  full-width header, hover:bg-accent/50, aria-expanded
-    "Package history"  +  <Badge variant="secondary">{count}</Badge>
-    ChevronRight (collapsed) | ChevronDown (expanded)
-  </button>
-  {isExpanded && (
-    list of HistoricalPackageRow (most-recent end_date first)
-    footer: "Member since {format(memberSince, 'd MMM yyyy')} · {durationText}"
-  )}
-</section>
-```
+**Edge cases:**
+- `points.length === 0` → render nothing (parent receives empty fragment / null)
+- One point → dot, no line; ideal still renders if applicable
+- `hoursTotal === 0` → no ideal line
+- `endDate` null → no ideal line; today marker still renders
+- Over budget → Y-axis grows; tooltip honest
+- Loading → ~180px skeleton
+- Error → small inline destructive alert; doesn't block rest of card
 
-- Local `useState<boolean>` for expansion. No persistence.
-- Default collapsed, **except** when `defaultExpanded` prop is true (used when there are no active packages).
-- `memberSince` = earliest `start_date` across the passed packages. `durationText` computed from months between memberSince and today: `{years} years {months} months` when ≥ 12 months, otherwise `{N} months`. Footer hidden if no historical package has a `start_date`.
-- Whole header is keyboard-focusable; Enter/Space toggle (native button behaviour).
+### 5. Wire-up — `PackageCard` in `ClientPackagesPage.tsx`
 
-## `ClientPackagesPage` changes
+- Import `useClientPackageHoursTimeline` and `PackageBurndownChart`
+- Call hook alongside existing dashboard / breakdown / recent hooks
+- Insert `<PackageBurndownChart ... />` directly after `<PackageHoursBreakdown />` (line ~251) and before `<PackageStageStepper />` (line ~258)
+- Pass `dashboard.data?.hours_total/hours_used/start_date/end_date` plus `timeline.data ?? []`, `timeline.isLoading`, `timeline.isError`
 
-Right after `useClientPackageDashboards()`:
+### Privacy & security guarantees
 
-```ts
-const activePackages = useMemo(
-  () => dashboards.filter(d => !d.is_complete),
-  [dashboards]
-);
+- View `security_invoker = true` → RLS delegated to `time_entries` and `package_instances`
+- Hook adds explicit `tenant_id` filter (defence in depth, matches `useReleasedAudits`)
+- No `is_billable`, no `user_id`, no consultant attribution surfaced
+- AEST/AEDT date bucketing matches operational reality
+- `start_at >= pi.start_date` excludes pre-period mis-attributions, consistent with sibling views
 
-const historicalPackages = useMemo(
-  () => dashboards
-    .filter(d => d.is_complete)
-    .sort((a, b) => (b.end_date ?? '').localeCompare(a.end_date ?? '')),
-  [dashboards]
-);
-```
+### Out of scope (explicit non-goals)
 
-Render flow inside the existing wrapper (preserving heading + loading skeleton):
+Cross-package burndown, PDF export, forecast/projection lines, per-stage burndown, drill-to-entries, on-hold annotations. Existing views, tables, EOS/L10, Scorecards, audit module, Vivacity Academy untouched.
 
-- **Both empty**: existing `No active packages found.` empty card (unchanged).
-- **Active present**: render the existing active-list block but iterating over `activePackages` instead of `dashboards`. Existing `expandedIds` auto-expand effect, `toggle`, and `CollapsedPackageRow` / `PackageCard` branching all stay exactly as today — only the source array changes.
-- **Historical present**: append `<PackageHistorySection packages={historicalPackages} defaultExpanded={activePackages.length === 0} />`.
-- **Active empty + history present**: render a single muted line above the section — `You don't have any active packages right now. Your history with us is below.` — and the section opens expanded by default.
+### Sanity SQL (for PR description after deploy)
 
-Wrap the whole body in `space-y-8` to give the history block clear separation from the active list (active list keeps its inner `space-y-4`).
-
-## Acceptance / Smoke
-
-- AHMRC Training: 1 active card + collapsed `Package history (3)`. Expanding shows 3 rows newest-first with tenure footer.
-- AHMRC active card: byte-identical to today (no changes to `PackageCard` props or render path).
-- A history row reads e.g. `Diamond RTO Membership · membership · 30 Nov 2022 → 1 Dec 2023 · 12 months · Completed`. No stages, hours tile, stepper, or action row.
-- Tenant with only one active package and no history: page identical to today, no history section rendered.
-- Tenant with only history: muted message above + history expanded by default.
-- DevTools: zero new queries. Mobile: history rows truncate cleanly.
-- No `any`. Build clean.
-
-## Out of scope (per prompt)
-
-Click-to-expand history detail, renewal-chain visualisation, CSV export, "Reactivate" action, history-section search/filter, persisting expand state.
+1. AHMRC `package_instance_id = 15152` timeline rows
+2. Final cumulative reconcile against `v_client_package_dashboard.hours_used`
+3. Cross-platform count of packages with ≥ 2 timeline points
