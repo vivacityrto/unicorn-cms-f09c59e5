@@ -349,7 +349,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     setEditForm({
       job_title: member.users.job_title || '',
       phone: member.users.phone || '',
-      role: getMemberRoleValue(member),
+      role: getMemberRelationshipRole(member),
       disabled: member.users.disabled ?? false,
     });
     setDrawerStats({ totalLogins: 0, lastLogin: null });
