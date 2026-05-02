@@ -371,26 +371,20 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
       if (userError) throw userError;
 
-      const currentRoleValue = getMemberRoleValue(editingMember);
-      if (editForm.role !== currentRoleValue) {
-        const patch = buildRolePatch(editForm.role);
-        const { error: roleError } = await supabase
-          .from('tenant_users')
-          .update(patch)
-          .eq('tenant_id', tenantId)
-          .eq('user_id', editingMember.user_id);
-
-        if (roleError) throw roleError;
+      const currentRR = getMemberRelationshipRole(editingMember);
+      const newRR = editForm.role as RelationshipRole;
+      let legacy = legacyTenantUserPatch(currentRR);
+      if (newRR !== currentRR) {
+        legacy = await applyRelationshipRole(editingMember, newRR);
       }
 
-      const patch = buildRolePatch(editForm.role);
       setMembers(prev => prev.map(m =>
         m.user_id === editingMember.user_id
           ? {
               ...m,
-              role: patch.role,
-              primary_contact: patch.primary_contact,
-              secondary_contact: patch.secondary_contact,
+              relationship_role: newRR,
+              role: legacy.role,
+              primary_contact: legacy.primary_contact,
               users: {
                 ...m.users,
                 job_title: editForm.job_title || null,
