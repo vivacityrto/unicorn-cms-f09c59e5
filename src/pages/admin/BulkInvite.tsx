@@ -91,23 +91,30 @@ export default function BulkInvite() {
     (async () => {
       setLoading(true);
       try {
-        // 1. Active membership package_instances → unique tenant_ids + tier
+        // 1. Membership packages (filter source — package_type='membership')
+        const { data: memberPkgs, error: pkErr } = await supabase
+          .from("packages")
+          .select("id, name, full_text")
+          .eq("package_type", "membership");
+        if (pkErr) throw pkErr;
+        const pkgInfo = new Map<number, { tier_name: string; package_code: string }>();
+        (memberPkgs || []).forEach((p: any) => pkgInfo.set(p.id, { tier_name: p.full_text || "Membership", package_code: p.name || "M" }));
+        const memberPkgIds = Array.from(pkgInfo.keys());
+        if (memberPkgIds.length === 0) { if (!cancelled) setRows([]); return; }
+
+        // 2. Active package_instances on those packages
         const { data: pkgInstances, error: piErr } = await supabase
           .from("package_instances")
-          .select("tenant_id, package_id, packages!inner(name, full_text, package_type)")
+          .select("tenant_id, package_id")
           .eq("is_active", true)
-          .eq("packages.package_type", "membership");
-
+          .in("package_id", memberPkgIds);
         if (piErr) throw piErr;
 
-        // Build map: tenant_id → first tier seen (tenants may hold both RTO+CRICOS)
         const tierByTenant = new Map<number, { tier_name: string; package_code: string }>();
         for (const pi of (pkgInstances || []) as any[]) {
           if (!tierByTenant.has(pi.tenant_id)) {
-            tierByTenant.set(pi.tenant_id, {
-              tier_name: pi.packages?.full_text || "Membership",
-              package_code: pi.packages?.name || "M",
-            });
+            const info = pkgInfo.get(pi.package_id);
+            if (info) tierByTenant.set(pi.tenant_id, info);
           }
         }
 
