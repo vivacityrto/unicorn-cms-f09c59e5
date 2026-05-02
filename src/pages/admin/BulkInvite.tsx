@@ -15,6 +15,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send, AlertCircle, CheckCircle2, Loader2, Pencil, MailCheck, Sparkles } from "lucide-react";
+import {
+  type RelationshipRole,
+  RELATIONSHIP_ROLE_OPTIONS,
+  relationshipRoleLabel,
+  unicornRoleFromRelationship,
+  isValidEmail,
+} from "@/lib/roles/relationshipRole";
 
 type LaunchRow = {
   tenant_id: number;
@@ -24,7 +31,10 @@ type LaunchRow = {
   suggested_email: string | null;
   suggested_first_name: string | null;
   suggested_last_name: string | null;
-  suggested_role: string | null;
+  /** Legacy unicorn_role of the suggested user (kept for the email payload). */
+  suggested_unicorn_role: string | null;
+  /** New canonical role from tenant_users.relationship_role. */
+  suggested_relationship_role: RelationshipRole | null;
   suggested_user_id: string | null;
 };
 
@@ -33,6 +43,7 @@ type Override = {
   first_name: string;
   last_name: string;
   unicorn_role: "Admin" | "User";
+  relationship_role: RelationshipRole;
 };
 
 type LiveStatus = "queued" | "sent" | "skipped" | "failed";
@@ -43,7 +54,7 @@ type TenantUserOption = {
   first_name: string | null;
   last_name: string | null;
   unicorn_role: string | null;
-  primary_contact: boolean;
+  relationship_role: RelationshipRole | null;
   created_at: string;
 };
 
