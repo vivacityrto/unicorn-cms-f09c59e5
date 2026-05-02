@@ -1,95 +1,52 @@
-## Fix Angela's `/admin/bulk-invite` redirect (Option A: both guards)
+# Post-Launch Follow-Up Backlog Update
 
-Two minimal edits. No other files touched.
+Per your direction, no RBAC refactor this turn. Just appending the agreed follow-ups to `.lovable/backlog.md` so they're tracked alongside the existing items.
 
-### Edit 1 — `src/pages/admin/BulkInvite.tsx`
+## Decision Recap (for the record)
 
-Add `Navigate` to the existing import (line 2):
+- **Q1 (Angela's role)**: Confirmed — `+bulktest1@vivacity.com.au` has `unicorn_role = 'Admin'`, not Vivacity team.
+- **Q2 (sidebar source of truth)**: Defer the structured-fields refactor. When shipped, gate must be `is_team === true OR unicorn_role IN ('Super Admin','Team Leader','Team Member')` until backfill completes — Angela's main account (`is_team = false`, `unicorn_role = 'Super Admin'`) is the canary that would lose her own sidebar under an `is_team`-only gate.
 
-```tsx
-import { Navigate, useNavigate } from "react-router-dom";
+## Items to Append to `.lovable/backlog.md`
+
+### 6. Override Modal — Email Format Validation
+**Priority:** Medium
+**Description:** Add email format validation to the override modal (carried over from earlier session).
+
+### 7. RBAC — Load Structured Fields into Auth Profile
+**Files:** `src/hooks/useAuth.tsx`, `src/components/layout/AuthenticatedLayout.tsx`, `src/components/DashboardLayout.tsx`, `src/contexts/TenantTypeContext.tsx`
+**Priority:** Medium
+**Description:** Extend `UserProfile` interface and `fetchUserProfile` select to include `is_team` and `user_type`. Migrate the three sidebar-decision sites to:
+```ts
+const isVivacityTeam =
+  profile?.is_team === true ||
+  ['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '');
 ```
+Once the `is_team` backfill (item 9) is complete and verified across all staff accounts, tighten to `is_team === true` alone. Requires regression pass on every `unicorn_role`-gated screen.
 
-Replace the `useEffect` access-control block (lines 78–85) with a render-time guard:
-
-**Before:**
-```tsx
-// Access control
-useEffect(() => {
-  if (authLoading) return;
-  if (!isSuperAdmin) {
-    toast({ title: "Access denied", description: "Only SuperAdmins can use the bulk invite tool.", variant: "destructive" });
-    navigate("/dashboard");
-  }
-}, [authLoading, isSuperAdmin, navigate, toast]);
+### 8. Backfill `is_team = true` for Angela's Main Account
+**Priority:** High (do before item 7 ships)
+**Description:** Migration:
+```sql
+UPDATE public.users SET is_team = true
+WHERE email = 'angela@vivacity.com.au';
 ```
+Broaden to all staff with `user_type = 'Vivacity Team'` AND `is_team = false` once item 9 root cause is understood.
 
-**After:**
-```tsx
-// Access control — wait for the profile to resolve, then check ONLY unicorn_role.
-// Do NOT add is_team / tenant_id / user_type checks; unicorn_role is authoritative.
-if (authLoading || profile === null || profile === undefined) {
-  return (
-    <DashboardLayout>
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    </DashboardLayout>
-  );
-}
-if (profile.unicorn_role !== "Super Admin") {
-  return <Navigate to="/dashboard" replace />;
-}
-```
+### 9. Investigate `is_team` Trigger Gap on Legacy Accounts
+**Priority:** Medium
+**Description:** Angela's account has `user_type = 'Vivacity Team'` but `is_team = false`. Determine whether:
+  (a) the trigger that sets `is_team` from `user_type` doesn't exist,
+  (b) it exists but only fires on INSERT (not retroactive for accounts predating it), or
+  (c) it was added after Angela's account was provisioned.
+Audit all `users` rows where `user_type = 'Vivacity Team' AND is_team = false` and either backfill or add a one-time reconciliation migration.
 
-### Edit 2 — `src/components/ProtectedRoute.tsx`
+## Files Changed
 
-Add `profile` to the `useAuth()` destructure (line 14):
+- `.lovable/backlog.md` — append items 6–9 and update the summary table + last-updated date.
 
-```tsx
-const { user, profile, loading } = useAuth();
-```
+## Out of Scope (this turn)
 
-Replace the SuperAdmin check (lines 34–37):
-
-**Before:**
-```tsx
-// Check if route requires SuperAdmin access
-if (requireSuperAdmin && !isSuperAdmin) {
-  return <Navigate to="/dashboard" replace />;
-}
-```
-
-**After:**
-```tsx
-// Check if route requires SuperAdmin access.
-// useAuth sets loading=false as soon as the session resolves, but profile is
-// fetched asynchronously after that. Wait for profile before judging, otherwise
-// legitimate SuperAdmins get redirected on first paint.
-if (requireSuperAdmin && !profile) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary-dark to-secondary">
-      <div className="text-white text-xl">Loading...</div>
-    </div>
-  );
-}
-if (requireSuperAdmin && !isSuperAdmin) {
-  return <Navigate to="/dashboard" replace />;
-}
-```
-
-### Not changing
-
-- `useAuth.tsx` — deferred profile fetch is intentional (avoids deadlock).
-- `useRBAC.ts` — its `isSuperAdmin` already correctly checks `unicorn_role === 'Super Admin'`.
-- `App.tsx` — route registration at line 1014 is correct as-is.
-- `ManageInvites.tsx` — Revoke gate is render-time conditional, tolerates null-profile naturally.
-- `send-invitation-email` v501 — untouched, CAPS comment block intact.
-
-### Verification
-
-1. Angela hard-refreshes `/admin/bulk-invite` → brief spinner → page renders, no redirect.
-2. Non-SuperAdmin → still redirected to `/dashboard` after profile resolves.
-3. ManageInvites Revoke button still SuperAdmin-only.
-
-Approve and I'll apply both edits.
+- No changes to `useAuth.tsx`, sidebar layout components, or `TenantTypeContext`.
+- No database migrations.
+- No regression testing of role-gated screens.
