@@ -175,6 +175,7 @@ export default function ClientDetail() {
         .eq('tenant_id', tenantIdNum)
         .eq('relationship_role', 'primary_contact')
         .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (pcRow?.user_id) {
