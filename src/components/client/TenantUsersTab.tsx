@@ -166,29 +166,100 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    if (!canChangeRoles) return;
-    setUpdatingRole(userId);
-    try {
-      const patch = buildRolePatch(newRole);
-      const { error } = await supabase
-        .from('tenant_users')
-        .update(patch)
-        .eq('tenant_id', tenantId)
-        .eq('user_id', userId);
+  // Apply a relationship_role change to a single user (writes new column +
+  // legacy patch + users.unicorn_role/user_type for back-compat).
+  // TODO(rel-role-phase-4): drop the dual-write to users.unicorn_role/user_type
+  // once RLS no longer reads from those legacy fields.
+  const applyRelationshipRole = async (member: TenantMemberInfo, newRR: RelationshipRole) => {
+    const legacy = legacyTenantUserPatch(newRR);
+    const { error: tuErr } = await supabase
+      .from('tenant_users')
+      .update({ relationship_role: newRR, ...legacy })
+      .eq('tenant_id', tenantId)
+      .eq('user_id', member.user_id);
+    if (tuErr) throw tuErr;
 
-      if (error) throw error;
-      setMembers(prev => prev.map(m =>
-        m.user_id === userId
-          ? { ...m, role: patch.role, primary_contact: patch.primary_contact, secondary_contact: patch.secondary_contact }
-          : m
+    const { error: usrErr } = await supabase
+      .from('users')
+      .update({
+        unicorn_role: unicornRoleFromRelationship(newRR),
+        user_type: userTypeFromRelationship(newRR),
+      })
+      .eq('user_uuid', member.users.user_uuid);
+    if (usrErr) throw usrErr;
+
+    return legacy;
+  };
+
+  const handleRelationshipRoleChange = async (member: TenantMemberInfo, newRR: RelationshipRole) => {
+    if (!canChangeRoles) return;
+    const oldRR = getMemberRelationshipRole(member);
+    if (oldRR === newRR) return;
+
+    // Single-primary swap: if promoting to primary while another user already
+    // holds primary, ask first; the actual swap runs in confirmPrimarySwap.
+    if (newRR === 'primary_contact') {
+      const existingPrimary = members.find(
+        (m) => m.user_id !== member.user_id && getMemberRelationshipRole(m) === 'primary_contact',
+      );
+      if (existingPrimary) {
+        setPrimarySwapTarget(member);
+        return;
+      }
+    }
+
+    setUpdatingRole(member.user_id);
+    try {
+      const legacy = await applyRelationshipRole(member, newRR);
+      setMembers((prev) => prev.map((m) =>
+        m.user_id === member.user_id
+          ? { ...m, relationship_role: newRR, role: legacy.role, primary_contact: legacy.primary_contact }
+          : m,
       ));
-      toast.success('Role updated successfully');
+      toast.success(`Role changed: ${relationshipRoleLabel(oldRR)} → ${relationshipRoleLabel(newRR)}`);
     } catch (error) {
       console.error('Error updating role:', error);
-      toast.error('Failed to update role');
+      if (isUniqueViolation(error)) {
+        toast.error("Couldn't change role — another change happened concurrently. Please refresh and try again.");
+        await fetchMembers();
+      } else {
+        toast.error('Failed to update role');
+      }
     } finally {
       setUpdatingRole(null);
+    }
+  };
+
+  const confirmPrimarySwap = async () => {
+    const target = primarySwapTarget;
+    if (!target) return;
+    const existingPrimary = members.find(
+      (m) => m.user_id !== target.user_id && getMemberRelationshipRole(m) === 'primary_contact',
+    );
+    if (!existingPrimary) {
+      setPrimarySwapTarget(null);
+      return;
+    }
+    setUpdatingRole(target.user_id);
+    try {
+      // Demote existing → secondary, then promote target → primary. Run sequentially
+      // so the unique index can never see two primaries mid-flight.
+      await applyRelationshipRole(existingPrimary, 'secondary_contact');
+      await applyRelationshipRole(target, 'primary_contact');
+      const oldRR = getMemberRelationshipRole(target);
+      toast.success(`Role changed: ${relationshipRoleLabel(oldRR)} → ${relationshipRoleLabel('primary_contact')}`);
+      await fetchMembers();
+    } catch (error) {
+      console.error('Error swapping primary contact:', error);
+      if (isUniqueViolation(error)) {
+        toast.error("Couldn't change role — another change happened concurrently. Please refresh and try again.");
+      } else {
+        toast.error('Failed to update role');
+      }
+      await fetchMembers();
+    } finally {
+      setUpdatingRole(null);
+      setPrimarySwapTarget(null);
     }
   };
 
