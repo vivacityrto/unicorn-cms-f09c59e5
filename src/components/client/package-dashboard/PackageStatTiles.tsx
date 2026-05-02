@@ -18,14 +18,26 @@ function fmtRelative(iso: string | null): { label: string; tone: 'neutral' | 'am
   return { label, tone };
 }
 
+function formatHours(decimalHours: number): string {
+  const total = Math.max(0, decimalHours);
+  const h = Math.floor(total);
+  const m = Math.round((total - h) * 60);
+  return `${h}:${m.toString().padStart(2, '0')}`;
+}
+
 const TONE_TEXT: Record<'neutral' | 'amber' | 'red', string> = {
   neutral: 'text-foreground',
   amber: 'text-amber-700',
   red: 'text-red-700',
 };
 
+interface TileBar {
+  pct: number;
+  colorClass: string;
+}
+
 function Tile({
-  label, value, sub, icon: Icon, tone = 'neutral', subTone = 'neutral',
+  label, value, sub, icon: Icon, tone = 'neutral', subTone = 'neutral', bar,
 }: {
   label: string;
   value: React.ReactNode;
@@ -33,6 +45,7 @@ function Tile({
   icon: React.ComponentType<{ className?: string }>;
   tone?: 'neutral' | 'amber' | 'red';
   subTone?: 'neutral' | 'amber' | 'red';
+  bar?: TileBar | null;
 }) {
   return (
     <div className="rounded-lg border bg-card p-3 space-y-1">
@@ -43,6 +56,14 @@ function Tile({
       <div className={cn('text-xl font-bold tracking-tight tabular-nums', TONE_TEXT[tone])}>
         {value}
       </div>
+      {bar && (
+        <div className="h-0.5 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className={cn('h-full', bar.colorClass)}
+            style={{ width: `${Math.min(100, Math.max(0, bar.pct * 100))}%` }}
+          />
+        </div>
+      )}
       {sub && (
         <div className={cn('text-xs', TONE_TEXT[subTone])}>{sub}</div>
       )}
@@ -69,16 +90,28 @@ export function PackageStatTiles({ dashboard }: Props) {
   const hoursPct = Number(dashboard.hours_pct_used) || 0;
   const hoursTone: 'neutral' | 'amber' | 'red' =
     hoursPct >= 0.95 ? 'red' : hoursPct >= 0.75 ? 'amber' : 'neutral';
-  const hoursValue = `${Number(dashboard.hours_used).toFixed(1)}`;
-  const hoursSub = dashboard.hours_total > 0
-    ? `of ${Number(dashboard.hours_total).toFixed(0)}h (${Math.round(hoursPct * 100)}%)`
+  const hoursUsedNum = Number(dashboard.hours_used) || 0;
+  const hoursTotalNum = Number(dashboard.hours_total) || 0;
+  const hoursValue = formatHours(hoursUsedNum);
+  const hoursSub = hoursTotalNum > 0
+    ? `of ${formatHours(hoursTotalNum)} (${Math.round(hoursPct * 100)}%)`
     : 'no allowance set';
+  const hoursBarColor =
+    hoursPct >= 0.95 ? 'bg-red-500' : hoursPct >= 0.75 ? 'bg-amber-500' : 'bg-emerald-500';
+  const hoursBar: TileBar = {
+    pct: hoursTotalNum > 0 ? Math.min(1, hoursPct) : 0,
+    colorClass: hoursBarColor,
+  };
 
   // Stages
-  const stagesValue = `${dashboard.stages_complete}`;
+  const stagesValue = `${dashboard.stages_complete} / ${dashboard.stages_total}`;
   const stagesSub = dashboard.stages_total > 0
     ? `of ${dashboard.stages_total} stages`
     : 'no stages';
+  const stagesBar: TileBar = {
+    pct: dashboard.stages_total > 0 ? dashboard.stages_complete / dashboard.stages_total : 0,
+    colorClass: 'bg-emerald-500',
+  };
 
   // Tasks
   const overdue = dashboard.overdue_tasks;
@@ -89,8 +122,8 @@ export function PackageStatTiles({ dashboard }: Props) {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-      <Tile label="Hours" value={hoursValue} sub={hoursSub} icon={Clock} tone={hoursTone} />
-      <Tile label="Stages" value={stagesValue} sub={stagesSub} icon={Layers} />
+      <Tile label="Hours" value={hoursValue} sub={hoursSub} icon={Clock} tone={hoursTone} bar={hoursBar} />
+      <Tile label="Stages" value={stagesValue} sub={stagesSub} icon={Layers} bar={stagesBar} />
       <Tile
         label="Open tasks"
         value={openValue}
