@@ -218,8 +218,7 @@ export function TenantInviteDialog({
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email)) {
       toast.error('Please enter a valid email address');
       return;
     }
@@ -236,7 +235,7 @@ export function TenantInviteDialog({
         outcome: 'blocked',
         failureReason: seatCheck.message,
       });
-      
+
       toast.error(seatCheck.message || 'Cannot invite more users - seat limit reached');
       setCanInvite(false);
       setSeatMessage(seatCheck.message || null);
@@ -252,14 +251,26 @@ export function TenantInviteDialog({
         return;
       }
 
+      // For client tenants, `role` is a RelationshipRole and we derive
+      // the legacy unicorn_role from it. The edge function will use
+      // relationship_role as the source of truth.
+      const isClient = tenantId !== VIVACITY_TENANT_ID;
+      const relationshipRole: RelationshipRole | null = isClient
+        ? (role as RelationshipRole)
+        : null;
+      const unicornRole = isClient
+        ? unicornRoleFromRelationship(relationshipRole as RelationshipRole)
+        : role;
+
       const { data, error } = await supabase.functions.invoke('invite-user', {
         body: {
           email: email.toLowerCase().trim(),
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          invite_as: tenantId === 6372 ? 'VIVACITY' : 'CLIENT',
+          invite_as: isClient ? 'CLIENT' : 'VIVACITY',
           tenant_id: tenantId,
-          unicorn_role: role,
+          unicorn_role: unicornRole,
+          relationship_role: relationshipRole,
           skip_email: !sendInvitation,
           job_title: position.trim() || null,
           phone_number: phoneNumber.trim() || null,
@@ -272,12 +283,15 @@ export function TenantInviteDialog({
         toast.success(sendInvitation ? `Invitation sent to ${email}` : `${firstName} added to ${tenantName}`);
         handleClose();
         onSuccess?.();
+      } else if (data?.code === 'PRIMARY_EXISTS' || data?.code === 'SECONDARY_EXISTS') {
+        toast.error(data?.detail || 'This organisation already has a contact in that role.');
+        // keep dialog open so the user can pick a different role
       } else {
         toast.error(data?.detail || 'Failed to send invitation');
       }
     } catch (error: any) {
       console.error('Error sending invite:', error);
-      toast.error(error.message || 'Failed to send invitation');
+      toast.error(error?.message || 'Failed to send invitation');
     } finally {
       setIsSending(false);
     }
