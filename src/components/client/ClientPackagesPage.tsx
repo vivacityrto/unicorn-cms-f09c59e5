@@ -4,8 +4,10 @@ import { useClientPackageStages } from "@/hooks/use-client-package-stages";
 import { useClientPackageWhatsNext } from "@/hooks/use-client-package-whats-next";
 import { useClientPackageHoursByType } from "@/hooks/use-client-package-hours-by-type";
 import { useClientPackageHoursRecent } from "@/hooks/use-client-package-hours-recent";
+import { useClientPackageHoursTimeline } from "@/hooks/use-client-package-hours-timeline";
 import { PinnedNoteBanner } from "@/components/client/package-dashboard/PinnedNoteBanner";
 import { PackageHoursBreakdown } from "@/components/client/package-dashboard/PackageHoursBreakdown";
+import { PackageBurndownChart } from "@/components/client/package-dashboard/PackageBurndownChart";
 import { PackageRecentWork } from "@/components/client/package-dashboard/PackageRecentWork";
 import { PackageStatusPill } from "@/components/client/package-dashboard/PackageStatusPill";
 import { PackageStatTiles } from "@/components/client/package-dashboard/PackageStatTiles";
@@ -169,6 +171,7 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
   const whatsNext = useClientPackageWhatsNext(packageInstanceId);
   const hoursByType = useClientPackageHoursByType(packageInstanceId);
   const hoursRecent = useClientPackageHoursRecent(packageInstanceId);
+  const timeline = useClientPackageHoursTimeline(packageInstanceId);
 
   return (
     <Card>
@@ -252,6 +255,18 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
           rows={hoursByType.data ?? []}
           isLoading={hoursByType.isLoading}
           isError={hoursByType.isError}
+        />
+
+        {/* Hours over time — burndown chart: actual cumulative vs ideal pacing.
+            Hidden entirely when there are no time entries. */}
+        <PackageBurndownChart
+          points={timeline.data ?? []}
+          hoursTotal={Number(dashboard?.hours_total ?? 0)}
+          hoursUsed={Number(dashboard?.hours_used ?? 0)}
+          startDate={dashboard?.start_date ?? null}
+          endDate={dashboard?.end_date ?? null}
+          isLoading={timeline.isLoading}
+          isError={timeline.isError}
         />
 
         {/* Your journey — stage stepper (replaces phase accordion) */}
