@@ -457,6 +457,16 @@ export default function ManageInvites() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6 animate-fade-in">
+        {launchMode && (
+          <div className="rounded-lg border-l-4 border-l-[#7130A0] bg-[#DFD8E8]/40 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-[#7130A0]" />
+              <p className="text-sm font-medium text-[#44235F]">
+                Launch week view — showing recent active invitations (pending, this week).
+              </p>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
