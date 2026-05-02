@@ -234,8 +234,17 @@ unicorn_role: invitationData!.unicornRole,
 
         // Sign in successful - finalize invitation and redirect
         if (signInData.user) {
-          await finalizeInvitation(signInData.user.id, tokenHash);
-          
+          const result = await finalizeInvitation(signInData.user.id, tokenHash);
+
+          if (!result.ok && result.code === 'EXPIRED') {
+            toast({
+              title: 'Invitation expired',
+              description: 'This invitation has expired. Please ask your admin for a new one.',
+              variant: 'destructive',
+            });
+            return;
+          }
+
           toast({
             title: 'Welcome back!',
             description: 'Your account was already set up. Redirecting to dashboard...',
@@ -249,10 +258,26 @@ unicorn_role: invitationData!.unicornRole,
 
       // Finalize invitation - create tenant membership
       if (authData.user) {
-        const membershipCreated = await finalizeInvitation(authData.user.id, tokenHash);
-        
-        if (!membershipCreated) {
-          console.warn('Membership creation may have failed - user should check with admin if access issues occur');
+        const result = await finalizeInvitation(authData.user.id, tokenHash);
+
+        if (!result.ok) {
+          if (result.code === 'EXPIRED') {
+            toast({
+              title: 'Invitation expired',
+              description: 'This invitation has expired. Please ask your admin for a new one.',
+              variant: 'destructive',
+            });
+            return;
+          }
+          if (result.code === 'INVALID_TOKEN') {
+            toast({
+              title: 'Invalid invitation',
+              description: 'This invitation link is no longer valid.',
+              variant: 'destructive',
+            });
+            return;
+          }
+          console.warn('Membership creation failed - contact admin if access issues occur:', result);
         }
       }
 
