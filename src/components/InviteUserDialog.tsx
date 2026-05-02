@@ -26,7 +26,7 @@ interface InviteUserDialogProps {
 }
 
 type UserSelection = 'vivacity' | 'client' | 'import' | null;
-type UnicornRole = 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User' | null;
+type UnicornRole = 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User' | RelationshipRole | null;
 
 interface Unicorn1User {
   ID: number;
