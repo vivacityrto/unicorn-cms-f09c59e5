@@ -114,7 +114,8 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const AdminTgaIntegrationWrapper = lazy(() => import("./pages/AdminTgaIntegrationWrapper"));
  const AdminUserAudit = lazy(() => import("./pages/AdminUserAudit"));
   const TeamUsers = lazy(() => import("./pages/TeamUsers"));
-  const NewStarterWizard = lazy(() => import("./pages/admin/NewStarterWizard"));
+const NewStarterWizard = lazy(() => import("./pages/admin/NewStarterWizard"));
+const BulkInvite = lazy(() => import("./pages/admin/BulkInvite"));
  const TenantUsers = lazy(() => import("./pages/TenantUsers"));
  const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
  const AdminManageStagesWrapper = lazy(() => import("./pages/AdminManageStagesWrapper"));
@@ -1010,6 +1011,7 @@ const App = () => (
             {/* Team & Tenant Users */}
             <Route path="/admin/team-users" element={<ProtectedRoute><TeamUsers /></ProtectedRoute>} />
             <Route path="/admin/team-users/new-starter" element={<ProtectedRoute requireSuperAdmin><NewStarterWizard /></ProtectedRoute>} />
+            <Route path="/admin/bulk-invite" element={<ProtectedRoute requireSuperAdmin><BulkInvite /></ProtectedRoute>} />
             <Route path="/admin/tenant-users" element={<ProtectedRoute><TenantUsers /></ProtectedRoute>} />
             {/* Admin Stages */}
             <Route path="/admin/stages" element={<ProtectedRoute requireSuperAdmin><AdminManageStagesWrapper /></ProtectedRoute>} />
