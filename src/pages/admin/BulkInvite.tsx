@@ -215,15 +215,29 @@ export default function BulkInvite() {
     return () => { cancelled = true; };
   }, [isSuperAdmin, toast]);
 
-  const effectiveContact = (r: LaunchRow): { email: string; first_name: string; last_name: string; role: string } | null => {
+  const effectiveContact = (r: LaunchRow): {
+    email: string;
+    first_name: string;
+    last_name: string;
+    relationship_role: RelationshipRole;
+    unicorn_role: string;
+  } | null => {
     const ov = overrides.get(r.tenant_id);
-    if (ov) return { email: ov.email, first_name: ov.first_name, last_name: ov.last_name || "-", role: ov.unicorn_role };
+    if (ov) return {
+      email: ov.email,
+      first_name: ov.first_name,
+      last_name: ov.last_name || "-",
+      relationship_role: ov.relationship_role,
+      unicorn_role: ov.unicorn_role,
+    };
     if (r.suggested_email) {
       return {
         email: r.suggested_email,
         first_name: r.suggested_first_name || "there",
         last_name: r.suggested_last_name || "-",
-        role: r.suggested_role || "Admin",
+        // Backfill ensures every active tenant has a primary_contact; default to that.
+        relationship_role: r.suggested_relationship_role || "primary_contact",
+        unicorn_role: r.suggested_unicorn_role || "Admin",
       };
     }
     return null;
