@@ -434,26 +434,68 @@ export function TenantInviteDialog({
 
             <div className="space-y-2">
               <Label>Role</Label>
-              <Select value={role} onValueChange={setRole}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getRoleOptions(tenantId).map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
-                      <div className="flex items-center gap-2">
-                        <r.icon className="h-4 w-4" />
-                        <div>
-                          <span className="font-medium">{r.label}</span>
-                          <span className="text-muted-foreground ml-2 text-xs">
-                            - {r.description}
-                          </span>
+              {isClientTenant ? (
+                <>
+                  <Select value={role} onValueChange={setRole}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RELATIONSHIP_ROLE_OPTIONS.map((opt) => {
+                        const taken =
+                          (opt.value === 'primary_contact' && primaryTaken) ||
+                          (opt.value === 'secondary_contact' && secondaryTaken);
+                        return (
+                          <SelectItem key={opt.value} value={opt.value} disabled={taken}>
+                            <div className="flex items-center gap-2">
+                              {opt.value === 'primary_contact' && <Shield className="h-4 w-4" />}
+                              {opt.value === 'secondary_contact' && <UserCheck className="h-4 w-4" />}
+                              {(opt.value === 'user' || opt.value === 'academy_user') && <UserIcon className="h-4 w-4" />}
+                              <div>
+                                <span className="font-medium">{opt.label}</span>
+                                <span className="text-muted-foreground ml-2 text-xs">
+                                  - {opt.description}
+                                </span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {role === 'primary_contact' && primaryTaken && (
+                    <p className="text-[11px] text-destructive">
+                      This organisation already has a primary contact. Demote them first to invite a new one.
+                    </p>
+                  )}
+                  {role === 'secondary_contact' && secondaryTaken && (
+                    <p className="text-[11px] text-destructive">
+                      This organisation already has a secondary contact. Demote them first to invite a new one.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <Select value={role} onValueChange={setRole}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getRoleOptions(tenantId).map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        <div className="flex items-center gap-2">
+                          <r.icon className="h-4 w-4" />
+                          <div>
+                            <span className="font-medium">{r.label}</span>
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              - {r.description}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="flex items-center space-x-2 pt-2">
