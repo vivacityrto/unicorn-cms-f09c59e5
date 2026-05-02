@@ -155,17 +155,17 @@ export default function BulkInvite() {
         const tenantNameMap = new Map<number, string>();
         (tenants || []).forEach((t: any) => tenantNameMap.set(t.id, t.name));
 
-        // 3. Most recent primary_contact tenant_users row per tenant
+        // 3. Most recent relationship_role='primary_contact' tenant_users row per tenant
         const { data: tus } = await supabase
           .from("tenant_users")
-          .select("tenant_id, user_id, created_at")
+          .select("tenant_id, user_id, relationship_role, created_at")
           .in("tenant_id", activeIds)
-          .eq("primary_contact", true)
+          .eq("relationship_role", "primary_contact")
           .order("created_at", { ascending: false });
 
-        const pickedTu = new Map<number, { user_id: string }>();
+        const pickedTu = new Map<number, { user_id: string; relationship_role: RelationshipRole | null }>();
         for (const tu of (tus || []) as any[]) {
-          if (!pickedTu.has(tu.tenant_id)) pickedTu.set(tu.tenant_id, { user_id: tu.user_id });
+          if (!pickedTu.has(tu.tenant_id)) pickedTu.set(tu.tenant_id, { user_id: tu.user_id, relationship_role: tu.relationship_role });
         }
 
         const userIds = Array.from(pickedTu.values()).map((v) => v.user_id).filter(Boolean);
@@ -191,7 +191,8 @@ export default function BulkInvite() {
               suggested_email: u?.email ?? null,
               suggested_first_name: u?.first_name ?? null,
               suggested_last_name: u?.last_name ?? null,
-              suggested_role: u?.unicorn_role ?? null,
+              suggested_unicorn_role: u?.unicorn_role ?? null,
+              suggested_relationship_role: tu?.relationship_role ?? null,
               suggested_user_id: tu?.user_id ?? null,
             };
           })
