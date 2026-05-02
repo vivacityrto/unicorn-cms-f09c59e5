@@ -349,7 +349,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     setEditForm({
       job_title: member.users.job_title || '',
       phone: member.users.phone || '',
-      role: getMemberRoleValue(member),
+      role: getMemberRelationshipRole(member),
       disabled: member.users.disabled ?? false,
     });
     setDrawerStats({ totalLogins: 0, lastLogin: null });
@@ -371,26 +371,20 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
       if (userError) throw userError;
 
-      const currentRoleValue = getMemberRoleValue(editingMember);
-      if (editForm.role !== currentRoleValue) {
-        const patch = buildRolePatch(editForm.role);
-        const { error: roleError } = await supabase
-          .from('tenant_users')
-          .update(patch)
-          .eq('tenant_id', tenantId)
-          .eq('user_id', editingMember.user_id);
-
-        if (roleError) throw roleError;
+      const currentRR = getMemberRelationshipRole(editingMember);
+      const newRR = editForm.role as RelationshipRole;
+      let legacy = legacyTenantUserPatch(currentRR);
+      if (newRR !== currentRR) {
+        legacy = await applyRelationshipRole(editingMember, newRR);
       }
 
-      const patch = buildRolePatch(editForm.role);
       setMembers(prev => prev.map(m =>
         m.user_id === editingMember.user_id
           ? {
               ...m,
-              role: patch.role,
-              primary_contact: patch.primary_contact,
-              secondary_contact: patch.secondary_contact,
+              relationship_role: newRR,
+              role: legacy.role,
+              primary_contact: legacy.primary_contact,
               users: {
                 ...m.users,
                 job_title: editForm.job_title || null,
@@ -584,47 +578,39 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                       {/* Role Badge/Selector */}
                       {canChangeRoles && member.user_id !== profile?.user_uuid ? (
                         <Select
-                          value={getMemberRoleValue(member)}
-                          onValueChange={(value) => handleRoleChange(member.user_id, value)}
+                          value={getMemberRelationshipRole(member)}
+                          onValueChange={(value) => handleRelationshipRoleChange(member, value as RelationshipRole)}
                           disabled={updatingRole === member.user_id}
                         >
                           <SelectTrigger className="w-44">
                             <SelectValue>
-                              {getRoleLabel(getMemberRoleValue(member))}
+                              {relationshipRoleLabel(getMemberRelationshipRole(member))}
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="parent">
-                              <div className="flex items-center gap-2">
-                                <Shield className="h-3 w-3" />
-                                Primary Contact
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="secondary">
-                              <div className="flex items-center gap-2">
-                                <UserCheck className="h-3 w-3" />
-                                Secondary Contact
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="child">
-                              <div className="flex items-center gap-2">
-                                <UserIcon className="h-3 w-3" />
-                                User
-                              </div>
-                            </SelectItem>
+                            {RELATIONSHIP_ROLE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                <div className="flex items-center gap-2">
+                                  {opt.value === 'primary_contact' && <Shield className="h-3 w-3" />}
+                                  {opt.value === 'secondary_contact' && <UserCheck className="h-3 w-3" />}
+                                  {(opt.value === 'user' || opt.value === 'academy_user') && <UserIcon className="h-3 w-3" />}
+                                  {opt.label}
+                                </div>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       ) : (
                         (() => {
-                          const v = getMemberRoleValue(member);
-                          if (v === 'parent') {
+                          const v = getMemberRelationshipRole(member);
+                          if (v === 'primary_contact') {
                             return (
                               <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                                 <Shield className="h-3 w-3 mr-1" /> Primary Contact
                               </Badge>
                             );
                           }
-                          if (v === 'secondary') {
+                          if (v === 'secondary_contact') {
                             return (
                               <Badge variant="outline" className="bg-accent/10 text-accent-foreground border-accent/30">
                                 <UserCheck className="h-3 w-3 mr-1" /> Secondary Contact
@@ -633,7 +619,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                           }
                           return (
                             <Badge variant="outline" className="bg-muted">
-                              <UserIcon className="h-3 w-3 mr-1" /> User
+                              <UserIcon className="h-3 w-3 mr-1" /> {relationshipRoleLabel(v)}
                             </Badge>
                           );
                         })()
@@ -747,27 +733,19 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                   onValueChange={value => setEditForm(f => ({ ...f, role: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue>{getRoleLabel(editForm.role)}</SelectValue>
+                    <SelectValue>{relationshipRoleLabel(editForm.role as RelationshipRole)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="parent">
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-3 w-3" />
-                        Primary Contact
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="secondary">
-                      <div className="flex items-center gap-2">
-                        <UserCheck className="h-3 w-3" />
-                        Secondary Contact
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="child">
-                      <div className="flex items-center gap-2">
-                        <UserIcon className="h-3 w-3" />
-                        User
-                      </div>
-                    </SelectItem>
+                    {RELATIONSHIP_ROLE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <div className="flex items-center gap-2">
+                          {opt.value === 'primary_contact' && <Shield className="h-3 w-3" />}
+                          {opt.value === 'secondary_contact' && <UserCheck className="h-3 w-3" />}
+                          {(opt.value === 'user' || opt.value === 'academy_user') && <UserIcon className="h-3 w-3" />}
+                          {opt.label}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
