@@ -816,7 +816,7 @@ export default function ManageInvites() {
                           {userStatus?.unicorn_role || labelForRole(invite.unicorn_role)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-6">
+                      <TableCell className={`py-6 ${isSuperAdmin ? 'border-r border-border/50' : ''}`}>
                         <div className="badge-container">
                           <Badge variant={statusBadge.variant} className={statusBadge.color}>
                             <StatusBadgeIcon className="mr-1 h-3 w-3" />
@@ -824,6 +824,27 @@ export default function ManageInvites() {
                           </Badge>
                         </div>
                       </TableCell>
+                      {isSuperAdmin && (
+                        <TableCell className="py-6 text-center" onClick={(e) => e.stopPropagation()}>
+                          {(invite.status === 'pending' || invite.status === 'sent') && !isVerified ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => {
+                                setRevokeTarget(invite);
+                                setRevokeReason("");
+                                setRevokeDialogOpen(true);
+                              }}
+                            >
+                              <Ban className="h-4 w-4 mr-1" />
+                              Revoke
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}
