@@ -1,6 +1,7 @@
 import { Clock, Layers, ListTodo, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ClientPackageDashboardRow } from '@/hooks/use-client-package-dashboard';
+import { formatHours } from './formatters';
 
 interface Props { dashboard: ClientPackageDashboardRow | null; }
 
@@ -16,13 +17,6 @@ function fmtRelative(iso: string | null): { label: string; tone: 'neutral' | 'am
   else label = `${days}d stale`;
   const tone = days >= 30 ? 'red' : days >= 14 ? 'amber' : 'neutral';
   return { label, tone };
-}
-
-function formatHours(decimalHours: number): string {
-  const total = Math.max(0, decimalHours);
-  const h = Math.floor(total);
-  const m = Math.round((total - h) * 60);
-  return `${h}:${m.toString().padStart(2, '0')}`;
 }
 
 const TONE_TEXT: Record<'neutral' | 'amber' | 'red', string> = {
