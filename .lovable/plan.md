@@ -1,141 +1,102 @@
-# Multi-package collapse on /client/packages
+# Hours transparency on the package card
 
-Tenants with multiple packages currently see every card fully expanded. This change auto-expands the most recently-active package and renders the rest as a one-line, click-to-expand summary row. Strictly additive — no existing tables touched, no behaviour change for single-package tenants beyond a new collapse chevron in the card header.
+Adds two new client-portal panels inside `PackageCard` to turn the abstract `17:30 / 91:00` hours number into a concrete evidence trail of *what was done*.
 
-## Scope
+- **"Where your hours went"** — compact category breakdown directly under the Hours stat tile.
+- **"Recent work"** — last-10 timeline of time entries under What's Next.
 
-- 1 new component: `CollapsedPackageRow.tsx`
-- 1 page modified: `ClientPackagesPage.tsx` (data source, expansion state, render switch)
-- 1 small prop added to `PackageCard` (`onCollapse?: () => void`) + chevron-up button in the header
-- 1 optional view migration: extend `v_client_package_dashboard` with `current_stage_shortname`
-- 1 optional interface field: `current_stage_shortname: string | null` on `ClientPackageDashboardRow`
+Strictly additive. No DDL on existing tables. No edits to existing views. No staff names, no `is_billable`, no consultant attribution surfaced.
 
-Not touched: PackageStatusPill, PackageStatTiles, PackageActionRow, PackageStageStepper, PackageWhatsNextPanel, PinnedNoteBanner, EOS, Scorecards.
+## Schema (1 migration, 2 new views)
 
-## Step 0 — Extend `v_client_package_dashboard` (recommended)
+Both views use `WITH (security_invoker = true)` and filter `te.start_at >= pi.start_date` (matches the hours-period rule already shipped). No changes to `time_entries`, `package_instances`, or any existing view.
 
-Single `CREATE OR REPLACE VIEW` migration. Re-emits the current view definition verbatim plus:
+### `v_client_package_hours_by_type`
 
-- New CTE `current_stage`:
-  ```text
-  SELECT DISTINCT ON (si.packageinstance_id)
-         si.packageinstance_id,
-         COALESCE(NULLIF(TRIM(s.shortname), ''), s.name) AS shortname
-  FROM stage_instances si
-  JOIN stages s ON s.id = si.stage_id
-  WHERE (si.status_id IS NULL OR si.status_id NOT IN (2, 3))
-    AND COALESCE(s.is_archived, false) = false
-    AND COALESCE(s.is_audit_workspace, false) = false
-  ORDER BY si.packageinstance_id, si.stage_sortorder ASC
-  ```
-- New `LEFT JOIN current_stage cs ON cs.packageinstance_id = pi.id`
-- New select column `cs.shortname AS current_stage_shortname`
+Per-package totals grouped by `(work_type, work_sub_type)`. Columns: `package_instance_id`, `tenant_id`, `work_type`, `work_sub_type`, `minutes`, `hours` (rounded), `pct_of_total` (0..1), `rank_in_package` (1 = largest). `work_type` empty/null normalised to `'Other'`. Rows where `duration_minutes` is null/≤0 or `package_instance_id` is null are excluded.
 
-Fallback if the view extension hits friction: drop the field and have `CollapsedPackageRow` derive the current stage via `useClientPackageStages` (one extra query per collapsed card — acceptable but not preferred).
+### `v_client_package_hours_recent`
 
-Update the `ClientPackageDashboardRow` interface in `src/hooks/use-client-package-dashboard.ts` to add `current_stage_shortname: string | null;`.
+Top 10 most recent entries per package (`ROW_NUMBER() … ORDER BY start_at DESC, id DESC`, `WHERE rank_in_package <= 10`). Columns: `entry_id` (uuid), `package_instance_id`, `tenant_id`, `occurred_at`, `duration_minutes`, `hours`, `work_type`, `work_sub_type`, `notes`, `rank_in_package`. **No `user_id`. No `is_billable`. No staff name join.**
 
-## Step 1 — `CollapsedPackageRow` component
+`GRANT SELECT ON … TO authenticated;` on both. View comments document purpose + privacy stance.
 
-New file: `src/components/client/package-dashboard/CollapsedPackageRow.tsx`
+Sanity: AHMRC M-DR (`package_instance_id = 15152`) breakdown rows should sum to its `hours_used` from `v_client_package_dashboard` (~17.5h); recent-work rows should match the staff Time Entries panel for that package.
 
-Props:
-```text
-{ dashboard: ClientPackageDashboardRow; onExpand: () => void }
-```
+## Hooks (2 new files)
 
-Layout — single horizontal row (`flex items-center gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 cursor-pointer transition-colors`), left to right:
+Both follow the established `useClientPackageDashboard` pattern: `useClientTenant()` → explicit `.eq('tenant_id', activeTenantId).eq('package_instance_id', packageInstanceId)`, `enabled` only when both ids present, `staleTime: 60_000`, ordered by `rank_in_package asc`.
 
-1. `ChevronRight` (lucide, size 16, muted)
-2. Package name — `dashboard.package_name`, `font-medium`, truncate
-3. Tier `<Badge variant="secondary">` — only if `dashboard.package_type` is non-null AND distinct from the displayed name (mirror PackageCard dedup)
-4. Summary line in `text-sm text-muted-foreground`, joined by `·`, omitting null/zero parts:
-   - `{stages_complete} / {stages_total} stages` — omit when `stages_total === 0`
-   - `{formatHours(hours_remaining)} remaining` — omit when `hours_total === 0`. Lift the existing `formatHours` helper out of `PackageStatTiles.tsx` into a small shared module (`src/components/client/package-dashboard/formatters.ts`) and re-import it from both places.
-   - `Currently in {current_stage_shortname}` — omit when null
-5. `<PackageStatusPill status={dashboard.status_pill} />` pushed right with `ml-auto`
+- `src/hooks/use-client-package-hours-by-type.ts` → exports `useClientPackageHoursByType` + `ClientPackageHoursByTypeRow`.
+- `src/hooks/use-client-package-hours-recent.ts` → exports `useClientPackageHoursRecent` + `ClientPackageHoursRecentRow`.
 
-Interaction:
-- Click anywhere → `onExpand()`
-- `role="button"`, `tabIndex={0}`, `onKeyDown` Enter/Space → `onExpand()`
-- `aria-expanded={false}`, `aria-label={`Expand ${dashboard.package_name}`}`
+(Note the prompt's example references `@/hooks/use-client-tenant`; the project's actual import is `@/contexts/ClientTenantContext` — the hooks will use that path, matching every other client-portal hook.)
 
-Responsive:
-- `< md`: hide the "Currently in {stage}" segment
-- `< sm`: also hide the tier pill — leaves name, stages, status pill
+## Components (2 new files)
 
-## Step 2 — Expansion state in `ClientPackagesPage`
+### `PackageHoursBreakdown.tsx`
 
-Switch the page's data source from `useClientPackageInstances().fetchClientPackages(...)` (current imperative fetch in a `useEffect`) to the existing `useClientPackageDashboards()` list hook. Every row — collapsed or expanded — reads the same payload. The expanded `PackageCard` keeps calling `useClientPackageDashboard(packageInstanceId)` for its detail; TanStack Query dedupes appropriately and the per-detail fetch is cheap.
+Section heading "Where your hours went" in `text-xs font-semibold uppercase tracking-wide text-muted-foreground` (matches the other panels).
 
-State:
-```text
-const { data: dashboards = [], isLoading } = useClientPackageDashboards();
-const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+Body: vertical list, `space-y-2`. Each row is `flex flex-col md:flex-row` with three columns:
+1. **Label** (~40% on md+, full width stacked on mobile) — `work_type` in `font-medium`, optional `· {work_sub_type}` in muted.
+2. **Bar** (`flex-1`) — `h-2 w-full rounded-full bg-muted`, fill width = `pct_of_total * 100%`, fill colour rotates through `[emerald, blue, violet, amber, slate]`. "Other" always slate.
+3. **Value** (~80px right-aligned) — `formatHours(hours)` (reuses `./formatters`) + ` · {pct}%` in muted.
 
-useEffect(() => {
-  if (expandedIds.size === 0 && dashboards.length > 0) {
-    const sorted = [...dashboards].sort((a, b) => {
-      const aAct = a.last_activity_at ?? '';
-      const bAct = b.last_activity_at ?? '';
-      const cmp = bAct.localeCompare(aAct);
-      return cmp !== 0 ? cmp : a.package_instance_id - b.package_instance_id;
-    });
-    setExpandedIds(new Set([sorted[0].package_instance_id]));
-  }
-}, [dashboards.length]);
-```
+Top-N: when `rows.length > 5`, show first 5 verbatim then a single `Other ({n} categories)` row summing the remaining hours and percentages. "Other" always uses slate fill regardless of which categories rolled in.
 
-`toggle(id)` adds/removes from the Set. No persistence anywhere.
+States: 3 skeleton rows on loading; inline destructive alert on error; **render `null` when `rows.length === 0`** (no placeholder).
 
-Tie-break: identical `last_activity_at` → lowest `package_instance_id` wins (stable across reloads). `null` activity sorts last.
+### `PackageRecentWork.tsx`
 
-## Step 3 — Render switch
+Section heading "Recent work".
+
+Renders first `initiallyShown` entries (default 5). "Show more" ghost button at the bottom expands to all (up to 10). Button hides when expanded.
+
+Each row: `flex items-start gap-3` with three cells:
+1. **Date + icon** (~80px) — small lucide icon (mapped from `work_type`: Consultation→`Phone`, Meeting→`Users`, Document Review→`FileText`, Evidence/Validation→`ClipboardCheck`, fallback→`Clock`) in the matching breakdown palette colour, plus `format(occurred_at, 'd MMM')` (year suffix only when not current year).
+2. **Body** (`flex-1`) — first line `{work_type}` + optional `· {work_sub_type}`; second line `text-xs text-muted-foreground` truncated `notes` (~80 chars). Notes line omitted entirely when null/empty.
+3. **Hours** (~50px right) — `formatHours(hours)`.
+
+States: 5 skeleton rows on loading; inline destructive alert on error; **render `null` when `entries.length === 0`**.
+
+## `PackageCard` wire-up
+
+Inside `src/components/client/ClientPackagesPage.tsx`, in `PackageCard`:
 
 ```text
-{dashboards.map(d => expandedIds.has(d.package_instance_id)
-  ? <PackageCard
-      key={d.package_instance_id}
-      pkg={...}                     // see note below
-      onCollapse={() => toggle(d.package_instance_id)}
-    />
-  : <CollapsedPackageRow
-      key={d.package_instance_id}
-      dashboard={d}
-      onExpand={() => toggle(d.package_instance_id)}
-    />
-)}
+const hoursByType = useClientPackageHoursByType(packageInstanceId);
+const hoursRecent = useClientPackageHoursRecent(packageInstanceId);
 ```
 
-`PackageCard` today takes `pkg: ClientPackageInstance`. Two options to feed it from the dashboard list:
-- **A (preferred):** Update `PackageCard` to accept `packageInstanceId: number` (plus the optional `onCollapse`) and let it source everything from `useClientPackageDashboard` + `useClientPackageStages` + `useClientPackageWhatsNext` as it already does. The legacy `pkg.package?.name` placeholder fallback is replaced with a one-line skeleton during the brief dashboard-loading window. This drops the `useClientPackageInstances` dependency entirely from this page.
-- **B:** Keep the `pkg` prop and synthesise a minimal `ClientPackageInstance`-shaped object from the dashboard row to avoid editing PackageCard's signature.
+Render order (preserving existing `space-y-6`):
 
-Plan picks **A** — cleaner and avoids carrying forward the legacy short-code placeholder now that the friendly name comes from the dashboard.
+```text
+header (icon, title, tier pill, dates, status pill, optional collapse chevron)
+PinnedNoteBanner            (existing, conditional)
+PackageStatTiles            (existing)
+PackageHoursBreakdown       NEW — directly under stat tiles
+PackageStageStepper         (existing)
+PackageWhatsNextPanel       (existing)
+PackageRecentWork           NEW — between What's Next and the action row
+PackageActionRow            (existing)
+```
 
-`PackageCard` change: add optional `onCollapse?: () => void`. When provided, render a `ChevronUp` lucide button (size 16, ghost variant) in the header to the right of the status pill. Click → `onCollapse()`. When omitted, button is not rendered (keeps PackageCard reusable in any future single-card context).
-
-Two cards may be expanded simultaneously — expanding one does NOT collapse another. Render order is whatever `useClientPackageDashboards` returns; expansion does not reorder.
-
-## Step 4 — Smoke checks
-
-Run as 3 different impersonations and document in PR:
-- 2+ active packages: only most-recent is expanded; others render as rows; clicking a row expands it; clicking chevron-up collapses; multiple expanded cards coexist
-- 1 package: expanded; chevron-up still works
-- 0 packages: existing empty state renders; no errors
-- DevTools: switching expansion of one card doesn't refetch others
-- `< md` viewport: collapsed rows truncate cleanly, no horizontal scroll
-- Keyboard: Tab to a collapsed row → Enter expands
-
-## What this won't do (out of scope, per prompt)
-
-No collapse-all/expand-all, no persistence of expanded state, no animated transitions, no stage click-through from the collapsed row, no drag-to-reorder, no auto-collapse-others.
+Empty/0-entry tenants: both new panels render nothing — the card collapses cleanly without empty space.
 
 ## Acceptance
 
-- New file: `CollapsedPackageRow.tsx`
-- New shared helper: `formatters.ts` (lifts `formatHours`)
-- Edits: `ClientPackagesPage.tsx`, `PackageCard` (signature + chevron), `PackageStatTiles.tsx` (re-import `formatHours`)
-- Optional migration: `CREATE OR REPLACE VIEW v_client_package_dashboard` with `current_stage_shortname`
-- Optional interface: `current_stage_shortname: string | null` on `ClientPackageDashboardRow`
-- No `any`, no new dependencies, build clean
+- 1 migration creating both views idempotently with `security_invoker=true` and `GRANT SELECT … TO authenticated`. No DDL on existing tables, no changes to existing views.
+- 2 hooks with explicit `tenant_id` filter from `useClientTenant()`.
+- 2 components matching the layout, palette, top-5 + Other rollup, and Show-more behaviour above.
+- `PackageCard` renders both in the specified order.
+- No `any`. No new dependencies (lucide / date-fns / Tailwind only). Build clean.
+- Smoke (after deploy): AHMRC M-DR breakdown sums to its dashboard `hours_used`; recent-work matches staff Time Entries; tenants with 0 entries render no empty placeholders; tenants with >5 categories show top 5 + "Other (N categories)"; mobile viewport stacks cleanly.
+
+## Out of scope (per prompt)
+
+Burndown chart, per-category drill-through, staff names, notes search, PDF export, cross-package aggregation, filtering/sorting controls.
+
+## Why this turn needs approval
+
+Migration tool and file-write are gated to default mode this turn. Approving this plan switches to default mode so the migration runs and the four new files (2 hooks + 2 components) plus the `PackageCard` wire-up can be applied in one go.

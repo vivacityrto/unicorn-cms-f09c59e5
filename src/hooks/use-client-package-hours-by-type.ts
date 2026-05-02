@@ -1,0 +1,69 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useClientTenant } from '@/contexts/ClientTenantContext';
+
+/**
+ * One row of v_client_package_hours_by_type — per-package time totals
+ * grouped by (work_type, work_sub_type). Powers the "Where your hours went"
+ * panel inside PackageCard.
+ */
+export interface ClientPackageHoursByTypeRow {
+  package_instance_id: number;
+  tenant_id: number;
+  work_type: string;
+  work_sub_type: string | null;
+  minutes: number;
+  hours: number;
+  pct_of_total: number;     // 0..1
+  rank_in_package: number;  // 1 = largest category
+}
+
+const VIEW = 'v_client_package_hours_by_type';
+
+/**
+ * SECURITY: Explicit tenant_id filter is required because internal staff bypass
+ * tenant RLS via get_current_user_tenant_id(). Mirrors useClientPackageDashboard.
+ */
+export function useClientPackageHoursByType(packageInstanceId: number | null) {
+  const { activeTenantId } = useClientTenant();
+
+  return useQuery({
+    queryKey: ['client_package_hours_by_type', activeTenantId, packageInstanceId],
+    enabled: !!activeTenantId && !!packageInstanceId,
+    staleTime: 60_000,
+    queryFn: async (): Promise<ClientPackageHoursByTypeRow[]> => {
+      if (!activeTenantId || !packageInstanceId) return [];
+
+      // The view is not yet present in the generated supabase types, so we
+      // use a cast through `unknown` rather than leaking `any` into the codebase.
+      const { data, error } = await (supabase as unknown as {
+        from: (table: string) => {
+          select: (cols: string) => {
+            eq: (
+              col: string,
+              val: number,
+            ) => {
+              eq: (
+                col: string,
+                val: number,
+              ) => {
+                order: (
+                  col: string,
+                  opts: { ascending: boolean },
+                ) => Promise<{ data: ClientPackageHoursByTypeRow[] | null; error: { message: string } | null }>;
+              };
+            };
+          };
+        };
+      })
+        .from(VIEW)
+        .select('*')
+        .eq('tenant_id', activeTenantId)
+        .eq('package_instance_id', packageInstanceId)
+        .order('rank_in_package', { ascending: true });
+
+      if (error) throw new Error(error.message);
+      return (data ?? []) as ClientPackageHoursByTypeRow[];
+    },
+  });
+}
