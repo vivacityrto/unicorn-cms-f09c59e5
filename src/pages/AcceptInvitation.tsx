@@ -277,7 +277,17 @@ unicorn_role: invitationData!.unicornRole,
             });
             return;
           }
-          console.warn('Membership creation failed - contact admin if access issues occur:', result);
+          // Surface ALL other failures (RPC_ERROR, EXCEPTION, NO_RESULT, INVALID_PARAMS, etc.)
+          // Previously these were swallowed with console.warn while showing a success toast.
+          console.error('Finalize invitation failed:', result);
+          toast({
+            title: 'Account created, but setup failed',
+            description:
+              result.message ||
+              `Could not finalize your invitation (${result.code}). Please contact your administrator before logging in.`,
+            variant: 'destructive',
+          });
+          return;
         }
       }
 
