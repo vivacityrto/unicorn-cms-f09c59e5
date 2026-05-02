@@ -23,6 +23,7 @@ import {
   Clock,
   Lock,
 } from "lucide-react";
+import { format } from "date-fns";
 
 export default function ClientPackagesPage() {
   const { activeTenantId } = useClientTenant();
@@ -95,25 +96,25 @@ function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
   return (
     <Card>
       <CardContent className="p-5 space-y-4">
-        {/* Pinned-note banner (only when present) */}
-        {dashboard?.pinned_note_text || dashboard?.pinned_note_title ? (
-          <PinnedNoteBanner
-            title={dashboard.pinned_note_title}
-            text={dashboard.pinned_note_text}
-            severity={dashboard.pinned_note_severity}
-          />
-        ) : null}
-
         {/* Package header */}
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
             <Package2 className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground">{pkg.package?.name ?? "Package"}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {completedPhases} of {totalPhases} phases complete
-            </p>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground">{pkg.package?.name ?? "Package"}</h3>
+              {dashboard?.package_type && dashboard.package_type !== (pkg.package?.name ?? "") && (
+                <Badge variant="secondary" className="text-xs">{dashboard.package_type}</Badge>
+              )}
+            </div>
+            {(dashboard?.start_date || dashboard?.end_date) && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {dashboard?.start_date && <>Started {format(new Date(dashboard.start_date), "d MMM yyyy")}</>}
+                {dashboard?.start_date && dashboard?.end_date && <> · </>}
+                {dashboard?.end_date && <>Renews {format(new Date(dashboard.end_date), "d MMM yyyy")}</>}
+              </p>
+            )}
           </div>
           {dashboard ? (
             <PackageStatusPill status={dashboard.status_pill} />
@@ -126,6 +127,15 @@ function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
             </Badge>
           )}
         </div>
+
+        {/* Pinned-note banner (only when present) — inside card, below header */}
+        {dashboard?.pinned_note_text || dashboard?.pinned_note_title ? (
+          <PinnedNoteBanner
+            title={dashboard.pinned_note_title}
+            text={dashboard.pinned_note_text}
+            severity={dashboard.pinned_note_severity}
+          />
+        ) : null}
 
         {/* Stat tiles */}
         {dashboardLoading ? (
