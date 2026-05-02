@@ -200,7 +200,7 @@ export function TenantInviteDialog({
           email: email.toLowerCase().trim(),
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          invite_as: 'CLIENT',
+          invite_as: tenantId === 6372 ? 'VIVACITY' : 'CLIENT',
           tenant_id: tenantId,
           unicorn_role: role,
           skip_email: !sendInvitation,
