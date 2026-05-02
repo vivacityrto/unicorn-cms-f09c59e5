@@ -82,16 +82,16 @@ serve(async (req: Request) => {
       return jsonResponse(400, { ok: false, detail: "Cannot cancel an accepted invitation" });
     }
 
-    // Check if already cancelled
-    if (invitation.status === "cancelled") {
-      return jsonResponse(400, { ok: false, detail: "Invitation is already cancelled" });
+    // Check if already revoked
+    if (invitation.status === "revoked") {
+      return jsonResponse(400, { ok: false, detail: "Invitation has already been revoked" });
     }
 
     // Cancel the invitation
     const { error: updateError } = await supabase
       .from("user_invitations")
       .update({
-        status: "cancelled",
+        status: "revoked",
         revoked_at: new Date().toISOString(),
         revoked_reason: reason || "Cancelled by admin",
         token_hash: null, // Clear the token to invalidate any existing links
