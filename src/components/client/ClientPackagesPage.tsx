@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useClientPackageDashboards, useClientPackageDashboard } from "@/hooks/use-client-package-dashboard";
 import { useClientPackageStages } from "@/hooks/use-client-package-stages";
 import { useClientPackageWhatsNext } from "@/hooks/use-client-package-whats-next";
@@ -13,6 +13,7 @@ import { PackageActionRow } from "@/components/client/package-dashboard/PackageA
 import { PackageStageStepper } from "@/components/client/package-dashboard/PackageStageStepper";
 import { PackageWhatsNextPanel } from "@/components/client/package-dashboard/PackageWhatsNextPanel";
 import { CollapsedPackageRow } from "@/components/client/package-dashboard/CollapsedPackageRow";
+import { PackageHistorySection } from "@/components/client/package-dashboard/PackageHistorySection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,13 +25,31 @@ export default function ClientPackagesPage() {
   const { data: dashboards = [], isLoading } = useClientPackageDashboards();
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
-  // Auto-expand the most recently-active package on first data load.
+  // Split: completed packages render as compact history rows; everything else
+  // gets the full PackageCard treatment. is_complete is exposed by
+  // v_client_package_dashboard. Treat null is_complete as active.
+  const activePackages = useMemo(
+    () => dashboards.filter(d => !d.is_complete),
+    [dashboards],
+  );
+
+  const historicalPackages = useMemo(
+    () =>
+      dashboards
+        .filter(d => d.is_complete)
+        // Most-recent end_date first; rows with no end_date sort to the bottom.
+        .sort((a, b) => (b.end_date ?? '').localeCompare(a.end_date ?? '')),
+    [dashboards],
+  );
+
+  // Auto-expand the most recently-active ACTIVE package on first data load.
+  // Historical packages never auto-expand — they live in the history section.
   // Only sets when expandedIds is still empty — never overrides later toggles.
   // Tie-break on identical last_activity_at: lowest package_instance_id wins,
   // keeping the initial expansion stable across reloads. Null activity sorts last.
   useEffect(() => {
-    if (expandedIds.size > 0 || dashboards.length === 0) return;
-    const sorted = [...dashboards].sort((a, b) => {
+    if (expandedIds.size > 0 || activePackages.length === 0) return;
+    const sorted = [...activePackages].sort((a, b) => {
       const aAct = a.last_activity_at ?? '';
       const bAct = b.last_activity_at ?? '';
       const cmp = bAct.localeCompare(aAct);
@@ -39,7 +58,7 @@ export default function ClientPackagesPage() {
     setExpandedIds(new Set([sorted[0].package_instance_id]));
     // Intentionally only depend on length: don't refire when row contents change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dashboards.length]);
+  }, [activePackages.length]);
 
   const toggle = (id: number) => {
     setExpandedIds(prev => {
@@ -66,38 +85,64 @@ export default function ClientPackagesPage() {
     );
   }
 
+  const hasAny = activePackages.length > 0 || historicalPackages.length > 0;
+  const onlyHistory = activePackages.length === 0 && historicalPackages.length > 0;
+
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-8 max-w-5xl">
       <div>
         <h1 className="text-2xl font-bold text-secondary">Packages</h1>
         <p className="text-sm text-muted-foreground mt-1">Your active packages and progress.</p>
       </div>
 
-      {dashboards.length === 0 ? (
+      {!hasAny && (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
             <Package2 className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
             <p className="text-sm">No active packages found.</p>
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-4">
-          {dashboards.map(d =>
-            expandedIds.has(d.package_instance_id) ? (
-              <PackageCard
-                key={d.package_instance_id}
-                packageInstanceId={d.package_instance_id}
-                onCollapse={() => toggle(d.package_instance_id)}
-              />
-            ) : (
-              <CollapsedPackageRow
-                key={d.package_instance_id}
-                dashboard={d}
-                onExpand={() => toggle(d.package_instance_id)}
-              />
-            )
-          )}
-        </div>
+      )}
+
+      {/* Active packages — full cards (with multi-package collapse logic). */}
+      {activePackages.length > 0 && (
+        <section>
+          <h2 className="sr-only">Your active packages</h2>
+          <div className="space-y-4">
+            {activePackages.map(d =>
+              expandedIds.has(d.package_instance_id) ? (
+                <PackageCard
+                  key={d.package_instance_id}
+                  packageInstanceId={d.package_instance_id}
+                  onCollapse={() => toggle(d.package_instance_id)}
+                />
+              ) : (
+                <CollapsedPackageRow
+                  key={d.package_instance_id}
+                  dashboard={d}
+                  onExpand={() => toggle(d.package_instance_id)}
+                />
+              )
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Friendly note for fully-retired tenants (history only). */}
+      {onlyHistory && (
+        <p className="text-sm text-muted-foreground">
+          You don't have any active packages right now. Your history with us is below.
+        </p>
+      )}
+
+      {/* Historical packages — compact rows, collapsed by default unless this
+          tenant has no active packages (then opens by default so the page
+          isn't empty-feeling). */}
+      {historicalPackages.length > 0 && (
+        <PackageHistorySection
+          packages={historicalPackages}
+          defaultExpanded={onlyHistory}
+        />
       )}
     </div>
   );
