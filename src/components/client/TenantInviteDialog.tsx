@@ -81,6 +81,11 @@ export function TenantInviteDialog({
   const [tenantType, setTenantType] = useState<TenantType | null>(null);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
+  // Reset role default whenever the dialog opens or tenant changes
+  useEffect(() => {
+    setRole(getDefaultRole(tenantId));
+  }, [tenantId, open]);
+
   // Check seat availability when dialog opens
   useEffect(() => {
     if (open && tenantId) {
