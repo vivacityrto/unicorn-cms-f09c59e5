@@ -1,28 +1,19 @@
 import { useState, useEffect } from "react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientPackageInstances, type ClientPackageInstance } from "@/hooks/useClientPackageInstances";
-import { usePhaseProgress } from "@/hooks/usePhaseProgress";
 import { useClientPackageDashboard } from "@/hooks/use-client-package-dashboard";
+import { useClientPackageStages } from "@/hooks/use-client-package-stages";
+import { useClientPackageWhatsNext } from "@/hooks/use-client-package-whats-next";
 import { PinnedNoteBanner } from "@/components/client/package-dashboard/PinnedNoteBanner";
 import { PackageStatusPill } from "@/components/client/package-dashboard/PackageStatusPill";
 import { PackageStatTiles } from "@/components/client/package-dashboard/PackageStatTiles";
 import { PackageActionRow } from "@/components/client/package-dashboard/PackageActionRow";
+import { PackageStageStepper } from "@/components/client/package-dashboard/PackageStageStepper";
+import { PackageWhatsNextPanel } from "@/components/client/package-dashboard/PackageWhatsNextPanel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Package2,
-  CheckCircle2,
-  Clock,
-  Lock,
-} from "lucide-react";
+import { Package2 } from "lucide-react";
 import { format } from "date-fns";
 
 export default function ClientPackagesPage() {
