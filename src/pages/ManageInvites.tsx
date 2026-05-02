@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck, Calendar } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck, Calendar, Ban } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,6 +43,8 @@ type UserStatus = {
 
 export default function ManageInvites() {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const launchMode = searchParams.get('launch') === '1';
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [userStatuses, setUserStatuses] = useState<Map<string, UserStatus>>(new Map());
   const [tenantNames, setTenantNames] = useState<Map<number, string>>(new Map());
@@ -48,16 +52,46 @@ export default function ManageInvites() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(launchMode ? "pending" : "all");
+  const [dateFilter, setDateFilter] = useState(launchMode ? "this-week" : "all");
   const [reInviteDialogOpen, setReInviteDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedInvites, setSelectedInvites] = useState<Set<string>>(new Set());
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState<InviteRow | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
+  const [revoking, setRevoking] = useState(false);
   const itemsPerPage = 20;
   const { profile } = useAuth();
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';
+  const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
+
+  const handleRevoke = async () => {
+    if (!revokeTarget || !revokeReason.trim()) return;
+    setRevoking(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const { data, error: fnError } = await supabase.functions.invoke('cancel-invite', {
+        body: { invitation_id: revokeTarget.id, reason: revokeReason.trim() },
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (fnError || (data && data.ok === false)) {
+        throw new Error(fnError?.message || data?.detail || 'Failed to revoke invitation');
+      }
+      toast({ title: 'Invitation revoked', description: `Revoked invite for ${revokeTarget.email}` });
+      setRevokeDialogOpen(false);
+      setRevokeTarget(null);
+      setRevokeReason("");
+      await fetchInvites();
+    } catch (e: any) {
+      toast({ title: 'Revoke failed', description: e.message, variant: 'destructive' });
+    } finally {
+      setRevoking(false);
+    }
+  };
 
   const fetchInvites = async () => {
     try {
@@ -423,6 +457,16 @@ export default function ManageInvites() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-6 animate-fade-in">
+        {launchMode && (
+          <div className="rounded-lg border-l-4 border-l-[#7130A0] bg-[#DFD8E8]/40 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-[#7130A0]" />
+              <p className="text-sm font-medium text-[#44235F]">
+                Launch week view — showing recent active invitations (pending, this week).
+              </p>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -695,7 +739,10 @@ export default function ManageInvites() {
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Email</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Tenant (RTO)</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Role</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap">Status</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Status</TableHead>
+                  {isSuperAdmin && (
+                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap text-center">Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -769,7 +816,7 @@ export default function ManageInvites() {
                           {userStatus?.unicorn_role || labelForRole(invite.unicorn_role)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="py-6">
+                      <TableCell className={`py-6 ${isSuperAdmin ? 'border-r border-border/50' : ''}`}>
                         <div className="badge-container">
                           <Badge variant={statusBadge.variant} className={statusBadge.color}>
                             <StatusBadgeIcon className="mr-1 h-3 w-3" />
@@ -777,6 +824,27 @@ export default function ManageInvites() {
                           </Badge>
                         </div>
                       </TableCell>
+                      {isSuperAdmin && (
+                        <TableCell className="py-6 text-center" onClick={(e) => e.stopPropagation()}>
+                          {(invite.status === 'pending' || invite.status === 'sent') && !isVerified ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => {
+                                setRevokeTarget(invite);
+                                setRevokeReason("");
+                                setRevokeDialogOpen(true);
+                              }}
+                            >
+                              <Ban className="h-4 w-4 mr-1" />
+                              Revoke
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}
@@ -903,6 +971,38 @@ export default function ManageInvites() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={revokeDialogOpen} onOpenChange={(open) => { if (!revoking) setRevokeDialogOpen(open); }}>
+        <AlertDialogContent className="border-[3px] border-[#dfdfdf]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke invitation</AlertDialogTitle>
+            <AlertDialogDescription>
+              {revokeTarget ? (
+                <>Revoke the invitation for <strong>{revokeTarget.email}</strong>? The link will stop working immediately. Provide a reason for the audit trail.</>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="my-2">
+            <Textarea
+              placeholder="Reason for revocation (e.g. wrong contact, replaced by new invite)..."
+              value={revokeReason}
+              onChange={(e) => setRevokeReason(e.target.value)}
+              rows={3}
+              disabled={revoking}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revoking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleRevoke(); }}
+              disabled={revoking || !revokeReason.trim()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {revoking ? 'Revoking...' : 'Revoke invitation'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
