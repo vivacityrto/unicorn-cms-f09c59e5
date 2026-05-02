@@ -617,7 +617,8 @@ function OverrideModal({
   const [newEmail, setNewEmail] = useState("");
   const [newFirst, setNewFirst] = useState("");
   const [newLast, setNewLast] = useState("");
-  const [newRole, setNewRole] = useState<"Admin" | "User">("Admin");
+  const [newRelationshipRole, setNewRelationshipRole] = useState<RelationshipRole>("primary_contact");
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!row) return;
@@ -625,16 +626,16 @@ function OverrideModal({
     setNewEmail(existingOverride?.email || "");
     setNewFirst(existingOverride?.first_name || "");
     setNewLast(existingOverride?.last_name || "");
-    setNewRole((existingOverride?.unicorn_role as any) || "Admin");
+    setNewRelationshipRole(existingOverride?.relationship_role || "primary_contact");
+    setEmailError(null);
     setTab("existing");
     (async () => {
       setLoading(true);
       try {
         const { data: tus } = await supabase
           .from("tenant_users")
-          .select("user_id, primary_contact, created_at")
+          .select("user_id, relationship_role, created_at")
           .eq("tenant_id", row.tenant_id)
-          .order("primary_contact", { ascending: false })
           .order("created_at", { ascending: false });
         const uids = (tus || []).map((t: any) => t.user_id).filter(Boolean);
         if (uids.length === 0) { setMembers([]); return; }
@@ -654,11 +655,17 @@ function OverrideModal({
               first_name: u.first_name,
               last_name: u.last_name,
               unicorn_role: u.unicorn_role,
-              primary_contact: !!t.primary_contact,
+              relationship_role: (t.relationship_role as RelationshipRole | null) ?? null,
               created_at: t.created_at,
             } as TenantUserOption;
           })
           .filter(Boolean) as TenantUserOption[];
+        // Surface primary_contact rows first.
+        opts.sort((a, b) => {
+          const ap = a.relationship_role === "primary_contact" ? 0 : 1;
+          const bp = b.relationship_role === "primary_contact" ? 0 : 1;
+          return ap - bp;
+        });
         setMembers(opts);
       } finally {
         setLoading(false);
@@ -671,22 +678,32 @@ function OverrideModal({
   const saveExisting = () => {
     const m = members.find((x) => x.user_id === selectedUserId);
     if (!m) return;
+    // Default existing-user override to the user's current relationship role,
+    // falling back to primary_contact (the launch list is keyed off primary).
+    const rr: RelationshipRole = m.relationship_role || "primary_contact";
     onSave(row.tenant_id, {
       email: m.email,
       first_name: m.first_name || "there",
       last_name: m.last_name || "-",
-      unicorn_role: (m.unicorn_role === "Admin" ? "Admin" : "User"),
+      relationship_role: rr,
+      unicorn_role: unicornRoleFromRelationship(rr),
     });
     onClose();
   };
 
   const saveNew = () => {
     if (!newEmail.trim() || !newFirst.trim()) return;
+    if (!isValidEmail(newEmail)) {
+      setEmailError("Enter a valid email address (e.g. name@example.com).");
+      return;
+    }
+    setEmailError(null);
     onSave(row.tenant_id, {
       email: newEmail.trim().toLowerCase(),
       first_name: newFirst.trim(),
       last_name: newLast.trim() || "-",
-      unicorn_role: newRole,
+      relationship_role: newRelationshipRole,
+      unicorn_role: unicornRoleFromRelationship(newRelationshipRole),
     });
     onClose();
   };
@@ -727,14 +744,17 @@ function OverrideModal({
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-medium" style={{ color: BRAND.acai }}>{m.first_name} {m.last_name || ""}</span>
-                          {m.primary_contact && (
+                          {m.relationship_role === "primary_contact" && (
                             <Badge style={{ backgroundColor: BRAND.fuchsia, color: "white" }}>Primary</Badge>
+                          )}
+                          {m.relationship_role === "secondary_contact" && (
+                            <Badge variant="outline">Secondary</Badge>
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground">{m.email}</span>
                       </div>
                     </div>
-                    <Badge variant="outline">{m.unicorn_role || "User"}</Badge>
+                    <Badge variant="outline">{relationshipRoleLabel(m.relationship_role)}</Badge>
                   </label>
                 ))}
               </div>
@@ -760,15 +780,28 @@ function OverrideModal({
             </div>
             <div>
               <label className="text-xs font-medium">Email</label>
-              <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="contact@example.com" />
+              <Input
+                type="email"
+                value={newEmail}
+                onChange={(e) => { setNewEmail(e.target.value); if (emailError) setEmailError(null); }}
+                placeholder="contact@example.com"
+                aria-invalid={!!emailError}
+              />
+              {emailError && <p className="text-xs text-destructive mt-1">{emailError}</p>}
             </div>
             <div>
               <label className="text-xs font-medium">Role</label>
-              <Select value={newRole} onValueChange={(v) => setNewRole(v as any)}>
+              <Select value={newRelationshipRole} onValueChange={(v) => setNewRelationshipRole(v as RelationshipRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="User">User</SelectItem>
+                  {RELATIONSHIP_ROLE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      <div className="flex flex-col">
+                        <span>{opt.label}</span>
+                        <span className="text-xs text-muted-foreground">{opt.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
