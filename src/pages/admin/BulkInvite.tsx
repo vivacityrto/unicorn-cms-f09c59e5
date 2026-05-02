@@ -276,7 +276,7 @@ export default function BulkInvite() {
     return {
       first_name: c.first_name,
       tenant_name: r.tenant_name,
-      role_label: c.role,
+      role_label: relationshipRoleLabel(c.relationship_role),
       inviter_name: profile ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "The Vivacity team" : "The Vivacity team",
       expiry_date: `${dd}/${mm}/${expiry.getFullYear()}`,
       invite_url: "https://unicorn-cms.au/accept-invitation?token=…",
@@ -462,7 +462,7 @@ export default function BulkInvite() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {c ? <Badge variant="secondary">{c.role}</Badge> : <span className="text-muted-foreground">—</span>}
+                          {c ? <Badge variant="secondary">{relationshipRoleLabel(c.relationship_role)}</Badge> : <span className="text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button size="sm" variant="ghost" onClick={() => setOverrideOpenFor(r)} disabled={sending}>
