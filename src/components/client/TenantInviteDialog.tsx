@@ -36,10 +36,24 @@ interface TenantInviteDialogProps {
   onSuccess?: () => void;
 }
 
-const TENANT_ROLES = [
+const VIVACITY_TENANT_ID = 6372;
+
+const VIVACITY_ROLES = [
+  { value: 'Super Admin', label: 'Super Admin', description: 'Full Vivacity admin access', icon: Shield },
+  { value: 'Team Leader', label: 'Team Leader', description: 'Leads a Vivacity team', icon: Shield },
+  { value: 'Team Member', label: 'Team Member', description: 'Vivacity staff member', icon: UserIcon },
+];
+
+const CLIENT_ROLES = [
   { value: 'Admin', label: 'Admin', description: 'Can manage users and settings', icon: Shield },
   { value: 'User', label: 'General User', description: 'Standard access to features', icon: UserIcon },
 ];
+
+const getRoleOptions = (tid: number) =>
+  tid === VIVACITY_TENANT_ID ? VIVACITY_ROLES : CLIENT_ROLES;
+
+const getDefaultRole = (tid: number) =>
+  tid === VIVACITY_TENANT_ID ? 'Team Member' : 'User';
 
 export function TenantInviteDialog({
   open,
