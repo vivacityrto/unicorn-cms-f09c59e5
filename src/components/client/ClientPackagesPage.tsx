@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { useClientTenant } from "@/contexts/ClientTenantContext";
-import { useClientPackageInstances, type ClientPackageInstance } from "@/hooks/useClientPackageInstances";
-import { useClientPackageDashboard } from "@/hooks/use-client-package-dashboard";
+import { useClientPackageDashboards, useClientPackageDashboard } from "@/hooks/use-client-package-dashboard";
 import { useClientPackageStages } from "@/hooks/use-client-package-stages";
 import { useClientPackageWhatsNext } from "@/hooks/use-client-package-whats-next";
 import { PinnedNoteBanner } from "@/components/client/package-dashboard/PinnedNoteBanner";
@@ -10,27 +8,45 @@ import { PackageStatTiles } from "@/components/client/package-dashboard/PackageS
 import { PackageActionRow } from "@/components/client/package-dashboard/PackageActionRow";
 import { PackageStageStepper } from "@/components/client/package-dashboard/PackageStageStepper";
 import { PackageWhatsNextPanel } from "@/components/client/package-dashboard/PackageWhatsNextPanel";
+import { CollapsedPackageRow } from "@/components/client/package-dashboard/CollapsedPackageRow";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package2 } from "lucide-react";
+import { Package2, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 
 export default function ClientPackagesPage() {
-  const { activeTenantId } = useClientTenant();
-  const { fetchClientPackages } = useClientPackageInstances();
-  const [packages, setPackages] = useState<ClientPackageInstance[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: dashboards = [], isLoading } = useClientPackageDashboards();
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
+  // Auto-expand the most recently-active package on first data load.
+  // Only sets when expandedIds is still empty — never overrides later toggles.
+  // Tie-break on identical last_activity_at: lowest package_instance_id wins,
+  // keeping the initial expansion stable across reloads. Null activity sorts last.
   useEffect(() => {
-    if (!activeTenantId) return;
-    setLoading(true);
-    fetchClientPackages(activeTenantId)
-      .then(setPackages)
-      .finally(() => setLoading(false));
-  }, [activeTenantId]);
+    if (expandedIds.size > 0 || dashboards.length === 0) return;
+    const sorted = [...dashboards].sort((a, b) => {
+      const aAct = a.last_activity_at ?? '';
+      const bAct = b.last_activity_at ?? '';
+      const cmp = bAct.localeCompare(aAct);
+      return cmp !== 0 ? cmp : a.package_instance_id - b.package_instance_id;
+    });
+    setExpandedIds(new Set([sorted[0].package_instance_id]));
+    // Intentionally only depend on length: don't refire when row contents change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dashboards.length]);
 
-  if (loading) {
+  const toggle = (id: number) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div>
@@ -53,7 +69,7 @@ export default function ClientPackagesPage() {
         <p className="text-sm text-muted-foreground mt-1">Your active packages and progress.</p>
       </div>
 
-      {packages.length === 0 ? (
+      {dashboards.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
             <Package2 className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
@@ -62,17 +78,39 @@ export default function ClientPackagesPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {packages.map((pkg) => (
-            <PackageCard key={pkg.id} pkg={pkg} />
-          ))}
+          {dashboards.map(d =>
+            expandedIds.has(d.package_instance_id) ? (
+              <PackageCard
+                key={d.package_instance_id}
+                packageInstanceId={d.package_instance_id}
+                onCollapse={() => toggle(d.package_instance_id)}
+              />
+            ) : (
+              <CollapsedPackageRow
+                key={d.package_instance_id}
+                dashboard={d}
+                onExpand={() => toggle(d.package_instance_id)}
+              />
+            )
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
-  const packageInstanceId = Number(pkg.id);
+interface PackageCardProps {
+  packageInstanceId: number;
+  /**
+   * When provided, renders a chevron-up control in the header that calls back
+   * to collapse this card. Omit in any single-package context to keep the card
+   * non-collapsible. Multiple cards may be expanded simultaneously — expanding
+   * one does NOT auto-collapse another.
+   */
+  onCollapse?: () => void;
+}
+
+function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
   const {
     data: dashboard,
     isLoading: dashboardLoading,
@@ -93,14 +131,16 @@ function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
             <div className="flex items-center gap-2">
               {/*
                 Title prefers the friendly name resolved by v_client_package_dashboard
-                (COALESCE(NULLIF(TRIM(packages.full_text), ''), packages.name)).
-                pkg.package?.name (short code from useClientPackageInstances) is kept
-                only as a loading placeholder until the dashboard query resolves.
+                (COALESCE(NULLIF(TRIM(packages.full_text), ''), packages.name)). While the
+                dashboard query is in flight we render a small skeleton instead of a
+                short-code placeholder so we never flash "M-DR" before "Diamond RTO Membership".
               */}
-              <h3 className="font-semibold text-foreground">
-                {dashboard?.package_name ?? pkg.package?.name ?? "Package"}
-              </h3>
-              {dashboard?.package_type && dashboard.package_type !== (dashboard?.package_name ?? pkg.package?.name ?? "") && (
+              {dashboard?.package_name ? (
+                <h3 className="font-semibold text-foreground">{dashboard.package_name}</h3>
+              ) : (
+                <Skeleton className="h-5 w-40" />
+              )}
+              {dashboard?.package_type && dashboard.package_type !== dashboard.package_name && (
                 <Badge variant="secondary" className="text-xs">{dashboard.package_type}</Badge>
               )}
             </div>
@@ -115,12 +155,19 @@ function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
           {dashboard ? (
             <PackageStatusPill status={dashboard.status_pill} />
           ) : (
-            <Badge
-              variant={pkg.status === "active" ? "default" : "secondary"}
-              className="capitalize text-xs"
+            <Skeleton className="h-5 w-16" />
+          )}
+          {onCollapse && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onCollapse}
+              aria-label={`Collapse ${dashboard?.package_name ?? 'package'}`}
+              aria-expanded
+              className="h-8 w-8 shrink-0"
             >
-              {pkg.status}
-            </Badge>
+              <ChevronUp className="h-4 w-4" />
+            </Button>
           )}
         </div>
 
