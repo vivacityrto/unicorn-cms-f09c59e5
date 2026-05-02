@@ -297,7 +297,11 @@ export function TenantInviteDialog({
     }
   };
 
-  const canSend = firstName.trim() && email.trim() && role && !isSending && canInvite && !checkingSeats;
+  const roleSlotTaken = isClientTenant && (
+    (role === 'primary_contact' && primaryTaken) ||
+    (role === 'secondary_contact' && secondaryTaken)
+  );
+  const canSend = firstName.trim() && email.trim() && role && !isSending && canInvite && !checkingSeats && !roleSlotTaken;
 
   const nextPlan = tenantType ? UPGRADE_PATHS[tenantType] : null;
   const nextPlanName = nextPlan ? PLAN_NAMES[nextPlan] : null;
