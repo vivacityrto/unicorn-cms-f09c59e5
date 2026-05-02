@@ -66,7 +66,7 @@ export function TenantInviteDialog({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('User');
+  const [role, setRole] = useState(() => getDefaultRole(tenantId));
   const [isSending, setIsSending] = useState(false);
   const [sendInvitation, setSendInvitation] = useState(false);
   const [position, setPosition] = useState('');
