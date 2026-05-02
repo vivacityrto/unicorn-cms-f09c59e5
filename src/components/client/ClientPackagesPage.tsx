@@ -171,6 +171,7 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
   const whatsNext = useClientPackageWhatsNext(packageInstanceId);
   const hoursByType = useClientPackageHoursByType(packageInstanceId);
   const hoursRecent = useClientPackageHoursRecent(packageInstanceId);
+  const timeline = useClientPackageHoursTimeline(packageInstanceId);
 
   return (
     <Card>
