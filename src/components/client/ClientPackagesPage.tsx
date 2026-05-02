@@ -91,8 +91,16 @@ function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-foreground">{pkg.package?.name ?? "Package"}</h3>
-              {dashboard?.package_type && dashboard.package_type !== (pkg.package?.name ?? "") && (
+              {/*
+                Title prefers the friendly name resolved by v_client_package_dashboard
+                (COALESCE(NULLIF(TRIM(packages.full_text), ''), packages.name)).
+                pkg.package?.name (short code from useClientPackageInstances) is kept
+                only as a loading placeholder until the dashboard query resolves.
+              */}
+              <h3 className="font-semibold text-foreground">
+                {dashboard?.package_name ?? pkg.package?.name ?? "Package"}
+              </h3>
+              {dashboard?.package_type && dashboard.package_type !== (dashboard?.package_name ?? pkg.package?.name ?? "") && (
                 <Badge variant="secondary" className="text-xs">{dashboard.package_type}</Badge>
               )}
             </div>
