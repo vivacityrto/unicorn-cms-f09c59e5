@@ -975,6 +975,38 @@ export default function ManageInvites() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={revokeDialogOpen} onOpenChange={(open) => { if (!revoking) setRevokeDialogOpen(open); }}>
+        <AlertDialogContent className="border-[3px] border-[#dfdfdf]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke invitation</AlertDialogTitle>
+            <AlertDialogDescription>
+              {revokeTarget ? (
+                <>Revoke the invitation for <strong>{revokeTarget.email}</strong>? The link will stop working immediately. Provide a reason for the audit trail.</>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="my-2">
+            <Textarea
+              placeholder="Reason for revocation (e.g. wrong contact, replaced by new invite)..."
+              value={revokeReason}
+              onChange={(e) => setRevokeReason(e.target.value)}
+              rows={3}
+              disabled={revoking}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revoking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleRevoke(); }}
+              disabled={revoking || !revokeReason.trim()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {revoking ? 'Revoking...' : 'Revoke invitation'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
