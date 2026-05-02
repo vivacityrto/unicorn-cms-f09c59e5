@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { useClientPackageDashboards, useClientPackageDashboard } from "@/hooks/use-client-package-dashboard";
 import { useClientPackageStages } from "@/hooks/use-client-package-stages";
 import { useClientPackageWhatsNext } from "@/hooks/use-client-package-whats-next";
+import { useClientPackageHoursByType } from "@/hooks/use-client-package-hours-by-type";
+import { useClientPackageHoursRecent } from "@/hooks/use-client-package-hours-recent";
 import { PinnedNoteBanner } from "@/components/client/package-dashboard/PinnedNoteBanner";
+import { PackageHoursBreakdown } from "@/components/client/package-dashboard/PackageHoursBreakdown";
+import { PackageRecentWork } from "@/components/client/package-dashboard/PackageRecentWork";
 import { PackageStatusPill } from "@/components/client/package-dashboard/PackageStatusPill";
 import { PackageStatTiles } from "@/components/client/package-dashboard/PackageStatTiles";
 import { PackageActionRow } from "@/components/client/package-dashboard/PackageActionRow";
@@ -118,6 +122,8 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
   } = useClientPackageDashboard(packageInstanceId);
   const stages = useClientPackageStages(packageInstanceId);
   const whatsNext = useClientPackageWhatsNext(packageInstanceId);
+  const hoursByType = useClientPackageHoursByType(packageInstanceId);
+  const hoursRecent = useClientPackageHoursRecent(packageInstanceId);
 
   return (
     <Card>
@@ -195,6 +201,14 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
           <PackageStatTiles dashboard={dashboard ?? null} />
         )}
 
+        {/* Where your hours went — sits directly under the stat tiles so it
+            grounds the abstract Hours number in concrete categories. */}
+        <PackageHoursBreakdown
+          rows={hoursByType.data ?? []}
+          isLoading={hoursByType.isLoading}
+          isError={hoursByType.isError}
+        />
+
         {/* Your journey — stage stepper (replaces phase accordion) */}
         <PackageStageStepper
           stages={stages.data ?? []}
@@ -208,6 +222,13 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
           isLoading={whatsNext.isLoading}
           isError={whatsNext.isError}
           packageInstanceId={packageInstanceId}
+        />
+
+        {/* Recent work — last 10 time entries, no staff names, no $ flag */}
+        <PackageRecentWork
+          entries={hoursRecent.data ?? []}
+          isLoading={hoursRecent.isLoading}
+          isError={hoursRecent.isError}
         />
 
         {/* Action buttons */}
