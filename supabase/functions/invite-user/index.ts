@@ -397,7 +397,7 @@ serve(async (req) => {
 
     // Create invitation record with 7-day expiration
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-    const { error: inviteError } = await supabase
+    const { data: insertedInvite, error: inviteError } = await supabase
       .from('user_invitations')
       .insert({
         email: payload.email.toLowerCase(),
@@ -409,9 +409,11 @@ serve(async (req) => {
         expires_at: expiresAt.toISOString(),
         invited_by: callerUser.user.id,
         status: 'pending',
-      });
+      })
+      .select('id')
+      .single();
 
-    if (inviteError) {
+    if (inviteError || !insertedInvite) {
       console.error("Failed to create invitation:", inviteError);
       return jsonResponse(500, {
         ok: false,
@@ -420,29 +422,28 @@ serve(async (req) => {
       });
     }
 
-    // 8. Create invite URL using the frontend origin
-    const frontendOrigin = req.headers.get("origin") || req.headers.get("referer")?.split('/').slice(0, 3).join('/');
-    
-    if (!frontendOrigin) {
-      console.error('Warning: No origin header found in request. Invite URL may not work correctly.');
-    }
-    
-    const inviteUrl = `${frontendOrigin}/accept-invitation?token=${inviteToken}`;
-    console.log('Generated invite URL:', inviteUrl);
-    
-    // Try to send custom invitation email
+    // 8. Send invitation email via custom function (uses APP_BASE_URL on the server)
     try {
-      await supabase.functions.invoke('send-invitation-email', {
+      const { error: emailErr } = await supabase.functions.invoke('send-invitation-email', {
         body: {
-          email: payload.email,
-          inviteUrl,
-          userType: payload.invite_as === 'VIVACITY' ? 'vivacity' : 'client',
+          invitation_id: insertedInvite.id,
+          token_plaintext: inviteToken,
         }
       });
-      console.log(`Custom invitation email sent to ${payload.email}`);
+      if (emailErr) {
+        console.warn('send-invitation-email returned error:', emailErr);
+      } else {
+        console.log(`Invitation email dispatched for ${payload.email} (invitation ${insertedInvite.id})`);
+      }
     } catch (emailError) {
-      console.warn('Failed to send invitation email (SendGrid may not be configured):', emailError);
+      console.warn('Failed to invoke send-invitation-email:', emailError);
     }
+
+    const frontendOrigin =
+      req.headers.get("origin") ||
+      req.headers.get("referer")?.split('/').slice(0, 3).join('/') ||
+      'https://www.unicorn-cms.au';
+    const inviteUrl = `${frontendOrigin}/accept-invitation?token=${inviteToken}`;
 
     // 10. Track invite attempts and log
     const { data: prevInvites } = await supabase
@@ -478,7 +479,8 @@ serve(async (req) => {
     return jsonResponse(200, {
       ok: true,
       detail: "Invitation sent successfully",
-      inviteUrl: `${req.headers.get("origin") || SUPABASE_URL}/accept-invitation?token=${inviteToken}`,
+      invitation_id: insertedInvite.id,
+      inviteUrl,
     });
   } catch (e: any) {
     console.error("Unhandled error:", e);
