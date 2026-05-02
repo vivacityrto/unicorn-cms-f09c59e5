@@ -1,79 +1,116 @@
-## Wire `/client/reports` to display released audit reports
+# Repair tenant invite pipeline end-to-end
 
-Replace the placeholder card in `src/pages/client/ClientReportsWrapper.tsx` with a real list of released audits, gated by the existing `tenant_read_v2` RLS policy. Page header stays untouched.
+Four changes, in order. Verified against live DB and confirmed against your two
+corrections (accept_invitation_v2 and accept-tenant-invite both already exist —
+we replace the RPC body and leave the dead edge function untouched).
 
-### 1. New hook: `src/hooks/useReleasedAudits.ts`
+---
 
-```ts
-useQuery({
-  queryKey: ['client-released-audits'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('client_audits')
-      .select(`
-        id, audit_type, snapshot_rto_name, snapshot_rto_number,
-        snapshot_cricos_code, conducted_at, score_pct, score_total,
-        score_max, risk_rating, report_pdf_path, report_released_at,
-        report_release_notes, report_acknowledged_at
-      `)
-      .order('report_released_at', { ascending: false });
-    if (error) throw error;
-    return data ?? [];
-  },
-  staleTime: 60_000,
-})
-```
+## 1. Migration — rewrite `public.accept_invitation_v2` to write to `tenant_users`
 
-No client-side filter — RLS filters to released, tenant-visible rows.
+`CREATE OR REPLACE FUNCTION` keeps the existing signature `(p_token_hash text, p_user_id uuid) RETURNS jsonb` so the frontend keeps working. Body changes:
 
-### 2. New component: `src/components/client/ReleasedAuditCard.tsx`
+- Inserts membership into `public.tenant_users` (not `tenant_members`) with the unique key `(tenant_id, user_id)` and the live role vocabulary `'parent' | 'child'` plus a `primary_contact` boolean.
+- Mapping: `unicorn_role = 'Admin'` → `role='parent'`, `primary_contact=true`. Everything else → `role='child'`, `primary_contact=false`. `secondary_contact=false`, `access_scope='full'`.
+- UPSERTs `public.users` first (so the row exists before the membership insert) with `tenant_id`, `unicorn_role`, `email`, `first_name`, `last_name`, `is_team = (tenant_id = 6372)`, `user_type = 'Vivacity' | 'Client'`, `disabled=false`. `ON CONFLICT (user_uuid) DO UPDATE` patches `tenant_id`/`unicorn_role`/`is_team`/`disabled` and only fills first/last name when currently empty.
+- Locks the invitation row with `FOR UPDATE`, returns the same return codes the frontend already branches on:
+  `INVALID_PARAMS | INVALID_TOKEN | EXPIRED | ALREADY_ACCEPTED | SUCCESS`.
+- Marks invitation `status='accepted'`, sets `accepted_at`, `accepted_by_user_id`, `updated_at`.
+- Best-effort audit insert into `audit_eos_events` wrapped in a sub-block so audit failures never block acceptance.
+- `GRANT EXECUTE ... TO authenticated, service_role`.
 
-Single card per audit. Composition:
+We do not touch `tenant_members` (the dormant table). 391 historical rows there stay as-is — separate investigation, not launch-blocking.
 
-- **Header row** (flex, wraps): `AUDIT_TYPE_LABELS[audit_type]` as bold title + `<AuditRiskBadge risk={risk_rating} />` + (right-aligned) `Released DD MMM YYYY` from `report_released_at`.
-- **Sub-line**: `snapshot_rto_name` (fallback "—") · `RTO {snapshot_rto_number}` if present · `CRICOS {snapshot_cricos_code}` if present. Muted text.
-- **Score line** (only if `score_pct != null`): `"{score_pct}%"` plus `" ({score_total}/{score_max})"` if both numerator/denominator present. Bold percent, muted parenthetical.
-- **Release notes** (only if `report_release_notes`): italic, `text-sm text-muted-foreground`, max 3 lines via `line-clamp-3`.
-- **Footer actions** (right-aligned):
-  - `Download PDF` — primary cyan button. Disabled when `!report_pdf_path`. On click: `supabase.storage.from('audit-reports').createSignedUrl(report_pdf_path, 600)` → `window.open(signedUrl, '_blank', 'noopener')`. Toast on error: "Couldn't open the PDF. Try again in a moment."
-  - `Acknowledge` — `variant="outline"`, only rendered when `report_acknowledged_at == null`. Wrapped in a `Tooltip` saying "Coming soon — acknowledge flow ships in Phase 3." `disabled` + onClick noop. When `report_acknowledged_at` is set, render a small green check chip: `Acknowledged DD MMM YYYY`.
+## 2. Rewrite `supabase/functions/send-invitation-email/index.ts`
 
-Date helper inline: `new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })`.
+New input shape: `{ invitation_id: uuid, token_plaintext: string }`.
 
-### 3. Rewrite `src/pages/client/ClientReportsWrapper.tsx`
+- `verify_jwt: true` (no config.toml change needed — default).
+- Validates all four `MAILGUN_*` env vars; 500 with explicit detail if any missing.
+- Loads invitation row + tenant name + inviter name (3 small selects via service-role client).
+- AuthZ: caller must be Vivacity staff (tenant 6372 OR `unicorn_role IN ('Super Admin','Team Leader','Team Member')`) **or** have a `tenant_users` row with `role='parent'` on the invitation's tenant. 403 otherwise.
+- Builds `invite_url = ${origin}/accept-invitation?token=${token_plaintext}` with origin resolution: `PUBLIC_APP_URL` env var → `Origin` header → `Referer` → fallback `https://app.unicorn-cms.au`.
+- Formats `expiry_date` in `Australia/Sydney` as `D MMMM YYYY`.
+- `role_label` map: `Super Admin`/`Team Leader`/`Team Member` pass through, `Admin` → `Organisation Admin`, `User` → `Team Member`.
+- `inviter_name` = `first_name last_name` of `invited_by` user, or `'The Vivacity team'` fallback.
+- POSTs to `https://api.eu.mailgun.net/v3/${MAILGUN_DOMAIN}/messages` with `template=unicorn_accept_invite_v1` and `t:variables` containing the seven variables you confirmed: `first_name, last_name, tenant_name, invite_url, expiry_date, role_label, inviter_name`. Subject: `You've been invited to join {tenantName} on Unicorn 2.0`. Tag: `invitation`.
+- On non-2xx: log full Mailgun body, return 502, **do not** touch the invitation row (clean retry state).
+- On 2xx: parse Mailgun `id`, then `UPDATE user_invitations SET mailgun_message_id, last_sent_at` and return 200.
+
+CORS handled inline (preflight returns 200).
+
+## 3. Two surgical edits to `supabase/functions/invite-user/index.ts`
+
+Currently builds the URL itself and calls `send-invitation-email` with `{ email, inviteUrl, userType }`. Two changes:
+
+a. After the `INSERT INTO user_invitations`, add `.select('id').single()` so we capture `newInviteRow.id`.
+
+b. Replace the `supabase.functions.invoke('send-invitation-email', …)` body with `{ invitation_id: newInviteRow.id, token_plaintext: inviteToken }`. The 200 response from this function still includes `inviteUrl` (computed locally) for backwards-compat with any UI that reads it.
+
+Everything else in this function — the `skip_email` path, rate limiting, `audit_invites`, `audit_eos_events`, role validation, tenant validation — stays untouched.
+
+## 4. Three edits to `src/pages/AcceptInvitation.tsx`
+
+a. Line 81 — change `const VIVACITY_TENANT_ID = 319;` to `6372`.
+
+b. Tighten `finalizeInvitation` to branch on the returned `code`:
 
 ```text
-ClientLayout
-  Header (existing — keep "Reports" + subtitle)
-  ── if isLoading: 3 × skeleton cards (Card + CardContent w/ Skeleton lines)
-  ── if error: Card with red AlertTriangle + "Couldn't load your reports. Try refreshing."
-  ── if data.length === 0:
-       Existing empty-state Card (BarChart3 icon + "Reports will be
-       available here.") + new subtitle paragraph: "Once your consultant
-       releases an audit report, it will appear here."
-  ── else:
-       <div className="space-y-4">
-         {data.map(a => <ReleasedAuditCard key={a.id} audit={a} />)}
-       </div>
-  Coming-soon block (always rendered, below):
-    Card (border-dashed)
-      Title: "Assessment Validation"
-      Body: "We're building an assessment validation tool to give you
-             deeper insight into how your assessments are performing.
-             Coming soon."
-      No action button.
+SUCCESS           → toast success + navigate('/dashboard')
+ALREADY_ACCEPTED  → toast info    + navigate('/login')
+EXPIRED           → toast error,  no navigate, message "ask for a new invite"
+INVALID_TOKEN     → toast error,  no navigate
 ```
 
-### 4. No DB / RLS / storage changes
+The current code returns boolean and only logs failures — that swallows the EXPIRED / INVALID_TOKEN cases, which is part of the silent-failure problem.
 
-- Read query relies on the existing `tenant_read_v2` policy on `client_audits`.
-- Storage bucket `audit-reports` is private; signed URLs are generated client-side. The brief flags storage-RLS verification as a Phase 2 follow-up — leave as-is since paths embed the audit UUID and aren't guessable.
-- No migrations, no edge functions, no edits to `useAuditReport.ts`.
+c. Keep everything else: the existing UI (logo, form, password rules, signUp call, “User already registered → signInWithPassword” fallback) is fine. No new route, no new page.
 
-### Acceptance
+---
 
-- Empty tenant → original placeholder card with the new subtitle, plus the "Assessment Validation — Coming soon" card below.
-- Tenant with N released audits → N cards, newest first, each with audit type, risk badge, RTO/CRICOS line, release date, score line (when present), optional release notes, working `Download PDF` opening the signed URL in a new tab, and an `Acknowledge` button that's disabled with a "coming soon" tooltip when `report_acknowledged_at IS NULL`.
-- Audits without `report_pdf_path` show a disabled Download PDF button (tooltip: "PDF not generated yet").
-- Loading and error states render gracefully (skeletons / error card).
-- No client-side `.eq('report_client_visible', true)` filters — RLS does that.
+## Files touched
+
+```
+sql-setup/13-rewrite-accept-invitation-v2.sql          (new — to be applied via migration tool)
+supabase/functions/send-invitation-email/index.ts      (rewritten)
+supabase/functions/invite-user/index.ts                (2 small edits)
+src/pages/AcceptInvitation.tsx                         (~10 line edit)
+```
+
+Explicitly **not** touched (per your direction):
+
+- `supabase/functions/accept-tenant-invite/` — left at v52, dead code, no rollback risk.
+- `cancel-invite`, `resend-invite`, the legacy `accept_invite` RPC, `validate_invitation_token`, `admin_fix_invitations`.
+- `user_invitations` schema (already has `mailgun_message_id` and `last_sent_at`).
+- `tenant_members` table and its 391 historical rows.
+- `App.tsx` routes — keeping `/accept-invitation` (which is what the email link uses).
+
+## Migration delivery
+
+Plan mode and Agent mode in this sandbox don't currently expose a database migration tool. The SQL for change 1 will be staged at `sql-setup/13-rewrite-accept-invitation-v2.sql` so you can paste it into the Supabase SQL Editor in one shot. As soon as the migration tool reappears in this conversation, I'll run it through that path automatically instead.
+
+[Open SQL Editor](https://supabase.com/dashboard/project/yxkgdalkbrriasiyyrwk/sql/new)
+
+## Acceptance test (run after merge + SQL applied)
+
+1. Use the existing invite UI (or call `invite-user` directly) to invite `angela+invitetest@vivacity.com.au` to tenant `6372` with role `Team Member`.
+2. Verify the new `user_invitations` row has `mailgun_message_id` and `last_sent_at` populated within seconds.
+3. Inbox: email arrives via the `unicorn_accept_invite_v1` template, no literal `{{first_name}}` placeholders visible.
+4. Click → lands at `https://app.unicorn-cms.au/accept-invitation?token=…`, welcome screen shows "Vivacity Coaching & Consulting" and the role.
+5. Set password → submit → redirects to `/dashboard`.
+6. SQL verification:
+
+```sql
+select status, accepted_at, accepted_by_user_id from user_invitations where id = '<id>';
+select tenant_id, role, primary_contact from tenant_users where user_id = '<new auth user id>';
+select tenant_id, unicorn_role from users where user_uuid = '<new auth user id>';
+```
+
+Expected:
+- `user_invitations.status = 'accepted'`, `accepted_at` set, `accepted_by_user_id = new uuid`.
+- `tenant_users` row exists with `tenant_id=6372`, `role='child'`, `primary_contact=false`.
+- `users.tenant_id=6372`, `users.unicorn_role='Team Member'`.
+
+7. Sign out, sign back in with the email + password → dashboard renders Vivacity tenant data.
+
+If any step fails the PR isn't done.
