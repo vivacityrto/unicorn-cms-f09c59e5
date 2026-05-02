@@ -1,6 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { formatHours } from './formatters';
+import { formatHours, formatWorkType } from './formatters';
 import type { ClientPackageHoursByTypeRow } from '@/hooks/use-client-package-hours-by-type';
 
 interface Props {
@@ -118,11 +118,11 @@ export function PackageHoursBreakdown({ rows, isLoading, isError }: Props) {
               {/* Label column */}
               <div className="md:w-2/5 md:flex-shrink-0 min-w-0">
                 <span className="text-sm font-medium text-foreground truncate block">
-                  {row.work_type}
+                  {row.key === '__other__' ? row.work_type : formatWorkType(row.work_type)}
                   {row.work_sub_type && (
                     <span className="text-muted-foreground font-normal">
                       {' · '}
-                      {row.work_sub_type}
+                      {formatWorkType(row.work_sub_type)}
                     </span>
                   )}
                 </span>
