@@ -121,7 +121,7 @@ export function TenantInviteDialog({
     setFirstName('');
     setLastName('');
     setEmail('');
-    setRole('User');
+    setRole(getDefaultRole(tenantId));
     setPosition('');
     setPhoneNumber('');
     setSendInvitation(false);
