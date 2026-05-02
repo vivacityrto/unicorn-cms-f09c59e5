@@ -41,6 +41,18 @@ function SectionHeading() {
   );
 }
 
+/**
+ * Round a raw maximum up to a "nice" axis ceiling so the Y-axis lands on a
+ * round number with sensible tick spacing rather than e.g. 101.
+ */
+function roundUpToNiceMax(rawMax: number): number {
+  if (rawMax <= 0) return 10;
+  if (rawMax <= 10) return 10;
+  if (rawMax <= 100) return Math.ceil(rawMax / 10) * 10;
+  if (rawMax <= 500) return Math.ceil(rawMax / 25) * 25;
+  return Math.ceil(rawMax / 50) * 50;
+}
+
 /** Linear interpolation of ideal hours at an arbitrary date between start and end. */
 function interpolateIdeal(
   ts: number,
@@ -181,7 +193,7 @@ export function PackageBurndownChart({
       const minTs = sorted.length > 0 ? sorted[0].ts : 0;
       const maxTs = sorted.length > 0 ? sorted[sorted.length - 1].ts : 0;
 
-      const yMaxComputed = Math.ceil(Math.max(hoursTotal, hoursUsed, 1) * 1.1);
+      const yMaxComputed = roundUpToNiceMax(Math.max(hoursTotal, hoursUsed, 1));
       const span = sorted.length > 1
         ? differenceInMonths(new Date(maxTs), new Date(minTs))
         : 0;

@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { formatHours } from './formatters';
+import { formatHours, formatWorkType, cleanWorkNote } from './formatters';
 import type { ClientPackageHoursRecentRow } from '@/hooks/use-client-package-hours-recent';
 
 interface Props {
@@ -102,6 +102,7 @@ export function PackageRecentWork({
       <ul className="space-y-3">
         {visible.map((e) => {
           const { Icon, colorClass } = iconFor(e.work_type);
+          const cleanedNote = cleanWorkNote(e.notes);
           return (
             <li key={e.entry_id} className="flex items-start gap-3">
               {/* Date + icon */}
@@ -115,14 +116,14 @@ export function PackageRecentWork({
               {/* Body */}
               <div className="flex-1 min-w-0">
                 <div className="text-sm text-foreground">
-                  {e.work_type}
+                  {formatWorkType(e.work_type)}
                   {e.work_sub_type && (
-                    <span className="text-muted-foreground"> · {e.work_sub_type}</span>
+                    <span className="text-muted-foreground"> · {formatWorkType(e.work_sub_type)}</span>
                   )}
                 </div>
-                {e.notes && (
+                {cleanedNote && (
                   <div className="text-xs text-muted-foreground truncate">
-                    {truncate(e.notes, 80)}
+                    {truncate(cleanedNote, 80)}
                   </div>
                 )}
               </div>
