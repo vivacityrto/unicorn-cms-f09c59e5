@@ -43,6 +43,8 @@ type UserStatus = {
 
 export default function ManageInvites() {
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const launchMode = searchParams.get('launch') === '1';
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [userStatuses, setUserStatuses] = useState<Map<string, UserStatus>>(new Map());
   const [tenantNames, setTenantNames] = useState<Map<number, string>>(new Map());
@@ -50,16 +52,46 @@ export default function ManageInvites() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(launchMode ? "pending" : "all");
+  const [dateFilter, setDateFilter] = useState(launchMode ? "this-week" : "all");
   const [reInviteDialogOpen, setReInviteDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedInvites, setSelectedInvites] = useState<Set<string>>(new Set());
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState<InviteRow | null>(null);
+  const [revokeReason, setRevokeReason] = useState("");
+  const [revoking, setRevoking] = useState(false);
   const itemsPerPage = 20;
   const { profile } = useAuth();
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';
+  const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
+
+  const handleRevoke = async () => {
+    if (!revokeTarget || !revokeReason.trim()) return;
+    setRevoking(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const { data, error: fnError } = await supabase.functions.invoke('cancel-invite', {
+        body: { invitation_id: revokeTarget.id, reason: revokeReason.trim() },
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (fnError || (data && data.ok === false)) {
+        throw new Error(fnError?.message || data?.detail || 'Failed to revoke invitation');
+      }
+      toast({ title: 'Invitation revoked', description: `Revoked invite for ${revokeTarget.email}` });
+      setRevokeDialogOpen(false);
+      setRevokeTarget(null);
+      setRevokeReason("");
+      await fetchInvites();
+    } catch (e: any) {
+      toast({ title: 'Revoke failed', description: e.message, variant: 'destructive' });
+    } finally {
+      setRevoking(false);
+    }
+  };
 
   const fetchInvites = async () => {
     try {
