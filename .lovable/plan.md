@@ -1,53 +1,45 @@
-## Fix InviteUser role dropdown — branch on tenant_id
+## Goal
 
-The `TenantInviteDialog` role dropdown currently shows `Admin` / `General User` for every tenant. The `invite-user` edge function rejects those values for Vivacity (tenant 6372) and never accepts the literal `General User` for any tenant — it only accepts `User`. This change makes the dropdown tenant-aware while keeping submitted values aligned with the function's allow-list.
+Make the seven official Vivacity brand colors the single source of truth, so every future change uses them automatically without me having to be reminded.
 
-### File to modify
-- `src/components/client/TenantInviteDialog.tsx`
+## The palette (with role + HSL for tokens)
 
-### Changes
+| Role | Name | Hex | HSL |
+|------|------|-----|-----|
+| Headings | Purple | `#7130A0` | `271 54% 41%` |
+| Headings & Icons | Fuchsia | `#ED1878` | `330 86% 51%` |
+| Buttons (primary) | Cyan | `#23C0DD` | `190 74% 50%` |
+| Backgrounds (light) | Light Cyan | `#A6F1FF` | `190 100% 83%` |
+| Body text | Acai | `#44235F` | `273 47% 25%` |
+| Backgrounds (light) | Light Purple | `#DFD8E8` | `265 25% 88%` |
+| Highlights | Macaron Yellow | `#F9CB0C` | `49 95% 51%` |
 
-1. Replace the static `TENANT_ROLES` constant with two role lists and a selector:
-   ```ts
-   const VIVACITY_TENANT_ID = 6372;
+## What will change
 
-   const VIVACITY_ROLES = [
-     { value: 'Super Admin',  label: 'Super Admin',  description: 'Full Vivacity admin access', icon: Shield },
-     { value: 'Team Leader',  label: 'Team Leader',  description: 'Leads a Vivacity team',      icon: Shield },
-     { value: 'Team Member',  label: 'Team Member',  description: 'Vivacity staff member',      icon: UserIcon },
-   ];
+1. **Update memory** `mem://style/brand-color-and-ui-standards` — replace the current cyan-only note with the full official palette, role assignments, and HSL values, so every future prompt enforces these. Keep existing rules: cyan-only buttons, dark backdrops on floating panels, Academy keeps its purple/fuchsia gradient identity.
 
-   const CLIENT_ROLES = [
-     { value: 'Admin', label: 'Admin',        description: 'Can manage users and settings', icon: Shield },
-     { value: 'User',  label: 'General User', description: 'Standard access to features',   icon: UserIcon },
-   ];
+2. **Add brand color tokens to `src/index.css`** — introduce semantic CSS variables alongside existing ones (HSL only, per design system rule):
+   - `--brand-purple: 271 54% 41%`
+   - `--brand-fuchsia: 330 86% 51%`
+   - `--brand-cyan: 190 74% 50%` (already the `--primary`)
+   - `--brand-cyan-light: 190 100% 83%`
+   - `--brand-acai: 273 47% 25%`
+   - `--brand-purple-light: 265 25% 88%`
+   - `--brand-macaron: 49 95% 51%`
+   - Map `--foreground` (light mode body text) to `--brand-acai`.
 
-   const getRoleOptions = (tid: number) =>
-     tid === VIVACITY_TENANT_ID ? VIVACITY_ROLES : CLIENT_ROLES;
+3. **Expose tokens in `tailwind.config.ts`** — add a `brand` color scale so classes like `text-brand-purple`, `bg-brand-cyan-light`, `text-brand-acai`, `bg-brand-macaron` work everywhere.
 
-   const getDefaultRole = (tid: number) =>
-     tid === VIVACITY_TENANT_ID ? 'Team Member' : 'User';
-   ```
+## What will NOT change (to avoid breakage)
 
-2. Initialise `role` state from `getDefaultRole(tenantId)` instead of the hard-coded `'User'`.
+- No mass refactor of existing components — current cyan primary and shadcn semantic tokens stay intact.
+- Academy module keeps its purple/fuchsia gradient identity.
+- No hex values introduced into components — everything flows through HSL tokens.
 
-3. Add a `useEffect` keyed on `[tenantId, open]` that, whenever the dialog opens or the tenant changes, resets `role` to `getDefaultRole(tenantId)`. This guarantees the default is correct even if the same dialog instance is reused across tenants.
+## Files touched
 
-4. In `handleClose`, reset `role` to `getDefaultRole(tenantId)` (not `'User'`).
+- `mem://style/brand-color-and-ui-standards` (memory update)
+- `src/index.css` (add brand tokens, remap `--foreground` to acai)
+- `tailwind.config.ts` (expose `brand.*` scale)
 
-5. In the `<Select>` block, iterate `getRoleOptions(tenantId)` instead of the removed `TENANT_ROLES`. The submitted value remains `r.value`, so:
-   - `General User` (label) ⇒ `User` (value sent to edge function).
-   - All Vivacity labels match their values verbatim.
-
-No changes to `invite_as`, payload shape, or any other field — that branching was already added in the previous fix.
-
-### Acceptance checks (manual, after deploy)
-1. Open dialog on tenant 6372 — options are Super Admin / Team Leader / Team Member; default Team Member.
-2. Open dialog on any client tenant — options are Admin / General User; default General User.
-3. Submit Vivacity invite with Team Member ⇒ `invite-user` returns 200; `user_invitations` row has `unicorn_role = 'Team Member'`.
-4. Submit client invite with General User ⇒ `invite-user` returns 200; row has `unicorn_role = 'User'`.
-
-### Out of scope
-- No edge-function changes.
-- No DB migration.
-- No changes to seat-limit logic, smart-paste, or any other dialog behaviour.
+Approve and I'll apply it.
