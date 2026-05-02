@@ -53111,6 +53111,7 @@ export type Database = {
       }
       v_client_package_dashboard: {
         Row: {
+          current_stage_shortname: string | null
           current_stage_sortorder: number | null
           end_date: string | null
           hours_added: number | null

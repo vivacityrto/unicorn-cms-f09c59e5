@@ -26,6 +26,7 @@ export interface ClientPackageDashboardRow {
   stages_total: number;
   stages_complete: number;
   current_stage_sortorder: number | null;
+  current_stage_shortname: string | null;
 
   open_tasks: number;
   overdue_tasks: number;
