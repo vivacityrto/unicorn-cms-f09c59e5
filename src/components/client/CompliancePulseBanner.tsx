@@ -59,9 +59,12 @@ export function CompliancePulseBanner() {
       </div>
 
       {/* Phase position */}
-      <div className="text-muted-foreground">
-        Phase: <span className="font-medium text-foreground">{currentPhase}</span>
-      </div>
+      {/* TODO(phase-indicator): tenant-level lifecycle phase intentionally hidden until wired to a real data source. See dashboard/Week 1 conversation. */}
+      {currentPhase && currentPhase !== "—" && String(currentPhase).trim() !== "" && (
+        <div className="text-muted-foreground">
+          Phase: <span className="font-medium text-foreground">{currentPhase}</span>
+        </div>
+      )}
 
       {/* Submission */}
       <div className="text-muted-foreground">
