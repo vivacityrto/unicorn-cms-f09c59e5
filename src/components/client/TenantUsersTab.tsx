@@ -578,47 +578,39 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                       {/* Role Badge/Selector */}
                       {canChangeRoles && member.user_id !== profile?.user_uuid ? (
                         <Select
-                          value={getMemberRoleValue(member)}
-                          onValueChange={(value) => handleRoleChange(member.user_id, value)}
+                          value={getMemberRelationshipRole(member)}
+                          onValueChange={(value) => handleRelationshipRoleChange(member, value as RelationshipRole)}
                           disabled={updatingRole === member.user_id}
                         >
                           <SelectTrigger className="w-44">
                             <SelectValue>
-                              {getRoleLabel(getMemberRoleValue(member))}
+                              {relationshipRoleLabel(getMemberRelationshipRole(member))}
                             </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="parent">
-                              <div className="flex items-center gap-2">
-                                <Shield className="h-3 w-3" />
-                                Primary Contact
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="secondary">
-                              <div className="flex items-center gap-2">
-                                <UserCheck className="h-3 w-3" />
-                                Secondary Contact
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="child">
-                              <div className="flex items-center gap-2">
-                                <UserIcon className="h-3 w-3" />
-                                User
-                              </div>
-                            </SelectItem>
+                            {RELATIONSHIP_ROLE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                <div className="flex items-center gap-2">
+                                  {opt.value === 'primary_contact' && <Shield className="h-3 w-3" />}
+                                  {opt.value === 'secondary_contact' && <UserCheck className="h-3 w-3" />}
+                                  {(opt.value === 'user' || opt.value === 'academy_user') && <UserIcon className="h-3 w-3" />}
+                                  {opt.label}
+                                </div>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       ) : (
                         (() => {
-                          const v = getMemberRoleValue(member);
-                          if (v === 'parent') {
+                          const v = getMemberRelationshipRole(member);
+                          if (v === 'primary_contact') {
                             return (
                               <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                                 <Shield className="h-3 w-3 mr-1" /> Primary Contact
                               </Badge>
                             );
                           }
-                          if (v === 'secondary') {
+                          if (v === 'secondary_contact') {
                             return (
                               <Badge variant="outline" className="bg-accent/10 text-accent-foreground border-accent/30">
                                 <UserCheck className="h-3 w-3 mr-1" /> Secondary Contact
@@ -627,7 +619,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                           }
                           return (
                             <Badge variant="outline" className="bg-muted">
-                              <UserIcon className="h-3 w-3 mr-1" /> User
+                              <UserIcon className="h-3 w-3 mr-1" /> {relationshipRoleLabel(v)}
                             </Badge>
                           );
                         })()
