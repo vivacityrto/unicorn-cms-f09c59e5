@@ -1,102 +1,95 @@
-# Hours transparency on the package card
+# Active packages vs Package history
 
-Adds two new client-portal panels inside `PackageCard` to turn the abstract `17:30 / 91:00` hours number into a concrete evidence trail of *what was done*.
+Splits `/packages` into two zones so closed packages stop rendering as broken-looking active cards:
 
-- **"Where your hours went"** — compact category breakdown directly under the Hours stat tile.
-- **"Recent work"** — last-10 timeline of time entries under What's Next.
+- **Your active packages** — full `PackageCard` treatment (with the existing Section A collapse logic for multi-package tenants).
+- **Package history** — collapsed-by-default section of compact one-line rows showing tenure only.
 
-Strictly additive. No DDL on existing tables. No edits to existing views. No staff names, no `is_billable`, no consultant attribution surfaced.
+Filter rule: `is_complete === true` → history; everything else → active. The dashboard view already exposes `is_complete` (verified in `ClientPackageDashboardRow`).
 
-## Schema (1 migration, 2 new views)
+UI-only. No SQL, no view changes, no hook changes.
 
-Both views use `WITH (security_invoker = true)` and filter `te.start_at >= pi.start_date` (matches the hours-period rule already shipped). No changes to `time_entries`, `package_instances`, or any existing view.
+## Files
 
-### `v_client_package_hours_by_type`
+**New:** `src/components/client/package-dashboard/HistoricalPackageRow.tsx` — single compact row.
 
-Per-package totals grouped by `(work_type, work_sub_type)`. Columns: `package_instance_id`, `tenant_id`, `work_type`, `work_sub_type`, `minutes`, `hours` (rounded), `pct_of_total` (0..1), `rank_in_package` (1 = largest). `work_type` empty/null normalised to `'Other'`. Rows where `duration_minutes` is null/≤0 or `package_instance_id` is null are excluded.
+**New:** `src/components/client/package-dashboard/PackageHistorySection.tsx` — collapsible wrapper with header, count badge, chevron toggle, and tenure footer.
 
-### `v_client_package_hours_recent`
+**Modified:** `src/components/client/ClientPackagesPage.tsx` — partition `dashboards` into `activePackages` / `historicalPackages` via `useMemo`; render active list (preserving existing collapse/expand logic untouched) followed by `<PackageHistorySection>` when history exists.
 
-Top 10 most recent entries per package (`ROW_NUMBER() … ORDER BY start_at DESC, id DESC`, `WHERE rank_in_package <= 10`). Columns: `entry_id` (uuid), `package_instance_id`, `tenant_id`, `occurred_at`, `duration_minutes`, `hours`, `work_type`, `work_sub_type`, `notes`, `rank_in_package`. **No `user_id`. No `is_billable`. No staff name join.**
+## `HistoricalPackageRow`
 
-`GRANT SELECT ON … TO authenticated;` on both. View comments document purpose + privacy stance.
+`flex items-center gap-3 p-3 rounded-md border bg-card/50`. Left to right:
 
-Sanity: AHMRC M-DR (`package_instance_id = 15152`) breakdown rows should sum to its `hours_used` from `v_client_package_dashboard` (~17.5h); recent-work rows should match the staff Time Entries panel for that package.
+1. `Archive` (lucide) icon, size 16, `text-muted-foreground`.
+2. `dashboard.package_name` — `text-sm font-medium`, truncated.
+3. `<Badge variant="secondary">{package_type}</Badge>` — omitted when `package_type === package_name` (same dedup rule used in `PackageCard`).
+4. Period text in `text-sm text-muted-foreground`:
+   - both dates: `{format(start, 'd MMM yyyy')} → {format(end, 'd MMM yyyy')}`
+   - start only: `Started {format(start, 'd MMM yyyy')}`
+   - neither: omitted
+5. `ml-auto` duration tag in `text-xs text-muted-foreground` — `formatDistanceStrict(end, start)` when both dates present (e.g. "12 months", "2 years"). Omitted otherwise.
+6. `<Badge variant="outline">Completed</Badge>` — single muted badge regardless of how the package ended. Does **not** reuse `PackageStatusPill` palette.
 
-## Hooks (2 new files)
+Non-interactive in v1. No loading/error states (parent passes resolved data).
 
-Both follow the established `useClientPackageDashboard` pattern: `useClientTenant()` → explicit `.eq('tenant_id', activeTenantId).eq('package_instance_id', packageInstanceId)`, `enabled` only when both ids present, `staleTime: 60_000`, ordered by `rank_in_package asc`.
-
-- `src/hooks/use-client-package-hours-by-type.ts` → exports `useClientPackageHoursByType` + `ClientPackageHoursByTypeRow`.
-- `src/hooks/use-client-package-hours-recent.ts` → exports `useClientPackageHoursRecent` + `ClientPackageHoursRecentRow`.
-
-(Note the prompt's example references `@/hooks/use-client-tenant`; the project's actual import is `@/contexts/ClientTenantContext` — the hooks will use that path, matching every other client-portal hook.)
-
-## Components (2 new files)
-
-### `PackageHoursBreakdown.tsx`
-
-Section heading "Where your hours went" in `text-xs font-semibold uppercase tracking-wide text-muted-foreground` (matches the other panels).
-
-Body: vertical list, `space-y-2`. Each row is `flex flex-col md:flex-row` with three columns:
-1. **Label** (~40% on md+, full width stacked on mobile) — `work_type` in `font-medium`, optional `· {work_sub_type}` in muted.
-2. **Bar** (`flex-1`) — `h-2 w-full rounded-full bg-muted`, fill width = `pct_of_total * 100%`, fill colour rotates through `[emerald, blue, violet, amber, slate]`. "Other" always slate.
-3. **Value** (~80px right-aligned) — `formatHours(hours)` (reuses `./formatters`) + ` · {pct}%` in muted.
-
-Top-N: when `rows.length > 5`, show first 5 verbatim then a single `Other ({n} categories)` row summing the remaining hours and percentages. "Other" always uses slate fill regardless of which categories rolled in.
-
-States: 3 skeleton rows on loading; inline destructive alert on error; **render `null` when `rows.length === 0`** (no placeholder).
-
-### `PackageRecentWork.tsx`
-
-Section heading "Recent work".
-
-Renders first `initiallyShown` entries (default 5). "Show more" ghost button at the bottom expands to all (up to 10). Button hides when expanded.
-
-Each row: `flex items-start gap-3` with three cells:
-1. **Date + icon** (~80px) — small lucide icon (mapped from `work_type`: Consultation→`Phone`, Meeting→`Users`, Document Review→`FileText`, Evidence/Validation→`ClipboardCheck`, fallback→`Clock`) in the matching breakdown palette colour, plus `format(occurred_at, 'd MMM')` (year suffix only when not current year).
-2. **Body** (`flex-1`) — first line `{work_type}` + optional `· {work_sub_type}`; second line `text-xs text-muted-foreground` truncated `notes` (~80 chars). Notes line omitted entirely when null/empty.
-3. **Hours** (~50px right) — `formatHours(hours)`.
-
-States: 5 skeleton rows on loading; inline destructive alert on error; **render `null` when `entries.length === 0`**.
-
-## `PackageCard` wire-up
-
-Inside `src/components/client/ClientPackagesPage.tsx`, in `PackageCard`:
+## `PackageHistorySection`
 
 ```text
-const hoursByType = useClientPackageHoursByType(packageInstanceId);
-const hoursRecent = useClientPackageHoursRecent(packageInstanceId);
+<section> (rounded-md border bg-card/30)
+  <button>  full-width header, hover:bg-accent/50, aria-expanded
+    "Package history"  +  <Badge variant="secondary">{count}</Badge>
+    ChevronRight (collapsed) | ChevronDown (expanded)
+  </button>
+  {isExpanded && (
+    list of HistoricalPackageRow (most-recent end_date first)
+    footer: "Member since {format(memberSince, 'd MMM yyyy')} · {durationText}"
+  )}
+</section>
 ```
 
-Render order (preserving existing `space-y-6`):
+- Local `useState<boolean>` for expansion. No persistence.
+- Default collapsed, **except** when `defaultExpanded` prop is true (used when there are no active packages).
+- `memberSince` = earliest `start_date` across the passed packages. `durationText` computed from months between memberSince and today: `{years} years {months} months` when ≥ 12 months, otherwise `{N} months`. Footer hidden if no historical package has a `start_date`.
+- Whole header is keyboard-focusable; Enter/Space toggle (native button behaviour).
 
-```text
-header (icon, title, tier pill, dates, status pill, optional collapse chevron)
-PinnedNoteBanner            (existing, conditional)
-PackageStatTiles            (existing)
-PackageHoursBreakdown       NEW — directly under stat tiles
-PackageStageStepper         (existing)
-PackageWhatsNextPanel       (existing)
-PackageRecentWork           NEW — between What's Next and the action row
-PackageActionRow            (existing)
+## `ClientPackagesPage` changes
+
+Right after `useClientPackageDashboards()`:
+
+```ts
+const activePackages = useMemo(
+  () => dashboards.filter(d => !d.is_complete),
+  [dashboards]
+);
+
+const historicalPackages = useMemo(
+  () => dashboards
+    .filter(d => d.is_complete)
+    .sort((a, b) => (b.end_date ?? '').localeCompare(a.end_date ?? '')),
+  [dashboards]
+);
 ```
 
-Empty/0-entry tenants: both new panels render nothing — the card collapses cleanly without empty space.
+Render flow inside the existing wrapper (preserving heading + loading skeleton):
 
-## Acceptance
+- **Both empty**: existing `No active packages found.` empty card (unchanged).
+- **Active present**: render the existing active-list block but iterating over `activePackages` instead of `dashboards`. Existing `expandedIds` auto-expand effect, `toggle`, and `CollapsedPackageRow` / `PackageCard` branching all stay exactly as today — only the source array changes.
+- **Historical present**: append `<PackageHistorySection packages={historicalPackages} defaultExpanded={activePackages.length === 0} />`.
+- **Active empty + history present**: render a single muted line above the section — `You don't have any active packages right now. Your history with us is below.` — and the section opens expanded by default.
 
-- 1 migration creating both views idempotently with `security_invoker=true` and `GRANT SELECT … TO authenticated`. No DDL on existing tables, no changes to existing views.
-- 2 hooks with explicit `tenant_id` filter from `useClientTenant()`.
-- 2 components matching the layout, palette, top-5 + Other rollup, and Show-more behaviour above.
-- `PackageCard` renders both in the specified order.
-- No `any`. No new dependencies (lucide / date-fns / Tailwind only). Build clean.
-- Smoke (after deploy): AHMRC M-DR breakdown sums to its dashboard `hours_used`; recent-work matches staff Time Entries; tenants with 0 entries render no empty placeholders; tenants with >5 categories show top 5 + "Other (N categories)"; mobile viewport stacks cleanly.
+Wrap the whole body in `space-y-8` to give the history block clear separation from the active list (active list keeps its inner `space-y-4`).
+
+## Acceptance / Smoke
+
+- AHMRC Training: 1 active card + collapsed `Package history (3)`. Expanding shows 3 rows newest-first with tenure footer.
+- AHMRC active card: byte-identical to today (no changes to `PackageCard` props or render path).
+- A history row reads e.g. `Diamond RTO Membership · membership · 30 Nov 2022 → 1 Dec 2023 · 12 months · Completed`. No stages, hours tile, stepper, or action row.
+- Tenant with only one active package and no history: page identical to today, no history section rendered.
+- Tenant with only history: muted message above + history expanded by default.
+- DevTools: zero new queries. Mobile: history rows truncate cleanly.
+- No `any`. Build clean.
 
 ## Out of scope (per prompt)
 
-Burndown chart, per-category drill-through, staff names, notes search, PDF export, cross-package aggregation, filtering/sorting controls.
-
-## Why this turn needs approval
-
-Migration tool and file-write are gated to default mode this turn. Approving this plan switches to default mode so the migration runs and the four new files (2 hooks + 2 components) plus the `PackageCard` wire-up can be applied in one go.
+Click-to-expand history detail, renewal-chain visualisation, CSV export, "Reactivate" action, history-section search/filter, persisting expand state.
