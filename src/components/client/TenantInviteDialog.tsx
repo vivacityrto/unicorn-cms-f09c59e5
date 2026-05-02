@@ -387,7 +387,7 @@ export function TenantInviteDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TENANT_ROLES.map((r) => (
+                  {getRoleOptions(tenantId).map((r) => (
                     <SelectItem key={r.value} value={r.value}>
                       <div className="flex items-center gap-2">
                         <r.icon className="h-4 w-4" />
