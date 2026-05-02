@@ -45407,6 +45407,9 @@ export type Database = {
           created_by: string | null
           id: number
           primary_contact: boolean | null
+          relationship_role:
+            | Database["public"]["Enums"]["tenant_user_role"]
+            | null
           role: string
           secondary_contact: boolean
           tenant_id: number
@@ -45418,6 +45421,9 @@ export type Database = {
           created_by?: string | null
           id?: number
           primary_contact?: boolean | null
+          relationship_role?:
+            | Database["public"]["Enums"]["tenant_user_role"]
+            | null
           role?: string
           secondary_contact?: boolean
           tenant_id: number
@@ -45429,6 +45435,9 @@ export type Database = {
           created_by?: string | null
           id?: number
           primary_contact?: boolean | null
+          relationship_role?:
+            | Database["public"]["Enums"]["tenant_user_role"]
+            | null
           role?: string
           secondary_contact?: boolean
           tenant_id?: number
@@ -48267,6 +48276,9 @@ export type Database = {
           last_name: string | null
           last_sent_at: string | null
           mailgun_message_id: string | null
+          relationship_role:
+            | Database["public"]["Enums"]["tenant_user_role"]
+            | null
           revoked_at: string | null
           revoked_reason: string | null
           status: string
@@ -48287,6 +48299,9 @@ export type Database = {
           last_name?: string | null
           last_sent_at?: string | null
           mailgun_message_id?: string | null
+          relationship_role?:
+            | Database["public"]["Enums"]["tenant_user_role"]
+            | null
           revoked_at?: string | null
           revoked_reason?: string | null
           status?: string
@@ -48307,6 +48322,9 @@ export type Database = {
           last_name?: string | null
           last_sent_at?: string | null
           mailgun_message_id?: string | null
+          relationship_role?:
+            | Database["public"]["Enums"]["tenant_user_role"]
+            | null
           revoked_at?: string | null
           revoked_reason?: string | null
           status?: string
@@ -58799,6 +58817,11 @@ export type Database = {
         | "academy_solo"
         | "academy_team"
         | "academy_elite"
+      tenant_user_role:
+        | "primary_contact"
+        | "secondary_contact"
+        | "user"
+        | "academy_user"
       unicorn_role:
         | "Super Admin"
         | "Admin"
@@ -59092,6 +59115,12 @@ export const Constants = {
         "academy_solo",
         "academy_team",
         "academy_elite",
+      ],
+      tenant_user_role: [
+        "primary_contact",
+        "secondary_contact",
+        "user",
+        "academy_user",
       ],
       unicorn_role: [
         "Super Admin",
