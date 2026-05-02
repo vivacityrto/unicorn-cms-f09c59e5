@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, requireSuperAdmin = false }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const { canAccessRoute, isSuperAdmin, canAccessEOS, isVivacityTeam } = useRBAC();
   const location = useLocation();
   
@@ -29,7 +29,17 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false }: Protecte
     return <Navigate to="/login" replace />;
   }
 
-  // Check if route requires SuperAdmin access
+  // Check if route requires SuperAdmin access.
+  // useAuth sets loading=false as soon as the session resolves, but profile is
+  // fetched asynchronously after that. Wait for profile before judging, otherwise
+  // legitimate SuperAdmins get redirected on first paint.
+  if (requireSuperAdmin && !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary-dark to-secondary">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
   if (requireSuperAdmin && !isSuperAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
