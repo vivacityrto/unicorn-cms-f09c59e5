@@ -275,7 +275,6 @@ export function AdminInviteUserDialog({
                 return {
                   value: opt.value,
                   label: `${opt.label}${taken ? ' (already assigned)' : ''}  - ${opt.description}`,
-                  disabled: taken,
                 };
               })}
               value={relationshipRole}
