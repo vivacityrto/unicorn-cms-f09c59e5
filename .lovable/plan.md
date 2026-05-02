@@ -1,45 +1,57 @@
 ## Goal
 
-Make the seven official Vivacity brand colors the single source of truth, so every future change uses them automatically without me having to be reminded.
+Align `supabase/functions/send-invitation-email/index.ts` with live version 501 of the edge function. The live version removes a `v:NAME` form-param loop that causes Mailgun to perform a double substitution pass — doubling every variable in rendered emails and breaking all click-through links (including invite acceptance URLs).
 
-## The palette (with role + HSL for tokens)
+This bug has regressed twice. A permanent CAPS warning comment is required so future syncs do not re-introduce the loop "for safety."
 
-| Role | Name | Hex | HSL |
-|------|------|-----|-----|
-| Headings | Purple | `#7130A0` | `271 54% 41%` |
-| Headings & Icons | Fuchsia | `#ED1878` | `330 86% 51%` |
-| Buttons (primary) | Cyan | `#23C0DD` | `190 74% 50%` |
-| Backgrounds (light) | Light Cyan | `#A6F1FF` | `190 100% 83%` |
-| Body text | Acai | `#44235F` | `273 47% 25%` |
-| Backgrounds (light) | Light Purple | `#DFD8E8` | `265 25% 88%` |
-| Highlights | Macaron Yellow | `#F9CB0C` | `49 95% 51%` |
+## Current state (repo)
 
-## What will change
+`supabase/functions/send-invitation-email/index.ts` lines 137–141:
 
-1. **Update memory** `mem://style/brand-color-and-ui-standards` — replace the current cyan-only note with the full official palette, role assignments, and HSL values, so every future prompt enforces these. Keep existing rules: cyan-only buttons, dark backdrops on floating panels, Academy keeps its purple/fuchsia gradient identity.
+```ts
+formData.append("h:X-Mailgun-Variables", JSON.stringify(variables));
+// Also pass as t:variables for template engine
+for (const [k, v] of Object.entries(variables)) {
+  formData.append(`v:${k}`, String(v));
+}
+```
 
-2. **Add brand color tokens to `src/index.css`** — introduce semantic CSS variables alongside existing ones (HSL only, per design system rule):
-   - `--brand-purple: 271 54% 41%`
-   - `--brand-fuchsia: 330 86% 51%`
-   - `--brand-cyan: 190 74% 50%` (already the `--primary`)
-   - `--brand-cyan-light: 190 100% 83%`
-   - `--brand-acai: 273 47% 25%`
-   - `--brand-purple-light: 265 25% 88%`
-   - `--brand-macaron: 49 95% 51%`
-   - Map `--foreground` (light mode body text) to `--brand-acai`.
+The `for` loop is the regression. It must be deleted, and the existing single-line comment above it replaced with a load-bearing CAPS warning block.
 
-3. **Expose tokens in `tailwind.config.ts`** — add a `brand` color scale so classes like `text-brand-purple`, `bg-brand-cyan-light`, `text-brand-acai`, `bg-brand-macaron` work everywhere.
+## Change
 
-## What will NOT change (to avoid breakage)
+Replace lines 137–141 of `supabase/functions/send-invitation-email/index.ts` with a CAPS warning block followed by only the single `h:X-Mailgun-Variables` append (matches live v501):
 
-- No mass refactor of existing components — current cyan primary and shadcn semantic tokens stay intact.
-- Academy module keeps its purple/fuchsia gradient identity.
-- No hex values introduced into components — everything flows through HSL tokens.
+```ts
+// ============================================================================
+// DO NOT ADD A `v:NAME` LOOP HERE. DO NOT "ALSO PASS AS t:VARIABLES".
+// Mailgun reads template variables from the h:X-Mailgun-Variables header ONLY.
+// Appending v:<name> form params in addition to the header causes Mailgun to
+// run substitution TWICE, doubling every variable in the rendered email and
+// breaking every click-through link (including the invite acceptance URL).
+// This bug has regressed twice. Live v501 is the canonical fix.
+// If a future sync wants to re-add the loop "for safety" — it is not safety,
+// it is the bug. Leave this block as-is.
+// ============================================================================
+formData.append("h:X-Mailgun-Variables", JSON.stringify(variables));
+```
 
-## Files touched
+No other changes to this file. No edits to the comment wording.
 
-- `mem://style/brand-color-and-ui-standards` (memory update)
-- `src/index.css` (add brand tokens, remap `--foreground` to acai)
-- `tailwind.config.ts` (expose `brand.*` scale)
+## Deploy
 
-Approve and I'll apply it.
+After the file edit, redeploy the function so the running version matches the repo:
+
+- `supabase--deploy_edge_functions(["send-invitation-email"])`
+
+This is a no-op against live v501 behaviour but guarantees repo and deployed code are identical, eliminating the regression risk on next sync.
+
+## Out of scope
+
+- No changes to `cancel-invite`, `accept_invitation_v2`, or `AcceptInvitation.tsx` (already aligned in prior turns).
+- No template, variable, or recipient logic changes.
+- No "cleanup" of the comment block.
+
+## Verification
+
+After deploy, sending a test invite should produce an email where `{{invite_url}}`, `{{first_name}}`, etc. render once (not doubled like `https://unicorn-cms.au/accept-invitation?token=XXXhttps://unicorn-cms.au/accept-invitation?token=XXX`).

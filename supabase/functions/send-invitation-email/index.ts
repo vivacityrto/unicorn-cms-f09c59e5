@@ -134,11 +134,17 @@ const handler = async (req: Request): Promise<Response> => {
     formData.append("to", invitation.email);
     formData.append("subject", `You've been invited to ${tenantName} on Unicorn`);
     formData.append("template", "unicorn_accept_invite_v1");
+    // ============================================================================
+    // DO NOT ADD A `v:NAME` LOOP HERE. DO NOT "ALSO PASS AS t:VARIABLES".
+    // Mailgun reads template variables from the h:X-Mailgun-Variables header ONLY.
+    // Appending v:<name> form params in addition to the header causes Mailgun to
+    // run substitution TWICE, doubling every variable in the rendered email and
+    // breaking every click-through link (including the invite acceptance URL).
+    // This bug has regressed twice. Live v501 is the canonical fix.
+    // If a future sync wants to re-add the loop "for safety" — it is not safety,
+    // it is the bug. Leave this block as-is.
+    // ============================================================================
     formData.append("h:X-Mailgun-Variables", JSON.stringify(variables));
-    // Also pass as t:variables for template engine
-    for (const [k, v] of Object.entries(variables)) {
-      formData.append(`v:${k}`, String(v));
-    }
 
     const apiBase =
       MAILGUN_REGION === "eu" ? "https://api.eu.mailgun.net" : "https://api.mailgun.net";
