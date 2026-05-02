@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -75,14 +75,22 @@ export default function BulkInvite() {
 
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
 
-  // Access control
-  useEffect(() => {
-    if (authLoading) return;
-    if (!isSuperAdmin) {
-      toast({ title: "Access denied", description: "Only SuperAdmins can use the bulk invite tool.", variant: "destructive" });
-      navigate("/dashboard");
-    }
-  }, [authLoading, isSuperAdmin, navigate, toast]);
+  // Access control — wait for the profile to resolve, then check ONLY unicorn_role.
+  // Do NOT add is_team / tenant_id / user_type checks; unicorn_role is authoritative.
+  // Render-time guard (not useEffect) so we never flash content or fire a redirect
+  // on the transient null-profile state while useAuth's deferred profile fetch runs.
+  if (authLoading || profile === null || profile === undefined) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+  if (profile.unicorn_role !== "Super Admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   // Load Superhero membership tenants
   useEffect(() => {
