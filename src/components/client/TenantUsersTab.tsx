@@ -340,12 +340,15 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
   const handleCancelInvite = async (inviteId: string) => {
     try {
-      const { error } = await supabase
-        .from('user_invitations')
-        .update({ status: 'cancelled' })
-        .eq('id', inviteId);
+      const { data, error } = await supabase.functions.invoke('cancel-invite', {
+        body: {
+          invitation_id: inviteId,
+          reason: 'Cancelled by admin',
+        },
+      });
 
       if (error) throw error;
+      if (data && data.ok === false) throw new Error(data.detail || 'Failed to cancel invitation');
       
       setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
       toast.success('Invitation cancelled');
