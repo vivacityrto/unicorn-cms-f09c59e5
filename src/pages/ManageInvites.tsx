@@ -739,7 +739,10 @@ export default function ManageInvites() {
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Email</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Tenant (RTO)</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Role</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap">Status</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Status</TableHead>
+                  {isSuperAdmin && (
+                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap text-center">Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
