@@ -1,48 +1,48 @@
-# Display polish: Hours surfaces and burndown chart
+# Rename "Team" → "Users" in client side nav
 
-Three additive UI-only fixes, shipped together. No SQL, no view, no hook changes.
+## Current state (different from prompt assumptions)
 
-## 1. Add two display utilities to `formatters.ts`
+- `src/components/client/ClientSidebar.tsx` already has the Team item flagged `adminOnly: true` (line 60), and the sidebar already filters via `filterAdmin(...)` using `useAuth().getTenantRole(activeTenantId) === "Admin"` plus a SuperAdmin override.
+- `getTenantRole` reads from the `memberships` array on the auth context. SuperAdmins always return `"Admin"` (so impersonation is covered).
+- `src/App.tsx` already has **both** routes registered:
+  - line 1090: `/client/users` → `ClientUsersWrapperNew`
+  - line 1091: `/client/team` → `ClientTeamWrapperNew`
 
-Append to `src/components/client/package-dashboard/formatters.ts`:
+So the admin-gating work is already done. The only outstanding work is the rename + redirect.
 
-- `formatWorkType(value)` — converts snake_case enums (`compliance_health_check`) to Title Case (`Compliance Health Check`). Returns `''` for null/empty so callers' truthiness checks keep working.
-- `cleanWorkNote(note)` — returns trimmed note, or `null` if empty/whitespace, or `null` if it starts with `"Imported from meeting:"` (case-insensitive). Hides internal source-tracking metadata from clients.
+## Changes
 
-## 2. `PackageHoursBreakdown.tsx` — Title Case category labels
-
-Wrap the rendered `row.work_type` and `row.work_sub_type` in `formatWorkType(...)`. The `__other__` rollup row already uses the literal `Other (N categories)` string and is left untouched (it won't pass through the formatter since its label is already display-ready).
-
-## 3. `PackageRecentWork.tsx` — Title Case + clean notes
-
-- Wrap `e.work_type` and `e.work_sub_type` in `formatWorkType(...)` for display only.
-- Replace `e.notes` rendering with `cleanWorkNote(e.notes)`; when null, omit the second line. Keep the existing `truncate(..., 80)` on the cleaned value.
-- Icon mapping (`iconFor`) already uses `.toLowerCase().includes('consult' | 'meeting' | 'document' | 'evidence' | 'validation')` against the raw value — works correctly with snake_case inputs. **No icon mapping changes needed.** (The prompt's worry about icons defaulting to `Clock` doesn't apply here — the substring match already handles `consultation`, `governance_meeting_mt`, `document_review` etc.)
-
-## 4. `PackageBurndownChart.tsx` — round Y-axis to nice max
-
-Replace:
+### 1. `src/components/client/ClientSidebar.tsx` — line 60
+Change the nav entry label and path:
+```tsx
+{ icon: Users, label: "Users", path: "/client/users", adminOnly: true },
 ```
-const yMaxComputed = Math.ceil(Math.max(hoursTotal, hoursUsed, 1) * 1.1);
+Keep the lucide `Users` icon, keep `adminOnly: true`, keep position in `clientMenuItemsAfter`.
+
+### 2. `src/App.tsx` — line 1091
+Replace the `/client/team` route with a redirect to `/client/users`:
+```tsx
+<Route path="/client/team" element={<Navigate to="/client/users" replace />} />
 ```
-with a local `roundUpToNiceMax(rawMax)` helper:
-- ≤ 0 → 10
-- ≤ 10 → 10
-- ≤ 100 → next multiple of 10
-- ≤ 500 → next multiple of 25
-- otherwise → next multiple of 50
+The `/client/users` route on line 1090 already renders `ClientUsersWrapperNew` and stays untouched. `Navigate` is already imported in App.tsx (used elsewhere in the file).
 
-Apply as `yMax = roundUpToNiceMax(Math.max(hoursTotal, hoursUsed, 1))`.
+### 3. Sweep for any other `/client/team` references
+Verified via ripgrep: only the two lines above reference `/client/team` or the `"Team"` nav label. No other files need updating.
 
-For AHMRC (91 / 19) → ceiling 100, ticks 0/25/50/75/100. Over-budget cases still render honestly because we use `Math.max(hoursTotal, hoursUsed)`.
+## What is NOT changed (and why)
+
+- **No new `useIsTenantAdmin` hook.** The prompt proposed one, but the sidebar already uses `useAuth().getTenantRole(activeTenantId) === "Admin"` which is the established pattern across the client portal. Adding a parallel hook that queries `tenant_users` directly would duplicate logic, add a redundant network round-trip per render, and diverge from how every other admin-gated surface decides admin status. If the auth-context mapping from `relationship_role` → `"Admin"` is wrong, that's a separate bug to fix in `useAuth` (one place), not to route around with a new hook.
+- **No page component changes.** `ClientTeamWrapperNew` becomes unreachable after the redirect; leaving the file in place is fine — Prompt B will replace `ClientUsersWrapperNew`.
+- **No SQL, no view changes, no other nav items touched.**
 
 ## Files touched
 
-- `src/components/client/package-dashboard/formatters.ts` — append two functions.
-- `src/components/client/package-dashboard/PackageHoursBreakdown.tsx` — wrap two label spans.
-- `src/components/client/package-dashboard/PackageRecentWork.tsx` — wrap two label spans, replace note render with `cleanWorkNote`.
-- `src/components/client/package-dashboard/PackageBurndownChart.tsx` — add helper, swap one line in the `useMemo`.
+- `src/components/client/ClientSidebar.tsx` (one line)
+- `src/App.tsx` (one line)
 
-## Out of scope (per spec)
+## Smoke checks after deploy
 
-No view, hook, table, or threshold changes. No suffix cleanup (`_mt`). No banner/PackageStatusPill changes. No tooltip changes. No data-layer transformation of work_type.
+- Admin on AHMRC: "Users" appears in side nav, routes to `/client/users`.
+- Non-admin user: "Users" hidden (already gated, behaviour unchanged).
+- Old bookmark `/client/team` → redirects to `/client/users`.
+- Icon, position, mobile rendering unchanged.

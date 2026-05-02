@@ -57,7 +57,7 @@ const clientMenuItemsAfter: SidebarMenuItem[] = [
   { icon: Library, label: "Resource Hub", path: "/client/resource-hub" },
   { icon: Calendar, label: "Calendar", path: "/client/calendar" },
   { icon: BarChart3, label: "Reports", path: "/client/reports" },
-  { icon: Users, label: "Team", path: "/client/team", adminOnly: true },
+  { icon: Users, label: "Users", path: "/client/users", adminOnly: true },
   { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },
 ];
 
