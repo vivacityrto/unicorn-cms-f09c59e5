@@ -12,6 +12,12 @@ import { Building2, Users, Mail, Send, Shield, UserCog, User, UserPlus, Database
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  type RelationshipRole,
+  RELATIONSHIP_ROLE_OPTIONS,
+  isValidEmail,
+  unicornRoleFromRelationship,
+} from '@/lib/roles/relationshipRole';
 
 interface InviteUserDialogProps {
   open: boolean;
