@@ -2,6 +2,11 @@ import { useState, useEffect } from "react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientPackageInstances, type ClientPackageInstance } from "@/hooks/useClientPackageInstances";
 import { usePhaseProgress } from "@/hooks/usePhaseProgress";
+import { useClientPackageDashboard } from "@/hooks/use-client-package-dashboard";
+import { PinnedNoteBanner } from "@/components/client/package-dashboard/PinnedNoteBanner";
+import { PackageStatusPill } from "@/components/client/package-dashboard/PackageStatusPill";
+import { PackageStatTiles } from "@/components/client/package-dashboard/PackageStatTiles";
+import { PackageActionRow } from "@/components/client/package-dashboard/PackageActionRow";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,6 +82,11 @@ export default function ClientPackagesPage() {
 function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
   const packageInstanceId = Number(pkg.id);
   const { phases, isLoading } = usePhaseProgress(packageInstanceId);
+  const {
+    data: dashboard,
+    isLoading: dashboardLoading,
+    error: dashboardError,
+  } = useClientPackageDashboard(packageInstanceId);
 
   const completedPhases = phases.filter((p) => String(p.status) === "2" || p.status === "completed").length;
   const totalPhases = phases.length;
@@ -85,6 +95,15 @@ function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
   return (
     <Card>
       <CardContent className="p-5 space-y-4">
+        {/* Pinned-note banner (only when present) */}
+        {dashboard?.pinned_note_text || dashboard?.pinned_note_title ? (
+          <PinnedNoteBanner
+            title={dashboard.pinned_note_title}
+            text={dashboard.pinned_note_text}
+            severity={dashboard.pinned_note_severity}
+          />
+        ) : null}
+
         {/* Package header */}
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -96,13 +115,38 @@ function PackageCard({ pkg }: { pkg: ClientPackageInstance }) {
               {completedPhases} of {totalPhases} phases complete
             </p>
           </div>
-          <Badge
-            variant={pkg.status === "active" ? "default" : "secondary"}
-            className="capitalize text-xs"
-          >
-            {pkg.status}
-          </Badge>
+          {dashboard ? (
+            <PackageStatusPill status={dashboard.status_pill} />
+          ) : (
+            <Badge
+              variant={pkg.status === "active" ? "default" : "secondary"}
+              className="capitalize text-xs"
+            >
+              {pkg.status}
+            </Badge>
+          )}
         </div>
+
+        {/* Stat tiles */}
+        {dashboardLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-20 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : dashboardError ? (
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+            Couldn't load package details. Refresh to retry.
+          </div>
+        ) : (
+          <PackageStatTiles dashboard={dashboard ?? null} />
+        )}
+
+        {/* Action buttons */}
+        <PackageActionRow
+          packageInstanceId={packageInstanceId}
+          managerId={dashboard?.manager_id ?? null}
+        />
 
         {/* Progress bar */}
         {totalPhases > 0 && (

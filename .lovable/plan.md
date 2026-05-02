@@ -1,92 +1,80 @@
-# Relationship Role UI — Phase 3 Plan (revised)
+## Tenant Packages Dashboard — Week 1 (Quick Wins)
 
-Backend is locked and self-defending: `tenant_user_role` enum + `relationship_role` columns shipped, `invite-user` accepts the new field and returns 409 `PRIMARY_EXISTS`, and partial unique indexes `uniq_tenant_one_primary_contact` / `uniq_tenant_one_secondary_contact` enforce one-of-each per tenant at the DB level. Front end now wires up to read/write the new field while keeping the legacy `role` + `primary_contact` columns in sync (read-after-write back-compat).
+Turn the client-facing `/packages` page from a passive list into an active dashboard. Strictly additive: one new SQL view, one new hook, four new presentational components, and a small re-arrangement of the existing `PackageCard` in `ClientPackagesPage.tsx`. No legacy data, columns, or routes are touched.
 
-## 1. Shared helper (new file)
+### Resolved questions (from exploration)
 
-**`src/lib/roles/relationshipRole.ts`** exports:
-- `RelationshipRole` type (`'primary_contact' | 'secondary_contact' | 'user' | 'academy_user'`)
-- `RELATIONSHIP_ROLE_OPTIONS` — 4 entries with `value` / `label` / `description`
-- `relationshipRoleLabel(rr)` → display string (`'—'` for null/undefined)
-- `unicornRoleFromRelationship(rr)` → `'Admin' | 'User'` (primary/secondary → Admin; user/academy_user → User)
-- `userTypeFromRelationship(rr)` → `'Client Parent' | 'Client Child'` (matches `accept_invitation_v2` mapping)
-- `legacyTenantUserPatch(rr)` — **secondary_contact boolean intentionally not written**:
-  ```ts
-  export function legacyTenantUserPatch(rr: RelationshipRole):
-    { role: 'parent' | 'child'; primary_contact: boolean } {
-    if (rr === 'primary_contact')   return { role: 'parent', primary_contact: true };
-    if (rr === 'secondary_contact') return { role: 'parent', primary_contact: false };
-    return { role: 'child', primary_contact: false };
-  }
-  ```
-- `EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/` and `isValidEmail(s)`
-- `isUniqueViolation(err)` — returns true when the Supabase error has `code === '23505'` (used by callers to surface the concurrent-change toast)
+1. **Pinned-note source of truth.** Canonical surface is `public.notes`, filtered by `parent_type = 'package_instance'`, `parent_id = package_instance_id`, `is_pinned = true`. Confirmed by the existing `src/components/client/PackagePinnedNote.tsx` reading exactly this. `client_notes` is the contact/client-relationship notes table and is not the package banner source. The view will read from `notes`.
 
-All UI imports from this file. No duplicated mapping logic.
+2. **`last_activity_at` join path.** There is no single canonical activity surface. `consult_entries` has no FK to a package and would require a fragile join chain. We will compute `last_activity_at` as `greatest()` of three robust signals, all keyed directly off the package:
+   - `notes.updated_at` where `parent_type = 'package_instance'` and `parent_id = pi.id`
+   - `stage_instances.updated_at` where `packageinstance_id = pi.id`
+   - `client_action_items.updated_at` where `package_id = pi.id`
+   Implemented as a CTE so the planner doesn't fan out.
 
-## 2. BulkInvite (`src/pages/admin/BulkInvite.tsx`)
+3. **Action-button routes.** No confirmed booking, tasks-by-package, or CSC-message route exists today. We stub:
+   - Book consult → `/consults/new?package_instance_id={id}` with `// TODO(week1-routes)`
+   - Open tasks → `/tasks?package_instance_id={id}` with `// TODO(week1-routes)`
+   - Message CSC → opens `mailto:` to manager's email when known, else disabled with tooltip; `// TODO(week1-routes)`
 
-- **Suggested-contact query (line ~148):** change `.eq("primary_contact", true)` → `.eq("relationship_role", "primary_contact")`. Pull `relationship_role` into the select, store on `LaunchRow`, and render the Role column via `relationshipRoleLabel(...)` instead of the user's `unicorn_role`.
-- **Override modal (lines ~580-700):** replace the 2-option role `<Select>` with the 4 `RELATIONSHIP_ROLE_OPTIONS`. Update `Override` type to carry `relationship_role: RelationshipRole`. Replace the tenant-users browse query (line ~595) to select `relationship_role` instead of `primary_contact` and use it for the badge.
-- **Email validation:** in the override save, reject when `!isValidEmail(email)` with an inline field error.
-- **Send payload:** add `relationship_role` to the `invite-user` body; derive `unicorn_role` via `unicornRoleFromRelationship` so the legacy contract stays satisfied.
-- **409 handling in send loop:** when invoke returns/throws status 409 / body `code === "PRIMARY_EXISTS"`, mark that row as `failed`, surface server `detail` in a toast (non-blocking — keep iterating other rows).
+4. **Card vs detail.** The client-portal package surface today is `src/components/client/ClientPackagesPage.tsx` (rendered through `src/pages/client/ClientPackagesWrapper.tsx`). It renders one `PackageCard` per active package — no separate detail page is wired in the client layout. We apply the four pieces inside `PackageCard` only, extracting the four sub-components so a future detail view can reuse them.
 
-## 3. ManageInvites (`src/pages/ManageInvites.tsx`)
+5. **Schema gotchas confirmed.**
+   - `package_instances.tenant_id` is `bigint`. `notes.tenant_id` is `bigint`. `stage_instances` has no `tenant_id` (joined via `packageinstance_id`). `client_action_items.tenant_id` is `integer` and `client_task_instances` has no `tenant_id` at all (joined via `stageinstance_id`). Casts handled inside the view.
+   - `packages` has no `delivery_model` column. The view exposes `package_type` and `progress_mode` instead and the UI labels it accordingly. Avoids inventing a field.
+   - `package_instances.hours_used` is already aggregated `numeric` — used as-is, not re-summed from `consult_entries`.
 
-- Select `relationship_role` from `user_invitations`.
-- Role column: `relationshipRoleLabel(invitation.relationship_role)` when present; fall back to legacy mapping (`Admin → Primary Contact`, `User → User`) when null.
+### Steps
 
-## 4. Tenant detail Users tab (`src/components/client/TenantUsersTab.tsx`)
+1. **Migration `supabase/migrations/<ts>_v_client_package_dashboard.sql`**
+   - `CREATE OR REPLACE VIEW public.v_client_package_dashboard WITH (security_invoker = true) AS …`
+   - CTEs:
+     - `stage_agg` — per `packageinstance_id`: `count(*)`, `count(*) filter (where completion_date is not null)`, `min(stage_sortorder) filter (where completion_date is null)`, `max(updated_at)`.
+     - `tasks_agg` — union of open `client_action_items` (by `package_id`) and open `client_task_instances` (joined via `stage_instances.packageinstance_id`); aggregate `open_tasks`, `overdue_tasks` (`due_date < now()`).
+     - `pinned` — `distinct on (parent_id)` from `notes` where `parent_type='package_instance'` and `is_pinned`, ordered by `updated_at desc`. Returns `note_details`, `title`, `priority`.
+     - `activity` — `greatest(notes.max_updated, stage_agg.max_updated, tasks_max_updated)`.
+   - Final select joins `package_instances pi` → `packages p` → CTEs. Casts: `pi.tenant_id::bigint`, `client_action_items.tenant_id::bigint` inside `tasks_agg`.
+   - Computed columns: `hours_total = hours_included + coalesce(hours_added,0)`, `hours_pct_used` (safe-div), `pinned_note_severity` (case on lowercased `note_details||title` keywords: `'on hold'` → `hold`; `'urgent'`/`'overdue'` → `urgent`; else `info`), `status_pill` (rules from prompt, in order: on_hold → complete → stuck → drifting → on_track).
+   - Grant: `GRANT SELECT ON public.v_client_package_dashboard TO authenticated;`. No RLS on the view itself (security_invoker delegates to underlying tables).
+   - Header comment documenting purpose, column map, pinned-note source (`notes`), activity join path, and date.
 
-- Add `relationship_role` to `TenantMemberInfo` and to the `fetchMembers` select.
-- Replace `getRoleLabel` / `getMemberRoleValue` / `buildRolePatch` with the new helper. Dropdown options become `RELATIONSHIP_ROLE_OPTIONS` (4 items, including Academy User).
-- `handleRoleChange` and `handleSaveEdit` write **`relationship_role` directly** plus `legacyTenantUserPatch(...)` in the same UPDATE on `tenant_users`. Do **not** write `secondary_contact` — the relationship_role column is the source of truth for secondary status. Then update `users.unicorn_role` (via `unicornRoleFromRelationship`) and `users.user_type` (via `userTypeFromRelationship`) for that user.
-- **Single-primary swap (client-side):** before promoting to `primary_contact`, scan `members` for an existing primary with a different `user_id`. If found, open a confirm modal naming that user (e.g. *"Tenant already has a primary contact (Hamid Iskeirjeh). Demote them to secondary and promote this user to primary. Continue?"*). On confirm, run BOTH UPDATEs via `Promise.all` (demote existing → secondary_contact + legacy patch + users mapping; promote target → primary_contact + legacy patch + users mapping).
-- **23505 handling (applies to swap path AND direct `handleRoleChange`):** wrap `relationship_role` UPDATEs in try/catch. When `isUniqueViolation(err)` is true (Postgres `23505` from `uniq_tenant_one_primary_contact` / `uniq_tenant_one_secondary_contact`), show toast: *"Couldn't change role — another change happened concurrently. Please refresh and try again."* and call `fetchMembers()` to resync. Other errors → existing generic error toast.
-- Success toast: `Role changed: <Old Label> → <New Label>`.
+2. **RLS sanity test** (`supabase/tests/v_client_package_dashboard.sql` or extend existing pattern)
+   - Tenant A sees only their own row when filtering by their `package_instance_id`.
+   - Tenant A filtering by tenant B's `package_instance_id` returns zero rows.
+   - Super_admin sees all rows.
 
-## 5. InviteUser dialogs
+3. **Hook `src/hooks/use-client-package-dashboard.ts`**
+   - Exports `ClientPackageDashboardRow` interface mirroring view columns (no `any`).
+   - `useClientPackageDashboard(packageInstanceId)` — `maybeSingle`, explicit `.eq('tenant_id', activeTenantId)` and `.eq('package_instance_id', packageInstanceId)`, `staleTime: 30_000`, enabled only when both ids present. Mirrors the `useReleasedAudits` security pattern exactly (explicit tenant filter, comment explaining why).
+   - `useClientPackageDashboards()` list variant — same explicit tenant filter, no per-package eq, returns array.
 
-Two dialogs use this flow; update both:
-- `src/components/InviteUserDialog.tsx` (tenant-scoped)
-- `src/components/AdminInviteUserDialog.tsx` (SuperAdmin variant, if it exposes a role picker)
+4. **UI components** (under `src/components/client/package-dashboard/`)
+   - `PinnedNoteBanner.tsx` — full-card-width strip; severity → slate/amber/red; renders nothing when note is null. Click opens the existing dialog pattern from `PackagePinnedNote` (sanitised HTML). The old `PackagePinnedNote` component stays (it's used elsewhere) but `PackageCard` switches to the new banner fed from the view.
+   - `PackageStatusPill.tsx` — maps `status_pill` enum to label + colour; replaces the existing `Badge` in the card header.
+   - `PackageStatTiles.tsx` — `grid-cols-2 md:grid-cols-4`; tiles for Hours (with amber ≥75%, red ≥95%), Stages, Open tasks (overdue red sub-line if >0), Last activity (relative; amber 14d, red 30d).
+   - `PackageActionRow.tsx` — three shadcn `Button`s in `flex gap-2 flex-wrap`; primary is Book consult. Routes per Q3 with TODOs.
 
-Changes:
-- Replace role dropdown with `RELATIONSHIP_ROLE_OPTIONS`.
-- Fetch existing tenant primary (`relationship_role = 'primary_contact'`); if one exists, disable the "Primary Contact" option with helper text: *"This organisation already has a primary contact. Demote them first to invite a new one."* (Apply the same disable for "Secondary Contact" if a secondary already exists, since the DB unique index will reject a duplicate.)
-- Email validation via `isValidEmail` before submit.
-- Submit payload includes `relationship_role`; derive `unicorn_role` via helper.
-- Catch 409 `PRIMARY_EXISTS` → toast server `detail`.
+5. **Wire into `ClientPackagesPage.tsx` (`PackageCard`)**
+   - Call `useClientPackageDashboard(packageInstanceId)` alongside the existing `usePhaseProgress`.
+   - Render order inside the card: `PinnedNoteBanner` → header (with `PackageStatusPill` instead of the existing Active badge) → `PackageStatTiles` → `PackageActionRow` → existing progress bar + phase accordion (untouched, Week 2 will replace).
+   - Loading: skeleton tiles (no flicker to "0 / 0").
+   - Error: small inline banner "Couldn't load package details. Refresh to retry." Page does not crash.
+   - Null row: render tiles in disabled state with action buttons still present; no banner, no pill.
 
-## 6. Suggested-contact migration sweep
+6. **Smoke checks** logged in PR description (Adelaide Aviation, TRAYN, one more; super_admin impersonation; empty-package tenant; network-tab inspection that every query carries `tenant_id`).
 
-Replace `tenant_users.primary_contact = true` reads with `relationship_role = 'primary_contact'`:
-- `src/lib/notifyClient.ts:28`
-- `src/hooks/useTenantContacts.ts:40`
-- `src/hooks/useClientActingUser.ts:76`
-- `src/pages/TenantDetail.tsx:429`
-- `src/pages/ClientDetail.tsx:176`
+### Out of scope / queued for Week 2
 
-Out of scope: `useClientManagement.tsx` and `ManageTenants.tsx` references — those are `tenant_profiles.primary_contact_name/email/phone` (different column).
+Stage stepper, "What's next" task feed, multi-package collapse, client burndown chart. The existing phase accordion stays in place until Week 2 replaces it.
 
-Legacy `tenant_users.primary_contact` boolean stays (drop is post-launch). Legacy `tenant_users.secondary_contact` boolean stays untouched and is no longer written by the UI.
+### Acceptance checklist
 
-## 7. Verification (after build)
-
-Via Supabase read tool:
-1. `SELECT COUNT(DISTINCT tu.tenant_id) FROM tenant_users tu JOIN package_instances pi ON pi.tenant_id = tu.tenant_id JOIN packages p ON p.id = pi.package_id WHERE tu.relationship_role='primary_contact' AND pi.is_active AND p.package_type='membership';` — expect 55.
-2. Adelaide Aviation (`tenant_id=7535`): Hamid=primary_contact, Sherman=user, Isla=user.
-3. UI: invite Secondary Contact in Adelaide Aviation → `user_invitations.relationship_role='secondary_contact'`, `unicorn_role='Admin'`.
-4. UI: try to invite Primary Contact while Hamid is primary → dialog disables option; if forced via BulkInvite override, server returns 409 and toast shows the message.
-5. UI: simulate concurrent primary swap (two tabs) → second commit yields the "concurrent change" toast and refetches.
-
-## Out of scope (TODO comments only)
-- Academy User RLS (Monday).
-- Dropping legacy columns.
-- `users.unicorn_role`-driven RLS refactor — mark `// TODO(rel-role-phase-4)` where the dual-write to `users.unicorn_role` / `user_type` lives.
-
-## Files touched
-
-New: `src/lib/roles/relationshipRole.ts`
-Edited: `src/pages/admin/BulkInvite.tsx`, `src/pages/ManageInvites.tsx`, `src/components/client/TenantUsersTab.tsx`, `src/components/InviteUserDialog.tsx`, `src/components/AdminInviteUserDialog.tsx`, `src/lib/notifyClient.ts`, `src/hooks/useTenantContacts.ts`, `src/hooks/useClientActingUser.ts`, `src/pages/TenantDetail.tsx`, `src/pages/ClientDetail.tsx`
+- [ ] Migration applied to dev, idempotent (`CREATE OR REPLACE VIEW`), no DDL on existing tables.
+- [ ] RLS sanity test passes for tenant A / tenant B / super_admin.
+- [ ] Hook uses `useClientTenant()` and explicit `tenant_id` filter (mirrors `useReleasedAudits`).
+- [ ] Pinned-note source documented as `notes` in the view comment.
+- [ ] Stat tiles render correct totals on Adelaide Aviation, TRAYN, one other.
+- [ ] Status pill verified for at least one each of `on_track`, `drifting`, `stuck`, `on_hold`.
+- [ ] Three action buttons present, routed or stubbed with `// TODO(week1-routes)`.
+- [ ] No `any` in TypeScript. No untouched legacy table modified.
+- [ ] Manual five-tenant smoke pass logged in PR description.
