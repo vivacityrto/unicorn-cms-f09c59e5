@@ -59,7 +59,7 @@ const getRoleOptions = (tid: number) =>
   tid === VIVACITY_TENANT_ID ? VIVACITY_ROLES : CLIENT_ROLES;
 
 const getDefaultRole = (tid: number) =>
-  tid === VIVACITY_TENANT_ID ? 'Team Member' : 'User';
+  tid === VIVACITY_TENANT_ID ? 'Team Member' : 'user';
 
 export function TenantInviteDialog({
   open,
@@ -69,15 +69,21 @@ export function TenantInviteDialog({
   onSuccess,
 }: TenantInviteDialogProps) {
   const { session } = useAuth();
+  const isClientTenant = tenantId !== VIVACITY_TENANT_ID;
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState(() => getDefaultRole(tenantId));
+  // For client tenants, `role` holds a RelationshipRole value; for Vivacity, an unicorn_role string.
+  const [role, setRole] = useState<string>(() => getDefaultRole(tenantId));
   const [isSending, setIsSending] = useState(false);
   const [sendInvitation, setSendInvitation] = useState(false);
   const [position, setPosition] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  
+
+  // Existing relationship-role occupancy for client tenants (which slots are taken)
+  const [primaryTaken, setPrimaryTaken] = useState(false);
+  const [secondaryTaken, setSecondaryTaken] = useState(false);
+
   // Seat limit state
   const [checkingSeats, setCheckingSeats] = useState(true);
   const [canInvite, setCanInvite] = useState(true);
@@ -91,6 +97,32 @@ export function TenantInviteDialog({
   useEffect(() => {
     setRole(getDefaultRole(tenantId));
   }, [tenantId, open]);
+
+  // For client tenants: fetch existing primary/secondary occupancy so we can
+  // disable those options in the dropdown.
+  useEffect(() => {
+    if (!open || !isClientTenant) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('tenant_users')
+        .select('relationship_role, primary_contact, secondary_contact, role')
+        .eq('tenant_id', tenantId);
+      if (cancelled || error) return;
+      const rows = data ?? [];
+      const hasPrimary = rows.some((r: any) =>
+        r.relationship_role === 'primary_contact' ||
+        (!r.relationship_role && (r.primary_contact === true || r.role === 'parent')),
+      );
+      const hasSecondary = rows.some((r: any) =>
+        r.relationship_role === 'secondary_contact' ||
+        (!r.relationship_role && r.secondary_contact === true),
+      );
+      setPrimaryTaken(hasPrimary);
+      setSecondaryTaken(hasSecondary);
+    })();
+    return () => { cancelled = true; };
+  }, [open, tenantId, isClientTenant]);
 
   // Check seat availability when dialog opens
   useEffect(() => {
