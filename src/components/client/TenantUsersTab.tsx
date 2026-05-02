@@ -58,6 +58,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { TenantInviteDialog } from './TenantInviteDialog';
+import {
+  type RelationshipRole,
+  RELATIONSHIP_ROLE_OPTIONS,
+  relationshipRoleLabel,
+  unicornRoleFromRelationship,
+  userTypeFromRelationship,
+  legacyTenantUserPatch,
+  isUniqueViolation,
+} from '@/lib/roles/relationshipRole';
 
 interface TenantUser {
   user_uuid: string;
@@ -79,6 +88,7 @@ interface TenantMemberInfo {
   created_at: string;
   primary_contact?: boolean | null;
   secondary_contact?: boolean | null;
+  relationship_role?: RelationshipRole | null;
   users: TenantUser;
 }
 
