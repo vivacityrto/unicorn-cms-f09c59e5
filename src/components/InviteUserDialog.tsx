@@ -48,10 +48,13 @@ const VIVACITY_ROLES = [
   { value: 'Team Member', label: 'Team Member', icon: User },
 ];
 
-const CLIENT_ROLES = [
-  { value: 'Admin', label: 'Admin', icon: Shield },
-  { value: 'User', label: 'User', icon: User },
-];
+const CLIENT_ROLES = RELATIONSHIP_ROLE_OPTIONS.map((opt) => ({
+  value: opt.value,
+  label: opt.label,
+  icon: opt.value === 'primary_contact' ? Shield
+       : opt.value === 'secondary_contact' ? UserCog
+       : User,
+}));
 
 const VIVACITY_TENANT_ID = 6372;
 
