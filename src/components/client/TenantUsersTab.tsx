@@ -135,27 +135,19 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
-  // Map DB role values to readable labels (incl. virtual 'secondary')
-  const getRoleLabel = (role: string) => {
-    if (role === 'parent') return 'Primary Contact';
-    if (role === 'secondary') return 'Secondary Contact';
-    if (role === 'child') return 'User';
-    return role;
+  // Resolve effective relationship_role for a member, preferring the new
+  // canonical column and falling back to legacy flags for unmigrated rows.
+  const getMemberRelationshipRole = (m: TenantMemberInfo): RelationshipRole => {
+    if (m.relationship_role) return m.relationship_role;
+    if (m.secondary_contact) return 'secondary_contact';
+    if (m.primary_contact || m.role === 'parent') return 'primary_contact';
+    return 'user';
   };
 
-  // Resolve effective role value combining role + contact flags
-  const getMemberRoleValue = (m: TenantMemberInfo) => {
-    if (m.secondary_contact) return 'secondary';
-    if (m.role === 'parent') return 'parent';
-    return 'child';
-  };
-
-  // Primary and Secondary are mutually exclusive
-  const buildRolePatch = (newRole: string) => {
-    if (newRole === 'parent') return { role: 'parent', primary_contact: true, secondary_contact: false };
-    if (newRole === 'secondary') return { role: 'child', primary_contact: false, secondary_contact: true };
-    return { role: 'child', primary_contact: false, secondary_contact: false };
-  };
+  // Confirm-swap state for the "demote existing primary, promote this user"
+  // flow. Holds the target member being promoted; the existing primary is
+  // looked up at confirm-time from `members`.
+  const [primarySwapTarget, setPrimarySwapTarget] = useState<TenantMemberInfo | null>(null);
 
   const fetchPendingInvites = async () => {
     try {
