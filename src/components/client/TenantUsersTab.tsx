@@ -733,27 +733,19 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                   onValueChange={value => setEditForm(f => ({ ...f, role: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue>{getRoleLabel(editForm.role)}</SelectValue>
+                    <SelectValue>{relationshipRoleLabel(editForm.role as RelationshipRole)}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="parent">
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-3 w-3" />
-                        Primary Contact
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="secondary">
-                      <div className="flex items-center gap-2">
-                        <UserCheck className="h-3 w-3" />
-                        Secondary Contact
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="child">
-                      <div className="flex items-center gap-2">
-                        <UserIcon className="h-3 w-3" />
-                        User
-                      </div>
-                    </SelectItem>
+                    {RELATIONSHIP_ROLE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <div className="flex items-center gap-2">
+                          {opt.value === 'primary_contact' && <Shield className="h-3 w-3" />}
+                          {opt.value === 'secondary_contact' && <UserCheck className="h-3 w-3" />}
+                          {(opt.value === 'user' || opt.value === 'academy_user') && <UserIcon className="h-3 w-3" />}
+                          {opt.label}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
