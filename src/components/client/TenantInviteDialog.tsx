@@ -36,10 +36,24 @@ interface TenantInviteDialogProps {
   onSuccess?: () => void;
 }
 
-const TENANT_ROLES = [
+const VIVACITY_TENANT_ID = 6372;
+
+const VIVACITY_ROLES = [
+  { value: 'Super Admin', label: 'Super Admin', description: 'Full Vivacity admin access', icon: Shield },
+  { value: 'Team Leader', label: 'Team Leader', description: 'Leads a Vivacity team', icon: Shield },
+  { value: 'Team Member', label: 'Team Member', description: 'Vivacity staff member', icon: UserIcon },
+];
+
+const CLIENT_ROLES = [
   { value: 'Admin', label: 'Admin', description: 'Can manage users and settings', icon: Shield },
   { value: 'User', label: 'General User', description: 'Standard access to features', icon: UserIcon },
 ];
+
+const getRoleOptions = (tid: number) =>
+  tid === VIVACITY_TENANT_ID ? VIVACITY_ROLES : CLIENT_ROLES;
+
+const getDefaultRole = (tid: number) =>
+  tid === VIVACITY_TENANT_ID ? 'Team Member' : 'User';
 
 export function TenantInviteDialog({
   open,
@@ -52,7 +66,7 @@ export function TenantInviteDialog({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('User');
+  const [role, setRole] = useState(() => getDefaultRole(tenantId));
   const [isSending, setIsSending] = useState(false);
   const [sendInvitation, setSendInvitation] = useState(false);
   const [position, setPosition] = useState('');
@@ -66,6 +80,11 @@ export function TenantInviteDialog({
   const [seatMessage, setSeatMessage] = useState<string | null>(null);
   const [tenantType, setTenantType] = useState<TenantType | null>(null);
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+
+  // Reset role default whenever the dialog opens or tenant changes
+  useEffect(() => {
+    setRole(getDefaultRole(tenantId));
+  }, [tenantId, open]);
 
   // Check seat availability when dialog opens
   useEffect(() => {
@@ -102,7 +121,7 @@ export function TenantInviteDialog({
     setFirstName('');
     setLastName('');
     setEmail('');
-    setRole('User');
+    setRole(getDefaultRole(tenantId));
     setPosition('');
     setPhoneNumber('');
     setSendInvitation(false);
@@ -368,7 +387,7 @@ export function TenantInviteDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TENANT_ROLES.map((r) => (
+                  {getRoleOptions(tenantId).map((r) => (
                     <SelectItem key={r.value} value={r.value}>
                       <div className="flex items-center gap-2">
                         <r.icon className="h-4 w-4" />
