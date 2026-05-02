@@ -23,10 +23,16 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Shield, User as UserIcon, AlertTriangle, ArrowUpRight, Users, UserPlus } from 'lucide-react';
+import { Loader2, Shield, User as UserIcon, AlertTriangle, ArrowUpRight, Users, UserPlus, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TenantType } from '@/contexts/TenantTypeContext';
 import { UpgradeModal } from '@/components/billing/UpgradeModal';
+import {
+  type RelationshipRole,
+  RELATIONSHIP_ROLE_OPTIONS,
+  isValidEmail,
+  unicornRoleFromRelationship,
+} from '@/lib/roles/relationshipRole';
 
 interface TenantInviteDialogProps {
   open: boolean;
@@ -53,7 +59,7 @@ const getRoleOptions = (tid: number) =>
   tid === VIVACITY_TENANT_ID ? VIVACITY_ROLES : CLIENT_ROLES;
 
 const getDefaultRole = (tid: number) =>
-  tid === VIVACITY_TENANT_ID ? 'Team Member' : 'User';
+  tid === VIVACITY_TENANT_ID ? 'Team Member' : 'user';
 
 export function TenantInviteDialog({
   open,
@@ -63,15 +69,21 @@ export function TenantInviteDialog({
   onSuccess,
 }: TenantInviteDialogProps) {
   const { session } = useAuth();
+  const isClientTenant = tenantId !== VIVACITY_TENANT_ID;
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState(() => getDefaultRole(tenantId));
+  // For client tenants, `role` holds a RelationshipRole value; for Vivacity, an unicorn_role string.
+  const [role, setRole] = useState<string>(() => getDefaultRole(tenantId));
   const [isSending, setIsSending] = useState(false);
   const [sendInvitation, setSendInvitation] = useState(false);
   const [position, setPosition] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  
+
+  // Existing relationship-role occupancy for client tenants (which slots are taken)
+  const [primaryTaken, setPrimaryTaken] = useState(false);
+  const [secondaryTaken, setSecondaryTaken] = useState(false);
+
   // Seat limit state
   const [checkingSeats, setCheckingSeats] = useState(true);
   const [canInvite, setCanInvite] = useState(true);
@@ -85,6 +97,32 @@ export function TenantInviteDialog({
   useEffect(() => {
     setRole(getDefaultRole(tenantId));
   }, [tenantId, open]);
+
+  // For client tenants: fetch existing primary/secondary occupancy so we can
+  // disable those options in the dropdown.
+  useEffect(() => {
+    if (!open || !isClientTenant) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('tenant_users')
+        .select('relationship_role, primary_contact, secondary_contact, role')
+        .eq('tenant_id', tenantId);
+      if (cancelled || error) return;
+      const rows = data ?? [];
+      const hasPrimary = rows.some((r: any) =>
+        r.relationship_role === 'primary_contact' ||
+        (!r.relationship_role && (r.primary_contact === true || r.role === 'parent')),
+      );
+      const hasSecondary = rows.some((r: any) =>
+        r.relationship_role === 'secondary_contact' ||
+        (!r.relationship_role && r.secondary_contact === true),
+      );
+      setPrimaryTaken(hasPrimary);
+      setSecondaryTaken(hasSecondary);
+    })();
+    return () => { cancelled = true; };
+  }, [open, tenantId, isClientTenant]);
 
   // Check seat availability when dialog opens
   useEffect(() => {
@@ -180,8 +218,7 @@ export function TenantInviteDialog({
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email)) {
       toast.error('Please enter a valid email address');
       return;
     }
@@ -198,7 +235,7 @@ export function TenantInviteDialog({
         outcome: 'blocked',
         failureReason: seatCheck.message,
       });
-      
+
       toast.error(seatCheck.message || 'Cannot invite more users - seat limit reached');
       setCanInvite(false);
       setSeatMessage(seatCheck.message || null);
@@ -214,14 +251,26 @@ export function TenantInviteDialog({
         return;
       }
 
+      // For client tenants, `role` is a RelationshipRole and we derive
+      // the legacy unicorn_role from it. The edge function will use
+      // relationship_role as the source of truth.
+      const isClient = tenantId !== VIVACITY_TENANT_ID;
+      const relationshipRole: RelationshipRole | null = isClient
+        ? (role as RelationshipRole)
+        : null;
+      const unicornRole = isClient
+        ? unicornRoleFromRelationship(relationshipRole as RelationshipRole)
+        : role;
+
       const { data, error } = await supabase.functions.invoke('invite-user', {
         body: {
           email: email.toLowerCase().trim(),
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          invite_as: tenantId === 6372 ? 'VIVACITY' : 'CLIENT',
+          invite_as: isClient ? 'CLIENT' : 'VIVACITY',
           tenant_id: tenantId,
-          unicorn_role: role,
+          unicorn_role: unicornRole,
+          relationship_role: relationshipRole,
           skip_email: !sendInvitation,
           job_title: position.trim() || null,
           phone_number: phoneNumber.trim() || null,
@@ -234,18 +283,25 @@ export function TenantInviteDialog({
         toast.success(sendInvitation ? `Invitation sent to ${email}` : `${firstName} added to ${tenantName}`);
         handleClose();
         onSuccess?.();
+      } else if (data?.code === 'PRIMARY_EXISTS' || data?.code === 'SECONDARY_EXISTS') {
+        toast.error(data?.detail || 'This organisation already has a contact in that role.');
+        // keep dialog open so the user can pick a different role
       } else {
         toast.error(data?.detail || 'Failed to send invitation');
       }
     } catch (error: any) {
       console.error('Error sending invite:', error);
-      toast.error(error.message || 'Failed to send invitation');
+      toast.error(error?.message || 'Failed to send invitation');
     } finally {
       setIsSending(false);
     }
   };
 
-  const canSend = firstName.trim() && email.trim() && role && !isSending && canInvite && !checkingSeats;
+  const roleSlotTaken = isClientTenant && (
+    (role === 'primary_contact' && primaryTaken) ||
+    (role === 'secondary_contact' && secondaryTaken)
+  );
+  const canSend = firstName.trim() && email.trim() && role && !isSending && canInvite && !checkingSeats && !roleSlotTaken;
 
   const nextPlan = tenantType ? UPGRADE_PATHS[tenantType] : null;
   const nextPlanName = nextPlan ? PLAN_NAMES[nextPlan] : null;
@@ -382,26 +438,68 @@ export function TenantInviteDialog({
 
             <div className="space-y-2">
               <Label>Role</Label>
-              <Select value={role} onValueChange={setRole}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getRoleOptions(tenantId).map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
-                      <div className="flex items-center gap-2">
-                        <r.icon className="h-4 w-4" />
-                        <div>
-                          <span className="font-medium">{r.label}</span>
-                          <span className="text-muted-foreground ml-2 text-xs">
-                            - {r.description}
-                          </span>
+              {isClientTenant ? (
+                <>
+                  <Select value={role} onValueChange={setRole}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RELATIONSHIP_ROLE_OPTIONS.map((opt) => {
+                        const taken =
+                          (opt.value === 'primary_contact' && primaryTaken) ||
+                          (opt.value === 'secondary_contact' && secondaryTaken);
+                        return (
+                          <SelectItem key={opt.value} value={opt.value} disabled={taken}>
+                            <div className="flex items-center gap-2">
+                              {opt.value === 'primary_contact' && <Shield className="h-4 w-4" />}
+                              {opt.value === 'secondary_contact' && <UserCheck className="h-4 w-4" />}
+                              {(opt.value === 'user' || opt.value === 'academy_user') && <UserIcon className="h-4 w-4" />}
+                              <div>
+                                <span className="font-medium">{opt.label}</span>
+                                <span className="text-muted-foreground ml-2 text-xs">
+                                  - {opt.description}
+                                </span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {role === 'primary_contact' && primaryTaken && (
+                    <p className="text-[11px] text-destructive">
+                      This organisation already has a primary contact. Demote them first to invite a new one.
+                    </p>
+                  )}
+                  {role === 'secondary_contact' && secondaryTaken && (
+                    <p className="text-[11px] text-destructive">
+                      This organisation already has a secondary contact. Demote them first to invite a new one.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <Select value={role} onValueChange={setRole}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getRoleOptions(tenantId).map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        <div className="flex items-center gap-2">
+                          <r.icon className="h-4 w-4" />
+                          <div>
+                            <span className="font-medium">{r.label}</span>
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              - {r.description}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="flex items-center space-x-2 pt-2">

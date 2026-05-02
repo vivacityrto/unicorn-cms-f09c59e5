@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,12 @@ import { Combobox } from '@/components/ui/combobox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, UserPlus } from 'lucide-react';
+import {
+  type RelationshipRole,
+  RELATIONSHIP_ROLE_OPTIONS,
+  isValidEmail,
+  unicornRoleFromRelationship,
+} from '@/lib/roles/relationshipRole';
 
 interface AdminInviteUserDialogProps {
   open: boolean;
@@ -16,13 +22,6 @@ interface AdminInviteUserDialogProps {
   tenantId: number;
   tenantName: string;
 }
-
-type AdminRole = 'Admin' | 'User';
-
-const ADMIN_ROLES: { value: AdminRole; label: string; description: string }[] = [
-  { value: 'Admin', label: 'Admin', description: 'Full administrative access' },
-  { value: 'User', label: 'General User', description: 'Standard access to features' },
-];
 
 export function AdminInviteUserDialog({
   open,
@@ -36,8 +35,36 @@ export function AdminInviteUserDialog({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [roleLevel, setRoleLevel] = useState<AdminRole>('User');
+  const [relationshipRole, setRelationshipRole] = useState<RelationshipRole>('user');
   const [sendInvitation, setSendInvitation] = useState(false);
+
+  // Existing role-slot occupancy for this tenant
+  const [primaryTaken, setPrimaryTaken] = useState(false);
+  const [secondaryTaken, setSecondaryTaken] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('tenant_users')
+        .select('relationship_role, primary_contact, secondary_contact, role')
+        .eq('tenant_id', tenantId);
+      if (cancelled || error) return;
+      const rows = data ?? [];
+      const hasPrimary = rows.some((r: any) =>
+        r.relationship_role === 'primary_contact' ||
+        (!r.relationship_role && (r.primary_contact === true || r.role === 'parent')),
+      );
+      const hasSecondary = rows.some((r: any) =>
+        r.relationship_role === 'secondary_contact' ||
+        (!r.relationship_role && r.secondary_contact === true),
+      );
+      setPrimaryTaken(hasPrimary);
+      setSecondaryTaken(hasSecondary);
+    })();
+    return () => { cancelled = true; };
+  }, [open, tenantId]);
 
   /**
    * Smart paste: detect "Name <email>", "email", or "First Last" pasted into
@@ -50,7 +77,6 @@ export function AdminInviteUserDialog({
 
     const emailRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
 
-    // Pattern 1: "Name <email>" or "Name (email)" — closing bracket optional
     const nameEmailMatch = raw.match(/^(.+?)\s*[<(]\s*([^<>()\s]+@[^<>()\s]+)\s*[>)]?\s*$/i);
     if (nameEmailMatch && emailRegex.test(nameEmailMatch[2])) {
       const namePart = nameEmailMatch[1].trim().replace(/^["']|["']$/g, '').trim();
@@ -62,10 +88,8 @@ export function AdminInviteUserDialog({
       return true;
     }
 
-    // Pattern 2: bare email
     if (emailRegex.test(raw) && !raw.includes(' ')) {
       setEmail(raw);
-      // Only auto-fill first name if empty, derived from local part
       if (!firstName) {
         const local = raw.split('@')[0].split(/[._-]/)[0];
         if (local) setFirstName(local.charAt(0).toUpperCase() + local.slice(1));
@@ -73,7 +97,6 @@ export function AdminInviteUserDialog({
       return true;
     }
 
-    // Pattern 3: "First Last" (multi-word, no email)
     if (!emailRegex.test(raw) && /\s/.test(raw)) {
       const parts = raw.split(/\s+/);
       setFirstName(parts[0]);
@@ -88,17 +111,48 @@ export function AdminInviteUserDialog({
     setFirstName('');
     setLastName('');
     setEmail('');
-    setRoleLevel('User');
+    setRelationshipRole('user');
     setSendInvitation(false);
     setIsSending(false);
+    setPrimaryTaken(false);
+    setSecondaryTaken(false);
     onOpenChange(false);
   };
+
+  const roleSlotTaken =
+    (relationshipRole === 'primary_contact' && primaryTaken) ||
+    (relationshipRole === 'secondary_contact' && secondaryTaken);
+
+  const slotTakenMessage =
+    relationshipRole === 'primary_contact' && primaryTaken
+      ? 'This organisation already has a primary contact. Demote them first to invite a new one.'
+      : relationshipRole === 'secondary_contact' && secondaryTaken
+      ? 'This organisation already has a secondary contact. Demote them first to invite a new one.'
+      : null;
 
   const handleSubmit = async () => {
     if (!email || !firstName) {
       toast({
         title: 'Missing Information',
         description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      toast({
+        title: 'Invalid email',
+        description: 'Please enter a valid email address.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (roleSlotTaken) {
+      toast({
+        title: 'Role already taken',
+        description: slotTakenMessage ?? 'That role is already assigned.',
         variant: 'destructive',
       });
       return;
@@ -113,7 +167,8 @@ export function AdminInviteUserDialog({
           last_name: (lastName.trim() || '-'),
           invite_as: 'CLIENT',
           tenant_id: tenantId,
-          unicorn_role: roleLevel,
+          unicorn_role: unicornRoleFromRelationship(relationshipRole),
+          relationship_role: relationshipRole,
           skip_email: !sendInvitation,
         },
       });
@@ -123,6 +178,14 @@ export function AdminInviteUserDialog({
       }
 
       if (!data?.ok) {
+        if (data?.code === 'PRIMARY_EXISTS' || data?.code === 'SECONDARY_EXISTS') {
+          toast({
+            title: 'Role already taken',
+            description: data?.detail || 'This organisation already has a contact in that role.',
+            variant: 'destructive',
+          });
+          return; // keep dialog open
+        }
         throw new Error(data?.detail || data?.code || 'Failed to add user');
       }
 
@@ -147,7 +210,7 @@ export function AdminInviteUserDialog({
     }
   };
 
-  const canSubmit = email && firstName && !isSending;
+  const canSubmit = email && firstName && !isSending && !roleSlotTaken;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -205,16 +268,24 @@ export function AdminInviteUserDialog({
           <div className="space-y-2">
             <Label htmlFor="admin-role" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Role</Label>
             <Combobox
-              options={ADMIN_ROLES.map(r => ({
-                value: r.value,
-                label: `${r.label}  - ${r.description}`,
-              }))}
-              value={roleLevel}
-              onValueChange={(value) => setRoleLevel(value as AdminRole)}
+              options={RELATIONSHIP_ROLE_OPTIONS.map((opt) => {
+                const taken =
+                  (opt.value === 'primary_contact' && primaryTaken) ||
+                  (opt.value === 'secondary_contact' && secondaryTaken);
+                return {
+                  value: opt.value,
+                  label: `${opt.label}${taken ? ' (already assigned)' : ''}  - ${opt.description}`,
+                };
+              })}
+              value={relationshipRole}
+              onValueChange={(value) => setRelationshipRole(value as RelationshipRole)}
               placeholder="Select role..."
               searchPlaceholder="Search roles..."
               emptyText="No roles found."
             />
+            {slotTakenMessage && (
+              <p className="text-[11px] text-destructive leading-tight">{slotTakenMessage}</p>
+            )}
           </div>
 
           <div className="flex items-center space-x-2 pt-2">

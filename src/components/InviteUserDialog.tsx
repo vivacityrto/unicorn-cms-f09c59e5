@@ -12,6 +12,12 @@ import { Building2, Users, Mail, Send, Shield, UserCog, User, UserPlus, Database
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  type RelationshipRole,
+  RELATIONSHIP_ROLE_OPTIONS,
+  isValidEmail,
+  unicornRoleFromRelationship,
+} from '@/lib/roles/relationshipRole';
 
 interface InviteUserDialogProps {
   open: boolean;
@@ -20,7 +26,7 @@ interface InviteUserDialogProps {
 }
 
 type UserSelection = 'vivacity' | 'client' | 'import' | null;
-type UnicornRole = 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User' | null;
+type UnicornRole = 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User' | RelationshipRole | null;
 
 interface Unicorn1User {
   ID: number;
@@ -42,10 +48,13 @@ const VIVACITY_ROLES = [
   { value: 'Team Member', label: 'Team Member', icon: User },
 ];
 
-const CLIENT_ROLES = [
-  { value: 'Admin', label: 'Admin', icon: Shield },
-  { value: 'User', label: 'User', icon: User },
-];
+const CLIENT_ROLES = RELATIONSHIP_ROLE_OPTIONS.map((opt) => ({
+  value: opt.value,
+  label: opt.label,
+  icon: opt.value === 'primary_contact' ? Shield
+       : opt.value === 'secondary_contact' ? UserCog
+       : User,
+}));
 
 const VIVACITY_TENANT_ID = 6372;
 
@@ -209,11 +218,25 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
   const handleSendInvite = async () => {
     if (!email || !firstName || !userType || !roleLevel || !tenantId) return;
 
+    if (!isValidEmail(email)) {
+      toast({ title: 'Invalid email', description: 'Please enter a valid email address.', variant: 'destructive' });
+      return;
+    }
+
     setIsLoading(true);
     try {
       if (userType === 'client' && !tenantId) {
         throw new Error('Please select a tenant for client invites');
       }
+
+      // Client invites use the new relationship_role; derive legacy unicorn_role.
+      const isClient = userType === 'client';
+      const relationshipRole: RelationshipRole | null = isClient
+        ? (roleLevel as RelationshipRole)
+        : null;
+      const unicornRole = isClient
+        ? unicornRoleFromRelationship(relationshipRole as RelationshipRole)
+        : roleLevel;
 
       const payload = {
         email: email.trim().toLowerCase(),
@@ -221,7 +244,8 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
         last_name: lastName.trim() || '-',
         invite_as: userType?.toUpperCase() as 'VIVACITY' | 'CLIENT',
         tenant_id: tenantId,
-        unicorn_role: roleLevel,
+        unicorn_role: unicornRole,
+        relationship_role: relationshipRole,
         skip_email: !sendInvitation,
       };
 

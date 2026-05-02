@@ -841,6 +841,46 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Primary-contact swap confirmation */}
+      <AlertDialog
+        open={!!primarySwapTarget}
+        onOpenChange={(open) => !open && setPrimarySwapTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Swap Primary Contact?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {(() => {
+                const existing = members.find(
+                  (m) =>
+                    primarySwapTarget &&
+                    m.user_id !== primarySwapTarget.user_id &&
+                    getMemberRelationshipRole(m) === 'primary_contact',
+                );
+                const targetName = `${primarySwapTarget?.users?.first_name ?? ''} ${primarySwapTarget?.users?.last_name ?? ''}`.trim() || primarySwapTarget?.users?.email;
+                const existingName = existing
+                  ? `${existing.users?.first_name ?? ''} ${existing.users?.last_name ?? ''}`.trim() || existing.users?.email
+                  : 'the current primary contact';
+                return (
+                  <>
+                    This organisation already has a primary contact:{' '}
+                    <strong>{existingName}</strong>. Promoting{' '}
+                    <strong>{targetName}</strong> will demote them to{' '}
+                    <strong>Secondary Contact</strong>.
+                  </>
+                );
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmPrimarySwap}>
+              Swap Primary
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
