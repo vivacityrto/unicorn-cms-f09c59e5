@@ -1,13 +1,34 @@
-import { Bot, MessageCircle, Headphones, FileText, Calendar, Library, ArrowRight, ShieldCheck } from "lucide-react";
+import {
+  Bot,
+  MessageCircle,
+  FileText,
+  Calendar,
+  Library,
+  ArrowRight,
+  ShieldCheck,
+  Briefcase,
+  CalendarPlus,
+  Mail,
+} from "lucide-react";
+import { differenceInMonths, format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useHelpCenter } from "@/components/help-center";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useOpenDocumentRequest } from "@/components/layout/ClientLayout";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
-import { ClientProgressSummary } from "./ClientProgressSummary";
+import { useClientHomeHero } from "@/hooks/use-client-home-hero";
+import { useClientProgress, type ClientProgress } from "@/hooks/useClientProgress";
 import { ProgressAnchors } from "@/components/compliance/ProgressAnchors";
 import { MomentumBanner } from "@/components/dashboard/MomentumBanner";
 import { useMomentumState } from "@/hooks/useMomentumState";
@@ -19,6 +40,295 @@ import { ClientActionPlanSection } from "./ClientActionPlanSection";
 import { ClientAuditReportsSection } from "./ClientAuditReportsSection";
 import { ClientUpcomingAuditSection } from "./ClientUpcomingAuditSection";
 
+// ───────── helpers ─────────
+
+function timeAwareGreeting(now: Date = new Date()): string {
+  const sydneyHour = Number(
+    new Intl.DateTimeFormat("en-AU", {
+      timeZone: "Australia/Sydney",
+      hour: "numeric",
+      hour12: false,
+    }).format(now)
+  );
+  if (sydneyHour < 12) return "Good morning";
+  if (sydneyHour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function formatTenure(memberSinceISO: string | null): string {
+  if (!memberSinceISO) return "Member of Vivacity";
+  const d = parseISO(memberSinceISO);
+  const dateLabel = format(d, "d MMM yyyy");
+  const months = differenceInMonths(new Date(), d);
+  if (months <= 0) return `Member since ${dateLabel}`;
+  if (months < 12) return `Member since ${dateLabel} · ${months} months`;
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  const duration =
+    rem === 0
+      ? `${years} year${years === 1 ? "" : "s"}`
+      : `${years} year${years === 1 ? "" : "s"} ${rem} months`;
+  return `Member since ${dateLabel} · ${duration}`;
+}
+
+function getInitials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p.charAt(0).toUpperCase())
+      .join("") || "?"
+  );
+}
+
+function riskBadge(risk: ClientProgress["risk_state"]) {
+  switch (risk) {
+    case "on_track":
+      return (
+        <Badge className="bg-primary/15 text-primary hover:bg-primary/20 border-primary/20">
+          On Track
+        </Badge>
+      );
+    case "needs_attention":
+      return (
+        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200">
+          Needs Attention
+        </Badge>
+      );
+    case "action_required":
+      return (
+        <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200">
+          Action Required
+        </Badge>
+      );
+    default:
+      return <Badge variant="secondary">—</Badge>;
+  }
+}
+
+function packageSubLine(p: ClientProgress): string {
+  const total = (p.phase_completion ?? 0) === 0 && (p.steps_remaining ?? 0) === 0;
+  if (total && !p.current_phase_name) {
+    // Best-effort edge case: nothing set up yet
+    return "Stage progress not yet set up";
+  }
+  if (!p.current_phase_name) {
+    return `100% complete · All stages complete`;
+  }
+  return `${p.phase_completion}% complete · ${p.steps_remaining} stage${
+    p.steps_remaining === 1 ? "" : "s"
+  } remaining · Currently in ${p.current_phase_name}`;
+}
+
+// ───────── sub-components ─────────
+
+function CSCCard({
+  cscName,
+  cscEmail,
+  cscRoleLabel,
+  cscAvatarUrl,
+  hasCSC,
+  onMessage,
+}: {
+  cscName: string | null;
+  cscEmail: string | null;
+  cscRoleLabel: string;
+  cscAvatarUrl: string | null;
+  hasCSC: boolean;
+  onMessage: () => void;
+}) {
+  const displayName = hasCSC ? cscName ?? "Not yet assigned" : "Not yet assigned";
+
+  const messageBtn = (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onMessage}
+      disabled={!hasCSC}
+      className={!hasCSC ? "cursor-not-allowed" : ""}
+    >
+      <Mail className="h-4 w-4 mr-1.5" />
+      Message
+    </Button>
+  );
+  const bookBtn = (
+    <Button asChild={hasCSC} size="sm" disabled={!hasCSC} className={!hasCSC ? "cursor-not-allowed" : ""}>
+      {hasCSC ? (
+        <Link to="/client/calendar">
+          <CalendarPlus className="h-4 w-4 mr-1.5" />
+          Book consult
+        </Link>
+      ) : (
+        <span>
+          <CalendarPlus className="h-4 w-4 mr-1.5" />
+          Book consult
+        </span>
+      )}
+    </Button>
+  );
+
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4 min-w-0">
+            <Avatar className="h-12 w-12">
+              {cscAvatarUrl ? <AvatarImage src={cscAvatarUrl} alt={displayName} /> : null}
+              <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                Your {cscRoleLabel}
+              </div>
+              <div className="font-semibold text-foreground truncate">{displayName}</div>
+              {hasCSC && cscEmail ? (
+                <div className="text-xs text-muted-foreground truncate">{cscEmail}</div>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {hasCSC ? (
+              messageBtn
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-block">{messageBtn}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Your CSC assignment is pending — contact info@vivacity.com.au
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {hasCSC ? (
+              bookBtn
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-block">{bookBtn}</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Your CSC assignment is pending — contact info@vivacity.com.au
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AuditReadinessEmpty() {
+  return (
+    <Card>
+      <CardContent className="p-5 flex items-center gap-3">
+        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <ShieldCheck className="h-5 w-5 text-primary" />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          No audits yet — your CSC will set one up when it's time.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PackagesStrip({ rows, isLoading }: { rows: ClientProgress[]; isLoading: boolean }) {
+  return (
+    <Card>
+      <CardContent className="p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-foreground">Your packages</h3>
+        </div>
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading…</p>
+        ) : rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No active packages right now.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {rows.map((p) => (
+              <li
+                key={p.package_instance_id}
+                className="py-3 first:pt-0 last:pb-0 flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+              >
+                <div className="flex items-start gap-3 min-w-0">
+                  <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <div className="font-medium text-foreground truncate">{p.package_name}</div>
+                    <div className="text-xs text-muted-foreground">{packageSubLine(p)}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  {riskBadge(p.risk_state)}
+                  <Link
+                    to="/client/packages"
+                    className="text-sm text-primary hover:underline inline-flex items-center"
+                  >
+                    View
+                    <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+type QuickAction = {
+  label: string;
+  subtitle: string;
+  icon: typeof Bot;
+  onClick?: () => void;
+  to?: string;
+  emphasised?: boolean;
+};
+
+function QuickActionsRow({ actions }: { actions: QuickAction[] }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {actions.map((a) => {
+        const Icon = a.icon;
+        const inner = (
+          <CardContent className="p-4 flex items-start gap-3">
+            <div
+              className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 ${
+                a.emphasised ? "bg-primary/10" : "bg-secondary/10"
+              }`}
+            >
+              <Icon className={`h-5 w-5 ${a.emphasised ? "text-primary" : "text-secondary"}`} />
+            </div>
+            <div className="min-w-0">
+              <div className="font-medium text-foreground">{a.label}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{a.subtitle}</div>
+            </div>
+          </CardContent>
+        );
+        const cardCls = `cursor-pointer hover:border-primary/40 transition-colors ${
+          a.emphasised ? "border-2 border-primary/30 bg-primary/5" : ""
+        }`;
+        if (a.to) {
+          return (
+            <Link key={a.label} to={a.to}>
+              <Card className={cardCls}>{inner}</Card>
+            </Link>
+          );
+        }
+        return (
+          <Card key={a.label} onClick={a.onClick} className={cardCls}>
+            {inner}
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+// ───────── page ─────────
+
 export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
   const { profile } = useAuth();
@@ -27,140 +337,133 @@ export function ClientHomePage() {
   const openDocumentRequest = useOpenDocumentRequest();
 
   const displayName = actingUser?.first_name || profile?.first_name;
+  const { data: hero } = useClientHomeHero();
+  const { data: progressList, isLoading: progressLoading } = useClientProgress(activeTenantId);
   const { data: momentumStates } = useMomentumState(activeTenantId);
   const primaryMomentum = momentumStates?.[0] ?? null;
 
+  const greeting = timeAwareGreeting();
+  const tenureText = formatTenure(hero?.member_since ?? null);
+  const hasCSC = !!hero?.csc_user_id;
+  const showAuditEmpty = (hero?.audits_total ?? 0) === 0;
+  const progressRows = progressList ?? [];
+
+  const quickActions: QuickAction[] = [
+    {
+      label: "Book consult",
+      subtitle: "Schedule time with your CSC",
+      icon: CalendarPlus,
+      to: "/client/calendar",
+      emphasised: true,
+    },
+    {
+      label: "Message CSC",
+      subtitle: "Quick question? Send a note",
+      icon: MessageCircle,
+      onClick: () => openHelpCenter("chatbot"),
+    },
+    {
+      label: "Request document",
+      subtitle: "Ask Vivacity to share or create",
+      icon: FileText,
+      onClick: () => openDocumentRequest(),
+    },
+    {
+      label: "Ask the Chatbot",
+      subtitle: "Get answers fast. Logged.",
+      icon: Bot,
+      onClick: () => openHelpCenter("chatbot"),
+    },
+  ];
+
   return (
-    <div className="space-y-8 max-w-5xl">
-      {/* Welcome */}
-      <div>
-        <h1 className="text-2xl font-bold text-secondary">
-          Welcome{displayName ? `, ${displayName}` : ""}
-        </h1>
-        <p className="text-muted-foreground mt-1">What do you need today?</p>
-      </div>
+    <TooltipProvider>
+      <div className="space-y-8 max-w-5xl">
+        {/* Hero */}
+        <div>
+          <h1 className="text-2xl font-bold text-secondary">
+            {greeting}
+            {displayName ? `, ${displayName}` : ""}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">{tenureText}</p>
+        </div>
 
-      {/* Progress Summary */}
-      <ClientProgressSummary tenantId={activeTenantId} />
+        {/* CSC card */}
+        <CSCCard
+          cscName={hero?.csc_display_name ?? null}
+          cscEmail={hero?.csc_email ?? null}
+          cscRoleLabel={hero?.csc_role_label ?? "CSC"}
+          cscAvatarUrl={hero?.csc_avatar_url ?? null}
+          hasCSC={hasCSC}
+          onMessage={() => openHelpCenter("chatbot")}
+        />
 
-      {/* Momentum Banner (client variant) */}
-      {primaryMomentum && (
-        <MomentumBanner state={primaryMomentum} variant="client" />
-      )}
+        {/* Audit readiness — empty-state aware */}
+        {showAuditEmpty ? <AuditReadinessEmpty /> : <AuditReadinessCard />}
 
-      {/* Progress Anchors */}
-      <ProgressAnchors tenantId={activeTenantId} variant="client" />
+        {/* Your packages strip */}
+        <PackagesStrip rows={progressRows} isLoading={progressLoading} />
 
-      {/* Upcoming Audit Schedule */}
-      <ClientUpcomingAuditSection />
+        {/* Quick actions */}
+        <QuickActionsRow actions={quickActions} />
 
-      {/* Audit Preparation Portal */}
-      <AuditPreparationSection />
+        {/* Momentum Banner (client variant) */}
+        {primaryMomentum && <MomentumBanner state={primaryMomentum} variant="client" />}
 
-      {/* Audit Reports */}
-      <ClientAuditReportsSection />
+        {/* Progress Anchors */}
+        <ProgressAnchors tenantId={activeTenantId} variant="client" />
 
-      {/* Client Action Plan */}
-      <ClientActionPlanSection />
+        {/* Upcoming Audit Schedule */}
+        <ClientUpcomingAuditSection />
 
-      {/* Row 1: What do you need? */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Chatbot - Primary */}
-        <Card className="border-2 border-primary/30 bg-primary/5 hover:border-primary/50 transition-colors">
-          <CardContent className="p-5 flex flex-col items-start gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Bot className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground">Ask the Chatbot</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Get answers fast. Logged to your account.
-              </p>
-            </div>
-            <Button onClick={() => openHelpCenter("chatbot")} className="mt-auto w-full">
-              Ask now
+        {/* Audit Preparation Portal */}
+        <AuditPreparationSection />
+
+        {/* Audit Reports */}
+        <ClientAuditReportsSection />
+
+        {/* Client Action Plan */}
+        <ClientActionPlanSection />
+
+        {/* What Needs Attention */}
+        <AttentionPanel />
+
+        {/* Recent Activity Timeline */}
+        <ActivityTimeline />
+
+        {/* Quick links footer */}
+        <div>
+          <h3 className="font-semibold text-foreground mb-3">Quick links</h3>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/client/documents">
+                <FileText className="h-3.5 w-3.5 mr-1" /> Documents
+              </Link>
             </Button>
-          </CardContent>
-        </Card>
-
-        {/* Request a document - replaces Message CSC */}
-        <Card className="hover:border-secondary/30 transition-colors">
-          <CardContent className="p-5 flex flex-col items-start gap-3">
-            <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-secondary" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground">Request a document</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Ask Vivacity to share or create a document. Logged to your account.
-              </p>
-            </div>
-            <Button variant="outline" onClick={() => openDocumentRequest()} className="mt-auto w-full">
-              Create request
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/client/calendar">
+                <Calendar className="h-3.5 w-3.5 mr-1" /> Calendar
+              </Link>
             </Button>
-          </CardContent>
-        </Card>
-
-        {/* Support - Secondary */}
-        <Card className="hover:border-secondary/30 transition-colors">
-          <CardContent className="p-5 flex flex-col items-start gap-3">
-            <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
-              <Headphones className="h-5 w-5 text-secondary" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground">Support</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                For technical issues and access help.
-              </p>
-            </div>
-            <Button variant="outline" onClick={() => openHelpCenter("support")} className="mt-auto w-full">
-              Contact support
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/client/resource-hub">
+                <Library className="h-3.5 w-3.5 mr-1" /> Resource Hub
+              </Link>
             </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* What Needs Attention */}
-      <AttentionPanel />
-
-      {/* Audit Readiness */}
-      <AuditReadinessCard />
-
-      {/* Recent Activity Timeline */}
-      <ActivityTimeline />
-
-      {/* Row 3: Quick links */}
-      <div>
-        <h3 className="font-semibold text-foreground mb-3">Quick links</h3>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/client/documents">
-              <FileText className="h-3.5 w-3.5 mr-1" /> Documents
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/client/calendar">
-              <Calendar className="h-3.5 w-3.5 mr-1" /> Calendar
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/client/resource-hub">
-              <Library className="h-3.5 w-3.5 mr-1" /> Resource Hub
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/client/documents?tab=governance">
-              <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Governance Register
-            </Link>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => openDocumentRequest()}>
-            <FileText className="h-3.5 w-3.5 mr-1" /> Request a document
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => openHelpCenter("chatbot")}>
-            <Bot className="h-3.5 w-3.5 mr-1" /> Ask Chatbot
-          </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/client/documents?tab=governance">
+                <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Governance Register
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => openDocumentRequest()}>
+              <FileText className="h-3.5 w-3.5 mr-1" /> Request a document
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => openHelpCenter("chatbot")}>
+              <Bot className="h-3.5 w-3.5 mr-1" /> Ask Chatbot
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
