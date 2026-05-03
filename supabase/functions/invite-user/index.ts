@@ -9,6 +9,8 @@ type UnicornRole =
   | "Admin"
   | "User";
 
+type RelationshipRole = 'primary_contact' | 'secondary_contact' | 'user' | 'academy_user';
+
 type Payload = {
   email: string;
   first_name: string;
@@ -16,6 +18,7 @@ type Payload = {
   invite_as: 'VIVACITY' | 'CLIENT';
   tenant_id: number;
   unicorn_role: UnicornRole;
+  relationship_role?: RelationshipRole;
   skip_email?: boolean;
   job_title?: string | null;
   phone_number?: string | null;
