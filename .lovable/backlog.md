@@ -113,3 +113,15 @@ Audit all `users` rows where `user_type = 'Vivacity Team' AND is_team = false` a
 ---
 
 *Last updated: 2026-05-02*
+
+## Academy-only users: widen Calendar + Resource Hub access, restrict everything else
+
+Source: Resource Hub coming-soon prompt (Step 3, deferred Option B).
+
+For users where `tenant_users.relationship_role = 'academy_user'`:
+- Surface `relationship_role` on `ClientTenantContext` (one query against `tenant_users` for the active user/tenant).
+- In `ClientRouteGuard`, redirect any path outside `/client/academy/*`, `/client/resource-hub`, `/client/calendar` back to `/client/academy`.
+- In `ClientSidebar`, hide all nav items except Academy, Resource Hub, Calendar (plus footer Help/Support).
+- Validate via "View as Client" impersonation against an academy-only test user before enabling.
+
+Today these users are walled off from Calendar (live webinar schedule) and Resource Hub (curated training-derived resources), which contradicts product intent.
