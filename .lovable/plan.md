@@ -1,93 +1,65 @@
-# Users page Phase 2 — invite + resend + revoke
+## Home Phase 1B-B v2 — Client feed sections + 1B-A cleanup
 
-## Discovery (Step 1 result)
+Adds three real-data sections and one stubbed Vivacity Services section to `ClientHomePage`, sourced from a single new view. Strictly client-facing — no `eos_*`, no `meetings`, no staff attribution. Also cleans up legacy widgets that should have been removed in 1B-A.
 
-Three existing edge functions handle this flow today on the staff side. Reuse all three.
+### 1. Migration — `v_client_home_feed`
 
-| Function | Purpose | Today's auth | Payload |
-|---|---|---|---|
-| `invite-user` | Create pending invite + dispatch Mailgun email | Vivacity staff **or** tenant Admin (verified via `tenant_users` membership lookup against `payload.tenant_id`) | `{ email, first_name, last_name, invite_as: 'CLIENT', tenant_id, unicorn_role: 'Admin'\|'User' }` |
-| `resend-invite` | Rotate token, bump `last_sent_at`, re-send email | SuperAdmin **or** tenant Admin — but currently checks `callerProfile.tenant_id === invitation.tenant_id` (single-tenant assumption) | `{ invitation_id }` |
-| `cancel-invite` | Soft-revoke (sets `status='revoked'`, `revoked_at`, clears `token_hash`) | **SuperAdmin only** today — tenant Admins are blocked | `{ invitation_id, reason? }` |
+`supabase/migrations/<ts>_v_client_home_feed.sql`. `CREATE OR REPLACE VIEW … WITH (security_invoker = true)`, UNION ALL across:
 
-Two of these need surgical auth/payload extensions before the client UI can use them; nothing else changes.
+- **coming_up** — open `client_action_items` due in next 84 days; released, incomplete `client_task_instances` due in next 84 days (package not complete).
+- **needs_attention** — overdue CAIs; overdue released CTIs; `notes` (parent_type `package_instance`, pinned, body matches `(urgent|overdue|action required)`).
+- **recent_activity** (last 30 days, `pi.is_complete = false`, `te.start_at >= pi.start_date`) — `time_entries`, `stage_instances` completed (`status_id IN (2,3)`), `stage_instances` released, completed CAIs.
 
-### Required edge-function changes
+Output columns: `feed_section, event_type, tenant_id (bigint), package_instance_id, event_at (timestamptz), title, subtitle, event_uid, source_table, href`. `GRANT SELECT TO authenticated`. View comment documents intent + invariants. SQL body as in the prompt.
 
-1. **`cancel-invite` — widen auth to tenant Admins.**
-   Replace the SuperAdmin-only gate with the same pattern `invite-user` uses: SuperAdmin **or** a row in `tenant_users` where `user_id = caller` AND `tenant_id = invitation.tenant_id` AND the caller's `unicorn_role IN ('Admin')` (or `tenant_users.relationship_role IN ('primary_contact','secondary_contact')`). Tenant scope comes from the invitation row itself, so there's no spoof surface.
+After apply, run sanity SELECTs (AHMRC `tenant_id = 7449` distribution + cross-platform tenant counts per section).
 
-2. **`resend-invite` — fix multi-tenant auth check.**
-   Today: `callerProfile.tenant_id === invitation.tenant_id` (uses the legacy single-tenant column on `users`). Replace with a `tenant_users` membership lookup against `invitation.tenant_id`, matching `invite-user`'s pattern. SuperAdmin path stays.
+### 2. Hook — `src/hooks/use-client-home-feed.ts`
 
-3. **`invite-user` — accept optional `relationship_role`.**
-   Today the function only takes `unicorn_role` (`Admin`/`User`). The Phase 2 modal needs three distinct outcomes (`secondary_contact`, `user`, `academy_user`), which all map to `unicorn_role='User'` or `'Admin'` and are indistinguishable downstream without `relationship_role`. Add an optional `relationship_role: 'secondary_contact'|'user'|'academy_user'` to the payload, validate it's not `primary_contact`, and persist it on the inserted `user_invitations` row. `accept_invitation_v2` already prefers `relationship_role` when present, so no SQL change is needed.
+Single TanStack query `['client_home_feed', activeTenantId]` from `useClientTenant`, `staleTime: 60_000`, `.eq('tenant_id', activeTenantId)`, ordered by `event_at desc`. `useMemo` partitions:
 
-   Validation: if `relationship_role='secondary_contact'`, reject when a non-revoked, non-expired pending invite OR an active `tenant_users` row already holds `secondary_contact` for that tenant — same shape as the existing `INVITE_EXISTS` 409.
+- `comingUp` — asc by `event_at`, slice 5
+- `needsAttention` — asc by `event_at` (oldest overdue first)
+- `recentActivity` — desc by `event_at`, slice 8
 
-No new edge functions. No SQL invitation logic touched. `accept_invitation_v2`, `validate_invitation_token`, `check_invitation_expiry_trigger`, `user_invitations`, `users`, `tenant_users` all untouched.
+Exports typed `HomeFeedSection`, `HomeFeedEventType`, `HomeFeedRow`, `UseClientHomeFeedResult`. No `any`.
 
-## Database change (additive)
+### 3. Components — `src/components/client/home/`
 
-`CREATE OR REPLACE VIEW public.v_client_tenant_users` (Option A from the prompt). Strictly additive:
+- **`HomeNeedsAttentionSection.tsx`** — hides when empty. Amber-bordered card (`border-amber-200 bg-amber-50/50`), `AlertCircle` icon, rows clickable to `event.href`, "Due X days ago" relative time on right.
+- **`HomeComingUpSection.tsx`** — hides when empty (and not loading). 3 skeletons while loading. `CheckSquare` blue icon, "in N days" via `formatDistanceToNow(parseISO(event_at), { addSuffix: true })`.
+- **`HomeVivacityServicesSection.tsx`** — always visible, no data. 4-card grid (2×2 desktop, 1-col mobile): Reporting Reminders (`BellRing`), Upcoming Events (`CalendarPlus`), Superhero Tools Unleashed (`Sparkles`), Trainer PD (`GraduationCap`). Each carries a "Coming soon" pill. Brand-purple icon accents; non-interactive.
+- **`HomeRecentActivitySection.tsx`** — hides when empty. 4 skeletons while loading. Icon by `event_type` (`Phone` blue / `CheckCircle2` emerald / `Send` violet / `CheckSquare` emerald). For `consult_logged` rows, run `title`/`subtitle` through `formatWorkType` from `src/components/client/package-dashboard/formatters.ts`. Rows non-interactive in v1. Right side: `formatDistanceToNow(..., { addSuffix: true })`.
 
-- Add `last_sent_at timestamptz` and `mailgun_message_id text` to both CTEs (`active_users` returns `NULL`/`NULL`; `pending_invites` returns `ui.last_sent_at`/`ui.mailgun_message_id`).
-- Keep `security_invoker = true` and the existing filters (excludes archived users, `is_vivacity_internal`, accepted/revoked/expired invites).
+### 4. Wire-up + 1B-A cleanup — `src/components/client/ClientHomePage.tsx`
 
-## Frontend
+Current render confirmed: the audit conditional `showAuditEmpty ? <AuditReadinessEmpty /> : <AuditReadinessCard />` is already correct (line 402). The duplicate "0% Audit Ready" pill is being rendered by one of the legacy widgets (likely `MomentumBanner` or `ProgressAnchors`); removing them resolves Bug 1 naturally.
 
-### `src/hooks/use-client-tenant-users.ts`
+**Remove JSX usages and imports** (files stay on disk) of:
 
-Extend `ClientTenantUserRow` with the two new nullable fields. No query change.
+- `<MomentumBanner />` (+ `useMomentumState`, `primaryMomentum`)
+- `<ProgressAnchors />`
+- `<AttentionPanel />`
+- `<ActivityTimeline />`
+- `<ClientActionPlanSection />` — the "My Action Plan" empty-celebration card
 
-### `src/components/client/ClientUsersPage.tsx`
+Leave untouched: `<CSCCard>`, audit empty/non-empty conditional, `<PackagesStrip>`, `<QuickActionsRow>`, `<ClientUpcomingAuditSection>`, `<AuditPreparationSection>`, `<ClientAuditReportsSection>`, Quick links footer.
 
-- Replace the disabled `Invite user` button with an active one. Disabled state with "Admin only" tooltip when `useAuth().getTenantRole(activeTenantId) !== 'Admin'`.
-- Empty state: drop "— coming soon" and add the same `Invite user` CTA inline.
-- Pending rows: add a kebab `DropdownMenu` (Resend, Revoke). Hidden on active rows. Disabled when not Admin.
-- Pending rows: small `Mail`/`MailWarning` lucide icon next to the status pill driven by `last_sent_at`, with `date-fns` relative tooltip.
+**Insert in this order** after `<QuickActionsRow>`, wrapped in `space-y-6`:
 
-### New components (kept colocated under `src/components/client/users/`)
+1. `<HomeNeedsAttentionSection events={feed.needsAttention} />`
+2. `<HomeComingUpSection events={feed.comingUp} isLoading={feed.isLoading} />`
+3. `<HomeVivacityServicesSection />`
+4. `<HomeRecentActivitySection events={feed.recentActivity} isLoading={feed.isLoading} />`
 
-- `InviteUserDialog.tsx` — shadcn `Dialog`, `react-hook-form` + `zod` schema. Fields: email (required, lowercased on submit), first name (required, trimmed), last name (optional). Access level radio with three options:
+Call `useClientHomeFeed()` once at top of component.
 
-  | Radio label | `unicorn_role` | `relationship_role` |
-  |---|---|---|
-  | Full access | `User` | `user` |
-  | Academy only | `User` | `academy_user` |
-  | Secondary contact | `Admin` | `secondary_contact` |
+If after deploy the duplicate "0% Audit Ready" pill or "999 days" banner persists, search for the source by visible copy (`rg "Audit Ready"`, `rg "999"`, `rg "Action required to continue"`) and remove that surface too.
 
-  No "Primary contact" option. Pre-submit checks query the cached `v_client_tenant_users` rows for this tenant: reject if email already a confirmed member, reject if email already has an active pending invite (offer "Resend the existing invite instead"), reject secondary_contact slot if already taken.
+### 5. Sanity / acceptance
 
-  Submit calls `supabase.functions.invoke('invite-user', { body: { email, first_name, last_name, invite_as: 'CLIENT', tenant_id: activeTenantId, unicorn_role, relationship_role } })`. Map the documented error codes (`INVITE_EXISTS`, `INVALID_EMAIL`, `ROLE_NOT_ALLOWED`, `RATE_LIMIT_EXCEEDED`, `FORBIDDEN`) to inline messages; fall through to a generic toast.
+Smoke-check AHMRC (calm state — Needs Attention hidden, Coming Up hidden, Vivacity Services visible, Recent Activity populated), a tenant with overdue CAIs (Needs Attention amber card), and a brand-new tenant (only Vivacity Services + hero). Confirm no `eos_*` / `meetings` / staff-name leakage; build clean; no `any`.
 
-- `RevokeInviteAlert.tsx` — shadcn `AlertDialog`. On confirm: `supabase.functions.invoke('cancel-invite', { body: { invitation_id: rowKey, reason: 'Revoked by tenant admin' } })`.
+### Out of scope
 
-- `useInviteMutations.ts` — three TanStack `useMutation` hooks (`invite`, `resend`, `revoke`) sharing one `onSuccess` that invalidates `['client_tenant_users', activeTenantId]` and toasts. `resend` calls `supabase.functions.invoke('resend-invite', { body: { invitation_id } })`.
-
-All three actions explicitly include `tenant_id: activeTenantId` (belt-and-braces); the edge functions remain the canonical gate.
-
-## What's not in scope
-
-Edit confirmed users, remove confirmed users, transfer primary contact, reactivate disabled users, per-user audit log, bulk CSV invite. All Phase 3+.
-
-## Files
-
-**Migrations**
-- `supabase/migrations/<ts>_v_client_tenant_users_add_invite_metadata.sql` — `CREATE OR REPLACE VIEW` adding the two columns.
-
-**Edge functions (edit + redeploy)**
-- `supabase/functions/cancel-invite/index.ts` — widen auth to tenant Admins.
-- `supabase/functions/resend-invite/index.ts` — switch to `tenant_users` membership check.
-- `supabase/functions/invite-user/index.ts` — accept + persist optional `relationship_role`; secondary_contact uniqueness check.
-
-**Frontend**
-- `src/hooks/use-client-tenant-users.ts` — extend type.
-- `src/components/client/ClientUsersPage.tsx` — wire button, kebab, mail icon, empty-state CTA.
-- `src/components/client/users/InviteUserDialog.tsx` (new)
-- `src/components/client/users/RevokeInviteAlert.tsx` (new)
-- `src/components/client/users/useInviteMutations.ts` (new)
-
-## Smoke checks
-
-The set listed in the prompt (invite, duplicate-block, resend, revoke confirm, confirmed-member rejection, secondary_contact second-slot allowed, non-admin disabled state, cross-tenant RLS, mobile, clean build).
+Real data behind Vivacity Services cards, replacement My Action Plan surface for tenants with audits, deletion of legacy widget files, realtime subscriptions.

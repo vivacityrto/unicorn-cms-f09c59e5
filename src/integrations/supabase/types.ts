@@ -55175,6 +55175,21 @@ export type Database = {
         }
         Relationships: []
       }
+      v_client_home_feed: {
+        Row: {
+          event_at: string | null
+          event_type: string | null
+          event_uid: string | null
+          feed_section: string | null
+          href: string | null
+          package_instance_id: number | null
+          source_table: string | null
+          subtitle: string | null
+          tenant_id: number | null
+          title: string | null
+        }
+        Relationships: []
+      }
       v_client_home_hero: {
         Row: {
           active_packages: number | null
