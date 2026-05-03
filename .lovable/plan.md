@@ -1,65 +1,39 @@
-## Home Phase 1B-B v2 — Client feed sections + 1B-A cleanup
+# Home Phase 1C — Reporting Reminders UI
 
-Adds three real-data sections and one stubbed Vivacity Services section to `ClientHomePage`, sourced from a single new view. Strictly client-facing — no `eos_*`, no `meetings`, no staff attribution. Also cleans up legacy widgets that should have been removed in 1B-A.
+UI-only. The `compliance_obligations` table and `v_client_reporting_reminders` view are already live; no SQL changes.
 
-### 1. Migration — `v_client_home_feed`
+## Files
 
-`supabase/migrations/<ts>_v_client_home_feed.sql`. `CREATE OR REPLACE VIEW … WITH (security_invoker = true)`, UNION ALL across:
+### 1. New — `src/hooks/use-client-reporting-reminders.ts`
+React Query hook over `v_client_reporting_reminders`, scoped to `useClientTenant().activeTenantId`, ordered by `sort_order`. Exports `ClientReportingReminder`, `ReminderStatus`, `ReminderRecurrence`, `ReminderAudience` types. `staleTime: 10min`. No `any`.
 
-- **coming_up** — open `client_action_items` due in next 84 days; released, incomplete `client_task_instances` due in next 84 days (package not complete).
-- **needs_attention** — overdue CAIs; overdue released CTIs; `notes` (parent_type `package_instance`, pinned, body matches `(urgent|overdue|action required)`).
-- **recent_activity** (last 30 days, `pi.is_complete = false`, `te.start_at >= pi.start_date`) — `time_entries`, `stage_instances` completed (`status_id IN (2,3)`), `stage_instances` released, completed CAIs.
+### 2. New — `src/components/client/home/HomeReportingRemindersCard.tsx`
+Self-fetching card. Layout per prompt:
 
-Output columns: `feed_section, event_type, tenant_id (bigint), package_instance_id, event_at (timestamptz), title, subtitle, event_uid, source_table, href`. `GRANT SELECT TO authenticated`. View comment documents intent + invariants. SQL body as in the prompt.
+- Header: `BellRing` (purple) + "Reporting reminders" + subtitle "Your annual compliance calendar."
+- Default visible subset: all `overdue` (asc by `days_until`), all `due_soon` (asc), up to 2 `upcoming`, up to 2 `always_open`.
+- Local `useState` expander → "Show all N obligations" reveals the rest (preserves `sort_order` for the additional rows).
+- Row: status icon (left) + title (`font-medium truncate`) + description (`text-sm text-muted-foreground line-clamp-2`) + date line + CTA link (`text-primary text-xs hover:underline` + `ExternalLink` 12px, `target="_blank" rel="noopener noreferrer"`) + status pill (right).
+- Status → pill/icon mapping exactly as specified (overdue=destructive/AlertTriangle red-600, due_soon=amber bg+border/Clock amber-600, upcoming=outline/Calendar slate-500, always_open=secondary/Infinity muted, no_date=secondary/RefreshCw muted).
+- Date line copy:
+  - overdue → `Was due {format(d,'d MMM yyyy')} ({Math.abs(days_until)} days ago)`
+  - due_soon / upcoming → `Due {…} (in {days_until} days)`
+  - always_open / no_date → omitted
+- States: 4 skeleton rows on loading; small inline alert on error; `return null` when `data.length === 0`.
+- Mobile (`<md`): pill drops below title; CTA wraps to its own row; description clamps to 2 lines.
 
-After apply, run sanity SELECTs (AHMRC `tenant_id = 7449` distribution + cross-platform tenant counts per section).
+### 3. Edit — `src/components/client/home/HomeVivacityServicesSection.tsx`
+- Drop the "Reporting reminders" entry from `SERVICES` (keep Events, Tools, PD).
+- Render `<HomeReportingRemindersCard />` at full width above the stub grid.
+- Conditional reflow: use `useClientReportingReminders` here too (cheap — same React Query cache key) to detect empty/hidden state. When the live card is hidden, render the three remaining stubs as a 3-card grid (`sm:grid-cols-3`); when visible, stack live card on top + 3-card row below. Section heading changes to "From Vivacity".
 
-### 2. Hook — `src/hooks/use-client-home-feed.ts`
+## Technical notes
 
-Single TanStack query `['client_home_feed', activeTenantId]` from `useClientTenant`, `staleTime: 60_000`, `.eq('tenant_id', activeTenantId)`, ordered by `event_at desc`. `useMemo` partitions:
+- Reuses `formatDistanceToNow`/`format` from `date-fns` (already in project).
+- All shadcn primitives reused (`Card`, `CardContent`, `Badge`, `Skeleton`, `Alert`, `Button`).
+- Tenant scoping via `.eq('tenant_id', activeTenantId)` on top of view's `security_invoker` RLS.
+- No new dependencies, no `any`, Australian `d MMM yyyy` formatting, no edits outside the three files above.
 
-- `comingUp` — asc by `event_at`, slice 5
-- `needsAttention` — asc by `event_at` (oldest overdue first)
-- `recentActivity` — desc by `event_at`, slice 8
+## Out of scope
 
-Exports typed `HomeFeedSection`, `HomeFeedEventType`, `HomeFeedRow`, `UseClientHomeFeedResult`. No `any`.
-
-### 3. Components — `src/components/client/home/`
-
-- **`HomeNeedsAttentionSection.tsx`** — hides when empty. Amber-bordered card (`border-amber-200 bg-amber-50/50`), `AlertCircle` icon, rows clickable to `event.href`, "Due X days ago" relative time on right.
-- **`HomeComingUpSection.tsx`** — hides when empty (and not loading). 3 skeletons while loading. `CheckSquare` blue icon, "in N days" via `formatDistanceToNow(parseISO(event_at), { addSuffix: true })`.
-- **`HomeVivacityServicesSection.tsx`** — always visible, no data. 4-card grid (2×2 desktop, 1-col mobile): Reporting Reminders (`BellRing`), Upcoming Events (`CalendarPlus`), Superhero Tools Unleashed (`Sparkles`), Trainer PD (`GraduationCap`). Each carries a "Coming soon" pill. Brand-purple icon accents; non-interactive.
-- **`HomeRecentActivitySection.tsx`** — hides when empty. 4 skeletons while loading. Icon by `event_type` (`Phone` blue / `CheckCircle2` emerald / `Send` violet / `CheckSquare` emerald). For `consult_logged` rows, run `title`/`subtitle` through `formatWorkType` from `src/components/client/package-dashboard/formatters.ts`. Rows non-interactive in v1. Right side: `formatDistanceToNow(..., { addSuffix: true })`.
-
-### 4. Wire-up + 1B-A cleanup — `src/components/client/ClientHomePage.tsx`
-
-Current render confirmed: the audit conditional `showAuditEmpty ? <AuditReadinessEmpty /> : <AuditReadinessCard />` is already correct (line 402). The duplicate "0% Audit Ready" pill is being rendered by one of the legacy widgets (likely `MomentumBanner` or `ProgressAnchors`); removing them resolves Bug 1 naturally.
-
-**Remove JSX usages and imports** (files stay on disk) of:
-
-- `<MomentumBanner />` (+ `useMomentumState`, `primaryMomentum`)
-- `<ProgressAnchors />`
-- `<AttentionPanel />`
-- `<ActivityTimeline />`
-- `<ClientActionPlanSection />` — the "My Action Plan" empty-celebration card
-
-Leave untouched: `<CSCCard>`, audit empty/non-empty conditional, `<PackagesStrip>`, `<QuickActionsRow>`, `<ClientUpcomingAuditSection>`, `<AuditPreparationSection>`, `<ClientAuditReportsSection>`, Quick links footer.
-
-**Insert in this order** after `<QuickActionsRow>`, wrapped in `space-y-6`:
-
-1. `<HomeNeedsAttentionSection events={feed.needsAttention} />`
-2. `<HomeComingUpSection events={feed.comingUp} isLoading={feed.isLoading} />`
-3. `<HomeVivacityServicesSection />`
-4. `<HomeRecentActivitySection events={feed.recentActivity} isLoading={feed.isLoading} />`
-
-Call `useClientHomeFeed()` once at top of component.
-
-If after deploy the duplicate "0% Audit Ready" pill or "999 days" banner persists, search for the source by visible copy (`rg "Audit Ready"`, `rg "999"`, `rg "Action required to continue"`) and remove that surface too.
-
-### 5. Sanity / acceptance
-
-Smoke-check AHMRC (calm state — Needs Attention hidden, Coming Up hidden, Vivacity Services visible, Recent Activity populated), a tenant with overdue CAIs (Needs Attention amber card), and a brand-new tenant (only Vivacity Services + hero). Confirm no `eos_*` / `meetings` / staff-name leakage; build clean; no `any`.
-
-### Out of scope
-
-Real data behind Vivacity Services cards, replacement My Action Plan surface for tenants with audits, deletion of legacy widget files, realtime subscriptions.
+EOS/L10, Scorecards, audit module, dashboard track, the other three stub cards, mark-as-done, email reminders, `window_opens_at` rendering, registration-renewal date computation.
