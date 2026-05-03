@@ -237,6 +237,8 @@ const ClientResourceHubPage = () => {
           </div>
         </>
       )}
+        </>
+      )}
     </div>
   );
 };
