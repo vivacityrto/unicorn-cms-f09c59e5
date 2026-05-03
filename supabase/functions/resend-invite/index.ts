@@ -110,10 +110,20 @@ serve(async (req) => {
       });
     }
 
-    // 5. Check permissions
-    const isSuperAdmin = callerProfile.global_role === 'SuperAdmin';
-    const isTenantAdmin = callerProfile.tenant_id === invitation.tenant_id && 
-      (callerProfile.unicorn_role === 'Admin' || callerProfile.tenant_role === 'admin');
+    // 5. Check permissions: SuperAdmin OR a tenant Admin who is a member of the invitation's tenant.
+    const isSuperAdmin = callerProfile.global_role === 'SuperAdmin' || callerProfile.unicorn_role === 'Super Admin';
+    let isTenantAdmin = false;
+    if (!isSuperAdmin && callerProfile.unicorn_role === 'Admin') {
+      const { data: membership } = await supabase
+        .from('tenant_users')
+        .select('id, relationship_role')
+        .eq('user_id', callerUser.user.id)
+        .eq('tenant_id', invitation.tenant_id)
+        .maybeSingle();
+      if (membership && (membership.relationship_role === 'primary_contact' || membership.relationship_role === 'secondary_contact')) {
+        isTenantAdmin = true;
+      }
+    }
 
     if (!isSuperAdmin && !isTenantAdmin) {
       return jsonResponse(403, {

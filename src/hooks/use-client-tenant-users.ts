@@ -30,6 +30,8 @@ export interface ClientTenantUserRow {
   invite_expires_at: string | null;
   status: TenantUserStatus;
   member_since: string | null;
+  last_sent_at: string | null;
+  mailgun_message_id: string | null;
 }
 
 export function useClientTenantUsers() {

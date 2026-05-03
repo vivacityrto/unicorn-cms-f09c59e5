@@ -9,6 +9,8 @@ type UnicornRole =
   | "Admin"
   | "User";
 
+type RelationshipRole = 'primary_contact' | 'secondary_contact' | 'user' | 'academy_user';
+
 type Payload = {
   email: string;
   first_name: string;
@@ -16,6 +18,7 @@ type Payload = {
   invite_as: 'VIVACITY' | 'CLIENT';
   tenant_id: number;
   unicorn_role: UnicornRole;
+  relationship_role?: RelationshipRole;
   skip_email?: boolean;
   job_title?: string | null;
   phone_number?: string | null;
@@ -197,6 +200,57 @@ serve(async (req) => {
         code: "ROLE_NOT_ALLOWED",
         detail: `Role ${payload.unicorn_role} is not allowed for this tenant`,
       });
+    }
+
+    // Validate relationship_role (optional). Tenant admins cannot create primary contacts via this flow.
+    if (payload.relationship_role) {
+      const allowedRR: RelationshipRole[] = ['secondary_contact', 'user', 'academy_user'];
+      if (!allowedRR.includes(payload.relationship_role)) {
+        return jsonResponse(400, {
+          ok: false,
+          code: "RELATIONSHIP_ROLE_NOT_ALLOWED",
+          detail: "Primary contact must be assigned via the transfer-primary-contact flow",
+        });
+      }
+
+      // Secondary contact uniqueness: at most one active or pending per tenant.
+      if (payload.relationship_role === 'secondary_contact') {
+        const { data: existingSecondary } = await supabase
+          .from('tenant_users')
+          .select('id')
+          .eq('tenant_id', payload.tenant_id)
+          .eq('relationship_role', 'secondary_contact')
+          .limit(1)
+          .maybeSingle();
+
+        if (existingSecondary) {
+          return jsonResponse(409, {
+            ok: false,
+            code: "SECONDARY_CONTACT_TAKEN",
+            detail: "This organisation already has a secondary contact.",
+          });
+        }
+
+        const { data: pendingSecondary } = await supabase
+          .from('user_invitations')
+          .select('id')
+          .eq('tenant_id', payload.tenant_id)
+          .eq('relationship_role', 'secondary_contact')
+          .eq('status', 'pending')
+          .is('accepted_at', null)
+          .is('revoked_at', null)
+          .gt('expires_at', new Date().toISOString())
+          .limit(1)
+          .maybeSingle();
+
+        if (pendingSecondary) {
+          return jsonResponse(409, {
+            ok: false,
+            code: "SECONDARY_CONTACT_PENDING",
+            detail: "A pending invite already nominates someone as secondary contact.",
+          });
+        }
+      }
     }
 
     // 4b. Rate limiting - check recent invite attempts for this email
@@ -405,6 +459,7 @@ serve(async (req) => {
         last_name: payload.last_name,
         tenant_id: payload.tenant_id,
         unicorn_role: payload.unicorn_role,
+        relationship_role: payload.relationship_role ?? null,
         token_hash: tokenHash,
         expires_at: expiresAt.toISOString(),
         invited_by: callerUser.user.id,
