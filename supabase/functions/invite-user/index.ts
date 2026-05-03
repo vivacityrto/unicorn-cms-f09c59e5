@@ -459,6 +459,7 @@ serve(async (req) => {
         last_name: payload.last_name,
         tenant_id: payload.tenant_id,
         unicorn_role: payload.unicorn_role,
+        relationship_role: payload.relationship_role ?? null,
         token_hash: tokenHash,
         expires_at: expiresAt.toISOString(),
         invited_by: callerUser.user.id,
