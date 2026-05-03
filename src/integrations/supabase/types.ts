@@ -53692,6 +53692,29 @@ export type Database = {
         }
         Relationships: []
       }
+      v_client_tenant_users: {
+        Row: {
+          access_scope: string | null
+          avatar_url: string | null
+          display_name: string | null
+          email: string | null
+          first_name: string | null
+          invite_expires_at: string | null
+          invited_at: string | null
+          last_name: string | null
+          last_sign_in_at: string | null
+          member_since: string | null
+          primary_contact: boolean | null
+          relationship_role: string | null
+          row_key: string | null
+          row_type: string | null
+          secondary_contact: boolean | null
+          status: string | null
+          tenant_id: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       v_client_to_tenant: {
         Row: {
           client_id: string | null
