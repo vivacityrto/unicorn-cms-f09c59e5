@@ -1,93 +1,125 @@
-# Users page — Phase 1: read-only list view
+# Home page Phase 1B-A — Hero, CSC card, packages strip, quick actions
 
 ## Verified facts before planning
 
-- **Current route target**: `/client/users` is wired to `src/pages/client/ClientUsersWrapper.tsx`, which currently renders the legacy `@/pages/TeamSettings` page (not a blank skeleton — the prompt was slightly off here). We replace its inner content with the new `ClientUsersPage`. `ClientLayout` wrapper stays.
-- **Schema confirmed** for `tenant_users`, `users`, `user_invitations`. All columns the prompt's view depends on exist (`users.full_name`, `users.avatar_path`, `users.is_vivacity_internal`, `users.last_sign_in_at`, `users.archived`, `users.disabled`; `tenant_users.relationship_role`, `primary_contact`, `secondary_contact`, `access_scope`, `created_at`; `user_invitations.status`, `accepted_at`, `revoked_at`, `expires_at`, `first_name`, `last_name`, `email`, `created_at`, `relationship_role`).
-- **Enum confirmed**: `tenant_user_role` has exactly the four values the prompt expects: `primary_contact`, `secondary_contact`, `user`, `academy_user`.
-- **Tenant context**: `useClientTenant()` exposes `activeTenantId: number | null` — same pattern used by every other client-portal hook.
+- **Route**: `/client/home` → `src/pages/client/ClientHomeWrapper.tsx` → `src/components/client/ClientHomePage.tsx` (the file to restructure).
+- **Existing progress hook**: `useClientProgress(tenantId)` at `src/hooks/useClientProgress.ts` already wraps `v_client_dashboard_progress` and returns rows with `package_name`, `current_phase_name`, `phase_completion`, `steps_remaining`, `risk_state`, `package_instance_id`. Reuse as-is — no changes.
+- **Schema confirmed** for `tenant_csc_assignments` (`tenant_id`, `csc_user_id`, `role_label`, `is_primary`, `assigned_since`), `package_instances` (`tenant_id`, `start_date`, `is_complete`), `client_audits` (`subject_tenant_id`), `tenants` (`id`, `name`, `legal_name`), `users` (`first_name`, `last_name`, `email`, `avatar_url`, `user_uuid`).
+- **Avatar field**: project convention is `avatar_url` (full public URL, used directly via `<AvatarImage src=…/>`). View will expose `csc_avatar_url`, not `csc_avatar_path`.
+- **Existing helpers on the current page**: `useAuth().profile`, `useClientActingUser()` (gives the impersonated first_name), `useClientTenant().activeTenantId`, `useHelpCenter()`, `useOpenDocumentRequest()`. All retained.
+- **AuditReadinessCard** already exists and renders nothing when there's no progress data; we'll wrap the page logic so when `audits_total === 0` we render the new empty-state pill instead.
+- **Sections in Phase 1B-A scope only**: hero, CSC card, packages strip, audit-readiness empty-state, quick actions row. The lower sections (Attention, Activity Timeline, Action Plan, etc.) stay where they currently render — only their order/wrapping changes minimally.
 
 ## What gets built
 
-### 1. Migration — `v_client_tenant_users`
+### 1. Migration — `v_client_home_hero`
 
-Strictly additive view, `security_invoker = true`, UNION ALL of two CTEs:
+Strictly additive view, `security_invoker = true`:
 
-- **`active_users`** — `tenant_users` JOIN `users`, filtered:
-  - `NOT COALESCE(u.archived, false)`
-  - `NOT COALESCE(u.is_vivacity_internal, false)` (per the prompt's important addition — Vivacity CSCs must not appear in client-facing user lists)
-- **`pending_invites`** — `user_invitations` filtered to `status = 'pending'`, `accepted_at IS NULL`, `revoked_at IS NULL`, `expires_at > now()`.
+- CTE `csc_primary` — `DISTINCT ON (tenant_id)` from `tenant_csc_assignments` joined to `users`, ordered by `is_primary DESC, assigned_since DESC NULLS LAST`. Picks one CSC per tenant, preferring the primary, then the most recently assigned.
+- CTE `package_aggregates` — per-tenant `MIN(start_date)` (tenure anchor), counts of total / active / historical from `package_instances`.
+- CTE `audit_count` — total `client_audits` per `subject_tenant_id`.
+- Outer `SELECT` — left-joins all three onto `tenants`, exposing: `tenant_id`, `tenant_name`, `tenant_legal_name`, `member_since`, `total_packages_ever`, `active_packages`, `historical_packages`, `csc_user_id`, `csc_display_name`, `csc_first_name`, `csc_email`, `csc_avatar_url`, `csc_role_label` (defaulting to `'CSC'`), `audits_total`.
 
-Output columns: `row_type`, `row_key`, `tenant_id`, `user_id`, `first_name`, `last_name`, `display_name`, `email`, `avatar_path`, `relationship_role`, `primary_contact`, `secondary_contact`, `access_scope`, `last_sign_in_at`, `invited_at`, `invite_expires_at`, `status`, `member_since`.
+`GRANT SELECT … TO authenticated`. Comment explains purpose.
 
-`status` derived: `disabled` / `archived` / `active` for confirmed users, `invited` for pending. `display_name` falls back through `full_name` → `first_name + last_name` → `email` → `'Unnamed user'`. `GRANT SELECT … TO authenticated`. RLS continues to be enforced by the underlying base tables via `security_invoker`.
+### 2. Hook — `src/hooks/use-client-home-hero.ts`
 
-### 2. Hook — `src/hooks/use-client-tenant-users.ts`
+`useClientHomeHero()` using TanStack Query. Reads `activeTenantId` from `useClientTenant()`, gates with `enabled: !!activeTenantId`, explicit `.eq('tenant_id', activeTenantId!)`, `.maybeSingle()`. `staleTime: 5 * 60_000`. Exports a typed `ClientHomeHero` interface — no `any`.
 
-`useClientTenantUsers()` using TanStack Query. Reads `activeTenantId` from `useClientTenant()`, gates the query with `enabled: !!activeTenantId`, explicit `.eq('tenant_id', activeTenantId!)`, ordered active-before-invited then primary_contact-first then display_name. `staleTime: 30_000`. Exports the `ClientTenantUserRow` type and the union types for row_type / status / role. Strictly typed, no `any`.
+### 3. Component restructure — `ClientHomePage.tsx`
 
-### 3. Page component — `src/components/client/ClientUsersPage.tsx`
+Replace the welcome block + the three ad-hoc "What do you need?" cards with the new structure. Keep all other section components in place, just reorder.
 
-New component, no edits to existing pages. Structure:
+**New order**:
 
-- **Header**: "Users" title, subtitle copy, disabled "Invite user" button (cyan primary look, `cursor-not-allowed`) wrapped in shadcn `Tooltip` with content "Coming soon — for now, contact your CSC to add users."
-- **Count summary**: `{activeCount} active · {invitedCount} pending invite(s)`.
-- **Table** (shadcn `Table`): columns User / Role / Status / Last active.
-  - User cell: shadcn `Avatar` (image when `avatar_path` present, otherwise initials via local `getInitials` helper) + name + muted email.
-  - Role pill: `formatRelationshipRole(...)` mapping enum to friendly label; `primary_contact` rendered with emphasised brand-coloured `Badge` variant, others default.
-  - Status: small coloured dot + text via local `StatusDot` component (emerald/amber/slate per status).
-  - Last active: `formatDistanceToNow(parseISO(...), { addSuffix: true })` from `date-fns` (already a project dep). For pending rows shows "Invited X ago"; for active rows with no `last_sign_in_at` shows muted "Never".
-- **States**:
-  - Loading → 3 skeleton rows.
-  - Error → destructive inline alert "Couldn't load users."
-  - Empty → centred placeholder card "No users yet" + subtext.
-- **Mobile**: role + status collapse below the user cell on `<md`; Last active hidden on narrow viewports (Tailwind `hidden md:table-cell`).
+```text
+[Hero greeting + tenure tag]
+[CSC card]
+[Audit-readiness pill (empty-state aware)]
+[Your packages strip]
+[Quick actions row]
+[MomentumBanner] (unchanged)
+[ProgressAnchors] (unchanged)
+[ClientUpcomingAuditSection] (unchanged)
+[AuditPreparationSection] (unchanged)
+[ClientAuditReportsSection] (unchanged)
+[ClientActionPlanSection] (unchanged)
+[AttentionPanel] (unchanged)
+[ActivityTimeline] (unchanged)
+[Quick links footer] (unchanged)
+```
 
-All colours via design-system tokens (semantic Tailwind classes / shadcn variants). No hardcoded hex.
+The original `<ClientProgressSummary>` and the three "Ask the Chatbot / Request a document / Support" cards are removed (their function moves into the new strip + quick actions row). The `AuditReadinessCard` import stays available for non-empty states; the page renders it when `hero.audits_total > 0` and renders the new empty-state pill when zero.
 
-### 4. Route wire-up — `src/pages/client/ClientUsersWrapper.tsx`
+**New helpers (inline in the page file)**:
 
-Replace the lazy-loaded `TeamSettings` import with the new `ClientUsersPage`. `ClientLayout` and the Suspense fallback stay. No change to `src/App.tsx`.
+- `timeAwareGreeting(now)` — uses `Intl.DateTimeFormat('en-AU', { timeZone: 'Australia/Sydney', hour: 'numeric', hour12: false })` to derive Sydney hour, returns "Good morning" / "Good afternoon" / "Good evening".
+- `formatTenure(memberSinceISO)` — returns "Member of Vivacity" if null, else `Member since {format(d, 'd MMM yyyy')} · {duration}`. Duration computed via `differenceInMonths` from `date-fns`: `<12` → "N months"; `>=12` → "Y years" or "Y years M months" if remainder; if total months is 0, drop the duration entirely.
+- `getInitials(name)` — splits on whitespace, two letters max, uppercase, fallback "?".
+
+**Hero block**: large `h1` "Good morning, Chris" with the tenure line as muted `text-sm` underneath.
+
+**CSC card** (shadcn `Card`): avatar (image from `csc_avatar_url`, fallback initials), label "Your {csc_role_label}", display name, email below in muted text. Two buttons on the right: "Message" (opens help center), "Book consult" (links to `/client/calendar` if it exists, otherwise opens help center). When `csc_user_id` is null, name shows "Not yet assigned" and both buttons are disabled inside a `Tooltip` with content "Your CSC assignment is pending — contact info@vivacity.com.au".
+
+**Audit-readiness empty state**: when `hero.audits_total === 0`, render a small `Card` with `ShieldCheck` icon and copy "No audits yet — your CSC will set one up when it's time." Otherwise render the existing `<AuditReadinessCard />`.
+
+**Your packages strip**: consumes `useClientProgress(activeTenantId)`. Renders a card containing an ordered list of `PackageStripRow` items. Each row:
+
+- Left: small `Briefcase` icon + `package_name` (truncate on overflow)
+- Right: a status badge derived from `risk_state` (cyan tone for `on_track`, amber for `needs_attention`, red for `action_required`) plus a "View →" link to `/client/packages`
+- Sub-line in muted `text-xs`: `{phase_completion}% complete · {steps_remaining} stages remaining · Currently in {current_phase_name}` with the documented edge cases (no current phase, total stages = 0)
+
+Empty state: "No active packages right now."
+
+**Quick actions row**: 4 cards (3 on tablet 2x2, stacked on mobile) using existing handlers:
+
+1. **Book consult** → links to `/client/calendar`
+2. **Message CSC** → `openHelpCenter('chatbot')` (existing wired action)
+3. **Request document** → `openDocumentRequest()` (existing wired action)
+4. **Ask the Chatbot** → `openHelpCenter('chatbot')` (kept since it's already wired)
+
+"Open audit workspace" is omitted because there's no existing route handler for it (per the prompt's guidance: don't fabricate routes).
+
+### 4. No file removed
+
+Existing components (`ClientProgressSummary`, `AuditReadinessCard`, etc.) stay on disk — only their import/usage in `ClientHomePage.tsx` changes. `useClientProgress` is reused unchanged.
 
 ## What is NOT changed
 
-- `tenant_users`, `users`, `user_invitations`, or any other table.
-- Any existing view.
-- The legacy `TeamSettings` page file (left in place — it has other usages or can be cleaned up later; out of scope).
-- Side-nav config (Prompt A's gating already applied).
-- `App.tsx` routes.
+- `v_client_dashboard_progress`, `v_client_package_dashboard`, or any other shipped view.
+- Any base table.
+- Other client-portal pages (Packages, Documents, Calendar, etc.).
+- EOS/L10, Scorecards, audit module, Vivacity Academy.
+- The "Action required" momentum banner (epoch fix is a separate prompt).
+- The bottom Quick Links footer.
 
 ## RLS / security notes
 
-- `security_invoker = true` means querying the view runs each underlying SELECT with the caller's privileges — existing RLS on `tenant_users`, `users`, `user_invitations` keeps cross-tenant data invisible.
-- The hook also adds an explicit `.eq('tenant_id', activeTenantId)` belt-and-braces filter so the query URL always carries the tenant scope (visible in network tab for verification).
-- Direct URL access to `/client/users` by a non-admin tenant user still resolves (gating is nav-level only). Per the prompt this is acceptable for v1; non-admins seeing fellow tenant users isn't a leak.
+- `security_invoker = true` on the new view defers to existing RLS on `tenant_csc_assignments`, `users`, `package_instances`, `client_audits`, and `tenants`.
+- Hook adds explicit `.eq('tenant_id', activeTenantId)` for belt-and-braces and so the query URL carries the tenant scope.
+- No new mutations, no new tables.
 
-## Sanity SQL run after the migration
+## Sanity SQL after migration
 
-I'll run these via `supabase--read_query` and report the results:
+I'll run via `supabase--read_query`:
 
 ```sql
--- AHMRC tenant
-SELECT row_type, status, display_name, email, relationship_role, primary_contact
-FROM v_client_tenant_users WHERE tenant_id = 7449
-ORDER BY row_type, display_name;
+SELECT tenant_name, member_since, active_packages, historical_packages,
+       csc_display_name, csc_role_label, audits_total
+FROM v_client_home_hero WHERE tenant_id = 7449;
 
--- Platform-wide distribution
-SELECT row_type, status, COUNT(*) FROM v_client_tenant_users GROUP BY 1,2 ORDER BY 3 DESC;
-
--- Reconciliation
-SELECT
-  (SELECT COUNT(*) FROM v_client_tenant_users WHERE row_type='active') AS view_active,
-  (SELECT COUNT(*) FROM tenant_users tu JOIN users u ON u.user_uuid=tu.user_id
-   WHERE NOT COALESCE(u.archived,false) AND NOT COALESCE(u.is_vivacity_internal,false)) AS direct;
+SELECT CASE WHEN csc_user_id IS NULL THEN 'no_csc' ELSE 'has_csc' END AS csc_state,
+       COUNT(*) AS n
+FROM v_client_home_hero GROUP BY 1;
 ```
+
+Expected for AHMRC: CSC=Angela Connell-Richards, member_since=2022-11-30, active=1, historical=3, audits=0.
 
 ## Files touched
 
-- `supabase/migrations/<timestamp>_v_client_tenant_users.sql` (new)
-- `src/hooks/use-client-tenant-users.ts` (new)
-- `src/components/client/ClientUsersPage.tsx` (new)
-- `src/pages/client/ClientUsersWrapper.tsx` (swap inner import)
+- `supabase/migrations/<timestamp>_v_client_home_hero.sql` (new — applied via migration tool)
+- `src/hooks/use-client-home-hero.ts` (new)
+- `src/components/client/ClientHomePage.tsx` (restructured: hero, CSC card, audit-readiness empty state, packages strip, quick actions row; lower sections retained)
 
 No other files modified.
