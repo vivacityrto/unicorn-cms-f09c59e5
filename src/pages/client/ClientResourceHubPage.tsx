@@ -59,7 +59,7 @@ const ClientResourceHubPage = () => {
 
   const { data: recentResources = [], isLoading: recentLoading } = useRecentResources(6);
   const { data: mostUsedResources = [], isLoading: mostUsedLoading } = useMostUsedResources(6);
-  const { data: allResources = [] } = useAllResources();
+  const { data: allResources = [], isLoading: allLoading } = useAllResources();
   const { data: searchResults = [], isLoading: searchLoading } = useSearchResources(
     searchTerm,
     selectedCategory || undefined,
