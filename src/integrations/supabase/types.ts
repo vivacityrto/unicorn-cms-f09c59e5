@@ -53695,7 +53695,7 @@ export type Database = {
       v_client_tenant_users: {
         Row: {
           access_scope: string | null
-          avatar_path: string | null
+          avatar_url: string | null
           display_name: string | null
           email: string | null
           first_name: string | null
