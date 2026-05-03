@@ -1,6 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { formatDistanceToNow, parseISO } from "date-fns";
-import { UserPlus, AlertCircle, Users as UsersIcon } from "lucide-react";
+import {
+  UserPlus,
+  AlertCircle,
+  Users as UsersIcon,
+  MoreHorizontal,
+  Mail,
+  MailWarning,
+  RefreshCcw,
+  Ban,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +30,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import {
   useClientTenantUsers,
@@ -28,6 +43,12 @@ import {
   type TenantUserRelationshipRole,
   type TenantUserStatus,
 } from "@/hooks/use-client-tenant-users";
+import { useAuth } from "@/hooks/useAuth";
+import { useClientTenant } from "@/contexts/ClientTenantContext";
+
+import InviteUserDialog from "./users/InviteUserDialog";
+import RevokeInviteAlert from "./users/RevokeInviteAlert";
+import { useInviteMutations } from "./users/useInviteMutations";
 
 function getInitials(name: string): string {
   return (
@@ -67,7 +88,8 @@ function RolePill({ row }: { row: ClientTenantUserRow }) {
   return <Badge variant="secondary">{label}</Badge>;
 }
 
-function StatusDot({ status }: { status: TenantUserStatus }) {
+function StatusDot({ row }: { row: ClientTenantUserRow }) {
+  const status: TenantUserStatus = row.status;
   const colourMap: Record<TenantUserStatus, string> = {
     active: "bg-emerald-500",
     invited: "bg-amber-500",
@@ -84,7 +106,31 @@ function StatusDot({ status }: { status: TenantUserStatus }) {
     <div className="flex items-center gap-2">
       <span className={`inline-block h-2 w-2 rounded-full ${colourMap[status]}`} />
       <span className="text-sm">{labelMap[status]}</span>
+      {row.row_type === "invited" ? <SentIndicator row={row} /> : null}
     </div>
+  );
+}
+
+function SentIndicator({ row }: { row: ClientTenantUserRow }) {
+  if (row.last_sent_at) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Mail className="h-3.5 w-3.5 text-muted-foreground" aria-label="Email sent" />
+        </TooltipTrigger>
+        <TooltipContent>
+          Sent {formatDistanceToNow(parseISO(row.last_sent_at), { addSuffix: true })}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <MailWarning className="h-3.5 w-3.5 text-amber-600" aria-label="Email not sent" />
+      </TooltipTrigger>
+      <TooltipContent>Email not sent yet — try resending.</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -121,10 +167,9 @@ function UserCell({ row }: { row: ClientTenantUserRow }) {
         {row.email ? (
           <div className="text-xs text-muted-foreground truncate">{row.email}</div>
         ) : null}
-        {/* Mobile: stack role + status under user */}
         <div className="md:hidden mt-1 flex items-center gap-2 flex-wrap">
           <RolePill row={row} />
-          <StatusDot status={row.status} />
+          <StatusDot row={row} />
         </div>
       </div>
     </div>
@@ -154,37 +199,49 @@ function LoadingSkeleton() {
           <TableCell className="hidden md:table-cell">
             <Skeleton className="h-4 w-24" />
           </TableCell>
+          <TableCell className="w-10" />
         </TableRow>
       ))}
     </>
   );
 }
 
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-        <UsersIcon className="h-6 w-6 text-muted-foreground" />
-      </div>
-      <h3 className="text-lg font-semibold">No users yet</h3>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-        Looks like you're the only one set up. Invite your team to give them access — coming soon.
-      </p>
-    </div>
-  );
-}
-
 export default function ClientUsersPage() {
   const { data, isLoading, isError } = useClientTenantUsers();
+  const { activeTenantId } = useClientTenant();
+  const { getTenantRole } = useAuth();
+  const { resend } = useInviteMutations();
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string | null } | null>(null);
 
   const rows = useMemo<ClientTenantUserRow[]>(() => data ?? [], [data]);
   const activeCount = rows.filter((r) => r.row_type === "active").length;
   const invitedCount = rows.filter((r) => r.row_type === "invited").length;
 
+  const isAdmin = activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false;
+
+  const inviteButton = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-block">
+          <Button
+            disabled={!isAdmin}
+            onClick={() => setInviteOpen(true)}
+            className={!isAdmin ? "cursor-not-allowed" : ""}
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Invite user
+          </Button>
+        </span>
+      </TooltipTrigger>
+      {!isAdmin ? <TooltipContent>Admin only.</TooltipContent> : null}
+    </Tooltip>
+  );
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
@@ -192,29 +249,15 @@ export default function ClientUsersPage() {
               People with access to your portal. Manage who can see your packages, documents, and Vivacity Academy.
             </p>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-block">
-                <Button disabled className="cursor-not-allowed">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Invite user
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              Coming soon — for now, contact your CSC to add users.
-            </TooltipContent>
-          </Tooltip>
+          {inviteButton}
         </div>
 
-        {/* Count summary */}
         {!isLoading && !isError ? (
           <div className="text-sm text-muted-foreground">
             {activeCount} active · {invitedCount} pending invite{invitedCount === 1 ? "" : "s"}
           </div>
         ) : null}
 
-        {/* Error */}
         {isError ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -222,9 +265,17 @@ export default function ClientUsersPage() {
           </Alert>
         ) : null}
 
-        {/* Table or Empty */}
         {!isError && rows.length === 0 && !isLoading ? (
-          <EmptyState />
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <UsersIcon className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold">No users yet</h3>
+            <p className="mt-1 mb-4 max-w-sm text-sm text-muted-foreground">
+              Looks like you're the only one set up. Invite your team to give them access.
+            </p>
+            {inviteButton}
+          </div>
         ) : !isError ? (
           <div className="rounded-lg border bg-card">
             <Table>
@@ -232,8 +283,9 @@ export default function ClientUsersPage() {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead className="hidden md:table-cell w-[200px]">Role</TableHead>
-                  <TableHead className="hidden md:table-cell w-[140px]">Status</TableHead>
+                  <TableHead className="hidden md:table-cell w-[180px]">Status</TableHead>
                   <TableHead className="hidden md:table-cell w-[180px]">Last active</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -249,10 +301,43 @@ export default function ClientUsersPage() {
                         <RolePill row={row} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <StatusDot status={row.status} />
+                        <StatusDot row={row} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         <LastActive row={row} />
+                      </TableCell>
+                      <TableCell className="w-10 text-right">
+                        {row.row_type === "invited" && isAdmin ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label="Invitation actions"
+                                disabled={resend.isPending}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => resend.mutate(row.row_key)}
+                                disabled={resend.isPending}
+                              >
+                                <RefreshCcw className="mr-2 h-4 w-4" />
+                                Resend invitation
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setRevokeTarget({ id: row.row_key, email: row.email })}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Ban className="mr-2 h-4 w-4" />
+                                Revoke invitation
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))
@@ -261,6 +346,14 @@ export default function ClientUsersPage() {
             </Table>
           </div>
         ) : null}
+
+        <InviteUserDialog open={inviteOpen} onOpenChange={setInviteOpen} rows={rows} />
+        <RevokeInviteAlert
+          open={!!revokeTarget}
+          onOpenChange={(o) => !o && setRevokeTarget(null)}
+          invitationId={revokeTarget?.id ?? null}
+          email={revokeTarget?.email ?? null}
+        />
       </div>
     </TooltipProvider>
   );
