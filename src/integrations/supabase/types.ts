@@ -55842,7 +55842,9 @@ export type Database = {
           invite_expires_at: string | null
           invited_at: string | null
           last_name: string | null
+          last_sent_at: string | null
           last_sign_in_at: string | null
+          mailgun_message_id: string | null
           member_since: string | null
           primary_contact: boolean | null
           relationship_role: string | null
