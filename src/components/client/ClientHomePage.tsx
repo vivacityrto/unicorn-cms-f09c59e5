@@ -29,16 +29,15 @@ import { useClientActingUser } from "@/hooks/useClientActingUser";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientHomeHero } from "@/hooks/use-client-home-hero";
 import { useClientProgress, type ClientProgress } from "@/hooks/useClientProgress";
-import { ProgressAnchors } from "@/components/compliance/ProgressAnchors";
-import { MomentumBanner } from "@/components/dashboard/MomentumBanner";
-import { useMomentumState } from "@/hooks/useMomentumState";
-import { AttentionPanel } from "./AttentionPanel";
+import { useClientHomeFeed } from "@/hooks/use-client-home-feed";
 import { AuditReadinessCard } from "./AuditReadinessCard";
-import { ActivityTimeline } from "./ActivityTimeline";
 import { AuditPreparationSection } from "./AuditPreparationSection";
-import { ClientActionPlanSection } from "./ClientActionPlanSection";
 import { ClientAuditReportsSection } from "./ClientAuditReportsSection";
 import { ClientUpcomingAuditSection } from "./ClientUpcomingAuditSection";
+import { HomeNeedsAttentionSection } from "./home/HomeNeedsAttentionSection";
+import { HomeComingUpSection } from "./home/HomeComingUpSection";
+import { HomeVivacityServicesSection } from "./home/HomeVivacityServicesSection";
+import { HomeRecentActivitySection } from "./home/HomeRecentActivitySection";
 
 // ───────── helpers ─────────
 
@@ -339,8 +338,7 @@ export function ClientHomePage() {
   const displayName = actingUser?.first_name || profile?.first_name;
   const { data: hero } = useClientHomeHero();
   const { data: progressList, isLoading: progressLoading } = useClientProgress(activeTenantId);
-  const { data: momentumStates } = useMomentumState(activeTenantId);
-  const primaryMomentum = momentumStates?.[0] ?? null;
+  const feed = useClientHomeFeed();
 
   const greeting = timeAwareGreeting();
   const tenureText = formatTenure(hero?.member_since ?? null);
@@ -407,11 +405,17 @@ export function ClientHomePage() {
         {/* Quick actions */}
         <QuickActionsRow actions={quickActions} />
 
-        {/* Momentum Banner (client variant) */}
-        {primaryMomentum && <MomentumBanner state={primaryMomentum} variant="client" />}
+        {/* Needs attention — overdue tasks + urgent pinned notes (hidden when empty) */}
+        <HomeNeedsAttentionSection events={feed.needsAttention} />
 
-        {/* Progress Anchors */}
-        <ProgressAnchors tenantId={activeTenantId} variant="client" />
+        {/* Coming up — task due dates within 12 weeks (hidden when empty) */}
+        <HomeComingUpSection events={feed.comingUp} isLoading={feed.isLoading} />
+
+        {/* Vivacity services — forward-looking signposts */}
+        <HomeVivacityServicesSection />
+
+        {/* Recent activity — last 30 days of cross-package events (hidden when empty) */}
+        <HomeRecentActivitySection events={feed.recentActivity} isLoading={feed.isLoading} />
 
         {/* Upcoming Audit Schedule */}
         <ClientUpcomingAuditSection />
@@ -421,15 +425,6 @@ export function ClientHomePage() {
 
         {/* Audit Reports */}
         <ClientAuditReportsSection />
-
-        {/* Client Action Plan */}
-        <ClientActionPlanSection />
-
-        {/* What Needs Attention */}
-        <AttentionPanel />
-
-        {/* Recent Activity Timeline */}
-        <ActivityTimeline />
 
         {/* Quick links footer */}
         <div>
