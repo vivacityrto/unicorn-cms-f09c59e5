@@ -54,18 +54,14 @@ serve(async (req: Request) => {
       callerProfile.global_role === "SuperAdmin" || 
       callerProfile.unicorn_role === "Super Admin";
 
-    if (!isSuperAdmin) {
-      return jsonResponse(403, { ok: false, detail: "Only SuperAdmins can cancel invitations" });
-    }
-
     // Parse request body
     const { invitation_id, reason } = await req.json();
-    
+
     if (!invitation_id) {
       return jsonResponse(400, { ok: false, detail: "invitation_id is required" });
     }
 
-    // Fetch the invitation
+    // Fetch the invitation (need tenant_id for the admin permission check)
     const { data: invitation, error: inviteError } = await supabase
       .from("user_invitations")
       .select("id, email, status, accepted_at, tenant_id, first_name, last_name")
@@ -75,6 +71,23 @@ serve(async (req: Request) => {
     if (inviteError || !invitation) {
       console.error("Invitation fetch error:", inviteError);
       return jsonResponse(404, { ok: false, detail: "Invitation not found" });
+    }
+
+    // Authorisation: SuperAdmin OR a tenant Admin who belongs to the invitation's tenant.
+    let isAuthorised = isSuperAdmin;
+    if (!isAuthorised && callerProfile.unicorn_role === 'Admin') {
+      const { data: membership } = await supabase
+        .from('tenant_users')
+        .select('id, relationship_role')
+        .eq('user_id', user.id)
+        .eq('tenant_id', invitation.tenant_id)
+        .maybeSingle();
+      if (membership && (membership.relationship_role === 'primary_contact' || membership.relationship_role === 'secondary_contact')) {
+        isAuthorised = true;
+      }
+    }
+    if (!isAuthorised) {
+      return jsonResponse(403, { ok: false, detail: "You don't have permission to cancel this invitation" });
     }
 
     // Check if already accepted
