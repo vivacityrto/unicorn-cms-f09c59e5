@@ -20,7 +20,7 @@ export interface ClientTenantUserRow {
   last_name: string | null;
   display_name: string;
   email: string | null;
-  avatar_path: string | null;
+  avatar_url: string | null;
   relationship_role: TenantUserRelationshipRole;
   primary_contact: boolean | null;
   secondary_contact: boolean | null;
