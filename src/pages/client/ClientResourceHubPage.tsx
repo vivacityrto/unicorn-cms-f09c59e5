@@ -114,6 +114,34 @@ const ClientResourceHubPage = () => {
         </Button>
       </div>
 
+      {/* Coming-soon hero when no resources are published yet */}
+      {allLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-40 w-full rounded-xl" />
+        </div>
+      ) : allResources.length === 0 ? (
+        <div className="rounded-xl border bg-card p-10 text-center flex flex-col items-center gap-4">
+          <div className="p-4 rounded-full bg-primary/10">
+            <Library className="h-8 w-8 text-primary" />
+          </div>
+          <div className="space-y-2 max-w-xl">
+            <h2 className="text-2xl font-semibold text-foreground">Resource Hub is coming soon</h2>
+            <p className="text-muted-foreground">
+              We're curating compliance templates, checklists, registers, audit tools, and how-to guides.
+              Check back shortly — or let us know what you need most.
+            </p>
+          </div>
+          <Button
+            variant="default"
+            className="gap-2 mt-2"
+            onClick={() => toast.info("Resource request feature coming soon.")}
+          >
+            <MessageSquarePlus className="h-4 w-4" />
+            Request a Resource
+          </Button>
+        </div>
+      ) : (
+        <>
       {/* Search */}
       <ResourceSearch
         searchTerm={searchTerm}
