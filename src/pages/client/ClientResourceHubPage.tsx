@@ -22,23 +22,23 @@ import {
   CheckSquare,
   ClipboardList,
   Search,
-  Video,
   BookOpen,
   TrendingUp,
   Clock,
   Star,
   ArrowRight,
   MessageSquarePlus,
+  Library,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const categoryIcons: Record<string, React.ElementType> = {
   templates: FileText,
   checklists: CheckSquare,
   "registers-forms": ClipboardList,
   "audit-evidence": Search,
-  "training-webinars": Video,
   "guides-howto": BookOpen,
   "ci-tools": TrendingUp,
 };

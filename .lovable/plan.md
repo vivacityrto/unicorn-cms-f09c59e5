@@ -1,39 +1,38 @@
-# Home Phase 1C — Reporting Reminders UI
+## Scope (Option B)
 
-UI-only. The `compliance_obligations` table and `v_client_reporting_reminders` view are already live; no SQL changes.
+Ship Steps 1 + 2 only. Step 3 (academy_user route/sidebar gating) is deferred to a follow-up once impersonation paths are validated.
 
-## Files
+## Changes
 
-### 1. New — `src/hooks/use-client-reporting-reminders.ts`
-React Query hook over `v_client_reporting_reminders`, scoped to `useClientTenant().activeTenantId`, ordered by `sort_order`. Exports `ClientReportingReminder`, `ReminderStatus`, `ReminderRecurrence`, `ReminderAudience` types. `staleTime: 10min`. No `any`.
+### 1. `src/types/resource.ts`
+Remove the `training-webinars` entry from `RESOURCE_CATEGORIES`. Leaves the other six categories intact. The `category` string remains free-form on `Resource` so any historical row tagged `training-webinars` won't crash — it just won't get a quick-link card. (No DB migration; schema already done via MCP per prompt.)
 
-### 2. New — `src/components/client/home/HomeReportingRemindersCard.tsx`
-Self-fetching card. Layout per prompt:
+### 2. `src/pages/client/ClientResourceHubPage.tsx`
+Replace the dashboard body with a coming-soon hero state when there are no published resources. Keep the page header and "Request a Resource" button.
 
-- Header: `BellRing` (purple) + "Reporting reminders" + subtitle "Your annual compliance calendar."
-- Default visible subset: all `overdue` (asc by `days_until`), all `due_soon` (asc), up to 2 `upcoming`, up to 2 `always_open`.
-- Local `useState` expander → "Show all N obligations" reveals the rest (preserves `sort_order` for the additional rows).
-- Row: status icon (left) + title (`font-medium truncate`) + description (`text-sm text-muted-foreground line-clamp-2`) + date line + CTA link (`text-primary text-xs hover:underline` + `ExternalLink` 12px, `target="_blank" rel="noopener noreferrer"`) + status pill (right).
-- Status → pill/icon mapping exactly as specified (overdue=destructive/AlertTriangle red-600, due_soon=amber bg+border/Clock amber-600, upcoming=outline/Calendar slate-500, always_open=secondary/Infinity muted, no_date=secondary/RefreshCw muted).
-- Date line copy:
-  - overdue → `Was due {format(d,'d MMM yyyy')} ({Math.abs(days_until)} days ago)`
-  - due_soon / upcoming → `Due {…} (in {days_until} days)`
-  - always_open / no_date → omitted
-- States: 4 skeleton rows on loading; small inline alert on error; `return null` when `data.length === 0`.
-- Mobile (`<md`): pill drops below title; CTA wraps to its own row; description clamps to 2 lines.
+Logic:
+- Use `useAllResources()` (already called) as the source of truth.
+- While loading → show a light skeleton (reuse existing `Skeleton`).
+- When `allResources.length === 0` → render a single hero card:
+  - `Library` icon in a cyan-tinted circle
+  - Heading: "Resource Hub is coming soon"
+  - Body: "We're curating compliance templates, checklists, registers, audit tools, and how-to guides. Check back shortly — or let us know what you need most."
+  - Primary CTA: existing "Request a Resource" button (reuse handler, just surface the same toast for now)
+- When `allResources.length > 0` → render the existing search + categories + Recently Added + Most Popular layout (unchanged), minus the removed category card from step 1.
 
-### 3. Edit — `src/components/client/home/HomeVivacityServicesSection.tsx`
-- Drop the "Reporting reminders" entry from `SERVICES` (keep Events, Tools, PD).
-- Render `<HomeReportingRemindersCard />` at full width above the stub grid.
-- Conditional reflow: use `useClientReportingReminders` here too (cheap — same React Query cache key) to detect empty/hidden state. When the live card is hidden, render the three remaining stubs as a 3-card grid (`sm:grid-cols-3`); when visible, stack live card on top + 3-card row below. Section heading changes to "From Vivacity".
+Remove the `training-webinars` entry from the local `categoryIcons` map for tidiness.
 
-## Technical notes
-
-- Reuses `formatDistanceToNow`/`format` from `date-fns` (already in project).
-- All shadcn primitives reused (`Card`, `CardContent`, `Badge`, `Skeleton`, `Alert`, `Button`).
-- Tenant scoping via `.eq('tenant_id', activeTenantId)` on top of view's `security_invoker` RLS.
-- No new dependencies, no `any`, Australian `d MMM yyyy` formatting, no edits outside the three files above.
+### 3. Step 3 follow-up (not built)
+Add a backlog note in `.lovable/backlog.md`:
+- Title: "Academy-only users: widen Calendar + Resource Hub access, restrict everything else"
+- Body: surface `relationship_role` on `ClientTenantContext`, add academy-user gate in `ClientRouteGuard` and `ClientSidebar`, smoke-test via impersonation. References this prompt.
 
 ## Out of scope
+- No changes to `ClientRouteGuard`, `ClientSidebar`, `ClientTenantContext`.
+- No changes to `useResources` hook or any RLS.
+- No changes to Calendar page.
 
-EOS/L10, Scorecards, audit module, dashboard track, the other three stub cards, mark-as-done, email reminders, `window_opens_at` rendering, registration-renewal date computation.
+## Acceptance
+- `/client/resource-hub` with zero published rows shows the coming-soon hero and the "Request a Resource" button — no category grid, no empty Recently/Popular sections.
+- Once a published resource exists, the page reverts to the full layout, and "Training & Webinars" no longer appears as a quick-link card.
+- Backlog note captures the deferred academy-user access work.

@@ -52,13 +52,6 @@ export const RESOURCE_CATEGORIES: ResourceCategory[] = [
     path: '/resource-hub/audit-evidence'
   },
   {
-    id: 'training-webinars',
-    label: 'Training & Webinars',
-    description: 'Recorded training sessions and webinars',
-    icon: 'Video',
-    path: '/resource-hub/training-webinars'
-  },
-  {
     id: 'guides-howto',
     label: 'Guides & How-To',
     description: 'Step-by-step guides and best practices',

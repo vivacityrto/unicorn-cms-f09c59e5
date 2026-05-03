@@ -55183,6 +55183,7 @@ export type Database = {
           feed_section: string | null
           href: string | null
           package_instance_id: number | null
+          package_name: string | null
           source_table: string | null
           subtitle: string | null
           tenant_id: number | null
