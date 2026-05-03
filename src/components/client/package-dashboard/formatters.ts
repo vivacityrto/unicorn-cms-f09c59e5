@@ -11,15 +11,19 @@ export function formatHours(decimalHours: number): string {
 
 /**
  * Convert a snake_case work_type or work_sub_type enum into a Title Case display string.
- * Internal values like 'compliance_health_check' or 'governance_meeting_mt' surface to
- * clients as 'Compliance Health Check' / 'Governance Meeting Mt'.
+ * Internal values like 'compliance_health_check' surface as 'Compliance Health Check'.
+ *
+ * Defensively strips trailing _mt / _qt / _yt artifacts from legacy or future imports
+ * so values like 'governance_meeting_mt' surface as 'Governance Meeting' rather than
+ * 'Governance Meeting Mt'.
  *
  * Returns empty string for null/undefined/empty input — callers conditionally render
  * based on truthiness so '' safely produces no output.
  */
 export function formatWorkType(value: string | null | undefined): string {
   if (!value) return '';
-  return value
+  const cleaned = value.replace(/_(mt|qt|yt)$/i, '');
+  return cleaned
     .trim()
     .split(/[_\s]+/)
     .filter(Boolean)

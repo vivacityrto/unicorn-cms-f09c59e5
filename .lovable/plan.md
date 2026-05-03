@@ -1,38 +1,39 @@
-## Scope (Option B)
+## Wednesday Recent Activity polish — 3 file edits
 
-Ship Steps 1 + 2 only. Step 3 (academy_user route/sidebar gating) is deferred to a follow-up once impersonation paths are validated.
+All schema work is already live. UI-only.
 
-## Changes
+### 1. `src/hooks/use-client-home-feed.ts`
+Add `package_name: string | null` to the `HomeFeedRow` interface (line 27). Query already uses `select('*')`, so no fetch change.
 
-### 1. `src/types/resource.ts`
-Remove the `training-webinars` entry from `RESOURCE_CATEGORIES`. Leaves the other six categories intact. The `category` string remains free-form on `Resource` so any historical row tagged `training-webinars` won't crash — it just won't get a quick-link card. (No DB migration; schema already done via MCP per prompt.)
+### 2. `src/components/client/home/HomeRecentActivitySection.tsx`
+Update `renderSubtitle` (lines 27–31) so `consult_logged` events fall back to `package_name` when `subtitle` is null:
 
-### 2. `src/pages/client/ClientResourceHubPage.tsx`
-Replace the dashboard body with a coming-soon hero state when there are no published resources. Keep the page header and "Request a Resource" button.
+```ts
+function renderSubtitle(event: HomeFeedRow): string | null {
+  if (event.event_type === "consult_logged") {
+    if (event.subtitle) return formatWorkType(event.subtitle);
+    return event.package_name ?? null;
+  }
+  return event.subtitle ?? null;
+}
+```
 
-Logic:
-- Use `useAllResources()` (already called) as the source of truth.
-- While loading → show a light skeleton (reuse existing `Skeleton`).
-- When `allResources.length === 0` → render a single hero card:
-  - `Library` icon in a cyan-tinted circle
-  - Heading: "Resource Hub is coming soon"
-  - Body: "We're curating compliance templates, checklists, registers, audit tools, and how-to guides. Check back shortly — or let us know what you need most."
-  - Primary CTA: existing "Request a Resource" button (reuse handler, just surface the same toast for now)
-- When `allResources.length > 0` → render the existing search + categories + Recently Added + Most Popular layout (unchanged), minus the removed category card from step 1.
+`formatWorkType` only runs when subtitle came from `event.subtitle`, never on the `package_name` fallback (already display-ready). Other event types (stage_completed, stage_released, task_completed) keep current behaviour. The existing `{subtitle && (...)}` guard in the render already omits the line when null — no layout change.
 
-Remove the `training-webinars` entry from the local `categoryIcons` map for tidiness.
+### 3. `src/components/client/package-dashboard/formatters.ts`
+Add a defensive trailing `_mt`/`_qt`/`_yt` strip at the top of `formatWorkType`:
 
-### 3. Step 3 follow-up (not built)
-Add a backlog note in `.lovable/backlog.md`:
-- Title: "Academy-only users: widen Calendar + Resource Hub access, restrict everything else"
-- Body: surface `relationship_role` on `ClientTenantContext`, add academy-user gate in `ClientRouteGuard` and `ClientSidebar`, smoke-test via impersonation. References this prompt.
+```ts
+const cleaned = value.replace(/_(mt|qt|yt)$/i, '');
+```
 
-## Out of scope
-- No changes to `ClientRouteGuard`, `ClientSidebar`, `ClientTenantContext`.
-- No changes to `useResources` hook or any RLS.
-- No changes to Calendar page.
+Then run the existing snake_case → Title Case conversion against `cleaned` instead of `value`. Update the JSDoc example so it doesn't promise that `governance_meeting_mt` becomes `Governance Meeting Mt`.
 
-## Acceptance
-- `/client/resource-hub` with zero published rows shows the coming-soon hero and the "Request a Resource" button — no category grid, no empty Recently/Popular sections.
-- Once a published resource exists, the page reverts to the full layout, and "Training & Webinars" no longer appears as a quick-link card.
-- Backlog note captures the deferred academy-user access work.
+### Out of scope
+No SQL. No changes to other home sections, hero, CSC card, packages strip, quick actions, Reporting Reminders, or any view.
+
+### Acceptance
+- `HomeFeedRow.package_name` typed as `string | null`.
+- Bare consult/meeting rows with null subtitle now show the package name as the second line.
+- `formatWorkType` strips trailing `_mt`/`_qt`/`_yt` defensively.
+- Build clean, no `any`.

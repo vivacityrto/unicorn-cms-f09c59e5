@@ -25,6 +25,7 @@ export interface HomeFeedRow {
   event_uid: string;
   source_table: string;
   href: string;
+  package_name: string | null;
 }
 
 export interface UseClientHomeFeedResult {

@@ -25,9 +25,11 @@ function renderTitle(event: HomeFeedRow): string {
 }
 
 function renderSubtitle(event: HomeFeedRow): string | null {
-  if (!event.subtitle) return null;
-  if (event.event_type === "consult_logged") return formatWorkType(event.subtitle);
-  return event.subtitle;
+  if (event.event_type === "consult_logged") {
+    if (event.subtitle) return formatWorkType(event.subtitle);
+    return event.package_name ?? null;
+  }
+  return event.subtitle ?? null;
 }
 
 export function HomeRecentActivitySection({ events, isLoading }: Props) {
