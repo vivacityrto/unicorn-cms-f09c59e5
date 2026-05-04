@@ -66,12 +66,12 @@ function execQuery(
 
 /**
  * Clear ALL instance data for a tenant so we can re-import cleanly.
- * Deletion order respects FK constraints (children first).
+ * Order respects FK constraints (children first), and nulls out
+ * references on tables we don't want to delete from.
  */
 async function clearTenantInstanceData(svcClient: SvcClient, tenantId: number): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
 
-  // Get package instance IDs for this tenant
   const { data: pkgRows } = await svcClient
     .from("package_instances")
     .select("id")
@@ -80,15 +80,14 @@ async function clearTenantInstanceData(svcClient: SvcClient, tenantId: number): 
 
   if (piIds.length === 0) return counts;
 
-  // Get stage instance IDs
   const { data: siRows } = await svcClient
     .from("stage_instances")
     .select("id")
     .in("packageinstance_id", piIds);
   const siIds = (siRows ?? []).map((r: any) => Number(r.id));
 
+  // ---- Stage-child rows ----
   if (siIds.length > 0) {
-    // Delete children of stage instances in batches (Supabase .in() limit)
     for (let i = 0; i < siIds.length; i += 100) {
       const batch = siIds.slice(i, i + 100);
 
@@ -107,9 +106,13 @@ async function clearTenantInstanceData(svcClient: SvcClient, tenantId: number): 
       const { count: c4 } = await svcClient
         .from("document_instances").delete({ count: "exact" }).in("stageinstance_id", batch);
       counts.document_instances = (counts.document_instances ?? 0) + (c4 ?? 0);
+
+      // Null linked_stage_instance_id on client_audits to release SET NULL FK
+      await (svcClient.from("client_audits") as any)
+        .update({ linked_stage_instance_id: null })
+        .in("linked_stage_instance_id", batch);
     }
 
-    // Delete stage instances
     for (let i = 0; i < siIds.length; i += 100) {
       const batch = siIds.slice(i, i + 100);
       const { count: c5 } = await svcClient
@@ -118,7 +121,43 @@ async function clearTenantInstanceData(svcClient: SvcClient, tenantId: number): 
     }
   }
 
-  // Delete package instances
+  // ---- Package-level child rows ----
+  // Null parent_instance_id on any child packages (e.g. add-on linked packages)
+  await (svcClient.from("package_instances") as any)
+    .update({ parent_instance_id: null })
+    .in("parent_instance_id", piIds);
+
+  // Null ops_work_items.package_instance_id (don't delete operational work items)
+  await (svcClient.from("ops_work_items") as any)
+    .update({ package_instance_id: null })
+    .in("package_instance_id", piIds);
+
+  for (let i = 0; i < piIds.length; i += 100) {
+    const batch = piIds.slice(i, i + 100);
+
+    const { count: te } = await svcClient
+      .from("time_entries").delete({ count: "exact" }).in("package_instance_id", batch);
+    counts.time_entries = (counts.time_entries ?? 0) + (te ?? 0);
+
+    const { count: ph } = await svcClient
+      .from("phase_instances").delete({ count: "exact" }).in("package_instance_id", batch);
+    counts.phase_instances = (counts.phase_instances ?? 0) + (ph ?? 0);
+
+    const { count: sl } = await (svcClient.from("package_instance_state_log") as any)
+      .delete({ count: "exact" }).in("package_instance_id", batch);
+    counts.package_instance_state_log = (counts.package_instance_state_log ?? 0) + (sl ?? 0);
+
+    const { count: cs } = await (svcClient.from("compliance_score_snapshots") as any)
+      .delete({ count: "exact" }).in("package_instance_id", batch);
+    counts.compliance_score_snapshots = (counts.compliance_score_snapshots ?? 0) + (cs ?? 0);
+
+    // package_notes: cascade-on-delete in schema, but be explicit so cleanup is observable
+    const { count: pn } = await (svcClient.from("package_notes") as any)
+      .delete({ count: "exact" }).in("package_instance_id", batch);
+    if (pn !== null && pn !== undefined) counts.package_notes = (counts.package_notes ?? 0) + (pn ?? 0);
+  }
+
+  // ---- Package instances ----
   const { count: piCount } = await svcClient
     .from("package_instances").delete({ count: "exact" }).eq("tenant_id", tenantId);
   counts.package_instances = piCount ?? 0;
@@ -204,7 +243,6 @@ serve(async (req) => {
   }
 
   try {
-    // --- Auth: SuperAdmin only ---
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -246,7 +284,6 @@ serve(async (req) => {
       });
     }
 
-    // --- Parse body ---
     const { client_id, import_options } = await req.json();
     if (!client_id || typeof client_id !== "number") {
       return new Response(
@@ -267,8 +304,11 @@ serve(async (req) => {
     const results: Record<string, any> = { imported: {} };
     const conn = await connectMssql();
 
+    // Mapping of Unicorn 1 PackageInstance.Id -> actual Unicorn 2 package_instances.id
+    const piIdMap = new Map<number, number>();
+
     try {
-      // ---- 0. Clear existing instance data for clean re-import ----
+      // ---- 0. Cleanup ----
       const cleared = await clearTenantInstanceData(svcClient, client_id);
       results.cleared = cleared;
 
@@ -332,16 +372,6 @@ serve(async (req) => {
         }
       }
 
-      // Helper: get package instance IDs for this client from MSSQL
-      async function getPackageInstanceIds(): Promise<number[]> {
-        const pkgs = await execQuery(
-          conn,
-          `SELECT [Id] FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
-          [{ name: "cid", type: TYPES.Int, value: client_id }]
-        );
-        return pkgs.map((r) => r.Id ?? r.id);
-      }
-
       // ---- 2. Package Instances ----
       if (opts.package_instances) {
         const pkgs = await execQuery(
@@ -349,15 +379,13 @@ serve(async (req) => {
           `SELECT [Id], [Package_Id], [StartDate], [EndDate], [IsComplete], [CLO_Id] FROM [dbo].[PackageInstances] WHERE [Client_Id] = @cid`,
           [{ name: "cid", type: TYPES.Int, value: client_id }]
         );
-        let created = 0, skipped = 0;
+        let created = 0, skipped = 0, remapped = 0;
         for (const p of pkgs) {
-          const pid = p.Id ?? p.id;
+          const u1Pid = Number(p.Id ?? p.id);
           const startDate = p.StartDate ?? p.startdate ?? new Date().toISOString().split('T')[0];
           const endDate = p.EndDate ?? p.enddate ?? null;
           const cloId = p.CLO_Id ?? p.Clo_Id ?? p.clo_id ?? null;
           const isComplete = p.IsComplete ?? p.iscomplete ?? false;
-          // Try inserting with U1 ID first; if conflict, insert without ID (auto-generate)
-          let insertError: any = null;
           const row = {
             tenant_id: client_id,
             package_id: p.Package_Id ?? p.package_id,
@@ -365,33 +393,59 @@ serve(async (req) => {
             start_date: startDate,
             end_date: endDate,
             clo_id: cloId ? Number(cloId) : null,
-            u1_packageid: p.Package_Id ?? p.package_id,
+            u1_packageid: u1Pid,
           };
-          const { error: err1 } = await svcClient.from("package_instances").insert({ id: pid, ...row });
-          if (err1) {
-            // ID conflict — retry without explicit ID so sequence auto-generates
-            console.warn(`PI ${pid} ID conflict, retrying with auto-ID:`, err1.message);
-            const { error: err2 } = await svcClient.from("package_instances").insert(row);
-            insertError = err2;
+
+          // Try with U1 ID first
+          const { data: ins1, error: err1 } = await svcClient
+            .from("package_instances")
+            .insert({ id: u1Pid, ...row })
+            .select("id")
+            .single();
+
+          if (!err1 && ins1) {
+            piIdMap.set(u1Pid, Number(ins1.id));
+            created++;
+            continue;
           }
-          const error = insertError;
-          if (error) {
-            console.error(`PI ${pid}:`, error.message);
+
+          // Retry with auto-ID
+          console.warn(`PI ${u1Pid} ID conflict, retrying with auto-ID:`, err1?.message);
+          const { data: ins2, error: err2 } = await svcClient
+            .from("package_instances")
+            .insert(row)
+            .select("id")
+            .single();
+
+          if (err2 || !ins2) {
+            console.error(`PI ${u1Pid}:`, err2?.message);
             skipped++;
           } else {
+            piIdMap.set(u1Pid, Number(ins2.id));
+            remapped++;
             created++;
           }
         }
-        results.imported.package_instances = { created, skipped, total: pkgs.length };
+        results.imported.package_instances = { created, skipped, remapped, total: pkgs.length };
+      } else {
+        // Even if not (re)importing, build the map from existing rows so stage import still works.
+        const { data: existingPis } = await svcClient
+          .from("package_instances")
+          .select("id, u1_packageid")
+          .eq("tenant_id", client_id);
+        for (const r of existingPis ?? []) {
+          if ((r as any).u1_packageid) piIdMap.set(Number((r as any).u1_packageid), Number((r as any).id));
+        }
       }
 
       // ---- 3. Stage Instances ----
+      let stageBackfill = { created: 0, skipped: 0 };
       if (opts.stage_instances) {
-        const piIds = await getPackageInstanceIds();
         let created = 0, skipped = 0, total = 0;
-        if (piIds.length > 0) {
-          const idList = piIds.join(",");
+        const u1PiIds = Array.from(piIdMap.keys());
 
+        if (u1PiIds.length > 0) {
+          const idList = u1PiIds.join(",");
           const stages = await execQuery(
             conn,
             `SELECT si.[Id], si.[Stage_Id], si.[PackageInstance_Id], pi.[Package_Id] AS [PackageId]
@@ -402,7 +456,7 @@ serve(async (req) => {
           );
           total = stages.length;
 
-          // Build sort order lookup from package_stages
+          // Sort order lookup
           const uniquePkgIds = [...new Set(stages.map((s) => Number(s.PackageId)).filter(Number.isFinite))];
           const { data: pkgStages } = await svcClient
             .from("package_stages")
@@ -413,47 +467,120 @@ serve(async (req) => {
             sortOrderMap.set(`${ps.package_id}-${ps.stage_id}`, ps.sort_order ?? 0);
           }
 
-          // Verify which stage IDs exist in U2
+          // Valid stages in U2
           const { data: allStages } = await svcClient.from("stages").select("id");
           const validStageIds = new Set((allStages ?? []).map((s: any) => Number(s.id)));
 
           for (const s of stages) {
-            const sid = s.Id ?? s.id;
+            const u1Sid = Number(s.Id ?? s.id);
             const stageId = Number(s.Stage_Id ?? s.stage_id);
+            const u1Pi = Number(s.PackageInstance_Id ?? s.packageinstance_id);
             const packageId = Number(s.PackageId);
 
+            const targetPi = piIdMap.get(u1Pi);
+            if (!targetPi) {
+              console.error(`SI ${u1Sid}: no mapped package instance for U1 PI ${u1Pi}`);
+              skipped++;
+              continue;
+            }
+
             if (!validStageIds.has(stageId)) {
-              console.error(`SI ${sid}: stage_id ${stageId} not found in U2 stages table`);
+              console.warn(`SI ${u1Sid}: stage_id ${stageId} not in U2 stages — skipped, will backfill from template`);
               skipped++;
               continue;
             }
 
             const sortOrder = sortOrderMap.get(`${packageId}-${stageId}`) ?? null;
 
-            const { error } = await svcClient.from("stage_instances").insert({
-              id: sid,
+            // Try with U1 stage instance ID first; if collision, auto-generate
+            const insertRow = {
               stage_id: stageId,
-              packageinstance_id: s.PackageInstance_Id ?? s.packageinstance_id,
+              packageinstance_id: targetPi,
               stage_sortorder: sortOrder,
-            });
-            if (error) {
-              console.error(`SI ${sid}:`, error.message);
-              skipped++;
-            } else {
-              created++;
+            };
+            const { error: e1 } = await svcClient
+              .from("stage_instances")
+              .insert({ id: u1Sid, ...insertRow });
+            if (e1) {
+              const { error: e2 } = await svcClient
+                .from("stage_instances")
+                .insert(insertRow);
+              if (e2) {
+                console.error(`SI ${u1Sid}:`, e2.message);
+                skipped++;
+                continue;
+              }
             }
+            created++;
           }
         }
         results.imported.stage_instances = { created, skipped, total };
+
+        // ---- 3b. Backfill from U2 package_stages templates for any imported package
+        // missing one of its template stages. This handles the U1<->U2 out-of-sync case.
+        const targetPis = Array.from(piIdMap.values());
+        if (targetPis.length > 0) {
+          // Get tenant package instances + their package_id
+          const { data: pis } = await svcClient
+            .from("package_instances")
+            .select("id, package_id")
+            .in("id", targetPis);
+
+          const pkgIdSet = new Set<number>((pis ?? []).map((r: any) => Number(r.package_id)));
+          const { data: tpls } = await svcClient
+            .from("package_stages")
+            .select("package_id, stage_id, sort_order")
+            .in("package_id", Array.from(pkgIdSet));
+
+          const tplsByPkg = new Map<number, { stage_id: number; sort_order: number | null }[]>();
+          for (const t of tpls ?? []) {
+            const k = Number((t as any).package_id);
+            if (!tplsByPkg.has(k)) tplsByPkg.set(k, []);
+            tplsByPkg.get(k)!.push({ stage_id: Number((t as any).stage_id), sort_order: (t as any).sort_order ?? null });
+          }
+
+          // Existing stage instances per pi
+          const { data: existingSis } = await svcClient
+            .from("stage_instances")
+            .select("packageinstance_id, stage_id")
+            .in("packageinstance_id", targetPis);
+          const existingByPi = new Map<number, Set<number>>();
+          for (const si of existingSis ?? []) {
+            const pi = Number((si as any).packageinstance_id);
+            if (!existingByPi.has(pi)) existingByPi.set(pi, new Set());
+            existingByPi.get(pi)!.add(Number((si as any).stage_id));
+          }
+
+          for (const pi of pis ?? []) {
+            const piId = Number((pi as any).id);
+            const pkgId = Number((pi as any).package_id);
+            const tplStages = tplsByPkg.get(pkgId) ?? [];
+            const have = existingByPi.get(piId) ?? new Set<number>();
+            for (const t of tplStages) {
+              if (have.has(t.stage_id)) continue;
+              const { error: bErr } = await svcClient.from("stage_instances").insert({
+                stage_id: t.stage_id,
+                packageinstance_id: piId,
+                stage_sortorder: t.sort_order,
+              });
+              if (bErr) {
+                console.error(`Backfill SI (pi ${piId}, stage ${t.stage_id}):`, bErr.message);
+                stageBackfill.skipped++;
+              } else {
+                stageBackfill.created++;
+              }
+            }
+          }
+        }
+        results.imported.stage_instances_backfill = stageBackfill;
       }
 
       // ---- 4-7. Seed child instances from Unicorn 2 templates ----
       const needsSeed = opts.staff_task_instances || opts.client_task_instances || opts.email_instances || opts.document_instances;
       if (needsSeed) {
-        // Get all stage instances for this tenant
         const { data: piRows } = await svcClient
           .from("package_instances").select("id").eq("tenant_id", client_id);
-        const localPiIds = (piRows ?? []).map((r: any) => r.id);
+        const localPiIds = (piRows ?? []).map((r: any) => Number(r.id));
 
         let newSiRows: any[] = [];
         if (localPiIds.length > 0) {
@@ -487,18 +614,10 @@ serve(async (req) => {
 
         console.log(`Seeded child instances for tenant ${client_id}:`, totals);
 
-        if (opts.staff_task_instances) {
-          results.imported.staff_task_instances = { seeded: totals.staff };
-        }
-        if (opts.client_task_instances) {
-          results.imported.client_task_instances = { seeded: totals.client };
-        }
-        if (opts.email_instances) {
-          results.imported.email_instances = { seeded: totals.emails };
-        }
-        if (opts.document_instances) {
-          results.imported.document_instances = { seeded: totals.documents };
-        }
+        if (opts.staff_task_instances) results.imported.staff_task_instances = { seeded: totals.staff };
+        if (opts.client_task_instances) results.imported.client_task_instances = { seeded: totals.client };
+        if (opts.email_instances) results.imported.email_instances = { seeded: totals.emails };
+        if (opts.document_instances) results.imported.document_instances = { seeded: totals.documents };
       }
 
       return new Response(JSON.stringify(results), {
