@@ -140,11 +140,17 @@ export async function validateClientAskVivAccess(
   supabase: SupabaseClient,
   userId: string,
   profile: UserProfile | null,
-  endpoint: string
+  endpoint: string,
+  previewTenantId?: number,
 ): Promise<
   | { allowed: true; tenant_id: number }
   | { allowed: false; reason: string }
 > {
+  // Preview bypass — Vivacity internal staff testing client surface
+  if (previewTenantId != null && isVivacityInternal(profile)) {
+    return { allowed: true, tenant_id: previewTenantId };
+  }
+
   // 1. Role gate
   const role = profile?.unicorn_role ?? null;
   if (!role || !CLIENT_ASK_VIV_ROLES.includes(role)) {
