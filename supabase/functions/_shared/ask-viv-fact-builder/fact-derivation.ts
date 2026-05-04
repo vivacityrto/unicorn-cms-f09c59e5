@@ -110,7 +110,7 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
     key: "package_count",
     value: { total: packages.length, active: activeCount },
     reason: null,
-    source_table: "packages",
+    source_table: "package_instances",
     source_ids: packages.map(p => p.id.toString()),
     derived_at: nowIso,
   });
@@ -126,7 +126,7 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
         type: pkg.package_type,
       },
       reason: null,
-      source_table: "packages",
+      source_table: "package_instances",
       source_ids: [pkg.id.toString()],
       derived_at: nowIso,
     });
@@ -150,7 +150,7 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
           percent_used: percentUsed,
         },
         reason: percentUsed >= 90 ? "Hours nearly exhausted" : null,
-        source_table: "packages",
+        source_table: "package_instances",
         source_ids: [pkg.id.toString()],
         derived_at: nowIso,
       });

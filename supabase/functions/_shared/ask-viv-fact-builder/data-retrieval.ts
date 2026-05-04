@@ -74,32 +74,39 @@ export async function retrieveFactData(
     recordIds.push({ table: "tenants", ids: [tenant.id.toString()] });
   }
 
-  // 2. Fetch packages (from tenant package_ids or scope)
+  // 2. Fetch packages from package_instances (source of truth), then look up template names
   let packages: PackageFactData[] = [];
-  const packageIdsToFetch = scope.package_id 
-    ? [parseInt(scope.package_id, 10)]
-    : (tenant?.package_ids || []);
+  tablesQueried.push("package_instances");
+  const { data: instancesData } = await supabase
+    .from("package_instances")
+    .select("id, package_id, is_complete, start_date, end_date, updated_at")
+    .eq("tenant_id", tenantId)
+    .eq("is_complete", false)
+    .limit(20);
 
-  if (packageIdsToFetch.length > 0) {
-    tablesQueried.push("packages");
-    const { data: packagesData } = await supabase
-      .from("packages")
-      .select("id, name, status, package_type, total_hours, updated_at")
-      .in("id", packageIdsToFetch)
-      .limit(20);
+  const packageIds = [...new Set((instancesData || []).map((i: any) => i.package_id))];
+  const { data: packagesData } = packageIds.length > 0
+    ? await supabase
+        .from("packages")
+        .select("id, name, package_type, total_hours")
+        .in("id", packageIds)
+    : { data: [] };
+  const packageMap = new Map((packagesData || []).map((p: any) => [p.id, p]));
 
-    packages = (packagesData || []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      status: p.status || "unknown",
-      package_type: p.package_type,
-      total_hours: p.total_hours,
-      updated_at: p.updated_at,
-    }));
+  packages = (instancesData || []).map((inst: any) => {
+    const pkg: any = packageMap.get(inst.package_id) ?? {};
+    return {
+      id: inst.id,
+      name: pkg.name ?? "Unknown package",
+      status: inst.is_complete ? "closed" : "active",
+      package_type: pkg.package_type ?? null,
+      total_hours: pkg.total_hours ?? null,
+      updated_at: inst.updated_at,
+    };
+  });
 
-    if (packages.length > 0) {
-      recordIds.push({ table: "packages", ids: packages.map(p => p.id.toString()) });
-    }
+  if (packages.length > 0) {
+    recordIds.push({ table: "package_instances", ids: packages.map(p => p.id.toString()) });
   }
 
   // 3. Fetch phases (stages)
@@ -134,6 +141,7 @@ export async function retrieveFactData(
   const { data: tasksData } = await supabase
     .from("tasks")
     .select("id, task_name, status, priority, due_date_at, updated_at")
+    .eq("tenant_id", tenantId)
     .limit(TASK_LIMIT);
 
   const tasks: TaskFactData[] = (tasksData || []).map((t) => ({
@@ -179,6 +187,7 @@ export async function retrieveFactData(
   const { data: consultData } = await supabase
     .from("consult_logs")
     .select("consult_id, date, hours, task, consultant")
+    .eq("tenant_id", tenantId)
     .gte("date", lookbackDate)
     .limit(100);
 

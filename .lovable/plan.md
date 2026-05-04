@@ -1,26 +1,24 @@
-## Goal
-Let Vivacity internal staff (Super Admin et al.) use the client Ask Viv panel while in client preview mode, without weakening the gate for real client users.
+# Fix Ask Viv Fact Builder Empty Responses
 
-## Changes (4 files, code-only, no migrations)
+Three bugs in the shared fact builder cause empty/incorrect data for both `compliance-assistant` and `compliance-assistant-client`. Fix in two files only.
 
-### 1. `supabase/functions/_shared/ask-viv-access.ts`
-- Add optional `previewTenantId?: number` parameter to `validateClientAskVivAccess`.
-- Before the role gate, short-circuit with `{ allowed: true, tenant_id: previewTenantId }` when `previewTenantId != null` AND `isVivacityInternal(profile)` is true.
-- If `previewTenantId` is provided but the user is not internal staff, ignore it and fall through to the standard client-role/membership checks.
+## File 1: `supabase/functions/_shared/ask-viv-fact-builder/data-retrieval.ts`
 
-### 2. `supabase/functions/compliance-assistant-client/index.ts`
-- Import `isVivacityInternal` from the shared module.
-- Parse `preview_tenant_id` from the request body when it is a number.
-- Update the forbidden-field guard: keep blocking `tenant_id`, `client_id`, `package_id`, `phase_id` unconditionally; block `preview_tenant_id` only for non-staff callers.
-- Pass `previewTenantId` as the new 5th arg to `validateClientAskVivAccess`.
+**Change 1 — Package lookup (lines 77–103):** Replace the current block (which reads `tenant.package_ids` and queries the `packages` template table) with a two-step fetch from `package_instances` (source of truth), then look up names/types from `packages`.
 
-### 3. `src/components/ask-viv/ClientAskVivPanel.tsx`
-- Add optional `previewTenantId?: number` to `ClientAskVivPanelProps`.
-- In `handleSend`, spread `{ preview_tenant_id: previewTenantId }` into the JSON body only when set.
+- Step A: Query `package_instances` filtered by `tenant_id` and `is_complete = false`, limit 20.
+- Step B: Collect distinct `package_id`s and fetch `id, name, package_type, total_hours` from `packages`.
+- Map to `PackageFactData[]` using the instance as the primary row: `id` = instance id, `status` = `is_complete ? "closed" : "active"`, `updated_at` from instance, name/type/hours from the matched package row (fallbacks: `"Unknown package"`, `null`, `null`).
+- Push `"package_instances"` to `tablesQueried` and `recordIds` (not `"packages"`).
 
-### 4. `src/components/layout/ClientLayout.tsx`
-- Destructure `activeTenantId` alongside `isPreview` from `useClientTenant()`.
-- Pass `previewTenantId={isPreview ? activeTenantId ?? undefined : undefined}` to `<ClientAskVivPanel>`.
+**Change 2 — Tasks query (line 134):** Add `.eq("tenant_id", tenantId)` so tasks are tenant-scoped.
 
-## Out of scope
-No other components, hooks, tests, docs, or migrations.
+**Change 3 — Consult logs query (line 180):** Add `.eq("tenant_id", tenantId)` before the `.gte("date", lookbackDate)` filter.
+
+## File 2: `supabase/functions/_shared/ask-viv-fact-builder/fact-derivation.ts`
+
+Update `source_table` from `"packages"` → `"package_instances"` at lines 113, 129, and 153, so derived facts match the `LABEL_BUILDERS` whitelist used by `compliance-assistant-client`.
+
+## Out of Scope
+
+No changes to `compliance-assistant/index.ts`, `compliance-assistant-client/index.ts`, other shared modules, frontend components, or migrations.
