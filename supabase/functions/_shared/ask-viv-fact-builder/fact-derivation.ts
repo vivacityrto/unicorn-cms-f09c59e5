@@ -110,7 +110,7 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
     key: "package_count",
     value: { total: packages.length, active: activeCount },
     reason: null,
-    source_table: "packages",
+    source_table: "package_instances",
     source_ids: packages.map(p => p.id.toString()),
     derived_at: nowIso,
   });
