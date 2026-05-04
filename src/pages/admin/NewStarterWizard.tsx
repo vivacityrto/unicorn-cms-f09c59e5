@@ -173,8 +173,26 @@ export default function NewStarterWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefillUserId, roles.data, teamLeaders]);
 
+  // Provisioning rule is optional metadata. When no rule matches, fall back to an empty
+  // default so the wizard never dead-ends — the operator can complete M365 setup manually
+  // (or we add a rule later under SuperAdmin → Code Tables).
+  const effectiveRule = useMemo(
+    () =>
+      resolved.data ?? {
+        id: 0,
+        role_code: form.roleCode,
+        location_code: form.locationCode,
+        m365_groups: [] as string[],
+        licenses: [] as string[],
+        software: [] as string[],
+        calendars: [] as string[],
+        notes: null,
+        is_active: true,
+      },
+    [resolved.data, form.roleCode, form.locationCode]
+  );
+
   const psScript = useMemo(() => {
-    if (!resolved.data) return "";
     return generatePowerShellScript({
       firstName: form.firstName,
       lastName: form.lastName,
@@ -183,10 +201,10 @@ export default function NewStarterWizard() {
       displayName: form.displayName,
       tempPassword: form.tempPassword,
       usageLocation: form.locationCode,
-      m365Groups: resolved.data.m365_groups,
-      licenses: resolved.data.licenses,
+      m365Groups: effectiveRule.m365_groups,
+      licenses: effectiveRule.licenses,
     });
-  }, [resolved.data, form]);
+  }, [effectiveRule, form]);
 
   const setField = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -195,18 +213,18 @@ export default function NewStarterWizard() {
       case 1:
         return !!(form.firstName && form.lastName && form.locationCode && form.startDate);
       case 2:
-        return !!(form.roleCode && form.teamLeaderId && resolved.data && !resolved.isLoading);
+        return !!(form.roleCode && form.teamLeaderId);
       case 3:
         return !!(form.upn && form.mailNickname && form.displayName && form.tempPassword);
       case 4:
-        return !!resolved.data;
+        return true;
       default:
         return true;
     }
   };
 
   const provision = async (mode: "save_only" | "m365_only" | "full" = "full") => {
-    if (!resolved.data) return;
+    // No-op: provisioning rule is now optional (effectiveRule provides empty defaults).
     if (form.teamLeaderId && !teamLeaders.some((t) => t.user_uuid === form.teamLeaderId)) {
       toast({
         title: "Invalid team leader",
@@ -424,13 +442,13 @@ export default function NewStarterWizard() {
               )}
 
               {form.roleCode && form.locationCode && !resolved.isLoading && !resolved.data && (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
-                  <div className="font-medium text-destructive">
-                    No active provisioning rule for {form.roleCode} / {form.locationCode}
+                <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+                  <div className="font-medium">
+                    No specific provisioning rule for {form.roleCode} / {form.locationCode}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Pick a different role or location combination, or add a rule under
-                    Admin → Staff Provisioning Rules before continuing.
+                    That's fine — defaults will be used. You can continue, then assign M365 groups,
+                    licenses and software manually after setup if needed.
                   </div>
                 </div>
               )}
@@ -474,7 +492,14 @@ export default function NewStarterWizard() {
         )}
 
         {/* STEP 4: Preview */}
-        {step === 4 && resolved.data && (
+        {step === 4 && resolved.isLoading && (
+          <Card>
+            <CardContent className="p-6 flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading provisioning rule…
+            </CardContent>
+          </Card>
+        )}
+        {step === 4 && !resolved.isLoading && (
           <StaffProvisioningPreview
             firstName={form.firstName}
             lastName={form.lastName}
@@ -483,33 +508,9 @@ export default function NewStarterWizard() {
             tempPassword={form.tempPassword}
             roleCode={form.roleCode}
             locationCode={form.locationCode}
-            rule={resolved.data}
+            rule={effectiveRule}
             psScript={psScript}
           />
-        )}
-        {step === 4 && !resolved.data && resolved.isLoading && (
-          <Card>
-            <CardContent className="p-6 flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading provisioning rule…
-            </CardContent>
-          </Card>
-        )}
-        {step === 4 && !resolved.data && !resolved.isLoading && (
-          <Card>
-            <CardHeader>
-              <CardTitle>No provisioning rule found</CardTitle>
-              <CardDescription>
-                There is no active rule for {form.roleCode} / {form.locationCode}. Go back to
-                Step 2 and pick a different role or location, or add a matching rule under
-                Admin → Staff Provisioning Rules.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" onClick={() => setStep(2)}>
-                <ArrowLeft className="h-4 w-4 mr-1" /> Back to Step 2
-              </Button>
-            </CardContent>
-          </Card>
         )}
 
         {/* STEP 5: Provision */}
