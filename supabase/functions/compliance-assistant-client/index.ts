@@ -323,20 +323,62 @@ Deno.serve(async (req) => {
     // 11. Freshness (mirrors compliance-assistant V4)
     const freshness = await deriveFreshness(supabase, gateTenantId);
 
-    // 12. Build deterministic markdown response
+    // 12. Build response with Gemini
     const friendlyRecords = buildFriendlyRecords(safeFacts);
     const translatedGaps = translateGaps([
       ...factsResult.gaps,
       ...(brainResult.confidence.level !== "high" ? [brainResult.confidence.explanation] : []),
       ...(vectorResults.length === 0 ? ["No vector embeddings"] : []),
     ]);
-    const answerMarkdown = buildClientResponse({
-      safeFacts,
-      brainResult,
-      vectorResults,
-      friendlyRecords,
-      translatedGaps,
-    });
+
+    const factsContext = buildFactsContext(safeFacts);
+    const vivSystemPrompt = `You are Viv, the AI compliance assistant for Unicorn by ComplyHub. You help Australian Registered Training Organisations (RTOs) understand their compliance journey and what to do next.
+
+TENANT ACCOUNT DATA (live data from this tenant's account):
+${factsContext}
+
+${vectorResults.length > 0 ? `RELEVANT STANDARDS CONTENT:\n${vectorResults.slice(0, 3).map((v) => `- ${citationLabel(v)}: ${v.content.slice(0, 300)}`).join("\n")}` : ""}
+
+RULES:
+- Answer the user's question using only the account facts above and your knowledge of the Standards for RTOs 2025.
+- Never say "compliant", "non-compliant", "audit ready", or predict audit outcomes.
+- Keep answers concise — 3 to 5 sentences or a short bullet list.
+- If you cannot answer from the facts provided, say so clearly and suggest the user contact their Vivacity consultant.
+- Use Australian English.
+- Do not mention internal system details, table names, or fact keys.`;
+
+    let answerMarkdown: string;
+    try {
+      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: vivSystemPrompt },
+            { role: "user", content: question },
+          ],
+          max_tokens: 500,
+          temperature: 0.3,
+        }),
+      });
+      if (!aiResp.ok) {
+        const errText = await aiResp.text();
+        console.error("Gemini error:", aiResp.status, errText);
+        throw new Error(`Gemini API error: ${aiResp.status}`);
+      }
+      const aiData = await aiResp.json();
+      answerMarkdown =
+        aiData.choices?.[0]?.message?.content ??
+        "I couldn't generate a response. Please try again.";
+    } catch (err) {
+      console.error("Gemini call failed:", err);
+      answerMarkdown =
+        "I'm having trouble connecting right now. Please try again in a moment, or contact your Vivacity consultant directly.";
+    }
 
     const consultantHandoff =
       brainResult.confidence.level === "low" ||
