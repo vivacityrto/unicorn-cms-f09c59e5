@@ -126,7 +126,7 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
         type: pkg.package_type,
       },
       reason: null,
-      source_table: "packages",
+      source_table: "package_instances",
       source_ids: [pkg.id.toString()],
       derived_at: nowIso,
     });
