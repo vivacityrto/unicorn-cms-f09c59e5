@@ -40,6 +40,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 import { AskVivFreshnessChip } from "./AskVivFreshnessChip";
 
 // ============= Types =============
@@ -395,6 +396,16 @@ function AssistantBubble({ message }: { message: AssistantMessage }) {
     message.freshness !== null &&
     (message.freshness.status === "aging" || message.freshness.status === "stale");
 
+  const hasRecords = message.records_accessed.length > 0;
+  const cleanedContent = hasRecords
+    ? message.content
+        .replace(
+          /^##\s*What we looked at[^\n]*\n(?:[ \t]*[-*][^\n]*\n?)*/gim,
+          "",
+        )
+        .trimEnd()
+    : message.content;
+
   return (
     <div className="flex gap-2 items-start">
       <div className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-primary to-primary/70">
@@ -419,24 +430,36 @@ function AssistantBubble({ message }: { message: AssistantMessage }) {
           </div>
         )}
 
-        {/* Message bubble — same plain renderer used in AskVivPanel */}
-        <div className="rounded-2xl rounded-bl-md px-4 py-2.5 text-sm bg-muted text-foreground">
-          <p className="whitespace-pre-wrap">{message.content}</p>
+        {/* Message bubble — markdown-rendered */}
+        <div className="rounded-2xl rounded-bl-md px-4 py-2.5 bg-muted text-foreground">
+          <ReactMarkdown
+            components={{
+              h2: ({ node, ...props }) => (
+                <h2
+                  className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-3 mb-1 first:mt-0"
+                  {...props}
+                />
+              ),
+              ul: ({ node, ...props }) => (
+                <ul className="space-y-1 pl-4" {...props} />
+              ),
+              ol: ({ node, ...props }) => (
+                <ol className="space-y-1 pl-4" {...props} />
+              ),
+              li: ({ node, ...props }) => (
+                <li className="text-sm list-disc" {...props} />
+              ),
+              p: ({ node, ...props }) => <p className="text-sm" {...props} />,
+            }}
+          >
+            {cleanedContent}
+          </ReactMarkdown>
         </div>
 
         {/* Metadata stack */}
         <div className="mt-2 space-y-1.5">
           {/* Confidence chip */}
           <ConfidenceChip confidence={message.confidence} />
-
-          {/* Gaps — italic list */}
-          {message.gaps.length > 0 && (
-            <ul className="text-xs text-muted-foreground italic list-disc list-inside space-y-0.5">
-              {message.gaps.map((gap, idx) => (
-                <li key={idx}>{gap}</li>
-              ))}
-            </ul>
-          )}
 
           {/* What we looked at — labels only */}
           {message.records_accessed.length > 0 && (
