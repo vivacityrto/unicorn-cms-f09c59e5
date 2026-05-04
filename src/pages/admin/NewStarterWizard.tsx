@@ -195,7 +195,7 @@ export default function NewStarterWizard() {
       case 1:
         return !!(form.firstName && form.lastName && form.locationCode && form.startDate);
       case 2:
-        return !!(form.roleCode && form.teamLeaderId);
+        return !!(form.roleCode && form.teamLeaderId && resolved.data && !resolved.isLoading);
       case 3:
         return !!(form.upn && form.mailNickname && form.displayName && form.tempPassword);
       case 4:
@@ -422,6 +422,18 @@ export default function NewStarterWizard() {
                   </div>
                 </div>
               )}
+
+              {form.roleCode && form.locationCode && !resolved.isLoading && !resolved.data && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
+                  <div className="font-medium text-destructive">
+                    No active provisioning rule for {form.roleCode} / {form.locationCode}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Pick a different role or location combination, or add a rule under
+                    Admin → Staff Provisioning Rules before continuing.
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -474,6 +486,30 @@ export default function NewStarterWizard() {
             rule={resolved.data}
             psScript={psScript}
           />
+        )}
+        {step === 4 && !resolved.data && resolved.isLoading && (
+          <Card>
+            <CardContent className="p-6 flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading provisioning rule…
+            </CardContent>
+          </Card>
+        )}
+        {step === 4 && !resolved.data && !resolved.isLoading && (
+          <Card>
+            <CardHeader>
+              <CardTitle>No provisioning rule found</CardTitle>
+              <CardDescription>
+                There is no active rule for {form.roleCode} / {form.locationCode}. Go back to
+                Step 2 and pick a different role or location, or add a matching rule under
+                Admin → Staff Provisioning Rules.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" onClick={() => setStep(2)}>
+                <ArrowLeft className="h-4 w-4 mr-1" /> Back to Step 2
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
         {/* STEP 5: Provision */}
