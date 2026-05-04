@@ -99,7 +99,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             size="icon"
             onClick={() => setIsAskVivOpen(true)}
             aria-label="Open Ask Viv"
-            className="fixed bottom-6 right-24 z-40 h-12 w-12 rounded-full shadow-lg p-1 bg-primary hover:bg-primary/90"
+            className="fixed bottom-6 right-6 z-50 h-12 w-12 rounded-full shadow-lg p-1 bg-primary hover:bg-primary/90"
           >
             <img src={vivIcon} alt="Ask Viv" className="h-9 w-9 object-contain" />
             <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-[hsl(var(--success,142_76%_36%))] border border-background" />
