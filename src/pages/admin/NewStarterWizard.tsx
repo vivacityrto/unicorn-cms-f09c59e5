@@ -492,7 +492,14 @@ export default function NewStarterWizard() {
         )}
 
         {/* STEP 4: Preview */}
-        {step === 4 && resolved.data && (
+        {step === 4 && resolved.isLoading && (
+          <Card>
+            <CardContent className="p-6 flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading provisioning rule…
+            </CardContent>
+          </Card>
+        )}
+        {step === 4 && !resolved.isLoading && (
           <StaffProvisioningPreview
             firstName={form.firstName}
             lastName={form.lastName}
@@ -501,33 +508,9 @@ export default function NewStarterWizard() {
             tempPassword={form.tempPassword}
             roleCode={form.roleCode}
             locationCode={form.locationCode}
-            rule={resolved.data}
+            rule={effectiveRule}
             psScript={psScript}
           />
-        )}
-        {step === 4 && !resolved.data && resolved.isLoading && (
-          <Card>
-            <CardContent className="p-6 flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading provisioning rule…
-            </CardContent>
-          </Card>
-        )}
-        {step === 4 && !resolved.data && !resolved.isLoading && (
-          <Card>
-            <CardHeader>
-              <CardTitle>No provisioning rule found</CardTitle>
-              <CardDescription>
-                There is no active rule for {form.roleCode} / {form.locationCode}. Go back to
-                Step 2 and pick a different role or location, or add a matching rule under
-                Admin → Staff Provisioning Rules.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" onClick={() => setStep(2)}>
-                <ArrowLeft className="h-4 w-4 mr-1" /> Back to Step 2
-              </Button>
-            </CardContent>
-          </Card>
         )}
 
         {/* STEP 5: Provision */}
