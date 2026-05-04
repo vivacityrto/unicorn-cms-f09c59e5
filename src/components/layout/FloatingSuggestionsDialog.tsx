@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useSuggestItems } from '@/hooks/useSuggestItems';
 import { Badge } from '@/components/ui/badge';
@@ -85,7 +86,7 @@ export function FloatingSuggestionsDialog({ open, onClose }: FloatingSuggestions
   const width = expanded ? 680 : 460;
   const height = expanded ? 600 : 440;
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop to make the dialog noticeable */}
       <div
