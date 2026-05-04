@@ -112,8 +112,8 @@ serve(async (req) => {
     if (!body[f]) return json(400, { ok: false, error: `Missing field: ${String(f)}` });
   }
 
-  // Load resolved rule
-  const { data: rule, error: ruleErr } = await admin
+  // Load resolved rule (optional — fall back to empty defaults if none configured)
+  const { data: ruleRow, error: ruleErr } = await admin
     .from("staff_provisioning_rules")
     .select("*")
     .eq("role_code", body.role_code)
@@ -122,7 +122,15 @@ serve(async (req) => {
     .maybeSingle();
 
   if (ruleErr) return json(500, { ok: false, error: ruleErr.message });
-  if (!rule) return json(404, { ok: false, error: `No active rule for ${body.role_code}/${body.location_code}` });
+  const rule = ruleRow ?? {
+    role_code: body.role_code,
+    location_code: body.location_code,
+    m365_groups: [] as string[],
+    licenses: [] as string[],
+    software: [] as string[],
+    calendars: [] as string[],
+    is_active: true,
+  };
 
   // Create the run row
   const { data: run, error: runErr } = await admin
