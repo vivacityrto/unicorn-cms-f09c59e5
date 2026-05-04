@@ -19,40 +19,40 @@ export function useStageActiveUsage(stageId: number | null) {
     const fetchActiveUsage = async () => {
       setLoading(true);
       try {
-        // Get client packages that use this stage and are active
-        const { data, error } = await (supabase as any)
+        // Step 1: client_package_stages → client_packages (active)
+        const { data: cpsRows, error: cpsError } = await (supabase as any)
           .from('client_package_stages')
-          .select(`
-            id,
-            client_packages!inner(
-              id,
-              status,
-              tenant_id,
-              tenants(name)
-            )
-          `)
+          .select('id, client_packages!inner(id, status, tenant_id)')
           .eq('stage_id', stageId)
           .in('client_packages.status', ['active', 'in_progress']);
 
-        if (error) throw error;
+        if (cpsError) throw cpsError;
 
-        // Extract unique tenants
-        const tenantsMap = new Map<number, string>();
-        (data || []).forEach((row: any) => {
-          const cp = row.client_packages;
-          if (cp?.tenant_id && cp?.tenants?.name) {
-            tenantsMap.set(cp.tenant_id, cp.tenants.name);
-          }
-        });
+        const tenantIds = Array.from(new Set(
+          (cpsRows || [])
+            .map((r: any) => r.client_packages?.tenant_id)
+            .filter((v: any) => v != null)
+        )) as number[];
 
-        const clients = Array.from(tenantsMap.entries()).map(([tenant_id, tenant_name]) => ({
-          tenant_id,
-          tenant_name
+        // Step 2: fetch tenant names separately (no FK relationship between client_packages and tenants)
+        let tenantNameMap = new Map<number, string>();
+        if (tenantIds.length > 0) {
+          const { data: tenantsData, error: tErr } = await (supabase as any)
+            .from('tenants')
+            .select('tenant_id, name')
+            .in('tenant_id', tenantIds);
+          if (tErr) throw tErr;
+          (tenantsData || []).forEach((t: any) => tenantNameMap.set(t.tenant_id, t.name));
+        }
+
+        const clients = tenantIds.map(id => ({
+          tenant_id: id,
+          tenant_name: tenantNameMap.get(id) || `Tenant #${id}`,
         }));
 
         setActiveUsage({
-          count: data?.length || 0,
-          clients
+          count: cpsRows?.length || 0,
+          clients,
         });
       } catch (error) {
         console.error('Error fetching stage active usage:', error);
