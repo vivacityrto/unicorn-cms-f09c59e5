@@ -442,13 +442,13 @@ export default function NewStarterWizard() {
               )}
 
               {form.roleCode && form.locationCode && !resolved.isLoading && !resolved.data && (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
-                  <div className="font-medium text-destructive">
-                    No active provisioning rule for {form.roleCode} / {form.locationCode}
+                <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+                  <div className="font-medium">
+                    No specific provisioning rule for {form.roleCode} / {form.locationCode}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    Pick a different role or location combination, or add a rule under
-                    Admin → Staff Provisioning Rules before continuing.
+                    That's fine — defaults will be used. You can continue, then assign M365 groups,
+                    licenses and software manually after setup if needed.
                   </div>
                 </div>
               )}
