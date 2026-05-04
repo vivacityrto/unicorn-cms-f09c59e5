@@ -141,6 +141,7 @@ export async function retrieveFactData(
   const { data: tasksData } = await supabase
     .from("tasks")
     .select("id, task_name, status, priority, due_date_at, updated_at")
+    .eq("tenant_id", tenantId)
     .limit(TASK_LIMIT);
 
   const tasks: TaskFactData[] = (tasksData || []).map((t) => ({
