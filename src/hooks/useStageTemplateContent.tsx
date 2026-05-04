@@ -2,6 +2,29 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * Safe, non-blocking audit log for stage template changes.
+ * audit_events.entity_id is a strict UUID column, so we cannot stuff a numeric
+ * stage_id into it. We use a random UUID for entity_id and keep the real
+ * numeric stage_id inside details.stage_id for downstream filtering.
+ */
+function logStageTemplateAudit(stageId: number | null | undefined, action: string, details: Record<string, any>) {
+  try {
+    const payload = {
+      entity: 'stage',
+      entity_id: (globalThis.crypto?.randomUUID?.() ?? '00000000-0000-0000-0000-000000000000'),
+      action,
+      details: { ...details, stage_id: stageId ?? null },
+    };
+    // Fire-and-forget; never block UI on audit failures.
+    void supabase.from('audit_events').insert(payload as any).then(({ error }) => {
+      if (error) console.warn('[audit] stage template audit failed:', error.message);
+    });
+  } catch (e) {
+    console.warn('[audit] stage template audit threw:', e);
+  }
+}
+
 // Types for stage template content (mapped from base tables)
 export interface StageTeamTask {
   id: number;
