@@ -682,9 +682,10 @@ export default function AdminStageDetail() {
           
           await supabase.from('audit_events').insert({
             entity: 'stage',
-            entity_id: stage.id.toString(),
+            entity_id: crypto.randomUUID(),
             action: hasDependencyWarning ? 'stage.certified_with_dependency_warning' : 'stage.certified_with_warnings',
             details: { 
+              stage_id: stage.id,
               warning_messages: certWarningMessages,
               stage_title: stage.title
             }
