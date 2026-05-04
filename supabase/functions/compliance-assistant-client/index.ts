@@ -52,6 +52,7 @@ const corsHeaders = {
 
 // ============= Constants =============
 const DAILY_QUERY_CAP = 20;
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const VIVACITY_TENANT_ID = 6372;
 
 /** Sources whose facts must NEVER be exposed to client-mode users. */
@@ -322,20 +323,62 @@ Deno.serve(async (req) => {
     // 11. Freshness (mirrors compliance-assistant V4)
     const freshness = await deriveFreshness(supabase, gateTenantId);
 
-    // 12. Build deterministic markdown response
+    // 12. Build response with Gemini
     const friendlyRecords = buildFriendlyRecords(safeFacts);
     const translatedGaps = translateGaps([
       ...factsResult.gaps,
       ...(brainResult.confidence.level !== "high" ? [brainResult.confidence.explanation] : []),
       ...(vectorResults.length === 0 ? ["No vector embeddings"] : []),
     ]);
-    const answerMarkdown = buildClientResponse({
-      safeFacts,
-      brainResult,
-      vectorResults,
-      friendlyRecords,
-      translatedGaps,
-    });
+
+    const factsContext = buildFactsContext(safeFacts);
+    const vivSystemPrompt = `You are Viv, the AI compliance assistant for Unicorn by ComplyHub. You help Australian Registered Training Organisations (RTOs) understand their compliance journey and what to do next.
+
+TENANT ACCOUNT DATA (live data from this tenant's account):
+${factsContext}
+
+${vectorResults.length > 0 ? `RELEVANT STANDARDS CONTENT:\n${vectorResults.slice(0, 3).map((v) => `- ${citationLabel(v)}: ${v.content.slice(0, 300)}`).join("\n")}` : ""}
+
+RULES:
+- Answer the user's question using only the account facts above and your knowledge of the Standards for RTOs 2025.
+- Never say "compliant", "non-compliant", "audit ready", or predict audit outcomes.
+- Keep answers concise — 3 to 5 sentences or a short bullet list.
+- If you cannot answer from the facts provided, say so clearly and suggest the user contact their Vivacity consultant.
+- Use Australian English.
+- Do not mention internal system details, table names, or fact keys.`;
+
+    let answerMarkdown: string;
+    try {
+      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: vivSystemPrompt },
+            { role: "user", content: question },
+          ],
+          max_tokens: 500,
+          temperature: 0.3,
+        }),
+      });
+      if (!aiResp.ok) {
+        const errText = await aiResp.text();
+        console.error("Gemini error:", aiResp.status, errText);
+        throw new Error(`Gemini API error: ${aiResp.status}`);
+      }
+      const aiData = await aiResp.json();
+      answerMarkdown =
+        aiData.choices?.[0]?.message?.content ??
+        "I couldn't generate a response. Please try again.";
+    } catch (err) {
+      console.error("Gemini call failed:", err);
+      answerMarkdown =
+        "I'm having trouble connecting right now. Please try again in a moment, or contact your Vivacity consultant directly.";
+    }
 
     const consultantHandoff =
       brainResult.confidence.level === "low" ||
@@ -545,16 +588,8 @@ async function deriveFreshness(
       .maybeSingle();
     lastActivityAt = (auditRow?.created_at as string | undefined) ?? null;
 
-    if (!lastActivityAt) {
-      const { data: taskRow } = await supabase
-        .from("tasks")
-        .select("updated_at")
-        .eq("tenant_id", tenantId)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      lastActivityAt = (taskRow?.updated_at as string | undefined) ?? null;
-    }
+
+
 
     const days = lastActivityAt
       ? Math.floor((Date.now() - new Date(lastActivityAt).getTime()) / 86_400_000)
@@ -574,98 +609,56 @@ async function deriveFreshness(
   }
 }
 
-/** Deterministic markdown formatter — NO LLM. */
-function buildClientResponse(args: {
-  safeFacts: DerivedFact[];
-  // deno-lint-ignore no-explicit-any
-  brainResult: any;
-  vectorResults: VectorResult[];
-  friendlyRecords: { label: string }[];
-  translatedGaps: string[];
-}): string {
-  const { safeFacts, brainResult, vectorResults, friendlyRecords, translatedGaps } = args;
-  const bullets: string[] = [];
+/** Summarise safe facts into plain text for the Gemini system prompt. */
+function buildFactsContext(facts: DerivedFact[]): string {
+  const lines: string[] = [];
 
-  // Tenant overview
-  const tenantNameFact = safeFacts.find((f) => f.key === "tenant_name");
-  const tenantStatusFact = safeFacts.find((f) => f.key === "tenant_status");
-  if (tenantNameFact) {
-    const status = tenantStatusFact ? ` (${tenantStatusFact.value})` : "";
-    bullets.push(`Your organisation: ${tenantNameFact.value}${status}.`);
+  const tenantName = facts.find((f) => f.key === "tenant_name")?.value;
+  const tenantStatus = facts.find((f) => f.key === "tenant_status")?.value;
+  if (tenantName) {
+    lines.push(`Organisation: ${tenantName}${tenantStatus ? ` (${tenantStatus})` : ""}`);
   }
 
-  // Package counts
-  const pkgCountFact = safeFacts.find((f) => f.key === "package_count");
-  if (pkgCountFact) {
-    const v = pkgCountFact.value as { total: number; active: number };
-    bullets.push(`You have ${v.total} package${v.total === 1 ? "" : "s"}, ${v.active} currently active.`);
+  const pkgCount = facts.find((f) => f.key === "package_count")?.value as
+    | { total: number; active: number }
+    | undefined;
+  if (pkgCount) {
+    lines.push(`Packages: ${pkgCount.total} total, ${pkgCount.active} currently active`);
   }
 
-  // Tasks
-  const incompleteFact = safeFacts.find((f) => f.key === "tasks_incomplete_count");
-  const overdueFact = safeFacts.find((f) => f.key === "tasks_overdue_count");
-  if (incompleteFact) {
-    bullets.push(`There are ${incompleteFact.value} incomplete tasks on your account.`);
-  }
-  if (overdueFact && (overdueFact.value as number) > 0) {
-    bullets.push(`${overdueFact.value} of these are overdue — consider prioritising them next.`);
-  }
-
-  // Next due task — folded in as next-action recommendation
-  const nextTaskFact = safeFacts.find((f) => f.key === "next_due_task");
-  if (nextTaskFact) {
-    const v = nextTaskFact.value as { label: string; due_date: string };
-    bullets.push(`Next up: "${v.label}" is due ${v.due_date}.`);
+  const activePackages = facts
+    .filter((f) => f.key === "package_status")
+    .map((f) => {
+      const v = f.value as { name: string; status: string };
+      return `${v.name} (${v.status})`;
+    });
+  if (activePackages.length > 0) {
+    lines.push(`Active packages: ${activePackages.join(", ")}`);
   }
 
-  // Blockers
-  const blockerFact = safeFacts.find((f) => f.key === "phase_blockers");
-  if (blockerFact && Array.isArray(blockerFact.value) && (blockerFact.value as unknown[]).length > 0) {
-    const blockers = blockerFact.value as Array<{ label: string; count: number }>;
-    for (const b of blockers.slice(0, 2)) {
-      bullets.push(`Blocker: ${b.label} (${b.count}).`);
-    }
-  }
+  const incomplete = facts.find((f) => f.key === "tasks_incomplete_count")?.value;
+  const overdue = facts.find((f) => f.key === "tasks_overdue_count")?.value;
+  if (incomplete !== undefined) lines.push(`Incomplete tasks: ${incomplete}`);
+  if (overdue !== undefined && (overdue as number) > 0) lines.push(`Overdue tasks: ${overdue}`);
 
-  // Escalations from brain
-  const escalations = (brainResult?.reasoning?.escalation_triggers ?? []) as Array<{
-    message: string;
-    suggested_action: string;
-  }>;
-  for (const e of escalations.slice(0, 2)) {
-    bullets.push(`${e.message} ${e.suggested_action ? `Recommended: ${e.suggested_action}.` : ""}`.trim());
-  }
+  const nextTask = facts.find((f) => f.key === "next_due_task")?.value as
+    | { label: string; due_date: string }
+    | undefined;
+  if (nextTask) lines.push(`Next task due: "${nextTask.label}" on ${nextTask.due_date}`);
 
-  // Top vector results — paraphrased reference, no raw chunk dump
-  if (vectorResults.length > 0) {
-    const top = vectorResults[0];
-    bullets.push(`Related material found: ${citationLabel(top)}.`);
-  }
+  const phases = facts
+    .filter((f) => f.key === "phase_status")
+    .map((f) => {
+      const v = f.value as { title: string; status: string };
+      return `${v.title} (${v.status})`;
+    });
+  if (phases.length > 0) lines.push(`Phases/stages: ${phases.join(", ")}`);
 
-  if (bullets.length === 0) {
-    bullets.push("We couldn't find specific information for your question. Consider rephrasing or contacting your consultant.");
-  }
+  const consult = facts.find((f) => f.key === "consult_hours_recent")?.value as
+    | { hours: number; period_days: number }
+    | undefined;
+  if (consult) lines.push(`Consulting hours (last ${consult.period_days} days): ${consult.hours}`);
 
-  const sections: string[] = [];
-
-  sections.push("## Answer");
-  sections.push(bullets.slice(0, 8).map((b) => `- ${b}`).join("\n"));
-  sections.push("");
-
-  sections.push("## What we looked at");
-  if (friendlyRecords.length > 0) {
-    sections.push(friendlyRecords.map((r) => `- ${r.label}`).join("\n"));
-  } else {
-    sections.push("- (no specific records to display)");
-  }
-  sections.push("");
-
-  sections.push("## What we couldn't find");
-  if (translatedGaps.length > 0) {
-    sections.push(translatedGaps.map((g) => `- ${g}`).join("\n"));
-  } else {
-    sections.push("- Nothing significant.");
-  }
-
-  return sections.join("\n");
+  return lines.length > 0 ? lines.join("\n") : "No account data available.";
 }
+

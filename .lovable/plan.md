@@ -1,39 +1,25 @@
-I found two concrete causes on the Admin Stage Detail page:
+## Goal
+Replace the deterministic markdown response in the `compliance-assistant-client` edge function with a Gemini-powered answer (via Lovable AI Gateway), and fix two silent `.eq("tenant_id", ...)` errors against the `tasks` table that have no such column.
 
-1. Stage field edits are wired to `onChange`, so every keystroke immediately calls the database. Because the stage is shared/active, the live-stage confirmation flow intercepts the first keystroke, creating confusing partial saves and success messages instead of one predictable save.
-2. Several child-content actions write an `audit_events` row with `entity_id = stageId.toString()`. The database now enforces `audit_events.entity_id` as UUID, so audit writes like `"1064"` fail. Some handlers await that failed audit insert after the main mutation, which can make the action look inconsistent and also explains the console error: `invalid input syntax for type uuid: "1064"`.
+No UI changes. No migrations. No new secrets (`LOVABLE_API_KEY` already set).
 
-Plan:
+## Files to edit
 
-1. Make Stage Settings edits explicit and predictable
-   - Replace the instant-save `onChange` behaviour for stage name, stage type, description, short name, video URL, version label, and AI hint with local draft state.
-   - Add a clear `Save Stage Settings` button.
-   - Only show the live-stage confirmation once, when saving the full draft, not on every keystroke.
-   - After save, refetch the stage from the database and update the local UI from the confirmed persisted row.
-   - Show a destructive toast if the update fails or affects 0 rows, rather than a success toast.
+### 1. `supabase/functions/compliance-assistant-client/index.ts`
+- **A.** Add `const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;` near the top constants, just after `DAILY_QUERY_CAP`.
+- **B.** Add new helper `buildFactsContext(facts)` that summarises safe facts (tenant, packages, tasks, phases, consult hours) into plain text for the system prompt.
+- **C.** Replace step 12 of the handler so it builds a Viv system prompt from `factsContext` + top 3 vector results, then calls `https://ai.gateway.lovable.dev/v1/chat/completions` with `google/gemini-2.5-flash` (max_tokens 500, temperature 0.3). Falls back to a friendly error message on failure. Logs Gemini errors to console.
+- **D.** Delete the now-unused `buildClientResponse` deterministic markdown formatter.
+- **E.** In `deriveFreshness`, remove the fallback block that queries `tasks` filtered by `tenant_id` (column doesn't exist — silent error contributes to "Stale: Data last updated unknown"). The `audit_events` lookup above is sufficient.
 
-2. Fix child task/email/document operations so audit logging cannot break them
-   - Update `useStageTemplateContent` so staff task, client task, email, and document link/unlink operations do not write numeric stage IDs into strict UUID `audit_events.entity_id`.
-   - For now, make those audit writes non-blocking and UUID-safe, with the numeric stage ID stored inside `details.stage_id` instead.
-   - This preserves audit context without causing `invalid input syntax for type uuid: "1064"`.
+### 2. `supabase/functions/_shared/ask-viv-fact-builder/data-retrieval.ts`
+- In step 4 (tasks query), remove `.eq("tenant_id", tenantId)`. RLS handles tenant scoping; the filter currently causes silent PostgREST failures and tasks always appear empty.
 
-3. Add missing RLS permissions for SuperAdmin stage child content
-   - Add/repair policies for `client_tasks` so SuperAdmins can insert/update/delete stage template client tasks, not only read them.
-   - Replace legacy `staff_tasks` policies that use `is_superadmin()` with the current `is_super_admin_safe(auth.uid())`, because Dave’s current role is `unicorn_role = 'Super Admin'` and `global_role` is null.
-   - Ensure `emails` stage-template CRUD remains available to SuperAdmins using the current safe role function.
-   - Keep tenant-facing SELECT policies intact.
+## Deployment
+Deploy both edge functions after edits:
+- `compliance-assistant-client`
+- (shared file is bundled into any function importing it; redeploy `compliance-assistant-client` to pick it up)
 
-4. Fix audit log display for numeric stage IDs
-   - Stop querying `audit_events.entity_id = '1064'` on the stage audit tab, because that column is UUID and will always error for numeric stage IDs.
-   - Query stage-related audit rows via `details.stage_id = 1064` going forward.
-   - This removes the current console error and makes the audit tab compatible with bigint/integer stage IDs.
-
-5. Clean up the active-usage lookup error
-   - Fix `useStageActiveUsage` so it no longer asks Supabase for a non-existent `client_packages -> tenants` relationship.
-   - Use the existing package/stage/tenant tables in separate safe queries instead.
-   - This will restore the active-client warning so edits to live stages are guarded correctly.
-
-6. Verification
-   - Test editing stage name/description/short name and confirm refresh preserves the change.
-   - Test deleting a staff task, email, and unlinking a document from the stage and confirm the item disappears after refresh.
-   - Confirm the browser console no longer shows the `client_packages` relationship error or `invalid input syntax for type uuid: "1064"` from the stage page.
+## Expected outcome
+- Viv produces natural-language Gemini answers grounded in tenant facts + RTO 2025 standards snippets, with the safety rails (no "compliant" claims, AU English, concise).
+- Tasks facts populate correctly; freshness no longer falsely reports "unknown".
