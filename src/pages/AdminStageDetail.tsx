@@ -1265,20 +1265,36 @@ export default function AdminStageDetail() {
                 <CardDescription>Configure the basic properties of this stage.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {settingsDirty && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Unsaved changes</AlertTitle>
+                    <AlertDescription className="flex items-center justify-between gap-4">
+                      <span>You have unsaved stage settings. Click Save to persist them.</span>
+                      <div className="flex gap-2 shrink-0">
+                        <Button size="sm" variant="outline" onClick={resetSettingsDraft} disabled={isSavingSettings}>Discard</Button>
+                        <Button size="sm" onClick={saveSettings} disabled={isSavingSettings}>
+                          {isSavingSettings ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                          Save Stage Settings
+                        </Button>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Stage Name</Label>
                     <Input
-                      value={stage.title || ''}
-                      onChange={(e) => handleUpdateStage({ title: e.target.value })}
+                      value={settingsDraft.title}
+                      onChange={(e) => setSettingsDraft(d => ({ ...d, title: e.target.value }))}
                       placeholder="e.g., Client Onboarding"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Stage Type</Label>
                     <Select 
-                      value={stage.stage_type || 'delivery'} 
-                      onValueChange={(value) => handleUpdateStage({ stage_type: value })}
+                      value={settingsDraft.stage_type} 
+                      onValueChange={(value) => setSettingsDraft(d => ({ ...d, stage_type: value }))}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -1295,8 +1311,8 @@ export default function AdminStageDetail() {
                 <div className="space-y-2">
                   <Label>Description</Label>
                   <Textarea
-                    value={stage.description || ''}
-                    onChange={(e) => handleUpdateStage({ description: e.target.value })}
+                    value={settingsDraft.description}
+                    onChange={(e) => setSettingsDraft(d => ({ ...d, description: e.target.value }))}
                     placeholder="Describe what this stage involves..."
                     rows={3}
                   />
@@ -1306,8 +1322,8 @@ export default function AdminStageDetail() {
                   <div className="space-y-2">
                     <Label>Short Name</Label>
                     <Input
-                      value={stage.short_name || ''}
-                      onChange={(e) => handleUpdateStage({ short_name: e.target.value })}
+                      value={settingsDraft.short_name}
+                      onChange={(e) => setSettingsDraft(d => ({ ...d, short_name: e.target.value }))}
                       placeholder="e.g., Onboard"
                     />
                   </div>
@@ -1320,8 +1336,8 @@ export default function AdminStageDetail() {
                 <div className="space-y-2">
                   <Label>Video URL (optional)</Label>
                   <Input
-                    value={stage.video_url || ''}
-                    onChange={(e) => handleUpdateStage({ video_url: e.target.value })}
+                    value={settingsDraft.video_url}
+                    onChange={(e) => setSettingsDraft(d => ({ ...d, video_url: e.target.value }))}
                     placeholder="https://youtube.com/..."
                   />
                 </div>
@@ -1329,8 +1345,8 @@ export default function AdminStageDetail() {
                 <div className="space-y-2">
                   <Label>Stage Version Label</Label>
                   <Input
-                    value={(stage as any).version_label || ''}
-                    onChange={(e) => handleUpdateVersionLabel(e.target.value)}
+                    value={settingsDraft.version_label}
+                    onChange={(e) => setSettingsDraft(d => ({ ...d, version_label: e.target.value }))}
                     placeholder="e.g., v2025.1, July 2026"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -1341,11 +1357,21 @@ export default function AdminStageDetail() {
                 <div className="space-y-2">
                   <Label>AI Hint (optional)</Label>
                   <Textarea
-                    value={stage.ai_hint || ''}
-                    onChange={(e) => handleUpdateStage({ ai_hint: e.target.value })}
+                    value={settingsDraft.ai_hint}
+                    onChange={(e) => setSettingsDraft(d => ({ ...d, ai_hint: e.target.value }))}
                     placeholder="Hints for AI suggestions..."
                     rows={2}
                   />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                  <Button variant="outline" onClick={resetSettingsDraft} disabled={!settingsDirty || isSavingSettings}>
+                    Discard changes
+                  </Button>
+                  <Button onClick={saveSettings} disabled={!settingsDirty || isSavingSettings}>
+                    {isSavingSettings ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                    Save Stage Settings
+                  </Button>
                 </div>
 
                 {/* Frameworks Section */}
