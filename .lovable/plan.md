@@ -1,29 +1,14 @@
-## Fix: Portal the FloatingSuggestionsDialog out of the TopBar stacking context
+## Fix: Suggestions dialog overflow on expand + drag clamp
 
-**Problem**
-`FloatingSuggestionsDialog` is mounted inside the sticky `<header>` (z-index 20), which creates a CSS stacking context. The dialog's `z-index: 9999` is therefore scoped to that header, so dashboard cards rendered elsewhere in the DOM can paint on top of it.
+**File:** `src/components/layout/FloatingSuggestionsDialog.tsx`
 
-**Change (single file: `src/components/layout/FloatingSuggestionsDialog.tsx`)**
+### Change 1 — Expand/minimize button (line ~123)
+Replace the existing `onClick={() => setExpanded(!expanded)}` on the expand Button with a handler that also clamps `position` into the viewport when switching to the expanded size (680×600 + 16px margin).
 
-1. Add at the top of the file:
-   ```ts
-   import { createPortal } from 'react-dom';
-   ```
-2. In the component's return, wrap the existing `<>…</>` fragment (backdrop `div` + dialog `div`) in `createPortal(…, document.body)`:
-   ```tsx
-   if (!open) return null;
-   return createPortal(
-     <>
-       {/* existing backdrop + dialog JSX, unchanged */}
-     </>,
-     document.body
-   );
-   ```
+### Change 2 — Drag clamp (lines ~57–60)
+Inside `handleMouseDown`'s `handleMouseMove`, replace the hardcoded `innerWidth - 200` / `innerHeight - 100` clamps with `innerWidth - width` / `innerHeight - height`, using the `width` / `height` already computed before the return.
 
-**Not changing**
-- No z-index values touched.
-- No layout, drag handling, filtering, or empty-state logic touched.
-- No other files modified.
+### Technical note
+`width` and `height` are `const`s in the same component-render scope. `handleMouseDown` is recreated each render (via `useCallback` with `[position]`), and `handleMouseMove` only runs after mousedown, by which point both consts are initialised — so the closure reference is safe despite the lexical order.
 
-**Why this works**
-Portaling renders the dialog as a direct child of `document.body`, outside the header's stacking context, so its `z-index: 9999` competes against the page root and reliably sits above dashboard cards.
+No other edits: no styling, z-index, portal, or logic changes.
