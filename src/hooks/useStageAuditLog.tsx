@@ -37,12 +37,13 @@ export function useStageAuditLog(options: UseStageAuditLogOptions) {
     setError(null);
 
     try {
-      // Query audit_events for this stage (match either legacy entity_id text OR details->stage_id numeric)
+      // Query audit_events for this stage. entity_id is uuid (random per event);
+      // the canonical stage reference lives in details.stage_id.
       let query = supabase
         .from('audit_events')
         .select('*')
         .eq('entity', 'stage')
-        .or(`entity_id.eq.${stageId},details->>stage_id.eq.${stageId}`)
+        .eq('details->>stage_id', String(stageId))
         .order('created_at', { ascending: false });
 
       if (dateFrom) {
