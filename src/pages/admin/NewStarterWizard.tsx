@@ -173,8 +173,26 @@ export default function NewStarterWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefillUserId, roles.data, teamLeaders]);
 
+  // Provisioning rule is optional metadata. When no rule matches, fall back to an empty
+  // default so the wizard never dead-ends — the operator can complete M365 setup manually
+  // (or we add a rule later under SuperAdmin → Code Tables).
+  const effectiveRule = useMemo(
+    () =>
+      resolved.data ?? {
+        id: 0,
+        role_code: form.roleCode,
+        location_code: form.locationCode,
+        m365_groups: [] as string[],
+        licenses: [] as string[],
+        software: [] as string[],
+        calendars: [] as string[],
+        notes: null,
+        is_active: true,
+      },
+    [resolved.data, form.roleCode, form.locationCode]
+  );
+
   const psScript = useMemo(() => {
-    if (!resolved.data) return "";
     return generatePowerShellScript({
       firstName: form.firstName,
       lastName: form.lastName,
@@ -183,10 +201,10 @@ export default function NewStarterWizard() {
       displayName: form.displayName,
       tempPassword: form.tempPassword,
       usageLocation: form.locationCode,
-      m365Groups: resolved.data.m365_groups,
-      licenses: resolved.data.licenses,
+      m365Groups: effectiveRule.m365_groups,
+      licenses: effectiveRule.licenses,
     });
-  }, [resolved.data, form]);
+  }, [effectiveRule, form]);
 
   const setField = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
