@@ -374,6 +374,71 @@ export default function AdminStageDetail() {
     }
   }, [stage]);
 
+  // Compute whether settings draft has unsaved changes
+  const settingsDirty = !!stage && (
+    settingsDraft.title !== (stage.title || '') ||
+    settingsDraft.description !== (stage.description || '') ||
+    settingsDraft.short_name !== (stage.short_name || '') ||
+    settingsDraft.video_url !== (stage.video_url || '') ||
+    settingsDraft.ai_hint !== (stage.ai_hint || '') ||
+    settingsDraft.version_label !== ((stage as any).version_label || '') ||
+    settingsDraft.stage_type !== (stage.stage_type || 'delivery')
+  );
+
+  const saveSettings = async () => {
+    if (!stage || !settingsDirty) return;
+    // Live-stage confirmation gate
+    if (isUsedByActiveClients && !hasConfirmedEditing) {
+      setPendingUpdate({
+        title: settingsDraft.title,
+        description: settingsDraft.description,
+        short_name: settingsDraft.short_name,
+        video_url: settingsDraft.video_url,
+        ai_hint: settingsDraft.ai_hint,
+        stage_type: settingsDraft.stage_type,
+        ...(settingsDraft.version_label !== ((stage as any).version_label || '') ? { version_label: settingsDraft.version_label || null } as any : {}),
+      });
+      setEditConfirmationOpen(true);
+      return;
+    }
+    setIsSavingSettings(true);
+    try {
+      const updates: Partial<Stage> = {
+        title: settingsDraft.title,
+        description: settingsDraft.description,
+        short_name: settingsDraft.short_name,
+        video_url: settingsDraft.video_url,
+        ai_hint: settingsDraft.ai_hint,
+        stage_type: settingsDraft.stage_type,
+      };
+      await updateStage(stage.id, updates);
+      // version_label uses dedicated handler (separate column + audit)
+      if (settingsDraft.version_label !== ((stage as any).version_label || '')) {
+        await handleUpdateVersionLabel(settingsDraft.version_label);
+      }
+      setStage(prev => prev ? { ...prev, ...updates } : null);
+      toast({ title: 'Stage saved' });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to save stage', variant: 'destructive' });
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const resetSettingsDraft = () => {
+    if (!stage) return;
+    setSettingsDraft({
+      title: stage.title || '',
+      description: stage.description || '',
+      short_name: stage.short_name || '',
+      video_url: stage.video_url || '',
+      ai_hint: stage.ai_hint || '',
+      version_label: (stage as any).version_label || '',
+      stage_type: stage.stage_type || 'delivery',
+    });
+  };
+
+
   const handleUpdateStage = async (updates: Partial<Stage>) => {
     if (!stage) return;
     
