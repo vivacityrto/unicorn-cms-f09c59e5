@@ -482,9 +482,9 @@ export default function AdminStageDetail() {
       if (oldLabel !== newLabel) {
         await supabase.from('audit_events').insert({
           entity: 'stage',
-          entity_id: stage.id.toString(),
+          entity_id: crypto.randomUUID(),
           action: 'stage.version_updated',
-          details: { 
+          details: { stage_id: stage.id, 
             old_version_label: oldLabel,
             new_version_label: newLabel,
             stage_title: stage.title
@@ -544,9 +544,9 @@ export default function AdminStageDetail() {
       if (stage.is_certified && isFrameworksNarrowed(oldFrameworks, frameworks)) {
         await supabase.from('audit_events').insert({
           entity: 'stage',
-          entity_id: stage.id.toString(),
+          entity_id: crypto.randomUUID(),
           action: 'stage.frameworks_narrowed',
-          details: {
+          details: { stage_id: stage.id,
             old_frameworks: oldFrameworks,
             new_frameworks: frameworks,
             stage_title: stage.title
@@ -617,9 +617,9 @@ export default function AdminStageDetail() {
         // Log the blocked attempt
         await supabase.from('audit_events').insert({
           entity: 'stage',
-          entity_id: stage.id.toString(),
+          entity_id: crypto.randomUUID(),
           action: 'stage.certification_blocked',
-          details: { 
+          details: { stage_id: stage.id, 
             failed_checks: quality.checks.filter(c => c.status === 'fail').map(c => c.check_key),
             stage_title: stage.title
           }
