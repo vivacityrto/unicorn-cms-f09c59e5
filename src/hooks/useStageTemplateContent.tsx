@@ -2,6 +2,29 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * Safe, non-blocking audit log for stage template changes.
+ * audit_events.entity_id is a strict UUID column, so we cannot stuff a numeric
+ * stage_id into it. We use a random UUID for entity_id and keep the real
+ * numeric stage_id inside details.stage_id for downstream filtering.
+ */
+function logStageTemplateAudit(stageId: number | null | undefined, action: string, details: Record<string, any>) {
+  try {
+    const payload = {
+      entity: 'stage',
+      entity_id: (globalThis.crypto?.randomUUID?.() ?? '00000000-0000-0000-0000-000000000000'),
+      action,
+      details: { ...details, stage_id: stageId ?? null },
+    };
+    // Fire-and-forget; never block UI on audit failures.
+    void supabase.from('audit_events').insert(payload as any).then(({ error }) => {
+      if (error) console.warn('[audit] stage template audit failed:', error.message);
+    });
+  } catch (e) {
+    console.warn('[audit] stage template audit threw:', e);
+  }
+}
+
 // Types for stage template content (mapped from base tables)
 export interface StageTeamTask {
   id: number;
@@ -211,12 +234,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId.toString(),
-      action: 'stage.template_updated',
-      details: { change_type: 'team_task_added', task_name: data.name }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'team_task_added', task_name: data.name });
 
     await fetchContent();
   };
@@ -240,15 +258,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    // Audit insert - non-blocking (entity_id may not match UUID format for numeric stage IDs)
-    supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId?.toString() || '',
-      action: 'stage.template_updated',
-      details: { change_type: 'team_task_updated', task_id: taskId }
-    }).then(({ error: auditError }) => {
-      if (auditError) console.warn('Audit event insert failed:', auditError.message);
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'team_task_updated', task_id: taskId });
 
     await fetchContent();
   };
@@ -263,12 +273,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId?.toString() || '',
-      action: 'stage.template_updated',
-      details: { change_type: 'team_task_deleted', task_name: task?.name }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'team_task_deleted', task_name: task?.name });
 
     await fetchContent();
   };
@@ -293,12 +298,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId.toString(),
-      action: 'stage.template_updated',
-      details: { change_type: 'client_task_added', task_name: data.name }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'client_task_added', task_name: data.name });
 
     await fetchContent();
   };
@@ -311,12 +311,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId?.toString() || '',
-      action: 'stage.template_updated',
-      details: { change_type: 'client_task_updated', task_id: taskId }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'client_task_updated', task_id: taskId });
 
     await fetchContent();
   };
@@ -331,12 +326,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId?.toString() || '',
-      action: 'stage.template_updated',
-      details: { change_type: 'client_task_deleted', task_name: task?.name }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'client_task_deleted', task_name: task?.name });
 
     await fetchContent();
   };
@@ -359,12 +349,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId.toString(),
-      action: 'stage.template_updated',
-      details: { change_type: 'email_added', email_name: emailTemplateIdOrName }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'email_added', email_name: emailTemplateIdOrName });
 
     await fetchContent();
   };
@@ -377,12 +362,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId?.toString() || '',
-      action: 'stage.template_updated',
-      details: { change_type: 'email_updated', email_id: emailId }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'email_updated', email_id: emailId });
 
     await fetchContent();
   };
@@ -395,12 +375,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId?.toString() || '',
-      action: 'stage.template_updated',
-      details: { change_type: 'email_deleted', email_id: emailId }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'email_deleted', email_id: emailId });
 
     await fetchContent();
   };
