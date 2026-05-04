@@ -362,6 +362,15 @@ export default function AdminStageDetail() {
   useEffect(() => {
     if (stage) {
       setLocalFrameworks((stage as any).frameworks || []);
+      setSettingsDraft({
+        title: stage.title || '',
+        description: stage.description || '',
+        short_name: stage.short_name || '',
+        video_url: stage.video_url || '',
+        ai_hint: stage.ai_hint || '',
+        version_label: (stage as any).version_label || '',
+        stage_type: stage.stage_type || 'delivery',
+      });
     }
   }, [stage]);
 
