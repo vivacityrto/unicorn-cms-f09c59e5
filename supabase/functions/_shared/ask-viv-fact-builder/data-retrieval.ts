@@ -187,6 +187,7 @@ export async function retrieveFactData(
   const { data: consultData } = await supabase
     .from("consult_logs")
     .select("consult_id, date, hours, task, consultant")
+    .eq("tenant_id", tenantId)
     .gte("date", lookbackDate)
     .limit(100);
 
