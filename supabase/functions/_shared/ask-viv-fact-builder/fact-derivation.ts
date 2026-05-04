@@ -150,7 +150,7 @@ export function derivePackageFacts(packages: PackageFactData[], nowIso: string):
           percent_used: percentUsed,
         },
         reason: percentUsed >= 90 ? "Hours nearly exhausted" : null,
-        source_table: "packages",
+        source_table: "package_instances",
         source_ids: [pkg.id.toString()],
         derived_at: nowIso,
       });
