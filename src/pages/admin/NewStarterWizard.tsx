@@ -422,6 +422,18 @@ export default function NewStarterWizard() {
                   </div>
                 </div>
               )}
+
+              {form.roleCode && form.locationCode && !resolved.isLoading && !resolved.data && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
+                  <div className="font-medium text-destructive">
+                    No active provisioning rule for {form.roleCode} / {form.locationCode}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Pick a different role or location combination, or add a rule under
+                    Admin → Staff Provisioning Rules before continuing.
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
