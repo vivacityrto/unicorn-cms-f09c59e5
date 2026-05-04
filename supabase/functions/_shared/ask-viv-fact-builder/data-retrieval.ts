@@ -79,7 +79,7 @@ export async function retrieveFactData(
   tablesQueried.push("package_instances");
   const { data: instancesData } = await supabase
     .from("package_instances")
-    .select("id, package_id, is_complete, start_date, end_date, updated_at")
+    .select("id, package_id, is_complete, start_date, end_date, created_at")
     .eq("tenant_id", tenantId)
     .eq("is_complete", false)
     .limit(20);
@@ -101,7 +101,7 @@ export async function retrieveFactData(
       status: inst.is_complete ? "closed" : "active",
       package_type: pkg.package_type ?? null,
       total_hours: pkg.total_hours ?? null,
-      updated_at: inst.updated_at,
+      updated_at: inst.created_at,
     };
   });
 
