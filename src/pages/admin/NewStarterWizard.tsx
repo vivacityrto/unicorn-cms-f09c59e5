@@ -213,11 +213,11 @@ export default function NewStarterWizard() {
       case 1:
         return !!(form.firstName && form.lastName && form.locationCode && form.startDate);
       case 2:
-        return !!(form.roleCode && form.teamLeaderId && resolved.data && !resolved.isLoading);
+        return !!(form.roleCode && form.teamLeaderId);
       case 3:
         return !!(form.upn && form.mailNickname && form.displayName && form.tempPassword);
       case 4:
-        return !!resolved.data;
+        return true;
       default:
         return true;
     }
