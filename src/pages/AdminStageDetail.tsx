@@ -151,6 +151,18 @@ export default function AdminStageDetail() {
   const [stage, setStage] = useState<Stage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('settings');
+
+  // Draft state for stage settings text fields (saved via explicit Save button)
+  const [settingsDraft, setSettingsDraft] = useState({
+    title: '',
+    description: '',
+    short_name: '',
+    video_url: '',
+    ai_hint: '',
+    version_label: '',
+    stage_type: 'delivery',
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [usageCount, setUsageCount] = useState(0);
   const [expandedAuditRows, setExpandedAuditRows] = useState<Set<string>>(new Set());
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
