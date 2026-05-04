@@ -224,7 +224,7 @@ export default function NewStarterWizard() {
   };
 
   const provision = async (mode: "save_only" | "m365_only" | "full" = "full") => {
-    if (!resolved.data) return;
+    // No-op: provisioning rule is now optional (effectiveRule provides empty defaults).
     if (form.teamLeaderId && !teamLeaders.some((t) => t.user_uuid === form.teamLeaderId)) {
       toast({
         title: "Invalid team leader",
