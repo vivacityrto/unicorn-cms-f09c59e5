@@ -197,6 +197,7 @@ export function FloatingSuggestionsDialog({ open, onClose }: FloatingSuggestions
         {filtered.length} item{filtered.length !== 1 ? 's' : ''} · Drag header to reposition
       </div>
     </div>
-    </>
+    </>,
+    document.body
   );
 }
