@@ -234,12 +234,7 @@ export function useStageTemplateContent(stageId: number | null) {
 
     if (error) throw error;
 
-    await supabase.from('audit_events').insert({
-      entity: 'stage',
-      entity_id: stageId.toString(),
-      action: 'stage.template_updated',
-      details: { change_type: 'team_task_added', task_name: data.name }
-    });
+    logStageTemplateAudit(stageId, 'stage.template_updated', { change_type: 'team_task_added', task_name: data.name });
 
     await fetchContent();
   };
