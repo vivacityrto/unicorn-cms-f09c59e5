@@ -40,6 +40,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 import { AskVivFreshnessChip } from "./AskVivFreshnessChip";
 
 // ============= Types =============
