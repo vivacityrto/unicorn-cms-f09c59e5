@@ -55,8 +55,8 @@ export function FloatingSuggestionsDialog({ open, onClose }: FloatingSuggestions
     const handleMouseMove = (ev: MouseEvent) => {
       if (!dragging.current) return;
       setPosition({
-        x: Math.max(0, Math.min(window.innerWidth - 200, ev.clientX - dragOffset.current.x)),
-        y: Math.max(0, Math.min(window.innerHeight - 100, ev.clientY - dragOffset.current.y)),
+        x: Math.max(0, Math.min(window.innerWidth - width, ev.clientX - dragOffset.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - height, ev.clientY - dragOffset.current.y)),
       });
     };
 
@@ -112,7 +112,16 @@ export function FloatingSuggestionsDialog({ open, onClose }: FloatingSuggestions
         <GripHorizontal className="h-4 w-4 text-muted-foreground" />
         <Lightbulb className="h-4 w-4 text-primary" />
         <span className="text-sm font-semibold flex-1">Suggestions</span>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setExpanded(!expanded)}>
+        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => {
+          const next = !expanded;
+          setExpanded(next);
+          if (next) {
+            setPosition(prev => ({
+              x: Math.max(0, Math.min(prev.x, window.innerWidth - 680 - 16)),
+              y: Math.max(0, Math.min(prev.y, window.innerHeight - 600 - 16)),
+            }));
+          }
+        }}>
           {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
         </Button>
         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
