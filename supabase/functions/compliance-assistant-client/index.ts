@@ -52,6 +52,7 @@ const corsHeaders = {
 
 // ============= Constants =============
 const DAILY_QUERY_CAP = 20;
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const VIVACITY_TENANT_ID = 6372;
 
 /** Sources whose facts must NEVER be exposed to client-mode users. */
