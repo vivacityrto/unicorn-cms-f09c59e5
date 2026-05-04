@@ -89,11 +89,12 @@ interface PanelError {
 interface ClientAskVivPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  previewTenantId?: number;
 }
 
 // ============= Component =============
 
-export function ClientAskVivPanel({ isOpen, onClose }: ClientAskVivPanelProps) {
+export function ClientAskVivPanel({ isOpen, onClose, previewTenantId }: ClientAskVivPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -157,7 +158,10 @@ export function ClientAskVivPanel({ isOpen, onClose }: ClientAskVivPanelProps) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({
+          question,
+          ...(previewTenantId != null ? { preview_tenant_id: previewTenantId } : {}),
+        }),
       });
 
       if (resp.status === 429) {

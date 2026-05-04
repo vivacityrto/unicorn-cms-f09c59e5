@@ -29,7 +29,7 @@ export const useOpenDocumentRequest = () => useContext(ClientRequestContext);
 function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAskVivOpen, setIsAskVivOpen] = useState(false);
-  const { isPreview } = useClientTenant();
+  const { isPreview, activeTenantId } = useClientTenant();
   const { requestModalOpen, setRequestModalOpen, prefill, openDocumentRequest } = useClientRequestActions();
 
   return (
@@ -113,6 +113,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       <ClientAskVivPanel
         isOpen={isAskVivOpen}
         onClose={() => setIsAskVivOpen(false)}
+        previewTenantId={isPreview ? activeTenantId ?? undefined : undefined}
       />
     </div>
   );

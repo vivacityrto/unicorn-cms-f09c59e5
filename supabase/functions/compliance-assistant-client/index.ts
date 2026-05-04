@@ -24,6 +24,7 @@ import {
   validateClientAskVivAccess,
   askVivAccessDeniedResponse,
   clientAskVivDenialMessage,
+  isVivacityInternal,
 } from "../_shared/ask-viv-access.ts";
 import {
   buildAskVivFacts,
@@ -202,6 +203,9 @@ Deno.serve(async (req) => {
     if (!question) {
       return jsonError(400, "BAD_REQUEST", "Question is required");
     }
+    const previewTenantId =
+      typeof body.preview_tenant_id === "number" ? body.preview_tenant_id : undefined;
+    const isSuperAdmin = isVivacityInternal(profile);
     for (const forbidden of ["tenant_id", "client_id", "package_id", "phase_id"]) {
       if (forbidden in body) {
         return jsonError(
@@ -211,6 +215,9 @@ Deno.serve(async (req) => {
         );
       }
     }
+    if (!isSuperAdmin && "preview_tenant_id" in body) {
+      return jsonError(400, "BAD_REQUEST", "Field 'preview_tenant_id' is not allowed");
+    }
 
     // 5. Access gate
     const access = await validateClientAskVivAccess(
@@ -218,6 +225,7 @@ Deno.serve(async (req) => {
       user.id,
       profile,
       "compliance-assistant-client",
+      previewTenantId,
     );
     if (!access.allowed) {
       return askVivAccessDeniedResponse(clientAskVivDenialMessage(access.reason));
