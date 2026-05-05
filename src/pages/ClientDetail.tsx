@@ -97,6 +97,7 @@ export default function ClientDetail() {
   const [userCount, setUserCount] = useState<number | null>(null);
   const [tenantPhone, setTenantPhone] = useState<string | null>(null);
   const [logoPath, setLogoPath] = useState<string | null>(null);
+  const [renameOpen, setRenameOpen] = useState(false);
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
   
