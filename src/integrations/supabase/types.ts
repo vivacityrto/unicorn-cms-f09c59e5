@@ -45219,6 +45219,7 @@ export type Database = {
       }
       tenant_relationships: {
         Row: {
+          bills_to_parent: boolean
           child_tenant_id: number
           created_at: string
           created_by: string | null
@@ -45228,6 +45229,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bills_to_parent?: boolean
           child_tenant_id: number
           created_at?: string
           created_by?: string | null
@@ -45237,6 +45239,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bills_to_parent?: boolean
           child_tenant_id?: number
           created_at?: string
           created_by?: string | null
@@ -61129,6 +61132,10 @@ export type Database = {
         Args: { p_reviewer_user_id: string; p_stage_release_id: string }
         Returns: Json
       }
+      resolve_billing_tenant_id: {
+        Args: { _tenant_id: number }
+        Returns: number
+      }
       resolve_tenant_for_task: { Args: { p_task_id: string }; Returns: number }
       resolve_tenant_merge_fields: {
         Args: { p_tenant_id: number }
@@ -61647,6 +61654,7 @@ export type Database = {
         Returns: boolean
       }
       tenant_is_writeable: { Args: { p_tenant_id: number }; Returns: boolean }
+      tenant_name_is_locked: { Args: { _tenant_id: number }; Returns: boolean }
       tga_get_client_data: { Args: { p_client_id: string }; Returns: Json }
       tga_get_sync_progress: { Args: { p_run_id: string }; Returns: Json }
       tga_get_tenant_data: { Args: { p_tenant_id: number }; Returns: Json }
