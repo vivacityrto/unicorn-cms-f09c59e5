@@ -30,6 +30,7 @@ interface RelationshipRow {
   child_tenant_id: number;
   notes: string | null;
   created_at: string;
+  bills_to_parent: boolean;
 }
 
 interface TenantBasic {
@@ -46,6 +47,7 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
   const [direction, setDirection] = useState<"parent" | "child">("child");
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
+  const [billsToParent, setBillsToParent] = useState(false);
 
   const isVivacityStaff = profile?.unicorn_role === "Super Admin" ||
     profile?.unicorn_role === "Team Leader" ||
@@ -57,7 +59,7 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenant_relationships")
-        .select("id, parent_tenant_id, child_tenant_id, notes, created_at")
+        .select("id, parent_tenant_id, child_tenant_id, notes, created_at, bills_to_parent")
         .or(`parent_tenant_id.eq.${tenantId},child_tenant_id.eq.${tenantId}`)
         .order("created_at", { ascending: true });
 
@@ -118,6 +120,7 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
           parent_tenant_id: parentId,
           child_tenant_id: childId,
           notes: notes.trim() || null,
+          bills_to_parent: billsToParent,
           created_by: profile?.user_uuid,
         });
 
@@ -160,7 +163,26 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
     setDirection("child");
     setSelectedTenantId(null);
     setNotes("");
+    setBillsToParent(false);
   };
+
+  const toggleBillsMutation = useMutation({
+    mutationFn: async ({ id, value }: { id: number; value: boolean }) => {
+      const { error } = await supabase
+        .from("tenant_relationships")
+        .update({ bills_to_parent: value })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant-relationships", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["membership-usage"] });
+      toast({ title: "Updated" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message || "Update failed", variant: "destructive" });
+    },
+  });
 
   // Filter out current tenant and already-linked tenants from combobox
   const availableTenants = allTenants.filter(
@@ -202,6 +224,8 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
               icon={<ArrowUp className="h-3.5 w-3.5 text-blue-500" />}
               name={name}
               notes={rel.notes}
+              billsToParent={rel.bills_to_parent}
+              billsBadgeText={rel.bills_to_parent ? "Your time bills here" : null}
               onNavigate={() => navigate(`/tenant/${otherId}`)}
               onDelete={isVivacityStaff ? () => deleteMutation.mutate(rel.id) : undefined}
             />
@@ -219,6 +243,13 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
               icon={<ArrowDown className="h-3.5 w-3.5 text-green-500" />}
               name={name}
               notes={rel.notes}
+              billsToParent={rel.bills_to_parent}
+              billsBadgeText={rel.bills_to_parent ? "Time bills to this org" : null}
+              onToggleBills={
+                isVivacityStaff
+                  ? (value) => toggleBillsMutation.mutate({ id: rel.id, value })
+                  : undefined
+              }
               onNavigate={() => navigate(`/tenant/${otherId}`)}
               onDelete={isVivacityStaff ? () => deleteMutation.mutate(rel.id) : undefined}
             />
@@ -270,6 +301,22 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
                 className="min-h-[60px]"
               />
             </div>
+
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={billsToParent}
+                onChange={(e) => setBillsToParent(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                Child's consult time bills to the parent
+                <span className="block text-xs text-muted-foreground">
+                  Time logged against the child organisation will be deducted from the parent's
+                  membership pool. The child shows zero pool of its own.
+                </span>
+              </span>
+            </label>
           </AppModalBody>
           <AppModalFooter>
             <Button variant="outline" onClick={resetDialog}>
@@ -293,6 +340,9 @@ function RelRow({
   icon,
   name,
   notes,
+  billsBadgeText,
+  billsToParent,
+  onToggleBills,
   onNavigate,
   onDelete,
 }: {
@@ -300,6 +350,9 @@ function RelRow({
   icon: React.ReactNode;
   name: string;
   notes: string | null;
+  billsBadgeText?: string | null;
+  billsToParent?: boolean;
+  onToggleBills?: (value: boolean) => void;
   onNavigate: () => void;
   onDelete?: () => void;
 }) {
@@ -310,8 +363,13 @@ function RelRow({
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-muted-foreground uppercase">{label}</span>
+            {billsBadgeText && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                {billsBadgeText}
+              </span>
+            )}
           </div>
           <p className="text-sm font-medium text-foreground truncate hover:text-primary transition-colors">
             {name}
@@ -321,6 +379,20 @@ function RelRow({
           )}
         </div>
       </div>
+      {onToggleBills && (
+        <label
+          className="flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer whitespace-nowrap"
+          title="Child's consult time bills to this parent"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={!!billsToParent}
+            onChange={(e) => onToggleBills(e.target.checked)}
+          />
+          Bills to me
+        </label>
+      )}
       {onDelete && (
         <Button
           variant="ghost"

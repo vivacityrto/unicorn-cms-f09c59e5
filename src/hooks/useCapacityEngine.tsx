@@ -37,6 +37,8 @@ export interface MembershipUsage {
   membership_year_end: string;
   tier_name?: string;
   flags?: string[];
+  billing_parent_tenant_id?: number | null;
+  billing_parent_name?: string | null;
   error?: string;
 }
 
@@ -63,6 +65,8 @@ export function useMembershipUsage(tenantId: number | null) {
         membership_year_end: parsed.membership_end_date ?? parsed.membership_year_end,
         tier_name: parsed.tier_name,
         flags: parsed.flags,
+        billing_parent_tenant_id: parsed.billing_parent_tenant_id ?? null,
+        billing_parent_name: parsed.billing_parent_name ?? null,
       } as MembershipUsage;
     },
     enabled: !!tenantId,
