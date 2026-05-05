@@ -224,7 +224,7 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     // only says 'rto'. Derive from registration fields first.
     const hasRto = !!selectedTenant.rto_id;
     const cricosVal = selectedTenant.profile_cricos_number || selectedTenant.cricos_id;
-    const hasCricos = !!cricosVal;
+    const hasCricos = isCricosValid(cricosVal);
     const ot = selectedTenant.org_type; // org_type supplements missing registration fields
     if (hasRto && hasCricos) return 'both' as const;
     if (hasCricos && !hasRto) {
