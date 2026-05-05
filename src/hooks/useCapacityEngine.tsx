@@ -37,6 +37,8 @@ export interface MembershipUsage {
   membership_year_end: string;
   tier_name?: string;
   flags?: string[];
+  billing_parent_tenant_id?: number | null;
+  billing_parent_name?: string | null;
   error?: string;
 }
 
