@@ -33,6 +33,7 @@ import { FacilitatorModeToggle } from "@/components/eos/FacilitatorModeToggle";
 import { AskVivButton } from "@/components/ask-viv";
 import { useHelpCenter } from "@/components/help-center";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
+import vivacityLogo from "@/assets/vivacity-logo.svg";
 import { HelpCircle } from "lucide-react";
 
 // Route to page title mapping
@@ -197,6 +198,12 @@ export function TopBar({ showSearch = false }: TopBarProps) {
           className="h-16 flex-shrink-0"
           width="117"
           height="64"
+          loading="eager"
+        />
+        <img
+          src={vivacityLogo}
+          alt="Vivacity Coaching & Consulting"
+          className="h-10 flex-shrink-0"
           loading="eager"
         />
         
