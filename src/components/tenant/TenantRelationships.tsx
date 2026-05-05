@@ -301,6 +301,22 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
                 className="min-h-[60px]"
               />
             </div>
+
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={billsToParent}
+                onChange={(e) => setBillsToParent(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                Child's consult time bills to the parent
+                <span className="block text-xs text-muted-foreground">
+                  Time logged against the child organisation will be deducted from the parent's
+                  membership pool. The child shows zero pool of its own.
+                </span>
+              </span>
+            </label>
           </AppModalBody>
           <AppModalFooter>
             <Button variant="outline" onClick={resetDialog}>
