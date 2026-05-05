@@ -225,11 +225,16 @@ export function NewAuditModal({ open, onOpenChange, preselectedTenantId, presele
     const hasRto = !!selectedTenant.rto_id;
     const cricosVal = selectedTenant.profile_cricos_number || selectedTenant.cricos_id;
     const hasCricos = !!cricosVal;
+    const ot = selectedTenant.org_type; // org_type supplements missing registration fields
     if (hasRto && hasCricos) return 'both' as const;
-    if (hasCricos && !hasRto) return 'cricos_only' as const;
-    if (hasRto && !hasCricos) return 'rto_only' as const;
-    // Fallback to stored org_type only when registration fields are absent
-    const ot = selectedTenant.org_type;
+    if (hasCricos && !hasRto) {
+      if (ot === 'rto_cricos') return 'both' as const;
+      return 'cricos_only' as const;
+    }
+    if (hasRto && !hasCricos) {
+      if (ot === 'rto_cricos' || ot === 'cricos') return 'both' as const;
+      return 'rto_only' as const;
+    }
     if (ot === 'rto_cricos') return 'both' as const;
     if (ot === 'cricos') return 'cricos_only' as const;
     if (ot === 'rto') return 'rto_only' as const;
