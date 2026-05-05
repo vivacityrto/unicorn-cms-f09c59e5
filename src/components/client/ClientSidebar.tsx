@@ -23,6 +23,7 @@ import {
   ChevronDown,
   HeartHandshake,
   ClipboardList,
+  Lightbulb,
 } from "lucide-react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -57,6 +58,7 @@ const clientMenuItemsAfter: SidebarMenuItem[] = [
   { icon: Library, label: "Resource Hub", path: "/client/resource-hub" },
   { icon: Calendar, label: "Calendar", path: "/client/calendar" },
   { icon: BarChart3, label: "Reports", path: "/client/reports" },
+  { icon: Lightbulb, label: "Suggestions", path: "/client/suggestions" },
   { icon: Users, label: "Users", path: "/client/users", adminOnly: true },
   { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },
 ];
@@ -237,9 +239,12 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentReque
           )}
 
           {/* Items after Academy */}
-          {filterAdmin(clientMenuItemsAfter).map((item) => (
-            <NavItem key={item.path} item={item} isActive={location.pathname === item.path} sidebarOpen={sidebarOpen} />
-          ))}
+          {filterAdmin(clientMenuItemsAfter).map((item) => {
+            const isActive = item.path === "/client/suggestions"
+              ? location.pathname.startsWith("/client/suggestions")
+              : location.pathname === item.path;
+            return <NavItem key={item.path} item={item} isActive={isActive} sidebarOpen={sidebarOpen} />;
+          })}
         </nav>
 
         {/* Footer */}

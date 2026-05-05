@@ -213,6 +213,9 @@ const ClientProfileWrapperNew = lazy(() => import("./pages/client/ClientProfileW
 const ClientTgaDetailsWrapperNew = lazy(() => import("./pages/client/ClientTgaDetailsWrapper"));
 const ClientFilesWrapperNew = lazy(() => import("./pages/client/ClientFilesWrapper"));
 const ClientTasksWrapperNew = lazy(() => import("./pages/client/ClientTasksWrapper"));
+const ClientSuggestionsWrapperNew = lazy(() => import("./pages/client/ClientSuggestionsWrapper"));
+const ClientNewSuggestionWrapperNew = lazy(() => import("./pages/client/ClientNewSuggestionWrapper"));
+const ClientSuggestionDetailWrapperNew = lazy(() => import("./pages/client/ClientSuggestionDetailWrapper"));
 // ClientCommunicationsWrapperNew removed — consolidated into ClientInboxPage
 const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackagesWrapper"));
 const ClientInboxWrapperNew = lazy(() => import("./pages/client/ClientInboxWrapper"));
@@ -1093,6 +1096,9 @@ const App = () => (
             <Route path="/client/profile" element={<ProtectedRoute><ClientProfileWrapperNew /></ProtectedRoute>} />
             <Route path="/client/tga" element={<ProtectedRoute><ClientTgaDetailsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/files" element={<ProtectedRoute><ClientFilesWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/suggestions" element={<ProtectedRoute><ClientSuggestionsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/suggestions/new" element={<ProtectedRoute><ClientNewSuggestionWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/suggestions/:id" element={<ProtectedRoute><ClientSuggestionDetailWrapperNew /></ProtectedRoute>} />
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboardWrapperNew /></ProtectedRoute>} />
             <Route path="/academy/trainer" element={<ProtectedRoute><AcademyTrainerWrapperNew /></ProtectedRoute>} />
             <Route path="/academy/compliance-manager" element={<ProtectedRoute><AcademyComplianceManagerWrapperNew /></ProtectedRoute>} />
