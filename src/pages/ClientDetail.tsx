@@ -60,6 +60,8 @@ import { AssignPackageDialog } from '@/components/client/AssignPackageDialog';
 import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
 import { TenantLogoUpload } from '@/components/tenant/TenantLogoUpload';
 import { OrgTypeBadge } from '@/components/tenant/OrgTypeBadge';
+import { RenameTenantDialog, canRenameTenant } from '@/components/tenant/RenameTenantDialog';
+import { Pencil, Lock } from 'lucide-react';
 
 interface TenantBasic {
   id: number;
