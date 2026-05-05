@@ -14,7 +14,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, ArrowLeft, Upload, FileText, Image as ImageIcon, Wand2, Copy, X } from 'lucide-react';
+import { Loader2, ArrowLeft, Upload, FileText, Image as ImageIcon, Wand2, Copy, X, Eye, EyeOff } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -33,7 +35,11 @@ function userName(user: { first_name: string | null; last_name: string | null } 
 export default function SuggestionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isVivacityStaff =
+    profile?.unicorn_role === 'Super Admin' ||
+    profile?.unicorn_role === 'Team Leader' ||
+    profile?.unicorn_role === 'Team Member';
   const { data: item, isLoading } = useSuggestItem(id);
   const updateItem = useUpdateSuggestItem();
   const dropdowns = useSuggestDropdowns();
