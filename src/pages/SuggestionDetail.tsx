@@ -225,6 +225,25 @@ export default function SuggestionDetail() {
     }
   }, [id, item, user, uploadAttachment]);
 
+  const handleVisibilityToggle = async (newValue: boolean) => {
+    if (!id || !item || !user) return;
+    const oldValue = item.is_client_visible;
+    if (oldValue === newValue) return;
+    await updateItem.mutateAsync({
+      id,
+      is_client_visible: newValue,
+      updated_by: user.id,
+    });
+    const { error: auditErr } = await (supabase.from('audit_events' as any) as any).insert({
+      entity: 'suggest_item',
+      entity_id: id,
+      action: 'visibility_toggled',
+      user_id: user.id,
+      details: { old: oldValue, new: newValue },
+    });
+    if (auditErr) console.error('audit_events insert failed', auditErr);
+  };
+
   const handleSave = async () => {
     if (!id || !user) return;
     const resolvedStatus = dropdowns.statuses.find(s => s.code === 'resolved');
@@ -472,6 +491,38 @@ export default function SuggestionDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Visibility (staff only) */}
+            {isVivacityStaff && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Visibility</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      {item.is_client_visible ? (
+                        <Eye className="h-4 w-4 text-primary" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <Label htmlFor="visible-to-client" className="text-sm cursor-pointer">
+                        Visible to client
+                      </Label>
+                    </div>
+                    <Switch
+                      id="visible-to-client"
+                      checked={item.is_client_visible}
+                      disabled={updateItem.isPending}
+                      onCheckedChange={handleVisibilityToggle}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Saves immediately. Independent of "Save Changes".
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Attachments */}
             <Card
