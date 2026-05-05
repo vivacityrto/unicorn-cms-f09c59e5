@@ -29,6 +29,7 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
 import { useHelpCenter } from "@/components/help-center";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
+import unicornLogo from "@/assets/unicorn-logo-login.svg";
 
 interface ClientTopbarProps {
   isPreview: boolean;
