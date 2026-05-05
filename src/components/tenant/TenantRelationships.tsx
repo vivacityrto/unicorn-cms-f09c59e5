@@ -224,6 +224,8 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
               icon={<ArrowUp className="h-3.5 w-3.5 text-blue-500" />}
               name={name}
               notes={rel.notes}
+              billsToParent={rel.bills_to_parent}
+              billsBadgeText={rel.bills_to_parent ? "Your time bills here" : null}
               onNavigate={() => navigate(`/tenant/${otherId}`)}
               onDelete={isVivacityStaff ? () => deleteMutation.mutate(rel.id) : undefined}
             />
@@ -241,6 +243,13 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
               icon={<ArrowDown className="h-3.5 w-3.5 text-green-500" />}
               name={name}
               notes={rel.notes}
+              billsToParent={rel.bills_to_parent}
+              billsBadgeText={rel.bills_to_parent ? "Time bills to this org" : null}
+              onToggleBills={
+                isVivacityStaff
+                  ? (value) => toggleBillsMutation.mutate({ id: rel.id, value })
+                  : undefined
+              }
               onNavigate={() => navigate(`/tenant/${otherId}`)}
               onDelete={isVivacityStaff ? () => deleteMutation.mutate(rel.id) : undefined}
             />
