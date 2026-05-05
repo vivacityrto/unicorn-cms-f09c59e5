@@ -200,6 +200,12 @@ export function TopBar({ showSearch = false }: TopBarProps) {
           height="64"
           loading="eager"
         />
+        <img
+          src={vivacityLogo}
+          alt="Vivacity Coaching & Consulting"
+          className="h-10 flex-shrink-0"
+          loading="eager"
+        />
         
         <div className="h-8 w-px bg-border flex-shrink-0" />
         
