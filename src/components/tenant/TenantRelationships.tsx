@@ -340,6 +340,9 @@ function RelRow({
   icon,
   name,
   notes,
+  billsBadgeText,
+  billsToParent,
+  onToggleBills,
   onNavigate,
   onDelete,
 }: {
@@ -347,6 +350,9 @@ function RelRow({
   icon: React.ReactNode;
   name: string;
   notes: string | null;
+  billsBadgeText?: string | null;
+  billsToParent?: boolean;
+  onToggleBills?: (value: boolean) => void;
   onNavigate: () => void;
   onDelete?: () => void;
 }) {
@@ -357,8 +363,13 @@ function RelRow({
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-muted-foreground uppercase">{label}</span>
+            {billsBadgeText && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                {billsBadgeText}
+              </span>
+            )}
           </div>
           <p className="text-sm font-medium text-foreground truncate hover:text-primary transition-colors">
             {name}
@@ -368,6 +379,20 @@ function RelRow({
           )}
         </div>
       </div>
+      {onToggleBills && (
+        <label
+          className="flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer whitespace-nowrap"
+          title="Child's consult time bills to this parent"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={!!billsToParent}
+            onChange={(e) => onToggleBills(e.target.checked)}
+          />
+          Bills to me
+        </label>
+      )}
       {onDelete && (
         <Button
           variant="ghost"
