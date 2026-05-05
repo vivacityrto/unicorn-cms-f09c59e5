@@ -1,32 +1,14 @@
-## Fix registrationType useMemo in NewAuditModal.tsx
+## Make Name column sortable in Manage Documents
 
-Update `src/components/audit/NewAuditModal.tsx` (lines ~220–237) so `org_type` supplements missing registration fields instead of only acting as a final fallback.
+The Name header in `src/pages/ManageDocuments.tsx` (line 1519–1521) is plain text, but the sort infrastructure already supports `"title"` as a sort field (`sortField` state + `toggleSort` + sort switch case at line 555). Currently no header is wired up to call `toggleSort`.
 
 ### Change
 
-Replace the current logic with:
+In `src/pages/ManageDocuments.tsx`, make the Name `TableHead` clickable to toggle sorting on `title`:
 
-```ts
-const registrationType = useMemo(() => {
-  if (!selectedTenant) return null;
-  const hasRto = !!selectedTenant.rto_id;
-  const cricosVal = selectedTenant.profile_cricos_number || selectedTenant.cricos_id;
-  const hasCricos = !!cricosVal;
-  const ot = selectedTenant.org_type; // org_type supplements missing registration fields
-  if (hasRto && hasCricos) return 'both' as const;
-  if (hasCricos && !hasRto) {
-    if (ot === 'rto_cricos') return 'both' as const;
-    return 'cricos_only' as const;
-  }
-  if (hasRto && !hasCricos) {
-    if (ot === 'rto_cricos' || ot === 'cricos') return 'both' as const;
-    return 'rto_only' as const;
-  }
-  if (ot === 'rto_cricos') return 'both' as const;
-  if (ot === 'cricos') return 'cricos_only' as const;
-  if (ot === 'rto') return 'rto_only' as const;
-  return detectRegistrationType(selectedTenant.rto_id, cricosVal);
-}, [selectedTenant]);
-```
+- Wrap the "Name" label in a button that calls `toggleSort("title")`
+- Show an ascending/descending arrow (using `ArrowUp` / `ArrowDown` from lucide-react, falling back to `ArrowUpDown` when inactive) based on `sortField === "title"` and `sortDirection`
+- Add `cursor-pointer select-none` and `hover:text-primary` to match the existing semibold header styling
+- Keep all other headers untouched (per scope discipline — ID and Version Date were not requested)
 
-The "neither field set" fallback chain remains unchanged. No other files modified.
+No changes to data fetching, filter logic, or the existing sort comparator — those already handle `"title"` correctly via `localeCompare`.
