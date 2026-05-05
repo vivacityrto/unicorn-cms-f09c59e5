@@ -30,6 +30,7 @@ interface RelationshipRow {
   child_tenant_id: number;
   notes: string | null;
   created_at: string;
+  bills_to_parent: boolean;
 }
 
 interface TenantBasic {
