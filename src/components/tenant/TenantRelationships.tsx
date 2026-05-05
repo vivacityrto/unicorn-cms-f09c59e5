@@ -163,7 +163,26 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
     setDirection("child");
     setSelectedTenantId(null);
     setNotes("");
+    setBillsToParent(false);
   };
+
+  const toggleBillsMutation = useMutation({
+    mutationFn: async ({ id, value }: { id: number; value: boolean }) => {
+      const { error } = await supabase
+        .from("tenant_relationships")
+        .update({ bills_to_parent: value })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant-relationships", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["membership-usage"] });
+      toast({ title: "Updated" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message || "Update failed", variant: "destructive" });
+    },
+  });
 
   // Filter out current tenant and already-linked tenants from combobox
   const availableTenants = allTenants.filter(
