@@ -40554,6 +40554,7 @@ export type Database = {
           created_by: string
           description: string
           id: string
+          is_client_visible: boolean
           is_deleted: boolean
           release_notes: string | null
           release_version: string | null
@@ -40585,6 +40586,7 @@ export type Database = {
           created_by: string
           description: string
           id?: string
+          is_client_visible?: boolean
           is_deleted?: boolean
           release_notes?: string | null
           release_version?: string | null
@@ -40616,6 +40618,7 @@ export type Database = {
           created_by?: string
           description?: string
           id?: string
+          is_client_visible?: boolean
           is_deleted?: boolean
           release_notes?: string | null
           release_version?: string | null
