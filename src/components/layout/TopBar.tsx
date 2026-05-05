@@ -33,6 +33,7 @@ import { FacilitatorModeToggle } from "@/components/eos/FacilitatorModeToggle";
 import { AskVivButton } from "@/components/ask-viv";
 import { useHelpCenter } from "@/components/help-center";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
+import vivacityLogo from "@/assets/vivacity-logo.svg";
 import { HelpCircle } from "lucide-react";
 
 // Route to page title mapping
