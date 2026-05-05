@@ -1,14 +1,32 @@
-## Fix: Suggestions dialog overflow on expand + drag clamp
+## Fix registrationType useMemo in NewAuditModal.tsx
 
-**File:** `src/components/layout/FloatingSuggestionsDialog.tsx`
+Update `src/components/audit/NewAuditModal.tsx` (lines ~220–237) so `org_type` supplements missing registration fields instead of only acting as a final fallback.
 
-### Change 1 — Expand/minimize button (line ~123)
-Replace the existing `onClick={() => setExpanded(!expanded)}` on the expand Button with a handler that also clamps `position` into the viewport when switching to the expanded size (680×600 + 16px margin).
+### Change
 
-### Change 2 — Drag clamp (lines ~57–60)
-Inside `handleMouseDown`'s `handleMouseMove`, replace the hardcoded `innerWidth - 200` / `innerHeight - 100` clamps with `innerWidth - width` / `innerHeight - height`, using the `width` / `height` already computed before the return.
+Replace the current logic with:
 
-### Technical note
-`width` and `height` are `const`s in the same component-render scope. `handleMouseDown` is recreated each render (via `useCallback` with `[position]`), and `handleMouseMove` only runs after mousedown, by which point both consts are initialised — so the closure reference is safe despite the lexical order.
+```ts
+const registrationType = useMemo(() => {
+  if (!selectedTenant) return null;
+  const hasRto = !!selectedTenant.rto_id;
+  const cricosVal = selectedTenant.profile_cricos_number || selectedTenant.cricos_id;
+  const hasCricos = !!cricosVal;
+  const ot = selectedTenant.org_type; // org_type supplements missing registration fields
+  if (hasRto && hasCricos) return 'both' as const;
+  if (hasCricos && !hasRto) {
+    if (ot === 'rto_cricos') return 'both' as const;
+    return 'cricos_only' as const;
+  }
+  if (hasRto && !hasCricos) {
+    if (ot === 'rto_cricos' || ot === 'cricos') return 'both' as const;
+    return 'rto_only' as const;
+  }
+  if (ot === 'rto_cricos') return 'both' as const;
+  if (ot === 'cricos') return 'cricos_only' as const;
+  if (ot === 'rto') return 'rto_only' as const;
+  return detectRegistrationType(selectedTenant.rto_id, cricosVal);
+}, [selectedTenant]);
+```
 
-No other edits: no styling, z-index, portal, or logic changes.
+The "neither field set" fallback chain remains unchanged. No other files modified.
