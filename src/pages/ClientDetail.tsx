@@ -608,6 +608,14 @@ export default function ClientDetail() {
         </Tabs>
       </div>
 
+      <RenameTenantDialog
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+        tenantId={tenantIdNum!}
+        currentName={tenant.name}
+        rtoId={profile?.rto_number}
+        onRenamed={(newName) => setTenant((prev) => (prev ? { ...prev, name: newName } : null))}
+      />
     </div>
   );
 }
