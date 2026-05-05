@@ -47,6 +47,7 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
   const [direction, setDirection] = useState<"parent" | "child">("child");
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
+  const [billsToParent, setBillsToParent] = useState(false);
 
   const isVivacityStaff = profile?.unicorn_role === "Super Admin" ||
     profile?.unicorn_role === "Team Leader" ||
