@@ -1,64 +1,144 @@
-# M2 — Backfill only
+## M3 — RLS Policy Swap + Visibility Triggers
 
-Second of three migrations. Data only. No schema, no policy, no triggers. Pre-flight confirmed **0 rows** will be affected today; migration ships as a correctness guarantee and historical record.
+Single migration file. Header includes full rollback + verification steps. SECURITY DEFINER, search_path=public on both trigger functions. Idempotent DROP IF EXISTS guards.
 
-**File:** `supabase/migrations/<timestamp>_suggest_items_backfill_client_visible.sql`
+### Migration SQL
 
 ```sql
--- =====================================================================
--- Suggestion Register — M2 of 3: data backfill only
--- Marks existing client-authored suggest_items as visible to clients.
--- No schema changes, no RLS changes, no triggers (those are M1 and M3).
+-- ============================================================================
+-- M3: suggest_items client-visibility enforcement
+-- Phase 3 of 3 (M1 schema, M2 backfill, M3 behaviour)
 --
--- Lock impact: per-row write locks only. Pre-flight: 0 rows affected
--- (all 8 existing rows authored by Vivacity staff). Off-peak NOT required.
+-- Changes:
+--   1. Recreate suggest_items_select policy — non-staff require
+--      is_client_visible = true in addition to has_tenant_access_safe.
+--      Staff (super admin / vivacity team) bypass unchanged.
+--   2. BEFORE INSERT trigger suggest_items_force_client_visibility —
+--      forces is_client_visible = true for any insert by a non-staff user.
+--   3. BEFORE UPDATE trigger suggest_items_visibility_guard —
+--      (a) reverts non-staff attempts to mutate is_client_visible,
+--      (b) auto-flips is_client_visible = true when suggest_release_status_id
+--          transitions to the dd_suggest_release_status row where code='released'.
 --
--- Verification:
---   -- Before applying:
---   SELECT count(*) FILTER (WHERE is_client_visible) AS visible_before,
---          count(*) AS total
---     FROM public.suggest_items;
---   -- Expected pre-state: visible_before = 0, total = 8
+-- ----------------------------------------------------------------------------
+-- ROLLBACK (run as a single transaction):
 --
---   -- After applying:
---   SELECT count(*) FILTER (WHERE is_client_visible) AS visible_after,
---          count(*) AS total
---     FROM public.suggest_items;
---   -- Expected post-state: visible_after = 0 (no client-authored rows exist yet),
---   --                      total = 8
+-- BEGIN;
+-- DROP TRIGGER IF EXISTS suggest_items_force_client_visibility ON public.suggest_items;
+-- DROP TRIGGER IF EXISTS suggest_items_visibility_guard       ON public.suggest_items;
+-- DROP FUNCTION IF EXISTS public.suggest_items_force_client_visibility();
+-- DROP FUNCTION IF EXISTS public.suggest_items_visibility_guard();
 --
---   -- Sanity: every row currently visible must be authored by a non-staff user.
---   SELECT si.id, u.unicorn_role
---     FROM public.suggest_items si
---     LEFT JOIN public.users u ON u.user_uuid = si.created_by
---    WHERE si.is_client_visible = true;
---   -- Expected: 0 rows (no staff member should appear in this list).
+-- DROP POLICY IF EXISTS suggest_items_select ON public.suggest_items;
+-- CREATE POLICY suggest_items_select ON public.suggest_items
+--   FOR SELECT
+--   USING (
+--     (NOT is_deleted) AND (
+--       is_super_admin_safe(auth.uid())
+--       OR is_vivacity_team_safe(auth.uid())
+--       OR has_tenant_access_safe((tenant_id)::bigint, auth.uid())
+--     )
+--   );
+-- COMMIT;
 --
--- Rollback (reverse the same predicate):
---   UPDATE public.suggest_items si
---      SET is_client_visible = false
---    WHERE created_by IN (
---      SELECT user_uuid FROM public.users
---       WHERE unicorn_role IS NULL
---          OR unicorn_role NOT IN ('Super Admin','Team Leader','Team Member')
---    );
--- =====================================================================
+-- ----------------------------------------------------------------------------
+-- VERIFICATION (run after apply):
+--   a. Staff JWT:    SELECT count(*) FROM suggest_items;            -- sees all (8)
+--   b. Client JWT:   SELECT count(*) FROM suggest_items;            -- only own tenant
+--                                                                    -- AND is_client_visible
+--   c. Non-staff insert: lands with is_client_visible = true regardless of payload.
+--   d. Non-staff update: SET is_client_visible = false → silently reverted to true.
+--   e. Status flip:  UPDATE ... SET suggest_release_status_id =
+--                      '74722d84-873b-4355-9551-2e3105a5b5e2'    -- 'released'
+--                    → is_client_visible auto-set to true.
+-- ============================================================================
 
-UPDATE public.suggest_items si
-   SET is_client_visible = true
-  WHERE created_by IN (
-    SELECT user_uuid FROM public.users
-     WHERE unicorn_role IS NULL
-        OR unicorn_role NOT IN ('Super Admin','Team Leader','Team Member')
+-- 1. SELECT policy swap -------------------------------------------------------
+DROP POLICY IF EXISTS suggest_items_select ON public.suggest_items;
+
+CREATE POLICY suggest_items_select ON public.suggest_items
+  FOR SELECT
+  USING (
+    (NOT is_deleted) AND (
+      is_super_admin_safe(auth.uid())
+      OR is_vivacity_team_safe(auth.uid())
+      OR (
+        has_tenant_access_safe((tenant_id)::bigint, auth.uid())
+        AND is_client_visible = true
+      )
+    )
   );
+
+-- 2. BEFORE INSERT: force is_client_visible = true for non-staff --------------
+CREATE OR REPLACE FUNCTION public.suggest_items_force_client_visibility()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT (is_super_admin_safe(auth.uid()) OR is_vivacity_team_safe(auth.uid())) THEN
+    NEW.is_client_visible := true;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS suggest_items_force_client_visibility ON public.suggest_items;
+CREATE TRIGGER suggest_items_force_client_visibility
+  BEFORE INSERT ON public.suggest_items
+  FOR EACH ROW
+  EXECUTE FUNCTION public.suggest_items_force_client_visibility();
+
+-- 3. BEFORE UPDATE: guard flag + auto-flip on release -------------------------
+CREATE OR REPLACE FUNCTION public.suggest_items_visibility_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_is_staff boolean;
+  v_released_id uuid;
+BEGIN
+  v_is_staff := is_super_admin_safe(auth.uid()) OR is_vivacity_team_safe(auth.uid());
+
+  -- (a) Non-staff cannot mutate is_client_visible
+  IF NOT v_is_staff AND NEW.is_client_visible IS DISTINCT FROM OLD.is_client_visible THEN
+    NEW.is_client_visible := OLD.is_client_visible;
+  END IF;
+
+  -- (b) Auto-flip to true on transition to release_status='released'
+  IF NEW.suggest_release_status_id IS DISTINCT FROM OLD.suggest_release_status_id THEN
+    SELECT id INTO v_released_id
+      FROM public.dd_suggest_release_status
+     WHERE code = 'released'
+     LIMIT 1;
+
+    IF v_released_id IS NOT NULL
+       AND NEW.suggest_release_status_id = v_released_id THEN
+      NEW.is_client_visible := true;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS suggest_items_visibility_guard ON public.suggest_items;
+CREATE TRIGGER suggest_items_visibility_guard
+  BEFORE UPDATE ON public.suggest_items
+  FOR EACH ROW
+  EXECUTE FUNCTION public.suggest_items_visibility_guard();
 ```
 
-## What happens after approval
+### Notes on choices
 
-1. Apply M2 via the migration tool.
-2. Run the post-state verification query (expect `visible_after = 0`, `total = 8`).
-3. Stop and report back. M3 (SELECT policy swap + INSERT/UPDATE triggers) follows as a separate plan/approval cycle.
+- **Staff predicate** mirrors the existing SELECT policy exactly (`is_super_admin_safe OR is_vivacity_team_safe`) — no new helper introduced, no role drift.
+- **Non-staff update revert is silent** (no RAISE) per the spec — the row simply persists `OLD.is_client_visible`. If you'd prefer a hard error instead, say the word and I'll swap to `RAISE EXCEPTION`.
+- **Released ID lookup** is by `code='released'` (resolved id = `74722d84-…`), so this survives any future reseed of `dd_suggest_release_status`.
+- **Auto-flip is one-way**: only sets to `true` on the released transition; it never sets back to `false` if the status is moved away from released. This matches "released → client-visible" without introducing reversal semantics.
+- **No INSERT/UPDATE policy changes** — existing `suggest_items_insert` / `suggest_items_update` policies remain; the trigger handles the visibility column.
+- **Idempotent**: every CREATE is preceded by DROP IF EXISTS; safe to re-run.
 
-## Note on intermediate state
-
-Behaviour remains unchanged after M2: the existing `suggest_items_select` policy still doesn't reference `is_client_visible`, so non-staff visibility is identical to today. The flag becomes load-bearing only when M3 ships.
+Awaiting approval to apply.
