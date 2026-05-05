@@ -29,6 +29,7 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
 import { useHelpCenter } from "@/components/help-center";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
+import unicornLogo from "@/assets/unicorn-logo-login.svg";
 
 interface ClientTopbarProps {
   isPreview: boolean;
@@ -71,9 +72,20 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
         borderColor: "hsl(270 20% 88%)",
       }}
     >
-      {/* Left: Vivacity logo */}
+      {/* Left: Unicorn + Vivacity logos */}
       <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-        <img src={vivacityLogo} alt="Vivacity" className="h-10 w-auto" />
+        <img
+          src={unicornLogo}
+          alt="Unicorn 2.0"
+          className="h-14 w-auto flex-shrink-0"
+          loading="eager"
+        />
+        <img
+          src={vivacityLogo}
+          alt="Vivacity Coaching & Consulting"
+          className="h-10 w-auto flex-shrink-0"
+          loading="eager"
+        />
       </div>
 
       {/* Center: Search */}
