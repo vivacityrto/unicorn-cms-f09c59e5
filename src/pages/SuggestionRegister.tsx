@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Search, Plus, Lightbulb, Rocket, CalendarDays, User } from 'lucide-react';
+import { Loader2, Search, Plus, Lightbulb, Rocket, CalendarDays, User, Eye, EyeOff } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 
 const PRIORITY_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -38,7 +38,11 @@ function userName(user: { first_name: string | null; last_name: string | null } 
 
 export default function SuggestionRegister() {
   const navigate = useNavigate();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, profile } = useAuth();
+  const isVivacityStaff =
+    profile?.unicorn_role === 'Super Admin' ||
+    profile?.unicorn_role === 'Team Leader' ||
+    profile?.unicorn_role === 'Team Member';
   const { data: items, isLoading } = useSuggestItems();
   const { data: releasedItems, isLoading: releasedLoading } = useReleasedSuggestItems();
   const dropdowns = useSuggestDropdowns();
@@ -201,6 +205,11 @@ export default function SuggestionRegister() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="min-w-[280px]">Title</TableHead>
+                          {isVivacityStaff && (
+                            <TableHead className="w-10">
+                              <span className="sr-only">Visibility</span>
+                            </TableHead>
+                          )}
                           <TableHead>Type</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Priority</TableHead>
@@ -219,6 +228,15 @@ export default function SuggestionRegister() {
                             onClick={() => navigate(`/suggestions/${item.id}`)}
                           >
                             <TableCell className="font-medium">{item.title}</TableCell>
+                            {isVivacityStaff && (
+                              <TableCell>
+                                {item.is_client_visible ? (
+                                  <Eye className="h-4 w-4 text-primary" aria-label="Visible to client" />
+                                ) : (
+                                  <EyeOff className="h-4 w-4 text-muted-foreground" aria-label="Hidden from client" />
+                                )}
+                              </TableCell>
+                            )}
                             <TableCell>
                               <Badge variant="outline" className="text-xs">{item.item_type?.label ?? '—'}</Badge>
                             </TableCell>

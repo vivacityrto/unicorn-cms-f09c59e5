@@ -28,6 +28,7 @@ export interface SuggestItem {
   released_at: string | null;
   released_by: string | null;
   is_deleted: boolean;
+  is_client_visible: boolean;
   created_at: string;
   updated_at: string;
   created_by: string;
