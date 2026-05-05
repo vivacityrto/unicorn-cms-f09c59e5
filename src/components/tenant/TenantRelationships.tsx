@@ -120,6 +120,7 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
           parent_tenant_id: parentId,
           child_tenant_id: childId,
           notes: notes.trim() || null,
+          bills_to_parent: billsToParent,
           created_by: profile?.user_uuid,
         });
 
