@@ -59,7 +59,7 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenant_relationships")
-        .select("id, parent_tenant_id, child_tenant_id, notes, created_at")
+        .select("id, parent_tenant_id, child_tenant_id, notes, created_at, bills_to_parent")
         .or(`parent_tenant_id.eq.${tenantId},child_tenant_id.eq.${tenantId}`)
         .order("created_at", { ascending: true });
 
