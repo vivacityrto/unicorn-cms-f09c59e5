@@ -1517,7 +1517,22 @@ export default function ManageDocuments() {
                   </TableHead>
                 )}
                 <TableHead className="font-semibold bg-muted/30 text-foreground min-w-[200px] max-w-[300px] h-14 whitespace-nowrap border-r">
-                  Name
+                  <button
+                    type="button"
+                    onClick={() => toggleSort("title")}
+                    className="flex items-center gap-1 select-none hover:text-primary transition-colors"
+                  >
+                    Name
+                    {sortField === "title" ? (
+                      sortDirection === "asc" ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="h-4 w-4 text-muted-foreground/60" />
+                    )}
+                  </button>
                 </TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground min-w-[250px] h-14 whitespace-nowrap border-r">Description</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Format</TableHead>
