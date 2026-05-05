@@ -79,19 +79,26 @@ export function RenameTenantDialog({
         .eq("id", tenantId);
       if (error) throw error;
 
-      // Audit
-      await supabase.from("audit_events").insert({
-        entity: "tenants",
-        entity_id: null,
-        tenant_id: tenantId,
-        action: "name_changed",
-        actor_user_id: profile?.user_uuid ?? null,
-        metadata: {
-          from: currentName,
-          to: trimmed,
-          rto_id_at_change: rtoId ?? null,
-        },
-      });
+      // Audit (entity_id is uuid; use tenants.id_uuid)
+      const { data: tRow } = await supabase
+        .from("tenants")
+        .select("id_uuid")
+        .eq("id", tenantId)
+        .maybeSingle();
+      if (tRow?.id_uuid) {
+        await supabase.from("audit_events").insert({
+          entity: "tenants",
+          entity_id: tRow.id_uuid,
+          action: "name_changed",
+          user_id: profile?.user_uuid ?? null,
+          details: {
+            tenant_id: tenantId,
+            from: currentName,
+            to: trimmed,
+            rto_id_at_change: rtoId ?? null,
+          },
+        });
+      }
 
       return trimmed;
     },
