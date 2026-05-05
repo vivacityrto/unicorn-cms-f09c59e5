@@ -263,6 +263,26 @@ export default function ClientDetail() {
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold">{tenant.name}</h1>
+                  {canEdit && (
+                    canRenameTenant(profile?.rto_number) ? (
+                      <button
+                        type="button"
+                        onClick={() => setRenameOpen(true)}
+                        className="text-muted-foreground hover:text-primary transition-colors"
+                        title="Rename organisation"
+                        aria-label="Rename organisation"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <span
+                        className="text-muted-foreground"
+                        title={`Name is managed by TGA (RTO ${profile?.rto_number}). Re-query TGA to change.`}
+                      >
+                        <Lock className="h-3.5 w-3.5" />
+                      </span>
+                    )
+                  )}
                   <TenantStatusDropdown
                     tenantId={tenantIdNum!}
                     currentStatus={tenant.status}
