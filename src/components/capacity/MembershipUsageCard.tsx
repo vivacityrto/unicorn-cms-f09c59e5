@@ -21,6 +21,31 @@ export function MembershipUsageCard({ tenantId }: MembershipUsageCardProps) {
     );
   }
 
+  if (usage?.billing_parent_tenant_id) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Membership Usage
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Consult time for this organisation is billed to{' '}
+            <a
+              href={`/tenant/${usage.billing_parent_tenant_id}`}
+              className="font-medium text-primary hover:underline"
+            >
+              {usage.billing_parent_name ?? 'parent organisation'}
+            </a>
+            . View pool there.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!usage || usage.included_hours_annual === 0) {
     return (
       <Card>
