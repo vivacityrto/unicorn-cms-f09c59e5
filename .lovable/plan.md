@@ -1,75 +1,102 @@
-# Fix invite acceptance: write tenant_members row and set profiles.active_tenant_id
+# Fix infinite recursion in `conversation_participants` RLS
 
-## Findings from deep dive
+## Root cause confirmed
+Live policy inspection (pg_policy) confirms:
+- `cp_select_member` on `conversation_participants` self-references the same table inside an `EXISTS` subquery, which re-enters the policy under RLS.
+- `tm_select_participant` and `tm_insert_tenant` on `tenant_messages` both run `EXISTS … FROM conversation_participants` under RLS, which triggers `cp_select_member`, completing the recursion loop. Postgres aborts with "infinite recursion detected in policy for relation conversation_participants" → HTTP 500 on every read/write.
 
-- `public.accept_invitation_v2(text, uuid)` is `SECURITY DEFINER`, search_path `public, pg_temp`. It currently writes `users`, `tenant_users`, `user_invitations`, and `audit_eos_events` — but never `tenant_members` or `profiles`. Confirmed against the live function definition (202 lines).
-- `tenant_members` is the canonical RLS source for `users_select_same_tenant` and many other policies (per `mem://security/users-rls-architecture`). Missing rows here are exactly why newly-invited users can't see tenant data.
-- Schema reality:
-  - `tenant_members(id uuid pk default gen_random_uuid(), tenant_id bigint NOT NULL, user_id uuid NOT NULL → users.user_uuid ON UPDATE CASCADE ON DELETE CASCADE, role text NOT NULL CHECK IN ('Admin','General User'), status text NOT NULL CHECK IN ('active','inactive','pending'), invited_at, joined_at default now(), created_at NOT NULL default now(), updated_at NOT NULL default now())`. Unique `(tenant_id, user_id)`. ON CONFLICT target in the spec matches.
-  - `tenants` has both `id bigint` and `id_uuid uuid`. The spec correctly resolves `id_uuid` from the bigint `v_invitation.tenant_id`.
-  - `profiles.user_id uuid`, `profiles.active_tenant_id uuid`, `profiles.updated_at timestamptz`. The spec's `WHERE user_id = p_user_id` matches.
-- Role mapping in spec — `CASE WHEN v_tu_role = 'parent' THEN 'Admin' ELSE 'General User' END` — is consistent with the existing legacy/relationship_role derivation block (parent ⇒ Admin, child ⇒ General User). Vivacity-team invitations also fall through to `child` ⇒ `General User`, which is acceptable for `tenant_members.role` (Vivacity staff visibility is governed by `unicorn_role`/`is_team`, not by `tenant_members.role`).
-- The `ON CONFLICT … DO UPDATE SET role = EXCLUDED.role, status = 'active', updated_at = now()` is safe: if a member already exists we re-activate without demoting Admins, because re-acceptance only happens for the same invitation/role grant. (No existing flow downgrades Admin→General User via re-invitation.)
-- The profiles UPDATE is gated on `active_tenant_id IS NULL`, so it never overwrites an existing active tenant for users who belong to multiple tenants. Safe.
-- Frontend: `src/pages/AcceptInvitation.tsx` line 81 **already** contains `const VIVACITY_TENANT_ID = 6372;`. The requested edit is a no-op — I will skip it and call this out, rather than churning the file. Verified via ripgrep.
-- All other invocations of `accept_invitation_v2` are unaffected — function signature, return shape, and existing writes are unchanged.
+## Helper functions
+- `is_super_admin`, `is_vivacity_team_safe`, `has_tenant_access_safe`, `is_tenant_admin` already exist in `public`. Confirmed via `pg_proc`.
+- `is_conversation_participant_safe` does **not** exist — needs to be created.
 
-## Implementation
-
-### 1. Migration — extend `accept_invitation_v2`
-
-Replace the function with an identical body, inserting two new statements **after** the existing `INSERT INTO public.tenant_users … ON CONFLICT …` block (line 158 in the current definition) and **before** the `UPDATE public.user_invitations` block:
+## Migration (single file)
 
 ```sql
--- a) Mirror membership into tenant_members (canonical RLS source)
-INSERT INTO public.tenant_members (tenant_id, user_id, role, status)
-VALUES (
-  v_invitation.tenant_id,
-  p_user_id,
-  CASE WHEN v_tu_role = 'parent' THEN 'Admin' ELSE 'General User' END,
-  'active'
-)
-ON CONFLICT (tenant_id, user_id) DO UPDATE SET
-  role = EXCLUDED.role,
-  status = 'active',
-  updated_at = now();
+-- 1. SECURITY DEFINER helper bypasses RLS, breaking the recursion chain
+CREATE OR REPLACE FUNCTION public.is_conversation_participant_safe(
+  p_conversation_id uuid,
+  p_user_id uuid
+) RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.conversation_participants
+    WHERE conversation_id = p_conversation_id
+      AND user_id = p_user_id
+  );
+$$;
 
--- b) Set the user's active tenant if they don't have one yet
-UPDATE public.profiles
-SET active_tenant_id = (
-       SELECT id_uuid FROM public.tenants WHERE id = v_invitation.tenant_id
-     ),
-    updated_at = now()
-WHERE user_id = p_user_id
-  AND active_tenant_id IS NULL;
+REVOKE ALL ON FUNCTION public.is_conversation_participant_safe(uuid, uuid) FROM public;
+GRANT EXECUTE ON FUNCTION public.is_conversation_participant_safe(uuid, uuid)
+  TO authenticated, service_role;
+
+-- 2. Recreate cp_select_member without self-reference
+DROP POLICY IF EXISTS cp_select_member ON public.conversation_participants;
+CREATE POLICY cp_select_member ON public.conversation_participants
+FOR SELECT
+USING (
+  is_super_admin()
+  OR is_vivacity_team_safe(auth.uid())
+  OR user_id = auth.uid()
+  OR public.is_conversation_participant_safe(conversation_id, auth.uid())
+);
+
+-- 3. Recreate tm_select_participant
+DROP POLICY IF EXISTS tm_select_participant ON public.tenant_messages;
+CREATE POLICY tm_select_participant ON public.tenant_messages
+FOR SELECT
+USING (
+  is_vivacity_team_safe(auth.uid())
+  OR public.is_conversation_participant_safe(conversation_id, auth.uid())
+);
+
+-- 4. Recreate tm_insert_tenant — PRESERVE existing sender_user_uuid guard
+DROP POLICY IF EXISTS tm_insert_tenant ON public.tenant_messages;
+CREATE POLICY tm_insert_tenant ON public.tenant_messages
+FOR INSERT
+WITH CHECK (
+  sender_user_uuid = auth.uid()
+  AND has_tenant_access_safe(tenant_id, auth.uid())
+  AND public.is_conversation_participant_safe(conversation_id, auth.uid())
+);
 ```
 
-Everything else in the function — guards, role derivation, `users` re-link/insert/update, `tenant_users` write, `user_invitations` status flip, `audit_eos_events` insert, return JSON — is preserved verbatim. Function attributes (`SECURITY DEFINER`, search_path, language, signature) unchanged.
+## Deviations from the request — flagged for confirmation
 
-### 2. Frontend — no change required
+The request omitted the existing `sender_user_uuid = auth.uid()` check from `tm_insert_tenant`. The current production policy enforces it (verified in `pg_policy.polwithcheck`). Removing it would let an authenticated tenant user insert a message attributed to **another user** in the same conversation — a spoofing/audit-integrity regression that violates project rule "every material action records who performed it".
 
-`src/pages/AcceptInvitation.tsx:81` is already `const VIVACITY_TENANT_ID = 6372;`. No edit needed; the requested change matches the current state. I'll explicitly note this in the change log instead of re-writing the line.
+**Recommendation: keep `sender_user_uuid = auth.uid()`** (as written above). This is the only safe interpretation; the recursion fix does not require dropping it. If the user explicitly wants it removed, call it out and we revisit.
+
+## Verification queries (post-migration)
+
+1. `SELECT pg_get_expr(polqual, polrelid) FROM pg_policy WHERE polname IN ('cp_select_member','tm_select_participant','tm_insert_tenant');` — confirm no `conversation_participants` self-reference remains.
+2. `SELECT 1 FROM public.tenant_messages LIMIT 1;` as an authenticated participant — must not error.
+3. `SELECT 1 FROM public.conversation_participants LIMIT 1;` — must not error.
 
 ## Risk assessment
 
-- **RLS impact**: positive only. New `tenant_members` row enables `users_select_same_tenant` to function for invited users. No policy is altered.
-- **FK constraints**: `tenant_members.user_id → users(user_uuid)` is satisfied because the function's earlier block guarantees a `users` row for `p_user_id` (via re-link/insert/update) before the new statements run.
-- **CHECK constraints**: role values ('Admin','General User') and status ('active') both pass `tenant_members_role_check` and `tenant_members_status_check`.
-- **Re-acceptance**: `ON CONFLICT` re-activates membership without orphaning historical rows. `profiles` update is idempotent and guarded by `IS NULL`.
-- **Vivacity-team invitations** (tenant 6372): receive `tenant_members.role = 'General User'`. Their staff privileges flow through `unicorn_role` / `is_team` on `public.users`, not `tenant_members.role`, so this is correct.
-- **Audit completeness**: existing `audit_eos_events` row already records `tenant_id`, `user_id`, and `tenant_users_role`. The two new writes are deterministic consequences of the same accept event and don't require separate audit entries. (Optional follow-up: add `tenant_members_role` and `active_tenant_set` flags into the existing `details` jsonb — flag for next sprint, not this one, since user said "do not touch any other logic".)
-- **Backward compatibility**: signature and return shape unchanged; all callers continue to work.
-- **Concurrency**: both new statements are single-row idempotent operations on uniquely-keyed rows; no deadlock risk vs the existing writes.
+| Area | Impact | Notes |
+|---|---|---|
+| Recursion / 500s | Resolved | Helper is `SECURITY DEFINER`, does not re-enter RLS. |
+| Other policies (`tm_select_staff`, `tm_insert_staff`, `tm_delete_staff`, `tm_update_participant`, `cp_insert_auth`, `cp_update_own`, `cp_delete_admin`) | Untouched | Verified via pg_policy dump. None reference the recreated policies. |
+| `cp_delete_admin` | Still queries `tenant_conversations` (not `conversation_participants`) — no recursion path. | OK |
+| `cp_insert_auth` | Same — references `tenant_conversations`/`tenant_users`, no loop. | OK |
+| Visibility semantics | Equivalent. The new `cp_select_member` returns the same row set as the broken policy (a participant can see all participants of conversations they're in), just without recursing. | OK |
+| Sender spoofing | Prevented by retaining `sender_user_uuid = auth.uid()` in `tm_insert_tenant`. | OK |
+| FK constraints | Untouched. | OK |
+| Function security | `SECURITY DEFINER` + fixed `search_path = public` + explicit `GRANT EXECUTE` to `authenticated`/`service_role` only. Safe pattern, matches existing `*_safe` helpers. | OK |
+| Audit logging | No write paths altered; existing audit triggers/inserts unaffected. | OK |
+| Backward compatibility | Function additive; policy names and semantics preserved. No client code changes required. | OK |
 
 ## Summary of changes
+1. **New function**: `public.is_conversation_participant_safe(uuid, uuid)` — `SECURITY DEFINER` helper.
+2. **Recreated policies** (3): `cp_select_member`, `tm_select_participant`, `tm_insert_tenant` — now call the helper instead of inlining a recursive `EXISTS`.
+3. **No** other policy, table, function, FK, or app code changes.
 
-1. **DB migration**: `accept_invitation_v2` extended with `tenant_members` insert and conditional `profiles.active_tenant_id` set. No other function logic touched.
-2. **Frontend**: no change — constant is already 6372.
-
-### Benefits
-- Invited users immediately gain RLS-visible tenant membership via `tenant_members`.
-- Their portal lands on the correct active tenant on first login (no manual switcher step).
-- Fix is self-contained inside one SECURITY DEFINER function — no policy, table, or hook changes.
-
-### Residual risk
-Low. The only behavioural delta for existing users is: on re-accepting an invitation, an `inactive` `tenant_members` row is reactivated. This is the intended outcome of accepting an invitation.
+## Benefits
+- Eliminates production 500s on tenant messaging.
+- Removes a latent recursion class for any future policy that joins `conversation_participants`.
+- Preserves audit integrity by keeping the sender identity guard.
