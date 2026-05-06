@@ -261,7 +261,7 @@ async function seedMessage(
   if (error) throw new Error(`seed message: ${error.message}`);
 }
 
-describe.sequential.skipIf(!RLS_SUITE_ENABLED)(
+describe.skipIf(!RLS_SUITE_ENABLED).sequential(
   "tenant_messages RLS — live database",
   () => {
     beforeAll(async () => {
