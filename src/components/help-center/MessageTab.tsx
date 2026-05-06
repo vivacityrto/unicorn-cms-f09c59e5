@@ -52,24 +52,45 @@ export function MessageTab({ channel }: MessageTabProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  // For CSC: tenant_conversations.id; for support: help_threads.id
   const [threadId, setThreadId] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  // CSC branch: blocks send when participant upsert failed.
+  const [cscInitFailed, setCscInitFailed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Load most recent thread for this channel
+  // ---------- Load history ----------
   useEffect(() => {
     if (!profile?.user_uuid) return;
+
+    let cancelled = false;
+
     (async () => {
       setLoadingHistory(true);
+      setMessages([]);
+      setThreadId(null);
+      setCscInitFailed(false);
+
+      if (channel === "csc") {
+        await loadCscThread();
+      } else {
+        await loadSupportThread();
+      }
+
+      if (!cancelled) setLoadingHistory(false);
+    })();
+
+    async function loadSupportThread() {
       const { data: threads } = await supabase
         .from("help_threads")
         .select("id")
-        .eq("user_id", profile.user_uuid)
-        .eq("channel", channel)
+        .eq("user_id", profile!.user_uuid)
+        .eq("channel", "support")
         .eq("status", "open")
         .order("updated_at", { ascending: false })
         .limit(1);
 
+      if (cancelled) return;
       if (threads && threads.length > 0) {
         const tid = threads[0].id;
         setThreadId(tid);
@@ -78,11 +99,179 @@ export function MessageTab({ channel }: MessageTabProps) {
           .select("id, role, content, created_at")
           .eq("thread_id", tid)
           .order("created_at", { ascending: true });
-        if (msgs) setMessages(msgs.filter(m => m.role === "user" || m.role === "staff") as Message[]);
+        if (!cancelled && msgs) {
+          setMessages(msgs.filter(m => m.role === "user" || m.role === "staff") as Message[]);
+        }
       }
-      setLoadingHistory(false);
-    })();
-  }, [profile?.user_uuid, channel]);
+    }
+
+    async function loadCscThread() {
+      const tenantId = profile!.tenant_id;
+      const myUuid = profile!.user_uuid;
+      if (!tenantId || !myUuid) return;
+
+      // 1) Resolve existing open CSC conversation, or create one.
+      let conversationId: string | null = null;
+      const { data: existing } = await (supabase
+        .from("tenant_conversations" as any)
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("topic", "csc")
+        .eq("created_by_user_uuid", myUuid)
+        .eq("status", "open")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()) as any;
+
+      if (existing?.id) {
+        conversationId = existing.id;
+      } else {
+        const { data: created, error: createErr } = await (supabase
+          .from("tenant_conversations" as any)
+          .insert({
+            tenant_id: tenantId,
+            topic: "csc",
+            type: "direct",
+            subject: "Message your CSC",
+            created_by_user_uuid: myUuid,
+            status: "open",
+          } as any)
+          .select("id")
+          .single()) as any;
+        if (createErr || !created?.id) {
+          console.error("CSC conversation create failed:", createErr);
+          toast.error("Could not initialize your message thread. Please refresh and try again.");
+          setCscInitFailed(true);
+          return;
+        }
+        conversationId = created.id;
+      }
+
+      if (!conversationId || cancelled) return;
+
+      // 2) Self participant — REQUIRED before any send (RLS). Surface failure to user.
+      const { error: selfPartErr } = await (supabase
+        .from("conversation_participants" as any)
+        .upsert(
+          {
+            conversation_id: conversationId,
+            user_id: myUuid,
+            role: "member",
+            last_read_at: new Date().toISOString(),
+          } as any,
+          { onConflict: "conversation_id,user_id" }
+        )) as any;
+      if (selfPartErr) {
+        console.error("CSC self participant upsert failed:", selfPartErr);
+        toast.error("Could not initialize your message thread. Please refresh and try again.");
+        setCscInitFailed(true);
+        return;
+      }
+
+      // 3) Add primary CSC as participant (best-effort).
+      const { data: cscRow } = await (supabase
+        .from("tenant_csc_assignments" as any)
+        .select("csc_user_id")
+        .eq("tenant_id", tenantId)
+        .eq("is_primary", true)
+        .limit(1)
+        .maybeSingle()) as any;
+
+      if (cscRow?.csc_user_id) {
+        const { error: cscPartErr } = await (supabase
+          .from("conversation_participants" as any)
+          .upsert(
+            {
+              conversation_id: conversationId,
+              user_id: cscRow.csc_user_id,
+              role: "csc",
+            } as any,
+            { onConflict: "conversation_id,user_id", ignoreDuplicates: true }
+          )) as any;
+        if (cscPartErr) {
+          console.warn("CSC participant upsert non-fatal failure:", cscPartErr);
+        }
+      }
+
+      if (cancelled) return;
+      setThreadId(conversationId);
+
+      // 4) Fetch messages.
+      const { data: rows } = await (supabase
+        .from("tenant_messages" as any)
+        .select("id, sender_user_uuid, body, created_at")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true })) as any;
+
+      if (cancelled) return;
+
+      const mapped: Message[] = (rows || []).map((r: any) => ({
+        id: r.id,
+        role: r.sender_user_uuid === myUuid ? "user" : "staff",
+        content: r.body,
+        created_at: r.created_at,
+      }));
+      setMessages(mapped);
+
+      // 5) Fire-and-forget read audit.
+      if (mapped.length > 0) {
+        void (supabase
+          .from("audit_events")
+          .insert({
+            entity: "tenant_message_read",
+            entity_id: conversationId,
+            action: "messages_read",
+            user_id: myUuid,
+            details: {
+              conversation_id: conversationId,
+              tenant_id: tenantId,
+              message_count: mapped.length,
+            },
+          } as any) as any).then(() => {}, () => {});
+      }
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.user_uuid, profile?.tenant_id, channel]);
+
+  // ---------- Realtime (CSC only) ----------
+  useEffect(() => {
+    if (channel !== "csc" || !threadId) return;
+    const myUuid = profile?.user_uuid;
+    const ch = supabase
+      .channel(`csc-tm:${threadId}`)
+      .on(
+        "postgres_changes" as any,
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "tenant_messages",
+          filter: `conversation_id=eq.${threadId}`,
+        },
+        (payload: any) => {
+          const r = payload.new;
+          if (!r) return;
+          setMessages(prev => {
+            if (prev.some(m => m.id === r.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: r.id,
+                role: r.sender_user_uuid === myUuid ? "user" : "staff",
+                content: r.body,
+                created_at: r.created_at,
+              },
+            ];
+          });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [channel, threadId, profile?.user_uuid]);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -90,52 +279,20 @@ export function MessageTab({ channel }: MessageTabProps) {
 
   const sendMessage = async () => {
     if (!input.trim() || loading || !profile) return;
+    if (channel === "csc" && cscInitFailed) {
+      toast.error("Message thread not initialized. Please refresh and try again.");
+      return;
+    }
     const userMsg = input.trim();
     setInput("");
     setLoading(true);
 
     try {
-      let currentThreadId = threadId;
-
-      // Create thread if none exists
-      if (!currentThreadId) {
-        const { data: newThread, error: threadError } = await supabase
-          .from("help_threads")
-          .insert({
-            tenant_id: profile.tenant_id,
-            user_id: profile.user_uuid,
-            channel,
-            status: "open",
-          })
-          .select("id")
-          .single();
-
-        if (threadError) throw threadError;
-        currentThreadId = newThread.id;
-        setThreadId(currentThreadId);
+      if (channel === "csc") {
+        await sendCsc(userMsg);
+      } else {
+        await sendSupport(userMsg);
       }
-
-      // Insert message
-      const { data: msg, error: msgError } = await supabase
-        .from("help_messages")
-        .insert({
-          thread_id: currentThreadId,
-          sender_id: profile.user_uuid,
-          role: "user",
-          content: userMsg,
-        })
-        .select("id, role, content, created_at")
-        .single();
-
-      if (msgError) throw msgError;
-
-      setMessages(prev => [...prev, msg as Message]);
-
-      // Touch thread updated_at
-      await supabase
-        .from("help_threads")
-        .update({ updated_at: new Date().toISOString() })
-        .eq("id", currentThreadId);
     } catch (err: any) {
       console.error("Message send error:", err);
       toast.error("Failed to send message. Please try again.");
@@ -143,6 +300,92 @@ export function MessageTab({ channel }: MessageTabProps) {
       setLoading(false);
     }
   };
+
+  async function sendSupport(userMsg: string) {
+    let currentThreadId = threadId;
+
+    if (!currentThreadId) {
+      const { data: newThread, error: threadError } = await supabase
+        .from("help_threads")
+        .insert({
+          tenant_id: profile!.tenant_id,
+          user_id: profile!.user_uuid,
+          channel: "support",
+          status: "open",
+        })
+        .select("id")
+        .single();
+
+      if (threadError) throw threadError;
+      currentThreadId = newThread.id;
+      setThreadId(currentThreadId);
+    }
+
+    const { data: msg, error: msgError } = await supabase
+      .from("help_messages")
+      .insert({
+        thread_id: currentThreadId,
+        sender_id: profile!.user_uuid,
+        role: "user",
+        content: userMsg,
+      })
+      .select("id, role, content, created_at")
+      .single();
+
+    if (msgError) throw msgError;
+
+    setMessages(prev => [...prev, msg as Message]);
+
+    await supabase
+      .from("help_threads")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", currentThreadId);
+  }
+
+  async function sendCsc(userMsg: string) {
+    const conversationId = threadId;
+    if (!conversationId) {
+      toast.error("Message thread not ready. Please try again.");
+      return;
+    }
+    const myUuid = profile!.user_uuid;
+    const tenantId = profile!.tenant_id;
+
+    const { data: inserted, error } = await (supabase
+      .from("tenant_messages" as any)
+      .insert({
+        conversation_id: conversationId,
+        tenant_id: tenantId,
+        sender_user_uuid: myUuid,
+        sender_type: "client",
+        body: userMsg,
+      } as any)
+      .select("id, sender_user_uuid, body, created_at")
+      .single()) as any;
+    if (error) throw error;
+
+    if (inserted) {
+      setMessages(prev => {
+        if (prev.some(m => m.id === inserted.id)) return prev;
+        return [
+          ...prev,
+          {
+            id: inserted.id,
+            role: "user",
+            content: inserted.body,
+            created_at: inserted.created_at,
+          },
+        ];
+      });
+    }
+
+    // Touch own last_read_at
+    await (supabase
+      .from("conversation_participants" as any)
+      .update({ last_read_at: new Date().toISOString() } as any)
+      .eq("conversation_id", conversationId)
+      .eq("user_id", myUuid)) as any;
+  }
 
   const EmptyIcon = config.emptyIcon;
 
@@ -215,10 +458,14 @@ export function MessageTab({ channel }: MessageTabProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={config.placeholder}
-            disabled={loading}
+            disabled={loading || (channel === "csc" && cscInitFailed)}
             className="flex-1"
           />
-          <Button type="submit" size="icon" disabled={!input.trim() || loading}>
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!input.trim() || loading || (channel === "csc" && cscInitFailed)}
+          >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </form>
