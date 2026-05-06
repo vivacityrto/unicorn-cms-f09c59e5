@@ -24,10 +24,42 @@ export interface ConversationThread {
 export interface ConversationMessage {
   id: string;
   conversation_id: string;
+  /** Aliased from tenant_messages.sender_user_uuid for backward compatibility. */
   sender_id: string;
+  sender_type?: string | null;
   body: string;
   created_at: string;
   sender_name?: string;
+}
+
+/**
+ * Subscribe to realtime INSERTs on tenant_messages for a single conversation
+ * and invalidate the relevant queries on every event.
+ */
+export function useConversationRealtime(conversationId: string | null) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!conversationId) return;
+    const channel = supabase
+      .channel(`tm:${conversationId}`)
+      .on(
+        "postgres_changes" as any,
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "tenant_messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["conversation-messages", conversationId] });
+          qc.invalidateQueries({ queryKey: ["client-conversations"] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, qc]);
 }
 
 export function useClientCommunications() {
@@ -54,7 +86,6 @@ export function useClientCommunications() {
       if (error) throw error;
       if (!convos?.length) return [];
 
-      // Get participant read status for current user
       const convoIds = convos.map((c: any) => c.id);
       const { data: participants } = await (supabase
         .from("conversation_participants" as any)
@@ -68,7 +99,9 @@ export function useClientCommunications() {
       return convos.map((c: any) => ({
         ...c,
         isUnread: c.last_message_at
-          ? !readMap.has(c.id) || !readMap.get(c.id) || new Date(c.last_message_at) > new Date(readMap.get(c.id)!)
+          ? !readMap.has(c.id) ||
+            !readMap.get(c.id) ||
+            new Date(c.last_message_at) > new Date(readMap.get(c.id)!)
           : false,
       }));
     },
@@ -77,24 +110,24 @@ export function useClientCommunications() {
 
   // Fetch messages for a specific conversation
   const useConversationMessages = (conversationId: string | null) => {
+    // Realtime keeps this conversation's message list fresh.
+    useConversationRealtime(conversationId);
+
     return useQuery({
       queryKey: ["conversation-messages", conversationId],
       queryFn: async (): Promise<ConversationMessage[]> => {
         if (!conversationId) return [];
 
         const { data, error } = await (supabase
-          .from("messages" as any)
-          .select("id, conversation_id, sender_id, body, created_at")
+          .from("tenant_messages" as any)
+          .select("id, conversation_id, sender_user_uuid, sender_type, body, created_at")
           .eq("conversation_id", conversationId)
           .order("created_at", { ascending: true })) as any;
 
         if (error) throw error;
         if (!data?.length) return [];
 
-        // Fetch sender names
-        const senderIdSet = new Set<string>();
-        data.forEach((m: any) => senderIdSet.add(m.sender_id));
-        const senderIds = Array.from(senderIdSet);
+        const senderIds = Array.from(new Set<string>(data.map((m: any) => m.sender_user_uuid)));
         const { data: users } = await (supabase
           .from("users")
           .select("user_uuid, first_name, last_name")
@@ -102,13 +135,43 @@ export function useClientCommunications() {
 
         const nameMap = new Map<string, string>();
         (users || []).forEach((u: any) => {
-          nameMap.set(u.user_uuid, [u.first_name, u.last_name].filter(Boolean).join(" ") || "Unknown");
+          nameMap.set(
+            u.user_uuid,
+            [u.first_name, u.last_name].filter(Boolean).join(" ") || "Unknown"
+          );
         });
 
-        return data.map((m: any) => ({
-          ...m,
-          sender_name: nameMap.get(m.sender_id) || "Unknown",
+        const mapped: ConversationMessage[] = data.map((m: any) => ({
+          id: m.id,
+          conversation_id: m.conversation_id,
+          sender_id: m.sender_user_uuid,
+          sender_type: m.sender_type ?? null,
+          body: m.body,
+          created_at: m.created_at,
+          sender_name: nameMap.get(m.sender_user_uuid) || "Unknown",
         }));
+
+        // Fire-and-forget application-layer read audit.
+        if (mapped.length > 0 && currentUserId) {
+          void (supabase
+            .from("audit_events")
+            .insert({
+              entity: "tenant_message_read",
+              entity_id: conversationId,
+              action: "messages_read",
+              user_id: currentUserId,
+              details: {
+                conversation_id: conversationId,
+                tenant_id: activeTenantId,
+                message_count: mapped.length,
+              },
+            } as any) as any).then(
+            () => {},
+            () => {}
+          );
+        }
+
+        return mapped;
       },
       enabled: !!conversationId,
     });
@@ -120,17 +183,17 @@ export function useClientCommunications() {
       if (!currentUserId || !activeTenantId) throw new Error("Not authenticated");
 
       const { error } = await (supabase
-        .from("messages" as any)
+        .from("tenant_messages" as any)
         .insert({
           conversation_id: conversationId,
-          sender_id: currentUserId,
+          sender_user_uuid: currentUserId,
+          sender_type: "client",
           body,
           tenant_id: activeTenantId,
         } as any)) as any;
 
       if (error) throw error;
 
-      // Update last_read_at for sender
       await (supabase
         .from("conversation_participants" as any)
         .update({ last_read_at: new Date().toISOString() } as any)
@@ -160,7 +223,6 @@ export function useClientCommunications() {
     }) => {
       if (!currentUserId || !activeTenantId) throw new Error("Not authenticated");
 
-      // Create conversation
       const { data: conv, error: convError } = await (supabase
         .from("tenant_conversations" as any)
         .insert({
@@ -179,17 +241,20 @@ export function useClientCommunications() {
       if (convError) throw convError;
       const conversationId = conv.id;
 
-      // Add client as participant
-      await (supabase
+      // Sender must be a participant before INSERT to tenant_messages (RLS).
+      const { error: selfPartError } = await (supabase
         .from("conversation_participants" as any)
-        .insert({
-          conversation_id: conversationId,
-          user_id: currentUserId,
-          role: "client",
-          last_read_at: new Date().toISOString(),
-        } as any)) as any;
+        .upsert(
+          {
+            conversation_id: conversationId,
+            user_id: currentUserId,
+            role: "client",
+            last_read_at: new Date().toISOString(),
+          } as any,
+          { onConflict: "conversation_id,user_id" }
+        )) as any;
+      if (selfPartError) throw selfPartError;
 
-      // Look up primary CSC
       const { data: cscAssignment } = await (supabase
         .from("tenant_csc_assignments" as any)
         .select("csc_user_id")
@@ -200,22 +265,26 @@ export function useClientCommunications() {
       if (cscAssignment?.csc_user_id) {
         await (supabase
           .from("conversation_participants" as any)
-          .insert({
-            conversation_id: conversationId,
-            user_id: cscAssignment.csc_user_id,
-            role: "csc",
-          } as any)) as any;
+          .upsert(
+            {
+              conversation_id: conversationId,
+              user_id: cscAssignment.csc_user_id,
+              role: "csc",
+            } as any,
+            { onConflict: "conversation_id,user_id", ignoreDuplicates: true }
+          )) as any;
       }
 
-      // Send first message
-      await (supabase
-        .from("messages" as any)
+      const { error: msgError } = await (supabase
+        .from("tenant_messages" as any)
         .insert({
           conversation_id: conversationId,
-          sender_id: currentUserId,
+          sender_user_uuid: currentUserId,
+          sender_type: "client",
           body: firstMessage,
           tenant_id: activeTenantId,
         } as any)) as any;
+      if (msgError) throw msgError;
 
       return conversationId;
     },
