@@ -152,7 +152,7 @@ function CSCCard({
     </Button>
   );
   const bookBtn = (
-    <Button asChild={hasCSC} size="sm" disabled={!hasCSC} className={!hasCSC ? "cursor-not-allowed" : ""}>
+    <Button asChild={hasCSC} size="sm" variant="outline" disabled={!hasCSC} className={!hasCSC ? "cursor-not-allowed" : ""}>
       {hasCSC ? (
         <Link to="/client/calendar">
           <CalendarPlus className="h-4 w-4 mr-1.5" />
