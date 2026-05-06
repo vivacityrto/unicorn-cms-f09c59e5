@@ -227,7 +227,7 @@ export function useClientCommunications() {
         .from("tenant_conversations" as any)
         .insert({
           tenant_id: activeTenantId,
-          topic: subject || "General",
+          topic: "general",
           type,
           subject: subject || null,
           related_entity: relatedEntity || null,
