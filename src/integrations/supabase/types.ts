@@ -60850,6 +60850,10 @@ export type Database = {
       }
       is_admin_or_team_leader: { Args: never; Returns: boolean }
       is_client_user: { Args: never; Returns: boolean }
+      is_conversation_participant_safe: {
+        Args: { p_conversation_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_current_user_super_admin: { Args: never; Returns: boolean }
       is_eos_admin: {
         Args: { _tenant_id: number; _user_id: string }
