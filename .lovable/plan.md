@@ -1,28 +1,63 @@
-## Fix: tenant_conversations topic check-constraint violation
+## Fix: "Member since" wrong date + "Book consult" button styling
 
-### Problem
-`src/hooks/useClientCommunications.ts` line 230 assigns the free-text `subject` string to the `topic` column. `tenant_conversations.topic` has a CHECK constraint allowing only: `general`, `support`, `csc`, `document_request`, `bot_escalation`. Any user-entered subject that isn't one of those values triggers Postgres error 23514, causing "New conversation" to fail from the client inbox.
+### Bug A — Member since uses backdated package start date
 
-### Change
-One line, in the `createConversation` mutation insert:
+**Root cause (confirmed):** `public.v_client_home_hero` selects `pa.earliest_package_start AS member_since`, where `pa.earliest_package_start = MIN(package_instances.start_date)` per tenant. Package starts are routinely backdated (some to 2013), producing misleading tenure on the client home hero card.
 
-```ts
-// Before (line 230)
-topic: subject || "General",
+**Fix:** Recreate the view with one swap:
 
-// After
-topic: "general",
+```sql
+-- Before
+pa.earliest_package_start AS member_since,
+-- After
+t.created_at AS member_since,
 ```
 
-The user's subject text is already preserved on line 232 (`subject: subject || null`), so no data is lost.
+The `package_aggregates` CTE stays intact — it still feeds `total_packages_ever`, `active_packages`, `historical_packages`. `earliest_package_start` simply stops being projected (no consumers reference it; only `member_since` is read by `use-client-home-hero.ts`).
 
-### Why this is safe
-- Single-line, isolated edit; no schema changes.
-- `"general"` is a valid enum value, matching the existing default semantic.
-- `subject` column continues to carry the free-text label for display.
-- No RLS, FK, view, hook, or component contract changes.
-- No impact on existing conversations (only affects new inserts).
-- Future enhancement (not in this change): if/when we want users to pick a topic category, surface a typed selector in `NewConversationDialog` and pass it through — out of scope here.
+**Migration shape:** `CREATE OR REPLACE VIEW public.v_client_home_hero AS …` — single statement, no data migration, no grants change (CREATE OR REPLACE preserves ownership, privileges, and the prior RLS-bypass posture). The accompanying `users_select_assigned_csc` policy added previously is unaffected.
 
-### Risk
-Minimal. Reverts a regression to the documented constraint contract. No migration, no downstream consumers affected.
+**Type/contract impact:** `member_since` remains `string | null` in `ClientHomeHero` (TypeScript). `tenants.created_at` is `timestamptz NOT NULL` on all 406 non-system tenants, so for any visible tenant the value will now be non-null and accurate. `formatTenure()` in `ClientHomePage.tsx` already handles a valid ISO timestamp — no code change needed.
+
+**Backward compatibility:** No external consumers select `earliest_package_start` (it was never projected). Column list, ordering, and types unchanged from a client perspective. Existing queries using `select("*")` continue to work.
+
+### Bug B — "Book consult" button looks permanently active
+
+**Root cause (confirmed):** In `src/components/client/ClientHomePage.tsx` line 155, `bookBtn` renders `<Button asChild={hasCSC} size="sm" …>` with no `variant`, defaulting to the filled primary style. The sibling Message button uses `variant="outline"`, producing the visual mismatch.
+
+**Fix:** Add `variant="outline"` to that single Button:
+
+```tsx
+// Line 155
+<Button asChild={hasCSC} size="sm" variant="outline" disabled={!hasCSC} className={!hasCSC ? "cursor-not-allowed" : ""}>
+```
+
+Nothing else changes — `asChild`, `disabled`, the conditional `<Link>` vs `<span>` children, and the icon/label all stay. The QuickActionsRow "Book consult" tile (line ~351) and `PackageActionRow.tsx` are untouched (different components, intentional emphasis).
+
+### Files touched
+
+- New migration: `CREATE OR REPLACE VIEW public.v_client_home_hero` with `t.created_at AS member_since`.
+- `src/components/client/ClientHomePage.tsx` line 155: add `variant="outline"`.
+
+### Areas verified unaffected
+
+- `package_aggregates` counts (`active_packages`, `historical_packages`, `total_packages_ever`) — logic untouched.
+- `csc_primary` CTE, CSC name/email/avatar/role_label resolution, and the `users_select_assigned_csc` RLS policy.
+- `audit_count` / `audits_total`.
+- CSCCard Message button, avatar, name, email; QuickActionsRow grid; `formatTenure()`.
+- `use-client-home-hero.ts` interface and React Query cache key.
+
+### Risk assessment
+
+- **Severity:** Low. View-only DDL via `CREATE OR REPLACE`; one-line UI tweak.
+- **Data risk:** None — no rows mutated, no columns removed from the projection, no FK/constraint changes.
+- **Tenancy/RLS risk:** None — view definition retains the same base tables and joins; recent CSC SELECT policy unaffected.
+- **Visual regression risk:** Minimal — outline variant aligns Book consult with Message; both become equal-weight secondary actions, matching the documented design intent.
+- **Audit:** Migration file is the audit record for the view change; no audit log entries needed (no row-level data changed).
+- **Rollback:** Re-run a migration restoring `pa.earliest_package_start AS member_since`; UI revert is a one-line edit.
+
+### Benefits
+
+- Accurate, trustworthy tenure on every client home hero (no more 2013-as-member-since).
+- Visual consistency in the CSC card — "Book consult" no longer reads as "currently active/pressed".
+- Zero impact on package counts, CSC resolution, audits, or any other home-page metric.
