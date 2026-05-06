@@ -283,7 +283,7 @@ Deno.serve(async (req) => {
       factsResult = await buildAskVivFacts(supabase, {
         user_id: user.id,
         tenant_id: gateTenantId,
-        role: profile.unicorn_role || "User",
+        role: isVivacityInternal(profile) ? (profile.unicorn_role ?? "Team Member") : "Team Member",
         scope: { client_id: null, package_id: null, phase_id: null },
         now_iso: new Date().toISOString(),
         timezone: "Australia/Sydney",
