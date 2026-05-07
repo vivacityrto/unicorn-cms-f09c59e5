@@ -13,7 +13,7 @@ interface Message {
   role: "user" | "staff";
   content: string;
   created_at: string;
-  sender_user_uuid: string;
+  sender_user_uuid?: string;
 }
 
 interface MessageTabProps {
