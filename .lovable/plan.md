@@ -1,25 +1,23 @@
 ## Plan
 
-Edit only `src/pages/TeamCommunicationsPage.tsx`:
+In `src/components/NotificationDropdown.tsx` (lines 58–59), replace the message-routing branch inside `handleNotifClick` so it falls back to parsing the `conversation` query param from `notification.link` when `source_id` is missing, and navigates to `/communications` (no thread) if neither is available.
 
-1. **Line 1 area**: Add a new import below the React import:
-   ```ts
-   import { useSearchParams } from "react-router-dom";
-   ```
+### Change
 
-2. **Inside the component**, add:
-   ```ts
-   const [searchParams] = useSearchParams();
-   ```
+Replace:
+```ts
+} else if (notification.type === 'message' && notification.source_id) {
+  navigate(`/communications?thread=${notification.source_id}`);
+}
+```
 
-3. **Add an effect** that auto-selects the thread once conversations load:
-   ```ts
-   useEffect(() => {
-     const threadId = searchParams.get('thread');
-     if (threadId && conversations.length > 0) {
-       setSelectedId(threadId);
-     }
-   }, [conversations, searchParams]);
-   ```
+With:
+```ts
+} else if (notification.type === 'message') {
+  const convId = notification.source_id
+    ?? new URLSearchParams(notification.link?.split('?')[1] ?? '').get('conversation');
+  navigate(convId ? `/communications?thread=${convId}` : '/communications');
+}
+```
 
-No other files touched. No changes to selection logic, queries, or UI.
+No other files touched.
