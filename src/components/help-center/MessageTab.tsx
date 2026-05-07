@@ -58,6 +58,7 @@ export function MessageTab({ channel }: MessageTabProps) {
   const [loadingHistory, setLoadingHistory] = useState(true);
   // CSC branch: blocks send when participant upsert failed.
   const [cscInitFailed, setCscInitFailed] = useState(false);
+  const [cscProfile, setCscProfile] = useState<{ avatar_url: string | null; first_name: string | null; last_name: string | null } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // ---------- Load history ----------
