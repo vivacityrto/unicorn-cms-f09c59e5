@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { differenceInMonths, format, parseISO } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -151,19 +152,18 @@ function CSCCard({
       Message
     </Button>
   );
-  const bookBtn = (
-    <Button asChild={hasCSC} size="sm" variant="outline" disabled={!hasCSC} className={!hasCSC ? "cursor-not-allowed" : ""}>
-      {hasCSC ? (
-        <Link to="/client/calendar">
-          <CalendarPlus className="h-4 w-4 mr-1.5" />
-          Book consult
-        </Link>
-      ) : (
-        <span>
-          <CalendarPlus className="h-4 w-4 mr-1.5" />
-          Book consult
-        </span>
-      )}
+  const bookBtn = hasCSC ? (
+    <Link
+      to="/client/calendar"
+      className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+    >
+      <CalendarPlus className="h-4 w-4 mr-1.5" />
+      Book consult
+    </Link>
+  ) : (
+    <Button size="sm" variant="outline" disabled className="cursor-not-allowed">
+      <CalendarPlus className="h-4 w-4 mr-1.5" />
+      Book consult
     </Button>
   );
 

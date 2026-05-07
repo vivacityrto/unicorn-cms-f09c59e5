@@ -1,23 +1,36 @@
-## Fix: Route message notifications to their thread
+## Fix: "Book consult" button rendering as filled instead of outline
 
-In `src/components/NotificationDropdown.tsx` (lines 53–61), update `handleNotifClick` to add a branch for `type === 'message'` notifications. When a message notification has a `source_id`, navigate to `/communications?thread={source_id}` instead of falling through to the generic `notification.link` handler.
+In `src/components/client/ClientHomePage.tsx`, the `bookBtn` in `CSCCard` uses `<Button asChild={hasCSC} variant="outline">` wrapping a `<Link>`. The Radix Slot pattern isn't propagating the outline classes to the rendered anchor, so it renders as the default filled style.
 
-Verified `Notification` interface in `src/hooks/useNotifications.tsx` already exposes `source_id: string | null`, so no type changes needed.
+### Changes
 
-### New handler
-
+**1. Imports (line 15)** — add `buttonVariants` and `cn`:
 ```ts
-const handleNotifClick = (notification: Notification) => {
-  if (!notification.is_read) markAsRead(notification.id);
-
-  if (NOTE_TYPES.has(notification.type)) {
-    setPreviewNotif(notification);
-  } else if (notification.type === 'message' && notification.source_id) {
-    navigate(`/communications?thread=${notification.source_id}`);
-  } else if (notification.link) {
-    navigate(notification.link);
-  }
-};
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 ```
 
-No other files affected. Backward compatible: existing notification types continue to use `notification.link`.
+**2. Replace `bookBtn` definition (lines 154–168)** with two distinct render paths, no `asChild`:
+```tsx
+const bookBtn = hasCSC ? (
+  <Link
+    to="/client/calendar"
+    className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+  >
+    <CalendarPlus className="h-4 w-4 mr-1.5" />
+    Book consult
+  </Link>
+) : (
+  <Button size="sm" variant="outline" disabled className="cursor-not-allowed">
+    <CalendarPlus className="h-4 w-4 mr-1.5" />
+    Book consult
+  </Button>
+);
+```
+
+The surrounding tooltip wrapper (lines 202–213) still works — it wraps `bookBtn` in a `<span>` for the disabled case.
+
+### Out of scope
+- QuickActionsRow "Book consult" card (separate, intentional emphasis)
+- Message button, avatar, name, email
+- Routing, tooltip logic, RLS
