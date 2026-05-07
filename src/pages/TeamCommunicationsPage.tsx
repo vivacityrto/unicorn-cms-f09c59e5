@@ -218,15 +218,18 @@ export default function TeamCommunicationsPage() {
           schema: "public",
           table: "tenant_conversations",
         },
-        () => {
+        (payload: any) => {
           qc.invalidateQueries({ queryKey: ["team-conversations"] });
+          if (selectedId && payload.new?.id === selectedId) {
+            qc.invalidateQueries({ queryKey: ["team-conversation-messages", selectedId] });
+          }
         }
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [qc]);
+  }, [qc, selectedId]);
 
   const handleSelectConversation = useCallback(async (convId: string) => {
     setSelectedId(convId);
