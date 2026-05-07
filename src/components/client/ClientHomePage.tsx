@@ -357,7 +357,7 @@ export function ClientHomePage() {
       label: "Message CSC",
       subtitle: "Quick question? Send a note",
       icon: MessageCircle,
-      onClick: () => openHelpCenter("chatbot"),
+      onClick: () => openHelpCenter("csc"),
     },
     {
       label: "Request document",
@@ -392,7 +392,7 @@ export function ClientHomePage() {
           cscRoleLabel={hero?.csc_role_label ?? "CSC"}
           cscAvatarUrl={hero?.csc_avatar_url ?? null}
           hasCSC={hasCSC}
-          onMessage={() => openHelpCenter("chatbot")}
+          onMessage={() => openHelpCenter("csc")}
         />
 
         {/* Audit readiness — empty-state aware */}
