@@ -55,6 +55,8 @@ export const NotificationDropdown = () => {
 
     if (NOTE_TYPES.has(notification.type)) {
       setPreviewNotif(notification);
+    } else if (notification.type === 'message' && notification.source_id) {
+      navigate(`/communications?thread=${notification.source_id}`);
     } else if (notification.link) {
       navigate(notification.link);
     }
