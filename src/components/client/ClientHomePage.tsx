@@ -352,7 +352,6 @@ export function ClientHomePage() {
       subtitle: "Schedule time with your CSC",
       icon: CalendarPlus,
       to: "/client/calendar",
-      emphasised: true,
     },
     {
       label: "Message CSC",
