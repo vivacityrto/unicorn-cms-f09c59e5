@@ -51,7 +51,7 @@ export const NotificationDropdown = () => {
   }
 
   const handleNotifClick = (notification: Notification) => {
-    if (!notification.is_read) markAsRead(notification.id);
+    if (!notification.is_read && notification.type !== 'message') markAsRead(notification.id);
 
     if (NOTE_TYPES.has(notification.type)) {
       setPreviewNotif(notification);

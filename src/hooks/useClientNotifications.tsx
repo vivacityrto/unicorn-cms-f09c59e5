@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -53,6 +54,26 @@ export function useClientNotifications() {
     },
     enabled: !!profile?.user_uuid && !!activeTenantId,
   });
+
+  useEffect(() => {
+    if (!profile?.user_uuid) return;
+    const channel = supabase
+      .channel(`client-notif-live:${profile.user_uuid}`)
+      .on(
+        "postgres_changes" as any,
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "user_notifications",
+          filter: `user_id=eq.${profile.user_uuid}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["client-notifications"] });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [profile?.user_uuid, qc]);
 
   const markAsRead = useMutation({
     mutationFn: async (notificationId: string) => {
