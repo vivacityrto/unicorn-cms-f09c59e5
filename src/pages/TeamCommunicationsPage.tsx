@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/modals";
 import { MessageSquare, Plus, Send, Mail, MailOpen, Building2 } from "lucide-react";
 import { format } from "date-fns";
+import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
 
 interface Conversation {
   id: string;
@@ -33,6 +34,7 @@ interface Conversation {
   created_at: string;
   tenant_name?: string;
   isUnread?: boolean;
+  isMine?: boolean;
 }
 
 interface Message {
@@ -59,8 +61,14 @@ export default function TeamCommunicationsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [composerText, setComposerText] = useState("");
   const [filterTenant, setFilterTenant] = useState<string>("all");
+  const [filterStaff, setFilterStaff] = useState<string>("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { data: staffUsers = [] } = useVivacityTeamUsers();
+  const staffOptions = staffUsers.map(u => ({
+    id: u.user_uuid,
+    name: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email,
+  }));
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUserId = profile?.user_uuid;
 
@@ -87,15 +95,17 @@ export default function TeamCommunicationsPage() {
 
       const convoIds = (data as any[]).map((c: any) => c.id);
       const readMap = new Map<string, string | null>();
+      const mineSet = new Set<string>();
       if (currentUserId && convoIds.length > 0) {
         const { data: participants } = await (supabase
           .from("conversation_participants" as any)
           .select("conversation_id, last_read_at")
           .eq("user_id", currentUserId)
           .in("conversation_id", convoIds)) as any;
-        (participants || []).forEach((p: any) =>
-          readMap.set(p.conversation_id, p.last_read_at)
-        );
+        (participants || []).forEach((p: any) => {
+          readMap.set(p.conversation_id, p.last_read_at);
+          mineSet.add(p.conversation_id);
+        });
       }
 
       return (data as any[]).map((c: any) => ({
@@ -105,6 +115,7 @@ export default function TeamCommunicationsPage() {
           ? !readMap.has(c.id) || !readMap.get(c.id) ||
             new Date(c.last_message_at) > new Date(readMap.get(c.id)!)
           : false,
+        isMine: mineSet.has(c.id),
       }));
     },
     enabled: !!currentUserId,
@@ -119,9 +130,30 @@ export default function TeamCommunicationsPage() {
     .map(([id, name]) => ({ id, name }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const filtered = filterTenant === "all"
+  // Staff filter: fetch conversation IDs the selected staff member participates in
+  const { data: staffConvIds } = useQuery({
+    queryKey: ["team-comms-staff-conv-ids", filterStaff],
+    queryFn: async (): Promise<Set<string>> => {
+      const { data, error } = await (supabase
+        .from("conversation_participants" as any)
+        .select("conversation_id")
+        .eq("user_id", filterStaff)) as any;
+      if (error) throw error;
+      return new Set<string>((data || []).map((p: any) => p.conversation_id));
+    },
+    enabled: filterStaff !== "all",
+  });
+
+  const filteredByTenant = filterTenant === "all"
     ? conversations
     : conversations.filter(c => String(c.tenant_id) === filterTenant);
+
+  const filtered = filterStaff === "all" || !staffConvIds
+    ? filteredByTenant
+    : filteredByTenant.filter(c => staffConvIds.has(c.id));
+
+  const mineConvs = filtered.filter(c => c.isMine);
+  const teamConvs = filtered.filter(c => !c.isMine);
 
   const selected = conversations.find(c => c.id === selectedId);
 
@@ -338,8 +370,8 @@ export default function TeamCommunicationsPage() {
         </Button>
       </div>
 
-      {/* Filter by tenant */}
-      <div className="flex gap-2 items-center">
+      {/* Filters */}
+      <div className="flex gap-2 items-center flex-wrap">
         <Select value={filterTenant} onValueChange={setFilterTenant}>
           <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="All Clients" />
@@ -348,6 +380,17 @@ export default function TeamCommunicationsPage() {
             <SelectItem value="all">All Clients</SelectItem>
             {tenantOptions.map(t => (
               <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterStaff} onValueChange={setFilterStaff}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="All Team Members" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Team Members</SelectItem>
+            {staffOptions.map(s => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -370,8 +413,8 @@ export default function TeamCommunicationsPage() {
               </div>
             ) : (
               <ScrollArea className="h-[60vh]">
-                <div className="divide-y divide-border">
-                  {filtered.map(conv => (
+                {(() => {
+                  const renderRow = (conv: typeof filtered[number]) => (
                     <button
                       key={conv.id}
                       onClick={() => handleSelectConversation(conv.id)}
@@ -404,8 +447,32 @@ export default function TeamCommunicationsPage() {
                         </p>
                       )}
                     </button>
-                  ))}
-                </div>
+                  );
+                  return (
+                    <div>
+                      {mineConvs.length > 0 && (
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-4 py-2 bg-muted/30 sticky top-0 z-10">
+                            Your Conversations
+                          </div>
+                          <div className="divide-y divide-border">
+                            {mineConvs.map(renderRow)}
+                          </div>
+                        </div>
+                      )}
+                      {teamConvs.length > 0 && (
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-4 py-2 bg-muted/30 sticky top-0 z-10">
+                            Team Conversations
+                          </div>
+                          <div className="divide-y divide-border">
+                            {teamConvs.map(renderRow)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </ScrollArea>
             )}
           </div>
