@@ -427,6 +427,7 @@ export function MessageTab({ channel }: MessageTabProps) {
             role: "user",
             content: inserted.body,
             created_at: inserted.created_at,
+            sender_user_uuid: inserted.sender_user_uuid,
           },
         ];
       });
