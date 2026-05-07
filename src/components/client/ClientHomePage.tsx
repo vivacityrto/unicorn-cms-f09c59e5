@@ -311,13 +311,13 @@ function QuickActionsRow({ actions }: { actions: QuickAction[] }) {
         }`;
         if (a.to) {
           return (
-            <Link key={a.label} to={a.to}>
-              <Card className={cardCls}>{inner}</Card>
+            <Link key={a.label} to={a.to} className="block h-full">
+              <Card className={`${cardCls} h-full`}>{inner}</Card>
             </Link>
           );
         }
         return (
-          <Card key={a.label} onClick={a.onClick} className={cardCls}>
+          <Card key={a.label} onClick={a.onClick} className={`${cardCls} h-full`}>
             {inner}
           </Card>
         );
