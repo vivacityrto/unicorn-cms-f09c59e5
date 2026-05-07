@@ -176,23 +176,30 @@ export default function TeamCommunicationsPage() {
 
       const { data: users } = await (supabase
         .from("users")
-        .select("user_uuid, first_name, last_name")
+        .select("user_uuid, first_name, last_name, avatar_url")
         .in("user_uuid", senderIds)) as any;
 
       const nameMap = new Map<string, string>();
+      const avatarMap = new Map<string, string | null>();
       (users || []).forEach((u: any) => {
-        nameMap.set(u.user_uuid, [u.first_name, u.last_name].filter(Boolean).join(" ") || "Unknown");
+        nameMap.set(u.user_uuid, [u.first_name, u.last_name].filter(Boolean).join(" "));
+        avatarMap.set(u.user_uuid, u.avatar_url ?? null);
       });
 
-      const mapped = (data as any[]).map((m: any) => ({
-        id: m.id,
-        conversation_id: m.conversation_id,
-        sender_user_uuid: m.sender_user_uuid,
-        sender_type: m.sender_type ?? null,
-        body: m.body,
-        created_at: m.created_at,
-        sender_name: nameMap.get(m.sender_user_uuid) || "Unknown",
-      })) as Message[];
+      const mapped = (data as any[]).map((m: any) => {
+        const resolved = nameMap.get(m.sender_user_uuid) || "";
+        const fallback = m.sender_type === "staff" ? "Vivacity Team" : "Unknown";
+        return {
+          id: m.id,
+          conversation_id: m.conversation_id,
+          sender_user_uuid: m.sender_user_uuid,
+          sender_type: m.sender_type ?? null,
+          body: m.body,
+          created_at: m.created_at,
+          sender_name: resolved || fallback,
+          sender_avatar_url: avatarMap.get(m.sender_user_uuid) ?? null,
+        };
+      }) as Message[];
 
       // Fire-and-forget read audit.
       if (mapped.length > 0 && currentUserId) {
