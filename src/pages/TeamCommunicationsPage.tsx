@@ -413,8 +413,8 @@ export default function TeamCommunicationsPage() {
               </div>
             ) : (
               <ScrollArea className="h-[60vh]">
-                <div className="divide-y divide-border">
-                  {filtered.map(conv => (
+                {(() => {
+                  const renderRow = (conv: typeof filtered[number]) => (
                     <button
                       key={conv.id}
                       onClick={() => handleSelectConversation(conv.id)}
@@ -447,8 +447,32 @@ export default function TeamCommunicationsPage() {
                         </p>
                       )}
                     </button>
-                  ))}
-                </div>
+                  );
+                  return (
+                    <div>
+                      {mineConvs.length > 0 && (
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-4 py-2 bg-muted/30 sticky top-0 z-10">
+                            Your Conversations
+                          </div>
+                          <div className="divide-y divide-border">
+                            {mineConvs.map(renderRow)}
+                          </div>
+                        </div>
+                      )}
+                      {teamConvs.length > 0 && (
+                        <div>
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-4 py-2 bg-muted/30 sticky top-0 z-10">
+                            Team Conversations
+                          </div>
+                          <div className="divide-y divide-border">
+                            {teamConvs.map(renderRow)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </ScrollArea>
             )}
           </div>
