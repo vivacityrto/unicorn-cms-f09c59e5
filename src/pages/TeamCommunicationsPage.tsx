@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +32,7 @@ interface Conversation {
   last_message_preview: string | null;
   created_at: string;
   tenant_name?: string;
+  isUnread?: boolean;
 }
 
 interface Message {
@@ -84,9 +85,26 @@ export default function TeamCommunicationsPage() {
       const tenantMap = new Map<number, string>();
       (tenants || []).forEach((t: any) => tenantMap.set(t.id, t.name));
 
+      const convoIds = (data as any[]).map((c: any) => c.id);
+      const readMap = new Map<string, string | null>();
+      if (currentUserId && convoIds.length > 0) {
+        const { data: participants } = await (supabase
+          .from("conversation_participants" as any)
+          .select("conversation_id, last_read_at")
+          .eq("user_id", currentUserId)
+          .in("conversation_id", convoIds)) as any;
+        (participants || []).forEach((p: any) =>
+          readMap.set(p.conversation_id, p.last_read_at)
+        );
+      }
+
       return (data as any[]).map((c: any) => ({
         ...c,
         tenant_name: tenantMap.get(c.tenant_id) || `Tenant ${c.tenant_id}`,
+        isUnread: c.last_message_at
+          ? !readMap.has(c.id) || !readMap.get(c.id) ||
+            new Date(c.last_message_at) > new Date(readMap.get(c.id)!)
+          : false,
       }));
     },
     enabled: !!currentUserId,
@@ -94,13 +112,6 @@ export default function TeamCommunicationsPage() {
 
   const lastAutoSelectedRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    const threadId = searchParams.get('thread');
-    if (threadId && conversations.length > 0 && threadId !== lastAutoSelectedRef.current) {
-      lastAutoSelectedRef.current = threadId;
-      setSelectedId(threadId);
-    }
-  }, [conversations, searchParams]);
 
 
   // Get unique tenants for filter
@@ -217,7 +228,7 @@ export default function TeamCommunicationsPage() {
     };
   }, [qc]);
 
-  const handleSelectConversation = async (convId: string) => {
+  const handleSelectConversation = useCallback(async (convId: string) => {
     setSelectedId(convId);
     if (!currentUserId) return;
     // Stamp last_read_at without touching the existing role
@@ -236,7 +247,15 @@ export default function TeamCommunicationsPage() {
       .eq("is_read", false) as any).then(() => {}, () => {});
 
     qc.invalidateQueries({ queryKey: ["team-unread-count"] });
-  };
+  }, [currentUserId, qc]);
+
+  useEffect(() => {
+    const threadId = searchParams.get('thread');
+    if (threadId && conversations.length > 0 && threadId !== lastAutoSelectedRef.current) {
+      lastAutoSelectedRef.current = threadId;
+      handleSelectConversation(threadId);
+    }
+  }, [conversations, searchParams, handleSelectConversation]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -365,8 +384,11 @@ export default function TeamCommunicationsPage() {
                         >
                           {conv.type}
                         </Badge>
+                        {conv.isUnread && (
+                          <span className="h-2 w-2 rounded-full bg-[#23C0DD] flex-shrink-0" />
+                        )}
                       </div>
-                      <p className="text-sm font-medium truncate text-foreground">
+                      <p className={`text-sm truncate text-foreground ${conv.isUnread ? "font-semibold" : "font-medium"}`}>
                         {conv.subject || conv.topic || "General"}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
