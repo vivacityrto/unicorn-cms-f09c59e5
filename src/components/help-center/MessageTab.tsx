@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Loader2, User, Headphones, MessageCircle } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ export function MessageTab({ channel }: MessageTabProps) {
   const [loadingHistory, setLoadingHistory] = useState(true);
   // CSC branch: blocks send when participant upsert failed.
   const [cscInitFailed, setCscInitFailed] = useState(false);
+  const [cscProfile, setCscProfile] = useState<{ avatar_url: string | null; first_name: string | null; last_name: string | null } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // ---------- Load history ----------
@@ -70,6 +72,7 @@ export function MessageTab({ channel }: MessageTabProps) {
       setMessages([]);
       setThreadId(null);
       setCscInitFailed(false);
+      setCscProfile(null);
 
       if (channel === "csc") {
         await loadCscThread();
@@ -178,6 +181,13 @@ export function MessageTab({ channel }: MessageTabProps) {
         .maybeSingle()) as any;
 
       if (cscRow?.csc_user_id) {
+        const { data: cscUser } = await (supabase
+          .from("users")
+          .select("avatar_url, first_name, last_name")
+          .eq("user_uuid", cscRow.csc_user_id)
+          .maybeSingle()) as any;
+        if (!cancelled && cscUser) setCscProfile(cscUser);
+
         const { error: cscPartErr } = await (supabase
           .from("conversation_participants" as any)
           .upsert(
@@ -420,9 +430,14 @@ export function MessageTab({ channel }: MessageTabProps) {
             {messages.map((msg) => (
               <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 {msg.role === "staff" && (
-                  <div className="flex-shrink-0 h-7 w-7 rounded-full bg-secondary/10 flex items-center justify-center">
-                    <Headphones className="h-4 w-4 text-secondary" />
-                  </div>
+                  <Avatar className="h-7 w-7 flex-shrink-0">
+                    {cscProfile?.avatar_url && <AvatarImage src={cscProfile.avatar_url} />}
+                    <AvatarFallback className="bg-secondary/10 text-secondary text-xs">
+                      {cscProfile
+                        ? `${cscProfile.first_name?.[0] ?? ""}${cscProfile.last_name?.[0] ?? ""}`.toUpperCase() || "CS"
+                        : <Headphones className="h-4 w-4 text-secondary" />}
+                    </AvatarFallback>
+                  </Avatar>
                 )}
                 <div
                   className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
