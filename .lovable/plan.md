@@ -1,66 +1,28 @@
-## Real-time client message notifier in ClientLayout
+## Plan: Stop redundant thread auto-selection in TeamCommunicationsPage
 
-Add a single `useEffect` inside `ClientLayoutInner` (in `src/components/layout/ClientLayout.tsx`) that subscribes to new `tenant_messages` for the active tenant and surfaces a toast + invalidates inbox queries so unread badges and lists refresh without a reload.
+Single file: `src/pages/TeamCommunicationsPage.tsx`. No other files, no DB changes.
 
-### Changes — `src/components/layout/ClientLayout.tsx`
+### Problem
+The effect at lines 95–100 reads `?thread=` from the URL and calls `setSelectedId(threadId)` whenever `conversations` or `searchParams` change. Since the realtime subscription refreshes `conversations` on every new message, the effect re-runs and re-selects the same thread repeatedly, firing the messages query redundantly.
 
-1. **Imports** (add to existing import block):
-   - `import { useEffect } from "react";` (extend existing react import)
-   - `import { useNavigate } from "react-router-dom";`
-   - `import { useQueryClient } from "@tanstack/react-query";`
-   - `import { toast } from "sonner";`
-   - `import { supabase } from "@/integrations/supabase/client";`
-   - `import { useAuth } from "@/hooks/useAuth";`
+### Change
+`useRef` is already imported (line 1), so no import change is needed.
 
-2. **Inside `ClientLayoutInner`**, after the existing `useClientTenant()` / `useClientRequestActions()` calls:
-   ```ts
-   const { profile } = useAuth();
-   const navigate = useNavigate();
-   const queryClient = useQueryClient();
-   const currentUserUuid = profile?.user_uuid ?? null;
+Add a ref directly above the existing effect, and gate auto-selection on the URL thread differing from the last auto-selected one:
 
-   useEffect(() => {
-     if (!activeTenantId) return;
+```tsx
+const lastAutoSelectedRef = useRef<string | null>(null);
 
-     const channel = supabase
-       .channel(`client-inbox-notifier-${activeTenantId}`)
-       .on(
-         "postgres_changes",
-         {
-           event: "INSERT",
-           schema: "public",
-           table: "tenant_messages",
-           filter: `tenant_id=eq.${activeTenantId}`,
-         },
-         (payload: any) => {
-           const row = payload?.new;
-           if (!row) return;
-           if (currentUserUuid && row.sender_user_uuid === currentUserUuid) return;
+useEffect(() => {
+  const threadId = searchParams.get('thread');
+  if (threadId && conversations.length > 0 && threadId !== lastAutoSelectedRef.current) {
+    lastAutoSelectedRef.current = threadId;
+    setSelectedId(threadId);
+  }
+}, [conversations, searchParams]);
+```
 
-           toast("New message received", {
-             description: "You have a new message in your inbox.",
-             action: {
-               label: "View",
-               onClick: () =>
-                 navigate(
-                   `/client/inbox?tab=messages&thread=${row.conversation_id}`
-                 ),
-             },
-           });
-
-           queryClient.invalidateQueries({ queryKey: ["client-conversations"] });
-           queryClient.invalidateQueries({ queryKey: ["client-inbox"] });
-         }
-       )
-       .subscribe();
-
-     return () => {
-       supabase.removeChannel(channel);
-     };
-   }, [activeTenantId, currentUserUuid, navigate, queryClient]);
-   ```
+This replaces lines 95–100. Navigating from `?thread=A` to `?thread=B` still works because the ref only blocks re-selecting the same ID.
 
 ### Out of scope
-- No changes to `useClientCommunications.ts`, `useClientInbox.ts`, `ClientSidebar.tsx`, `MessageTab.tsx`, `TeamCommunicationsPage.tsx`, EOS, or Administration code.
-- No DB / RLS / migration changes; relies on existing realtime publication for `tenant_messages`.
-- No change to the staff-side `useTeamUnreadCount` notifier.
+No other effects, hooks, files, RLS, or DB changes.

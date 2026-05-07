@@ -92,9 +92,12 @@ export default function TeamCommunicationsPage() {
     enabled: !!currentUserId,
   });
 
+  const lastAutoSelectedRef = useRef<string | null>(null);
+
   useEffect(() => {
     const threadId = searchParams.get('thread');
-    if (threadId && conversations.length > 0) {
+    if (threadId && conversations.length > 0 && threadId !== lastAutoSelectedRef.current) {
+      lastAutoSelectedRef.current = threadId;
       setSelectedId(threadId);
     }
   }, [conversations, searchParams]);
