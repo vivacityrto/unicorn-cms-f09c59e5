@@ -1,16 +1,11 @@
-## Fix topic check constraint violation (23514)
+## Plan: Add all tenant users as conversation participants
 
-The `tenant_conversations.topic` column only accepts: `general`, `support`, `csc`, `document_request`, `bot_escalation`. Two create paths currently pass the user's free-text subject into `topic`, triggering check constraint violations. Free-text already lives in the `subject` column on the next line, so `topic` should be hardcoded to `'general'`.
+**File**: `src/pages/TeamCommunicationsPage.tsx` (inside `NewTeamMessageDialog.handleSubmit`)
 
-### Changes
+**Change**: Replace the primary-contact-only lookup + single upsert with a query that fetches all `tenant_users` for the tenant and bulk-upserts them into `conversation_participants` with `role: "client"`.
 
-**1. `src/hooks/useClientCommunications.ts`** — in the `createConversation` mutation insert payload:
-- Replace `topic: subject || "General",` with `topic: "general",`
+**Why**: RLS on `tenant_messages` requires the user to be in `conversation_participants`. Adding only the primary contact (often null) leaves client users unable to read messages — they see the conversation but get "No messages in this conversation yet."
 
-**2. `src/pages/TeamCommunicationsPage.tsx`** — in `NewTeamMessageDialog.handleSubmit` insert payload:
-- Replace `topic: subject.trim() || "General",` with `topic: "general",`
+**Exact replacement**: swap the `pc` block for the `tenantUsers` block as specified in the request, preserving the `onConflict: "conversation_id,user_id", ignoreDuplicates: true` upsert options.
 
-### Out of scope
-- No DB/RLS/schema changes
-- No edits to the `subject` field or any surrounding logic
-- No other files touched
+**Out of scope**: no schema/RLS/migration changes; no other files touched; no edits to subject/topic logic.
