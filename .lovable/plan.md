@@ -1,11 +1,26 @@
-## Plan: Add all tenant users as conversation participants
+## Plan
 
-**File**: `src/pages/TeamCommunicationsPage.tsx` (inside `NewTeamMessageDialog.handleSubmit`)
+Three scoped fixes across two existing files plus one new hook. No other files touched.
 
-**Change**: Replace the primary-contact-only lookup + single upsert with a query that fetches all `tenant_users` for the tenant and bulk-upserts them into `conversation_participants` with `role: "client"`.
+### 1. `src/pages/TeamCommunicationsPage.tsx` — Realtime conversation list
+Add a second, independent `useEffect` directly below the existing `selectedId`-scoped realtime subscription. New effect subscribes to `tenant_conversations` UPDATE events on channel `team-conversations-live` (no `selectedId` guard) and invalidates `["team-conversations"]` on any update. Existing subscription left untouched.
 
-**Why**: RLS on `tenant_messages` requires the user to be in `conversation_participants`. Adding only the primary contact (often null) leaves client users unable to read messages — they see the conversation but get "No messages in this conversation yet."
+### 2. `src/pages/TeamCommunicationsPage.tsx` — Mark-as-read without overwriting role
+- In `sendMessage` (~lines 207–215), replace the single participant upsert with two steps:
+  1. Upsert with `role: "staff"` and `last_read_at`, using `onConflict: "conversation_id,user_id", ignoreDuplicates: true` (never overwrites existing role).
+  2. Update `last_read_at` on the existing row by `conversation_id` + `user_id`.
+- Add a `handleSelectConversation(convId)` helper that calls `setSelectedId`, then updates `last_read_at` on `conversation_participants` for the current user, then invalidates `["team-unread-count"]`.
+- In the thread list `filtered.map` (~line 299), replace `onClick={() => setSelectedId(conv.id)}` with `onClick={() => handleSelectConversation(conv.id)}`.
 
-**Exact replacement**: swap the `pc` block for the `tenantUsers` block as specified in the request, preserving the `onConflict: "conversation_id,user_id", ignoreDuplicates: true` upsert options.
+### 3. Unread badge on Communications nav
 
-**Out of scope**: no schema/RLS/migration changes; no other files touched; no edits to subject/topic logic.
+**New file `src/hooks/useTeamUnreadCount.ts`**: exports `useTeamUnreadCount()` returning a number. Loads current user, subscribes to `tenant_conversations` UPDATEs to invalidate, and runs a `useQuery(["team-unread-count", currentUserId])` that fetches all `tenant_conversations` with `last_message_at`, then `conversation_participants` rows for the user, then counts conversations whose `last_message_at` > stored `last_read_at` (or no participant row / null read).
+
+**Edit `src/components/DashboardLayout.tsx`**:
+- Import `useTeamUnreadCount`.
+- Call `const teamUnreadCount = useTeamUnreadCount();` after existing hooks.
+- Extend `renderMenuItem` parameter type to include optional `badge?: number`. In both the Vivacity-team branch and the client branch, after the label `<span>` inside `<Link>`, render a pink (`bg-[#ED1878]`) pill showing `badge` (capped to `99+`) when `sidebarOpen && badge > 0`.
+- Replace the `renderSection("clients", "Clients", clientsMenuItems, "clients")` call with a mapped variant that injects `badge: teamUnreadCount || undefined` onto the item whose `path === "/communications"`. `renderSection` signature unchanged.
+
+### Out of scope
+No changes to `useClientCommunications.ts`, `ClientInboxPage.tsx`, `useClientInbox.ts`, `ClientSidebar.tsx`, `MessageTab.tsx`, isolation tests, or any EOS/Administration code. No DB/RLS/migration changes.
