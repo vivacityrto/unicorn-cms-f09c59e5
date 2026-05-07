@@ -85,9 +85,26 @@ export default function TeamCommunicationsPage() {
       const tenantMap = new Map<number, string>();
       (tenants || []).forEach((t: any) => tenantMap.set(t.id, t.name));
 
+      const convoIds = (data as any[]).map((c: any) => c.id);
+      const readMap = new Map<string, string | null>();
+      if (currentUserId && convoIds.length > 0) {
+        const { data: participants } = await (supabase
+          .from("conversation_participants" as any)
+          .select("conversation_id, last_read_at")
+          .eq("user_id", currentUserId)
+          .in("conversation_id", convoIds)) as any;
+        (participants || []).forEach((p: any) =>
+          readMap.set(p.conversation_id, p.last_read_at)
+        );
+      }
+
       return (data as any[]).map((c: any) => ({
         ...c,
         tenant_name: tenantMap.get(c.tenant_id) || `Tenant ${c.tenant_id}`,
+        isUnread: c.last_message_at
+          ? !readMap.has(c.id) || !readMap.get(c.id) ||
+            new Date(c.last_message_at) > new Date(readMap.get(c.id)!)
+          : false,
       }));
     },
     enabled: !!currentUserId,
