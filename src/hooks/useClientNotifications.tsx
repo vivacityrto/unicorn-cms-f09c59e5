@@ -19,6 +19,7 @@ export interface ClientNotification {
 
 /** Notification types that are relevant to clients (from Vivacity → tenant) */
 const CLIENT_FACING_TYPES = [
+  "message",
   "meeting_upcoming",
   "task_due",
   "obligation_due",
