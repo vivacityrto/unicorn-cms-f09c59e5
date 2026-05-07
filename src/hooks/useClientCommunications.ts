@@ -313,12 +313,14 @@ export function useClientCommunications() {
         .eq("user_id", currentUserId)) as any;
       if (error) throw error;
 
-      void (supabase
-        .from("user_notifications" as any)
-        .update({ is_read: true } as any)
-        .eq("user_id", currentUserId!)
-        .eq("source_id", conversationId)
-        .eq("is_read", false) as any).then(() => {}, () => {});
+      try {
+        await (supabase
+          .from("user_notifications" as any)
+          .update({ is_read: true } as any)
+          .eq("user_id", currentUserId!)
+          .eq("source_id", conversationId)
+          .eq("is_read", false) as any);
+      } catch (_) {}
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-conversations"] });
