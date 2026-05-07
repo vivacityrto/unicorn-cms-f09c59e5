@@ -193,6 +193,39 @@ export default function TeamCommunicationsPage() {
     };
   }, [selectedId, qc]);
 
+  // Always-on: keep conversation list fresh on any new message in any thread
+  useEffect(() => {
+    const channel = supabase
+      .channel("team-conversations-live")
+      .on(
+        "postgres_changes" as any,
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "tenant_conversations",
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["team-conversations"] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
+
+  const handleSelectConversation = async (convId: string) => {
+    setSelectedId(convId);
+    if (!currentUserId) return;
+    // Stamp last_read_at without touching the existing role
+    await (supabase
+      .from("conversation_participants" as any)
+      .update({ last_read_at: new Date().toISOString() } as any)
+      .eq("conversation_id", convId)
+      .eq("user_id", currentUserId)) as any;
+    qc.invalidateQueries({ queryKey: ["team-unread-count"] });
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
@@ -203,16 +236,26 @@ export default function TeamCommunicationsPage() {
       if (!currentUserId) throw new Error("Not authenticated");
       const conv = conversations.find(c => c.id === conversationId);
 
-      // Ensure staff is a participant BEFORE inserting the message (RLS requires it).
+      // Step 1: Insert participant row only if not already present (never overwrite role)
       const { error: partError } = await (supabase
         .from("conversation_participants" as any)
-        .upsert({
-          conversation_id: conversationId,
-          user_id: currentUserId,
-          role: "staff",
-          last_read_at: new Date().toISOString(),
-        } as any, { onConflict: "conversation_id,user_id" })) as any;
+        .upsert(
+          {
+            conversation_id: conversationId,
+            user_id: currentUserId,
+            role: "staff",
+            last_read_at: new Date().toISOString(),
+          } as any,
+          { onConflict: "conversation_id,user_id", ignoreDuplicates: true }
+        )) as any;
       if (partError) throw partError;
+
+      // Step 2: Stamp last_read_at on the existing row regardless of its role
+      await (supabase
+        .from("conversation_participants" as any)
+        .update({ last_read_at: new Date().toISOString() } as any)
+        .eq("conversation_id", conversationId)
+        .eq("user_id", currentUserId)) as any;
 
       const { error } = await (supabase
         .from("tenant_messages" as any)
@@ -296,7 +339,7 @@ export default function TeamCommunicationsPage() {
                   {filtered.map(conv => (
                     <button
                       key={conv.id}
-                      onClick={() => setSelectedId(conv.id)}
+                      onClick={() => handleSelectConversation(conv.id)}
                       className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
                         selectedId === conv.id ? "bg-muted/70" : ""
                       }`}

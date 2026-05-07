@@ -15,6 +15,7 @@ import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
 import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupReminderModal";
 import { cn } from "@/lib/utils";
+import { useTeamUnreadCount } from "@/hooks/useTeamUnreadCount";
 
 // ============================================================
 // VIVACITY TEAM SIDEBAR - FINAL AUTHORITY MODEL
@@ -171,6 +172,7 @@ export const DashboardLayout = ({
     logSettingsOpened,
     getBestTab,
   } = useProfileSetupReminder();
+  const teamUnreadCount = useTeamUnreadCount();
 
   // Determine user role
   const userRole = profile?.unicorn_role || "User";
@@ -239,7 +241,7 @@ export const DashboardLayout = ({
   }, [userRole]);
 
   // Render menu link
-  const renderMenuItem = (item: { icon: any; label: string; path: string }) => {
+  const renderMenuItem = (item: { icon: any; label: string; path: string; badge?: number }) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.path;
 
@@ -263,6 +265,11 @@ export const DashboardLayout = ({
               {item.label}
             </span>
           )}
+          {sidebarOpen && (item as any).badge > 0 && (
+            <span className="ml-auto text-[10px] font-bold bg-[#ED1878] text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+              {(item as any).badge > 99 ? "99+" : (item as any).badge}
+            </span>
+          )}
         </Link>
       );
     }
@@ -284,6 +291,11 @@ export const DashboardLayout = ({
         {sidebarOpen && (
           <span className="font-medium leading-snug break-words hyphens-auto">
             {item.label}
+          </span>
+        )}
+        {sidebarOpen && (item as any).badge > 0 && (
+          <span className="ml-auto text-[10px] font-bold bg-[#ED1878] text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+            {(item as any).badge > 99 ? "99+" : (item as any).badge}
           </span>
         )}
       </Link>
@@ -449,7 +461,16 @@ export const DashboardLayout = ({
               </Collapsible>
 
               {/* 2. CLIENTS Section - All Vivacity Team */}
-              {renderSection("clients", "Clients", clientsMenuItems, "clients")}
+              {renderSection(
+                "clients",
+                "Clients",
+                clientsMenuItems.map(item =>
+                  item.path === "/communications"
+                    ? { ...item, badge: teamUnreadCount || undefined }
+                    : item
+                ),
+                "clients"
+              )}
 
               {/* 3. EOS Section - Role-Aware */}
               {renderSection("eos", "EOS", filteredEosItems, "eos")}
