@@ -172,6 +172,7 @@ export const DashboardLayout = ({
     logSettingsOpened,
     getBestTab,
   } = useProfileSetupReminder();
+  const teamUnreadCount = useTeamUnreadCount();
 
   // Determine user role
   const userRole = profile?.unicorn_role || "User";
