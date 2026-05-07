@@ -139,11 +139,25 @@ function TemplatePhaseView({
   const queryClient = useQueryClient();
   const allTemplateSectionIds = sections.filter(s => s.template_section_id).map(s => s.template_section_id!);
 
-  // Build questionsBySection from query cache
+  // Build questionsBySection from query cache.
+  // Order by COALESCE(response.display_order, question.sort_order), then sort_order, then id.
+  // This keeps existing questions in place while letting newly-added template questions
+  // (which have no response row yet) fall to the end after a refresh.
+  const responseOrderByQuestionId = new Map<string, number | null>();
+  for (const r of responses) {
+    if (r.question_id) responseOrderByQuestionId.set(r.question_id, (r as any).display_order ?? null);
+  }
   const questionsBySection: Record<string, TemplateQuestion[]> = {};
   for (const tsId of allTemplateSectionIds) {
-    const cached = queryClient.getQueryData<TemplateQuestion[]>(['audit-questions', tsId]);
-    questionsBySection[tsId] = cached || [];
+    const cached = queryClient.getQueryData<TemplateQuestion[]>(['audit-questions', tsId]) || [];
+    const sorted = [...cached].sort((a, b) => {
+      const ad = responseOrderByQuestionId.get(a.id) ?? a.sort_order;
+      const bd = responseOrderByQuestionId.get(b.id) ?? b.sort_order;
+      if (ad !== bd) return ad - bd;
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+      return a.id.localeCompare(b.id);
+    });
+    questionsBySection[tsId] = sorted;
   }
 
   // Calculate phase completions
