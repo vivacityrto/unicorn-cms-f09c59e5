@@ -471,34 +471,46 @@ export function MessageTab({ channel }: MessageTabProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                {msg.role === "staff" && (
-                  <Avatar className="h-7 w-7 flex-shrink-0">
-                    {cscProfile?.avatar_url && <AvatarImage src={cscProfile.avatar_url} />}
-                    <AvatarFallback className="bg-secondary/10 text-secondary text-xs">
-                      {cscProfile
-                        ? `${cscProfile.first_name?.[0] ?? ""}${cscProfile.last_name?.[0] ?? ""}`.toUpperCase() || "CS"
-                        : <Headphones className="h-4 w-4 text-secondary" />}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-                <div
-                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  }`}
-                >
-                  {msg.content}
-                </div>
-                {msg.role === "user" && (
-                  <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="h-4 w-4 text-primary" />
+            {messages.map((msg) => {
+              const staffName = msg.sender_user_uuid ? staffNameMap.get(msg.sender_user_uuid) : undefined;
+              const staffAvatar = msg.sender_user_uuid ? staffAvatarMap.get(msg.sender_user_uuid) : undefined;
+              const displayName = staffName || "Vivacity Team";
+              const initials = staffName
+                ? staffName.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase()
+                : "VT";
+              const firstName = staffName ? staffName.split(/\s+/)[0] : "Vivacity Team";
+              return (
+                <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  {msg.role === "staff" && (
+                    <Avatar className="h-7 w-7 flex-shrink-0">
+                      <AvatarImage src={staffAvatar ?? undefined} />
+                      <AvatarFallback className="bg-secondary/10 text-secondary text-[10px]">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className="flex flex-col max-w-[80%]">
+                    {msg.role === "staff" && (
+                      <p className="text-xs font-medium text-muted-foreground mb-0.5">{firstName}</p>
+                    )}
+                    <div
+                      className={`rounded-lg px-3 py-2 text-sm ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-foreground"
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+                  {msg.role === "user" && (
+                    <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             <div ref={scrollRef} />
           </div>
         )}
