@@ -1,42 +1,15 @@
-## Fix "0 lessons" on unenrolled Academy course cards
+## Fix: Toast navigation lands on stale message thread
 
-**File:** `src/hooks/useAcademyCourses.ts` — `useAcademyCourses` query function only.
+**File:** `src/components/layout/ClientLayout.tsx`
 
-**Problem:** `total_lessons` is read from `v_academy_course_progress`, which only has rows for enrolled users. Unenrolled courses fall through to `?? 0`, so every card shows "0 lessons".
+**Problem:** The `client-inbox-notifier-${activeTenantId}` realtime subscription (lines 47–80) invalidates `["client-conversations"]` and `["client-inbox"]` on a new `tenant_messages` INSERT, but does NOT invalidate `["conversation-messages", conversationId]`. With the global `staleTime: 2 * 60 * 1000`, when the user clicks "View" on the toast, React Query serves stale cached messages and the new inbound message is missing.
 
-**Change:** After fetching `courses`, run a second query in parallel with the progress query to count published lessons per course directly from `academy_lessons`, then use it as a fallback.
-
-```ts
-const courseIds = courses.map((c) => c.id);
-
-const [progressRes, lessonsRes] = await Promise.all([
-  user
-    ? supabase
-        .from("v_academy_course_progress")
-        .select("course_id, enrollment_status, progress_percentage, completed_lessons, total_lessons, has_certificate, certificate_number")
-        .eq("user_id", user.id)
-    : Promise.resolve({ data: null }),
-  supabase
-    .from("academy_lessons")
-    .select("course_id")
-    .eq("is_published", true)
-    .in("course_id", courseIds),
-]);
-
-const lessonCountMap = new Map<number, number>();
-for (const l of (lessonsRes.data ?? []) as { course_id: number | null }[]) {
-  if (l.course_id == null) continue;
-  lessonCountMap.set(l.course_id, (lessonCountMap.get(l.course_id) ?? 0) + 1);
-}
-```
-
-Then in the final `courses.map(...)`:
+**Change:** In the subscription callback, after the null guard (line 59) and before the `toast(...)` call (line 61), add a single invalidation:
 
 ```ts
-total_lessons: p?.total_lessons ?? lessonCountMap.get(c.id) ?? 0,
+queryClient.invalidateQueries({ queryKey: ["conversation-messages", row.conversation_id] });
 ```
 
-All other resolved fields (`enrollment_status`, `progress_percentage`, `completed_lessons`, `has_certificate`, `certificate_number`) and the rest of the file (dashboard stats, my-courses, helpers) remain unchanged.
+That is the only edit. No other invalidations, subscription logic, callers, hooks, or files are touched.
 
-### Risk
-Negligible. One extra `.in()` query against `academy_lessons` per courses fetch; runs in parallel with the existing progress query. No schema, RLS, or interface changes. Enrolled users keep their progress-view count (which reflects what's counted toward completion); unenrolled users now see the real published-lesson count instead of 0.
+**Risk:** Negligible. One extra cache invalidation keyed by the actual conversation id from the realtime payload. Ensures the thread view fetches fresh on next mount/focus and AJ's new message is visible immediately.
