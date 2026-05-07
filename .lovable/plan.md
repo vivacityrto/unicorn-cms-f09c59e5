@@ -1,13 +1,26 @@
-## Fix: Remove "pressed" appearance from Book consult quick action card
+## Fix: Equalize Book consult tile size with sibling QuickAction tiles
 
-The "Book consult" tile in the QuickActionsRow grid (under the CSC card) has `emphasised: true`, which applies `border-2 border-primary/30 bg-primary/5` plus a cyan-tinted icon bubble. Next to the three plain neighbour cards, this reads as a pressed/active state.
+Cause: In `QuickActionsRow` (`src/components/client/ClientHomePage.tsx`), tiles with a `to` prop are wrapped in a `<Link>` that has no height styling. The grid stretches the `<Link>` to full row height, but the inner `<Card>` doesn't fill the link, so the Book consult card collapses to its content height while the sibling tiles (rendered as bare `<Card onClick>`) stretch via the grid's default `align: stretch`.
 
-### Change
+### Change (lines 312–323)
 
-In `src/components/client/ClientHomePage.tsx`, in the `quickActions` array (line 349), remove the `emphasised: true` line from the "Book consult" entry so all four quick action tiles share the same neutral card style.
+Add `block h-full` to the wrapping `<Link>` and `h-full` to both `<Card>` renderings so all four tiles fill the grid row equally:
 
-Result: the four tiles in the row become visually equal weight; high-intent emphasis still lives on the dedicated CSCCard "Book consult" outline button above.
+```tsx
+if (a.to) {
+  return (
+    <Link key={a.label} to={a.to} className="block h-full">
+      <Card className={`${cardCls} h-full`}>{inner}</Card>
+    </Link>
+  );
+}
+return (
+  <Card key={a.label} onClick={a.onClick} className={`${cardCls} h-full`}>
+    {inner}
+  </Card>
+);
+```
 
 ### Out of scope
-- CSCCard buttons (already correct from previous fix)
-- `QuickAction` type or `QuickActionsRow` styling logic (the `emphasised` flag stays available for future use)
+- CSCCard buttons
+- Inner padding, icon size, typography
