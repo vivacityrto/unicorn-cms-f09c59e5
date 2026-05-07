@@ -300,9 +300,24 @@ export function MessageTab({ channel }: MessageTabProps) {
                 role: r.sender_user_uuid === myUuid ? "user" : "staff",
                 content: r.body,
                 created_at: r.created_at,
+                sender_user_uuid: r.sender_user_uuid,
               },
             ];
           });
+          // Backfill staff identity if unseen.
+          if (r.sender_user_uuid && r.sender_user_uuid !== myUuid && !staffAvatarMap.has(r.sender_user_uuid)) {
+            void (async () => {
+              const { data: u } = await (supabase
+                .from("users")
+                .select("user_uuid, first_name, last_name, avatar_url")
+                .eq("user_uuid", r.sender_user_uuid)
+                .maybeSingle()) as any;
+              if (!u) return;
+              const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Vivacity Team";
+              setStaffNameMap(prev => new Map(prev).set(u.user_uuid, name));
+              setStaffAvatarMap(prev => new Map(prev).set(u.user_uuid, u.avatar_url ?? null));
+            })();
+          }
         }
       )
       .subscribe();
