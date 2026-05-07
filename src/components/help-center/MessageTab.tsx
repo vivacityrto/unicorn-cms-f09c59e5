@@ -72,6 +72,7 @@ export function MessageTab({ channel }: MessageTabProps) {
       setMessages([]);
       setThreadId(null);
       setCscInitFailed(false);
+      setCscProfile(null);
 
       if (channel === "csc") {
         await loadCscThread();
