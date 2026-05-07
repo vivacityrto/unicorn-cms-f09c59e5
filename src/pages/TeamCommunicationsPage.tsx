@@ -95,15 +95,17 @@ export default function TeamCommunicationsPage() {
 
       const convoIds = (data as any[]).map((c: any) => c.id);
       const readMap = new Map<string, string | null>();
+      const mineSet = new Set<string>();
       if (currentUserId && convoIds.length > 0) {
         const { data: participants } = await (supabase
           .from("conversation_participants" as any)
           .select("conversation_id, last_read_at")
           .eq("user_id", currentUserId)
           .in("conversation_id", convoIds)) as any;
-        (participants || []).forEach((p: any) =>
-          readMap.set(p.conversation_id, p.last_read_at)
-        );
+        (participants || []).forEach((p: any) => {
+          readMap.set(p.conversation_id, p.last_read_at);
+          mineSet.add(p.conversation_id);
+        });
       }
 
       return (data as any[]).map((c: any) => ({
@@ -113,6 +115,7 @@ export default function TeamCommunicationsPage() {
           ? !readMap.has(c.id) || !readMap.get(c.id) ||
             new Date(c.last_message_at) > new Date(readMap.get(c.id)!)
           : false,
+        isMine: mineSet.has(c.id),
       }));
     },
     enabled: !!currentUserId,
