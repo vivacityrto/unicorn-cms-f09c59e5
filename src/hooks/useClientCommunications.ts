@@ -41,17 +41,18 @@ export function useConversationRealtime(conversationId: string | null) {
   useEffect(() => {
     if (!conversationId) return;
     const channel = supabase
-      .channel(`tm:${conversationId}`)
+      .channel(`conv-live:${conversationId}`)
       .on(
         "postgres_changes" as any,
         {
-          event: "INSERT",
+          event: "UPDATE",
           schema: "public",
-          table: "tenant_messages",
-          filter: `conversation_id=eq.${conversationId}`,
+          table: "tenant_conversations",
         },
-        () => {
-          qc.invalidateQueries({ queryKey: ["conversation-messages", conversationId] });
+        (payload: any) => {
+          if (payload.new?.id === conversationId) {
+            qc.invalidateQueries({ queryKey: ["conversation-messages", conversationId] });
+          }
           qc.invalidateQueries({ queryKey: ["client-conversations"] });
         }
       )
