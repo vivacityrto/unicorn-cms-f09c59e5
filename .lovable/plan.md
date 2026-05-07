@@ -1,26 +1,16 @@
-# Plan: Route "Message CSC" actions to the CSC tab
+## Fix topic check constraint violation (23514)
 
-Two single-character literal swaps in `src/components/client/ClientHomePage.tsx`. No other files touched.
+The `tenant_conversations.topic` column only accepts: `general`, `support`, `csc`, `document_request`, `bot_escalation`. Two create paths currently pass the user's free-text subject into `topic`, triggering check constraint violations. Free-text already lives in the `subject` column on the next line, so `topic` should be hardcoded to `'general'`.
 
-## Change 1 — Line 360 ("Message CSC" quick action tile)
+### Changes
 
-```tsx
-// Before
-onClick: () => openHelpCenter("chatbot"),
-// After
-onClick: () => openHelpCenter("csc"),
-```
+**1. `src/hooks/useClientCommunications.ts`** — in the `createConversation` mutation insert payload:
+- Replace `topic: subject || "General",` with `topic: "general",`
 
-## Change 2 — Line 395 (CSC card `onMessage` prop)
+**2. `src/pages/TeamCommunicationsPage.tsx`** — in `NewTeamMessageDialog.handleSubmit` insert payload:
+- Replace `topic: subject.trim() || "General",` with `topic: "general",`
 
-```tsx
-// Before
-onMessage={() => openHelpCenter("chatbot")}
-// After
-onMessage={() => openHelpCenter("csc")}
-```
-
-## Untouched
-- Line 372 — "Ask the Chatbot" tile stays `openHelpCenter("chatbot")`.
-- `HelpCenterContext.tsx` — no changes.
-- All other markup, props, styling, schema, RLS.
+### Out of scope
+- No DB/RLS/schema changes
+- No edits to the `subject` field or any surrounding logic
+- No other files touched
