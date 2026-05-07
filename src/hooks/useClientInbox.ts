@@ -33,7 +33,9 @@ export function useClientInbox() {
       is_read: !c.isUnread,
     }));
 
-    const notificationItems: UnifiedInboxItem[] = (notif.notifications || []).map((n) => ({
+    const notificationItems: UnifiedInboxItem[] = (notif.notifications || [])
+      .filter((n) => n.type !== 'message')
+      .map((n) => ({
       item_type: "notification",
       id: n.id,
       title: n.title,
