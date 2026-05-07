@@ -10254,6 +10254,7 @@ export type Database = {
           ai_suggested_rating: string | null
           audit_id: string
           created_at: string
+          display_order: number | null
           evidence_urls: string[]
           id: string
           is_flagged: boolean
@@ -10278,6 +10279,7 @@ export type Database = {
           ai_suggested_rating?: string | null
           audit_id: string
           created_at?: string
+          display_order?: number | null
           evidence_urls?: string[]
           id?: string
           is_flagged?: boolean
@@ -10302,6 +10304,7 @@ export type Database = {
           ai_suggested_rating?: string | null
           audit_id?: string
           created_at?: string
+          display_order?: number | null
           evidence_urls?: string[]
           id?: string
           is_flagged?: boolean
@@ -59933,6 +59936,10 @@ export type Database = {
           profile_id: number
           user_id: string
         }[]
+      }
+      audit_refresh_template_questions: {
+        Args: { p_audit_id: string; p_force?: boolean }
+        Returns: Json
       }
       audit_send_24hr_confirmation: { Args: never; Returns: undefined }
       audit_send_evidence_reminders: { Args: never; Returns: undefined }
