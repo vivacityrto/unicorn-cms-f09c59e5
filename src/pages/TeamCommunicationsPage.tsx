@@ -370,8 +370,8 @@ export default function TeamCommunicationsPage() {
         </Button>
       </div>
 
-      {/* Filter by tenant */}
-      <div className="flex gap-2 items-center">
+      {/* Filters */}
+      <div className="flex gap-2 items-center flex-wrap">
         <Select value={filterTenant} onValueChange={setFilterTenant}>
           <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="All Clients" />
@@ -380,6 +380,17 @@ export default function TeamCommunicationsPage() {
             <SelectItem value="all">All Clients</SelectItem>
             {tenantOptions.map(t => (
               <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterStaff} onValueChange={setFilterStaff}>
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="All Team Members" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Team Members</SelectItem>
+            {staffOptions.map(s => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
