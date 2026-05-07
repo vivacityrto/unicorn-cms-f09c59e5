@@ -1,26 +1,66 @@
-## Plan
+## Real-time client message notifier in ClientLayout
 
-Three scoped fixes across two existing files plus one new hook. No other files touched.
+Add a single `useEffect` inside `ClientLayoutInner` (in `src/components/layout/ClientLayout.tsx`) that subscribes to new `tenant_messages` for the active tenant and surfaces a toast + invalidates inbox queries so unread badges and lists refresh without a reload.
 
-### 1. `src/pages/TeamCommunicationsPage.tsx` — Realtime conversation list
-Add a second, independent `useEffect` directly below the existing `selectedId`-scoped realtime subscription. New effect subscribes to `tenant_conversations` UPDATE events on channel `team-conversations-live` (no `selectedId` guard) and invalidates `["team-conversations"]` on any update. Existing subscription left untouched.
+### Changes — `src/components/layout/ClientLayout.tsx`
 
-### 2. `src/pages/TeamCommunicationsPage.tsx` — Mark-as-read without overwriting role
-- In `sendMessage` (~lines 207–215), replace the single participant upsert with two steps:
-  1. Upsert with `role: "staff"` and `last_read_at`, using `onConflict: "conversation_id,user_id", ignoreDuplicates: true` (never overwrites existing role).
-  2. Update `last_read_at` on the existing row by `conversation_id` + `user_id`.
-- Add a `handleSelectConversation(convId)` helper that calls `setSelectedId`, then updates `last_read_at` on `conversation_participants` for the current user, then invalidates `["team-unread-count"]`.
-- In the thread list `filtered.map` (~line 299), replace `onClick={() => setSelectedId(conv.id)}` with `onClick={() => handleSelectConversation(conv.id)}`.
+1. **Imports** (add to existing import block):
+   - `import { useEffect } from "react";` (extend existing react import)
+   - `import { useNavigate } from "react-router-dom";`
+   - `import { useQueryClient } from "@tanstack/react-query";`
+   - `import { toast } from "sonner";`
+   - `import { supabase } from "@/integrations/supabase/client";`
+   - `import { useAuth } from "@/hooks/useAuth";`
 
-### 3. Unread badge on Communications nav
+2. **Inside `ClientLayoutInner`**, after the existing `useClientTenant()` / `useClientRequestActions()` calls:
+   ```ts
+   const { profile } = useAuth();
+   const navigate = useNavigate();
+   const queryClient = useQueryClient();
+   const currentUserUuid = profile?.user_uuid ?? null;
 
-**New file `src/hooks/useTeamUnreadCount.ts`**: exports `useTeamUnreadCount()` returning a number. Loads current user, subscribes to `tenant_conversations` UPDATEs to invalidate, and runs a `useQuery(["team-unread-count", currentUserId])` that fetches all `tenant_conversations` with `last_message_at`, then `conversation_participants` rows for the user, then counts conversations whose `last_message_at` > stored `last_read_at` (or no participant row / null read).
+   useEffect(() => {
+     if (!activeTenantId) return;
 
-**Edit `src/components/DashboardLayout.tsx`**:
-- Import `useTeamUnreadCount`.
-- Call `const teamUnreadCount = useTeamUnreadCount();` after existing hooks.
-- Extend `renderMenuItem` parameter type to include optional `badge?: number`. In both the Vivacity-team branch and the client branch, after the label `<span>` inside `<Link>`, render a pink (`bg-[#ED1878]`) pill showing `badge` (capped to `99+`) when `sidebarOpen && badge > 0`.
-- Replace the `renderSection("clients", "Clients", clientsMenuItems, "clients")` call with a mapped variant that injects `badge: teamUnreadCount || undefined` onto the item whose `path === "/communications"`. `renderSection` signature unchanged.
+     const channel = supabase
+       .channel(`client-inbox-notifier-${activeTenantId}`)
+       .on(
+         "postgres_changes",
+         {
+           event: "INSERT",
+           schema: "public",
+           table: "tenant_messages",
+           filter: `tenant_id=eq.${activeTenantId}`,
+         },
+         (payload: any) => {
+           const row = payload?.new;
+           if (!row) return;
+           if (currentUserUuid && row.sender_user_uuid === currentUserUuid) return;
+
+           toast("New message received", {
+             description: "You have a new message in your inbox.",
+             action: {
+               label: "View",
+               onClick: () =>
+                 navigate(
+                   `/client/inbox?tab=messages&thread=${row.conversation_id}`
+                 ),
+             },
+           });
+
+           queryClient.invalidateQueries({ queryKey: ["client-conversations"] });
+           queryClient.invalidateQueries({ queryKey: ["client-inbox"] });
+         }
+       )
+       .subscribe();
+
+     return () => {
+       supabase.removeChannel(channel);
+     };
+   }, [activeTenantId, currentUserUuid, navigate, queryClient]);
+   ```
 
 ### Out of scope
-No changes to `useClientCommunications.ts`, `ClientInboxPage.tsx`, `useClientInbox.ts`, `ClientSidebar.tsx`, `MessageTab.tsx`, isolation tests, or any EOS/Administration code. No DB/RLS/migration changes.
+- No changes to `useClientCommunications.ts`, `useClientInbox.ts`, `ClientSidebar.tsx`, `MessageTab.tsx`, `TeamCommunicationsPage.tsx`, EOS, or Administration code.
+- No DB / RLS / migration changes; relies on existing realtime publication for `tenant_messages`.
+- No change to the staff-side `useTeamUnreadCount` notifier.

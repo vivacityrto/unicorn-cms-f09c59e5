@@ -1,4 +1,9 @@
-import { useState, createContext, useContext } from "react";
+import { useState, createContext, useContext, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { ClientTenantProvider, useClientTenant } from "@/contexts/ClientTenantContext";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 import { ClientSidebar } from "@/components/client/ClientSidebar";
