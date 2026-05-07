@@ -46,6 +46,10 @@ export default function MyNotificationsPage() {
 
     if (NOTE_TYPES.has(notification.type)) {
       setPreviewNotif(notification);
+    } else if (notification.type === 'message') {
+      const convId = notification.source_id
+        ?? new URLSearchParams(notification.link?.split('?')[1] ?? '').get('conversation');
+      navigate(convId ? `/communications?thread=${convId}` : '/communications');
     } else if (notification.link) {
       navigate(notification.link);
     }
