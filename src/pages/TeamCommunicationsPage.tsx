@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -58,6 +59,7 @@ export default function TeamCommunicationsPage() {
   const [composerText, setComposerText] = useState("");
   const [filterTenant, setFilterTenant] = useState<string>("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [searchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUserId = profile?.user_uuid;
 
@@ -89,6 +91,14 @@ export default function TeamCommunicationsPage() {
     },
     enabled: !!currentUserId,
   });
+
+  useEffect(() => {
+    const threadId = searchParams.get('thread');
+    if (threadId && conversations.length > 0) {
+      setSelectedId(threadId);
+    }
+  }, [conversations, searchParams]);
+
 
   // Get unique tenants for filter
   const tenantOptions = [...new Map(conversations.map(c => [c.tenant_id, c.tenant_name || ""])).entries()]
