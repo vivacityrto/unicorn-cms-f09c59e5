@@ -31,6 +31,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useDebouncedAutosave } from './useDebouncedAutosave';
+import { DictateButton } from '@/components/audit/DictateButton';
 import { useAuditFindings } from '@/hooks/useAuditWorkspace';
 import { EvidencePanel } from './EvidencePanel';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
