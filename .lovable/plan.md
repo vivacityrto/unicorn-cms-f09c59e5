@@ -1,76 +1,51 @@
-# Fix: Client Inbox Infinite Mark-Read Loop
+## Goal
 
-## Problem
+Show real per-message sender avatar + name in three messaging surfaces. Staff senders without a resolved name display as "Vivacity Team".
 
-In `src/pages/ClientInboxPage.tsx` (MessagesTab), the auto mark-as-read effect at lines 190–196 lists the entire `markRead` mutation object in its dependency array:
+Scope: 3 files. No RLS, migrations, edge functions, or other files.
 
-```ts
-useEffect(() => {
-  if (!selectedId || !conversations.length) return;
-  const conv = conversations.find((c) => c.id === selectedId);
-  if (conv?.isUnread) {
-    markRead.mutate(selectedId);
-  }
-}, [selectedId, conversations, markRead]);
-```
+---
 
-`useMutation` returns a new object reference on every state transition (idle → pending → success → idle) and on each query/cache change. Because `conv.isUnread` doesn't flip to `false` until the `conversations` query refetches and the cache is updated, the effect re-fires on the next `markRead` re-render with `isUnread` still true, calling `markRead.mutate` again. This produces a tight loop of PATCH requests against `conversation_participants`, saturates React Query's mutation queue, and starves `sendMessage.mutateAsync` of a render slot — so message sending appears blocked.
+## 1. `src/hooks/useClientCommunications.ts`
 
-`markRead.mutate` itself is a stable bound function (React Query guarantees referential stability of `.mutate`/`.mutateAsync`), so depending on it instead of the wrapper object breaks the loop without changing semantics.
+- Add `sender_avatar_url: string | null` to the `ConversationMessage` interface.
+- In `useConversationMessages` queryFn:
+  - Extend users select to `'user_uuid, first_name, last_name, avatar_url'`.
+  - Build `avatarMap: Map<string, string | null>` alongside `nameMap`.
+  - Apply name fallback per-row at map time: when name is empty, use `'Vivacity Team'` if `m.sender_type === 'staff'`, else `'Unknown'`.
+  - Set `sender_avatar_url: avatarMap.get(m.sender_user_uuid) ?? null` on each mapped message.
 
-## Change (single file, single hunk)
+## 2. `src/pages/TeamCommunicationsPage.tsx`
 
-`src/pages/ClientInboxPage.tsx`, replace lines 189–196:
+- Import `Avatar`, `AvatarImage`, `AvatarFallback` from `@/components/ui/avatar`.
+- Add only `sender_avatar_url: string | null` to the `Message` interface (sender_user_uuid already present).
+- In the messages query (~line 161):
+  - Extend users select to include `avatar_url`.
+  - Build `avatarMap` alongside `nameMap`.
+  - Per-row fallback: empty name + `sender_type === 'staff'` → `'Vivacity Team'`, else `'Unknown'`.
+  - Add `sender_avatar_url` to mapped objects.
+- Render: replace the sender-name `<p>` at line 405 (the `{!isOwn && <p ...>{msg.sender_name}</p>}` line — actual line in current file is 510) with a small flex row: `<Avatar className="h-6 w-6">` containing `<AvatarImage src={msg.sender_avatar_url ?? undefined} />` and `<AvatarFallback>` showing initials (first letter of each word in `sender_name`), followed by the name text using existing `text-xs font-medium text-muted-foreground` styling.
 
-```tsx
-// Auto mark-as-read whenever a conversation becomes selected (click or deep link)
-const mutateMarkRead = markRead.mutate;
-useEffect(() => {
-  if (!selectedId || !conversations.length) return;
-  const conv = conversations.find((c) => c.id === selectedId);
-  if (conv?.isUnread) {
-    mutateMarkRead(selectedId);
-  }
-}, [selectedId, conversations, mutateMarkRead]);
-```
+## 3. `src/components/help-center/MessageTab.tsx` (CSC branch only)
 
-Nothing else in the file changes. `handleSelect` keeps its existing `markRead.mutate(conv.id)` call (line 214) — that path is correct and is the primary mark-read trigger; the effect only covers deep-link / URL-param entry where `handleSelect` was never invoked.
+- Extend `Message` interface to add `sender_user_uuid: string`.
+- Add component state: `staffNameMap` and `staffAvatarMap` (`Map<string, string>` / `Map<string, string | null>`).
+- In `loadCscThread` after fetching `rows`:
+  - Carry `sender_user_uuid: r.sender_user_uuid` through the initial mapping (line 208).
+  - Collect unique staff sender UUIDs (rows where `sender_user_uuid !== myUuid`), single `users` lookup for `user_uuid, first_name, last_name, avatar_url`, populate both maps via `setStaffNameMap` / `setStaffAvatarMap`. Use `'Vivacity Team'` fallback for empty names.
+- Realtime INSERT handler (line 259): include `sender_user_uuid` in the new message object. After updating `messages`, if `r.sender_user_uuid !== myUuid` and not already in `staffAvatarMap`, fire an incremental `users` select for that UUID and merge into both maps.
+- Staff render block (lines 432-441): replace the existing single-CSC Avatar with a per-message Avatar resolved via the maps. `<AvatarImage src={staffAvatarMap.get(msg.sender_user_uuid) ?? undefined} />`, `<AvatarFallback className="text-[10px]">{initials}</AvatarFallback>` (initials derived from resolved name, defaulting to `"VT"`). Add a `text-xs font-medium text-muted-foreground` label above the bubble showing the staff first name (or `"Vivacity Team"` if unresolved). Wrap label + bubble in a `flex flex-col` so the label stacks above the message.
+- Client (`role === 'user'`) messages: unchanged — generic `<User>` icon, no name label.
+- Do not touch `cscProfile` (not present in this file per user clarification — ignore prior plan reference).
 
-## Out of Scope (explicitly untouched)
+---
 
-- `handleSelect` (line 208) — unchanged.
-- `src/hooks/useClientCommunications.ts` — no changes.
-- `useConversationRealtime`, `sendMessage`, `createConversation` — no changes.
-- `TeamCommunicationsPage.tsx` — no changes.
-- Any database table, RLS policy, FK, migration, or edge function — no changes.
+## Technical notes
 
-## Deep-Dive Verification
+- `sender_type` is a per-row column on `tenant_messages`, so the "Vivacity Team" fallback must be applied at row-mapping time rather than during map construction.
+- `users.avatar_url` is already selectable under existing RLS (used by `useTenantUsers`, `useVivacityTeamUsers`).
+- Realtime in `MessageTab` may deliver staff senders not yet in the identity map; fallback labels cover the gap and incremental fetch backfills.
 
-1. **Referential stability of `markRead.mutate`** — React Query binds `mutate` once per `useMutation` invocation; it does not change across state transitions of the same mutation instance. Safe to use as a dep.
-2. **Effect still fires when expected** —
-   - Deep link with `?thread=...`: `selectedId` set from URL → effect runs once → marks read.
-   - User clicks conversation: `handleSelect` marks read directly; effect's `conv.isUnread` check is then false on the cache refresh, so it is a no-op.
-   - New incoming message on currently-selected conversation that flips `isUnread` back to true: `conversations` reference changes from realtime invalidation → effect re-runs → marks read once. Loop is impossible because once the optimistic / refetched cache reports `isUnread = false`, the guard short-circuits.
-3. **No double-fire risk** — even if the effect runs twice in quick succession (StrictMode dev double-invoke or a fast cache update), the underlying `markRead` mutation is idempotent at the data layer (`last_read_at = now()` on `conversation_participants`), and the existing `handleSelect` already calls it on click without issues.
-4. **Audit trail** — `markRead` writes to `conversation_participants.last_read_at` only; no audit-loggable material change is altered. Existing audit behaviour preserved.
-5. **RLS / FK** — no schema or policy change; the mutation uses the same RLS-scoped update as today.
-6. **Backward compatibility** — pure client-side render fix; no contract change for hooks, components, or APIs. No migration needed.
-7. **Other consumers of `markRead`** — `handleSelect` continues to use `markRead.mutate` directly. No other call sites in this file.
+## Risk
 
-## Risk Assessment
-
-- **Severity of fix**: Low risk, single-line semantic change in one effect.
-- **Regression surface**: MessagesTab only. No impact on Notifications tab, Team Communications, client portal RLS, or message send/receive pipeline.
-- **Test coverage**: Manual smoke — (a) deep-link to unread thread marks read once; (b) click unread thread marks read once; (c) send message succeeds without latency; (d) network panel shows a single PATCH per selection, not a burst.
-- **Rollback**: Revert the one hunk.
-
-## Summary of Changes
-
-- One file, one effect: extract `markRead.mutate` into `mutateMarkRead` and use it as the effect dependency in place of the unstable `markRead` object.
-
-## Benefits
-
-- Eliminates the mark-read PATCH storm against `conversation_participants`.
-- Unblocks `sendMessage.mutateAsync` so messages send normally.
-- Reduces Supabase write load and realtime channel noise.
-- Preserves deep-link and realtime mark-read behaviour exactly as designed.
+Low. Read-side rendering + identity resolution only. No mutation, schema, RLS, or send-flow impact.

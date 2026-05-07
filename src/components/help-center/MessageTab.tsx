@@ -13,6 +13,7 @@ interface Message {
   role: "user" | "staff";
   content: string;
   created_at: string;
+  sender_user_uuid?: string;
 }
 
 interface MessageTabProps {
@@ -59,6 +60,8 @@ export function MessageTab({ channel }: MessageTabProps) {
   // CSC branch: blocks send when participant upsert failed.
   const [cscInitFailed, setCscInitFailed] = useState(false);
   const [cscProfile, setCscProfile] = useState<{ avatar_url: string | null; first_name: string | null; last_name: string | null } | null>(null);
+  const [staffNameMap, setStaffNameMap] = useState<Map<string, string>>(new Map());
+  const [staffAvatarMap, setStaffAvatarMap] = useState<Map<string, string | null>>(new Map());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // ---------- Load history ----------
@@ -220,8 +223,33 @@ export function MessageTab({ channel }: MessageTabProps) {
         role: r.sender_user_uuid === myUuid ? "user" : "staff",
         content: r.body,
         created_at: r.created_at,
+        sender_user_uuid: r.sender_user_uuid,
       }));
       setMessages(mapped);
+
+      // Resolve staff sender identities (per-message).
+      const staffIds = Array.from(new Set<string>(
+        (rows || [])
+          .map((r: any) => r.sender_user_uuid)
+          .filter((u: string) => u && u !== myUuid)
+      ));
+      if (staffIds.length > 0) {
+        const { data: staffUsers } = await (supabase
+          .from("users")
+          .select("user_uuid, first_name, last_name, avatar_url")
+          .in("user_uuid", staffIds)) as any;
+        if (!cancelled && staffUsers) {
+          const nm = new Map<string, string>();
+          const am = new Map<string, string | null>();
+          staffUsers.forEach((u: any) => {
+            const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Vivacity Team";
+            nm.set(u.user_uuid, name);
+            am.set(u.user_uuid, u.avatar_url ?? null);
+          });
+          setStaffNameMap(nm);
+          setStaffAvatarMap(am);
+        }
+      }
 
       // 5) Fire-and-forget read audit.
       if (mapped.length > 0) {
@@ -272,9 +300,24 @@ export function MessageTab({ channel }: MessageTabProps) {
                 role: r.sender_user_uuid === myUuid ? "user" : "staff",
                 content: r.body,
                 created_at: r.created_at,
+                sender_user_uuid: r.sender_user_uuid,
               },
             ];
           });
+          // Backfill staff identity if unseen.
+          if (r.sender_user_uuid && r.sender_user_uuid !== myUuid && !staffAvatarMap.has(r.sender_user_uuid)) {
+            void (async () => {
+              const { data: u } = await (supabase
+                .from("users")
+                .select("user_uuid, first_name, last_name, avatar_url")
+                .eq("user_uuid", r.sender_user_uuid)
+                .maybeSingle()) as any;
+              if (!u) return;
+              const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Vivacity Team";
+              setStaffNameMap(prev => new Map(prev).set(u.user_uuid, name));
+              setStaffAvatarMap(prev => new Map(prev).set(u.user_uuid, u.avatar_url ?? null));
+            })();
+          }
         }
       )
       .subscribe();
@@ -384,6 +427,7 @@ export function MessageTab({ channel }: MessageTabProps) {
             role: "user",
             content: inserted.body,
             created_at: inserted.created_at,
+            sender_user_uuid: inserted.sender_user_uuid,
           },
         ];
       });
@@ -427,34 +471,46 @@ export function MessageTab({ channel }: MessageTabProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {messages.map((msg) => (
-              <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                {msg.role === "staff" && (
-                  <Avatar className="h-7 w-7 flex-shrink-0">
-                    {cscProfile?.avatar_url && <AvatarImage src={cscProfile.avatar_url} />}
-                    <AvatarFallback className="bg-secondary/10 text-secondary text-xs">
-                      {cscProfile
-                        ? `${cscProfile.first_name?.[0] ?? ""}${cscProfile.last_name?.[0] ?? ""}`.toUpperCase() || "CS"
-                        : <Headphones className="h-4 w-4 text-secondary" />}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-                <div
-                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
-                  }`}
-                >
-                  {msg.content}
-                </div>
-                {msg.role === "user" && (
-                  <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="h-4 w-4 text-primary" />
+            {messages.map((msg) => {
+              const staffName = msg.sender_user_uuid ? staffNameMap.get(msg.sender_user_uuid) : undefined;
+              const staffAvatar = msg.sender_user_uuid ? staffAvatarMap.get(msg.sender_user_uuid) : undefined;
+              const displayName = staffName || "Vivacity Team";
+              const initials = staffName
+                ? staffName.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase()
+                : "VT";
+              const firstName = staffName ? staffName.split(/\s+/)[0] : "Vivacity Team";
+              return (
+                <div key={msg.id} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  {msg.role === "staff" && (
+                    <Avatar className="h-7 w-7 flex-shrink-0">
+                      <AvatarImage src={staffAvatar ?? undefined} />
+                      <AvatarFallback className="bg-secondary/10 text-secondary text-[10px]">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className="flex flex-col max-w-[80%]">
+                    {msg.role === "staff" && (
+                      <p className="text-xs font-medium text-muted-foreground mb-0.5">{firstName}</p>
+                    )}
+                    <div
+                      className={`rounded-lg px-3 py-2 text-sm ${
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-foreground"
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+                  {msg.role === "user" && (
+                    <div className="flex-shrink-0 h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             <div ref={scrollRef} />
           </div>
         )}

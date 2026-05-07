@@ -30,6 +30,7 @@ export interface ConversationMessage {
   body: string;
   created_at: string;
   sender_name?: string;
+  sender_avatar_url: string | null;
 }
 
 /**
@@ -131,26 +132,33 @@ export function useClientCommunications() {
         const senderIds = Array.from(new Set<string>(data.map((m: any) => m.sender_user_uuid)));
         const { data: users } = await (supabase
           .from("users")
-          .select("user_uuid, first_name, last_name")
+          .select("user_uuid, first_name, last_name, avatar_url")
           .in("user_uuid", senderIds)) as any;
 
         const nameMap = new Map<string, string>();
+        const avatarMap = new Map<string, string | null>();
         (users || []).forEach((u: any) => {
           nameMap.set(
             u.user_uuid,
-            [u.first_name, u.last_name].filter(Boolean).join(" ") || "Unknown"
+            [u.first_name, u.last_name].filter(Boolean).join(" ")
           );
+          avatarMap.set(u.user_uuid, u.avatar_url ?? null);
         });
 
-        const mapped: ConversationMessage[] = data.map((m: any) => ({
-          id: m.id,
-          conversation_id: m.conversation_id,
-          sender_id: m.sender_user_uuid,
-          sender_type: m.sender_type ?? null,
-          body: m.body,
-          created_at: m.created_at,
-          sender_name: nameMap.get(m.sender_user_uuid) || "Unknown",
-        }));
+        const mapped: ConversationMessage[] = data.map((m: any) => {
+          const resolved = nameMap.get(m.sender_user_uuid) || "";
+          const fallback = m.sender_type === "staff" ? "Vivacity Team" : "Unknown";
+          return {
+            id: m.id,
+            conversation_id: m.conversation_id,
+            sender_id: m.sender_user_uuid,
+            sender_type: m.sender_type ?? null,
+            body: m.body,
+            created_at: m.created_at,
+            sender_name: resolved || fallback,
+            sender_avatar_url: avatarMap.get(m.sender_user_uuid) ?? null,
+          };
+        });
 
         // Fire-and-forget application-layer read audit.
         if (mapped.length > 0 && currentUserId) {
