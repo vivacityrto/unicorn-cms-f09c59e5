@@ -1,26 +1,25 @@
-## Fix: Equalize Book consult tile size with sibling QuickAction tiles
+## Plan
 
-Cause: In `QuickActionsRow` (`src/components/client/ClientHomePage.tsx`), tiles with a `to` prop are wrapped in a `<Link>` that has no height styling. The grid stretches the `<Link>` to full row height, but the inner `<Card>` doesn't fill the link, so the Book consult card collapses to its content height while the sibling tiles (rendered as bare `<Card onClick>`) stretch via the grid's default `align: stretch`.
+Edit only `src/pages/TeamCommunicationsPage.tsx`:
 
-### Change (lines 312–323)
+1. **Line 1 area**: Add a new import below the React import:
+   ```ts
+   import { useSearchParams } from "react-router-dom";
+   ```
 
-Add `block h-full` to the wrapping `<Link>` and `h-full` to both `<Card>` renderings so all four tiles fill the grid row equally:
+2. **Inside the component**, add:
+   ```ts
+   const [searchParams] = useSearchParams();
+   ```
 
-```tsx
-if (a.to) {
-  return (
-    <Link key={a.label} to={a.to} className="block h-full">
-      <Card className={`${cardCls} h-full`}>{inner}</Card>
-    </Link>
-  );
-}
-return (
-  <Card key={a.label} onClick={a.onClick} className={`${cardCls} h-full`}>
-    {inner}
-  </Card>
-);
-```
+3. **Add an effect** that auto-selects the thread once conversations load:
+   ```ts
+   useEffect(() => {
+     const threadId = searchParams.get('thread');
+     if (threadId && conversations.length > 0) {
+       setSelectedId(threadId);
+     }
+   }, [conversations, searchParams]);
+   ```
 
-### Out of scope
-- CSCCard buttons
-- Inner padding, icon size, typography
+No other files touched. No changes to selection logic, queries, or UI.
