@@ -203,16 +203,26 @@ export default function TeamCommunicationsPage() {
       if (!currentUserId) throw new Error("Not authenticated");
       const conv = conversations.find(c => c.id === conversationId);
 
-      // Ensure staff is a participant BEFORE inserting the message (RLS requires it).
+      // Step 1: Insert participant row only if not already present (never overwrite role)
       const { error: partError } = await (supabase
         .from("conversation_participants" as any)
-        .upsert({
-          conversation_id: conversationId,
-          user_id: currentUserId,
-          role: "staff",
-          last_read_at: new Date().toISOString(),
-        } as any, { onConflict: "conversation_id,user_id" })) as any;
+        .upsert(
+          {
+            conversation_id: conversationId,
+            user_id: currentUserId,
+            role: "staff",
+            last_read_at: new Date().toISOString(),
+          } as any,
+          { onConflict: "conversation_id,user_id", ignoreDuplicates: true }
+        )) as any;
       if (partError) throw partError;
+
+      // Step 2: Stamp last_read_at on the existing row regardless of its role
+      await (supabase
+        .from("conversation_participants" as any)
+        .update({ last_read_at: new Date().toISOString() } as any)
+        .eq("conversation_id", conversationId)
+        .eq("user_id", currentUserId)) as any;
 
       const { error } = await (supabase
         .from("tenant_messages" as any)
