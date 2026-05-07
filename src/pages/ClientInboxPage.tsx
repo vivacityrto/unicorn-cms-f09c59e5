@@ -180,7 +180,6 @@ function MessagesTab() {
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [composerText, setComposerText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const markedReadRef = useRef<string | null>(null);
 
   // Sync ?thread= URL param into selection
   useEffect(() => {
@@ -190,10 +189,8 @@ function MessagesTab() {
   // Auto mark-as-read whenever a conversation becomes selected (click or deep link)
   useEffect(() => {
     if (!selectedId || !conversations.length) return;
-    if (markedReadRef.current === selectedId) return;
     const conv = conversations.find((c) => c.id === selectedId);
     if (conv?.isUnread) {
-      markedReadRef.current = selectedId;
       markRead.mutate(selectedId);
     }
   }, [selectedId, conversations, markRead]);
