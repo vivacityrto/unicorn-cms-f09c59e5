@@ -59,6 +59,8 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           if (!row) return;
           if (currentUserUuid && row.sender_user_uuid === currentUserUuid) return;
 
+          queryClient.invalidateQueries({ queryKey: ["conversation-messages", row.conversation_id] });
+
           toast("New message received", {
             description: "You have a new message in your inbox.",
             action: {
