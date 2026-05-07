@@ -193,6 +193,39 @@ export default function TeamCommunicationsPage() {
     };
   }, [selectedId, qc]);
 
+  // Always-on: keep conversation list fresh on any new message in any thread
+  useEffect(() => {
+    const channel = supabase
+      .channel("team-conversations-live")
+      .on(
+        "postgres_changes" as any,
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "tenant_conversations",
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["team-conversations"] });
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [qc]);
+
+  const handleSelectConversation = async (convId: string) => {
+    setSelectedId(convId);
+    if (!currentUserId) return;
+    // Stamp last_read_at without touching the existing role
+    await (supabase
+      .from("conversation_participants" as any)
+      .update({ last_read_at: new Date().toISOString() } as any)
+      .eq("conversation_id", convId)
+      .eq("user_id", currentUserId)) as any;
+    qc.invalidateQueries({ queryKey: ["team-unread-count"] });
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
