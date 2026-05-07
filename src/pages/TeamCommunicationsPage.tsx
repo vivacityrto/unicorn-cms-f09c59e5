@@ -59,6 +59,7 @@ export default function TeamCommunicationsPage() {
   const [composerText, setComposerText] = useState("");
   const [filterTenant, setFilterTenant] = useState<string>("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [searchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUserId = profile?.user_uuid;
 
