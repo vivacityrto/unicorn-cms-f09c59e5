@@ -250,6 +250,14 @@ export default function TeamCommunicationsPage() {
   }, [currentUserId, qc]);
 
   useEffect(() => {
+    const threadId = searchParams.get('thread');
+    if (threadId && conversations.length > 0 && threadId !== lastAutoSelectedRef.current) {
+      lastAutoSelectedRef.current = threadId;
+      handleSelectConversation(threadId);
+    }
+  }, [conversations, searchParams, handleSelectConversation]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
