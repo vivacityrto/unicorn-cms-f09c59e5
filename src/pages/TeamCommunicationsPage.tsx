@@ -19,6 +19,7 @@ import {
   AppModalFooter,
 } from "@/components/ui/modals";
 import { MessageSquare, Plus, Send, Mail, MailOpen, Building2 } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
 
