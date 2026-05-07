@@ -461,7 +461,16 @@ export const DashboardLayout = ({
               </Collapsible>
 
               {/* 2. CLIENTS Section - All Vivacity Team */}
-              {renderSection("clients", "Clients", clientsMenuItems, "clients")}
+              {renderSection(
+                "clients",
+                "Clients",
+                clientsMenuItems.map(item =>
+                  item.path === "/communications"
+                    ? { ...item, badge: teamUnreadCount || undefined }
+                    : item
+                ),
+                "clients"
+              )}
 
               {/* 3. EOS Section - Role-Aware */}
               {renderSection("eos", "EOS", filteredEosItems, "eos")}
