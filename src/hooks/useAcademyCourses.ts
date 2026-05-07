@@ -43,8 +43,10 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
       if (coursesErr) throw coursesErr;
       if (!courses || courses.length === 0) return [];
 
-      // Fetch progress for current user (separate query to avoid TS2589)
-      let progressMap = new Map<number, {
+      const courseIds = courses.map((c) => c.id);
+
+      // Fetch progress for current user and lesson counts in parallel
+      const progressMap = new Map<number, {
         enrollment_status: string | null;
         progress_percentage: number | null;
         completed_lessons: number | null;
@@ -52,17 +54,32 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
         has_certificate: boolean | null;
         certificate_number: string | null;
       }>();
+      const lessonCountMap = new Map<number, number>();
 
-      if (user) {
-        const { data: progress } = await supabase
-          .from("v_academy_course_progress")
-          .select("course_id, enrollment_status, progress_percentage, completed_lessons, total_lessons, has_certificate, certificate_number")
-          .eq("user_id", user.id);
+      const [progressRes, lessonsRes] = await Promise.all([
+        user
+          ? supabase
+              .from("v_academy_course_progress")
+              .select("course_id, enrollment_status, progress_percentage, completed_lessons, total_lessons, has_certificate, certificate_number")
+              .eq("user_id", user.id)
+          : Promise.resolve({ data: null as any }),
+        supabase
+          .from("academy_lessons")
+          .select("course_id")
+          .eq("is_published", true)
+          .in("course_id", courseIds),
+      ]);
 
-        if (progress) {
-          for (const p of progress) {
-            if (p.course_id) progressMap.set(p.course_id, p);
-          }
+      if (progressRes.data) {
+        for (const p of progressRes.data) {
+          if (p.course_id) progressMap.set(p.course_id, p);
+        }
+      }
+
+      if (lessonsRes.data) {
+        for (const l of lessonsRes.data as { course_id: number | null }[]) {
+          if (l.course_id == null) continue;
+          lessonCountMap.set(l.course_id, (lessonCountMap.get(l.course_id) ?? 0) + 1);
         }
       }
 
@@ -73,7 +90,7 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
           enrollment_status: p?.enrollment_status ?? null,
           progress_percentage: p?.progress_percentage ?? 0,
           completed_lessons: p?.completed_lessons ?? 0,
-          total_lessons: p?.total_lessons ?? 0,
+          total_lessons: p?.total_lessons ?? lessonCountMap.get(c.id) ?? 0,
           has_certificate: p?.has_certificate ?? false,
           certificate_number: p?.certificate_number ?? null,
         };
