@@ -384,8 +384,11 @@ export default function TeamCommunicationsPage() {
                         >
                           {conv.type}
                         </Badge>
+                        {conv.isUnread && (
+                          <span className="h-2 w-2 rounded-full bg-[#23C0DD] flex-shrink-0" />
+                        )}
                       </div>
-                      <p className="text-sm font-medium truncate text-foreground">
+                      <p className={`text-sm truncate text-foreground ${conv.isUnread ? "font-semibold" : "font-medium"}`}>
                         {conv.subject || conv.topic || "General"}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
