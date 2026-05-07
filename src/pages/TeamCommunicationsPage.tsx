@@ -32,6 +32,7 @@ interface Conversation {
   last_message_preview: string | null;
   created_at: string;
   tenant_name?: string;
+  isUnread?: boolean;
 }
 
 interface Message {
