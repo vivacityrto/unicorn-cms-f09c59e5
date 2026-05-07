@@ -239,7 +239,7 @@ export const DashboardLayout = ({
   }, [userRole]);
 
   // Render menu link
-  const renderMenuItem = (item: { icon: any; label: string; path: string }) => {
+  const renderMenuItem = (item: { icon: any; label: string; path: string; badge?: number }) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.path;
 
@@ -263,6 +263,11 @@ export const DashboardLayout = ({
               {item.label}
             </span>
           )}
+          {sidebarOpen && (item as any).badge > 0 && (
+            <span className="ml-auto text-[10px] font-bold bg-[#ED1878] text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+              {(item as any).badge > 99 ? "99+" : (item as any).badge}
+            </span>
+          )}
         </Link>
       );
     }
@@ -284,6 +289,11 @@ export const DashboardLayout = ({
         {sidebarOpen && (
           <span className="font-medium leading-snug break-words hyphens-auto">
             {item.label}
+          </span>
+        )}
+        {sidebarOpen && (item as any).badge > 0 && (
+          <span className="ml-auto text-[10px] font-bold bg-[#ED1878] text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
+            {(item as any).badge > 99 ? "99+" : (item as any).badge}
           </span>
         )}
       </Link>
