@@ -223,8 +223,33 @@ export function MessageTab({ channel }: MessageTabProps) {
         role: r.sender_user_uuid === myUuid ? "user" : "staff",
         content: r.body,
         created_at: r.created_at,
+        sender_user_uuid: r.sender_user_uuid,
       }));
       setMessages(mapped);
+
+      // Resolve staff sender identities (per-message).
+      const staffIds = Array.from(new Set<string>(
+        (rows || [])
+          .map((r: any) => r.sender_user_uuid)
+          .filter((u: string) => u && u !== myUuid)
+      ));
+      if (staffIds.length > 0) {
+        const { data: staffUsers } = await (supabase
+          .from("users")
+          .select("user_uuid, first_name, last_name, avatar_url")
+          .in("user_uuid", staffIds)) as any;
+        if (!cancelled && staffUsers) {
+          const nm = new Map<string, string>();
+          const am = new Map<string, string | null>();
+          staffUsers.forEach((u: any) => {
+            const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Vivacity Team";
+            nm.set(u.user_uuid, name);
+            am.set(u.user_uuid, u.avatar_url ?? null);
+          });
+          setStaffNameMap(nm);
+          setStaffAvatarMap(am);
+        }
+      }
 
       // 5) Fire-and-forget read audit.
       if (mapped.length > 0) {
