@@ -447,7 +447,7 @@ function NewTeamMessageDialog({
         .from("tenant_conversations" as any)
         .insert({
           tenant_id: tid,
-          topic: subject.trim() || "General",
+          topic: "general",
           type,
           subject: subject.trim() || null,
           created_by_user_uuid: currentUserId,
