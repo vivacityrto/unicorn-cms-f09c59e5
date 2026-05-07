@@ -440,7 +440,12 @@ export function QuestionCard({
 
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
+                <DictateButton
+                  onTranscript={(t) => setNotes(notes ? `${notes} ${t}` : t)}
+                />
+              </div>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
