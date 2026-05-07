@@ -61,8 +61,14 @@ export default function TeamCommunicationsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [composerText, setComposerText] = useState("");
   const [filterTenant, setFilterTenant] = useState<string>("all");
+  const [filterStaff, setFilterStaff] = useState<string>("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const { data: staffUsers = [] } = useVivacityTeamUsers();
+  const staffOptions = staffUsers.map(u => ({
+    id: u.user_uuid,
+    name: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email,
+  }));
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUserId = profile?.user_uuid;
 
