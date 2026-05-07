@@ -112,13 +112,6 @@ export default function TeamCommunicationsPage() {
 
   const lastAutoSelectedRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    const threadId = searchParams.get('thread');
-    if (threadId && conversations.length > 0 && threadId !== lastAutoSelectedRef.current) {
-      lastAutoSelectedRef.current = threadId;
-      handleSelectConversation(threadId);
-    }
-  }, [conversations, searchParams, handleSelectConversation]);
 
 
   // Get unique tenants for filter
