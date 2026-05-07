@@ -181,6 +181,13 @@ export function MessageTab({ channel }: MessageTabProps) {
         .maybeSingle()) as any;
 
       if (cscRow?.csc_user_id) {
+        const { data: cscUser } = await (supabase
+          .from("users")
+          .select("avatar_url, first_name, last_name")
+          .eq("user_uuid", cscRow.csc_user_id)
+          .maybeSingle()) as any;
+        if (!cancelled && cscUser) setCscProfile(cscUser);
+
         const { error: cscPartErr } = await (supabase
           .from("conversation_participants" as any)
           .upsert(
