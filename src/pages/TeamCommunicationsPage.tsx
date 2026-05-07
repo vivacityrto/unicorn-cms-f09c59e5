@@ -516,7 +516,17 @@ export default function TeamCommunicationsPage() {
                         return (
                           <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
                             <div className={`rounded-lg px-3 py-2 max-w-[75%] ${isOwn ? "bg-primary/10 text-foreground" : "bg-muted text-foreground"}`}>
-                              {!isOwn && <p className="text-xs font-medium text-muted-foreground mb-0.5">{msg.sender_name}</p>}
+                              {!isOwn && (
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={msg.sender_avatar_url ?? undefined} />
+                                    <AvatarFallback className="text-[10px]">
+                                      {(msg.sender_name || "?").split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <p className="text-xs font-medium text-muted-foreground">{msg.sender_name}</p>
+                                </div>
+                              )}
                               <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
                               <p className="text-[11px] text-muted-foreground mt-1">{format(new Date(msg.created_at), "d MMM, HH:mm")}</p>
                             </div>
