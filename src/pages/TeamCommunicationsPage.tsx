@@ -251,7 +251,7 @@ export default function TeamCommunicationsPage() {
       .eq("is_read", false) as any).then(() => {}, () => {});
 
     qc.invalidateQueries({ queryKey: ["team-unread-count"] });
-  }, [currentUserId, qc]);
+  }, [currentUserId, qc, setSearchParams]);
 
   useEffect(() => {
     const threadId = searchParams.get('thread');
