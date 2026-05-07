@@ -1,28 +1,31 @@
-## Plan: Stop redundant thread auto-selection in TeamCommunicationsPage
+## Goal
+Make client portal message notifications visible in the topbar bell and Notifications tab, and ensure clicking them opens the correct thread.
 
-Single file: `src/pages/TeamCommunicationsPage.tsx`. No other files, no DB changes.
+## Changes
 
-### Problem
-The effect at lines 95–100 reads `?thread=` from the URL and calls `setSelectedId(threadId)` whenever `conversations` or `searchParams` change. Since the realtime subscription refreshes `conversations` on every new message, the effect re-runs and re-selects the same thread repeatedly, firing the messages query redundantly.
+### 1. `src/hooks/useClientNotifications.tsx`
+Add `"message"` as the first entry in the `CLIENT_FACING_TYPES` array so message-type notifications are no longer filtered out of the client notification feed and unread bell count.
 
-### Change
-`useRef` is already imported (line 1), so no import change is needed.
+### 2. `src/pages/ClientInboxPage.tsx`
+The `NotificationsTab` here doesn't use a `to=` prop — it navigates via `handleClick` calling `navigate(n.link)`. Apply the URL rewrite at that point:
 
-Add a ref directly above the existing effect, and gate auto-selection on the URL thread differing from the last auto-selected one:
-
-```tsx
-const lastAutoSelectedRef = useRef<string | null>(null);
-
-useEffect(() => {
-  const threadId = searchParams.get('thread');
-  if (threadId && conversations.length > 0 && threadId !== lastAutoSelectedRef.current) {
-    lastAutoSelectedRef.current = threadId;
-    setSelectedId(threadId);
+- Add a module-level helper:
+  ```ts
+  function resolveNotificationLink(n: ClientNotification): string {
+    if (n.type === 'message' && n.link) {
+      try {
+        const url = new URL(n.link, window.location.origin);
+        const convId = url.searchParams.get('conversation');
+        if (convId) return `/client/inbox?tab=messages&thread=${convId}`;
+      } catch {}
+    }
+    return n.link || '/client/inbox?tab=notifications';
   }
-}, [conversations, searchParams]);
-```
+  ```
+- In `NotificationsTab.handleClick`, replace `if (n.link) navigate(n.link);` with `navigate(resolveNotificationLink(n));`.
+- Keep the existing `{n.link && <ExternalLink ... />}` indicator as-is.
 
-This replaces lines 95–100. Navigating from `?thread=A` to `?thread=B` still works because the ref only blocks re-selecting the same ID.
-
-### Out of scope
-No other effects, hooks, files, RLS, or DB changes.
+## Out of scope
+- No DB / trigger changes (`fn_tm_on_message_insert` already inserts the row).
+- No edits to the All tab, MessageTab, ClientSidebar, or the team inbox.
+- No changes to notification preferences or styling.

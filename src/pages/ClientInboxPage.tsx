@@ -452,6 +452,17 @@ const TYPE_TO_CATEGORY: Record<string, keyof CategoryPrefs> = {
   event: "events",
 };
 
+function resolveNotificationLink(n: ClientNotification): string {
+  if (n.type === 'message' && n.link) {
+    try {
+      const url = new URL(n.link, window.location.origin);
+      const convId = url.searchParams.get('conversation');
+      if (convId) return `/client/inbox?tab=messages&thread=${convId}`;
+    } catch {}
+  }
+  return n.link || '/client/inbox?tab=notifications';
+}
+
 function groupNotifications(notifications: ClientNotification[]) {
   const today: ClientNotification[] = [];
   const thisWeek: ClientNotification[] = [];
@@ -490,7 +501,7 @@ function NotificationsTab() {
 
   const handleClick = (n: ClientNotification) => {
     if (!n.is_read) markAsRead(n.id);
-    if (n.link) navigate(n.link);
+    navigate(resolveNotificationLink(n));
   };
 
   if (isLoading) {
