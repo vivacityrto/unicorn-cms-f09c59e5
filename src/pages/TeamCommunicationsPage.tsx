@@ -60,7 +60,7 @@ export default function TeamCommunicationsPage() {
   const [composerText, setComposerText] = useState("");
   const [filterTenant, setFilterTenant] = useState<string>("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUserId = profile?.user_uuid;
 
@@ -233,6 +233,7 @@ export default function TeamCommunicationsPage() {
 
   const handleSelectConversation = useCallback(async (convId: string) => {
     setSelectedId(convId);
+    setSearchParams({ thread: convId }, { replace: true });
     if (!currentUserId) return;
     // Stamp last_read_at without touching the existing role
     await (supabase
@@ -250,7 +251,7 @@ export default function TeamCommunicationsPage() {
       .eq("is_read", false) as any).then(() => {}, () => {});
 
     qc.invalidateQueries({ queryKey: ["team-unread-count"] });
-  }, [currentUserId, qc]);
+  }, [currentUserId, qc, setSearchParams]);
 
   useEffect(() => {
     const threadId = searchParams.get('thread');
@@ -484,6 +485,7 @@ export default function TeamCommunicationsPage() {
         currentUserId={currentUserId}
         onCreated={(id) => {
           setSelectedId(id);
+          setSearchParams({ thread: id }, { replace: true });
           qc.invalidateQueries({ queryKey: ["team-conversations"] });
         }}
       />
