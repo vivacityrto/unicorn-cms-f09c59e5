@@ -468,23 +468,23 @@ function NewTeamMessageDialog({
         } as any, { onConflict: "conversation_id,user_id" })) as any;
       if (staffPartError) throw staffPartError;
 
-      // Add tenant's primary contact as participant (best-effort).
-      const { data: pc } = await supabase
+      // Add all tenant users as participants so every client user can read/write.
+      const { data: tenantUsers } = await supabase
         .from("tenant_users")
         .select("user_id")
-        .eq("tenant_id", tid)
-        .eq("primary_contact", true)
-        .limit(1)
-        .maybeSingle();
+        .eq("tenant_id", tid);
 
-      if (pc?.user_id) {
+      if (tenantUsers?.length) {
         await (supabase
           .from("conversation_participants" as any)
-          .upsert({
-            conversation_id: conv.id,
-            user_id: pc.user_id,
-            role: "client",
-          } as any, { onConflict: "conversation_id,user_id", ignoreDuplicates: true })) as any;
+          .upsert(
+            tenantUsers.map((u: any) => ({
+              conversation_id: conv.id,
+              user_id: u.user_id,
+              role: "client",
+            })),
+            { onConflict: "conversation_id,user_id", ignoreDuplicates: true }
+          )) as any;
       }
 
       // Send first message
