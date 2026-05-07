@@ -1,60 +1,70 @@
-# Fix A & Fix B — Inbox auto-read + Staff URL sync
+Scope: `src/pages/TeamCommunicationsPage.tsx` only. No RLS, no migrations, no other files.
 
-## Fix A — `src/pages/ClientInboxPage.tsx` (MessagesTab)
+## Change 1 — Two-section conversation list
 
-Remove the `markedReadRef` ref and its check in the auto-mark-read effect. The `conv?.isUnread` guard is self-limiting: after `markRead` mutates and `["client-conversations"]` refetches with `isUnread=false`, the effect re-runs but no-ops. This restores auto-mark-read when new messages arrive on an already-open conversation.
+Within the existing scrollable list, render two labelled groups:
 
-**Line 183** — delete:
+- **"Your Conversations"** — conversations where the current user (`currentUserId`) is in `conversation_participants`.
+- **"Team Conversations"** — all other conversations the user can see.
+
+Both sorted by `last_message_at` desc (already the order from the query). Section header omitted when its group is empty.
+
+### Implementation
+- Reuse the existing participants fetch in the `team-conversations` query (lines 89–99). The current call already returns `conversation_id` rows for the current user; build `mineSet = new Set(participants.map(p => p.conversation_id))` from that same result.
+- Add `isMine: boolean` to each `Conversation`.
+- After computing `filtered` (tenant + new staff filter), partition into `mine = filtered.filter(c => c.isMine)` and `team = filtered.filter(c => !c.isMine)`.
+- Replace the single `filtered.map(...)` block with two consecutive groups, each preceded by a section header (`text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-4 py-2 bg-muted/30`). Skip header + group if empty.
+
+## Change 2 — Staff filter dropdown
+
+Add a second `Select` next to the tenant filter, default label "All Team Members".
+
+### Data
+- Import and call the existing hook:
+  ```ts
+  import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
+  const { data: staffUsers = [] } = useVivacityTeamUsers();
+  const staffOptions = staffUsers.map(u => ({
+    id: u.user_uuid,
+    name: `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email,
+  }));
+  ```
+  (No new `useQuery` — the hook already filters to `Super Admin`/`Team Leader`/`Team Member`, `archived=false`, `disabled=false`, ordered by first name.)
+
+- New state: `const [filterStaff, setFilterStaff] = useState<string>("all");`
+
+- New `useQuery(["team-comms-staff-conv-ids", filterStaff], …, { enabled: filterStaff !== "all" })` fetching `conversation_participants.conversation_id` where `user_id = filterStaff`; returns `Set<string>`.
+
+### Filtering
 ```ts
-const markedReadRef = useRef<string | null>(null);
+const filteredByTenant = filterTenant === "all"
+  ? conversations
+  : conversations.filter(c => String(c.tenant_id) === filterTenant);
+
+const filtered = filterStaff === "all" || !staffConvIds
+  ? filteredByTenant
+  : filteredByTenant.filter(c => staffConvIds.has(c.id));
 ```
 
-**Lines 191–199** — replace with:
-```ts
-useEffect(() => {
-  if (!selectedId || !conversations.length) return;
-  const conv = conversations.find((c) => c.id === selectedId);
-  if (conv?.isUnread) {
-    markRead.mutate(selectedId);
-  }
-}, [selectedId, conversations, markRead]);
+Both filters additive. Your/Team split still uses `currentUserId`, not the selected staff person.
+
+### UI
+```tsx
+<Select value={filterStaff} onValueChange={setFilterStaff}>
+  <SelectTrigger className="w-[220px]">
+    <SelectValue placeholder="All Team Members" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="all">All Team Members</SelectItem>
+    {staffOptions.map(s => (
+      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+    ))}
+  </SelectContent>
+</Select>
 ```
 
-Leave `handleSelect` (line 211–218) untouched — its inline `markRead.mutate(conv.id)` remains as the immediate click trigger.
-
-## Fix B — `src/pages/TeamCommunicationsPage.tsx`
-
-Three surgical edits to keep the `?thread=` URL in sync with `selectedId`.
-
-**Line 63** — add setter:
-```ts
-const [searchParams, setSearchParams] = useSearchParams();
-```
-
-**Line 234–235** (`handleSelectConversation`) — add URL update right after `setSelectedId(convId);`:
-```ts
-setSelectedId(convId);
-setSearchParams({ thread: convId }, { replace: true });
-```
-
-**Lines 485–488** (`onCreated` on `NewTeamMessageDialog`) — add URL update:
-```ts
-onCreated={(id) => {
-  setSelectedId(id);
-  setSearchParams({ thread: id }, { replace: true });
-  qc.invalidateQueries({ queryKey: ["team-conversations"] });
-}}
-```
-
-The `lastAutoSelectedRef` guard in the auto-select effect (lines 255–260) prevents the `?thread=` write from re-triggering `handleSelectConversation`, since it stamps `lastAutoSelectedRef.current = threadId` before invoking. No risk of loop.
-
-## Out of scope (do not touch)
-- `useConversationRealtime`, `sendMessage`, any other hook
-- `lastAutoSelectedRef` logic and the auto-select effect
-- `last_read_at` stamping and `user_notifications` mark-read in `handleSelectConversation`
-- `NewTeamMessageDialog` internals
-- Client portal files beyond the `MessagesTab` edit above
-- No DB, RLS, migrations, edge functions
+## Out of scope
+`useConversationRealtime`, `sendMessage`, `lastAutoSelectedRef`, `last_read_at` stamping, `user_notifications` mark-read, `NewTeamMessageDialog`, RLS, migrations, edge functions, any other file.
 
 ## Risk
-Minimal. Both changes are additive/subtractive at the React state layer. Fix A is self-limiting via existing `isUnread` data flow. Fix B's URL write uses `replace: true` (no history pollution) and is guarded against re-entry by the existing `lastAutoSelectedRef`.
+Minimal. All changes are client-side state + render in a single file. Reuses an existing hook (`useVivacityTeamUsers`) and an existing participants fetch. Default behaviour (both filters = "all") is unchanged because the staff-conv-ids query is gated by `enabled`.

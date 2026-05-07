@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/modals";
 import { MessageSquare, Plus, Send, Mail, MailOpen, Building2 } from "lucide-react";
 import { format } from "date-fns";
+import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
 
 interface Conversation {
   id: string;
@@ -33,6 +34,7 @@ interface Conversation {
   created_at: string;
   tenant_name?: string;
   isUnread?: boolean;
+  isMine?: boolean;
 }
 
 interface Message {
