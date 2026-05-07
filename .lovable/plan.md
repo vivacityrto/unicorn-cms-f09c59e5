@@ -1,31 +1,36 @@
 ## Goal
-Make client portal message notifications visible in the topbar bell and Notifications tab, and ensure clicking them opens the correct thread.
+Make message-notification unread counts drop in real time when a user opens a conversation in the Vivacity team inbox.
 
-## Changes
+## Part 1 — Database migration
 
-### 1. `src/hooks/useClientNotifications.tsx`
-Add `"message"` as the first entry in the `CLIENT_FACING_TYPES` array so message-type notifications are no longer filtered out of the client notification feed and unread bell count.
+One migration with two changes:
 
-### 2. `src/pages/ClientInboxPage.tsx`
-The `NotificationsTab` here doesn't use a `to=` prop — it navigates via `handleClick` calling `navigate(n.link)`. Apply the URL rewrite at that point:
+**A. Add `user_notifications` to the realtime publication** so that `useNotifications` (already subscribed) receives UPDATE events when notifications are marked read.
 
-- Add a module-level helper:
-  ```ts
-  function resolveNotificationLink(n: ClientNotification): string {
-    if (n.type === 'message' && n.link) {
-      try {
-        const url = new URL(n.link, window.location.origin);
-        const convId = url.searchParams.get('conversation');
-        if (convId) return `/client/inbox?tab=messages&thread=${convId}`;
-      } catch {}
-    }
-    return n.link || '/client/inbox?tab=notifications';
-  }
-  ```
-- In `NotificationsTab.handleClick`, replace `if (n.link) navigate(n.link);` with `navigate(resolveNotificationLink(n));`.
-- Keep the existing `{n.link && <ExternalLink ... />}` indicator as-is.
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.user_notifications;
+```
+
+(Wrapped in a `DO` block that checks `pg_publication_tables` to make it idempotent — re-running the migration won't error.) No REPLICA IDENTITY change needed; subscribers refetch on any event.
+
+**B. Update `public.fn_tm_on_message_insert`** to populate `source_id` with the conversation id, so the per-conversation read-mark UPDATE in Part 2 can target the right rows. This is a `CREATE OR REPLACE` of the function body only — the existing `trg_tm_on_message_insert` trigger binding stays intact, no downtime. Function body identical to today except the INSERT into `user_notifications` adds `source_id` (column) and `NEW.conversation_id::text` (value); link string unchanged.
+
+## Part 2 — Code change (single file)
+
+`src/pages/TeamCommunicationsPage.tsx` — `handleSelectConversation`:
+Between the existing `conversation_participants` UPDATE and the `qc.invalidateQueries({ queryKey: ["team-unread-count"] })`, add a fire-and-forget UPDATE:
+
+```ts
+void (supabase
+  .from("user_notifications" as any)
+  .update({ is_read: true } as any)
+  .eq("user_id", currentUserId)
+  .eq("source_id", convId)
+  .eq("is_read", false) as any).then(() => {}, () => {});
+```
+
+No imports change. No other files touched.
 
 ## Out of scope
-- No DB / trigger changes (`fn_tm_on_message_insert` already inserts the row).
-- No edits to the All tab, MessageTab, ClientSidebar, or the team inbox.
-- No changes to notification preferences or styling.
+- `useNotifications.tsx`, `NotificationDropdown.tsx`, `useClientNotifications.tsx`, `ClientLayout.tsx`, or any other file.
+- No data backfill of `source_id` for historical message notifications (only newly inserted rows after this migration will have it populated; pre-existing message notifications stay as-is).
