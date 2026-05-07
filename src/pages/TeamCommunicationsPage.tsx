@@ -226,6 +226,15 @@ export default function TeamCommunicationsPage() {
       .update({ last_read_at: new Date().toISOString() } as any)
       .eq("conversation_id", convId)
       .eq("user_id", currentUserId)) as any;
+
+    // Mark any message notifications for this conversation as read (fire-and-forget)
+    void (supabase
+      .from("user_notifications" as any)
+      .update({ is_read: true } as any)
+      .eq("user_id", currentUserId)
+      .eq("source_id", convId)
+      .eq("is_read", false) as any).then(() => {}, () => {});
+
     qc.invalidateQueries({ queryKey: ["team-unread-count"] });
   };
 
