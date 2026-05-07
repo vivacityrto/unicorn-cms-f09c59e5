@@ -46,14 +46,13 @@ export function useConversationRealtime(conversationId: string | null) {
       .on(
         "postgres_changes" as any,
         {
-          event: "UPDATE",
+          event: "INSERT",
           schema: "public",
-          table: "tenant_conversations",
+          table: "tenant_messages",
+          filter: `conversation_id=eq.${conversationId}`,
         },
-        (payload: any) => {
-          if (payload.new?.id === conversationId) {
-            qc.invalidateQueries({ queryKey: ["conversation-messages", conversationId] });
-          }
+        () => {
+          qc.invalidateQueries({ queryKey: ["conversation-messages", conversationId] });
           qc.invalidateQueries({ queryKey: ["client-conversations"] });
         }
       )
