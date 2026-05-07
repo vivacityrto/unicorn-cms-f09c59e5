@@ -130,9 +130,30 @@ export default function TeamCommunicationsPage() {
     .map(([id, name]) => ({ id, name }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const filtered = filterTenant === "all"
+  // Staff filter: fetch conversation IDs the selected staff member participates in
+  const { data: staffConvIds } = useQuery({
+    queryKey: ["team-comms-staff-conv-ids", filterStaff],
+    queryFn: async (): Promise<Set<string>> => {
+      const { data, error } = await (supabase
+        .from("conversation_participants" as any)
+        .select("conversation_id")
+        .eq("user_id", filterStaff)) as any;
+      if (error) throw error;
+      return new Set<string>((data || []).map((p: any) => p.conversation_id));
+    },
+    enabled: filterStaff !== "all",
+  });
+
+  const filteredByTenant = filterTenant === "all"
     ? conversations
     : conversations.filter(c => String(c.tenant_id) === filterTenant);
+
+  const filtered = filterStaff === "all" || !staffConvIds
+    ? filteredByTenant
+    : filteredByTenant.filter(c => staffConvIds.has(c.id));
+
+  const mineConvs = filtered.filter(c => c.isMine);
+  const teamConvs = filtered.filter(c => !c.isMine);
 
   const selected = conversations.find(c => c.id === selectedId);
 
