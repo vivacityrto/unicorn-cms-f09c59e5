@@ -187,13 +187,14 @@ function MessagesTab() {
   }, [threadParam, selectedId]);
 
   // Auto mark-as-read whenever a conversation becomes selected (click or deep link)
+  const mutateMarkRead = markRead.mutate;
   useEffect(() => {
     if (!selectedId || !conversations.length) return;
     const conv = conversations.find((c) => c.id === selectedId);
     if (conv?.isUnread) {
-      markRead.mutate(selectedId);
+      mutateMarkRead(selectedId);
     }
-  }, [selectedId, conversations, markRead]);
+  }, [selectedId, conversations, mutateMarkRead]);
 
   const filtered = filterUnread ? conversations.filter((c) => c.isUnread) : conversations;
   const selected = conversations.find((c) => c.id === selectedId);
