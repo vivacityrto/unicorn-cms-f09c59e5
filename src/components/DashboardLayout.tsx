@@ -15,6 +15,7 @@ import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
 import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupReminderModal";
 import { cn } from "@/lib/utils";
+import { useTeamUnreadCount } from "@/hooks/useTeamUnreadCount";
 
 // ============================================================
 // VIVACITY TEAM SIDEBAR - FINAL AUTHORITY MODEL
