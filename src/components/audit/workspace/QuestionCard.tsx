@@ -31,6 +31,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useDebouncedAutosave } from './useDebouncedAutosave';
+import { DictateButton } from '@/components/audit/DictateButton';
 import { useAuditFindings } from '@/hooks/useAuditWorkspace';
 import { EvidencePanel } from './EvidencePanel';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -354,7 +355,12 @@ export function QuestionCard({
         {(ctx === 'client_discussion' || ctx === 'closing_discussion') && (
           <>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
+                <DictateButton
+                  onTranscript={(t) => setNotes(notes ? `${notes} ${t}` : t)}
+                />
+              </div>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -434,7 +440,12 @@ export function QuestionCard({
 
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-medium text-muted-foreground">{notesLabel}</label>
+                <DictateButton
+                  onTranscript={(t) => setNotes(notes ? `${notes} ${t}` : t)}
+                />
+              </div>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
