@@ -36,6 +36,48 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const [isAskVivOpen, setIsAskVivOpen] = useState(false);
   const { isPreview, activeTenantId } = useClientTenant();
   const { requestModalOpen, setRequestModalOpen, prefill, openDocumentRequest } = useClientRequestActions();
+  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const currentUserUuid = profile?.user_uuid ?? null;
+
+  useEffect(() => {
+    if (!activeTenantId) return;
+
+    const channel = supabase
+      .channel(`client-inbox-notifier-${activeTenantId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "tenant_messages",
+          filter: `tenant_id=eq.${activeTenantId}`,
+        },
+        (payload: any) => {
+          const row = payload?.new;
+          if (!row) return;
+          if (currentUserUuid && row.sender_user_uuid === currentUserUuid) return;
+
+          toast("New message received", {
+            description: "You have a new message in your inbox.",
+            action: {
+              label: "View",
+              onClick: () =>
+                navigate(`/client/inbox?tab=messages&thread=${row.conversation_id}`),
+            },
+          });
+
+          queryClient.invalidateQueries({ queryKey: ["client-conversations"] });
+          queryClient.invalidateQueries({ queryKey: ["client-inbox"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeTenantId, currentUserUuid, navigate, queryClient]);
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
