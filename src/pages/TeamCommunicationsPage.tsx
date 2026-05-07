@@ -116,9 +116,9 @@ export default function TeamCommunicationsPage() {
     const threadId = searchParams.get('thread');
     if (threadId && conversations.length > 0 && threadId !== lastAutoSelectedRef.current) {
       lastAutoSelectedRef.current = threadId;
-      setSelectedId(threadId);
+      handleSelectConversation(threadId);
     }
-  }, [conversations, searchParams]);
+  }, [conversations, searchParams, handleSelectConversation]);
 
 
   // Get unique tenants for filter
