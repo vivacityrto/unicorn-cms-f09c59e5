@@ -12,6 +12,14 @@ interface PreviewTenant {
   academy_max_users: number | null;
 }
 
+export interface ActingUserOption {
+  user_uuid: string;
+  full_name: string;
+  email: string;
+  relationship_role: string;
+  is_default: boolean;
+}
+
 interface ClientPreviewContextValue {
   // State
   isPreviewMode: boolean;
@@ -19,16 +27,20 @@ interface ClientPreviewContextValue {
   previewSessionId: string | null;
   previewReason: string | null;
   loading: boolean;
-  
+  // Acting user (Academy impersonation)
+  actingUserId: string | null;
+  actingUserOptions: ActingUserOption[];
+
   // Actions
-  startPreview: (tenantId: number, reason?: string) => Promise<boolean>;
+  startPreview: (tenantId: number, reason?: string, actingUserId?: string | null) => Promise<boolean>;
   endPreview: () => Promise<void>;
+  setActingUserId: (uuid: string | null) => void;
+  fetchActingUserOptions: (tenantId: number) => Promise<ActingUserOption[]>;
   canUsePreview: boolean;
 }
 
 const ClientPreviewContext = createContext<ClientPreviewContextValue | undefined>(undefined);
 
-// Session storage key for persisting preview state across page navigations
 const PREVIEW_SESSION_KEY = "client_preview_session";
 
 interface StoredPreviewSession {
@@ -39,38 +51,79 @@ interface StoredPreviewSession {
   academyMaxUsers: number | null;
   reason: string | null;
   startedAt: string;
+  actingUserId: string | null;
+  actingUserOptions: ActingUserOption[];
+}
+
+async function loadActingUserOptions(tenantId: number): Promise<ActingUserOption[]> {
+  const { data, error } = await supabase
+    .from("tenant_users")
+    .select(
+      "user_id, relationship_role, primary_contact, users:user_id ( user_uuid, first_name, last_name, email )"
+    )
+    .eq("tenant_id", tenantId);
+  if (error) {
+    console.error("Failed to fetch acting user options:", error);
+    return [];
+  }
+  const options: ActingUserOption[] = [];
+  for (const row of (data ?? []) as any[]) {
+    const u = row.users;
+    if (!u || !u.user_uuid) continue; // exclude null user_uuid
+    const fullName =
+      [u.first_name, u.last_name].filter(Boolean).join(" ").trim() ||
+      u.email ||
+      "Unnamed user";
+    options.push({
+      user_uuid: u.user_uuid as string,
+      full_name: fullName,
+      email: u.email ?? "",
+      relationship_role: row.relationship_role ?? "user",
+      is_default: row.primary_contact === true || row.relationship_role === "primary_contact",
+    });
+  }
+  // Sort: default first, then by name
+  options.sort((a, b) => {
+    if (a.is_default && !b.is_default) return -1;
+    if (!a.is_default && b.is_default) return 1;
+    return a.full_name.localeCompare(b.full_name);
+  });
+  return options;
 }
 
 export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => {
   const { profile, session } = useAuth();
   const { isSuperAdmin, isVivacityTeam } = useRBAC();
   const queryClient = useQueryClient();
-  
+
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewTenant, setPreviewTenant] = useState<PreviewTenant | null>(null);
   const [previewSessionId, setPreviewSessionId] = useState<string | null>(null);
   const [previewReason, setPreviewReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [actingUserId, setActingUserIdState] = useState<string | null>(null);
+  const [actingUserOptions, setActingUserOptions] = useState<ActingUserOption[]>([]);
 
-  // Only Super Admin and Team Leader can use preview
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
   const canUsePreview = isSuperAdmin || isTeamLeader;
 
-  // Restore preview session from sessionStorage on mount
+  // Restore session
   useEffect(() => {
     const stored = sessionStorage.getItem(PREVIEW_SESSION_KEY);
     if (stored && canUsePreview) {
       try {
-        const session: StoredPreviewSession = JSON.parse(stored);
+        const s: StoredPreviewSession = JSON.parse(stored);
         setIsPreviewMode(true);
         setPreviewTenant({
-          id: session.tenantId,
-          name: session.tenantName,
-          tenant_type: session.tenantType,
-          academy_max_users: session.academyMaxUsers,
+          id: s.tenantId,
+          name: s.tenantName,
+          tenant_type: s.tenantType,
+          academy_max_users: s.academyMaxUsers,
         });
-        setPreviewSessionId(session.sessionId);
-        setPreviewReason(session.reason);
+        setPreviewSessionId(s.sessionId);
+        setPreviewReason(s.reason);
+        setActingUserIdState(s.actingUserId ?? null);
+        setActingUserOptions(s.actingUserOptions ?? []);
       } catch (e) {
         console.error("Error restoring preview session:", e);
         sessionStorage.removeItem(PREVIEW_SESSION_KEY);
@@ -78,98 +131,135 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
     }
   }, [canUsePreview]);
 
-  /**
-   * Start impersonating a client tenant
-   */
-  const startPreview = useCallback(async (tenantId: number, reason?: string): Promise<boolean> => {
-    if (!canUsePreview || !session?.user?.id) {
-      console.error("User cannot use preview mode");
-      return false;
+  const persistSession = useCallback((s: StoredPreviewSession) => {
+    sessionStorage.setItem(PREVIEW_SESSION_KEY, JSON.stringify(s));
+  }, []);
+
+  const setActingUserId = useCallback((uuid: string | null) => {
+    setActingUserIdState(uuid);
+    const stored = sessionStorage.getItem(PREVIEW_SESSION_KEY);
+    if (stored) {
+      try {
+        const parsed: StoredPreviewSession = JSON.parse(stored);
+        parsed.actingUserId = uuid;
+        sessionStorage.setItem(PREVIEW_SESSION_KEY, JSON.stringify(parsed));
+      } catch {
+        /* noop */
+      }
     }
+    queryClient.invalidateQueries();
+  }, [queryClient]);
 
-    setLoading(true);
-    try {
-      // Fetch tenant details
-      const { data: tenantData, error: tenantError } = await supabase
-        .from("tenants")
-        .select("id, name, tenant_type, academy_max_users")
-        .eq("id", tenantId)
-        .single();
+  const fetchActingUserOptions = useCallback(async (tenantId: number) => {
+    const opts = await loadActingUserOptions(tenantId);
+    setActingUserOptions(opts);
+    return opts;
+  }, []);
 
-      if (tenantError || !tenantData) {
-        console.error("Error fetching tenant:", tenantError);
+  const startPreview = useCallback(
+    async (tenantId: number, reason?: string, initialActingUserId?: string | null): Promise<boolean> => {
+      if (!canUsePreview || !session?.user?.id) {
+        console.error("User cannot use preview mode");
         return false;
       }
 
-      // Create audit log entry
-      const { data: auditData, error: auditError } = await supabase
-        .from("audit_client_impersonation")
-        .insert({
-          actor_user_id: session.user.id,
-          tenant_id: tenantId,
+      setLoading(true);
+      try {
+        const { data: tenantData, error: tenantError } = await supabase
+          .from("tenants")
+          .select("id, name, tenant_type, academy_max_users")
+          .eq("id", tenantId)
+          .single();
+
+        if (tenantError || !tenantData) {
+          console.error("Error fetching tenant:", tenantError);
+          return false;
+        }
+
+        // Audit log
+        const { data: auditData, error: auditError } = await supabase
+          .from("audit_client_impersonation")
+          .insert({
+            actor_user_id: session.user.id,
+            tenant_id: tenantId,
+            reason: reason || null,
+          })
+          .select("id")
+          .single();
+
+        if (auditError) {
+          console.error("Error creating audit log:", auditError);
+          return false;
+        }
+
+        // Resolve acting user options if not already cached for this tenant
+        let opts = actingUserOptions;
+        if (opts.length === 0) {
+          opts = await loadActingUserOptions(tenantId);
+        }
+        const resolvedActingId =
+          initialActingUserId ??
+          opts.find((o) => o.is_default)?.user_uuid ??
+          opts[0]?.user_uuid ??
+          null;
+
+        const previewState: StoredPreviewSession = {
+          sessionId: auditData.id,
+          tenantId: tenantData.id,
+          tenantName: tenantData.name,
+          tenantType: (tenantData.tenant_type as TenantType) || "compliance_system",
+          academyMaxUsers: tenantData.academy_max_users,
           reason: reason || null,
-        })
-        .select("id")
-        .single();
+          startedAt: new Date().toISOString(),
+          actingUserId: resolvedActingId,
+          actingUserOptions: opts,
+        };
 
-      if (auditError) {
-        console.error("Error creating audit log:", auditError);
+        persistSession(previewState);
+
+        setIsPreviewMode(true);
+        setPreviewTenant({
+          id: tenantData.id,
+          name: tenantData.name,
+          tenant_type: previewState.tenantType,
+          academy_max_users: tenantData.academy_max_users,
+        });
+        setPreviewSessionId(auditData.id);
+        setPreviewReason(reason || null);
+        setActingUserIdState(resolvedActingId);
+        setActingUserOptions(opts);
+
+        queryClient.invalidateQueries();
+
+        return true;
+      } catch (error) {
+        console.error("Error starting preview:", error);
         return false;
+      } finally {
+        setLoading(false);
       }
+    },
+    [canUsePreview, session?.user?.id, queryClient, actingUserOptions, persistSession]
+  );
 
-      const previewState: StoredPreviewSession = {
-        sessionId: auditData.id,
-        tenantId: tenantData.id,
-        tenantName: tenantData.name,
-        tenantType: (tenantData.tenant_type as TenantType) || "compliance_system",
-        academyMaxUsers: tenantData.academy_max_users,
-        reason: reason || null,
-        startedAt: new Date().toISOString(),
-      };
-
-      // Store in sessionStorage
-      sessionStorage.setItem(PREVIEW_SESSION_KEY, JSON.stringify(previewState));
-
-      // Update state
-      setIsPreviewMode(true);
-      setPreviewTenant({
-        id: tenantData.id,
-        name: tenantData.name,
-        tenant_type: previewState.tenantType,
-        academy_max_users: tenantData.academy_max_users,
-      });
-      setPreviewSessionId(auditData.id);
-      setPreviewReason(reason || null);
-
-      // Invalidate tenant-scoped caches so the preview shows fresh data
-      queryClient.invalidateQueries();
-
-      return true;
-    } catch (error) {
-      console.error("Error starting preview:", error);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [canUsePreview, session?.user?.id]);
-
-  /**
-   * End the preview session
-   */
   const endPreview = useCallback(async () => {
-    if (!previewSessionId) {
-      // Just clear state if no session ID
+    const cleanup = () => {
       setIsPreviewMode(false);
       setPreviewTenant(null);
       setPreviewSessionId(null);
       setPreviewReason(null);
+      setActingUserIdState(null);
+      setActingUserOptions([]);
       sessionStorage.removeItem(PREVIEW_SESSION_KEY);
+    };
+
+    if (!previewSessionId) {
+      cleanup();
       return;
     }
 
     setLoading(true);
     try {
-      // Update audit log with ended_at timestamp
       await supabase
         .from("audit_client_impersonation")
         .update({ ended_at: new Date().toISOString() })
@@ -177,13 +267,7 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
     } catch (error) {
       console.error("Error updating audit log:", error);
     } finally {
-      // Clear state regardless of audit update success
-      setIsPreviewMode(false);
-      setPreviewTenant(null);
-      setPreviewSessionId(null);
-      setPreviewReason(null);
-      sessionStorage.removeItem(PREVIEW_SESSION_KEY);
-      // Invalidate all caches so we return to the admin's own data
+      cleanup();
       queryClient.invalidateQueries();
       setLoading(false);
     }
@@ -197,8 +281,12 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
         previewSessionId,
         previewReason,
         loading,
+        actingUserId,
+        actingUserOptions,
         startPreview,
         endPreview,
+        setActingUserId,
+        fetchActingUserOptions,
         canUsePreview,
       }}
     >
