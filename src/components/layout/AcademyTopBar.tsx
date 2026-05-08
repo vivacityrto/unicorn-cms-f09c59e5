@@ -104,13 +104,13 @@ export function AcademyTopBar() {
       {/* Left: Logo, Page Title & Breadcrumbs - shrinks to accommodate right side */}
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/70">
-            <GraduationCap className="h-4 w-4 text-primary-foreground" />
+          <div className="flex items-center justify-center h-8 w-8 rounded-lg" style={{ background: "var(--viv-grad-hero)" }}>
+            <GraduationCap className="h-4 w-4 text-white" />
           </div>
-          <span className="font-bold text-lg text-foreground">Academy</span>
+          <span className="viv-font-anton text-xl text-[var(--viv-purple)]">Academy</span>
         </div>
 
-        <div className="h-8 w-px bg-border flex-shrink-0" />
+        <div className="h-8 w-px bg-[var(--viv-purple-light)] flex-shrink-0" />
 
         <div className="flex flex-col min-w-0">
           {showBreadcrumbs && (
@@ -128,7 +128,7 @@ export function AcademyTopBar() {
               ))}
             </nav>
           )}
-          <h1 className="text-lg font-semibold text-foreground truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]">
+          <h1 className="viv-font-anton text-xl text-[var(--viv-purple)] truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]">
             {pageTitle}
           </h1>
         </div>
@@ -177,7 +177,7 @@ export function AcademyTopBar() {
                         alt={getUserDisplayName()}
                         className="object-cover"
                       />
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                      <AvatarFallback className="bg-[var(--viv-purple-light)] text-[var(--viv-acai)] font-semibold">
                         {getInitials(profile?.email || "U")}
                       </AvatarFallback>
                     </Avatar>
@@ -200,7 +200,7 @@ export function AcademyTopBar() {
                   <p className="text-xs text-muted-foreground truncate">
                     {profile?.email}
                   </p>
-                  <Badge variant="secondary" className="w-fit text-xs">
+                  <Badge variant="secondary" className="w-fit text-xs bg-[var(--viv-cyan-light)] text-[var(--viv-fuchsia)] border-transparent">
                     Academy {getTierLabel()}
                   </Badge>
                 </div>
