@@ -597,7 +597,24 @@ export function MessageTab({ channel }: MessageTabProps) {
       </ScrollArea>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-border">
+      <div className="px-4 py-3 border-t border-border space-y-2">
+        {channel === "support" && attachmentPreview && (
+          <div className="relative inline-block">
+            <img
+              src={attachmentPreview}
+              alt="Attachment preview"
+              className="h-16 w-16 object-cover rounded border border-border"
+            />
+            <button
+              type="button"
+              onClick={clearAttachment}
+              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
+              aria-label="Remove attachment"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -605,6 +622,27 @@ export function MessageTab({ channel }: MessageTabProps) {
           }}
           className="flex gap-2"
         >
+          {channel === "support" && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                aria-label="Attach image"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+            </>
+          )}
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -615,12 +653,17 @@ export function MessageTab({ channel }: MessageTabProps) {
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || loading || (channel === "csc" && cscInitFailed)}
+            disabled={
+              loading ||
+              (channel === "csc" && cscInitFailed) ||
+              (channel === "csc" ? !input.trim() : !input.trim() && !attachment)
+            }
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </form>
       </div>
+
     </div>
   );
 }
