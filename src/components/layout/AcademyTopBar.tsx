@@ -6,6 +6,7 @@ import {
   LogOut,
   Search,
   ChevronRight,
+  ChevronLeft,
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { useTenantType } from "@/contexts/TenantTypeContext";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 
@@ -65,6 +67,7 @@ const getBreadcrumbs = (pathname: string) => {
 export function AcademyTopBar() {
   const location = useLocation();
   const { profile, signOut } = useAuth();
+  const { hasFullAccess } = useUserAccess();
   const { academyTier } = useTenantType();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -103,6 +106,16 @@ export function AcademyTopBar() {
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-20">
       {/* Left: Logo, Page Title & Breadcrumbs - shrinks to accommodate right side */}
       <div className="flex items-center gap-4 flex-1 min-w-0">
+        {hasFullAccess && (
+          <Link
+            to="/"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-[var(--viv-purple)] transition-colors flex-shrink-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="hidden sm:inline">Compliance System</span>
+          </Link>
+        )}
         <div className="flex items-center gap-2 flex-shrink-0">
           <div className="flex items-center justify-center h-8 w-8 rounded-lg" style={{ background: "var(--viv-grad-hero)" }}>
             <GraduationCap className="h-4 w-4 text-white" />
