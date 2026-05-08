@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { toast } from 'sonner';
 import { 
   FileText, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, 
@@ -72,20 +73,6 @@ function useTenants() {
   });
 }
 
-function useVivacityTeamUsers() {
-  return useQuery({
-    queryKey: ['vivacity-team-users'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email, avatar_url')
-        .eq('user_type', 'Vivacity Team')
-        .order('first_name');
-      if (error) throw error;
-      return data || [];
-    }
-  });
-}
 
 function QuestionCard({
   question,

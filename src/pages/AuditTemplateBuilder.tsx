@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from '@/lib/utils';
 import { useAuditTemplates, useAuditTemplateQuestions, AuditTemplateQuestion } from '@/hooks/useAuditTemplates';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -111,21 +112,6 @@ function DocumentsDropdownPreview({ value, onValueChange, hasError }: { value?: 
     }));
   }, [documents]);
   return <Combobox options={documentOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading documents..." : "Search documents..."} searchPlaceholder="Type to search documents..." emptyText="No documents found." disabled={isLoading} showAvatar={false} showCreatedAt={true} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
-}
-
-// Hook to fetch Vivacity Team users
-function useVivacityTeamUsers() {
-  return useQuery({
-    queryKey: ['vivacity-team-users'],
-    queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('users').select('user_uuid, first_name, last_name, email, avatar_url').eq('user_type', 'Vivacity Team').order('first_name');
-      if (error) throw error;
-      return data || [];
-    }
-  });
 }
 
 // Vivacity Team dropdown preview component with smart search
