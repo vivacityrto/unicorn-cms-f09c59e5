@@ -399,32 +399,28 @@ export function MessageTab({ channel }: MessageTabProps) {
   };
 
   async function sendSupport(userMsg: string) {
-    let currentThreadId = threadId;
+    const diagnosticMeta = {
+      page_path: window.location.pathname,
+      browser: getBrowserName(navigator.userAgent),
+      os: getOSName(navigator.userAgent),
+      screen: `${window.innerWidth}x${window.innerHeight}`,
+      ...(subject.trim() ? { subject: subject.trim() } : {}),
+    };
 
-    if (!currentThreadId) {
-      const diagnosticMeta = {
-        page_path: window.location.pathname,
-        browser: getBrowserName(navigator.userAgent),
-        os: getOSName(navigator.userAgent),
-        screen: `${window.innerWidth}x${window.innerHeight}`,
-      };
+    const { data: newThread, error: threadError } = await supabase
+      .from("help_threads")
+      .insert({
+        tenant_id: profile!.tenant_id,
+        user_id: profile!.user_uuid,
+        channel: "support",
+        status: "open",
+        metadata: diagnosticMeta,
+      } as any)
+      .select("id")
+      .single();
 
-      const { data: newThread, error: threadError } = await supabase
-        .from("help_threads")
-        .insert({
-          tenant_id: profile!.tenant_id,
-          user_id: profile!.user_uuid,
-          channel: "support",
-          status: "open",
-          metadata: diagnosticMeta,
-        } as any)
-        .select("id")
-        .single();
-
-      if (threadError) throw threadError;
-      currentThreadId = newThread.id;
-      setThreadId(currentThreadId);
-    }
+    if (threadError) throw threadError;
+    const currentThreadId = newThread.id;
 
     let messageMetadata: Record<string, any> | null = null;
     const fileToUpload = attachment;
@@ -440,7 +436,7 @@ export function MessageTab({ channel }: MessageTabProps) {
       };
     }
 
-    const { data: msg, error: msgError } = await supabase
+    const { error: msgError } = await supabase
       .from("help_messages")
       .insert({
         thread_id: currentThreadId,
@@ -448,19 +444,20 @@ export function MessageTab({ channel }: MessageTabProps) {
         role: "user",
         content: userMsg || "(image attached)",
         ...(messageMetadata ? { metadata: messageMetadata } : {}),
-      } as any)
-      .select("id, role, content, created_at")
-      .single();
+      } as any);
 
     if (msgError) throw msgError;
-
-    setMessages(prev => [...prev, msg as Message]);
-    clearAttachment();
 
     await supabase
       .from("help_threads")
       .update({ updated_at: new Date().toISOString() })
       .eq("id", currentThreadId);
+
+    setSubmitted(true);
+    setInput("");
+    setSubject("");
+    setThreadId(null);
+    clearAttachment();
   }
 
   async function sendCsc(userMsg: string) {
