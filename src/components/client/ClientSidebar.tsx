@@ -100,10 +100,16 @@ function NavItem({ item, isActive, sidebarOpen: sOpen }: { item: SidebarMenuItem
 
 export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentRequest }: ClientSidebarProps) {
   const location = useLocation();
-  const { tenantName, isPreview, activeTenantId, academyAccessEnabled } = useClientTenant();
-  const { getTenantRole, isSuperAdmin } = useAuth();
+  const {
+    tenantName,
+    isPreview,
+    academyAccessEnabled,
+    canManagePortalUsers,
+  } = useClientTenant();
+  const { isSuperAdmin } = useAuth();
   const { openHelpCenter } = useHelpCenter();
-  const isAdmin = isSuperAdmin() || (activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false);
+  // Staff in preview retain full sidebar; otherwise use tenant_user-derived gate.
+  const canManageUsers = isSuperAdmin() || isPreview || canManagePortalUsers;
 
   const isAcademyActive = location.pathname === "/academy" || location.pathname.startsWith("/academy/");
   const [academyOpen, setAcademyOpen] = useState(isAcademyActive);
