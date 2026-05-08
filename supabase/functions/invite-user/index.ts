@@ -202,15 +202,55 @@ serve(async (req) => {
       });
     }
 
-    // Validate relationship_role (optional). Tenant admins cannot create primary contacts via this flow.
+    // Validate relationship_role (optional).
     if (payload.relationship_role) {
-      const allowedRR: RelationshipRole[] = ['secondary_contact', 'user', 'academy_user'];
+      const allowedRR: RelationshipRole[] = ['primary_contact', 'secondary_contact', 'user', 'academy_user'];
       if (!allowedRR.includes(payload.relationship_role)) {
         return jsonResponse(400, {
           ok: false,
           code: "RELATIONSHIP_ROLE_NOT_ALLOWED",
-          detail: "Primary contact must be assigned via the transfer-primary-contact flow",
+          detail: `Relationship role '${payload.relationship_role}' is not valid`,
         });
+      }
+
+      // Primary contact uniqueness: at most one active or pending per tenant.
+      // IMPORTANT: check relationship_role column, NOT the primary_contact boolean —
+      // the boolean is unreliable (trigger sets it true for all parent-role rows).
+      if (payload.relationship_role === 'primary_contact') {
+        const { data: existingPrimary } = await supabase
+          .from('tenant_users')
+          .select('id')
+          .eq('tenant_id', payload.tenant_id)
+          .eq('relationship_role', 'primary_contact')
+          .limit(1)
+          .maybeSingle();
+
+        if (existingPrimary) {
+          return jsonResponse(409, {
+            ok: false,
+            code: "PRIMARY_CONTACT_TAKEN",
+            detail: "This organisation already has a primary contact. Use the transfer flow to reassign.",
+          });
+        }
+
+        const { data: pendingPrimary } = await supabase
+          .from('user_invitations')
+          .select('id')
+          .eq('tenant_id', payload.tenant_id)
+          .eq('relationship_role', 'primary_contact')
+          .eq('status', 'pending')
+          .is('revoked_at', null)
+          .gt('expires_at', new Date().toISOString())
+          .limit(1)
+          .maybeSingle();
+
+        if (pendingPrimary) {
+          return jsonResponse(409, {
+            ok: false,
+            code: "PRIMARY_CONTACT_PENDING",
+            detail: "A pending invitation already nominates someone as primary contact.",
+          });
+        }
       }
 
       // Secondary contact uniqueness: at most one active or pending per tenant.
