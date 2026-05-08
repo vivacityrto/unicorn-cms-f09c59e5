@@ -119,6 +119,19 @@ export function MessageTab({ channel }: MessageTabProps) {
     setAttachmentPreview(null);
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const file = e.clipboardData.files[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    e.preventDefault();
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      toast.error("Image must be 5 MB or smaller.");
+      return;
+    }
+    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+    setAttachment(file);
+    setAttachmentPreview(URL.createObjectURL(file));
+  };
+
   // ---------- Load history ----------
   useEffect(() => {
     if (!profile?.user_uuid) return;
