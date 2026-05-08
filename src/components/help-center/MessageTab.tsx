@@ -414,6 +414,7 @@ export function MessageTab({ channel }: MessageTabProps) {
         user_id: profile!.user_uuid,
         channel: "support",
         status: "open",
+        subject: subject.trim() || null,
         metadata: diagnosticMeta,
       } as any)
       .select("id")
