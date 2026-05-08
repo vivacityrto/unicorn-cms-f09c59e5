@@ -26912,6 +26912,7 @@ export type Database = {
           channel: string
           created_at: string
           id: string
+          metadata: Json | null
           status: string
           subject: string | null
           tenant_id: number
@@ -26922,6 +26923,7 @@ export type Database = {
           channel: string
           created_at?: string
           id?: string
+          metadata?: Json | null
           status?: string
           subject?: string | null
           tenant_id: number
@@ -26932,6 +26934,7 @@ export type Database = {
           channel?: string
           created_at?: string
           id?: string
+          metadata?: Json | null
           status?: string
           subject?: string | null
           tenant_id?: number
@@ -50561,6 +50564,7 @@ export type Database = {
           is_read: boolean
           link: string | null
           message: string
+          metadata: Json | null
           source_id: string | null
           tenant_id: number | null
           title: string
@@ -50576,6 +50580,7 @@ export type Database = {
           is_read?: boolean
           link?: string | null
           message: string
+          metadata?: Json | null
           source_id?: string | null
           tenant_id?: number | null
           title: string
@@ -50591,6 +50596,7 @@ export type Database = {
           is_read?: boolean
           link?: string | null
           message?: string
+          metadata?: Json | null
           source_id?: string | null
           tenant_id?: number | null
           title?: string
