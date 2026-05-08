@@ -2,11 +2,31 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, User, Headphones, MessageCircle } from "lucide-react";
+import { Send, Loader2, User, Headphones, MessageCircle, Paperclip, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
+function getBrowserName(ua: string): string {
+  if (/Edg\//.test(ua)) return 'Edge';
+  if (/Chrome\//.test(ua)) return 'Chrome';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/Safari\//.test(ua) && !/Chrome/.test(ua)) return 'Safari';
+  return 'Unknown';
+}
+
+function getOSName(ua: string): string {
+  if (/Windows NT 10/.test(ua)) return 'Windows 10/11';
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Mac OS X/.test(ua)) return 'macOS';
+  if (/Android/.test(ua)) return 'Android';
+  if (/iPhone|iPad/.test(ua)) return 'iOS';
+  if (/Linux/.test(ua)) return 'Linux';
+  return 'Unknown';
+}
 
 interface Message {
   id: string;
