@@ -2,11 +2,31 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, User, Headphones, MessageCircle } from "lucide-react";
+import { Send, Loader2, User, Headphones, MessageCircle, Paperclip, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
+function getBrowserName(ua: string): string {
+  if (/Edg\//.test(ua)) return 'Edge';
+  if (/Chrome\//.test(ua)) return 'Chrome';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/Safari\//.test(ua) && !/Chrome/.test(ua)) return 'Safari';
+  return 'Unknown';
+}
+
+function getOSName(ua: string): string {
+  if (/Windows NT 10/.test(ua)) return 'Windows 10/11';
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Mac OS X/.test(ua)) return 'macOS';
+  if (/Android/.test(ua)) return 'Android';
+  if (/iPhone|iPad/.test(ua)) return 'iOS';
+  if (/Linux/.test(ua)) return 'Linux';
+  return 'Unknown';
+}
 
 interface Message {
   id: string;
@@ -63,6 +83,38 @@ export function MessageTab({ channel }: MessageTabProps) {
   const [staffNameMap, setStaffNameMap] = useState<Map<string, string>>(new Map());
   const [staffAvatarMap, setStaffAvatarMap] = useState<Map<string, string | null>>(new Map());
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+    };
+  }, [attachmentPreview]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      toast.error("Only image files are allowed.");
+      return;
+    }
+    if (f.size > MAX_ATTACHMENT_BYTES) {
+      toast.error("Image must be 5 MB or smaller.");
+      return;
+    }
+    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+    setAttachment(f);
+    setAttachmentPreview(URL.createObjectURL(f));
+  };
+
+  const clearAttachment = () => {
+    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+    setAttachment(null);
+    setAttachmentPreview(null);
+  };
 
   // ---------- Load history ----------
   useEffect(() => {
@@ -331,7 +383,11 @@ export function MessageTab({ channel }: MessageTabProps) {
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim() || loading || !profile) return;
+    if (loading || !profile) return;
+    const hasText = input.trim().length > 0;
+    const hasAttachment = channel === "support" && !!attachment;
+    if (!hasText && !hasAttachment) return;
+    if (channel === "csc" && !hasText) return;
     if (channel === "csc" && cscInitFailed) {
       toast.error("Message thread not initialized. Please refresh and try again.");
       return;
@@ -358,6 +414,13 @@ export function MessageTab({ channel }: MessageTabProps) {
     let currentThreadId = threadId;
 
     if (!currentThreadId) {
+      const diagnosticMeta = {
+        page_path: window.location.pathname,
+        browser: getBrowserName(navigator.userAgent),
+        os: getOSName(navigator.userAgent),
+        screen: `${window.innerWidth}x${window.innerHeight}`,
+      };
+
       const { data: newThread, error: threadError } = await supabase
         .from("help_threads")
         .insert({
@@ -365,7 +428,8 @@ export function MessageTab({ channel }: MessageTabProps) {
           user_id: profile!.user_uuid,
           channel: "support",
           status: "open",
-        })
+          metadata: diagnosticMeta,
+        } as any)
         .select("id")
         .single();
 
@@ -374,20 +438,36 @@ export function MessageTab({ channel }: MessageTabProps) {
       setThreadId(currentThreadId);
     }
 
+    let messageMetadata: Record<string, any> | null = null;
+    const fileToUpload = attachment;
+    if (fileToUpload) {
+      const path = `${profile!.tenant_id}/${currentThreadId}/${crypto.randomUUID()}-${fileToUpload.name}`;
+      const { error: upErr } = await supabase.storage
+        .from("support-attachments")
+        .upload(path, fileToUpload, { contentType: fileToUpload.type, upsert: false });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("support-attachments").getPublicUrl(path);
+      messageMetadata = {
+        attachments: [{ url: pub.publicUrl, name: fileToUpload.name, type: fileToUpload.type }],
+      };
+    }
+
     const { data: msg, error: msgError } = await supabase
       .from("help_messages")
       .insert({
         thread_id: currentThreadId,
         sender_id: profile!.user_uuid,
         role: "user",
-        content: userMsg,
-      })
+        content: userMsg || "(image attached)",
+        ...(messageMetadata ? { metadata: messageMetadata } : {}),
+      } as any)
       .select("id, role, content, created_at")
       .single();
 
     if (msgError) throw msgError;
 
     setMessages(prev => [...prev, msg as Message]);
+    clearAttachment();
 
     await supabase
       .from("help_threads")
@@ -517,7 +597,24 @@ export function MessageTab({ channel }: MessageTabProps) {
       </ScrollArea>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-border">
+      <div className="px-4 py-3 border-t border-border space-y-2">
+        {channel === "support" && attachmentPreview && (
+          <div className="relative inline-block">
+            <img
+              src={attachmentPreview}
+              alt="Attachment preview"
+              className="h-16 w-16 object-cover rounded border border-border"
+            />
+            <button
+              type="button"
+              onClick={clearAttachment}
+              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
+              aria-label="Remove attachment"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -525,6 +622,27 @@ export function MessageTab({ channel }: MessageTabProps) {
           }}
           className="flex gap-2"
         >
+          {channel === "support" && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                aria-label="Attach image"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+            </>
+          )}
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -535,12 +653,17 @@ export function MessageTab({ channel }: MessageTabProps) {
           <Button
             type="submit"
             size="icon"
-            disabled={!input.trim() || loading || (channel === "csc" && cscInitFailed)}
+            disabled={
+              loading ||
+              (channel === "csc" && cscInitFailed) ||
+              (channel === "csc" ? !input.trim() : !input.trim() && !attachment)
+            }
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </form>
       </div>
+
     </div>
   );
 }
