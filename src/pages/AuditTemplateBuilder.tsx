@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from '@/lib/utils';
 import { useAuditTemplates, useAuditTemplateQuestions, AuditTemplateQuestion } from '@/hooks/useAuditTemplates';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';

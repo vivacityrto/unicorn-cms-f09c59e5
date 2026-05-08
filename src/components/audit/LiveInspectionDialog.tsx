@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { toast } from 'sonner';
 import { 
   FileText, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, 
