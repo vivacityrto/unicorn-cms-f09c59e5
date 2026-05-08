@@ -60852,6 +60852,27 @@ export type Database = {
           user_uuid: string
         }[]
       }
+      get_vivacity_team_directory: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          first_name: string
+          last_name: string
+          user_uuid: string
+        }[]
+      }
+      get_vivacity_team_directory_staff: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          email: string
+          first_name: string
+          job_title: string
+          last_name: string
+          unicorn_role: string
+          user_uuid: string
+        }[]
+      }
       get_vivacity_workspace_id: { Args: never; Returns: string }
       get_vivacity_workspace_id_safe: { Args: never; Returns: string }
       go_to_previous_segment: {
