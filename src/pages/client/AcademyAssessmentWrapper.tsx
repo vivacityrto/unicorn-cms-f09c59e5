@@ -1,4 +1,4 @@
-import { ClientLayout } from "@/components/layout/ClientLayout";
+import { AcademyLayout } from "@/components/layout/AcademyLayout";
 import AcademyAccessGate from "@/components/academy/AcademyAccessGate";
 import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
@@ -7,12 +7,12 @@ const AcademyAssessmentPlayerPage = lazy(() => import("./AcademyAssessmentPlayer
 
 export default function AcademyAssessmentWrapper() {
   return (
-    <ClientLayout>
+    <AcademyLayout>
       <AcademyAccessGate>
         <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
           <AcademyAssessmentPlayerPage />
         </Suspense>
       </AcademyAccessGate>
-    </ClientLayout>
+    </AcademyLayout>
   );
 }
