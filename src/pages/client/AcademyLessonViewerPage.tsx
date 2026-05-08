@@ -508,8 +508,9 @@ export default function AcademyLessonViewerPage() {
             </div>
             <Button
               size="sm"
-              onClick={() => enrolMutation.mutate()}
+              onClick={() => course && enrolMutation.mutate(course.id)}
               isLoading={enrolMutation.isPending}
+              disabled={!enrolMutation.canMutate}
               style={{ backgroundColor: ACCENT }}
               className="text-white hover:opacity-90 flex-shrink-0"
             >
