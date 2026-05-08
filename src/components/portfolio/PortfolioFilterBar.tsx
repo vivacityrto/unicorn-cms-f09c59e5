@@ -37,8 +37,8 @@ export function PortfolioFilterBar({ filters, onFiltersChange, savedView, onSave
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="my_tenants">My Tenants</SelectItem>
-              <SelectItem value="all_tenants">All Tenants</SelectItem>
+              <SelectItem value="my_tenants">My Clients</SelectItem>
+              <SelectItem value="all_tenants">All Clients</SelectItem>
             </SelectContent>
           </Select>
         )}
