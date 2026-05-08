@@ -64,10 +64,10 @@ export function useClientPackageDashboard(packageInstanceId: number | null) {
       if (!activeTenantId || !packageInstanceId) return null;
 
       const { data, error } = await (supabase as any)
-        .from(VIEW)
-        .select('*')
-        .eq('tenant_id', activeTenantId)
-        .eq('package_instance_id', packageInstanceId)
+        .rpc('get_client_package_dashboard', {
+          p_tenant_id: activeTenantId,
+          p_package_instance_id: packageInstanceId,
+        })
         .maybeSingle();
 
       if (error) throw error;
