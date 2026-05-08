@@ -508,16 +508,108 @@ export function MessageTab({ channel }: MessageTabProps) {
 
   const EmptyIcon = config.emptyIcon;
 
+  if (channel === "support") {
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-border space-y-1">
+          <p className="text-sm text-muted-foreground">{config.subtitle}</p>
+          {config.fallback && (
+            <p className="text-xs text-muted-foreground">
+              Or email: <span className="text-foreground">{config.fallback}</span>
+            </p>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {submitted ? (
+            <div className="flex flex-col items-center justify-center text-center space-y-3 py-12">
+              <CheckCircle2 className="h-12 w-12 text-green-500" />
+              <div>
+                <p className="font-medium text-secondary">Ticket submitted</p>
+                <p className="text-sm text-muted-foreground mt-1">Our team will be in touch.</p>
+              </div>
+              <Button variant="outline" onClick={() => setSubmitted(false)}>
+                Submit another ticket
+              </Button>
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendMessage();
+              }}
+              className="space-y-3"
+            >
+              <Input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Subject (optional)"
+                disabled={loading}
+              />
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onPaste={handlePaste}
+                placeholder={config.placeholder}
+                rows={4}
+                disabled={loading}
+              />
+              {attachmentPreview && (
+                <div className="relative inline-block">
+                  <img
+                    src={attachmentPreview}
+                    alt="Attachment preview"
+                    className="h-16 w-16 object-cover rounded border border-border"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearAttachment}
+                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
+                    aria-label="Remove attachment"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                  aria-label="Attach image"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading || (!input.trim() && !attachment)}
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                  Send Ticket
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border space-y-1">
         <p className="text-sm text-muted-foreground">{config.subtitle}</p>
-        {channel === "support" && config.fallback && (
-          <p className="text-xs text-muted-foreground">
-            Or email: <span className="text-foreground">{config.fallback}</span>
-          </p>
-        )}
       </div>
 
       {/* Messages */}
@@ -539,7 +631,6 @@ export function MessageTab({ channel }: MessageTabProps) {
             {messages.map((msg) => {
               const staffName = msg.sender_user_uuid ? staffNameMap.get(msg.sender_user_uuid) : undefined;
               const staffAvatar = msg.sender_user_uuid ? staffAvatarMap.get(msg.sender_user_uuid) : undefined;
-              const displayName = staffName || "Vivacity Team";
               const initials = staffName
                 ? staffName.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase()
                 : "VT";
@@ -583,23 +674,6 @@ export function MessageTab({ channel }: MessageTabProps) {
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-border space-y-2">
-        {channel === "support" && attachmentPreview && (
-          <div className="relative inline-block">
-            <img
-              src={attachmentPreview}
-              alt="Attachment preview"
-              className="h-16 w-16 object-cover rounded border border-border"
-            />
-            <button
-              type="button"
-              onClick={clearAttachment}
-              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
-              aria-label="Remove attachment"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        )}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -607,42 +681,17 @@ export function MessageTab({ channel }: MessageTabProps) {
           }}
           className="flex gap-2"
         >
-          {channel === "support" && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={loading}
-                aria-label="Attach image"
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-            </>
-          )}
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={config.placeholder}
-            disabled={loading || (channel === "csc" && cscInitFailed)}
+            disabled={loading || cscInitFailed}
             className="flex-1"
           />
           <Button
             type="submit"
             size="icon"
-            disabled={
-              loading ||
-              (channel === "csc" && cscInitFailed) ||
-              (channel === "csc" ? !input.trim() : !input.trim() && !attachment)
-            }
+            disabled={loading || cscInitFailed || !input.trim()}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
