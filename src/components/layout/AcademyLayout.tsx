@@ -142,6 +142,13 @@ export const AcademyLayout = ({
   return (
     <HelpCenterProvider>
     <div className="min-h-screen bg-background academy-scope">
+      {/* Impersonation Banner (fixed; spacer pushes layout down) */}
+      {isPreviewMode && (
+        <>
+          <ImpersonationBanner />
+          <div className="h-12" />
+        </>
+      )}
       {/* Sidebar - Academy themed (lighter, learning-focused) */}
       <aside
         className={`${sidebarOpen ? "w-64" : "w-20"} bg-card border-r border-[var(--viv-purple-light)] transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30`}
