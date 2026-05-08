@@ -65,6 +65,7 @@ import { CelebrationProvider } from "./components/ui/celebration";
  const LiveMeetingView = lazy(() => import("./components/eos/LiveMeetingView").then(m => ({ default: m.LiveMeetingView })));
  const ClientEosOverview = lazy(() => import("./pages/ClientEosOverview"));
 const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
+const PostSignInRedirect = lazy(() => import("./pages/PostSignInRedirect"));
 const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
 const AddinSettings = lazy(() => import("./pages/admin/AddinSettings"));
 const AddinDiagnostics = lazy(() => import("./pages/admin/AddinDiagnostics"));
@@ -262,6 +263,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/accept-invitation" element={<AcceptInvitationWrapper />} />
+            <Route path="/post-sign-in" element={<PostSignInRedirect />} />
             <Route 
               path="/dashboard" 
               element={
