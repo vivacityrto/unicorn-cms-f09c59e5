@@ -1,77 +1,85 @@
-# secondary-contact-portal-access-fix (revised)
+## Academy Typography Revert — Inter Throughout
 
-## Problem
-Secondary contacts (`tenant_users.secondary_contact = true`, `access_scope = 'full'`) cannot see the Packages page (and other portal modules) at `/client/*`. RLS already permits them — `app.user_can_access_tenant()` only requires `access_scope='full'`. Bug is in the SPA gating layer; "View as Client" masks it because impersonation runs as the staff CSC.
+### Phase 1 — Audit findings
 
-DB confirms 1 secondary contact + 1 secondary‑role row currently exist with `access_scope='full'`.
+**1.1 CSS files defining Anton / Binate / Montserrat**
+- `src/index.css` lines 848–857:
+  ```css
+  .academy-scope .viv-font-anton {
+    font-family: 'Anton', 'Montserrat', system-ui, sans-serif;
+    letter-spacing: 0.01em;
+  }
+  /* TODO(brand): swap Montserrat fallback for Binate when licensed */
+  .academy-scope .viv-font-binate {
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  ```
+  No `@font-face` blocks; no `@import` for these fonts. No `Binate` literal anywhere — the class was named after Binate but currently maps to Montserrat as a placeholder.
 
-## Investigation findings
-- No nav/route guard keys off `primary_contact === true`. Existing `primary_contact` references are in invite dialogs / role mapper and are legitimate (leave alone).
-- Today the Users sidebar item is gated by `adminOnly` → `getTenantRole(activeTenantId) === "Admin"`, which reads legacy `tenant_members`. In practice this surfaces it for primary contacts.
-- `ClientTenantContext.activeTenantId` derives from `profile.tenant_id` (column on `users`). Secondary contacts whose tenancy lives only in `tenant_users` may have a null `users.tenant_id`, so `ClientRouteGuard` redirects them out.
-- Invite-accept writes `access_scope='full'` for primary/secondary/user and `'academy_only'` for `academy_user`. 100% of existing secondary-contact rows are `'full'`. Proceed.
+**1.2 `viv-font-anton` / `viv-font-binate` class usages in TSX**
+- `src/components/layout/AcademyTopBar.tsx:123, 144` (anton — "Academy" label, page title)
+- `src/components/layout/AcademyLayout.tsx:127` (binate — small caption), `:165` (anton — "Vivacity" wordmark)
+- `src/components/layout/AcademyFooter.tsx:40` (anton)
+- `src/pages/client/AcademyDashboardPage.tsx:97` (anton — h2), `:114` (anton — stat number), `:116` (binate — stat label)
+- `src/components/academy/AcademyPageWrapper.tsx:42` (anton — page h1)
 
-## Contract (single source of truth in tenant-user hook/context)
-```ts
-const canAccessClientPortal =
-  tenantUser?.access_scope === 'full' &&
-  (tenantUser.primary_contact === true || tenantUser.secondary_contact === true);
+**1.3 `index.html` Google Fonts links**
+- `index.html:30`:
+  ```html
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+  ```
+  (preconnect lines 28–29 are generic to fonts.googleapis.com and stay.)
 
-// Backup-admin model: BOTH primary and secondary manage users.
-// Narrowing to secondary-only would regress today's primary-contact UX.
-const canManagePortalUsers =
-  tenantUser?.access_scope === 'full' &&
-  (tenantUser.primary_contact === true || tenantUser.secondary_contact === true);
+**1.4 Inter / base font stack**
+No explicit Inter declaration found in `tailwind.config.ts` or `src/index.css`. The rest of Unicorn renders with Tailwind's default `font-sans` stack (system-ui / Apple system fonts) inherited via the body. Reverting Academy to "the same stack as the rest of Unicorn" therefore means **inheriting the global stack** — no new font import needed.
 
-const isAcademyOnly =
-  tenantUser?.access_scope === 'academy_only';
-```
-While loading, all three are `false` (no first-paint leakage).
+**Note — out-of-scope inline-Anton sites discovered (not part of `.academy-scope`)**
+- `src/components/academy/admin/VideoThumbnail.tsx:38` — inline `style={{ fontFamily: "'Anton', sans-serif" }}` on a video thumbnail letter badge.
+- `src/pages/admin/BulkInvite.tsx:400` — inline `style={{ fontFamily: "Anton, sans-serif" }}` on the BulkInvite admin h1.
 
-## Changes
+These two also reference Anton and would break visually (fall back to the next stack member) once the Google Fonts link is removed. The Prompt is scoped to `.academy-scope` typography revert, but `VideoThumbnail` is an Academy admin component, and removing the Google Fonts link without addressing them leaves them silently degraded. **Recommendation: strip the inline `fontFamily` from both as well so they inherit the global stack** — confirm in the open question below.
 
-### 1. `src/contexts/ClientTenantContext.tsx`
-Augment to also fetch the caller's `tenant_users` row for the active tenant and expose:
-```
-tenantUser, tenantUserLoading,
-canAccessClientPortal, canManagePortalUsers, isAcademyOnly
-```
-Resilient `activeTenantId` resolution:
-- If `profile.tenant_id` is set → use it (current behaviour).
-- Else if the user has **exactly one** `tenant_users` row → use that row's `tenant_id`.
-- Else (zero or 2+ rows with no `users.tenant_id`) → `activeTenantId` stays `null` and a `console.warn` is emitted. Multi-tenant users are a real future case; don't paper over with a silent pick.
+---
 
-### 2. Replace gating reads
-| Surface | New gate |
-|---|---|
-| Sidebar items: Inbox, Home, Tasks, Packages, Documents, Files, Resource Hub, Calendar, Reports, Suggestions, TGA Details | `canAccessClientPortal` |
-| Sidebar Vivacity Academy section | unchanged (still `academyAccessEnabled`) |
-| Sidebar Users item (currently `adminOnly`) | `canManagePortalUsers` |
-| `ClientRouteGuard` for `{packages, documents, files, tasks, calendar, reports, tga, suggestions}` | when `!tenantUserLoading && !canAccessClientPortal` → redirect; if `isAcademyOnly`, render `AcademyOnlyFallback` |
-| `ClientRouteGuard` for `/client/users` | redirect when `!canManagePortalUsers` |
-| Academy-only users | only `/client/academy/*` and `/client/help` render; everything else falls through to `AcademyOnlyFallback` ("ask your primary contact for access") |
+### Phase 2 — Strip display fonts
 
-Add small `AcademyOnlyFallback` component in `src/components/client/`.
+- `src/index.css`: delete the `.viv-font-anton` and `.viv-font-binate` rule blocks (lines 848–857) and the TODO comment. Leave the `.academy-scope` colour-token block (838–847) intact.
+- `index.html`: delete line 30 (the Anton+Montserrat `<link>`). Keep the two `preconnect` lines — they're harmless and may be reused by other Google Fonts loads.
+- No `@font-face` to remove (none exist).
+- No Calibri body declaration to revert — none exists in the codebase. Phase 4 of the prompt is therefore a no-op; will be noted in the report.
 
-### 3. Tests — `src/contexts/__tests__/ClientTenantContext.test.tsx`
-1. Primary contact, `access_scope='full'` → `canAccessClientPortal=true, canManagePortalUsers=true, isAcademyOnly=false`
-2. Secondary contact, `access_scope='full'` → `canAccessClientPortal=true, canManagePortalUsers=true, isAcademyOnly=false`
-3. `access_scope='academy_only'` → `canAccessClientPortal=false, canManagePortalUsers=false, isAcademyOnly=true`
-4. Loading (`tenantUser=null`) → all three `false`
-5. **Resilient resolution (single row):** `profile.tenant_id=null`, exactly one `tenant_users` row (secondary contact, full) → `activeTenantId` resolves to that row's tenant_id; `canAccessClientPortal=true`
-6. **Multi-row defensiveness:** `profile.tenant_id=null`, two `tenant_users` rows → `activeTenantId` stays `null`, a `console.warn` is emitted, all three booleans remain `false`
+### Phase 3 — Replace class usages in TSX
 
-### 4. RLS smoke-test migration
-File: `supabase/migrations/<timestamp>_rls_smoke_secondary_contact_can_access_tenant.sql` — exact SQL from brief §5.2. Self-cleaning DO block; raises if RLS contract narrows.
+For each site listed in 1.2, remove the `viv-font-anton` / `viv-font-binate` token from the `className` string and leave all sibling classes (sizes, colours, weights, tracking) intact. No element unwrapping. Files touched:
+- `src/components/layout/AcademyTopBar.tsx`
+- `src/components/layout/AcademyLayout.tsx`
+- `src/components/layout/AcademyFooter.tsx`
+- `src/components/academy/AcademyPageWrapper.tsx`
+- `src/pages/client/AcademyDashboardPage.tsx`
 
-## Out of scope (per brief §8)
-- "View as Client" impersonation drift
-- `auth_rls_initplan` warnings
-- Overlapping permissive SELECT policies on EOS tables
-- Changes to `accept_invitation_v2` / `invite-user` edge function
-- Renaming `primary_contact` / `secondary_contact`
-- Any modification to `app.user_can_access_tenant` or other RLS helpers
-- Any data mutation
+### Phase 4 — Body font
 
-## Definition of done
-Mirrors brief §6.
+No `.academy-scope { font-family: Calibri }` rule exists. Body text already inherits the global Unicorn stack. No edit required; will be called out explicitly in the deliverable report.
+
+### Phase 5 — Verification (post-edit)
+
+- `rg -n -i "anton|binate|montserrat" src/ public/ index.html` → expect zero matches (modulo the open-question files below if we leave them).
+- `rg -n "viv-font-anton|viv-font-binate" src/` → zero matches.
+- Visual smoke: `/academy/dashboard`, `/academy/courses`, all five hub pages, lesson viewer — typography matches `/dashboard` and `/client/home`.
+- Confirm `--viv-purple/--viv-fuchsia/--viv-cyan/--viv-acai/--viv-gold` tokens, gradients, and stat-card coloured bars unchanged.
+- Confirm no diff outside `.academy-scope` consumers and the two HTML/CSS lines.
+
+---
+
+### Open question (one decision needed before I implement)
+
+How should I handle the two **inline-Anton** sites that are technically outside `.academy-scope` but will degrade silently once the Google Fonts link is gone?
+
+1. **Strip both** (recommended) — remove `fontFamily` from `VideoThumbnail.tsx:38` and `BulkInvite.tsx:400` so they inherit the global Inter/system stack. Cleanest end state, zero Anton references remain.
+2. **Strip only `VideoThumbnail.tsx`** — it's an Academy admin component; leave `BulkInvite.tsx` alone since it's not Academy-scoped.
+3. **Leave both as-is** — they'll fall back to `sans-serif`. Strict reading of the prompt (".academy-scope only").
+
+I'll proceed with option 1 unless told otherwise.
