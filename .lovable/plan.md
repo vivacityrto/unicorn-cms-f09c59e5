@@ -1,15 +1,44 @@
-## Fix: Toast navigation lands on stale message thread
+## Bug Fix Plan: Dashboard label terminology + "View Tasks" navigation
 
-**File:** `src/components/layout/ClientLayout.tsx`
+Two minimal, isolated edits across two files.
 
-**Problem:** The `client-inbox-notifier-${activeTenantId}` realtime subscription (lines 47–80) invalidates `["client-conversations"]` and `["client-inbox"]` on a new `tenant_messages` INSERT, but does NOT invalidate `["conversation-messages", conversationId]`. With the global `staleTime: 2 * 60 * 1000`, when the user clicks "View" on the toast, React Query serves stale cached messages and the new inbound message is missing.
+### File 1: `src/pages/Dashboard.tsx`
 
-**Change:** In the subscription callback, after the null guard (line 59) and before the `toast(...)` call (line 61), add a single invalidation:
-
-```ts
-queryClient.invalidateQueries({ queryKey: ["conversation-messages", row.conversation_id] });
+**Edit A (line 76) — subtitle terminology:**
+Change the conditional text only. Comparison values (`'my_tenants'`) are untouched.
+```tsx
+{savedView === 'my_tenants' ? 'My Clients' : 'All Clients'} · {activePortfolio.length + lowAttention.length} active
 ```
 
-That is the only edit. No other invalidations, subscription logic, callers, hooks, or files are touched.
+**Edit B (lines 112–114) — TodaysFocus onAction:**
+Route-aware navigation; falls back to drawer when no route.
+```tsx
+onAction={(item) => {
+  if (item.actionRoute) {
+    navigate(item.actionRoute);
+  } else {
+    openDrawerById(item.tenantId);
+  }
+}}
+```
+`navigate` is already in scope (line 19). `actionRoute?: string` exists on focus items (`src/hooks/useDashboardTriage.ts:114`) and is populated for the task-related focus items (`/my-work`, `/tasks-management`).
 
-**Risk:** Negligible. One extra cache invalidation keyed by the actual conversation id from the realtime payload. Ensures the thread view fetches fresh on next mount/focus and AJ's new message is visible immediately.
+### File 2: `src/components/portfolio/PortfolioFilterBar.tsx`
+
+**Edit C (lines 40–41) — SelectItem display labels only:**
+```tsx
+<SelectItem value="my_tenants">My Clients</SelectItem>
+<SelectItem value="all_tenants">All Clients</SelectItem>
+```
+The `value` attributes remain `my_tenants` / `all_tenants` so all filtering logic and `savedView` comparisons continue to work unchanged.
+
+### Out of scope (explicitly untouched)
+- `savedView` state, its values, or any filter logic
+- `openDrawerById` and all other callers
+- Any DB / RLS / migrations / edge functions
+- Any other files, hooks, or components
+
+### Verification after apply
+- Saved-view toggle still filters My/All correctly (values unchanged).
+- Today's Focus items with `actionRoute` (`/my-work`, `/tasks-management`) navigate via router; items without a route still open the tenant drawer.
+- Subtitle active count renders unchanged.

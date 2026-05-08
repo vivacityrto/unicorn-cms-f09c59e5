@@ -73,7 +73,7 @@ const Dashboard = () => {
             <div>
               <h1 className="text-base font-bold text-foreground">Triage Dashboard</h1>
               <p className="text-xs text-muted-foreground">
-                {savedView === 'my_tenants' ? 'My Tenants' : 'All Tenants'} · {activePortfolio.length + lowAttention.length} active
+                {savedView === 'my_tenants' ? 'My Clients' : 'All Clients'} · {activePortfolio.length + lowAttention.length} active
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -110,7 +110,11 @@ const Dashboard = () => {
               <TodaysFocusSection
                 items={todaysFocus}
                 onAction={(item) => {
-                  openDrawerById(item.tenantId);
+                  if (item.actionRoute) {
+                    navigate(item.actionRoute);
+                  } else {
+                    openDrawerById(item.tenantId);
+                  }
                 }}
                 onSnooze={(item, days) => snoozeItem({ itemId: item.id, days })}
               />
