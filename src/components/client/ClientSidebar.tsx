@@ -115,7 +115,7 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentReque
   const [academyOpen, setAcademyOpen] = useState(isAcademyActive);
 
   const filterAdmin = (items: SidebarMenuItem[]) =>
-    items.filter((item) => !item.adminOnly || isAdmin);
+    items.filter((item) => !item.adminOnly || canManageUsers);
 
   return (
     <>
