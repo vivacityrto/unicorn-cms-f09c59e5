@@ -1,4 +1,4 @@
-import { ShieldAlert, CheckCircle2, AlertTriangle, Activity } from "lucide-react";
+import { ShieldAlert, CheckCircle2, AlertTriangle, Activity, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useClientProgress } from "@/hooks/useClientProgress";
 import { useClientActivityTimeline } from "@/hooks/useClientActivityTimeline";
@@ -73,8 +73,21 @@ export function CompliancePulseBanner() {
           <Badge variant="outline" className="text-primary text-xs">Eligible</Badge>
         ) : (
           <Badge variant="secondary" className="text-xs">Not yet</Badge>
-        )}
-      </div>
+      )}
+
+      {/* Unicorn 1 link */}
+      {activeTenantId && (
+        <a
+          href={`https://unicorn-cms.com.au/clients/${activeTenantId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-background/50 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Unicorn 1
+        </a>
+      )}
+    </div>
 
       {/* Days since activity */}
       {daysSinceActivity !== null && (
