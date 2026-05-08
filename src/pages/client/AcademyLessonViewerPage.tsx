@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useState, useEffect, useRef, useCallback } from "react";
-import Player from "@vimeo/player";
+import VimeoPlayer from "@/components/academy/VimeoPlayer";
 import { sanitizeHtml } from "@/lib/sanitize";
 import {
   AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalDescription, AppModalBody, AppModalFooter,
@@ -25,11 +25,7 @@ export default function AcademyLessonViewerPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [livePercent, setLivePercent] = useState<number>(0);
   const [livePosition, setLivePosition] = useState<number>(0);
-  const [videoError, setVideoError] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const playerRef = useRef<Player | null>(null);
-  const lastUpsertRef = useRef<number>(0);
   const autoCompletedRef = useRef<boolean>(false);
   const prevEnrollmentStatusRef = useRef<string | null>(null);
 
@@ -270,81 +266,11 @@ export default function AcademyLessonViewerPage() {
     qc.invalidateQueries({ queryKey: ["academy-enrollment-detail"] });
   }, [canTrackProgress, lesson, course, enrollment, completedLessonIds, qc]);
 
-  // Build Vimeo embed URL
-  const vimeoEmbedUrl = video?.vimeo_url
-    ? video.vimeo_url.replace("vimeo.com/", "player.vimeo.com/video/").split("?")[0] +
-      "?autoplay=0&title=0&byline=0&portrait=0&texttrack=en"
-    : null;
-
-  // Wire Vimeo SDK
-  useEffect(() => {
-    if (!vimeoEmbedUrl || !iframeRef.current) return;
-    setVideoError(false);
-    const player = new Player(iframeRef.current);
-    playerRef.current = player;
-
-    let started = false;
-    const startPos = currentProgress?.last_position_seconds ?? 0;
-    if (startPos > 5) {
-      player.setCurrentTime(startPos).catch(() => {});
-    }
-
-    const onPlay = () => {
-      if (started) return;
-      started = true;
-      if (canTrackProgress) {
-        upsertProgress({ started_at: new Date().toISOString() });
-      }
-    };
-
-    const onTimeUpdate = (e: { seconds: number; percent: number; duration: number }) => {
-      const pct = Math.floor(e.percent * 100);
-      const secs = Math.floor(e.seconds);
-      setLivePercent(pct);
-      setLivePosition(secs);
-
-      const now = Date.now();
-      if (canTrackProgress && now - lastUpsertRef.current >= PROGRESS_THROTTLE_MS) {
-        lastUpsertRef.current = now;
-        upsertProgress({
-          last_position_seconds: secs,
-          watch_seconds: secs,
-          completion_percentage: pct,
-        });
-      }
-
-      if (pct >= completionThreshold && canTrackProgress && !autoCompletedRef.current) {
-        autoCompleteLesson();
-      }
-    };
-
-    const onEnded = () => {
-      if (canTrackProgress) autoCompleteLesson();
-    };
-
-    const onError = () => setVideoError(true);
-
-    player.on("play", onPlay);
-    player.on("timeupdate", onTimeUpdate);
-    player.on("ended", onEnded);
-    player.on("error", onError);
-
-    return () => {
-      player.off("play", onPlay);
-      player.off("timeupdate", onTimeUpdate);
-      player.off("ended", onEnded);
-      player.off("error", onError);
-      playerRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vimeoEmbedUrl, canTrackProgress, completionThreshold, lesson?.id]);
-
   // Reset autocomplete latch when lesson changes
   useEffect(() => {
     autoCompletedRef.current = false;
     setLivePercent(currentProgress?.completion_percentage ?? 0);
     setLivePosition(currentProgress?.last_position_seconds ?? 0);
-    lastUpsertRef.current = 0;
   }, [lesson?.id, currentProgress?.completion_percentage, currentProgress?.last_position_seconds]);
 
   // Course completion celebration
