@@ -7,6 +7,10 @@ import {
   MessageSquare,
   User,
   Users,
+  ShieldCheck,
+  Building2,
+  HeartHandshake,
+  ClipboardList,
   Menu,
   X,
   Sparkles,
@@ -21,6 +25,14 @@ import { AcademyTopBar } from "@/components/layout/AcademyTopBar";
 import { AcademyFooter } from "@/components/layout/AcademyFooter";
 
 // Academy menu items
+const academyPathwaysItems = [
+  { icon: Users, label: "Trainer Hub", path: "/academy/trainer" },
+  { icon: ShieldCheck, label: "Compliance Manager", path: "/academy/compliance-manager" },
+  { icon: Building2, label: "Governance Person", path: "/academy/governance-person" },
+  { icon: HeartHandshake, label: "Student Support Officer", path: "/academy/student-support-officer" },
+  { icon: ClipboardList, label: "Administration Assistant", path: "/academy/administration-assistant" },
+];
+
 const academyMainItems = [
   { icon: LayoutDashboard, label: "Academy Dashboard", path: "/academy" },
   { icon: BookOpen, label: "My Courses", path: "/academy/courses" },
@@ -44,6 +56,7 @@ export const AcademyLayout = ({
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sectionsOpen, setSectionsOpen] = useState({
+    pathways: true,
     learning: true,
     account: false,
     team: false,
@@ -166,6 +179,9 @@ export const AcademyLayout = ({
           ref={navRef}
           className="flex-1 py-4 overflow-y-auto scrollbar-hide"
         >
+          {/* Pathways Section */}
+          {renderSection("Pathways", academyPathwaysItems, "pathways")}
+
           {/* Learning Section */}
           {renderSection("Learning", academyMainItems, "learning")}
 
