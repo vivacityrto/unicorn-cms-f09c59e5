@@ -116,31 +116,17 @@ export const ADMIN_ROUTES = [
   '/manage-users',
   '/manage-invites',
   '/audits',
-  '/admin/manage-packages',
-  '/admin/package-builder',
-  '/admin/email-templates',
-  '/admin/user-audit',
-  '/admin/stages',
-  '/admin/stage-builder',
-  '/admin/stage-analytics',
-  '/admin/team-users',
-  '/admin/tenant-users',
-  '/admin/assistant',
-  '/admin/knowledge',
-  '/admin/eos-processes',
-  '/admin/qa/responsive',
-  '/admin/qa/smoke',
+  '/admin/',
 ];
 
-// Advanced Features routes that require SuperAdmin
-export const ADVANCED_ROUTES = [
-  '/templates',
-  '/frameworks',
-  '/audit-logs',
-  '/flags',
-  '/risks',
-  '/health',
-  '/tools',
+// Routes explicitly accessible to client-role users (unicorn_role = 'Admin' or 'User').
+// Everything NOT in this list requires isVivacityTeam. Add new client-facing routes here.
+export const CLIENT_ROUTES = [
+  '/dashboard',
+  '/settings',
+  '/profile',
+  '/client/',
+  '/client-portal/',
 ];
 
 // EOS routes - Vivacity Team only (Super Admin, Team Leader, Team Member)
@@ -295,22 +281,12 @@ export const useRBAC = () => {
    * Check if a route is protected and user has access
    */
   const canAccessRoute = (path: string): boolean => {
-    // Check admin routes
     if (ADMIN_ROUTES.some(route => path.startsWith(route))) {
       return canAccessAdmin();
     }
-    
-    // Check advanced routes
-    if (ADVANCED_ROUTES.some(route => path.startsWith(route))) {
-      return canAccessAdvanced();
-    }
-    
-    // Check EOS routes - Vivacity Team only
     if (EOS_ROUTES.some(route => path.startsWith(route))) {
       return canAccessEOS();
     }
-    
-    // All other routes are accessible
     return true;
   };
 

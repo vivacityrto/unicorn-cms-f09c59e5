@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { mockUsers } from '../fixtures/auth-test-data';
 import type { Permission } from '@/hooks/useRBAC';
-import { ADMIN_ROUTES, ADVANCED_ROUTES, EOS_ROUTES } from '@/hooks/useRBAC';
+import { ADMIN_ROUTES, CLIENT_ROUTES, EOS_ROUTES } from '@/hooks/useRBAC';
 
 // Profile type that accepts any user role
 interface UserProfile {
@@ -114,15 +114,16 @@ function hasPermission(profile: UserProfile | null, permission: Permission): boo
 }
 
 function canAccessRoute(profile: UserProfile | null, path: string): boolean {
-  // Check admin routes
+  const isClientRoute = CLIENT_ROUTES.some(route => path.startsWith(route));
+  // Deny-by-default: routes not in CLIENT_ROUTES require Vivacity Team membership.
+  if (!isClientRoute && !isVivacityTeam(profile)) {
+    return false;
+  }
+  // Admin routes require administration:access.
   if (ADMIN_ROUTES.some(route => path.startsWith(route))) {
     return hasPermission(profile, 'administration:access');
   }
-  // Check advanced routes
-  if (ADVANCED_ROUTES.some(route => path.startsWith(route))) {
-    return hasPermission(profile, 'advanced_features:access');
-  }
-  // Check EOS routes
+  // EOS routes require eos:access.
   if (EOS_ROUTES.some(route => path.startsWith(route))) {
     return hasPermission(profile, 'eos:access');
   }

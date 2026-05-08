@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useRBAC, ADMIN_ROUTES, ADVANCED_ROUTES, EOS_ROUTES } from '@/hooks/useRBAC';
+import { useRBAC, ADMIN_ROUTES, CLIENT_ROUTES, EOS_ROUTES } from '@/hooks/useRBAC';
 import { useEffect, useRef } from 'react';
 import { toast } from '@/hooks/use-toast';
 
@@ -44,18 +44,23 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false }: Protecte
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Check RBAC route access (admin, advanced, and EOS routes)
   const currentPath = location.pathname;
   const isAdminRoute = ADMIN_ROUTES.some(route => currentPath.startsWith(route));
-  const isAdvancedRoute = ADVANCED_ROUTES.some(route => currentPath.startsWith(route));
   const isEosRoute = EOS_ROUTES.some(route => currentPath.startsWith(route));
+  const isClientRoute = CLIENT_ROUTES.some(route => currentPath.startsWith(route));
 
-  if ((isAdminRoute || isAdvancedRoute) && !canAccessRoute(currentPath)) {
-    // Redirect users trying to access admin/advanced routes without permission
+  // Deny-by-default: any route not in CLIENT_ROUTES requires Vivacity Team membership.
+  // Clients (unicorn_role 'Admin' or 'User') are redirected to dashboard.
+  if (!isClientRoute && !isVivacityTeam) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Block EOS routes for non-Vivacity users (clients)
+  // Admin routes require administration:access (Super Admin only).
+  if (isAdminRoute && !canAccessRoute(currentPath)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // EOS routes: Vivacity Team only — keep existing toast logic below this check unchanged.
   if (isEosRoute && !canAccessEOS()) {
     // Show toast only once per session to avoid spam
     if (!hasShownEosToast.current) {
