@@ -135,27 +135,28 @@ serve(async (req) => {
       .eq("user_uuid", user.id)
       .single();
 
-    if (!userData?.tenant_id) {
+    const isSuperAdmin =
+      userData?.global_role === "SuperAdmin" || userData?.unicorn_role === "Super Admin";
+    const requestedTenantId = body.tenant_id as number | undefined;
+
+    // Resolve effective tenant: SuperAdmins may pass an explicit tenant_id
+    // (and may have no tenant_id of their own). Other users always use their own.
+    let tenantId: number | undefined;
+    if (isSuperAdmin && requestedTenantId) {
+      tenantId = requestedTenantId;
+      console.log(`[browse-sp] SuperAdmin override: browsing tenant ${tenantId}`);
+    } else if (userData?.tenant_id) {
+      tenantId = userData.tenant_id;
+      if (requestedTenantId && requestedTenantId !== tenantId) {
+        console.warn(`[browse-sp] Non-SuperAdmin attempted tenant override: ${requestedTenantId}`);
+      }
+    }
+
+    if (!tenantId) {
       return new Response(
         JSON.stringify({ error: "No tenant found for user" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    }
-
-    let tenantId = userData.tenant_id;
-
-    // If a different tenant_id was requested, allow only for SuperAdmins
-    const requestedTenantId = body.tenant_id as number | undefined;
-    if (requestedTenantId && requestedTenantId !== tenantId) {
-      const isSuperAdmin = userData.global_role === "SuperAdmin" || userData.unicorn_role === "Super Admin";
-
-      if (isSuperAdmin) {
-        tenantId = requestedTenantId;
-        console.log(`[browse-sp] SuperAdmin override: browsing tenant ${tenantId}`);
-      } else {
-        console.warn(`[browse-sp] Non-SuperAdmin attempted tenant override: ${requestedTenantId}`);
-        // Silently fall back to user's own tenant
-      }
     }
 
     // Determine browsing mode: site_purpose (global site) or tenant settings
