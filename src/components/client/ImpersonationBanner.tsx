@@ -1,14 +1,13 @@
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, X, Building2, Shield } from "lucide-react";
+import { Eye, X, Building2, Shield, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-/**
- * Banner shown when a Vivacity Team member is viewing as a client
- */
 export function ImpersonationBanner() {
-  const { isPreviewMode, previewTenant, endPreview, loading } = useClientPreview();
+  const { isPreviewMode, previewTenant, actingUserId, actingUserOptions, endPreview, loading } = useClientPreview();
+  const { isVivacityStaff } = useUserAccess();
   const navigate = useNavigate();
 
   if (!isPreviewMode || !previewTenant) {
@@ -17,17 +16,25 @@ export function ImpersonationBanner() {
 
   const handleExit = async () => {
     await endPreview();
-    navigate(`/tenant/${previewTenant.id}`);
+    if (isVivacityStaff) {
+      navigate("/dashboard");
+    } else {
+      navigate("/");
+    }
   };
 
   const tenantTypeLabel = previewTenant.tenant_type.startsWith("academy_")
     ? "Academy"
     : "Compliance System";
 
+  const actingUser = actingUserId
+    ? actingUserOptions.find((o) => o.user_uuid === actingUserId)
+    : null;
+
   return (
     <div className="fixed top-0 left-0 right-0 z-[100] bg-muted text-foreground px-4 py-2 shadow-md">
       <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Eye className="h-5 w-5 text-brand-fuchsia" />
             <span className="font-semibold text-secondary">Impersonating Client View</span>
@@ -39,6 +46,12 @@ export function ImpersonationBanner() {
           <Badge variant="outline" className="border-border text-foreground">
             {tenantTypeLabel}
           </Badge>
+          {actingUserId && actingUser && (
+            <Badge variant="outline" className="border-border text-foreground">
+              <User className="h-3 w-3 mr-1" />
+              Acting as {actingUser.full_name}
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center gap-3">

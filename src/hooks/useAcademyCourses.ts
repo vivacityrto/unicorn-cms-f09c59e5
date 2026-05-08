@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 
 export interface AcademyCourse {
   id: number;
@@ -29,12 +30,10 @@ interface UseAcademyCoursesOptions {
 }
 
 export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
+  const { userId } = useAcademyActingUserId();
   return useQuery({
-    queryKey: ["academy-courses", audienceKey],
+    queryKey: ["academy-courses", audienceKey, userId],
     queryFn: async (): Promise<AcademyCourse[]> => {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-
       // Fetch published courses for this audience
       const { data: courses, error: coursesErr } = await supabase
         .from("academy_courses")
@@ -49,7 +48,6 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
 
       const courseIds = courses.map((c) => c.id);
 
-      // Fetch progress for current user and lesson counts in parallel
       const progressMap = new Map<number, {
         enrollment_status: string | null;
         progress_percentage: number | null;
@@ -61,11 +59,11 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
       const lessonCountMap = new Map<number, number>();
 
       const [progressRes, lessonsRes] = await Promise.all([
-        user
+        userId
           ? supabase
               .from("v_academy_course_progress")
               .select("course_id, enrollment_status, progress_percentage, completed_lessons, total_lessons, has_certificate, certificate_number")
-              .eq("user_id", user.id)
+              .eq("user_id", userId)
           : Promise.resolve({ data: null as any }),
         supabase
           .from("academy_lessons")
@@ -106,19 +104,17 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
 
 /** Dashboard stats hook */
 export function useAcademyDashboardStats() {
+  const { userId } = useAcademyActingUserId();
   return useQuery({
-    queryKey: ["academy-dashboard-stats"],
+    queryKey: ["academy-dashboard-stats", userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      // Parallel queries
       const [coursesRes, inProgressRes, certsRes] = await Promise.all([
         supabase.from("academy_courses").select("id", { count: "exact", head: true }).eq("status", "published"),
-        user
-          ? supabase.from("academy_enrollments").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "active").is("completed_at", null)
+        userId
+          ? supabase.from("academy_enrollments").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "active").is("completed_at", null)
           : Promise.resolve({ count: 0 }),
-        user
-          ? supabase.from("academy_certificates").select("id", { count: "exact", head: true }).eq("user_id", user.id).is("revoked_at", null)
+        userId
+          ? supabase.from("academy_certificates").select("id", { count: "exact", head: true }).eq("user_id", userId).is("revoked_at", null)
           : Promise.resolve({ count: 0 }),
       ]);
 
@@ -135,16 +131,16 @@ export function useAcademyDashboardStats() {
 
 /** My courses for the dashboard — user's enrollments with course info */
 export function useMyAcademyCourses() {
+  const { userId } = useAcademyActingUserId();
   return useQuery({
-    queryKey: ["academy-my-courses"],
+    queryKey: ["academy-my-courses", userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!userId) return [];
 
       const { data: progress, error } = await supabase
         .from("v_academy_course_progress")
         .select("course_id, course_title, enrollment_status, progress_percentage, completed_lessons, total_lessons, has_certificate, estimated_minutes")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("last_activity_at", { ascending: false })
         .limit(10);
 

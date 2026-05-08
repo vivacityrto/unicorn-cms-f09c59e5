@@ -21,9 +21,9 @@ import {
 } from "@/hooks/useAcademyCourses";
 import {
   MyEnrolledCourse,
-  useEnrolInCourse,
   useMyEnrolledCourses,
 } from "@/hooks/academy/useMyEnrolledCourses";
+import { useEnrolCourse } from "@/hooks/academy/useEnrolCourse";
 
 export type AudienceKey =
   | "trainer"
@@ -94,7 +94,7 @@ export default function AudienceHubPage({
   });
   const { data: enrolled = [], refetch: refetchEnrolled } =
     useMyEnrolledCourses();
-  const enrolMutation = useEnrolInCourse();
+  const enrolMutation = useEnrolCourse();
 
   const enrolledByCourseId = useMemo(() => {
     const m = new Map<number, MyEnrolledCourse>();
@@ -127,7 +127,7 @@ export default function AudienceHubPage({
         navigate(`/academy/course/${course.slug}`);
       }
     } catch {
-      // toast already shown by useEnrolInCourse onError
+      // toast already shown by useEnrolCourse onError
     }
   };
 

@@ -7,9 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, Clock, Play, CheckCircle2 } from "lucide-react";
 import {
   useMyEnrolledCourses,
-  useEnrolInCourse,
   type MyEnrolledCourse,
 } from "@/hooks/academy/useMyEnrolledCourses";
+import { useEnrolCourse } from "@/hooks/academy/useEnrolCourse";
 
 const ACCENT = "#23c0dd";
 
@@ -33,7 +33,7 @@ function statusMeta(c: MyEnrolledCourse) {
 export default function AcademyCoursesListPage() {
   const navigate = useNavigate();
   const { data: courses, isLoading } = useMyEnrolledCourses();
-  const enrol = useEnrolInCourse();
+  const enrol = useEnrolCourse();
 
   const handleCta = async (c: MyEnrolledCourse) => {
     // Completed → review course detail
