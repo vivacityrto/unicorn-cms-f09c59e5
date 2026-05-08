@@ -73,6 +73,17 @@ export function CompliancePulseBanner() {
           <Badge variant="outline" className="text-primary text-xs">Eligible</Badge>
         ) : (
           <Badge variant="secondary" className="text-xs">Not yet</Badge>
+        )}
+      </div>
+
+      {/* Days since activity */}
+      {daysSinceActivity !== null && (
+        <div className="flex items-center gap-1 text-muted-foreground ml-auto">
+          <Activity className="h-3.5 w-3.5" />
+          {daysSinceActivity === 0
+            ? "Active today"
+            : `${daysSinceActivity}d since last activity`}
+        </div>
       )}
 
       {/* Unicorn 1 link */}
@@ -86,17 +97,6 @@ export function CompliancePulseBanner() {
           <ExternalLink className="h-3.5 w-3.5" />
           Unicorn 1
         </a>
-      )}
-    </div>
-
-      {/* Days since activity */}
-      {daysSinceActivity !== null && (
-        <div className="flex items-center gap-1 text-muted-foreground ml-auto">
-          <Activity className="h-3.5 w-3.5" />
-          {daysSinceActivity === 0
-            ? "Active today"
-            : `${daysSinceActivity}d since last activity`}
-        </div>
       )}
     </div>
   );
