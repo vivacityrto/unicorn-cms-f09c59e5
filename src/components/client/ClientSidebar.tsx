@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -20,9 +19,7 @@ import {
   Package2,
   Inbox,
   GraduationCap,
-  ChevronDown,
-  HeartHandshake,
-  ClipboardList,
+  ExternalLink,
   Lightbulb,
 } from "lucide-react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
@@ -46,13 +43,8 @@ const clientMenuItemsBefore: SidebarMenuItem[] = [
   { icon: FolderOpen, label: "Files", path: "/client/files" },
 ];
 
-const academySubItems: SidebarMenuItem[] = [
-  { icon: GraduationCap, label: "Trainer Hub", path: "/academy/trainer" },
-  { icon: GraduationCap, label: "Compliance Manager", path: "/academy/compliance-manager" },
-  { icon: GraduationCap, label: "Governance Person", path: "/academy/governance-person" },
-  { icon: HeartHandshake, label: "Student Support Officer", path: "/academy/student-support-officer" },
-  { icon: ClipboardList, label: "Administration Assistant", path: "/academy/administration-assistant" },
-];
+// Embedded Academy submenu removed 2026-05-08 — canonical Academy now lives at
+// /academy/* under AcademyLayout, opened in a new tab from the row below.
 
 const clientMenuItemsAfter: SidebarMenuItem[] = [
   { icon: Library, label: "Resource Hub", path: "/client/resource-hub" },
@@ -110,9 +102,6 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentReque
   const { openHelpCenter } = useHelpCenter();
   // Staff in preview retain full sidebar; otherwise use tenant_user-derived gate.
   const canManageUsers = isSuperAdmin() || isPreview || canManagePortalUsers;
-
-  const isAcademyActive = location.pathname === "/academy" || location.pathname.startsWith("/academy/");
-  const [academyOpen, setAcademyOpen] = useState(isAcademyActive);
 
   const filterAdmin = (items: SidebarMenuItem[]) =>
     items.filter((item) => !item.adminOnly || canManageUsers);
@@ -178,70 +167,31 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentReque
             <NavItem key={item.path} item={item} isActive={location.pathname === item.path} sidebarOpen={sidebarOpen} />
           ))}
 
-          {/* Vivacity Academy collapsible (hidden when access disabled) */}
+          {/* Vivacity Academy — opens canonical Academy app in a new tab */}
           {academyAccessEnabled && (
-            <>
-              <button
-                onClick={() => setAcademyOpen((prev) => !prev)}
-                className={cn(
-                  "flex items-center gap-3 mx-2 mb-1 w-[calc(100%-16px)] transition-all text-sm rounded-lg min-h-[44px] relative",
-                  sidebarOpen ? "px-4" : "px-0 justify-center",
-                  isAcademyActive
-                    ? "bg-white/15 text-white font-semibold"
-                    : "text-white/80 hover:bg-white/10 hover:text-white"
-                )}
-                style={{ paddingTop: "10px", paddingBottom: "10px" }}
-              >
-                {isAcademyActive && (
-                  <div
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
-                    style={{ backgroundColor: "hsl(189 74% 50%)" }}
-                  />
-                )}
-                <GraduationCap
-                  className="w-[18px] h-[18px] flex-shrink-0"
-                  style={{ color: isAcademyActive ? "hsl(189 74% 50%)" : "currentColor" }}
-                />
-                {sidebarOpen && (
-                  <>
-                    <span className="leading-snug flex-1 text-left">Vivacity Academy</span>
-                    <ChevronDown
-                      className={cn("w-4 h-4 transition-transform duration-200", academyOpen && "rotate-180")}
-                    />
-                  </>
-                )}
-              </button>
-
-              {/* Academy sub-items */}
-              {academyOpen && sidebarOpen && (
-                <div className="ml-4">
-                  {academySubItems.map((sub) => {
-                    const active = location.pathname === sub.path;
-                    return (
-                      <Link
-                        key={sub.path}
-                        to={sub.path}
-                        className={cn(
-                          "flex items-center gap-2 mx-2 mb-0.5 transition-all text-xs rounded-lg min-h-[36px] relative pl-6",
-                          active
-                            ? "bg-white/15 text-white font-semibold"
-                            : "text-white/70 hover:bg-white/[0.08] hover:text-white"
-                        )}
-                        style={{ paddingTop: "6px", paddingBottom: "6px" }}
-                      >
-                        {active && (
-                          <div
-                            className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full"
-                            style={{ backgroundColor: "hsl(189 74% 50%)" }}
-                          />
-                        )}
-                        <span>{sub.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
+            <a
+              href="/academy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "flex items-center gap-3 mx-2 mb-1 transition-all text-sm rounded-lg min-h-[44px] relative text-white/80 hover:bg-white/10 hover:text-white",
+                sidebarOpen ? "px-4" : "px-0 justify-center",
               )}
-            </>
+              style={{ paddingTop: "10px", paddingBottom: "10px" }}
+            >
+              <span
+                className="w-[22px] h-[22px] rounded-md flex items-center justify-center flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, #7130A0, #ED1878)" }}
+              >
+                <GraduationCap className="w-3.5 h-3.5 text-white" />
+              </span>
+              {sidebarOpen && (
+                <>
+                  <span className="leading-snug flex-1">Vivacity Academy</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-white/60 flex-shrink-0" aria-hidden="true" />
+                </>
+              )}
+            </a>
           )}
 
           {/* Items after Academy */}
