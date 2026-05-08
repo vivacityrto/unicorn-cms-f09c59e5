@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, User, Headphones, MessageCircle, Paperclip, X } from "lucide-react";
+import { Send, Loader2, User, Headphones, MessageCircle, Paperclip, X, CheckCircle2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -76,7 +77,7 @@ export function MessageTab({ channel }: MessageTabProps) {
   const [loading, setLoading] = useState(false);
   // For CSC: tenant_conversations.id; for support: help_threads.id
   const [threadId, setThreadId] = useState<string | null>(null);
-  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(channel === "csc");
   // CSC branch: blocks send when participant upsert failed.
   const [cscInitFailed, setCscInitFailed] = useState(false);
   const [cscProfile, setCscProfile] = useState<{ avatar_url: string | null; first_name: string | null; last_name: string | null } | null>(null);
@@ -86,6 +87,8 @@ export function MessageTab({ channel }: MessageTabProps) {
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [subject, setSubject] = useState("");
 
   useEffect(() => {
     return () => {
@@ -116,6 +119,19 @@ export function MessageTab({ channel }: MessageTabProps) {
     setAttachmentPreview(null);
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const file = e.clipboardData.files[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    e.preventDefault();
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      toast.error("Image must be 5 MB or smaller.");
+      return;
+    }
+    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+    setAttachment(file);
+    setAttachmentPreview(URL.createObjectURL(file));
+  };
+
   // ---------- Load history ----------
   useEffect(() => {
     if (!profile?.user_uuid) return;
@@ -123,45 +139,17 @@ export function MessageTab({ channel }: MessageTabProps) {
     let cancelled = false;
 
     (async () => {
+      if (channel !== "csc") return;
       setLoadingHistory(true);
       setMessages([]);
       setThreadId(null);
       setCscInitFailed(false);
       setCscProfile(null);
 
-      if (channel === "csc") {
-        await loadCscThread();
-      } else {
-        await loadSupportThread();
-      }
+      await loadCscThread();
 
       if (!cancelled) setLoadingHistory(false);
     })();
-
-    async function loadSupportThread() {
-      const { data: threads } = await supabase
-        .from("help_threads")
-        .select("id")
-        .eq("user_id", profile!.user_uuid)
-        .eq("channel", "support")
-        .eq("status", "open")
-        .order("updated_at", { ascending: false })
-        .limit(1);
-
-      if (cancelled) return;
-      if (threads && threads.length > 0) {
-        const tid = threads[0].id;
-        setThreadId(tid);
-        const { data: msgs } = await supabase
-          .from("help_messages")
-          .select("id, role, content, created_at")
-          .eq("thread_id", tid)
-          .order("created_at", { ascending: true });
-        if (!cancelled && msgs) {
-          setMessages(msgs.filter(m => m.role === "user" || m.role === "staff") as Message[]);
-        }
-      }
-    }
 
     async function loadCscThread() {
       const tenantId = profile!.tenant_id;
@@ -411,32 +399,28 @@ export function MessageTab({ channel }: MessageTabProps) {
   };
 
   async function sendSupport(userMsg: string) {
-    let currentThreadId = threadId;
+    const diagnosticMeta = {
+      page_path: window.location.pathname,
+      browser: getBrowserName(navigator.userAgent),
+      os: getOSName(navigator.userAgent),
+      screen: `${window.innerWidth}x${window.innerHeight}`,
+      ...(subject.trim() ? { subject: subject.trim() } : {}),
+    };
 
-    if (!currentThreadId) {
-      const diagnosticMeta = {
-        page_path: window.location.pathname,
-        browser: getBrowserName(navigator.userAgent),
-        os: getOSName(navigator.userAgent),
-        screen: `${window.innerWidth}x${window.innerHeight}`,
-      };
+    const { data: newThread, error: threadError } = await supabase
+      .from("help_threads")
+      .insert({
+        tenant_id: profile!.tenant_id,
+        user_id: profile!.user_uuid,
+        channel: "support",
+        status: "open",
+        metadata: diagnosticMeta,
+      } as any)
+      .select("id")
+      .single();
 
-      const { data: newThread, error: threadError } = await supabase
-        .from("help_threads")
-        .insert({
-          tenant_id: profile!.tenant_id,
-          user_id: profile!.user_uuid,
-          channel: "support",
-          status: "open",
-          metadata: diagnosticMeta,
-        } as any)
-        .select("id")
-        .single();
-
-      if (threadError) throw threadError;
-      currentThreadId = newThread.id;
-      setThreadId(currentThreadId);
-    }
+    if (threadError) throw threadError;
+    const currentThreadId = newThread.id;
 
     let messageMetadata: Record<string, any> | null = null;
     const fileToUpload = attachment;
@@ -452,7 +436,7 @@ export function MessageTab({ channel }: MessageTabProps) {
       };
     }
 
-    const { data: msg, error: msgError } = await supabase
+    const { error: msgError } = await supabase
       .from("help_messages")
       .insert({
         thread_id: currentThreadId,
@@ -460,19 +444,20 @@ export function MessageTab({ channel }: MessageTabProps) {
         role: "user",
         content: userMsg || "(image attached)",
         ...(messageMetadata ? { metadata: messageMetadata } : {}),
-      } as any)
-      .select("id, role, content, created_at")
-      .single();
+      } as any);
 
     if (msgError) throw msgError;
-
-    setMessages(prev => [...prev, msg as Message]);
-    clearAttachment();
 
     await supabase
       .from("help_threads")
       .update({ updated_at: new Date().toISOString() })
       .eq("id", currentThreadId);
+
+    setSubmitted(true);
+    setInput("");
+    setSubject("");
+    setThreadId(null);
+    clearAttachment();
   }
 
   async function sendCsc(userMsg: string) {
@@ -523,16 +508,108 @@ export function MessageTab({ channel }: MessageTabProps) {
 
   const EmptyIcon = config.emptyIcon;
 
+  if (channel === "support") {
+    return (
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-border space-y-1">
+          <p className="text-sm text-muted-foreground">{config.subtitle}</p>
+          {config.fallback && (
+            <p className="text-xs text-muted-foreground">
+              Or email: <span className="text-foreground">{config.fallback}</span>
+            </p>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {submitted ? (
+            <div className="flex flex-col items-center justify-center text-center space-y-3 py-12">
+              <CheckCircle2 className="h-12 w-12 text-green-500" />
+              <div>
+                <p className="font-medium text-secondary">Ticket submitted</p>
+                <p className="text-sm text-muted-foreground mt-1">Our team will be in touch.</p>
+              </div>
+              <Button variant="outline" onClick={() => setSubmitted(false)}>
+                Submit another ticket
+              </Button>
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendMessage();
+              }}
+              className="space-y-3"
+            >
+              <Input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Subject (optional)"
+                disabled={loading}
+              />
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onPaste={handlePaste}
+                placeholder={config.placeholder}
+                rows={4}
+                disabled={loading}
+              />
+              {attachmentPreview && (
+                <div className="relative inline-block">
+                  <img
+                    src={attachmentPreview}
+                    alt="Attachment preview"
+                    className="h-16 w-16 object-cover rounded border border-border"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearAttachment}
+                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
+                    aria-label="Remove attachment"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                  aria-label="Attach image"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading || (!input.trim() && !attachment)}
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                  Send Ticket
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border space-y-1">
         <p className="text-sm text-muted-foreground">{config.subtitle}</p>
-        {channel === "support" && config.fallback && (
-          <p className="text-xs text-muted-foreground">
-            Or email: <span className="text-foreground">{config.fallback}</span>
-          </p>
-        )}
       </div>
 
       {/* Messages */}
@@ -554,7 +631,6 @@ export function MessageTab({ channel }: MessageTabProps) {
             {messages.map((msg) => {
               const staffName = msg.sender_user_uuid ? staffNameMap.get(msg.sender_user_uuid) : undefined;
               const staffAvatar = msg.sender_user_uuid ? staffAvatarMap.get(msg.sender_user_uuid) : undefined;
-              const displayName = staffName || "Vivacity Team";
               const initials = staffName
                 ? staffName.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase()
                 : "VT";
@@ -598,23 +674,6 @@ export function MessageTab({ channel }: MessageTabProps) {
 
       {/* Input */}
       <div className="px-4 py-3 border-t border-border space-y-2">
-        {channel === "support" && attachmentPreview && (
-          <div className="relative inline-block">
-            <img
-              src={attachmentPreview}
-              alt="Attachment preview"
-              className="h-16 w-16 object-cover rounded border border-border"
-            />
-            <button
-              type="button"
-              onClick={clearAttachment}
-              className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground"
-              aria-label="Remove attachment"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        )}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -622,42 +681,17 @@ export function MessageTab({ channel }: MessageTabProps) {
           }}
           className="flex gap-2"
         >
-          {channel === "support" && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={loading}
-                aria-label="Attach image"
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-            </>
-          )}
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={config.placeholder}
-            disabled={loading || (channel === "csc" && cscInitFailed)}
+            disabled={loading || cscInitFailed}
             className="flex-1"
           />
           <Button
             type="submit"
             size="icon"
-            disabled={
-              loading ||
-              (channel === "csc" && cscInitFailed) ||
-              (channel === "csc" ? !input.trim() : !input.trim() && !attachment)
-            }
+            disabled={loading || cscInitFailed || !input.trim()}
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
