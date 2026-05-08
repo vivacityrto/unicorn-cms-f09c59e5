@@ -304,7 +304,6 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
         {/* Action buttons */}
         <PackageActionRow
           packageInstanceId={packageInstanceId}
-          managerId={dashboard?.manager_id ?? null}
         />
       </CardContent>
     </Card>
