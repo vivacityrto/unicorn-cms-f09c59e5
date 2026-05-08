@@ -60118,6 +60118,33 @@ export type Database = {
           target_table: string
         }[]
       }
+      complete_academy_enrollment: {
+        Args: { p_enrollment_id: number }
+        Returns: {
+          completed_at: string | null
+          course_id: number
+          created_at: string | null
+          enrolled_at: string | null
+          enrolled_by: string | null
+          expires_at: string | null
+          id: number
+          notes: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source: string | null
+          status: string | null
+          tenant_id: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "academy_enrollments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_audit_stage_tasks: {
         Args: { p_audit_id: string; p_milestone: string }
         Returns: number
@@ -60331,6 +60358,33 @@ export type Database = {
           p_tenant_id?: number
         }
         Returns: string
+      }
+      enrol_in_academy_course: {
+        Args: { p_course_id: number }
+        Returns: {
+          completed_at: string | null
+          course_id: number
+          created_at: string | null
+          enrolled_at: string | null
+          enrolled_by: string | null
+          expires_at: string | null
+          id: number
+          notes: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source: string | null
+          status: string | null
+          tenant_id: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "academy_enrollments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       finalise_meeting_minutes: {
         Args: { p_meeting_id: string; p_summary: string }
@@ -61783,6 +61837,33 @@ export type Database = {
           p_user_id?: string
         }
         Returns: Json
+      }
+      unenrol_from_academy_course: {
+        Args: { p_course_id: number }
+        Returns: {
+          completed_at: string | null
+          course_id: number
+          created_at: string | null
+          enrolled_at: string | null
+          enrolled_by: string | null
+          expires_at: string | null
+          id: number
+          notes: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source: string | null
+          status: string | null
+          tenant_id: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "academy_enrollments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       unlock_meeting_minutes: {
         Args: { p_meeting_id: string; p_reason: string }
