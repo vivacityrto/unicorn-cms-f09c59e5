@@ -20,7 +20,8 @@ export default function PostSignInRedirect() {
   const [timedOut, setTimedOut] = useState(false);
 
   const fresh =
-    (location.state as { fresh?: boolean } | null)?.fresh === true;
+    (location.state as { fresh?: boolean } | null)?.fresh === true ||
+    new URLSearchParams(location.search).get("fresh") === "1";
 
   useEffect(() => {
     const t = window.setTimeout(() => setTimedOut(true), FALLBACK_MS);

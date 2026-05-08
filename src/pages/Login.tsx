@@ -21,11 +21,11 @@ const Login = () => {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
 
-  // Redirect if already logged in
+  // Redirect if already logged in (returning session — no fresh flag, suppress toast)
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        navigate("/post-sign-in");
       }
     });
   }, [navigate]);
@@ -47,7 +47,7 @@ const Login = () => {
         description: "Redirecting...",
       });
 
-      navigate("/dashboard");
+      navigate("/post-sign-in", { state: { fresh: true } });
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -123,7 +123,7 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/post-sign-in?fresh=1`,
         },
       });
 
@@ -256,7 +256,7 @@ const Login = () => {
                         provider: 'azure',
                         options: {
                           scopes: 'openid profile email',
-                          redirectTo: `${window.location.origin}/dashboard`,
+                          redirectTo: `${window.location.origin}/post-sign-in?fresh=1`,
                         },
                       });
                       if (error) throw error;
