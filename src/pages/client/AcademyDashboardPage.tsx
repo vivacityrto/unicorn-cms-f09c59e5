@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 import { useAcademyDashboardStats, formatDuration } from "@/hooks/useAcademyCourses";
 import { useMyEnrolledCourses } from "@/hooks/academy/useMyEnrolledCourses";
+import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const roleTiles = [
@@ -67,15 +68,18 @@ const statusLabel = (s: string | null) =>
 export default function AcademyDashboardPage() {
   const { data: stats, isLoading: statsLoading } = useAcademyDashboardStats();
   const { data: myCoursesAll = [], isLoading: coursesLoading } = useMyEnrolledCourses();
+  const { profile } = useAuth();
   const myCourses = myCoursesAll
     .filter((c) => c.enrollment_status === "active")
     .slice(0, 3);
 
+  const firstName = profile?.first_name?.trim();
+
   const statCards = [
-    { label: "Courses", value: stats?.courses ?? 0, icon: BookOpen },
-    { label: "In Progress", value: stats?.inProgress ?? 0, icon: Clock },
-    { label: "Certificates", value: stats?.certificates ?? 0, icon: Award },
-    { label: "Events", value: stats?.events ?? 0, icon: Calendar },
+    { label: "Courses", value: stats?.courses ?? 0, icon: BookOpen, accent: "#7130A0" },
+    { label: "In Progress", value: stats?.inProgress ?? 0, icon: Clock, accent: "#23C0DD" },
+    { label: "Certificates", value: stats?.certificates ?? 0, icon: Award, accent: "#F9CB0C" },
+    { label: "Events", value: stats?.events ?? 0, icon: Calendar, accent: "#ED1878" },
   ];
 
   return (
@@ -85,18 +89,31 @@ export default function AcademyDashboardPage() {
       icon={<GraduationCap className="h-6 w-6" />}
       accentColour="#23c0dd"
     >
+      {/* Welcome strip */}
+      <div
+        className="rounded-xl px-6 py-5 text-white"
+        style={{ background: "var(--viv-grad-hero)" }}
+      >
+        <h2 className="viv-font-anton text-3xl text-white leading-tight">
+          {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
+        </h2>
+        <p className="text-sm text-white/85 mt-1">
+          Pick up where you left off, or explore a new pathway below.
+        </p>
+      </div>
+
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((s) => (
-          <Card key={s.label}>
+          <Card key={s.label} className="overflow-hidden border-l-[4px]" style={{ borderLeftColor: s.accent }}>
             <CardContent className="pt-6 flex flex-col items-center text-center">
-              <s.icon className="h-6 w-6 mb-2" style={{ color: "#23c0dd" }} />
+              <s.icon className="h-6 w-6 mb-2" style={{ color: s.accent }} />
               {statsLoading ? (
                 <Skeleton className="h-8 w-12 mb-1" />
               ) : (
-                <span className="text-3xl font-bold text-foreground">{s.value}</span>
+                <span className="viv-font-anton text-3xl text-[var(--viv-acai)]">{s.value}</span>
               )}
-              <span className="text-sm text-muted-foreground mt-1">{s.label}</span>
+              <span className="viv-font-binate text-[11px] text-[var(--viv-acai)]/70 mt-1">{s.label}</span>
             </CardContent>
           </Card>
         ))}

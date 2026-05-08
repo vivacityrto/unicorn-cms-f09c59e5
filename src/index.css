@@ -833,3 +833,26 @@
   85% { transform: rotate(-2deg); }
   100% { transform: rotate(0); }
 }
+
+/* ===== Vivacity Academy brand scope (Phase 3) ===== */
+.academy-scope {
+  --viv-purple: #7130A0;
+  --viv-fuchsia: #ED1878;
+  --viv-cyan: #23C0DD;
+  --viv-cyan-light: #A6F1FF;
+  --viv-acai: #44235F;
+  --viv-purple-light: #DFD8E8;
+  --viv-gold: #F9CB0C;
+  --viv-grad-hero: linear-gradient(90deg, #7130A0 0%, #ED1878 100%);
+}
+.academy-scope .viv-font-anton {
+  font-family: 'Anton', 'Montserrat', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+/* TODO(brand): swap Montserrat fallback for Binate when licensed */
+.academy-scope .viv-font-binate {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

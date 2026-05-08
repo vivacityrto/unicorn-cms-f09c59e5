@@ -23,6 +23,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useTenantType } from "@/contexts/TenantTypeContext";
 import { AcademyTopBar } from "@/components/layout/AcademyTopBar";
 import { AcademyFooter } from "@/components/layout/AcademyFooter";
+import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 
 // Academy menu items
 const academyPathwaysItems = [
@@ -89,10 +90,10 @@ export const AcademyLayout = ({
         key={item.path}
         to={item.path}
         data-active={isActive}
-        className={`flex items-center gap-3 px-4 mx-2 mb-1 transition-colors text-sm rounded-lg ${
+        className={`flex items-center gap-3 px-4 mx-2 mb-1 transition-colors text-sm rounded-lg border-l-[3px] ${
           isActive
-            ? "bg-primary/10 border border-primary/20 text-primary font-medium"
-            : "text-foreground/70 hover:bg-muted hover:text-foreground"
+            ? "bg-[var(--viv-cyan-light)] text-[var(--viv-purple)] font-semibold border-[var(--viv-fuchsia)]"
+            : "text-[var(--viv-acai)]/80 hover:bg-[var(--viv-purple-light)]/40 hover:text-[var(--viv-purple)] border-transparent"
         }`}
         style={{ paddingTop: "12px", paddingBottom: "12px" }}
       >
@@ -119,8 +120,8 @@ export const AcademyLayout = ({
         className="mt-4"
       >
         {sidebarOpen && (
-          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-muted py-2 rounded-lg transition-colors">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-[var(--viv-purple-light)]/30 py-2 rounded-lg transition-colors">
+            <p className="viv-font-binate text-[11px] text-[var(--viv-acai)]">
               {title}
             </p>
             {sectionsOpen[sectionKey] ? (
@@ -136,38 +137,39 @@ export const AcademyLayout = ({
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <HelpCenterProvider>
+    <div className="min-h-screen bg-background academy-scope">
       {/* Sidebar - Academy themed (lighter, learning-focused) */}
       <aside
-        className={`${sidebarOpen ? "w-64" : "w-20"} bg-card border-r border-border transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30`}
+        className={`${sidebarOpen ? "w-64" : "w-20"} bg-card border-r border-[var(--viv-purple-light)] transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30`}
       >
         {/* Sidebar Header */}
         {sidebarOpen ? (
-          <div className="relative px-4 pt-4 pb-4 border-b border-border">
+          <div className="relative px-4 pt-4 pb-4" style={{ background: "var(--viv-grad-hero)" }}>
             {/* Logo and branding */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/70">
-                <GraduationCap className="h-5 w-5 text-primary-foreground" />
+              <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm">
+                <GraduationCap className="h-5 w-5 text-white" />
               </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-lg text-foreground">Vivacity</span>
-                <span className="text-xs text-muted-foreground">Academy</span>
+              <div className="flex flex-col leading-tight">
+                <span className="viv-font-anton text-xl text-white">Vivacity</span>
+                <span className="text-xs text-white/80">Academy</span>
               </div>
             </div>
 
             {/* Close button */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="absolute top-4 right-3 p-1.5 hover:bg-muted rounded-full transition-all duration-200 text-muted-foreground hover:text-foreground"
+              className="absolute top-4 right-3 p-1.5 hover:bg-white/15 rounded-full transition-all duration-200 text-white/80 hover:text-white"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         ) : (
-          <div className="h-16 flex items-center justify-center px-4 border-b border-border">
+          <div className="h-16 flex items-center justify-center px-4" style={{ background: "var(--viv-grad-hero)" }}>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-muted rounded-lg transition-colors text-foreground"
+              className="p-2 hover:bg-white/15 rounded-lg transition-colors text-white"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -193,9 +195,9 @@ export const AcademyLayout = ({
         </nav>
 
         {/* Bottom section */}
-        <div className="p-4 border-t border-border">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Sparkles className="h-3 w-3" />
+        <div className="p-4 border-t border-[var(--viv-purple-light)]">
+          <div className="inline-flex items-center gap-2 text-xs px-2.5 py-1 rounded-full bg-[var(--viv-purple-light)] text-[var(--viv-fuchsia)] font-medium">
+            <Sparkles className="h-3 w-3 text-[var(--viv-gold)]" />
             <span>
               Academy{" "}
               {academyTier
@@ -219,6 +221,8 @@ export const AcademyLayout = ({
         {/* Academy Footer */}
         <AcademyFooter />
       </div>
+      <HelpCenterDrawer />
     </div>
+    </HelpCenterProvider>
   );
 };
