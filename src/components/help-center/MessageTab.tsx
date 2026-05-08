@@ -77,7 +77,7 @@ export function MessageTab({ channel }: MessageTabProps) {
   const [loading, setLoading] = useState(false);
   // For CSC: tenant_conversations.id; for support: help_threads.id
   const [threadId, setThreadId] = useState<string | null>(null);
-  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(channel === "csc");
   // CSC branch: blocks send when participant upsert failed.
   const [cscInitFailed, setCscInitFailed] = useState(false);
   const [cscProfile, setCscProfile] = useState<{ avatar_url: string | null; first_name: string | null; last_name: string | null } | null>(null);
@@ -87,6 +87,8 @@ export function MessageTab({ channel }: MessageTabProps) {
   const [attachment, setAttachment] = useState<File | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [subject, setSubject] = useState("");
 
   useEffect(() => {
     return () => {
