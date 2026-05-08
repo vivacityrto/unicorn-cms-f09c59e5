@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useState, useEffect, useRef, useCallback } from "react";
-import Player from "@vimeo/player";
+import VimeoPlayer from "@/components/academy/VimeoPlayer";
 import { sanitizeHtml } from "@/lib/sanitize";
 import {
   AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalDescription, AppModalBody, AppModalFooter,
@@ -25,11 +25,7 @@ export default function AcademyLessonViewerPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [livePercent, setLivePercent] = useState<number>(0);
   const [livePosition, setLivePosition] = useState<number>(0);
-  const [videoError, setVideoError] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const playerRef = useRef<Player | null>(null);
-  const lastUpsertRef = useRef<number>(0);
   const autoCompletedRef = useRef<boolean>(false);
   const prevEnrollmentStatusRef = useRef<string | null>(null);
 
@@ -270,81 +266,11 @@ export default function AcademyLessonViewerPage() {
     qc.invalidateQueries({ queryKey: ["academy-enrollment-detail"] });
   }, [canTrackProgress, lesson, course, enrollment, completedLessonIds, qc]);
 
-  // Build Vimeo embed URL
-  const vimeoEmbedUrl = video?.vimeo_url
-    ? video.vimeo_url.replace("vimeo.com/", "player.vimeo.com/video/").split("?")[0] +
-      "?autoplay=0&title=0&byline=0&portrait=0&texttrack=en"
-    : null;
-
-  // Wire Vimeo SDK
-  useEffect(() => {
-    if (!vimeoEmbedUrl || !iframeRef.current) return;
-    setVideoError(false);
-    const player = new Player(iframeRef.current);
-    playerRef.current = player;
-
-    let started = false;
-    const startPos = currentProgress?.last_position_seconds ?? 0;
-    if (startPos > 5) {
-      player.setCurrentTime(startPos).catch(() => {});
-    }
-
-    const onPlay = () => {
-      if (started) return;
-      started = true;
-      if (canTrackProgress) {
-        upsertProgress({ started_at: new Date().toISOString() });
-      }
-    };
-
-    const onTimeUpdate = (e: { seconds: number; percent: number; duration: number }) => {
-      const pct = Math.floor(e.percent * 100);
-      const secs = Math.floor(e.seconds);
-      setLivePercent(pct);
-      setLivePosition(secs);
-
-      const now = Date.now();
-      if (canTrackProgress && now - lastUpsertRef.current >= PROGRESS_THROTTLE_MS) {
-        lastUpsertRef.current = now;
-        upsertProgress({
-          last_position_seconds: secs,
-          watch_seconds: secs,
-          completion_percentage: pct,
-        });
-      }
-
-      if (pct >= completionThreshold && canTrackProgress && !autoCompletedRef.current) {
-        autoCompleteLesson();
-      }
-    };
-
-    const onEnded = () => {
-      if (canTrackProgress) autoCompleteLesson();
-    };
-
-    const onError = () => setVideoError(true);
-
-    player.on("play", onPlay);
-    player.on("timeupdate", onTimeUpdate);
-    player.on("ended", onEnded);
-    player.on("error", onError);
-
-    return () => {
-      player.off("play", onPlay);
-      player.off("timeupdate", onTimeUpdate);
-      player.off("ended", onEnded);
-      player.off("error", onError);
-      playerRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vimeoEmbedUrl, canTrackProgress, completionThreshold, lesson?.id]);
-
   // Reset autocomplete latch when lesson changes
   useEffect(() => {
     autoCompletedRef.current = false;
     setLivePercent(currentProgress?.completion_percentage ?? 0);
     setLivePosition(currentProgress?.last_position_seconds ?? 0);
-    lastUpsertRef.current = 0;
   }, [lesson?.id, currentProgress?.completion_percentage, currentProgress?.last_position_seconds]);
 
   // Course completion celebration
@@ -618,42 +544,37 @@ export default function AcademyLessonViewerPage() {
         )}
 
         {/* Video Player */}
-        {vimeoEmbedUrl && !videoError && (
-          <div className="relative w-full rounded-xl overflow-hidden shadow-sm" style={{ paddingBottom: "56.25%", background: "#000" }}>
-            <iframe
-              ref={iframeRef}
-              src={vimeoEmbedUrl}
-              className="absolute inset-0 w-full h-full"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
-              title={lesson.title}
-            />
-          </div>
+        {(video?.vimeo_url || lesson.lesson_type === "video") && (
+          <VimeoPlayer
+            vimeoUrl={video?.vimeo_url ?? null}
+            title={lesson.title}
+            startPositionSeconds={currentProgress?.last_position_seconds ?? 0}
+            completionThreshold={completionThreshold}
+            onFirstPlay={() => {
+              if (canTrackProgress) {
+                upsertProgress({ started_at: new Date().toISOString() });
+              }
+            }}
+            onProgress={({ percentInt, seconds }) => {
+              setLivePercent(percentInt);
+              setLivePosition(seconds);
+              if (canTrackProgress) {
+                upsertProgress({
+                  last_position_seconds: seconds,
+                  watch_seconds: seconds,
+                  completion_percentage: percentInt,
+                });
+              }
+            }}
+            onCompletionThresholdReached={() => {
+              if (canTrackProgress) autoCompleteLesson();
+            }}
+            onEnded={() => {
+              if (canTrackProgress) autoCompleteLesson();
+            }}
+          />
         )}
 
-        {/* Video error */}
-        {vimeoEmbedUrl && videoError && (
-          <div className="flex items-center justify-center rounded-xl border border-dashed bg-muted/30" style={{ height: 300 }}>
-            <div className="text-center">
-              <AlertTriangle className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">Video unavailable</p>
-              <p className="text-xs text-muted-foreground mt-1">Please try again or contact support.</p>
-            </div>
-          </div>
-        )}
-
-        {/* No video placeholder */}
-        {!vimeoEmbedUrl && lesson.lesson_type === "video" && (
-          <div
-            className="flex items-center justify-center rounded-xl"
-            style={{ height: 300, background: `linear-gradient(135deg, ${ACCENT} 0%, #7130A0 100%)` }}
-          >
-            <div className="text-center text-white">
-              <Play className="h-12 w-12 mx-auto mb-2 opacity-60" />
-              <p className="text-sm opacity-80">Video not yet available</p>
-            </div>
-          </div>
-        )}
 
         {/* Lesson header */}
         <div className="space-y-2">

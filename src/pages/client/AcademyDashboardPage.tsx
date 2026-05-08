@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
-import { useAcademyDashboardStats, useMyAcademyCourses, formatDuration } from "@/hooks/useAcademyCourses";
+import { useAcademyDashboardStats, formatDuration } from "@/hooks/useAcademyCourses";
+import { useMyEnrolledCourses } from "@/hooks/academy/useMyEnrolledCourses";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const roleTiles = [
@@ -65,7 +66,10 @@ const statusLabel = (s: string | null) =>
 
 export default function AcademyDashboardPage() {
   const { data: stats, isLoading: statsLoading } = useAcademyDashboardStats();
-  const { data: myCourses = [], isLoading: coursesLoading } = useMyAcademyCourses();
+  const { data: myCoursesAll = [], isLoading: coursesLoading } = useMyEnrolledCourses();
+  const myCourses = myCoursesAll
+    .filter((c) => c.enrollment_status === "active")
+    .slice(0, 3);
 
   const statCards = [
     { label: "Courses", value: stats?.courses ?? 0, icon: BookOpen },
@@ -150,28 +154,39 @@ export default function AcademyDashboardPage() {
               <p className="text-sm">You haven't enrolled in any courses yet.</p>
             </div>
           )}
-          {!coursesLoading && myCourses.map((c) => (
-            <div key={c.course_id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm text-foreground">{c.course_title}</h4>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant={statusVariant(c.enrollment_status)} className="text-xs">
-                    {statusLabel(c.enrollment_status)}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">{formatDuration(c.estimated_minutes)}</span>
+          {!coursesLoading && myCourses.map((c) => {
+            const target = c.next_lesson
+              ? `/academy/course/${c.next_lesson.slug}/lesson/${c.next_lesson.lessonId}`
+              : c.course_slug
+                ? `/academy/course/${c.course_slug}`
+                : "/academy/courses";
+            return (
+              <Link
+                key={c.enrollment_id}
+                to={target}
+                className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm text-foreground">{c.course_title}</h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant={statusVariant(c.enrollment_status)} className="text-xs">
+                      {statusLabel(c.enrollment_status)}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{formatDuration(c.estimated_minutes)}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="text-xs font-medium text-muted-foreground w-8 text-right">
-                  {c.progress_percentage ?? 0}%
-                </span>
-                <Progress
-                  value={c.progress_percentage ?? 0}
-                  className="w-24 h-2 [&>div]:bg-[#23c0dd]"
-                />
-              </div>
-            </div>
-          ))}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-xs font-medium text-muted-foreground w-8 text-right">
+                    {c.progress_percentage ?? 0}%
+                  </span>
+                  <Progress
+                    value={c.progress_percentage ?? 0}
+                    className="w-24 h-2 [&>div]:bg-[#23c0dd]"
+                  />
+                </div>
+              </Link>
+            );
+          })}
         </CardContent>
       </Card>
 

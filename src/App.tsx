@@ -186,9 +186,8 @@ const ComplianceAuditForm = lazy(() => import("./pages/ComplianceAuditForm"));
 const ComplianceAuditReport = lazy(() => import("./pages/ComplianceAuditReport"));
 
 // Academy pages (placeholder)
-const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
-const AcademyCourses = lazy(() => import("./pages/academy/AcademyCourses"));
-const AcademyCertificates = lazy(() => import("./pages/academy/AcademyCertificates"));
+const AcademyCoursesListPage = lazy(() => import("./pages/academy/AcademyCoursesListPage"));
+const AcademyCertificatesPage = lazy(() => import("./pages/academy/AcademyCertificatesPage"));
 const AcademyEvents = lazy(() => import("./pages/academy/AcademyEvents"));
 const AcademyCommunity = lazy(() => import("./pages/academy/AcademyCommunity"));
 const AcademyTeam = lazy(() => import("./pages/academy/AcademyTeam"));
@@ -1077,9 +1076,8 @@ const App = () => (
             <Route path="/superadmin/academy/builder/:courseId" element={<ProtectedRoute requireSuperAdmin><AcademyBuilderCourse /></ProtectedRoute>} />
             <Route path="/superadmin/academy/package-course-rules" element={<ProtectedRoute requireSuperAdmin><AcademyPackageCourseRulesPage /></ProtectedRoute>} />
             {/* Academy Routes */}
-            <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />
-            <Route path="/academy/courses" element={<ProtectedRoute><AcademyCourses /></ProtectedRoute>} />
-            <Route path="/academy/certificates" element={<ProtectedRoute><AcademyCertificates /></ProtectedRoute>} />
+            <Route path="/academy/courses" element={<ProtectedRoute><AcademyCoursesListPage /></ProtectedRoute>} />
+            <Route path="/academy/certificates" element={<ProtectedRoute><AcademyCertificatesPage /></ProtectedRoute>} />
             <Route path="/academy/events" element={<ProtectedRoute><AcademyEvents /></ProtectedRoute>} />
             <Route path="/academy/community" element={<ProtectedRoute><AcademyCommunity /></ProtectedRoute>} />
             <Route path="/academy/team" element={<ProtectedRoute><AcademyTeam /></ProtectedRoute>} />
