@@ -60153,6 +60153,33 @@ export type Database = {
         Args: { p_audit_id: string; p_milestone: string }
         Returns: number
       }
+      complete_enrollment_as_impersonator: {
+        Args: { p_enrollment_id: number; p_target_user_id: string }
+        Returns: {
+          completed_at: string | null
+          course_id: number
+          created_at: string | null
+          enrolled_at: string | null
+          enrolled_by: string | null
+          expires_at: string | null
+          id: number
+          notes: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source: string | null
+          status: string | null
+          tenant_id: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "academy_enrollments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_meeting_instance: {
         Args: { p_meeting_id: string }
         Returns: boolean
@@ -60358,6 +60385,33 @@ export type Database = {
           p_tenant_id?: number
         }
         Returns: string
+      }
+      enrol_as_impersonator: {
+        Args: { p_course_id: number; p_target_user_id: string }
+        Returns: {
+          completed_at: string | null
+          course_id: number
+          created_at: string | null
+          enrolled_at: string | null
+          enrolled_by: string | null
+          expires_at: string | null
+          id: number
+          notes: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          source: string | null
+          status: string | null
+          tenant_id: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "academy_enrollments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       enrol_in_academy_course: {
         Args: { p_course_id: number }
