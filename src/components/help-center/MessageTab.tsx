@@ -139,45 +139,17 @@ export function MessageTab({ channel }: MessageTabProps) {
     let cancelled = false;
 
     (async () => {
+      if (channel !== "csc") return;
       setLoadingHistory(true);
       setMessages([]);
       setThreadId(null);
       setCscInitFailed(false);
       setCscProfile(null);
 
-      if (channel === "csc") {
-        await loadCscThread();
-      } else {
-        await loadSupportThread();
-      }
+      await loadCscThread();
 
       if (!cancelled) setLoadingHistory(false);
     })();
-
-    async function loadSupportThread() {
-      const { data: threads } = await supabase
-        .from("help_threads")
-        .select("id")
-        .eq("user_id", profile!.user_uuid)
-        .eq("channel", "support")
-        .eq("status", "open")
-        .order("updated_at", { ascending: false })
-        .limit(1);
-
-      if (cancelled) return;
-      if (threads && threads.length > 0) {
-        const tid = threads[0].id;
-        setThreadId(tid);
-        const { data: msgs } = await supabase
-          .from("help_messages")
-          .select("id, role, content, created_at")
-          .eq("thread_id", tid)
-          .order("created_at", { ascending: true });
-        if (!cancelled && msgs) {
-          setMessages(msgs.filter(m => m.role === "user" || m.role === "staff") as Message[]);
-        }
-      }
-    }
 
     async function loadCscThread() {
       const tenantId = profile!.tenant_id;
