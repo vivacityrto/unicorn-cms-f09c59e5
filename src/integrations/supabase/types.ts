@@ -60549,6 +60549,39 @@ export type Database = {
       }
       get_audit_report: { Args: { p_audit_id: number }; Returns: Json }
       get_client_eos_overview: { Args: { p_client_id: string }; Returns: Json }
+      get_client_package_dashboard: {
+        Args: { p_package_instance_id?: number; p_tenant_id: number }
+        Returns: {
+          current_stage_shortname: string
+          current_stage_sortorder: number
+          end_date: string
+          hours_added: number
+          hours_included: number
+          hours_pct_used: number
+          hours_remaining: number
+          hours_total: number
+          hours_used: number
+          is_complete: boolean
+          last_activity_at: string
+          manager_id: string
+          open_tasks: number
+          overdue_tasks: number
+          package_instance_id: number
+          package_name: string
+          package_type: string
+          pinned_note_priority: string
+          pinned_note_severity: string
+          pinned_note_text: string
+          pinned_note_title: string
+          pinned_note_updated_at: string
+          progress_mode: string
+          stages_complete: number
+          stages_total: number
+          start_date: string
+          status_pill: string
+          tenant_id: number
+        }[]
+      }
       get_complete_schema: {
         Args: never
         Returns: {
