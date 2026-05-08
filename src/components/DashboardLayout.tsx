@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, MapPin, Database, FileCheck, Tags, Globe, GraduationCap } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,6 +16,7 @@ import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
 import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupReminderModal";
 import { cn } from "@/lib/utils";
 import { useTeamUnreadCount } from "@/hooks/useTeamUnreadCount";
+import { useSupportTicketsBadge } from "@/hooks/useSupportTicketsBadge";
 
 // ============================================================
 // VIVACITY TEAM SIDEBAR - FINAL AUTHORITY MODEL
@@ -40,6 +41,7 @@ const clientsMenuItems = [
   { icon: Package2, label: "Packages", path: "/manage-packages" },
   { icon: FileText, label: "Documents", path: "/manage-documents" },
   { icon: Mail, label: "Communications", path: "/communications" },
+  { icon: LifeBuoy, label: "Support Tickets", path: "/support-tickets" },
   { icon: Lightbulb, label: "RTO Tips", path: "/rto-tips" },
   { icon: FileCheck, label: "Compliance Auditor", path: "/compliance-audits" },
   { icon: ClipboardCheck, label: "Audits", path: "/audits" },
@@ -173,6 +175,7 @@ export const DashboardLayout = ({
     getBestTab,
   } = useProfileSetupReminder();
   const teamUnreadCount = useTeamUnreadCount();
+  const supportTicketsCount = useSupportTicketsBadge();
 
   // Determine user role
   const userRole = profile?.unicorn_role || "User";
@@ -464,11 +467,13 @@ export const DashboardLayout = ({
               {renderSection(
                 "clients",
                 "Clients",
-                clientsMenuItems.map(item =>
-                  item.path === "/communications"
-                    ? { ...item, badge: teamUnreadCount || undefined }
-                    : item
-                ),
+                clientsMenuItems.map(item => {
+                  if (item.path === "/communications")
+                    return { ...item, badge: teamUnreadCount || undefined };
+                  if (item.path === "/support-tickets")
+                    return { ...item, badge: supportTicketsCount || undefined };
+                  return item;
+                }),
                 "clients"
               )}
 

@@ -161,6 +161,7 @@ const NewSuggestionForm = lazy(() => import("./pages/NewSuggestionForm"));
 const SuggestionDetail = lazy(() => import("./pages/SuggestionDetail"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
 const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
+const SupportTicketsWrapper = lazy(() => import("./pages/SupportTicketsWrapper"));
 const AcademyDashboardWrapperNew = lazy(() => import("./pages/client/AcademyDashboardWrapper"));
 const AcademyTrainerWrapperNew = lazy(() => import("./pages/client/AcademyTrainerWrapper"));
 const AcademyComplianceManagerWrapperNew = lazy(() => import("./pages/client/AcademyComplianceManagerWrapper"));
@@ -576,6 +577,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <TeamCommunicationsWrapper />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/support-tickets" 
+              element={
+                <ProtectedRoute>
+                  <SupportTicketsWrapper />
                 </ProtectedRoute>
               } 
             />
