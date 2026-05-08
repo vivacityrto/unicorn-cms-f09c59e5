@@ -544,42 +544,37 @@ export default function AcademyLessonViewerPage() {
         )}
 
         {/* Video Player */}
-        {vimeoEmbedUrl && !videoError && (
-          <div className="relative w-full rounded-xl overflow-hidden shadow-sm" style={{ paddingBottom: "56.25%", background: "#000" }}>
-            <iframe
-              ref={iframeRef}
-              src={vimeoEmbedUrl}
-              className="absolute inset-0 w-full h-full"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
-              title={lesson.title}
-            />
-          </div>
+        {(video?.vimeo_url || lesson.lesson_type === "video") && (
+          <VimeoPlayer
+            vimeoUrl={video?.vimeo_url ?? null}
+            title={lesson.title}
+            startPositionSeconds={currentProgress?.last_position_seconds ?? 0}
+            completionThreshold={completionThreshold}
+            onFirstPlay={() => {
+              if (canTrackProgress) {
+                upsertProgress({ started_at: new Date().toISOString() });
+              }
+            }}
+            onProgress={({ percentInt, seconds }) => {
+              setLivePercent(percentInt);
+              setLivePosition(seconds);
+              if (canTrackProgress) {
+                upsertProgress({
+                  last_position_seconds: seconds,
+                  watch_seconds: seconds,
+                  completion_percentage: percentInt,
+                });
+              }
+            }}
+            onCompletionThresholdReached={() => {
+              if (canTrackProgress) autoCompleteLesson();
+            }}
+            onEnded={() => {
+              if (canTrackProgress) autoCompleteLesson();
+            }}
+          />
         )}
 
-        {/* Video error */}
-        {vimeoEmbedUrl && videoError && (
-          <div className="flex items-center justify-center rounded-xl border border-dashed bg-muted/30" style={{ height: 300 }}>
-            <div className="text-center">
-              <AlertTriangle className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">Video unavailable</p>
-              <p className="text-xs text-muted-foreground mt-1">Please try again or contact support.</p>
-            </div>
-          </div>
-        )}
-
-        {/* No video placeholder */}
-        {!vimeoEmbedUrl && lesson.lesson_type === "video" && (
-          <div
-            className="flex items-center justify-center rounded-xl"
-            style={{ height: 300, background: `linear-gradient(135deg, ${ACCENT} 0%, #7130A0 100%)` }}
-          >
-            <div className="text-center text-white">
-              <Play className="h-12 w-12 mx-auto mb-2 opacity-60" />
-              <p className="text-sm opacity-80">Video not yet available</p>
-            </div>
-          </div>
-        )}
 
         {/* Lesson header */}
         <div className="space-y-2">
