@@ -449,7 +449,7 @@ export default function TeamCommunicationsPage() {
                         )}
                       </div>
                       <p className={`text-sm truncate text-foreground ${conv.isUnread ? "font-semibold" : "font-normal"}`}>
-                        {conv.subject || conv.topic || "General"}
+                        {conv.type === "direct" ? "Direct message" : (conv.subject || conv.topic || "General")}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
                         {conv.last_message_preview || "No messages yet"}
@@ -496,7 +496,7 @@ export default function TeamCommunicationsPage() {
               <>
                 <div className="px-4 py-3 border-b border-border flex items-center gap-2">
                   <h2 className="font-semibold text-foreground truncate">
-                    {selected.subject || selected.topic || "General"}
+                    {selected.type === "direct" ? "Direct message" : (selected.subject || selected.topic || "General")}
                   </h2>
                   <Badge variant="outline" className={`text-[10px] px-1.5 py-0 capitalize ${TYPE_COLORS[selected.type] || ""}`}>
                     {selected.type}
