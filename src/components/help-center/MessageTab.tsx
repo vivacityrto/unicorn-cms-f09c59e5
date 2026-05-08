@@ -83,6 +83,38 @@ export function MessageTab({ channel }: MessageTabProps) {
   const [staffNameMap, setStaffNameMap] = useState<Map<string, string>>(new Map());
   const [staffAvatarMap, setStaffAvatarMap] = useState<Map<string, string | null>>(new Map());
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+    };
+  }, [attachmentPreview]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      toast.error("Only image files are allowed.");
+      return;
+    }
+    if (f.size > MAX_ATTACHMENT_BYTES) {
+      toast.error("Image must be 5 MB or smaller.");
+      return;
+    }
+    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+    setAttachment(f);
+    setAttachmentPreview(URL.createObjectURL(f));
+  };
+
+  const clearAttachment = () => {
+    if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+    setAttachment(null);
+    setAttachmentPreview(null);
+  };
 
   // ---------- Load history ----------
   useEffect(() => {
