@@ -383,7 +383,11 @@ export function MessageTab({ channel }: MessageTabProps) {
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim() || loading || !profile) return;
+    if (loading || !profile) return;
+    const hasText = input.trim().length > 0;
+    const hasAttachment = channel === "support" && !!attachment;
+    if (!hasText && !hasAttachment) return;
+    if (channel === "csc" && !hasText) return;
     if (channel === "csc" && cscInitFailed) {
       toast.error("Message thread not initialized. Please refresh and try again.");
       return;
@@ -410,6 +414,13 @@ export function MessageTab({ channel }: MessageTabProps) {
     let currentThreadId = threadId;
 
     if (!currentThreadId) {
+      const diagnosticMeta = {
+        page_path: window.location.pathname,
+        browser: getBrowserName(navigator.userAgent),
+        os: getOSName(navigator.userAgent),
+        screen: `${window.innerWidth}x${window.innerHeight}`,
+      };
+
       const { data: newThread, error: threadError } = await supabase
         .from("help_threads")
         .insert({
@@ -417,7 +428,8 @@ export function MessageTab({ channel }: MessageTabProps) {
           user_id: profile!.user_uuid,
           channel: "support",
           status: "open",
-        })
+          metadata: diagnosticMeta,
+        } as any)
         .select("id")
         .single();
 
@@ -426,20 +438,36 @@ export function MessageTab({ channel }: MessageTabProps) {
       setThreadId(currentThreadId);
     }
 
+    let messageMetadata: Record<string, any> | null = null;
+    const fileToUpload = attachment;
+    if (fileToUpload) {
+      const path = `${profile!.tenant_id}/${currentThreadId}/${crypto.randomUUID()}-${fileToUpload.name}`;
+      const { error: upErr } = await supabase.storage
+        .from("support-attachments")
+        .upload(path, fileToUpload, { contentType: fileToUpload.type, upsert: false });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("support-attachments").getPublicUrl(path);
+      messageMetadata = {
+        attachments: [{ url: pub.publicUrl, name: fileToUpload.name, type: fileToUpload.type }],
+      };
+    }
+
     const { data: msg, error: msgError } = await supabase
       .from("help_messages")
       .insert({
         thread_id: currentThreadId,
         sender_id: profile!.user_uuid,
         role: "user",
-        content: userMsg,
-      })
+        content: userMsg || "(image attached)",
+        ...(messageMetadata ? { metadata: messageMetadata } : {}),
+      } as any)
       .select("id, role, content, created_at")
       .single();
 
     if (msgError) throw msgError;
 
     setMessages(prev => [...prev, msg as Message]);
+    clearAttachment();
 
     await supabase
       .from("help_threads")
