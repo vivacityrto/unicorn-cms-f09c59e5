@@ -59,6 +59,7 @@ export function useClientPackageDashboard(packageInstanceId: number | null) {
     queryKey: ['client_package_dashboard', activeTenantId, packageInstanceId],
     enabled: !!activeTenantId && !!packageInstanceId,
     staleTime: 30_000,
+    retry: 1,
     queryFn: async (): Promise<ClientPackageDashboardRow | null> => {
       if (!activeTenantId || !packageInstanceId) return null;
 
@@ -85,6 +86,7 @@ export function useClientPackageDashboards() {
     queryKey: ['client_package_dashboards', activeTenantId],
     enabled: !!activeTenantId,
     staleTime: 30_000,
+    retry: 1,
     queryFn: async (): Promise<ClientPackageDashboardRow[]> => {
       if (!activeTenantId) return [];
 

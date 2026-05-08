@@ -24,7 +24,7 @@ import { Package2, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 
 export default function ClientPackagesPage() {
-  const { data: dashboards = [], isLoading } = useClientPackageDashboards();
+  const { data: dashboards = [], isLoading, error } = useClientPackageDashboards();
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
   // Split: completed packages render as compact history rows; everything else
@@ -84,6 +84,16 @@ export default function ClientPackagesPage() {
           ))}
         </div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center text-destructive">
+          <p className="text-sm font-medium">Couldn't load packages — refresh to try again.</p>
+        </CardContent>
+      </Card>
     );
   }
 
