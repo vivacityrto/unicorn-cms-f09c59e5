@@ -74,7 +74,7 @@ export default function SupportTicketsPage() {
       const threadIds = rows.map((r) => r.id);
 
       const [{ data: users }, { data: tenants }, { data: msgs }] = await Promise.all([
-        supabase.from("users").select("user_uuid, full_name, email").in("user_uuid", userIds),
+        supabase.from("users").select("user_uuid, first_name, last_name, email").in("user_uuid", userIds),
         supabase.from("tenants").select("id, name").in("id", tenantIds),
         supabase
           .from("help_messages")
@@ -96,7 +96,7 @@ export default function SupportTicketsPage() {
         const u: any = userMap.get(r.user_id);
         return {
           ...r,
-          user_name: u?.full_name || u?.email || "Unknown user",
+          user_name: [u?.first_name, u?.last_name].filter(Boolean).join(" ") || u?.email || "Unknown user",
           tenant_name: tenantMap.get(r.tenant_id) || `Tenant #${r.tenant_id}`,
           preview: previewMap.get(r.id) || "",
           has_staff_reply: staffSet.has(r.id),
