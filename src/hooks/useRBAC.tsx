@@ -127,6 +127,7 @@ export const CLIENT_ROUTES = [
   '/profile',
   '/client/',
   '/client-portal/',
+  '/academy',
 ];
 
 // EOS routes - Vivacity Team only (Super Admin, Team Leader, Team Member)
