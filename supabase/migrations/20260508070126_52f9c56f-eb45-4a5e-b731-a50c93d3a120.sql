@@ -1,0 +1,1 @@
+ALTER TYPE public.unicorn_role ADD VALUE IF NOT EXISTS 'Academy User';

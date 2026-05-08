@@ -62095,6 +62095,7 @@ export type Database = {
         | "User"
         | "Team Leader"
         | "Team Member"
+        | "Academy User"
       user_type_enum:
         | "Vivacity"
         | "Client"
@@ -62395,6 +62396,7 @@ export const Constants = {
         "User",
         "Team Leader",
         "Team Member",
+        "Academy User",
       ],
       user_type_enum: [
         "Vivacity",
