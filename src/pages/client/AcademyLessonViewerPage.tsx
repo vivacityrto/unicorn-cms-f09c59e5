@@ -184,11 +184,10 @@ export default function AcademyLessonViewerPage() {
   const upsertProgress = useCallback(
     async (fields: Record<string, any>) => {
       if (!canTrackProgress || !lesson || !course || !enrollment) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!actingUserId) return;
       await supabase.from("academy_lesson_progress").upsert(
         {
-          user_id: user.id,
+          user_id: actingUserId,
           course_id: course.id,
           lesson_id: lesson.id,
           enrollment_id: enrollment.enrollment_id,
@@ -197,22 +196,20 @@ export default function AcademyLessonViewerPage() {
         { onConflict: "enrollment_id,lesson_id" }
       );
     },
-    [canTrackProgress, lesson, course, enrollment]
+    [canTrackProgress, lesson, course, enrollment, actingUserId]
   );
 
   // Auto-complete (server-side flow + client refetch)
   const autoCompleteLesson = useCallback(async () => {
     if (autoCompletedRef.current) return;
     if (!canTrackProgress || !lesson || !course || !enrollment) return;
+    if (!actingUserId) return;
     if (completedLessonIds.includes(lesson.id)) return;
     autoCompletedRef.current = true;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
     await supabase.from("academy_lesson_progress").upsert(
       {
-        user_id: user.id,
+        user_id: actingUserId,
         course_id: course.id,
         lesson_id: lesson.id,
         enrollment_id: enrollment.enrollment_id,
@@ -223,7 +220,6 @@ export default function AcademyLessonViewerPage() {
       { onConflict: "enrollment_id,lesson_id" }
     );
 
-    // Best-effort: check if all lessons complete and flip enrollment
     const { data: allLessons } = await supabase
       .from("academy_lessons")
       .select("id")
@@ -234,22 +230,21 @@ export default function AcademyLessonViewerPage() {
       const { count: completedCount } = await supabase
         .from("academy_lesson_progress")
         .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
+        .eq("user_id", actingUserId)
         .eq("is_completed", true)
         .in("lesson_id", lessonIds);
-      if ((completedCount ?? 0) >= lessonIds.length) {
-        await supabase
-          .from("academy_enrollments")
-          .update({ status: "completed", completed_at: new Date().toISOString() } as any)
-          .eq("user_id", user.id)
-          .eq("course_id", course.id)
-          .eq("status", "active");
+      if ((completedCount ?? 0) >= lessonIds.length && enrollment.enrollment_id) {
+        try {
+          await completeEnrollmentMutation.mutateAsync(enrollment.enrollment_id);
+        } catch {
+          /* toast surfaced by hook */
+        }
       }
     }
 
     qc.invalidateQueries({ queryKey: ["academy-lesson-progress"] });
     qc.invalidateQueries({ queryKey: ["academy-enrollment-detail"] });
-  }, [canTrackProgress, lesson, course, enrollment, completedLessonIds, qc]);
+  }, [canTrackProgress, lesson, course, enrollment, completedLessonIds, qc, actingUserId, completeEnrollmentMutation]);
 
   // Reset autocomplete latch when lesson changes
   useEffect(() => {
@@ -273,11 +268,10 @@ export default function AcademyLessonViewerPage() {
   // Mark lesson complete mutation (manual button)
   const markComplete = useMutation({
     mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !lesson || !course || !enrollment) throw new Error("Not ready");
+      if (!actingUserId || !lesson || !course || !enrollment) throw new Error("Not ready");
       const { error } = await supabase.from("academy_lesson_progress").upsert(
         {
-          user_id: user.id,
+          user_id: actingUserId,
           course_id: course.id,
           lesson_id: lesson.id,
           enrollment_id: enrollment.enrollment_id,
@@ -300,17 +294,16 @@ export default function AcademyLessonViewerPage() {
       const { count: completedCount } = await supabase
         .from("academy_lesson_progress")
         .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
+        .eq("user_id", actingUserId)
         .eq("is_completed", true)
         .in("lesson_id", lessonIdList);
 
-      if ((completedCount ?? 0) >= lessonIdList.length) {
-        await supabase
-          .from("academy_enrollments")
-          .update({ status: "completed", completed_at: new Date().toISOString() } as any)
-          .eq("user_id", user.id)
-          .eq("course_id", course.id)
-          .eq("status", "active");
+      if ((completedCount ?? 0) >= lessonIdList.length && enrollment.enrollment_id) {
+        try {
+          await completeEnrollmentMutation.mutateAsync(enrollment.enrollment_id);
+        } catch {
+          /* toast surfaced by hook */
+        }
         return { courseComplete: true };
       }
       return { courseComplete: false };

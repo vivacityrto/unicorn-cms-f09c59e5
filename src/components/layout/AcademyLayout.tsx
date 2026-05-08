@@ -24,6 +24,8 @@ import { useTenantType } from "@/contexts/TenantTypeContext";
 import { AcademyTopBar } from "@/components/layout/AcademyTopBar";
 import { AcademyFooter } from "@/components/layout/AcademyFooter";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
+import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
+import { useClientPreview } from "@/contexts/ClientPreviewContext";
 
 // Academy menu items
 const academyPathwaysItems = [
@@ -64,6 +66,7 @@ export const AcademyLayout = ({
   });
   const location = useLocation();
   const { academyTier } = useTenantType();
+  const { isPreviewMode } = useClientPreview();
   const navRef = useRef<HTMLElement>(null);
 
   // Show team section only for Team and Elite tiers

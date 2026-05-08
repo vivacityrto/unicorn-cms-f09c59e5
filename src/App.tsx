@@ -196,7 +196,7 @@ const AcademySettings = lazy(() => import("./pages/academy/AcademySettings"));
 
 // Client Preview pages
 const ClientPreview = lazy(() => import("./pages/ClientPreview"));
-const ClientPreviewAcademy = lazy(() => import("./pages/ClientPreviewAcademy"));
+
 const ClientCalendarWrapperLegacy = lazy(() => import("./pages/ClientCalendarWrapper"));
 // ClientNotificationsWrapperLegacy removed — /client/notifications now redirects to /client/inbox?tab=notifications
 
@@ -1086,7 +1086,7 @@ const App = () => (
             <Route path="/academy/settings" element={<ProtectedRoute><AcademySettings /></ProtectedRoute>} />
             {/* Client Preview Routes */}
             <Route path="/client-preview" element={<ProtectedRoute><ClientPreview /></ProtectedRoute>} />
-            <Route path="/client-preview/academy" element={<ProtectedRoute><ClientPreviewAcademy /></ProtectedRoute>} />
+            
             {/* Client Portal Routes (isolated ClientLayout) */}
             <Route path="/client/home" element={<ProtectedRoute><ClientHomeWrapperNew /></ProtectedRoute>} />
             <Route path="/client/inbox" element={<ProtectedRoute><ClientInboxWrapperNew /></ProtectedRoute>} />

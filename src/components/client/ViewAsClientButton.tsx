@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useClientPreview } from "@/contexts/ClientPreviewContext";
+import { useClientPreview, type ActingUserOption } from "@/contexts/ClientPreviewContext";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,6 +20,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Eye, ChevronDown, MonitorPlay, GraduationCap, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { TenantType } from "@/contexts/TenantTypeContext";
@@ -37,13 +45,16 @@ export function ViewAsClientButton({
   compact = false,
 }: ViewAsClientButtonProps) {
   const navigate = useNavigate();
-  const { startPreview, canUsePreview, loading } = useClientPreview();
+  const { profile } = useAuth();
+  const { startPreview, canUsePreview, loading, fetchActingUserOptions } = useClientPreview();
   const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [selectedMode, setSelectedMode] = useState<"portal" | "academy">("portal");
   const [isStarting, setIsStarting] = useState(false);
+  const [actingOptions, setActingOptions] = useState<ActingUserOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [selectedActingId, setSelectedActingId] = useState<string | null>(null);
 
-  // Check if tenant has academy access
   const hasAcademyAccess = tenantType.startsWith("academy_") || tenantType === "compliance_system";
   const isAcademyOnly = tenantType.startsWith("academy_");
 
@@ -51,27 +62,52 @@ export function ViewAsClientButton({
     return null;
   }
 
-  const handleViewClient = (mode: "portal" | "academy") => {
+  const handleViewClient = async (mode: "portal" | "academy") => {
     setSelectedMode(mode);
-    setReasonDialogOpen(true);
+
+    if (mode === "academy" || isAcademyOnly) {
+      // Guardrail: staff predicate check
+      if (profile && profile.is_vivacity_internal === false) {
+        toast.error("Academy impersonation unavailable", {
+          description:
+            "Your account isn't configured for Academy impersonation. Contact a workspace admin to enable is_vivacity_internal on your profile.",
+        });
+        return;
+      }
+      // Pre-fetch acting user options before opening dialog
+      setOptionsLoading(true);
+      setReasonDialogOpen(true);
+      try {
+        const opts = await fetchActingUserOptions(tenantId);
+        setActingOptions(opts);
+        const def = opts.find((o) => o.is_default) ?? opts[0] ?? null;
+        setSelectedActingId(def?.user_uuid ?? null);
+      } finally {
+        setOptionsLoading(false);
+      }
+    } else {
+      setActingOptions([]);
+      setSelectedActingId(null);
+      setReasonDialogOpen(true);
+    }
   };
 
   const handleStartPreview = async () => {
     setIsStarting(true);
     try {
-      const success = await startPreview(tenantId, reason || undefined);
-      
+      const acting = selectedMode === "academy" || isAcademyOnly ? selectedActingId : null;
+      const success = await startPreview(tenantId, reason || undefined, acting);
+
       if (success) {
         setReasonDialogOpen(false);
         setReason("");
-        
+
         toast.success(`Now viewing as ${tenantName}`, {
-          description: "You're in read-only preview mode",
+          description: "You're in preview mode",
         });
 
-        // Navigate to the appropriate preview route
         if (selectedMode === "academy" || isAcademyOnly) {
-          navigate("/client-preview/academy");
+          navigate("/academy");
         } else {
           navigate("/client-preview");
         }
@@ -87,6 +123,11 @@ export function ViewAsClientButton({
       setIsStarting(false);
     }
   };
+
+  const showAcademyPicker = selectedMode === "academy" || isAcademyOnly;
+  const noUsersAvailable = showAcademyPicker && !optionsLoading && actingOptions.length === 0;
+  const confirmDisabled =
+    isStarting || (showAcademyPicker && (optionsLoading || noUsersAvailable || !selectedActingId));
 
   return (
     <>
@@ -104,7 +145,6 @@ export function ViewAsClientButton({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          {/* Always show Client Portal option unless academy-only */}
           {!isAcademyOnly && (
             <DropdownMenuItem onClick={() => handleViewClient("portal")} className="gap-2">
               <MonitorPlay className="h-4 w-4" />
@@ -115,7 +155,6 @@ export function ViewAsClientButton({
             </DropdownMenuItem>
           )}
 
-          {/* Show Academy option if available */}
           {hasAcademyAccess && (
             <DropdownMenuItem onClick={() => handleViewClient("academy")} className="gap-2">
               <GraduationCap className="h-4 w-4" />
@@ -135,7 +174,6 @@ export function ViewAsClientButton({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Reason Dialog */}
       <Dialog open={reasonDialogOpen} onOpenChange={setReasonDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -164,21 +202,45 @@ export function ViewAsClientButton({
               </p>
             </div>
 
-            <div className="rounded-lg bg-muted p-3 text-sm space-y-2">
-              <p className="font-medium">Preview Mode Restrictions:</p>
-              <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                <li>Read-only access - no changes can be made</li>
-                <li>Actions are blocked in preview mode</li>
-                <li>Session is logged with start/end times</li>
-              </ul>
-            </div>
+            {showAcademyPicker && (
+              <div className="space-y-2">
+                <Label htmlFor="acting-as">Acting as</Label>
+                {optionsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading users…
+                  </div>
+                ) : noUsersAvailable ? (
+                  <p className="text-sm text-destructive">
+                    No users on this tenant yet — invite one before previewing Academy.
+                  </p>
+                ) : (
+                  <Select
+                    value={selectedActingId ?? undefined}
+                    onValueChange={(v) => setSelectedActingId(v)}
+                  >
+                    <SelectTrigger id="acting-as">
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {actingOptions.map((opt) => (
+                        <SelectItem key={opt.user_uuid} value={opt.user_uuid}>
+                          {opt.full_name}
+                          {opt.is_default ? " (Primary contact)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setReasonDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleStartPreview} disabled={isStarting}>
+            <Button onClick={handleStartPreview} disabled={confirmDisabled}>
               {isStarting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
