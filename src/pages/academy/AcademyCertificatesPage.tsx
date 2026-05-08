@@ -13,6 +13,7 @@ import {
 import { Award, Download, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 
 interface MyCertificate {
   id: number;
@@ -35,18 +36,18 @@ function formatDate(d: string | null): string {
 }
 
 function useMyCertificates() {
+  const { userId } = useAcademyActingUserId();
   return useQuery<MyCertificate[]>({
-    queryKey: ["academy-my-certificates"],
+    queryKey: ["academy-my-certificates", userId],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!userId) return [];
 
       const { data: certs, error } = await supabase
         .from("academy_certificates")
         .select(
           "id, certificate_number, course_id, issued_at, expires_at, public_url, metadata"
         )
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .is("revoked_at", null)
         .order("issued_at", { ascending: false });
       if (error) throw error;

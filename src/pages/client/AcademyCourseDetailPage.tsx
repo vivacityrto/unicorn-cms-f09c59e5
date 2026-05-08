@@ -9,11 +9,14 @@ import { useModulesWithLessons } from "@/hooks/academy/useAcademyModulesLessons"
 import { formatDuration } from "@/hooks/useAcademyCourses";
 import { toast } from "sonner";
 import AssessmentEntrySection from "@/components/academy/AssessmentEntrySection";
+import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
+import { useEnrolCourse } from "@/hooks/academy/useEnrolCourse";
 
 export default function AcademyCourseDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { userId } = useAcademyActingUserId();
 
   // Fetch course by slug
   const { data: course, isLoading: courseLoading } = useQuery({
@@ -33,15 +36,14 @@ export default function AcademyCourseDetailPage() {
 
   // Fetch enrollment + progress for current user
   const { data: enrollment, isLoading: enrollmentLoading } = useQuery({
-    queryKey: ["academy-enrollment-detail", course?.id],
+    queryKey: ["academy-enrollment-detail", course?.id, userId],
     enabled: !!course?.id,
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !course?.id) return null;
+      if (!userId || !course?.id) return null;
       const { data } = await supabase
         .from("v_academy_course_progress")
         .select("enrollment_id, enrollment_status, progress_percentage, completed_lessons, total_lessons, has_certificate, certificate_number")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("course_id", course.id)
         .maybeSingle();
       return data;
@@ -65,26 +67,8 @@ export default function AcademyCourseDetailPage() {
   // Modules + lessons
   const { data: modules = [], isLoading: modulesLoading } = useModulesWithLessons(course?.id ?? null);
 
-  // Enrol mutation
-  const enrolMutation = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !course) throw new Error("Not authenticated");
-      const { error } = await supabase.from("academy_enrollments").insert({
-        course_id: course.id,
-        user_id: user.id,
-        status: "active",
-        source: "self_enrol",
-      } as any);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("You're enrolled! Start learning.");
-      qc.invalidateQueries({ queryKey: ["academy-enrollment-detail", course?.id] });
-      qc.invalidateQueries({ queryKey: ["academy-courses"] });
-    },
-    onError: (e: any) => toast.error(e?.message || "Failed to enrol"),
-  });
+  // Enrol via dispatch hook (handles impersonation routing)
+  const enrolMutation = useEnrolCourse();
 
   const isLoading = courseLoading || enrollmentLoading;
   const isEnrolled = enrollment?.enrollment_status === "active" || enrollment?.enrollment_status === "completed";
@@ -191,8 +175,8 @@ export default function AcademyCourseDetailPage() {
           <div className="flex items-center gap-3">
             {!isEnrolled && (
               <Button
-                onClick={() => enrolMutation.mutate()}
-                disabled={enrolMutation.isPending}
+                onClick={() => course && enrolMutation.mutate(course.id)}
+                disabled={enrolMutation.isPending || !enrolMutation.canMutate}
                 style={{ backgroundColor: ACCENT }}
                 className="text-white hover:opacity-90"
               >
