@@ -302,7 +302,11 @@ function MessagesTab() {
                       key={conv.id}
                       onClick={() => handleSelect(conv)}
                       className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex items-center gap-3 ${
-                        selectedId === conv.id ? "bg-muted/70" : ""
+                        selectedId === conv.id
+                          ? "bg-muted/70"
+                          : conv.isUnread
+                            ? "bg-primary/5"
+                            : ""
                       }`}
                     >
                       {conv.isUnread ? (
@@ -312,7 +316,7 @@ function MessagesTab() {
                       )}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 mb-0.5">
-                          <p className="text-sm font-medium truncate text-foreground">
+                          <p className={`text-sm truncate ${conv.isUnread ? "font-semibold text-foreground" : "font-medium text-muted-foreground"}`}>
                             {conv.subject || conv.topic || "General"}
                           </p>
                           <Badge

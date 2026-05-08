@@ -428,7 +428,11 @@ export default function TeamCommunicationsPage() {
                       key={conv.id}
                       onClick={() => handleSelectConversation(conv.id)}
                       className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
-                        selectedId === conv.id ? "bg-muted/70" : ""
+                        selectedId === conv.id
+                          ? "bg-muted/70"
+                          : conv.isUnread
+                            ? "bg-primary/5"
+                            : ""
                       }`}
                     >
                       <div className="flex items-center gap-1.5 mb-0.5">
@@ -444,7 +448,7 @@ export default function TeamCommunicationsPage() {
                           <span className="h-2 w-2 rounded-full bg-[#23C0DD] flex-shrink-0" />
                         )}
                       </div>
-                      <p className={`text-sm truncate text-foreground ${conv.isUnread ? "font-semibold" : "font-medium"}`}>
+                      <p className={`text-sm truncate text-foreground ${conv.isUnread ? "font-semibold" : "font-normal"}`}>
                         {conv.subject || conv.topic || "General"}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
