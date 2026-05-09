@@ -184,7 +184,7 @@ export default function AcademyLessonViewerPage() {
   const isEnrolled = !!enrollment && enrollment.enrollment_status === "active";
   const isExpired = !!enrollmentRaw?.expires_at && new Date(enrollmentRaw.expires_at) < new Date();
   const isRevoked = !!enrollmentRaw?.revoked_at;
-  const canTrackProgress = isEnrolled && !isPreview && !isExpired && !isRevoked;
+  const canTrackProgress = isEnrolled && !isPreview && !isExpired && !isRevoked && !isReadOnly;
   const completionThreshold = lesson?.completion_threshold ?? 90;
 
   // Upsert progress helper
