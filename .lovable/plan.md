@@ -1,70 +1,97 @@
-# Academy Pathway Entitlement Gate Fix
+# Academy Gate Infinite Spinner — Root Cause + Fix
 
-Fix the false-negative "Academy not yet active" message on Compliance Manager, Student Support Officer, and Administration Assistant pathways.
+## Diagnosis (two compounding bugs)
 
-## Root cause (verified in code)
+### Bug A — `ClientTenantProvider` is not mounted on `/academy/*`
+Confirmed via `rg "ClientTenantProvider"`: the only mount is in `src/components/layout/ClientLayout.tsx` (line 173). `src/components/layout/AcademyLayout.tsx` does NOT wrap children in `ClientTenantProvider`. Every Academy wrapper renders `<AcademyLayout><AcademyAccessGate>…</AcademyAccessGate></AcademyLayout>`, so `useClientTenant()` inside the gate falls through to the default context value:
 
-**Bug 1 — Wrappers are inconsistent.** Five pathway wrappers exist; only three wrap their page in `<AcademyAccessGate>`:
+```ts
+academyAccessEnabled: false,
+academyAccessLoading: true,
+```
 
-| Wrapper | Has `<AcademyAccessGate>`? | Behaviour observed |
-|---|---|---|
-| `AcademyTrainerWrapper` | No | Renders ✓ |
-| `AcademyGovernancePersonWrapper` | No | Renders ✓ |
-| `AcademyComplianceManagerWrapper` | **Yes** | Shows "not active" ✗ |
-| `AcademyStudentSupportWrapper` | **Yes** | Shows "not active" ✗ |
-| `AcademyAdminAssistantWrapper` | **Yes** | Shows "not active" ✗ |
+After the previous patch added the spinner branch (`if (academyAccessLoading) return <Loader2/>`), every Academy page on every tenant now hangs on that spinner forever — no provider exists to ever flip the flag. This is why Trainer Hub and Governance Person, which previously worked, now also spin: it's not impersonation-specific, it's universal across `/academy/*`.
 
-That's why two work and three don't — nothing to do with slug maps, target_audience tagging, or feature flags.
+### Bug B — `academyAccessLoading` wiring is fragile even with the provider mounted
+The current second effect in `ClientTenantContext.tsx` (lines 103–125) only flips `academyAccessLoading` to `false` in two places:
+1. After the `tenants` fetch resolves (when `activeTenantId` is truthy).
+2. In the `!activeTenantId` branch, only when `profile?.user_uuid && resolvedTenantId === null && !isPreview`.
 
-**Bug 2 — `AcademyAccessGate` has no loading state.** `ClientTenantContext` (lines 41–124):
+Failure modes that leave the flag stuck on `true`:
+- **Impersonation pivot**: switching between impersonated tenants — `previewTenant` flips before `profile.user_uuid` re-evaluates, and intermediate states can reach the early-return without setting `false`.
+- **No profile yet** but `activeTenantId === null`: the `else` doesn't fire (because `profile.user_uuid` is missing) → stays `true` indefinitely.
+- **`resolvedTenantId` resolution failure** (multi-tenant_users with no `users.tenant_id`): `setResolvedTenantId(null)` runs but the second effect's terminal condition can race with `isPreview`.
 
-- `academyAccessEnabled` initial state = `false` (line 45)
-- Updates only after two chained async effects complete: (a) resolve `activeTenantId` from `tenant_users` (lines 55–96), then (b) fetch `tenants.academy_access_enabled` (lines 102–124).
-- The context exposes no `loading` flag for these fetches.
-
-`AcademyAccessGate` reads `academyAccessEnabled` and falls straight to the "not active" branch when it's falsy (line 19). It cannot distinguish "still loading" from "confirmed disabled", so on first render — and for the whole async window — it shows the gate. In impersonation mode the chain runs longer, so the false-negative is visible/sticky.
-
-This also means Trainer/Governance "work" only by accident — adding the gate to those wrappers would break them too, until Bug 2 is fixed.
+The user's framing is correct: the loading flag should track only the second async (`tenants` fetch), not the entire `activeTenantId` resolution chain.
 
 ## Fix
 
-### File 1 — `src/contexts/ClientTenantContext.tsx`
-- Add `academyAccessLoading: boolean` to the context type, default `true`.
-- Track loading across both effects:
-  - When `activeTenantId` is null AND tenant resolution hasn't settled (no profile yet, or `tenant_users` query pending) → loading `true`.
-  - When `activeTenantId` resolves and the `tenants` fetch is in flight → loading `true`.
-  - When `tenants` fetch settles (success or error) → loading `false`.
-  - When `activeTenantId` settles to `null` (resolved, but user has no tenant) → loading `false`, `academyAccessEnabled` stays `false` (correct behaviour: not entitled).
-- Expose via the provider value alongside `academyAccessEnabled`.
-- Simplest implementation: a single `academyAccessLoading` state initialised `true`, set `false` in both terminal branches of the second effect and in the early-return when `activeTenantId === null` after profile is known.
+### Step 1 — Mount `ClientTenantProvider` in `AcademyLayout`
+File: `src/components/layout/AcademyLayout.tsx`
 
-### File 2 — `src/components/academy/AcademyAccessGate.tsx`
-- Read `academyAccessLoading` alongside `academyAccessEnabled`.
-- While loading: render a minimal skeleton (centered spinner or a 3-line `<Skeleton>` block — match the Suspense fallback the wrappers already use: `<Loader2 className="h-6 w-6 animate-spin text-primary" />` in a centered container).
-- Only render the "Academy not yet active" panel when `!academyAccessLoading && !academyAccessEnabled`.
-- When entitled: render `children` as today.
+Wrap the existing `HelpCenterProvider` subtree in `ClientTenantProvider`:
 
-### Files 3–4 — Wrapper consistency
-Add `<AcademyAccessGate>` to the two wrappers currently missing it, so all five pathways enforce entitlement uniformly:
+```tsx
+return (
+  <ClientTenantProvider>
+    <HelpCenterProvider>
+      {/* existing layout */}
+    </HelpCenterProvider>
+  </ClientTenantProvider>
+);
+```
 
-- `src/pages/client/AcademyTrainerWrapper.tsx` — wrap `<TrainerHubPage />` in `<AcademyAccessGate>` (mirroring the structure of `AcademyComplianceManagerWrapper`).
-- `src/pages/client/AcademyGovernancePersonWrapper.tsx` — same change for `<GovernancePersonPage />`.
+Add the import:
+```ts
+import { ClientTenantProvider } from "@/contexts/ClientTenantContext";
+```
 
-Once Bug 2 is fixed, this is safe — the gate will no longer false-negative.
+This restores entitlement resolution for every Academy route in one place. No wrapper changes needed (per user constraint).
 
-## What this does NOT change
+### Step 2 — Refactor `academyAccessLoading` in `ClientTenantContext.tsx`
+File: `src/contexts/ClientTenantContext.tsx`
 
-- `AudienceHubPage.tsx` — untouched. The "no courses for this pathway" empty state stays as-is for now (separate ticket).
-- `useAcademyCourses.ts`, the page components, route registration — untouched.
-- No DB migration. `academy_access_enabled` derivation is correct; the issue is purely client-side loading/branch handling.
-- `target_audience` filtering is unrelated to this bug — once the gate stops firing, the existing course-fetch logic will render the 13 / 5 / 7 tagged courses for AHMRC.
+Make the flag track **only** the `tenants.academy_access_enabled` fetch lifecycle, decoupled from how `activeTenantId` was resolved. Concretely:
 
-## Verification
+- Default `academyAccessLoading: true` (unchanged).
+- In the second effect (the one that fetches `tenants`):
+  - If `activeTenantId` is set (by any path — impersonation, `users.tenant_id`, or `tenant_users` lookup): `setAcademyAccessLoading(true)` → fire fetch → `setAcademyAccessLoading(false)` in `finally` (success **or** error). Use a `try/finally` so an error in the supabase call still flips the flag.
+  - If `activeTenantId` is `null` AND tenant resolution has settled (i.e. the first effect has run to completion — either `profile.user_uuid` is absent, or `resolvedTenantId` was explicitly set to `null` after the lookup): `setAcademyAccessLoading(false)` and `setAcademyAccessEnabled(false)`. The "settled" signal is `profile?.user_uuid !== undefined` AND we've passed at least one render where the resolution ran.
 
-1. Impersonate AHMRC (`academy_access_enabled = true`):
-   - All five pathways render their hub (Trainer, Governance, Compliance Manager, Student Support, Admin Assistant). Compliance Manager shows 13 courses, SSO shows 5, Admin Assistant shows 7.
-   - During load, a brief spinner appears (no flash of "not active").
-2. Impersonate a tenant with `academy_access_enabled = false`:
-   - All five pathways show "Academy not yet active" — uniformly, after the loading spinner.
-3. Sign in as a real client user (no impersonation): same two scenarios behave identically.
-4. Network throttle: confirm spinner persists during slow fetch and "not active" never flashes for an entitled tenant.
+The cleanest implementation: track a `resolutionAttempted` boolean inside the first effect (set to `true` at the end of every branch, including the impersonation branch). The second effect then keys off `(activeTenantId, resolutionAttempted)`:
+- `activeTenantId != null` → fetch + flip on settle.
+- `activeTenantId == null && resolutionAttempted` → flip to `false`.
+- otherwise (still resolving) → leave `true`.
+
+### Step 3 — Watchdog on tenant resolution
+File: `src/contexts/ClientTenantContext.tsx`
+
+Add a 5-second watchdog effect. When `academyAccessLoading === true` and `activeTenantId === null`, start a `setTimeout(5000)` that:
+- `console.warn("[ClientTenantContext] tenant resolution exceeded 5s — surfacing not-active state")`
+- `setAcademyAccessLoading(false)`
+- (leaves `academyAccessEnabled` as `false`, so the gate renders the "not active" panel rather than spinning forever)
+
+Clear the timeout when `activeTenantId` becomes non-null, when the loading flag flips for any other reason, or on unmount.
+
+### Step 4 — Verification matrix
+Manual checks on the preview after deploy:
+
+| Scenario | Expected |
+|---|---|
+| SuperAdmin impersonating AHMRC (fresh load on `/academy/trainer`) | Gate renders Trainer Hub (no spinner, no "not active") |
+| SuperAdmin impersonating AHMRC (pivot from another tenant) | Same |
+| SuperAdmin impersonating a tenant with `academy_access_enabled = false` | Gate renders "Academy not yet active" |
+| Real client user (no impersonation) on a tenant with academy enabled | Gate renders the page |
+| Network failure on `tenants` fetch | Gate renders "not active" within ~1s, console error logged |
+| Tenant resolution stalls > 5s | Gate renders "not active", watchdog warning logged |
+
+## Files changed
+1. `src/components/layout/AcademyLayout.tsx` — add `ClientTenantProvider` wrap + import.
+2. `src/contexts/ClientTenantContext.tsx` — refactor loading-flag wiring + add watchdog.
+
+Wrappers (`AcademyTrainerWrapper.tsx`, `AcademyGovernancePersonWrapper.tsx`, etc.) — **untouched**, per constraint.
+
+## Out of scope
+- No RPC/migration (per prior constraints).
+- No changes to `AcademyAccessGate.tsx` — its current shape (loading → spinner; !enabled → panel; else → children) is correct.
+- No instrumentation beyond the single watchdog `console.warn` (which is a real recoverable-error signal, not debug noise).

@@ -26,6 +26,7 @@ import { AcademyFooter } from "@/components/layout/AcademyFooter";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
+import { ClientTenantProvider } from "@/contexts/ClientTenantContext";
 
 // Academy menu items
 const academyPathwaysItems = [
