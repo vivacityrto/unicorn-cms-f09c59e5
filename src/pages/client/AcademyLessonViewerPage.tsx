@@ -17,6 +17,12 @@ import {
 import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 import { useEnrolCourse } from "@/hooks/academy/useEnrolCourse";
 import { useCompleteEnrollment } from "@/hooks/academy/useCompleteEnrollment";
+import {
+  useReadOnlyGuard,
+  PREVIEW_BLOCKED_ERROR,
+  isPreviewBlockedError,
+} from "@/hooks/useReadOnlyGuard";
+import { friendlyDbError } from "@/lib/friendlyDbError";
 
 const ACCENT = "#23c0dd";
 const PROGRESS_THROTTLE_MS = 10_000;
