@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, ChevronLeft, ChevronRight, Clock, AlertTriangle, Send } from "lucide-react";
 import { toast } from "sonner";
+import {
+  useReadOnlyGuard,
+  PREVIEW_BLOCKED_ERROR,
+  isPreviewBlockedError,
+} from "@/hooks/useReadOnlyGuard";
+import { friendlyDbError } from "@/lib/friendlyDbError";
 
 interface QuestionOption {
   value: string;
