@@ -47,6 +47,7 @@ export default function AcademyAssessmentPlayerPage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const startedAtRef = useRef<string>(new Date().toISOString());
+  const { blockWrite } = useReadOnlyGuard();
 
   // Fetch assessment
   const { data: assessment, isLoading: assessmentLoading } = useQuery({
