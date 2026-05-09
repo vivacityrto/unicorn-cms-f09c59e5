@@ -17,6 +17,7 @@ interface ClientTenantContextValue {
   isPreview: boolean;
   isReadOnly: boolean;
   academyAccessEnabled: boolean;
+  academyAccessLoading: boolean;
   tenantUser: TenantUserRow | null;
   tenantUserLoading: boolean;
   canAccessClientPortal: boolean;
