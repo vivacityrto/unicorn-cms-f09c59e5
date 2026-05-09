@@ -19,6 +19,8 @@ import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 import { useAcademyDashboardStats, formatDuration } from "@/hooks/useAcademyCourses";
 import { useMyEnrolledCourses } from "@/hooks/academy/useMyEnrolledCourses";
 import { useAuth } from "@/hooks/useAuth";
+import { useClientPreview } from "@/contexts/ClientPreviewContext";
+import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const roleTiles = [
@@ -69,11 +71,20 @@ export default function AcademyDashboardPage() {
   const { data: stats, isLoading: statsLoading } = useAcademyDashboardStats();
   const { data: myCoursesAll = [], isLoading: coursesLoading } = useMyEnrolledCourses();
   const { profile } = useAuth();
+  const { isImpersonating } = useAcademyActingUserId();
+  const { actingUserId, actingUserOptions } = useClientPreview();
   const myCourses = myCoursesAll
     .filter((c) => c.enrollment_status === "active")
     .slice(0, 3);
 
-  const firstName = profile?.first_name?.trim();
+  const impersonated = isImpersonating
+    ? actingUserOptions.find((o) => o.user_uuid === actingUserId) ?? null
+    : null;
+  const impersonatedFirst =
+    impersonated?.full_name?.trim().split(/\s+/)[0] ??
+    impersonated?.email?.split("@")[0] ??
+    null;
+  const firstName = (impersonatedFirst ?? profile?.first_name ?? "").trim();
 
   const statCards = [
     { label: "Courses", value: stats?.courses ?? 0, icon: BookOpen, accent: "#7130A0" },

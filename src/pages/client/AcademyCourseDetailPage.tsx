@@ -180,7 +180,7 @@ export default function AcademyCourseDetailPage() {
                 style={{ backgroundColor: ACCENT }}
                 className="text-white hover:opacity-90"
               >
-                {enrolMutation.isPending ? "Enrolling…" : "Enrol Now"}
+                {enrolMutation.isPending ? "Enrolling…" : "Start Now"}
               </Button>
             )}
             {isEnrolled && enrollment?.progress_percentage != null && (
