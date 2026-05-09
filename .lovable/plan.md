@@ -1,85 +1,70 @@
-## Academy Typography Revert — Inter Throughout
+# Academy Pathway Entitlement Gate Fix
 
-### Phase 1 — Audit findings
+Fix the false-negative "Academy not yet active" message on Compliance Manager, Student Support Officer, and Administration Assistant pathways.
 
-**1.1 CSS files defining Anton / Binate / Montserrat**
-- `src/index.css` lines 848–857:
-  ```css
-  .academy-scope .viv-font-anton {
-    font-family: 'Anton', 'Montserrat', system-ui, sans-serif;
-    letter-spacing: 0.01em;
-  }
-  /* TODO(brand): swap Montserrat fallback for Binate when licensed */
-  .academy-scope .viv-font-binate {
-    font-family: 'Montserrat', system-ui, sans-serif;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  ```
-  No `@font-face` blocks; no `@import` for these fonts. No `Binate` literal anywhere — the class was named after Binate but currently maps to Montserrat as a placeholder.
+## Root cause (verified in code)
 
-**1.2 `viv-font-anton` / `viv-font-binate` class usages in TSX**
-- `src/components/layout/AcademyTopBar.tsx:123, 144` (anton — "Academy" label, page title)
-- `src/components/layout/AcademyLayout.tsx:127` (binate — small caption), `:165` (anton — "Vivacity" wordmark)
-- `src/components/layout/AcademyFooter.tsx:40` (anton)
-- `src/pages/client/AcademyDashboardPage.tsx:97` (anton — h2), `:114` (anton — stat number), `:116` (binate — stat label)
-- `src/components/academy/AcademyPageWrapper.tsx:42` (anton — page h1)
+**Bug 1 — Wrappers are inconsistent.** Five pathway wrappers exist; only three wrap their page in `<AcademyAccessGate>`:
 
-**1.3 `index.html` Google Fonts links**
-- `index.html:30`:
-  ```html
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
-  ```
-  (preconnect lines 28–29 are generic to fonts.googleapis.com and stay.)
+| Wrapper | Has `<AcademyAccessGate>`? | Behaviour observed |
+|---|---|---|
+| `AcademyTrainerWrapper` | No | Renders ✓ |
+| `AcademyGovernancePersonWrapper` | No | Renders ✓ |
+| `AcademyComplianceManagerWrapper` | **Yes** | Shows "not active" ✗ |
+| `AcademyStudentSupportWrapper` | **Yes** | Shows "not active" ✗ |
+| `AcademyAdminAssistantWrapper` | **Yes** | Shows "not active" ✗ |
 
-**1.4 Inter / base font stack**
-No explicit Inter declaration found in `tailwind.config.ts` or `src/index.css`. The rest of Unicorn renders with Tailwind's default `font-sans` stack (system-ui / Apple system fonts) inherited via the body. Reverting Academy to "the same stack as the rest of Unicorn" therefore means **inheriting the global stack** — no new font import needed.
+That's why two work and three don't — nothing to do with slug maps, target_audience tagging, or feature flags.
 
-**Note — out-of-scope inline-Anton sites discovered (not part of `.academy-scope`)**
-- `src/components/academy/admin/VideoThumbnail.tsx:38` — inline `style={{ fontFamily: "'Anton', sans-serif" }}` on a video thumbnail letter badge.
-- `src/pages/admin/BulkInvite.tsx:400` — inline `style={{ fontFamily: "Anton, sans-serif" }}` on the BulkInvite admin h1.
+**Bug 2 — `AcademyAccessGate` has no loading state.** `ClientTenantContext` (lines 41–124):
 
-These two also reference Anton and would break visually (fall back to the next stack member) once the Google Fonts link is removed. The Prompt is scoped to `.academy-scope` typography revert, but `VideoThumbnail` is an Academy admin component, and removing the Google Fonts link without addressing them leaves them silently degraded. **Recommendation: strip the inline `fontFamily` from both as well so they inherit the global stack** — confirm in the open question below.
+- `academyAccessEnabled` initial state = `false` (line 45)
+- Updates only after two chained async effects complete: (a) resolve `activeTenantId` from `tenant_users` (lines 55–96), then (b) fetch `tenants.academy_access_enabled` (lines 102–124).
+- The context exposes no `loading` flag for these fetches.
 
----
+`AcademyAccessGate` reads `academyAccessEnabled` and falls straight to the "not active" branch when it's falsy (line 19). It cannot distinguish "still loading" from "confirmed disabled", so on first render — and for the whole async window — it shows the gate. In impersonation mode the chain runs longer, so the false-negative is visible/sticky.
 
-### Phase 2 — Strip display fonts
+This also means Trainer/Governance "work" only by accident — adding the gate to those wrappers would break them too, until Bug 2 is fixed.
 
-- `src/index.css`: delete the `.viv-font-anton` and `.viv-font-binate` rule blocks (lines 848–857) and the TODO comment. Leave the `.academy-scope` colour-token block (838–847) intact.
-- `index.html`: delete line 30 (the Anton+Montserrat `<link>`). Keep the two `preconnect` lines — they're harmless and may be reused by other Google Fonts loads.
-- No `@font-face` to remove (none exist).
-- No Calibri body declaration to revert — none exists in the codebase. Phase 4 of the prompt is therefore a no-op; will be noted in the report.
+## Fix
 
-### Phase 3 — Replace class usages in TSX
+### File 1 — `src/contexts/ClientTenantContext.tsx`
+- Add `academyAccessLoading: boolean` to the context type, default `true`.
+- Track loading across both effects:
+  - When `activeTenantId` is null AND tenant resolution hasn't settled (no profile yet, or `tenant_users` query pending) → loading `true`.
+  - When `activeTenantId` resolves and the `tenants` fetch is in flight → loading `true`.
+  - When `tenants` fetch settles (success or error) → loading `false`.
+  - When `activeTenantId` settles to `null` (resolved, but user has no tenant) → loading `false`, `academyAccessEnabled` stays `false` (correct behaviour: not entitled).
+- Expose via the provider value alongside `academyAccessEnabled`.
+- Simplest implementation: a single `academyAccessLoading` state initialised `true`, set `false` in both terminal branches of the second effect and in the early-return when `activeTenantId === null` after profile is known.
 
-For each site listed in 1.2, remove the `viv-font-anton` / `viv-font-binate` token from the `className` string and leave all sibling classes (sizes, colours, weights, tracking) intact. No element unwrapping. Files touched:
-- `src/components/layout/AcademyTopBar.tsx`
-- `src/components/layout/AcademyLayout.tsx`
-- `src/components/layout/AcademyFooter.tsx`
-- `src/components/academy/AcademyPageWrapper.tsx`
-- `src/pages/client/AcademyDashboardPage.tsx`
+### File 2 — `src/components/academy/AcademyAccessGate.tsx`
+- Read `academyAccessLoading` alongside `academyAccessEnabled`.
+- While loading: render a minimal skeleton (centered spinner or a 3-line `<Skeleton>` block — match the Suspense fallback the wrappers already use: `<Loader2 className="h-6 w-6 animate-spin text-primary" />` in a centered container).
+- Only render the "Academy not yet active" panel when `!academyAccessLoading && !academyAccessEnabled`.
+- When entitled: render `children` as today.
 
-### Phase 4 — Body font
+### Files 3–4 — Wrapper consistency
+Add `<AcademyAccessGate>` to the two wrappers currently missing it, so all five pathways enforce entitlement uniformly:
 
-No `.academy-scope { font-family: Calibri }` rule exists. Body text already inherits the global Unicorn stack. No edit required; will be called out explicitly in the deliverable report.
+- `src/pages/client/AcademyTrainerWrapper.tsx` — wrap `<TrainerHubPage />` in `<AcademyAccessGate>` (mirroring the structure of `AcademyComplianceManagerWrapper`).
+- `src/pages/client/AcademyGovernancePersonWrapper.tsx` — same change for `<GovernancePersonPage />`.
 
-### Phase 5 — Verification (post-edit)
+Once Bug 2 is fixed, this is safe — the gate will no longer false-negative.
 
-- `rg -n -i "anton|binate|montserrat" src/ public/ index.html` → expect zero matches (modulo the open-question files below if we leave them).
-- `rg -n "viv-font-anton|viv-font-binate" src/` → zero matches.
-- Visual smoke: `/academy/dashboard`, `/academy/courses`, all five hub pages, lesson viewer — typography matches `/dashboard` and `/client/home`.
-- Confirm `--viv-purple/--viv-fuchsia/--viv-cyan/--viv-acai/--viv-gold` tokens, gradients, and stat-card coloured bars unchanged.
-- Confirm no diff outside `.academy-scope` consumers and the two HTML/CSS lines.
+## What this does NOT change
 
----
+- `AudienceHubPage.tsx` — untouched. The "no courses for this pathway" empty state stays as-is for now (separate ticket).
+- `useAcademyCourses.ts`, the page components, route registration — untouched.
+- No DB migration. `academy_access_enabled` derivation is correct; the issue is purely client-side loading/branch handling.
+- `target_audience` filtering is unrelated to this bug — once the gate stops firing, the existing course-fetch logic will render the 13 / 5 / 7 tagged courses for AHMRC.
 
-### Open question (one decision needed before I implement)
+## Verification
 
-How should I handle the two **inline-Anton** sites that are technically outside `.academy-scope` but will degrade silently once the Google Fonts link is gone?
-
-1. **Strip both** (recommended) — remove `fontFamily` from `VideoThumbnail.tsx:38` and `BulkInvite.tsx:400` so they inherit the global Inter/system stack. Cleanest end state, zero Anton references remain.
-2. **Strip only `VideoThumbnail.tsx`** — it's an Academy admin component; leave `BulkInvite.tsx` alone since it's not Academy-scoped.
-3. **Leave both as-is** — they'll fall back to `sans-serif`. Strict reading of the prompt (".academy-scope only").
-
-I'll proceed with option 1 unless told otherwise.
+1. Impersonate AHMRC (`academy_access_enabled = true`):
+   - All five pathways render their hub (Trainer, Governance, Compliance Manager, Student Support, Admin Assistant). Compliance Manager shows 13 courses, SSO shows 5, Admin Assistant shows 7.
+   - During load, a brief spinner appears (no flash of "not active").
+2. Impersonate a tenant with `academy_access_enabled = false`:
+   - All five pathways show "Academy not yet active" — uniformly, after the loading spinner.
+3. Sign in as a real client user (no impersonation): same two scenarios behave identically.
+4. Network throttle: confirm spinner persists during slow fetch and "not active" never flashes for an entitled tenant.
