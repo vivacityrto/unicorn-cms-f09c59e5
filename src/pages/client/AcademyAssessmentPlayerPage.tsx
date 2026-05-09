@@ -149,6 +149,7 @@ export default function AcademyAssessmentPlayerPage() {
   // Submit mutation
   const submitMutation = useMutation({
     mutationFn: async () => {
+      if (blockWrite("Submit assessment")) throw new Error(PREVIEW_BLOCKED_ERROR);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !assessment || !enrollment) throw new Error("Not ready");
 
