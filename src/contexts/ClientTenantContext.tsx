@@ -45,6 +45,7 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
   const { isPreviewMode, previewTenant } = useClientPreview();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [academyAccessEnabled, setAcademyAccessEnabled] = useState(false);
+  const [academyAccessLoading, setAcademyAccessLoading] = useState(true);
   const [resolvedTenantId, setResolvedTenantId] = useState<number | null>(null);
   const [tenantUser, setTenantUser] = useState<TenantUserRow | null>(null);
   const [tenantUserLoading, setTenantUserLoading] = useState(true);
