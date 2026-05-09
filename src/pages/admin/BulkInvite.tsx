@@ -397,10 +397,10 @@ export default function BulkInvite() {
             <Sparkles className="h-6 w-6" />
             <span className="text-sm font-semibold uppercase tracking-wider opacity-90">SuperAdmin · Bulk Invite</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-2" style={{ fontFamily: "Anton, sans-serif", letterSpacing: "0.02em" }}>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 tracking-tight">
             Monday Superhero Launch
           </h1>
-          <p className="text-base opacity-95 max-w-2xl" style={{ fontFamily: "Calibri, sans-serif" }}>
+          <p className="text-base opacity-95 max-w-2xl">
             Send invitations to the primary contact of every active Superhero member tenant. Each invitation expires in 7 days. Sends throttled at 20/min.
           </p>
         </div>

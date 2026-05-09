@@ -39,7 +39,7 @@ export default function AcademyPageWrapper({
       <div>
         <div className="flex items-center gap-2 mb-1">
           <span style={{ color: accentColour }}>{icon}</span>
-          <h1 className="viv-font-anton text-3xl text-[var(--viv-purple)]">{title}</h1>
+          <h1 className="text-3xl font-bold text-[var(--viv-purple)]">{title}</h1>
         </div>
         <p className="text-muted-foreground">{subtitle}</p>
         {/* Accent bar */}
