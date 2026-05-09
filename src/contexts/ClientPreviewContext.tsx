@@ -164,6 +164,10 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
       }
 
       setLoading(true);
+      // Defensive: clear any prior tenant's picker state before the
+      // async chain runs, so the UI never briefly renders stale options.
+      setActingUserOptions([]);
+      setActingUserIdState(null);
       try {
         const { data: tenantData, error: tenantError } = await supabase
           .from("tenants")
@@ -192,11 +196,9 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
           return false;
         }
 
-        // Resolve acting user options if not already cached for this tenant
-        let opts = actingUserOptions;
-        if (opts.length === 0) {
-          opts = await loadActingUserOptions(tenantId);
-        }
+        // Always refetch for the impersonated tenant — never seed
+        // the picker from stale React state from a prior preview.
+        const opts = await loadActingUserOptions(tenantId);
         const resolvedActingId =
           initialActingUserId ??
           opts.find((o) => o.is_default)?.user_uuid ??
