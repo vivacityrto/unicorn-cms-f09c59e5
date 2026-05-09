@@ -141,6 +141,7 @@ export const AcademyLayout = ({
   };
 
   return (
+    <ClientTenantProvider>
     <HelpCenterProvider>
     <div className="min-h-screen bg-background academy-scope">
       {/* Impersonation Banner (fixed; spacer pushes layout down) */}
