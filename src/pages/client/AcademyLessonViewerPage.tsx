@@ -40,6 +40,7 @@ export default function AcademyLessonViewerPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const autoCompletedRef = useRef<boolean>(false);
   const prevEnrollmentStatusRef = useRef<string | null>(null);
+  const { isReadOnly, blockWrite } = useReadOnlyGuard();
 
   const numericLessonId = lessonId ? parseInt(lessonId, 10) : null;
 
