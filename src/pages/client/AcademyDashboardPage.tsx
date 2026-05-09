@@ -94,7 +94,7 @@ export default function AcademyDashboardPage() {
         className="rounded-xl px-6 py-5 text-white"
         style={{ background: "var(--viv-grad-hero)" }}
       >
-        <h2 className="viv-font-anton text-3xl text-white leading-tight">
+        <h2 className="text-3xl font-bold text-white leading-tight">
           {firstName ? `Welcome back, ${firstName}` : "Welcome back"}
         </h2>
         <p className="text-sm text-white/85 mt-1">
@@ -111,9 +111,9 @@ export default function AcademyDashboardPage() {
               {statsLoading ? (
                 <Skeleton className="h-8 w-12 mb-1" />
               ) : (
-                <span className="viv-font-anton text-3xl text-[var(--viv-acai)]">{s.value}</span>
+                <span className="text-3xl font-bold text-[var(--viv-acai)]">{s.value}</span>
               )}
-              <span className="viv-font-binate text-[11px] text-[var(--viv-acai)]/70 mt-1">{s.label}</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--viv-acai)]/70 mt-1">{s.label}</span>
             </CardContent>
           </Card>
         ))}

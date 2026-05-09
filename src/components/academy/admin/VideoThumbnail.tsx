@@ -35,7 +35,7 @@ export default function VideoThumbnail({ src, videoName, size = "md" }: VideoThu
         background: "linear-gradient(135deg, hsl(270 55% 41%) 0%, hsl(330 86% 51%) 100%)",
       }}
     >
-      <span className="text-white font-bold text-2xl select-none" style={{ fontFamily: "'Anton', sans-serif" }}>
+      <span className="text-white font-bold text-2xl select-none">
         {videoName.charAt(0).toUpperCase()}
       </span>
     </div>

@@ -120,7 +120,7 @@ export function AcademyTopBar() {
           <div className="flex items-center justify-center h-8 w-8 rounded-lg" style={{ background: "var(--viv-grad-hero)" }}>
             <GraduationCap className="h-4 w-4 text-white" />
           </div>
-          <span className="viv-font-anton text-xl text-[var(--viv-purple)]">Academy</span>
+          <span className="text-xl font-semibold text-[var(--viv-purple)]">Academy</span>
         </div>
 
         <div className="h-8 w-px bg-[var(--viv-purple-light)] flex-shrink-0" />
@@ -141,7 +141,7 @@ export function AcademyTopBar() {
               ))}
             </nav>
           )}
-          <h1 className="viv-font-anton text-xl text-[var(--viv-purple)] truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]">
+          <h1 className="text-xl font-semibold text-[var(--viv-purple)] truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]">
             {pageTitle}
           </h1>
         </div>

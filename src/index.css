@@ -845,14 +845,3 @@
   --viv-gold: #F9CB0C;
   --viv-grad-hero: linear-gradient(90deg, #7130A0 0%, #ED1878 100%);
 }
-.academy-scope .viv-font-anton {
-  font-family: 'Anton', 'Montserrat', system-ui, sans-serif;
-  letter-spacing: 0.01em;
-}
-/* TODO(brand): swap Montserrat fallback for Binate when licensed */
-.academy-scope .viv-font-binate {
-  font-family: 'Montserrat', system-ui, sans-serif;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}

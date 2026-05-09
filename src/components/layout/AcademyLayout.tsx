@@ -124,7 +124,7 @@ export const AcademyLayout = ({
       >
         {sidebarOpen && (
           <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-[var(--viv-purple-light)]/30 py-2 rounded-lg transition-colors">
-            <p className="viv-font-binate text-[11px] text-[var(--viv-acai)]">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--viv-acai)]">
               {title}
             </p>
             {sectionsOpen[sectionKey] ? (
@@ -162,7 +162,7 @@ export const AcademyLayout = ({
                 <GraduationCap className="h-5 w-5 text-white" />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="viv-font-anton text-xl text-white">Vivacity</span>
+                <span className="text-xl font-semibold text-white">Vivacity</span>
                 <span className="text-xs text-white/80">Academy</span>
               </div>
             </div>
