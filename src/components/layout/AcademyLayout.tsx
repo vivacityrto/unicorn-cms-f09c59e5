@@ -26,6 +26,7 @@ import { AcademyFooter } from "@/components/layout/AcademyFooter";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
+import { ClientTenantProvider } from "@/contexts/ClientTenantContext";
 
 // Academy menu items
 const academyPathwaysItems = [
@@ -140,6 +141,7 @@ export const AcademyLayout = ({
   };
 
   return (
+    <ClientTenantProvider>
     <HelpCenterProvider>
     <div className="min-h-screen bg-background academy-scope">
       {/* Impersonation Banner (fixed; spacer pushes layout down) */}
@@ -234,5 +236,6 @@ export const AcademyLayout = ({
       <HelpCenterDrawer />
     </div>
     </HelpCenterProvider>
+    </ClientTenantProvider>
   );
 };

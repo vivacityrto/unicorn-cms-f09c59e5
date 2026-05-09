@@ -47,6 +47,7 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
   const [academyAccessEnabled, setAcademyAccessEnabled] = useState(false);
   const [academyAccessLoading, setAcademyAccessLoading] = useState(true);
   const [resolvedTenantId, setResolvedTenantId] = useState<number | null>(null);
+  const [resolutionAttempted, setResolutionAttempted] = useState(false);
   const [tenantUser, setTenantUser] = useState<TenantUserRow | null>(null);
   const [tenantUserLoading, setTenantUserLoading] = useState(true);
 
@@ -58,14 +59,17 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isPreview) {
       setResolvedTenantId(previewTenant!.id);
+      setResolutionAttempted(true);
       return;
     }
     if (!profile?.user_uuid) {
       setResolvedTenantId(null);
+      // Profile not loaded yet — resolution not attempted; do NOT mark settled.
       return;
     }
     if (profile.tenant_id) {
       setResolvedTenantId(profile.tenant_id);
+      setResolutionAttempted(true);
       return;
     }
     let cancelled = false;
@@ -78,10 +82,12 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.warn("[ClientTenantContext] tenant_users lookup failed", error);
         setResolvedTenantId(null);
+        setResolutionAttempted(true);
         return;
       }
       if (!data || data.length === 0) {
         setResolvedTenantId(null);
+        setResolutionAttempted(true);
         return;
       }
       if (data.length > 1) {
@@ -89,9 +95,11 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
           `[ClientTenantContext] User ${profile.user_uuid} has ${data.length} tenant_users rows and no users.tenant_id — refusing to pick. Multi-tenant selection UI required.`
         );
         setResolvedTenantId(null);
+        setResolutionAttempted(true);
         return;
       }
       setResolvedTenantId(Number(data[0].tenant_id));
+      setResolutionAttempted(true);
     })();
     return () => {
       cancelled = true;
@@ -101,14 +109,14 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
   const activeTenantId = resolvedTenantId;
   const tenantName = isPreview ? previewTenant!.name : null;
 
-  // Fetch tenant logo + academy access
+  // Fetch tenant logo + academy access. The loading flag tracks ONLY this fetch
+  // lifecycle (decoupled from how activeTenantId was resolved).
   useEffect(() => {
-    if (!activeTenantId) {
+    if (activeTenantId == null) {
       setLogoUrl(null);
       setAcademyAccessEnabled(false);
-      // Only mark as not-loading once tenant resolution has settled with no tenant.
-      // If profile is still loading, keep loading=true.
-      if (profile?.user_uuid && resolvedTenantId === null && !isPreview) {
+      // Only flip loading=false once tenant resolution has settled with no tenant.
+      if (resolutionAttempted) {
         setAcademyAccessLoading(false);
       }
       return;
@@ -116,27 +124,48 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
     setAcademyAccessLoading(true);
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("tenants")
-        .select("logo_path, academy_access_enabled")
-        .eq("id", activeTenantId)
-        .single();
-      if (cancelled) return;
-      if (data?.logo_path) {
-        const { data: urlData } = supabase.storage
-          .from("client-logos")
-          .getPublicUrl(data.logo_path);
-        setLogoUrl(urlData?.publicUrl || null);
-      } else {
-        setLogoUrl(null);
+      try {
+        const { data } = await supabase
+          .from("tenants")
+          .select("logo_path, academy_access_enabled")
+          .eq("id", activeTenantId)
+          .single();
+        if (cancelled) return;
+        if (data?.logo_path) {
+          const { data: urlData } = supabase.storage
+            .from("client-logos")
+            .getPublicUrl(data.logo_path);
+          setLogoUrl(urlData?.publicUrl || null);
+        } else {
+          setLogoUrl(null);
+        }
+        setAcademyAccessEnabled(data?.academy_access_enabled ?? false);
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("[ClientTenantContext] tenants fetch failed", err);
+          setAcademyAccessEnabled(false);
+        }
+      } finally {
+        if (!cancelled) setAcademyAccessLoading(false);
       }
-      setAcademyAccessEnabled(data?.academy_access_enabled ?? false);
-      setAcademyAccessLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [activeTenantId, profile?.user_uuid, resolvedTenantId, isPreview]);
+  }, [activeTenantId, resolutionAttempted]);
+
+  // Watchdog: if tenant resolution hangs > 5s with no activeTenantId, surface
+  // the not-active state instead of an infinite spinner.
+  useEffect(() => {
+    if (!academyAccessLoading || activeTenantId != null) return;
+    const t = setTimeout(() => {
+      console.warn(
+        "[ClientTenantContext] tenant resolution exceeded 5s — surfacing not-active state"
+      );
+      setAcademyAccessLoading(false);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [academyAccessLoading, activeTenantId]);
 
   // Fetch caller's tenant_users row for the active tenant
   useEffect(() => {
