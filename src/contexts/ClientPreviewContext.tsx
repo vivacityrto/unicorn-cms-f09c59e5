@@ -241,7 +241,7 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
         setLoading(false);
       }
     },
-    [canUsePreview, session?.user?.id, queryClient, actingUserOptions, persistSession]
+    [canUsePreview, session?.user?.id, queryClient, persistSession]
   );
 
   const endPreview = useCallback(async () => {
