@@ -200,7 +200,10 @@ export default function AcademyAssessmentPlayerPage() {
       setSubmitted(true);
       navigate(`/academy/course/${slug}/assessment/${assessmentId}/result/${attemptId}`, { replace: true });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to submit assessment"),
+    onError: (e: any) => {
+      if (isPreviewBlockedError(e)) return;
+      toast.error(friendlyDbError(e, "AcademyAssessmentPlayer.submit"));
+    },
   });
 
   const handleSubmit = useCallback(() => {
