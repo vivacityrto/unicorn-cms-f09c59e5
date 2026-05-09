@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, ChevronLeft, ChevronRight, Clock, AlertTriangle, Send } from "lucide-react";
 import { toast } from "sonner";
+import {
+  useReadOnlyGuard,
+  PREVIEW_BLOCKED_ERROR,
+  isPreviewBlockedError,
+} from "@/hooks/useReadOnlyGuard";
+import { friendlyDbError } from "@/lib/friendlyDbError";
 
 interface QuestionOption {
   value: string;
@@ -41,6 +47,7 @@ export default function AcademyAssessmentPlayerPage() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const startedAtRef = useRef<string>(new Date().toISOString());
+  const { blockWrite } = useReadOnlyGuard();
 
   // Fetch assessment
   const { data: assessment, isLoading: assessmentLoading } = useQuery({
@@ -142,6 +149,7 @@ export default function AcademyAssessmentPlayerPage() {
   // Submit mutation
   const submitMutation = useMutation({
     mutationFn: async () => {
+      if (blockWrite("Submit assessment")) throw new Error(PREVIEW_BLOCKED_ERROR);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !assessment || !enrollment) throw new Error("Not ready");
 
@@ -192,7 +200,10 @@ export default function AcademyAssessmentPlayerPage() {
       setSubmitted(true);
       navigate(`/academy/course/${slug}/assessment/${assessmentId}/result/${attemptId}`, { replace: true });
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to submit assessment"),
+    onError: (e: any) => {
+      if (isPreviewBlockedError(e)) return;
+      toast.error(friendlyDbError(e, "AcademyAssessmentPlayer.submit"));
+    },
   });
 
   const handleSubmit = useCallback(() => {

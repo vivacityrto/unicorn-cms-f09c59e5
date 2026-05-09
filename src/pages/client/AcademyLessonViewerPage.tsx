@@ -17,6 +17,12 @@ import {
 import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 import { useEnrolCourse } from "@/hooks/academy/useEnrolCourse";
 import { useCompleteEnrollment } from "@/hooks/academy/useCompleteEnrollment";
+import {
+  useReadOnlyGuard,
+  PREVIEW_BLOCKED_ERROR,
+  isPreviewBlockedError,
+} from "@/hooks/useReadOnlyGuard";
+import { friendlyDbError } from "@/lib/friendlyDbError";
 
 const ACCENT = "#23c0dd";
 const PROGRESS_THROTTLE_MS = 10_000;
@@ -34,6 +40,7 @@ export default function AcademyLessonViewerPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const autoCompletedRef = useRef<boolean>(false);
   const prevEnrollmentStatusRef = useRef<string | null>(null);
+  const { isReadOnly, blockWrite } = useReadOnlyGuard();
 
   const numericLessonId = lessonId ? parseInt(lessonId, 10) : null;
 
@@ -177,7 +184,7 @@ export default function AcademyLessonViewerPage() {
   const isEnrolled = !!enrollment && enrollment.enrollment_status === "active";
   const isExpired = !!enrollmentRaw?.expires_at && new Date(enrollmentRaw.expires_at) < new Date();
   const isRevoked = !!enrollmentRaw?.revoked_at;
-  const canTrackProgress = isEnrolled && !isPreview && !isExpired && !isRevoked;
+  const canTrackProgress = isEnrolled && !isPreview && !isExpired && !isRevoked && !isReadOnly;
   const completionThreshold = lesson?.completion_threshold ?? 90;
 
   // Upsert progress helper
@@ -268,6 +275,7 @@ export default function AcademyLessonViewerPage() {
   // Mark lesson complete mutation (manual button)
   const markComplete = useMutation({
     mutationFn: async () => {
+      if (blockWrite("Mark complete")) throw new Error(PREVIEW_BLOCKED_ERROR);
       if (!actingUserId || !lesson || !course || !enrollment) throw new Error("Not ready");
       const { error } = await supabase.from("academy_lesson_progress").upsert(
         {
@@ -316,7 +324,10 @@ export default function AcademyLessonViewerPage() {
         setShowCelebration(true);
       }
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update progress"),
+    onError: (e: any) => {
+      if (isPreviewBlockedError(e)) return;
+      toast.error(friendlyDbError(e, "AcademyLessonViewer.markComplete"));
+    },
   });
 
   // Compute prev/next lessons

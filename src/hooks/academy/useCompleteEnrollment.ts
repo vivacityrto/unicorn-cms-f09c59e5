@@ -2,6 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
+import {
+  useReadOnlyGuard,
+  PREVIEW_BLOCKED_ERROR,
+  isPreviewBlockedError,
+} from "@/hooks/useReadOnlyGuard";
+import { friendlyDbError } from "@/lib/friendlyDbError";
 
 /**
  * Complete an enrollment. When impersonating, routes through
@@ -10,10 +16,12 @@ import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 export function useCompleteEnrollment() {
   const qc = useQueryClient();
   const { userId, isImpersonating } = useAcademyActingUserId();
+  const { blockWrite } = useReadOnlyGuard();
   const canMutate = userId !== null;
 
   const mutation = useMutation({
     mutationFn: async (enrollmentId: number) => {
+      if (blockWrite("Complete enrollment")) throw new Error(PREVIEW_BLOCKED_ERROR);
       if (!userId) throw new Error("No acting user resolved");
       if (isImpersonating) {
         const { data, error } = await supabase.rpc(
@@ -39,7 +47,10 @@ export function useCompleteEnrollment() {
       qc.invalidateQueries({ queryKey: ["academy-my-enrolled-courses"] });
       qc.invalidateQueries({ queryKey: ["academy-my-certificates"] });
     },
-    onError: (e: Error) => toast.error(e.message || "Failed to complete enrollment"),
+    onError: (e: Error) => {
+      if (isPreviewBlockedError(e)) return;
+      toast.error(friendlyDbError(e, "useCompleteEnrollment"));
+    },
   });
 
   return { ...mutation, canMutate };
