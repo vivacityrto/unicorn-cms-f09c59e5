@@ -106,14 +106,22 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
     if (!activeTenantId) {
       setLogoUrl(null);
       setAcademyAccessEnabled(false);
+      // Only mark as not-loading once tenant resolution has settled with no tenant.
+      // If profile is still loading, keep loading=true.
+      if (profile?.user_uuid && resolvedTenantId === null && !isPreview) {
+        setAcademyAccessLoading(false);
+      }
       return;
     }
+    setAcademyAccessLoading(true);
+    let cancelled = false;
     (async () => {
       const { data } = await supabase
         .from("tenants")
         .select("logo_path, academy_access_enabled")
         .eq("id", activeTenantId)
         .single();
+      if (cancelled) return;
       if (data?.logo_path) {
         const { data: urlData } = supabase.storage
           .from("client-logos")
@@ -123,8 +131,12 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
         setLogoUrl(null);
       }
       setAcademyAccessEnabled(data?.academy_access_enabled ?? false);
+      setAcademyAccessLoading(false);
     })();
-  }, [activeTenantId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTenantId, profile?.user_uuid, resolvedTenantId, isPreview]);
 
   // Fetch caller's tenant_users row for the active tenant
   useEffect(() => {
