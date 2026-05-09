@@ -324,7 +324,10 @@ export default function AcademyLessonViewerPage() {
         setShowCelebration(true);
       }
     },
-    onError: (e: any) => toast.error(e?.message || "Failed to update progress"),
+    onError: (e: any) => {
+      if (isPreviewBlockedError(e)) return;
+      toast.error(friendlyDbError(e, "AcademyLessonViewer.markComplete"));
+    },
   });
 
   // Compute prev/next lessons
