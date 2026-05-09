@@ -192,6 +192,7 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
         isPreview,
         isReadOnly: isPreview,
         academyAccessEnabled,
+        academyAccessLoading,
         tenantUser,
         tenantUserLoading,
         canAccessClientPortal,
