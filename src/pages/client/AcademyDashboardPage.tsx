@@ -19,6 +19,8 @@ import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 import { useAcademyDashboardStats, formatDuration } from "@/hooks/useAcademyCourses";
 import { useMyEnrolledCourses } from "@/hooks/academy/useMyEnrolledCourses";
 import { useAuth } from "@/hooks/useAuth";
+import { useClientPreview } from "@/contexts/ClientPreviewContext";
+import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const roleTiles = [
