@@ -275,6 +275,7 @@ export default function AcademyLessonViewerPage() {
   // Mark lesson complete mutation (manual button)
   const markComplete = useMutation({
     mutationFn: async () => {
+      if (blockWrite("Mark complete")) throw new Error(PREVIEW_BLOCKED_ERROR);
       if (!actingUserId || !lesson || !course || !enrollment) throw new Error("Not ready");
       const { error } = await supabase.from("academy_lesson_progress").upsert(
         {
