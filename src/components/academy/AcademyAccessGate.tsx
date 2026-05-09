@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
-import { GraduationCap, MessageCircle } from "lucide-react";
+import { GraduationCap, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHelpCenter } from "@/components/help-center";
 
@@ -13,8 +13,16 @@ interface AcademyAccessGateProps {
  * renders an "Access Required" screen instead of the page content.
  */
 export default function AcademyAccessGate({ children }: AcademyAccessGateProps) {
-  const { academyAccessEnabled } = useClientTenant();
+  const { academyAccessEnabled, academyAccessLoading } = useClientTenant();
   const { openHelpCenter } = useHelpCenter();
+
+  if (academyAccessLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!academyAccessEnabled) {
     return (
