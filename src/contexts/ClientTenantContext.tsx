@@ -32,6 +32,7 @@ const ClientTenantContext = createContext<ClientTenantContextValue>({
   isPreview: false,
   isReadOnly: false,
   academyAccessEnabled: false,
+  academyAccessLoading: true,
   tenantUser: null,
   tenantUserLoading: true,
   canAccessClientPortal: false,
