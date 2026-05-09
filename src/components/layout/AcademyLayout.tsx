@@ -236,5 +236,6 @@ export const AcademyLayout = ({
       <HelpCenterDrawer />
     </div>
     </HelpCenterProvider>
+    </ClientTenantProvider>
   );
 };
