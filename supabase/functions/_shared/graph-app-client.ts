@@ -326,6 +326,36 @@ export async function graphDownload(driveId: string, itemId: string): Promise<Ui
 }
 
 /**
+ * Resolve a SharePoint/OneDrive sharing URL to a DriveItem (with parentReference.driveId).
+ * Uses Graph's `/shares/u!{base64url(url)}/driveItem` endpoint, which works for any
+ * SharePoint web URL (Doc.aspx, :w:/r/sites/..., short links, etc.) the app has access to.
+ */
+export async function resolveDriveItemFromSharingUrl(
+  sharingUrl: string,
+): Promise<{ driveId: string; itemId: string; name: string; webUrl: string }> {
+  // Encode per Graph spec: base64url, strip padding, prefix with "u!"
+  const b64 = btoa(sharingUrl)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+  const shareToken = `u!${b64}`;
+
+  const resp = await graphGet<DriveItem & { parentReference?: { driveId?: string } }>(
+    `/shares/${shareToken}/driveItem?$select=id,name,webUrl,parentReference,file`,
+  );
+
+  if (!resp.ok) {
+    throw new Error(`resolveDriveItemFromSharingUrl: ${resp.status} for ${sharingUrl}`);
+  }
+  const item = resp.data;
+  const driveId = item?.parentReference?.driveId;
+  if (!driveId || !item?.id) {
+    throw new Error(`resolveDriveItemFromSharingUrl: missing driveId/itemId for ${sharingUrl}`);
+  }
+  return { driveId, itemId: item.id, name: item.name, webUrl: item.webUrl };
+}
+
+/**
  * Search for items within a drive.
  */
 export async function graphSearchDrive<T = { value: DriveItem[] }>(

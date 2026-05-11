@@ -15,7 +15,6 @@ type ResultStatus = 'generated' | 'skipped' | 'failed';
 type ResultReason =
   | 'unsupported_format'
   | 'no_template'
-  | 'template_not_imported'
   | 'already_generated'
   | 'tailoring_incomplete'
   | 'locked'
@@ -194,35 +193,36 @@ Deno.serve(async (req: Request) => {
 
     for (const { inst, doc } of eligible) {
       const version = versionByDocId.get(doc.id);
+      const sp = (version?.storage_path ?? '').trim();
+      const fsp = (version?.frozen_storage_path ?? '').trim();
+      const sourceUrl = ((doc as { source_template_url?: string | null }).source_template_url ?? '').trim();
+
       if (!version) {
+        // No published version row at all — deliver requires a document_version_id.
+        // If a SharePoint source exists, surface that as the actionable reason.
         results.push({
           document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
-          status: 'skipped', reason: 'no_published_version',
-          error: 'No published version available for this document',
+          status: 'skipped', reason: sourceUrl ? 'no_published_version' : 'no_template',
+          error: sourceUrl
+            ? 'Source template is allocated in SharePoint but no published document version exists yet.'
+            : 'No published version and no SharePoint template URL.',
         });
         continue;
       }
-      const sp = (version.storage_path ?? '').trim();
-      const fsp = (version.frozen_storage_path ?? '').trim();
-      if (!sp && !fsp) {
-        const sourceUrl = ((doc as { source_template_url?: string | null }).source_template_url ?? '').trim();
-        if (sourceUrl) {
-          results.push({
-            document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
-            status: 'skipped', reason: 'template_not_imported',
-            error: 'Template is allocated in SharePoint but has not been imported. Use Admin → Document Templates to import it before generating.',
-          });
-        } else {
-          results.push({
-            document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
-            status: 'skipped', reason: 'no_template',
-            error: 'No template file is allocated for this document',
-          });
-        }
+
+      if (!sp && !fsp && !sourceUrl) {
+        results.push({
+          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          status: 'skipped', reason: 'no_template',
+          error: 'No template file is allocated for this document (neither Supabase storage nor SharePoint URL).',
+        });
         continue;
       }
-      // Use whichever is non-empty as the actual template path
-      version.storage_path = sp || fsp;
+
+      // Choose template source: prefer Supabase storage if present, else SharePoint.
+      version.storage_path = sp || fsp || null;
+      const templateSource = (sp || fsp) ? 'supabase_storage' : 'sharepoint_master';
+      console.log(`[bulk-gen] doc ${doc.id} (${doc.title}) → ${templateSource}`);
 
       try {
         const resp = await fetch(deliverUrl, {
