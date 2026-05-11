@@ -332,3 +332,44 @@ export function useUserAcademyEnrollments(userId: string | null | undefined) {
     enabled: !!userId,
   });
 }
+
+import {
+  createReview,
+  listEndCycleReviewIds,
+  listManagerCycles,
+  type CreateReviewInput,
+  type ManagerCycle,
+} from "./api";
+
+export function useManagerCycles(managerId: string | null | undefined) {
+  return useQuery<ManagerCycle[]>({
+    queryKey: [PDP_KEY, "manager-cycles", managerId ?? null],
+    queryFn: () => listManagerCycles(managerId as string),
+    enabled: !!managerId,
+  });
+}
+
+export function useEndCycleReviewSet(cycleIds: number[]) {
+  const sortedKey = [...cycleIds].sort((a, b) => a - b);
+  return useQuery<Set<number>>({
+    queryKey: [PDP_KEY, "manager-end-cycle-reviews", sortedKey],
+    queryFn: async () => new Set(await listEndCycleReviewIds(sortedKey)),
+    enabled: cycleIds.length > 0,
+  });
+}
+
+export function useCreateReview(cycleId: number | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation<PdpReview, Error, CreateReviewInput>({
+    mutationFn: (input) => createReview(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "reviews", cycleId ?? null] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "cycle-summary", cycleId ?? null] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "manager-cycles"] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "manager-end-cycle-reviews"] });
+      // TODO(prompt-10): notify reviewee via edge function (audit_log + in-app banner).
+      toast.success("Review saved");
+    },
+    onError: (err) => toast.error(err.message ?? "Failed to save review"),
+  });
+}
