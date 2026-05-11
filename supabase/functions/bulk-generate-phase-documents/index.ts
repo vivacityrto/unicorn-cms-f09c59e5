@@ -15,7 +15,6 @@ type ResultStatus = 'generated' | 'skipped' | 'failed';
 type ResultReason =
   | 'unsupported_format'
   | 'no_template'
-  | 'not_auto_generated'
   | 'already_generated'
   | 'tailoring_incomplete'
   | 'locked'
@@ -124,7 +123,7 @@ Deno.serve(async (req: Request) => {
     const docIds = [...new Set(instances.map(i => i.document_id))];
     const { data: docs } = await supabase
       .from('documents')
-      .select('id, title, format, uploaded_files, is_auto_generated')
+      .select('id, title, format, uploaded_files')
       .in('id', docIds);
 
     const docMap = new Map((docs || []).map(d => [d.id, d]));
@@ -149,14 +148,6 @@ Deno.serve(async (req: Request) => {
           document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
           status: 'skipped', reason: 'unsupported_format',
           error: `Format "${doc.format ?? 'none'}" is not supported`,
-        });
-        continue;
-      }
-      if (!doc.is_auto_generated) {
-        results.push({
-          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
-          status: 'skipped', reason: 'not_auto_generated',
-          error: 'Document is not marked as auto-generated',
         });
         continue;
       }
