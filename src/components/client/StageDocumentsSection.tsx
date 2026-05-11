@@ -297,19 +297,49 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                 <AlertDialogHeader>
                   <AlertDialogTitle>Generate All Documents</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Generate all eligible auto-generated documents for this stage?
-                    Up to {totalCount} documents will be processed. Already-generated documents will be skipped.
+                    Up to {totalCount} documents will be processed. Already-generated documents
+                    are skipped unless you tick Overwrite.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <div className="flex items-start gap-2 rounded-md border p-3 bg-muted/30">
+                  <Checkbox
+                    id="bulk-overwrite"
+                    checked={overwriteChecked}
+                    onCheckedChange={(v) => setOverwriteChecked(v === true)}
+                    className="mt-0.5"
+                  />
+                  <label htmlFor="bulk-overwrite" className="text-sm cursor-pointer leading-tight">
+                    <span className="font-medium">Overwrite documents already marked generated</span>
+                    <span className="block text-xs text-muted-foreground mt-0.5">
+                      Regenerates every eligible template and replaces files in Client Governance.
+                    </span>
+                  </label>
+                </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel onClick={() => setOverwriteChecked(false)}>Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={handleBulkGenerate}>
-                    Generate All
+                    {overwriteChecked ? 'Overwrite All' : 'Generate All'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           )}
+
+          <ConfirmDialog
+            open={!!overwritePrompt}
+            onOpenChange={(o) => { if (!o) setOverwritePrompt(null); }}
+            variant="warning"
+            title="Overwrite previously generated documents?"
+            description={
+              overwritePrompt
+                ? `${overwritePrompt.alreadyCount} of ${overwritePrompt.total} documents are already marked generated, so nothing was produced this run. Overwriting will regenerate every eligible template and replace the existing files in Client Governance.`
+                : ''
+            }
+            confirmText="Overwrite All"
+            cancelText="Keep Existing"
+            isLoading={overwriteRunning}
+            onConfirm={handleOverwriteConfirm}
+          />
         </div>
       </div>
 
