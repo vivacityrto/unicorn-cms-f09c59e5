@@ -220,8 +220,25 @@ export function useAddReflection(cycleId: number | null | undefined) {
     mutationFn: (input) => addReflection(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [PDP_KEY, "reflections", cycleId ?? null] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "unattached-reflections"] });
     },
     onError: (err) => toast.error(err.message ?? "Failed to add reflection"),
+  });
+}
+
+export function useUnattachedReflections(userId: string | null | undefined) {
+  return useQuery<{ count: number }>({
+    queryKey: [PDP_KEY, "unattached-reflections", userId ?? null],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("pdp_reflections")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId as string)
+        .is("cycle_id", null);
+      if (error) throw error;
+      return { count: count ?? 0 };
+    },
   });
 }
 
