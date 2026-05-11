@@ -232,3 +232,62 @@ export function useSignOffReview(cycleId: number | null | undefined) {
     onError: (err) => toast.error(err.message ?? "Failed to sign off review"),
   });
 }
+
+export function useCycle(cycleId: number | null | undefined) {
+  return useQuery<PdpCycle | null>({
+    queryKey: [PDP_KEY, "cycle", cycleId ?? null],
+    queryFn: () => getCycleById(cycleId as number),
+    enabled: !!cycleId,
+  });
+}
+
+export function useUpdateCycle(cycleId: number | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation<PdpCycle, Error, UpdateCycleInput>({
+    mutationFn: (input) => updateCycle(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "cycle", cycleId ?? null] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "cycle-summary", cycleId ?? null] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "current-cycle"] });
+      toast.success("Cycle updated");
+    },
+    onError: (err) => toast.error(err.message ?? "Failed to update cycle"),
+  });
+}
+
+export function useCloseCycle(cycleId: number | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation<PdpCycle, Error, { outcomeNotes: string }>({
+    mutationFn: ({ outcomeNotes }) => closeCycle(cycleId as number, outcomeNotes),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "cycle", cycleId ?? null] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "cycle-summary", cycleId ?? null] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "current-cycle"] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "currency"] });
+      toast.success("Cycle closed");
+    },
+    onError: (err) => toast.error(err.message ?? "Failed to close cycle"),
+  });
+}
+
+export function useDeleteGoal(cycleId: number | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation<void, Error, number>({
+    mutationFn: (goalId) => deleteGoal(goalId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "goals", cycleId ?? null] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "cycle-summary", cycleId ?? null] });
+      toast.success("Goal deleted");
+    },
+    onError: (err) => toast.error(err.message ?? "Failed to delete goal"),
+  });
+}
+
+export function useStandardsReference(ids: (string | null | undefined)[]) {
+  const cleaned = Array.from(new Set(ids.filter((x): x is string => !!x))).sort();
+  return useQuery<StandardRef[]>({
+    queryKey: [PDP_KEY, "standards-ref", cleaned],
+    queryFn: () => listStandardsReference(cleaned),
+    enabled: cleaned.length > 0,
+  });
+}
