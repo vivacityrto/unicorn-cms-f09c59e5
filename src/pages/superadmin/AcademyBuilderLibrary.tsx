@@ -132,9 +132,23 @@ export default function AcademyBuilderLibrary() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Create and manage training courses for Vivacity Academy</p>
         </div>
-        <Button onClick={() => setNewCourseOpen(true)} className="text-white hover:opacity-90" style={{ backgroundColor: "#23c0dd" }}>
-          <Plus className="h-4 w-4 mr-2" /> New Course
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setBackfillConfirmOpen(true)}
+            disabled={backfillRunning}
+          >
+            {backfillRunning ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Backfill Video Durations
+          </Button>
+          <Button onClick={() => setNewCourseOpen(true)} className="text-white hover:opacity-90" style={{ backgroundColor: "#23c0dd" }}>
+            <Plus className="h-4 w-4 mr-2" /> New Course
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
