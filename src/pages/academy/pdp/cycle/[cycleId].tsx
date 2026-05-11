@@ -38,6 +38,24 @@ export default function AcademyPdpCyclePage() {
 
   const audience = audiences?.find((a) => a.code === cycle?.audience_code) ?? null;
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const reviewMode = searchParams.get("reviewMode") === "1";
+  const isManager = !!user?.id && !!cycle?.manager_id && cycle.manager_id === user.id;
+  const [composerOpen, setComposerOpen] = useState(false);
+
+  useEffect(() => {
+    if (reviewMode && isManager) setComposerOpen(true);
+  }, [reviewMode, isManager]);
+
+  const handleComposerOpenChange = (open: boolean) => {
+    setComposerOpen(open);
+    if (!open && searchParams.has("reviewMode")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("reviewMode");
+      setSearchParams(next, { replace: true });
+    }
+  };
+
   return (
     <AcademyLayout>
       <AcademyPageWrapper
