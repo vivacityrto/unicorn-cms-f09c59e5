@@ -98,11 +98,50 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
 
   const handleBulkGenerate = async () => {
     setConfirmOpen(false);
+    const useOverwrite = overwriteChecked;
+    setOverwriteChecked(false);
     try {
-      await bulkGenerate({ tenantId, stageInstanceId, packageId });
+      const res = await bulkGenerate({
+        tenantId,
+        stageInstanceId,
+        packageId,
+        mode: useOverwrite ? 'overwrite_all' : 'pending_only',
+        // If we're already overwriting we want the honest toast; otherwise suppress
+        // the empty toast so we can prompt for overwrite instead.
+        silentEmpty: !useOverwrite,
+      });
       refetch();
+
+      // Detect "all skipped because already_generated" → offer overwrite.
+      if (res && !useOverwrite) {
+        const { summary, results: rs } = res;
+        const alreadyCount = rs.filter(r => r.reason === 'already_generated').length;
+        const anyFailed = rs.some(r => r.status === 'failed');
+        if (summary.generated === 0 && alreadyCount > 0 && !anyFailed) {
+          setOverwritePrompt({ alreadyCount, total: summary.total });
+        }
+      }
     } catch {
       // Error handled by hook toast
+    }
+  };
+
+  const handleOverwriteConfirm = async () => {
+    if (!overwritePrompt) return;
+    setOverwriteRunning(true);
+    try {
+      await bulkGenerate({
+        tenantId,
+        stageInstanceId,
+        packageId,
+        mode: 'overwrite_all',
+      });
+      refetch();
+    } catch {
+      // toast handled by hook
+    } finally {
+      setOverwriteRunning(false);
+      setOverwritePrompt(null);
     }
   };
 
