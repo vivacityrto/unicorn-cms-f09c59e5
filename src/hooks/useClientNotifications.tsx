@@ -73,7 +73,7 @@ export function useClientNotifications() {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [profile?.user_uuid, qc]);
+  }, [profile?.user_uuid, qc, isAcademyOnly]);
 
   const markAsRead = useMutation({
     mutationFn: async (notificationId: string) => {
