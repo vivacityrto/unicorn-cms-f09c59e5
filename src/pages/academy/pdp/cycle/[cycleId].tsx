@@ -82,6 +82,14 @@ export default function AcademyPdpCyclePage() {
             <div className="space-y-6 min-w-0">
               <CycleHeaderBand cycle={cycle} audience={audience} />
 
+              {reviewMode && !isManager ? (
+                <Alert>
+                  <AlertDescription>
+                    You are not the assigned manager for this cycle, so the review composer is unavailable.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+
               <Tabs defaultValue="overview" className="w-full">
                 <TabsList className="grid grid-cols-5 w-full max-w-2xl">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -122,6 +130,14 @@ export default function AcademyPdpCyclePage() {
           </div>
         )}
       </AcademyPageWrapper>
+
+      {valid && cycle ? (
+        <ReviewComposerDrawer
+          open={composerOpen && isManager}
+          onOpenChange={handleComposerOpenChange}
+          cycleId={cycle.id}
+        />
+      ) : null}
     </AcademyLayout>
   );
 }
