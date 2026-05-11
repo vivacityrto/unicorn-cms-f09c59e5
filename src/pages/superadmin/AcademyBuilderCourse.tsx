@@ -631,7 +631,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any; courseId: number; onGenerated: (short: string, desc: string) => void }) {
+function AiDescriptionGenerator({
+  title,
+  targetAudience,
+  difficultyLevel,
+  tags,
+  onGenerated,
+}: {
+  title: string;
+  targetAudience: string[];
+  difficultyLevel: string;
+  tags: string[];
+  onGenerated: (short: string, desc: string) => void;
+}) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -642,10 +654,10 @@ function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any
       const { data, error: fnError } = await supabase.functions.invoke("academy-ai-generate", {
         body: {
           action: "generate_descriptions",
-          title: course.title,
-          target_audience: course.target_audience,
-          difficulty_level: course.difficulty_level,
-          tags: course.tags,
+          title,
+          target_audience: targetAudience.length > 0 ? targetAudience.join(", ") : "training professionals",
+          difficulty_level: difficultyLevel,
+          tags,
         },
       });
 
@@ -654,12 +666,7 @@ function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any
 
       if (data?.short_description && data?.description) {
         onGenerated(data.short_description, data.description);
-        // Force re-render of textareas by updating DOM directly
-        const shortEl = document.querySelector('[data-field="short_description"]') as HTMLTextAreaElement;
-        const descEl = document.querySelector('[data-field="description"]') as HTMLTextAreaElement;
-        if (shortEl) shortEl.value = data.short_description;
-        if (descEl) descEl.value = data.description;
-        toast.success("Descriptions generated — review and edit before saving");
+        toast.success("Descriptions generated — review and click Save Changes");
       } else {
         throw new Error("Invalid response format");
       }
@@ -679,7 +686,7 @@ function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any
         className="w-full text-xs gap-1.5"
         style={{ borderColor: "#7130A0", color: "#7130A0" }}
         onClick={handleGenerate}
-        disabled={!course.title?.trim() || generating}
+        disabled={!title?.trim() || generating}
       >
         {generating ? (
           <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating…</>
@@ -691,3 +698,4 @@ function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any
     </div>
   );
 }
+
