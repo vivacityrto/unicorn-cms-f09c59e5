@@ -7,7 +7,7 @@ export function useVideoLibraryPicker(search?: string) {
     queryFn: async () => {
       let q = supabase
         .from("training_videos")
-        .select("id, video_name, vimeo_url, thumbnail, folder_name")
+        .select("id, video_name, vimeo_url, thumbnail, folder_name, duration_seconds")
         .order("video_name");
       if (search) {
         q = q.ilike("video_name", `%${search}%`);
