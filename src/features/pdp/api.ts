@@ -117,16 +117,17 @@ export async function upsertGoal(input: UpsertGoalInput): Promise<PdpGoal> {
     const { id, ...rest } = input;
     const { data, error } = await supabase
       .from("pdp_goals")
-      .update(rest)
+      .update(rest as GoalUpdate)
       .eq("id", id)
       .select("*")
       .single();
     if (error) throw error;
     return data;
   }
+  const { id: _omit, ...insertRest } = input;
   const { data, error } = await supabase
     .from("pdp_goals")
-    .insert(input)
+    .insert(insertRest as GoalInsert)
     .select("*")
     .single();
   if (error) throw error;
@@ -141,9 +142,10 @@ export type LogEvidenceInput = Partial<PdpEvidenceItem> & {
 };
 
 export async function logEvidence(input: LogEvidenceInput): Promise<PdpEvidenceItem> {
+  const { id: _omit, ...rest } = input;
   const { data, error } = await supabase
     .from("pdp_evidence_items")
-    .insert(input)
+    .insert(rest as EvidenceInsert)
     .select("*")
     .single();
   if (error) throw error;
@@ -159,14 +161,21 @@ export type AddReflectionInput = {
 };
 
 export async function addReflection(input: AddReflectionInput): Promise<PdpReflection> {
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr) throw userErr;
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("Not authenticated");
+
+  const payload: ReflectionInsert = { ...input, user_id: userId };
   const { data, error } = await supabase
     .from("pdp_reflections")
-    .insert(input)
+    .insert(payload)
     .select("*")
     .single();
   if (error) throw error;
   return data;
 }
+
 
 export async function signOffReview(reviewId: number): Promise<PdpReview> {
   const { data: userData, error: userErr } = await supabase.auth.getUser();
