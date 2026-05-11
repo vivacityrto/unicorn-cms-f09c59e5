@@ -14,6 +14,7 @@ import type {
 type GoalInsert = Database["public"]["Tables"]["pdp_goals"]["Insert"];
 type GoalUpdate = Database["public"]["Tables"]["pdp_goals"]["Update"];
 type EvidenceInsert = Database["public"]["Tables"]["pdp_evidence_items"]["Insert"];
+type EvidenceUpdate = Database["public"]["Tables"]["pdp_evidence_items"]["Update"];
 type ReflectionInsert = Database["public"]["Tables"]["pdp_reflections"]["Insert"];
 
 export async function listAudiences(): Promise<PdpAudience[]> {
