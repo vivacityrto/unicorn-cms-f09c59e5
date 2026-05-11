@@ -135,10 +135,34 @@ export default function LessonEditorPanel({ open, onClose, moduleId, courseId, l
           </div>
 
           {/* Estimated Minutes */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Estimated Minutes</label>
-            <Input type="number" value={estimatedMinutes} onChange={(e) => setEstimatedMinutes(e.target.value ? parseInt(e.target.value) : "")} />
-          </div>
+          {(() => {
+            const isVideoLesson = lessonType === "video";
+            const selectedVideo = isVideoLesson && videoId ? (videos as any[]).find((v) => v.id === videoId) : null;
+            const autoMin = selectedVideo?.duration_seconds != null ? Math.ceil(selectedVideo.duration_seconds / 60) : null;
+            const readOnly = isVideoLesson && !!videoId;
+            return (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-muted-foreground">Estimated Minutes</label>
+                  {isVideoLesson && videoId && (
+                    <span className="text-[11px] text-muted-foreground">
+                      {autoMin != null ? `🎬 ~${autoMin} min from video` : "🎬 Duration unknown — run backfill"}
+                    </span>
+                  )}
+                </div>
+                <Input
+                  type="number"
+                  value={readOnly && autoMin != null ? autoMin : (estimatedMinutes as number | "")}
+                  onChange={(e) => setEstimatedMinutes(e.target.value ? parseInt(e.target.value) : "")}
+                  readOnly={readOnly}
+                  className={readOnly ? "bg-muted/50 cursor-not-allowed" : ""}
+                />
+                {readOnly && (
+                  <p className="text-[11px] text-muted-foreground">Auto-set from video duration on save.</p>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Toggles */}
           <div className="flex items-center justify-between">
