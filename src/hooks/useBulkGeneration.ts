@@ -21,6 +21,7 @@ interface BulkGenerateParams {
 export type BulkResultReason =
   | 'unsupported_format'
   | 'no_template'
+  | 'template_not_imported'
   | 'already_generated'
   | 'tailoring_incomplete'
   | 'locked'
@@ -39,7 +40,8 @@ export interface BulkResult {
 
 const REASON_LABEL: Record<BulkResultReason, string> = {
   unsupported_format: 'unsupported format',
-  no_template: 'no template',
+  no_template: 'no template allocated',
+  template_not_imported: 'template not imported from SharePoint',
   already_generated: 'already generated',
   tailoring_incomplete: 'tailoring incomplete',
   locked: 'locked in SharePoint',
