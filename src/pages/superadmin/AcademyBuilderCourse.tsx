@@ -198,6 +198,10 @@ export default function AcademyBuilderCourse() {
 
   const handlePublish = () => {
     if (!courseId) return;
+    if ((formState.target_audience ?? []).length === 0) {
+      toast.error("Select at least one pathway before publishing");
+      return;
+    }
     const hasPublishedLessons = modules.some(m => m.lessons.some(l => l.is_published));
     if (!hasPublishedLessons) {
       toast.error("Cannot publish: no published lessons");
