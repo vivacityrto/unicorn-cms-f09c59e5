@@ -193,6 +193,7 @@ const AcademyEvents = lazy(() => import("./pages/academy/AcademyEvents"));
 const AcademyCommunity = lazy(() => import("./pages/academy/AcademyCommunity"));
 const AcademyTeam = lazy(() => import("./pages/academy/AcademyTeam"));
 const AcademySettings = lazy(() => import("./pages/academy/AcademySettings"));
+const AcademyPdpPage = lazy(() => import("./pages/academy/pdp"));
 
 // Client Preview pages
 const ClientPreview = lazy(() => import("./pages/ClientPreview"));
