@@ -719,7 +719,7 @@ serve(async (req) => {
     }
 
     // ── Download template from storage ─────────────────────────────────────
-    const storagePath = version.storage_path || version.file_path;
+    const storagePath = version.frozen_storage_path || version.storage_path || version.file_path;
     if (!storagePath) {
       return new Response(JSON.stringify({ error: "No storage path on version" }), {
         status: 400,
@@ -738,17 +738,9 @@ serve(async (req) => {
     const templateBytes = new Uint8Array(await templateBlob.arrayBuffer());
 
     // ── Fetch merge fields ─────────────────────────────────────────────────
-    // NOTE: must use userClient (not service role) — resolve_tenant_merge_fields
-    // checks app.user_can_access_tenant(), which relies on auth.uid().
-    // With the service role client, auth.uid() is null and the function returns 0 rows.
-    const { data: mergeFieldRows, error: mergeFieldsError } = await userClient
-      .from("v_tenant_merge_fields")
-      .select("field_tag, field_type, value")
-      .eq("tenant_id", tenant_id);
-
-    if (mergeFieldsError) {
-      console.warn(`[deliver] merge fields query error: ${mergeFieldsError.message}`);
-    }
+    // Delivery is a staff-only server action; resolve values with the service client
+    // so overwrite runs are not blocked by auth.uid()-dependent view semantics.
+    const mergeFieldRows = await resolveMergeFields(supabase, tenant_id);
     console.log(`[deliver] merge fields fetched: ${mergeFieldRows?.length ?? 0} rows for tenant ${tenant_id}`);
 
     const mergeData: Record<string, string> = {};
