@@ -66,7 +66,7 @@ export function useBulkGeneration() {
   const [progress, setProgress] = useState<BulkGenerationProgress | null>(null);
   const [results, setResults] = useState<BulkResult[]>([]);
 
-  const bulkGenerate = async ({ tenantId, stageInstanceId, packageId, mode = 'pending_only' }: BulkGenerateParams) => {
+  const bulkGenerate = async ({ tenantId, stageInstanceId, packageId, mode = 'pending_only', silentEmpty = false }: BulkGenerateParams) => {
     setGenerating(true);
     setProgress(null);
     setResults([]);
