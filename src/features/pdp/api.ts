@@ -350,28 +350,30 @@ export type ManagerCycleReviewee = {
 export type ManagerCycle = PdpCycle & { user: ManagerCycleReviewee };
 
 export async function listManagerCycles(managerId: string): Promise<ManagerCycle[]> {
-  const { data, error } = await supabase
+  const { data: cycles, error } = await supabase
     .from("pdp_cycles")
-    .select(
-      `*, user:users!pdp_cycles_user_id_fkey ( user_uuid, first_name, last_name, email )`,
-    )
+    .select("*")
     .eq("manager_id", managerId)
     .order("cycle_end_date", { ascending: true });
-  if (error) {
-    // Fallback if FK alias differs — fetch cycles only.
-    const { data: plain, error: err2 } = await supabase
-      .from("pdp_cycles")
-      .select("*")
-      .eq("manager_id", managerId)
-      .order("cycle_end_date", { ascending: true });
-    if (err2) throw err2;
-    return (plain ?? []).map((c) => ({ ...(c as PdpCycle), user: null }));
-  }
-  return (data ?? []).map((row) => {
-    const u = (row as { user: unknown }).user;
-    const user = Array.isArray(u) ? (u[0] as ManagerCycleReviewee) : (u as ManagerCycleReviewee);
-    return { ...(row as PdpCycle), user };
+  if (error) throw error;
+  const rows = cycles ?? [];
+  if (rows.length === 0) return [];
+
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
+  const { data: users } = await supabase
+    .from("users")
+    .select("user_uuid, first_name, last_name, email")
+    .in("user_uuid", userIds);
+  const byId = new Map<string, ManagerCycleReviewee>();
+  (users ?? []).forEach((u) => {
+    byId.set(u.user_uuid as string, {
+      user_uuid: u.user_uuid as string,
+      first_name: (u.first_name as string | null) ?? null,
+      last_name: (u.last_name as string | null) ?? null,
+      email: (u.email as string | null) ?? null,
+    });
   });
+  return rows.map((c) => ({ ...(c as PdpCycle), user: byId.get(c.user_id) ?? null }));
 }
 
 export async function listEndCycleReviewIds(cycleIds: number[]): Promise<number[]> {
