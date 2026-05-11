@@ -303,30 +303,58 @@ export default function AcademyBuilderCourse() {
           <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
             {/* Left Panel — Course Settings */}
             <div className="space-y-4 p-5 rounded-xl border" style={{ borderColor: "hsl(var(--border))" }}>
-              <h2 className="text-sm font-semibold text-foreground" style={{ color: "#7130A0" }}>Course Settings</h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-foreground" style={{ color: "#7130A0" }}>Course Settings</h2>
+                <div className="flex items-center gap-2">
+                  {course.updated_at && !isDirty && (
+                    <span className="text-[11px] text-muted-foreground">
+                      Saved {formatDistanceToNow(new Date(course.updated_at), { addSuffix: true })}
+                    </span>
+                  )}
+                  {isDirty && (
+                    <span className="text-[11px] text-amber-600">Unsaved</span>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={handleSaveSettings}
+                    disabled={!isDirty || saveCourseSettings.isPending}
+                    className="gap-1"
+                  >
+                    {saveCourseSettings.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
 
               <Field label="Title">
-                <Input defaultValue={course.title} onBlur={(e) => autoSave("title", e.target.value)} />
+                <Input value={formState.title} onChange={(e) => setFormState((p) => ({ ...p, title: e.target.value }))} />
               </Field>
 
               <Field label="Slug">
-                <Input defaultValue={course.slug} onBlur={(e) => autoSave("slug", e.target.value)} className="font-mono text-xs" />
+                <Input value={formState.slug} onChange={(e) => setFormState((p) => ({ ...p, slug: e.target.value }))} className="font-mono text-xs" />
               </Field>
 
               <Field label="Short Description">
-                <Textarea data-field="short_description" defaultValue={course.short_description ?? ""} onBlur={(e) => autoSave("short_description", e.target.value)} rows={2} />
+                <Textarea value={formState.short_description} onChange={(e) => setFormState((p) => ({ ...p, short_description: e.target.value }))} rows={2} />
               </Field>
 
               <Field label="Description">
-                <Textarea data-field="description" defaultValue={course.description ?? ""} onBlur={(e) => autoSave("description", e.target.value)} rows={4} />
+                <Textarea value={formState.description} onChange={(e) => setFormState((p) => ({ ...p, description: e.target.value }))} rows={4} />
               </Field>
 
-              <Field label="Target Audience">
-                <Input defaultValue={course.target_audience ?? ""} onBlur={(e) => autoSave("target_audience", e.target.value)} />
+              <Field label="Pathways">
+                <PathwayMultiSelect
+                  value={formState.target_audience}
+                  onChange={(v) => setFormState((p) => ({ ...p, target_audience: v }))}
+                />
               </Field>
 
               <Field label="Difficulty Level">
-                <Select defaultValue={course.difficulty_level ?? "beginner"} onValueChange={(v) => autoSave("difficulty_level", v)}>
+                <Select value={formState.difficulty_level} onValueChange={(v) => setFormState((p) => ({ ...p, difficulty_level: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="beginner">Beginner</SelectItem>
@@ -337,31 +365,50 @@ export default function AcademyBuilderCourse() {
               </Field>
 
               <Field label="Estimated Minutes">
-                <Input type="number" defaultValue={course.estimated_minutes ?? ""} onBlur={(e) => autoSave("estimated_minutes", e.target.value ? parseInt(e.target.value) : null)} />
+                <Input
+                  type="number"
+                  value={formState.estimated_minutes ?? ""}
+                  onChange={(e) => setFormState((p) => ({ ...p, estimated_minutes: e.target.value ? parseInt(e.target.value) : null }))}
+                />
               </Field>
 
-              <Field label="Tags (comma-separated)">
-                <Input defaultValue={(course.tags ?? []).join(", ")} onBlur={(e) => autoSave("tags", e.target.value.split(",").map((t: string) => t.trim()).filter(Boolean))} />
+              <Field label="Sub-categories (Tags)">
+                <TagChipInput
+                  value={formState.tags}
+                  onChange={(v) => setFormState((p) => ({ ...p, tags: v }))}
+                  suggestions={distinctTags}
+                />
               </Field>
 
-              <AiDescriptionGenerator course={course} courseId={courseId!} onGenerated={(short_desc, desc) => {
-                // Auto-save both fields with debounce
-                updateCourse.mutate({ id: courseId!, data: { short_description: short_desc, description: desc } as any });
-              }} />
+              <AiDescriptionGenerator
+                title={formState.title}
+                targetAudience={formState.target_audience}
+                difficultyLevel={formState.difficulty_level}
+                tags={formState.tags}
+                onGenerated={(short_desc, desc) =>
+                  setFormState((p) => ({ ...p, short_description: short_desc, description: desc }))
+                }
+              />
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-foreground">Free Course</span>
-                <Switch checked={course.is_free ?? false} onCheckedChange={(v) => autoSave("is_free", v)} />
+                <Switch checked={formState.is_free} onCheckedChange={(v) => setFormState((p) => ({ ...p, is_free: v }))} />
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-foreground">Certificate Enabled</span>
-                <Switch checked={course.certificate_enabled ?? false} onCheckedChange={(v) => autoSave("certificate_enabled", v)} />
+                <Switch checked={formState.certificate_enabled} onCheckedChange={(v) => setFormState((p) => ({ ...p, certificate_enabled: v }))} />
               </div>
 
-              {course.certificate_enabled && (
+              {formState.certificate_enabled && (
                 <Field label="Pass Score (%)">
-                  <Input type="number" min={0} max={100} defaultValue={course.pass_score ?? 80} onBlur={(e) => autoSave("pass_score", parseInt(e.target.value) || 80)} />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={formState.pass_score}
+                    onChange={(e) => setFormState((p) => ({ ...p, pass_score: parseInt(e.target.value) || 80 }))}
+                  />
                 </Field>
               )}
             </div>
