@@ -753,6 +753,14 @@ export default function AcademyLessonViewerPage() {
           </AppModalFooter>
         </AppModalContent>
       </AppModal>
+
+      <QuickReflectionDrawer
+        open={reflectionOpen}
+        onOpenChange={setReflectionOpen}
+        lessonProgressId={reflectionLessonProgressId}
+        cycleId={pdpCycle?.id ?? null}
+        lessonTitle={reflectionLessonTitle}
+      />
     </div>
   );
 }
