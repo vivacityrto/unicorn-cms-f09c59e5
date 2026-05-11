@@ -36,7 +36,7 @@ const CLIENT_FACING_TYPES = [
  */
 export function useClientNotifications() {
   const { profile } = useAuth();
-  const { activeTenantId } = useClientTenant();
+  const { activeTenantId, isAcademyOnly } = useClientTenant();
   const qc = useQueryClient();
 
   const query = useQuery({
@@ -52,11 +52,11 @@ export function useClientNotifications() {
       if (error) throw error;
       return (data || []) as unknown as ClientNotification[];
     },
-    enabled: !!profile?.user_uuid && !!activeTenantId,
+    enabled: !!profile?.user_uuid && !!activeTenantId && !isAcademyOnly,
   });
 
   useEffect(() => {
-    if (!profile?.user_uuid) return;
+    if (!profile?.user_uuid || isAcademyOnly) return;
     const channel = supabase
       .channel(`client-notif-live:${profile.user_uuid}`)
       .on(
