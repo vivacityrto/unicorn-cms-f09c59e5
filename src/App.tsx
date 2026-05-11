@@ -224,6 +224,7 @@ const ClientSuggestionDetailWrapperNew = lazy(() => import("./pages/client/Clien
 // ClientCommunicationsWrapperNew removed — consolidated into ClientInboxPage
 const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackagesWrapper"));
 const ClientInboxWrapperNew = lazy(() => import("./pages/client/ClientInboxWrapper"));
+const StaffPdpsWrapperNew = lazy(() => import("./pages/client/StaffPdpsWrapper"));
 const TeamInboxWrapper = lazy(() => import("./pages/TeamInboxWrapper"));
 const queryClient = new QueryClient({
   defaultOptions: {
