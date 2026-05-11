@@ -226,7 +226,11 @@ Deno.serve(async (req: Request) => {
           }),
         });
 
-        const respBody: any = await resp.json().catch(() => ({}));
+        const respBody = await resp.json().catch(() => ({})) as {
+          success?: boolean;
+          error?: string;
+          tailoring?: unknown;
+        };
 
         if (resp.ok && respBody?.success) {
           results.push({
