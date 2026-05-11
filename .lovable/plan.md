@@ -1,92 +1,106 @@
-# Quick Reflection Drawer (Additive)
+# Manager Reviews Hub + Composer Drawer + Acknowledge
 
 ## Context Verified
-- `addReflection` already exists in `src/features/pdp/api.ts` and stamps `user_id` from `auth.uid()`.
-- `useAddReflection(cycleId)` already exists in `src/features/pdp/hooks.ts` — will reuse, no duplicate added.
-- DB: `pdp_reflections` has nullable `cycle_id`, nullable `lesson_progress_id`, required `response`. Compatible with prompt.
-- `AcademyLessonViewerPage.tsx`: `autoCompleteLesson` (line 210) is the actual point where `is_completed` flips to true; `upsertProgress` (line 191) is a generic helper that never sets `is_completed`. The completion trigger fires in `VimeoPlayer.onCompletionThresholdReached` (line 559/563) → calls `autoCompleteLesson`.
-- The existing `currentProgress` query does not select `id`. We need `lesson_progress_id` for the reflection row, so we'll do a lightweight ad-hoc fetch inside the new effect (no edit to existing queries).
-
-## Trigger Strategy (Non-Invasive)
-Do **not** edit `autoCompleteLesson`, `upsertProgress`, `VimeoPlayer` props, or any existing query. Instead, add a **new `useEffect`** that watches `completedLessonIds` (already invalidated by `autoCompleteLesson`) and `currentProgress.is_completed`. When the current `lesson.id` transitions from "not in completed set" → "in completed set" during this session (tracked via a `useRef` latch keyed by lesson id so we don't re-prompt on remount/refresh of an already-completed lesson):
-1. Fetch the `pdp_lesson_progress` row id via a one-shot `supabase.from("academy_lesson_progress").select("id").eq("enrollment_id", …).eq("lesson_id", …).maybeSingle()`.
-2. Open the drawer with that id.
-
-A second ref `promptedLessonsRef = useRef<Set<number>>` ensures the drawer only opens once per lesson per page session and never for lessons already completed before this mount.
+- `pdp_reviews` schema: `cycle_id`, `review_type` (text), `reviewer_id` (NOT NULL uuid), `review_date` (NOT NULL date), `notes`, `outcome`, `signed_off_at`, `signed_off_by`. **No `created_by` / `updated_at`** — single `created_at`.
+- `pdp_cycles` has `manager_id`. RLS `pdp_cycles: manager views assigned` already grants managers SELECT on rows where `manager_id = auth.uid()`.
+- `pdp_reviews` RLS `reviewer manages own` already grants reviewer full access where `reviewer_id = auth.uid()` — no migration needed.
+- Sign-off API already exists (`signOffReview` + `useSignOffReview`). Reviewee `Sign off` button already renders for `end_cycle` pending in `ReviewsTab.tsx` — will rename copy to "Acknowledge" per prompt and let it cover all review types (not just end-of-cycle) when reviewee is current user.
+- Route registry lives in `src/App.tsx` with lazy imports for `/academy/pdp` and `/academy/pdp/cycle/:cycleId`.
+- No existing project-wide markdown editor — will use `Textarea` + "Markdown supported" hint to stay consistent with reflections/notes UX. Saved notes already render with `whitespace-pre-wrap` in `ReviewsTab`.
 
 ## Files
 
-### 1. `src/features/pdp/hooks.ts` (edit)
-- Add `useUnattachedReflections(userId)`:
-  - queryKey: `["pdp", "unattached-reflections", userId ?? null]`
-  - query: `select("id", { count: "exact", head: true }).eq("user_id", userId).is("cycle_id", null)`
-  - returns `{ count: number }`
-- `useAddReflection` already exists — leave intact. Extend its `onSuccess` only if needed to also invalidate `["pdp","unattached-reflections"]` so the dashboard badge updates immediately when an unattached one is created. (Backwards compatible — additive invalidation.)
+### 1. `src/features/pdp/api.ts` (edit) — add manager queries + create review
+- `listManagerCycles(managerId)` → `pdp_cycles.select("*, user:users!user_id(user_uuid, first_name, last_name, email)").eq("manager_id", managerId).order("cycle_end_date", { ascending: true })`. Returns rows with embedded reviewee profile (graceful if FK alias differs — fall back to manual join).
+- `listManagerEndCycleReviews(cycleIds)` → `pdp_reviews.select("cycle_id").in("cycle_id", cycleIds).eq("review_type","end_cycle")` — used to detect "no end-cycle review yet" for the **Awaiting review** group.
+- `createReview(input)`:
+  - input: `{ cycle_id, review_type: 'mid_cycle'|'end_cycle'|'ad_hoc', notes?: string|null, outcome?: 'on_track'|'needs_action'|'completed'|'not_completed'|null, review_date?: string }`
+  - resolves `reviewer_id` from `auth.getUser()`; defaults `review_date` to today (`yyyy-MM-dd`).
+  - returns inserted row.
 
-### 2. `src/pages/client/AcademyLessonViewerPage.tsx` (edit, additive)
-- New imports: `useAuth`, `useCurrentCycle`, `useAddReflection` from PDP hooks; new component `QuickReflectionDrawer` (see below).
-- Resolve `userId` and `tenantId` from `useAuth` (page already uses `actingUserId` for academy acting-user — but reflections must be the real auth user per prompt: `user_id = auth.uid()`).
-- Resolve current cycle: `useCurrentCycle(authUserId, tenantId)` → may return null.
-- New state: `reflectionOpen`, `reflectionLessonProgressId: number | null`, `reflectionLessonTitle: string | null`.
-- New refs: `promptedLessonsRef = useRef<Set<number>>(new Set())`, plus snapshot of `completedLessonIds` on first load to skip lessons already completed at mount.
-- New `useEffect` (deps: `lesson?.id`, `completedLessonIds`, `currentProgress?.is_completed`, `enrollment?.enrollment_id`):
-  - If lesson missing or already in initial-completed set → mark prompted, return.
-  - If lesson now completed AND not prompted yet → fetch progress id, set state, open drawer.
-- Render `<QuickReflectionDrawer />` at end of JSX, outside main layout flow. Built with shadcn `Drawer` (mobile-first / responsive, non-modal so it does not block lesson navigation — uses `modal={false}` so user can keep clicking sidebar / next lesson). Width auto, bottom sheet on mobile.
-  - Title: "Quick reflection (optional)"
-  - Body: prompt text + `Textarea rows={3} maxLength={1000}` + live counter "{n}/1000".
-  - Footer: "Save reflection" primary button (disabled while pending or empty), "Skip" link-style button.
-  - On save → `addReflectionMutation.mutate({ lesson_progress_id, prompt, response, cycle_id: cycle?.id ?? undefined })`. If `cycle?.id` is undefined, omit field so DB stores null. On success → toast "Reflection saved" + close.
-  - Skip just closes; nothing persisted.
-- **No edits** to `upsertProgress`, `autoCompleteLesson`, VimeoPlayer JSX, or any existing query/mutation.
+### 2. `src/features/pdp/hooks.ts` (edit) — add manager hooks
+- `useManagerCycles(managerId)` — query key `["pdp","manager-cycles", managerId]`. Returns `ManagerCycle[]` typed with reviewee profile fields.
+- `useManagerEndCycleReviewMap(cycleIds)` — query key `["pdp","manager-end-cycle-reviews", sortedIds]`. Returns `Set<number>` of cycle ids with an end-cycle review. Disabled if `cycleIds.length === 0`.
+- `useCreateReview(cycleId)` — mutation that invalidates `["pdp","reviews", cycleId]`, `["pdp","cycle-summary", cycleId]`, and `["pdp","manager-cycles"]` / `["pdp","manager-end-cycle-reviews"]` so the hub refreshes.
 
-### 3. New file `src/components/academy/pdp/QuickReflectionDrawer.tsx`
-Self-contained drawer component (keeps the page file lean). Strict typed props:
+### 3. `src/components/academy/pdp/ReviewComposerDrawer.tsx` (new)
+Self-contained shadcn `Sheet` (right on desktop, bottom on mobile via `useIsMobile`). Strict-typed props:
 ```ts
-interface QuickReflectionDrawerProps {
+interface ReviewComposerDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lessonProgressId: number | null;
-  cycleId: number | null;
-  lessonTitle?: string | null;
+  cycleId: number;
+  revieweeName?: string | null;
 }
 ```
-Uses `useAddReflection(cycleId)` internally.
+Form (controlled state, no zod for this prompt — light validation):
+- **Review type**: shadcn `RadioGroup` (Mid cycle / End cycle / Ad hoc).
+- **Notes**: `Textarea` rows={8}, `maxLength={4000}`, hint "Markdown supported".
+- **Outcome**: shadcn `Select` (`__none__` ↔ null per project standard) — On track / Needs action / Completed / Not completed.
+- Footer: "Save review" (disabled while pending), "Cancel".
+- On save → `useCreateReview(cycleId).mutate(...)`; on success toast "Review saved" and `onOpenChange(false)`.
 
-### 4. `src/pages/academy/pdp/index.tsx` (edit)
-- Import `useUnattachedReflections`.
-- Call `const { data: unattached } = useUnattachedReflections(userId);`
-- When `unattached?.count && unattached.count > 0`, render a small `Badge` (variant outline / amber accent) near the page subtitle / header band: e.g. `"{n} unattached reflection(s)"` with a tooltip "Created from lesson completions outside an active cycle".
-- Purely visual; no behavior change.
+### 4. `src/pages/academy/pdp/cycle/[cycleId].tsx` (edit, additive)
+- Read `?reviewMode=1` via `useSearchParams`.
+- Compute `isManager = !!user && cycle?.manager_id === user.id`.
+- New state `composerOpen`, seeded `true` when `reviewMode === '1' && isManager` (one-shot via `useEffect` keyed on `reviewMode + cycle?.manager_id`).
+- Render `<ReviewComposerDrawer />`. Strip `reviewMode` from URL on close (`setSearchParams` without the key) so refresh doesn't reopen.
+- If `reviewMode=1` but `!isManager`, show inline `Alert` ("You are not the assigned manager for this cycle.") instead of opening drawer.
+- **No edits** to existing tabs / layout.
+
+### 5. `src/components/academy/pdp/cycle/ReviewsTab.tsx` (edit, copy + scope only)
+- Change "Sign off" button label → "Acknowledge" when reviewee is the current auth user.
+- Show the Acknowledge button for any `pdp_reviews` row where `signed_off_at == null` AND `cycle.user_id === auth.uid()` (reviewee). Currently restricted to `end_cycle`; broaden so reviewee can acknowledge mid-cycle / ad-hoc reviews too (matches "the reviewee can sign off the review" requirement). Pass `cycle` (or just `revieweeUserId`) into ReviewsTab; call site already has `cycle` available.
+- Keep existing `useSignOffReview` flow intact.
+- Display a small in-app banner above the list when there is at least one review created in the last 24h that is unsigned and reviewee = current user: "New manager review awaiting your acknowledgement." (Pure UI — satisfies the "in-app banner is sufficient" requirement until Edge Function from Prompt 10 lands.)
+
+### 6. `src/pages/academy/pdp/reviews.tsx` (new) — Manager Reviews Hub
+- Layout: `AcademyLayout` + `AcademyPageWrapper` (title "Reviews", subtitle "Cycles assigned to you for review").
+- `useAuth()` → managerId; `useManagerCycles(managerId)`; `useManagerEndCycleReviewMap(cycleIds)`.
+- Group cycles client-side using `date-fns`:
+  - **Awaiting review**: `status === 'under_review'` OR (`cycle_end_date < today` AND id NOT in end-cycle review set AND status !== 'completed').
+  - **Active**: `status === 'active'` (and not already in Awaiting bucket).
+  - **Recently closed**: `status === 'completed'` AND `completed_at >= today - 90d` (fall back to `cycle_end_date` if `completed_at` null).
+- Render three `Card` sections; each row shows reviewee name, audience code badge, cycle dates, status badge, and a clickable `Link` to `/academy/pdp/cycle/{id}?reviewMode=1`. Whole row is a clickable button; hover affordance. Empty state per group ("Nothing here yet").
+- Skeletons during initial load. Sign-in / no-data states handled.
+
+### 7. `src/App.tsx` (edit) — register route
+- `const AcademyPdpReviewsPage = lazy(() => import("./pages/academy/pdp/reviews"));`
+- `<Route path="/academy/pdp/reviews" element={<ProtectedRoute><AcademyPdpReviewsPage /></ProtectedRoute>} />`
+- Place above the `/academy/pdp/cycle/:cycleId` route to avoid any path matching ambiguity.
 
 ## Edge Cases / Conflicts Considered
-- **Acting user vs auth user**: Page supports impersonation via `useAcademyActingUserId`. Reflection is tied to the real `auth.uid()` per spec — correct, since RLS on `pdp_reflections` will be enforced for that user. We will not write a reflection if the acting user differs from auth user (prevents cross-user reflections). Add a guard: only open drawer when `actingUserId === authUserId`.
-- **Already-completed lessons on mount**: snapshot `completedLessonIds` on first load per `lesson.id` and skip — avoids prompting users revisiting a finished lesson.
-- **Preview / read-only / unenrolled**: `autoCompleteLesson` is gated by `canTrackProgress`, so the trigger won't fire — no extra guard needed but we'll also early-return if `!canTrackProgress`.
-- **Multiple invalidations**: We watch `completedLessonIds` which is already refreshed by `autoCompleteLesson`'s `qc.invalidateQueries`. No new invalidation churn.
-- **Non-blocking**: shadcn `Drawer` rendered with `modal={false}` and no scroll lock — user can dismiss via X, Skip, or simply navigate away (drawer unmounts on route change).
-- **No `any`**: drawer props strictly typed; mutation input typed via existing `AddReflectionInput`.
-- **No DB migrations** required — schema already supports nullable `cycle_id` and `lesson_progress_id`.
-- **RLS**: existing `pdp_reflections` policies (insert where `user_id = auth.uid()`) will accept the row; cycle_id null is allowed by the schema.
+- **RLS**: All writes are by manager (reviewer); existing `pdp_reviews: reviewer manages own` policy permits insert/select. Sign-off path uses existing reviewee policy. No migration.
+- **Audit/notification**: Per prompt, an Edge Function will be wired in Prompt 10. We render an in-app banner today and leave a `// TODO(prompt-10): notify reviewee via edge function` comment in `useCreateReview` `onSuccess`.
+- **`pdp_reviews` schema gotchas**: `reviewer_id` and `review_date` are NOT NULL — defaults supplied. No `updated_at` column — do not attempt to set it.
+- **Routing precedence**: `/academy/pdp/reviews` registered before `:cycleId` route to avoid future regressions if patterns change.
+- **`reviewMode=1` on non-managers**: Drawer never opens; user sees inline message — prevents confused UX while preserving deep linking semantics.
+- **Date filtering**: All boundaries computed in local time using `startOfToday()` and `subDays(today, 90)` from `date-fns`.
+- **No `any`** in new code; reuse `PdpCycle`, `PdpReview` types and add `ManagerCycle = PdpCycle & { user: { user_uuid; first_name; last_name; email } | null }`.
+- **Australian date format** `dd/MM/yyyy` per memory.
+- **Existing `ReviewsTab` label change** is backwards compatible for sign-off semantics — same RPC, same RLS.
 
 ## Risk Assessment
 | Area | Risk | Mitigation |
 |---|---|---|
-| Lesson completion logic | None — not touched | Verified `autoCompleteLesson` and `upsertProgress` unchanged |
-| VimeoPlayer | None — props unchanged | Reflection trigger is a separate effect on query state |
-| Query cache | Low — only adds invalidation key | New key namespaced under `["pdp","unattached-reflections"]` |
-| RLS / security | Low | Reuses existing `addReflection` API which stamps `auth.uid()` server-side check |
-| User confusion | Low | Drawer optional, dismissible, non-modal |
-| Impersonation | Low | Guarded so reflection only prompts for real user |
+| RLS / data leak | None — manager filter enforced both client- and DB-side | Existing policies unchanged |
+| Sign-off broadening | Low — moves from end_cycle-only to all reviewee rows | Matches prompt; reviewee already had RLS update access |
+| URL `reviewMode` flag | Low | Stripped on close; ignored for non-managers |
+| Notification gap | Documented | In-app banner placeholder + TODO for Prompt 10 |
+| New route | None | Lazy-loaded, ProtectedRoute wrapper |
+| Schema change | None — no migration |
 
 ## Summary of Changes
-1. **Edit** `src/features/pdp/hooks.ts` — add `useUnattachedReflections`, extend `useAddReflection` invalidations.
-2. **Edit** `src/pages/client/AcademyLessonViewerPage.tsx` — additive completion-watch effect + drawer render. No existing logic touched.
-3. **New** `src/components/academy/pdp/QuickReflectionDrawer.tsx` — typed shadcn Drawer component.
-4. **Edit** `src/pages/academy/pdp/index.tsx` — unattached reflections badge.
+1. **New** `src/pages/academy/pdp/reviews.tsx` — three-group manager hub.
+2. **New** `src/components/academy/pdp/ReviewComposerDrawer.tsx` — composer Sheet.
+3. **Edit** `src/features/pdp/api.ts` — `listManagerCycles`, `listManagerEndCycleReviews`, `createReview`.
+4. **Edit** `src/features/pdp/hooks.ts` — `useManagerCycles`, `useManagerEndCycleReviewMap`, `useCreateReview`.
+5. **Edit** `src/pages/academy/pdp/cycle/[cycleId].tsx` — `?reviewMode=1` opens composer for the assigned manager.
+6. **Edit** `src/components/academy/pdp/cycle/ReviewsTab.tsx` — broaden Acknowledge button + in-app banner.
+7. **Edit** `src/App.tsx` — register `/academy/pdp/reviews`.
 
 ## Benefits
-- Captures reflective learning at peak relevance (immediately after completion).
-- Zero impact on existing progress/completion flow — fully additive and reversible.
-- Surfaces orphan reflections so users can reattach them later when a cycle exists.
-- Strict typing, no DB changes, no RLS changes.
+- Single hub for managers to triage cycle reviews.
+- Deep link `?reviewMode=1` keeps composer state shareable.
+- Reviewee acknowledgement covers all review types — closer to a complete loop ahead of the Edge Function.
+- Zero database migration; rides on existing RLS.
