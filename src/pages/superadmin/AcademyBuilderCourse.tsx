@@ -166,12 +166,8 @@ export default function AcademyBuilderCourse() {
     saveCourseSettings.mutate(formState);
   };
 
-  // Unsaved-changes guard (in-app navigation)
-  useBlocker(({ currentLocation, nextLocation }) =>
-    isDirty && currentLocation.pathname !== nextLocation.pathname
-      ? !window.confirm("You have unsaved changes. Leave anyway?")
-      : false
-  );
+  // Note: in-app navigation guard via useBlocker requires a data router; this app uses BrowserRouter.
+  // The beforeunload handler below covers tab close / reload.
 
   // Unsaved-changes guard (browser tab close / reload)
   useEffect(() => {
