@@ -23,6 +23,9 @@ import {
   isPreviewBlockedError,
 } from "@/hooks/useReadOnlyGuard";
 import { friendlyDbError } from "@/lib/friendlyDbError";
+import { useAuth } from "@/hooks/useAuth";
+import { useCurrentCycle } from "@/features/pdp/hooks";
+import { QuickReflectionDrawer } from "@/components/academy/pdp/QuickReflectionDrawer";
 
 const ACCENT = "#23c0dd";
 const PROGRESS_THROTTLE_MS = 10_000;
@@ -41,6 +44,15 @@ export default function AcademyLessonViewerPage() {
   const autoCompletedRef = useRef<boolean>(false);
   const prevEnrollmentStatusRef = useRef<string | null>(null);
   const { isReadOnly, blockWrite } = useReadOnlyGuard();
+  const { user, profile } = useAuth();
+  const authUserId = user?.id ?? null;
+  const tenantId = profile?.tenant_id ?? null;
+  const { data: pdpCycle } = useCurrentCycle(authUserId, tenantId);
+  const [reflectionOpen, setReflectionOpen] = useState(false);
+  const [reflectionLessonProgressId, setReflectionLessonProgressId] = useState<number | null>(null);
+  const [reflectionLessonTitle, setReflectionLessonTitle] = useState<string | null>(null);
+  const promptedLessonsRef = useRef<Set<number>>(new Set());
+  const initialCompletedSnapshotRef = useRef<Set<number> | null>(null);
 
   const numericLessonId = lessonId ? parseInt(lessonId, 10) : null;
 
@@ -271,6 +283,54 @@ export default function AcademyLessonViewerPage() {
     }
     prevEnrollmentStatusRef.current = status;
   }, [enrollment?.enrollment_status]);
+
+  // [Additive] Quick reflection drawer trigger — fires when a lesson transitions
+  // to completed during this session. Does NOT alter completion logic.
+  useEffect(() => {
+    const lessonId = lesson?.id;
+    if (!lessonId || !enrollment?.enrollment_id) return;
+    if (!authUserId || actingUserId !== authUserId) return;
+    if (!canTrackProgress) return;
+
+    if (initialCompletedSnapshotRef.current === null) {
+      initialCompletedSnapshotRef.current = new Set(completedLessonIds);
+    }
+    const initialSet = initialCompletedSnapshotRef.current;
+    if (initialSet.has(lessonId)) return;
+    if (promptedLessonsRef.current.has(lessonId)) return;
+
+    const justCompleted =
+      completedLessonIds.includes(lessonId) || currentProgress?.is_completed === true;
+    if (!justCompleted) return;
+
+    promptedLessonsRef.current.add(lessonId);
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("academy_lesson_progress")
+        .select("id")
+        .eq("enrollment_id", enrollment.enrollment_id)
+        .eq("lesson_id", lessonId)
+        .maybeSingle();
+      if (cancelled || !data?.id) return;
+      setReflectionLessonProgressId(data.id as number);
+      setReflectionLessonTitle(lesson?.title ?? null);
+      setReflectionOpen(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    lesson?.id,
+    lesson?.title,
+    completedLessonIds,
+    currentProgress?.is_completed,
+    enrollment?.enrollment_id,
+    authUserId,
+    actingUserId,
+    canTrackProgress,
+  ]);
+
 
   // Mark lesson complete mutation (manual button)
   const markComplete = useMutation({
@@ -693,6 +753,14 @@ export default function AcademyLessonViewerPage() {
           </AppModalFooter>
         </AppModalContent>
       </AppModal>
+
+      <QuickReflectionDrawer
+        open={reflectionOpen}
+        onOpenChange={setReflectionOpen}
+        lessonProgressId={reflectionLessonProgressId}
+        cycleId={pdpCycle?.id ?? null}
+        lessonTitle={reflectionLessonTitle}
+      />
     </div>
   );
 }

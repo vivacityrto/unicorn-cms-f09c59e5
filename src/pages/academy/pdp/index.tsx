@@ -8,8 +8,11 @@ import {
   useAudiences,
   useCurrentCycle,
   useCycleSummary,
+  useUnattachedReflections,
   useUserCurrency,
 } from "@/features/pdp/hooks";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles } from "lucide-react";
 import type { PdpEvidenceItem } from "@/features/pdp/types";
 import { PdpHeaderBand } from "@/components/academy/pdp/PdpHeaderBand";
 import { PdpProgressCard } from "@/components/academy/pdp/PdpProgressCard";
@@ -31,6 +34,8 @@ export default function AcademyPdpPage() {
   const { data: currency } = useUserCurrency(userId);
   const { data: audiences } = useAudiences();
   const audience = audiences?.find((a) => a.code === cycle?.audience_code) ?? null;
+  const { data: unattached } = useUnattachedReflections(userId);
+  const unattachedCount = unattached?.count ?? 0;
 
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
@@ -52,10 +57,33 @@ export default function AcademyPdpPage() {
           ) : !userId ? (
             <p className="text-sm text-muted-foreground">Sign in to view your PDP.</p>
           ) : !cycle ? (
-            <StartCycleEmptyState userId={userId} tenantId={tenantId} />
+            <>
+              {unattachedCount > 0 ? (
+                <Badge
+                  variant="outline"
+                  className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+                  title="Reflections created from lesson completions outside an active PDP cycle"
+                >
+                  <Sparkles className="mr-1 h-3 w-3" />
+                  {unattachedCount} unattached reflection{unattachedCount === 1 ? "" : "s"}
+                </Badge>
+              ) : null}
+              <StartCycleEmptyState userId={userId} tenantId={tenantId} />
+            </>
           ) : (
             <>
               <PdpHeaderBand cycle={cycle} audience={audience} />
+
+              {unattachedCount > 0 ? (
+                <Badge
+                  variant="outline"
+                  className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+                  title="Reflections created from lesson completions outside an active PDP cycle"
+                >
+                  <Sparkles className="mr-1 h-3 w-3" />
+                  {unattachedCount} unattached reflection{unattachedCount === 1 ? "" : "s"}
+                </Badge>
+              ) : null}
 
               <PdpProgressCard
                 summary={summary ?? null}
