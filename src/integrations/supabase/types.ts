@@ -146,6 +146,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "academy_assessment_attempts_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "academy_assessment_attempts_enrollment_id_fkey"
             columns: ["enrollment_id"]
             isOneToOne: false
@@ -266,6 +273,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "academy_assessments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "academy_assessments_module_id_fkey"
             columns: ["module_id"]
             isOneToOne: false
@@ -336,6 +350,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "academy_courses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_certificates_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
           },
           {
             foreignKeyName: "academy_certificates_enrollment_id_fkey"
@@ -633,6 +654,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "academy_enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "academy_enrollments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -822,6 +850,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "academy_lesson_progress_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "academy_lesson_progress_enrollment_id_fkey"
             columns: ["enrollment_id"]
             isOneToOne: false
@@ -911,6 +946,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "academy_lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "academy_lessons_module_id_fkey"
             columns: ["module_id"]
             isOneToOne: false
@@ -975,6 +1017,13 @@ export type Database = {
             referencedRelation: "academy_courses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "academy_modules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
+          },
         ]
       }
       academy_package_course_rules: {
@@ -1009,6 +1058,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "academy_courses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_package_course_rules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
           },
           {
             foreignKeyName: "academy_package_course_rules_package_id_fkey"
@@ -53849,6 +53905,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "academy_enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_total_minutes"
+            referencedColumns: ["course_id"]
+          },
+          {
             foreignKeyName: "academy_enrollments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -53982,6 +54045,15 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      v_academy_course_total_minutes: {
+        Row: {
+          course_id: number | null
+          lesson_count: number | null
+          total_lesson_minutes: number | null
+          video_lesson_count: number | null
+        }
+        Relationships: []
       }
       v_admin_zero_progress_packages: {
         Row: {
