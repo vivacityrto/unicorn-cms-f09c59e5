@@ -295,3 +295,23 @@ export function useStandardsReference(ids: (string | null | undefined)[]) {
     enabled: cleaned.length > 0,
   });
 }
+
+export function useUpdateEvidence(cycleId: number | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation<PdpEvidenceItem, Error, UpdateEvidenceInput>({
+    mutationFn: (input) => updateEvidence(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "evidence", cycleId ?? null] });
+      qc.invalidateQueries({ queryKey: [PDP_KEY, "cycle-summary", cycleId ?? null] });
+    },
+    onError: (err) => toast.error(err.message ?? "Failed to update evidence"),
+  });
+}
+
+export function useUserAcademyEnrollments(userId: string | null | undefined) {
+  return useQuery<UserAcademyEnrollment[]>({
+    queryKey: [PDP_KEY, "user-academy-enrollments", userId ?? null],
+    queryFn: () => listUserAcademyEnrollments(userId as string),
+    enabled: !!userId,
+  });
+}
