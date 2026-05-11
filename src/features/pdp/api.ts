@@ -337,3 +337,82 @@ export async function signOffReview(reviewId: number): Promise<PdpReview> {
   if (error) throw error;
   return data;
 }
+
+// ===== Manager review hub =====
+
+export type ManagerCycleReviewee = {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+} | null;
+
+export type ManagerCycle = PdpCycle & { user: ManagerCycleReviewee };
+
+export async function listManagerCycles(managerId: string): Promise<ManagerCycle[]> {
+  const { data, error } = await supabase
+    .from("pdp_cycles")
+    .select(
+      `*, user:users!pdp_cycles_user_id_fkey ( user_uuid, first_name, last_name, email )`,
+    )
+    .eq("manager_id", managerId)
+    .order("cycle_end_date", { ascending: true });
+  if (error) {
+    // Fallback if FK alias differs — fetch cycles only.
+    const { data: plain, error: err2 } = await supabase
+      .from("pdp_cycles")
+      .select("*")
+      .eq("manager_id", managerId)
+      .order("cycle_end_date", { ascending: true });
+    if (err2) throw err2;
+    return (plain ?? []).map((c) => ({ ...(c as PdpCycle), user: null }));
+  }
+  return (data ?? []).map((row) => {
+    const u = (row as { user: unknown }).user;
+    const user = Array.isArray(u) ? (u[0] as ManagerCycleReviewee) : (u as ManagerCycleReviewee);
+    return { ...(row as PdpCycle), user };
+  });
+}
+
+export async function listEndCycleReviewIds(cycleIds: number[]): Promise<number[]> {
+  if (!cycleIds.length) return [];
+  const { data, error } = await supabase
+    .from("pdp_reviews")
+    .select("cycle_id")
+    .in("cycle_id", cycleIds)
+    .eq("review_type", "end_cycle");
+  if (error) throw error;
+  return Array.from(new Set((data ?? []).map((r) => r.cycle_id as number)));
+}
+
+export type CreateReviewInput = {
+  cycle_id: number;
+  review_type: "mid_cycle" | "end_cycle" | "ad_hoc";
+  notes?: string | null;
+  outcome?: "on_track" | "needs_action" | "completed" | "not_completed" | null;
+  review_date?: string;
+};
+
+export async function createReview(input: CreateReviewInput): Promise<PdpReview> {
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr) throw userErr;
+  const reviewerId = userData.user?.id;
+  if (!reviewerId) throw new Error("Not authenticated");
+
+  const reviewDate = input.review_date ?? new Date().toISOString().slice(0, 10);
+  const payload = {
+    cycle_id: input.cycle_id,
+    review_type: input.review_type,
+    reviewer_id: reviewerId,
+    review_date: reviewDate,
+    notes: input.notes ?? null,
+    outcome: input.outcome ?? null,
+  };
+  const { data, error } = await supabase
+    .from("pdp_reviews")
+    .insert(payload)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
