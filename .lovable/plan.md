@@ -1,52 +1,38 @@
-# Why 0 of 196 generated
+## Finding
 
-The bulk run used `mode: 'pending_only'` (the default in `useBulkGeneration` and the only mode `StageDocumentsSection` ever sends). In `bulk-generate-phase-documents/index.ts` line 172, every `document_instance` with `isgenerated = true` is short-circuited with reason `already_generated` — no template fetch, no SharePoint call.
+The latest overwrite run did process 196 document instances, but the bulk function skipped 195 with `no_template` before calling delivery.
 
-All 196 instances on stage `24229` already carry `isgenerated = true` from earlier runs (including the broken bulk runs that flipped the flag without ever delivering a file to Client Governance). So pending-only mode correctly finds nothing to do. The skip is honest; the underlying flag is just stale because previous bulk attempts marked instances generated even when delivery failed.
+The database shows:
+- 196 stage document instances
+- 196 published `document_versions`
+- only 1 has a non-empty `document_versions.storage_path`
+- 195 have `storage_path = ''` (blank string), so the function treats them as missing templates
+- `documents.uploaded_files` also only exists for 1 document, which is why the earlier code behaved the same way
 
-Two things to fix:
+So the issue is not overwrite mode anymore, and not merge-field replacement. The issue is that most “allocated template files” are not currently materialised as local template paths in `document_versions.storage_path` / `frozen_storage_path`.
 
-1. Give the user a one-click way to re-run in `overwrite_all` mode when the dominant skip reason was `already_generated`.
-2. Stop the silent staleness going forward — only flip `isgenerated` after a confirmed delivery.
+## Plan
 
-# Plan
+1. **Make missing-template reporting accurate**
+   - Treat blank strings as missing paths using `trim()` checks.
+   - Return clearer result errors: “Published version exists but has no imported template storage path”.
+   - This prevents misleading counts where blank paths look like allocated templates.
 
-## 1. Follow-up "Overwrite Previously Generated" prompt — `StageDocumentsSection.tsx`
+2. **Add fallback support for allocated source templates**
+   - Inspect the template allocation source currently used by the UI/import flow (`source_template_url`, SharePoint import metadata, or mapping table).
+   - If a document has an allocated SharePoint template but no local `storage_path`, bulk generation should either:
+     - import/freeze that template first into `document_versions.storage_path`, then deliver it; or
+     - fail with a precise “template allocated but not imported/published” reason.
 
-After `bulkGenerate(...)` resolves, inspect the returned summary + `results`:
+3. **Use published version storage as the generation source of truth**
+   - Keep `document_versions.storage_path` / `frozen_storage_path` as the only source used for actual document bytes.
+   - Do not rely on `documents.uploaded_files` for bulk governance generation, because that only has 1 populated row in this stage.
 
-- If `summary.generated === 0` AND the dominant `skipped` reason is `already_generated` (count > 0), open a `ConfirmDialog` (variant `warning`):
-  - Title: **Overwrite previously generated documents?**
-  - Description: `"{N} of {total} documents are already marked generated. Overwriting will regenerate every eligible template and replace the existing files in Client Governance."`
-  - Confirm label: **Overwrite All**, Cancel: **Keep Existing**
-- On confirm, call `bulkGenerate({ ..., mode: 'overwrite_all' })` and `refetch()`.
-- Suppress the existing "Nothing generated" toast in this specific case so the user sees the prompt instead of a dead-end toast. Implementation: have `useBulkGeneration` accept an optional `onAllAlreadyGenerated` callback, or expose a `suppressEmptyToast` flag and let the component drive the prompt.
+4. **Improve diagnostics in the UI result summary**
+   - Surface a separate reason for `template_not_imported` instead of grouping it with `no_template`.
+   - The user will be able to see how many documents are genuinely missing templates versus allocated-but-not-imported.
 
-Preferred shape: `bulkGenerate` returns `{ summary, results }` (already does via state). Component reads `results` after the await, computes `allAlreadyGenerated = summary.generated === 0 && results.every(r => r.status !== 'failed') && results.some(r => r.reason === 'already_generated')`, and opens the prompt. Add a `silent` option to the hook so we can skip the "Nothing generated" toast when we know we're about to prompt.
-
-## 2. Initial "Generate All" dialog copy
-
-Update the existing `AlertDialog` (lines 252–266) so the user knows up front:
-- Add a checkbox **"Overwrite documents already marked generated"** that flips the call to `mode: 'overwrite_all'`.
-- Update the description to: `"Up to {totalCount} documents will be processed. Already-generated documents are skipped unless you tick Overwrite."`
-
-This means a user who knows the prior run was bad can pick overwrite without doing two round trips.
-
-## 3. Stop the stale-flag root cause — `bulk-generate-phase-documents/index.ts`
-
-Currently the function (and the legacy path that produced these 196 stale rows) marks `document_instances.isgenerated = true` based on attempted generation, not confirmed delivery. Change to only set `isgenerated = true` when `deliver-governance-document` returns a successful upload (HTTP 200 + `delivered: true` in the body). On any non-success outcome — `tailoring_incomplete`, `locked`, `delivery_failed`, `no_published_version`, `unsupported_format`, `no_template` — leave `isgenerated` untouched. This is the only business-logic change; it's required so future "pending_only" runs aren't blocked by ghost successes.
-
-## 4. Verification
-
-- Re-run on tenant `6372`, stage `24229` in pending-only mode → expect the new prompt to appear with "196 of 196 already marked generated".
-- Click **Overwrite All** → expect bulk run to attempt all 196, with results split between `generated` (templates present) and `skipped: no_template` (templates absent), matching the earlier dry-run audit.
-- Confirm `governance_document_deliveries` rows exist for each `generated` row and the SharePoint path is `Client Governance / Documents / Governance / {RTOID - Legal Name}/{Framework}/{Category}/`.
-- Confirm a fresh stage with no prior generation still works in default pending-only mode without showing the prompt.
-
-## Files touched
-
-- `src/components/client/StageDocumentsSection.tsx` — checkbox in initial dialog, follow-up `ConfirmDialog`, post-run branching.
-- `src/hooks/useBulkGeneration.ts` — optional `silent` flag to suppress the "Nothing generated" toast; no signature break.
-- `supabase/functions/bulk-generate-phase-documents/index.ts` — only flip `isgenerated` after a confirmed delivery from `deliver-governance-document`.
-
-No DB migration required.
+5. **Validate with the same tenant/stage**
+   - Re-run stage `24229` overwrite mode.
+   - Expected result after import/fallback is: all documents with a real allocated source template are attempted, not skipped as `no_template`.
+   - Merge replacements remain in the delivery function and should apply to each attempted DOCX/PPTX/XLSX.

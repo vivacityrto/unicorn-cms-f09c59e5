@@ -15,6 +15,7 @@ type ResultStatus = 'generated' | 'skipped' | 'failed';
 type ResultReason =
   | 'unsupported_format'
   | 'no_template'
+  | 'template_not_imported'
   | 'already_generated'
   | 'tailoring_incomplete'
   | 'locked'
@@ -123,7 +124,7 @@ Deno.serve(async (req: Request) => {
     const docIds = [...new Set(instances.map(i => i.document_id))];
     const { data: docs } = await supabase
       .from('documents')
-      .select('id, title, format')
+      .select('id, title, format, source_template_url')
       .in('id', docIds);
 
     const docMap = new Map((docs || []).map(d => [d.id, d]));
@@ -201,14 +202,27 @@ Deno.serve(async (req: Request) => {
         });
         continue;
       }
-      if (!version.storage_path && !version.frozen_storage_path) {
-        results.push({
-          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
-          status: 'skipped', reason: 'no_template',
-          error: 'Published version has no template storage path',
-        });
+      const sp = (version.storage_path ?? '').trim();
+      const fsp = (version.frozen_storage_path ?? '').trim();
+      if (!sp && !fsp) {
+        const sourceUrl = ((doc as { source_template_url?: string | null }).source_template_url ?? '').trim();
+        if (sourceUrl) {
+          results.push({
+            document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+            status: 'skipped', reason: 'template_not_imported',
+            error: 'Template is allocated in SharePoint but has not been imported. Use Admin → Document Templates to import it before generating.',
+          });
+        } else {
+          results.push({
+            document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+            status: 'skipped', reason: 'no_template',
+            error: 'No template file is allocated for this document',
+          });
+        }
         continue;
       }
+      // Use whichever is non-empty as the actual template path
+      version.storage_path = sp || fsp;
 
       try {
         const resp = await fetch(deliverUrl, {
