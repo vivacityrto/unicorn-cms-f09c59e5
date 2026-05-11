@@ -284,6 +284,54 @@ export default function AcademyLessonViewerPage() {
     prevEnrollmentStatusRef.current = status;
   }, [enrollment?.enrollment_status]);
 
+  // [Additive] Quick reflection drawer trigger — fires when a lesson transitions
+  // to completed during this session. Does NOT alter completion logic.
+  useEffect(() => {
+    const lessonId = lesson?.id;
+    if (!lessonId || !enrollment?.enrollment_id) return;
+    if (!authUserId || actingUserId !== authUserId) return;
+    if (!canTrackProgress) return;
+
+    if (initialCompletedSnapshotRef.current === null) {
+      initialCompletedSnapshotRef.current = new Set(completedLessonIds);
+    }
+    const initialSet = initialCompletedSnapshotRef.current;
+    if (initialSet.has(lessonId)) return;
+    if (promptedLessonsRef.current.has(lessonId)) return;
+
+    const justCompleted =
+      completedLessonIds.includes(lessonId) || currentProgress?.is_completed === true;
+    if (!justCompleted) return;
+
+    promptedLessonsRef.current.add(lessonId);
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from("academy_lesson_progress")
+        .select("id")
+        .eq("enrollment_id", enrollment.enrollment_id)
+        .eq("lesson_id", lessonId)
+        .maybeSingle();
+      if (cancelled || !data?.id) return;
+      setReflectionLessonProgressId(data.id as number);
+      setReflectionLessonTitle(lesson?.title ?? null);
+      setReflectionOpen(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    lesson?.id,
+    lesson?.title,
+    completedLessonIds,
+    currentProgress?.is_completed,
+    enrollment?.enrollment_id,
+    authUserId,
+    actingUserId,
+    canTrackProgress,
+  ]);
+
+
   // Mark lesson complete mutation (manual button)
   const markComplete = useMutation({
     mutationFn: async () => {
