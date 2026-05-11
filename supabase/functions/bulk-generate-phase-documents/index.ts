@@ -11,68 +11,28 @@ interface BulkGenerateRequest {
   mode: 'all' | 'pending_only' | 'overwrite_all';
 }
 
-interface TokenBinding {
-  source_type: 'client' | 'tenant' | 'package' | 'stage' | 'system' | 'static';
-  source_field?: string;
-  static_value?: string;
+type ResultStatus = 'generated' | 'skipped' | 'failed';
+type ResultReason =
+  | 'unsupported_format'
+  | 'no_template'
+  | 'not_auto_generated'
+  | 'already_generated'
+  | 'tailoring_incomplete'
+  | 'locked'
+  | 'delivery_failed'
+  | 'no_published_version'
+  | 'delivered';
+
+interface BulkResult {
+  document_instance_id: number;
+  document_id: number;
+  document_title: string;
+  status: ResultStatus;
+  reason: ResultReason;
+  error?: string;
 }
 
-interface ExcelBindings {
-  status: string;
-  token_bindings: Record<string, TokenBinding>;
-  dropdown_bindings: Record<string, { list_id: string }>;
-}
-
-function escapeXml(str: string): string {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-}
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-async function processExcelTemplate(
-  templateBytes: Uint8Array,
-  mergeData: Record<string, string>,
-  listData: Record<string, string[]>
-): Promise<Uint8Array> {
-  const { ZipReader, ZipWriter, Uint8ArrayReader, Uint8ArrayWriter } =
-    await import('https://deno.land/x/zipjs@v2.7.32/index.js');
-
-  const zipReader = new ZipReader(new Uint8ArrayReader(templateBytes));
-  const entries = await zipReader.getEntries();
-  const outputWriter = new Uint8ArrayWriter();
-  const zipWriter = new ZipWriter(outputWriter);
-
-  for (const entry of entries) {
-    if (entry.directory) continue;
-    const fileName = entry.filename;
-    const content = await entry.getData!(new Uint8ArrayWriter());
-
-    if (fileName.endsWith('.xml') || fileName.endsWith('.xml.rels')) {
-      const decoder = new TextDecoder();
-      let xmlContent = decoder.decode(content);
-
-      if (fileName.startsWith('xl/worksheets/') || fileName === 'xl/sharedStrings.xml') {
-        for (const [key, value] of Object.entries(mergeData)) {
-          const safeValue = escapeXml(value || '');
-          xmlContent = xmlContent.replace(new RegExp(`\\{\\{${escapeRegex(key)}\\}\\}`, 'g'), safeValue);
-          xmlContent = xmlContent.replace(new RegExp(`<<${escapeRegex(key)}>>`, 'g'), safeValue);
-          xmlContent = xmlContent.replace(new RegExp(`\\[\\[${escapeRegex(key)}\\]\\]`, 'g'), safeValue);
-        }
-      }
-
-      const encoder = new TextEncoder();
-      await zipWriter.add(fileName, new Uint8ArrayReader(encoder.encode(xmlContent)));
-    } else {
-      await zipWriter.add(fileName, new Uint8ArrayReader(content));
-    }
-  }
-
-  await zipReader.close();
-  await zipWriter.close();
-  return await outputWriter.getData();
-}
+const SUPPORTED_FORMATS = new Set(['docx', 'xlsx', 'xls', 'xlsm', 'pptx']);
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -82,7 +42,7 @@ Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Auth
+    // ── Auth ──────────────────────────────────────────────────────────────
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) throw new Error('Missing authorization header');
 
@@ -94,9 +54,9 @@ Deno.serve(async (req: Request) => {
     const body: BulkGenerateRequest = await req.json();
     const { tenant_id, stageinstance_id, package_id, mode = 'pending_only' } = body;
 
-    console.log('Bulk generate request:', { tenant_id, stageinstance_id, package_id, mode });
+    console.log('[bulk-gen] request', { tenant_id, stageinstance_id, package_id, mode, user: user.id });
 
-    // Verify tenant access
+    // Verify tenant access (SuperAdmin bypass)
     const { data: userProfile } = await supabase
       .from('users')
       .select('unicorn_role')
@@ -114,7 +74,22 @@ Deno.serve(async (req: Request) => {
       if (!tenantMember) throw new Error('Access denied');
     }
 
-    // Rate limit: 1 bulk gen per tenant per 5 min
+    // ── Pre-flight: SharePoint governance folder must be mapped ──────────
+    const { data: spSettings } = await supabase
+      .from('tenant_sharepoint_settings')
+      .select('governance_drive_id, governance_folder_item_id')
+      .eq('tenant_id', tenant_id)
+      .maybeSingle();
+
+    if (!spSettings?.governance_drive_id || !spSettings?.governance_folder_item_id) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'No governance folder configured for this tenant. Please verify the governance folder from the SharePoint Folder Mapping page (Admin → SharePoint Folder Mapping) before generating documents.',
+        error_code: 'GOVERNANCE_FOLDER_MISSING',
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
+    }
+
+    // ── Rate limit: 1 bulk gen per tenant per 5 min ──────────────────────
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     const { data: recentBulk } = await supabase
       .from('audit_events')
@@ -131,7 +106,7 @@ Deno.serve(async (req: Request) => {
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 });
     }
 
-    // Fetch document_instances for this stage instance
+    // ── Fetch document_instances for this stage instance ─────────────────
     const { data: instances, error: instError } = await supabase
       .from('document_instances')
       .select('id, document_id, isgenerated, status')
@@ -145,25 +120,64 @@ Deno.serve(async (req: Request) => {
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // Get document metadata
+    // ── Fetch document metadata ──────────────────────────────────────────
     const docIds = [...new Set(instances.map(i => i.document_id))];
     const { data: docs } = await supabase
       .from('documents')
-      .select('id, title, format, file_names, uploaded_files, merge_fields, is_auto_generated')
+      .select('id, title, format, uploaded_files, is_auto_generated')
       .in('id', docIds);
 
     const docMap = new Map((docs || []).map(d => [d.id, d]));
 
-    // Filter to eligible documents
-    const eligible = instances.filter(inst => {
+    // ── Pre-filter with stable reason codes ──────────────────────────────
+    const results: BulkResult[] = [];
+    const eligible: { inst: typeof instances[number]; doc: NonNullable<ReturnType<typeof docMap.get>> }[] = [];
+
+    for (const inst of instances) {
       const doc = docMap.get(inst.document_id);
-      if (!doc) return false;
+      if (!doc) {
+        results.push({
+          document_instance_id: inst.id, document_id: inst.document_id,
+          document_title: '(missing document)', status: 'skipped', reason: 'no_template',
+          error: 'Source document not found',
+        });
+        continue;
+      }
       const fmt = (doc.format || '').toLowerCase();
-      if (!['xlsx', 'xls', 'xlsm', 'docx'].includes(fmt)) return false;
-      if (mode === 'pending_only' && inst.isgenerated) return false;
-      // overwrite_all: include already-generated docs for re-generation
-      return true;
-    });
+      if (!SUPPORTED_FORMATS.has(fmt)) {
+        results.push({
+          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          status: 'skipped', reason: 'unsupported_format',
+          error: `Format "${doc.format ?? 'none'}" is not supported`,
+        });
+        continue;
+      }
+      if (!doc.is_auto_generated) {
+        results.push({
+          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          status: 'skipped', reason: 'not_auto_generated',
+          error: 'Document is not marked as auto-generated',
+        });
+        continue;
+      }
+      const hasTemplate = Array.isArray(doc.uploaded_files) && doc.uploaded_files.length > 0 && !!doc.uploaded_files[0];
+      if (!hasTemplate) {
+        results.push({
+          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          status: 'skipped', reason: 'no_template',
+          error: 'No template document mapped',
+        });
+        continue;
+      }
+      if (mode === 'pending_only' && inst.isgenerated) {
+        results.push({
+          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          status: 'skipped', reason: 'already_generated',
+        });
+        continue;
+      }
+      eligible.push({ inst, doc });
+    }
 
     if (eligible.length > 500) {
       return new Response(JSON.stringify({
@@ -172,200 +186,129 @@ Deno.serve(async (req: Request) => {
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
     }
 
-    // Fetch merge field values from unified view
-    const { data: mergeFieldRows } = await supabase
-      .from('v_tenant_merge_fields')
-      .select('field_tag, field_type, value')
-      .eq('tenant_id', tenant_id);
+    // ── Resolve latest published document_version per document_id ────────
+    const eligibleDocIds = [...new Set(eligible.map(e => e.doc.id))];
+    const versionByDocId = new Map<number, string>();
+    if (eligibleDocIds.length > 0) {
+      const { data: versions } = await supabase
+        .from('document_versions')
+        .select('id, document_id, version_number, status')
+        .in('document_id', eligibleDocIds)
+        .eq('status', 'published')
+        .order('version_number', { ascending: false });
 
-    // Also fetch tenant data for naming
-    const { data: tenant } = await supabase.from('tenants').select('name').eq('id', tenant_id).single();
-    const tenantData: Record<string, unknown> = { name: tenant?.name || '' };
+      for (const v of versions || []) {
+        if (!versionByDocId.has(v.document_id)) {
+          versionByDocId.set(v.document_id, v.id);
+        }
+      }
+    }
 
-    const results: Array<{ document_instance_id: number; document_title: string; status: 'generated' | 'skipped' | 'failed'; error?: string }> = [];
-    let generated = 0, skipped = 0, failed = 0;
+    // ── Per-document delivery via deliver-governance-document ────────────
+    const deliverUrl = `${supabaseUrl}/functions/v1/deliver-governance-document`;
+    let generated = 0;
+    let failed = 0;
 
-    for (const inst of eligible) {
-      const doc = docMap.get(inst.document_id)!;
+    for (const { inst, doc } of eligible) {
+      const versionId = versionByDocId.get(doc.id);
+      if (!versionId) {
+        results.push({
+          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          status: 'skipped', reason: 'no_published_version',
+          error: 'No published version available for this document',
+        });
+        continue;
+      }
+
       try {
-        const templatePath = doc.uploaded_files?.[0];
-        if (!templatePath) {
-          results.push({ document_instance_id: inst.id, document_title: doc.title, status: 'skipped', error: 'No template file' });
-          skipped++;
-          continue;
-        }
-
-        // Fetch bindings
-        const { data: excelBindings } = await supabase
-          .from('excel_template_bindings')
-          .select('*')
-          .eq('document_id', doc.id)
-          .maybeSingle();
-
-        const bindings = excelBindings as ExcelBindings | null;
-        if (bindings && bindings.status === 'error') {
-          results.push({ document_instance_id: inst.id, document_title: doc.title, status: 'skipped', error: 'Binding errors' });
-          skipped++;
-          continue;
-        }
-
-        // Build merge data
-        const mergeData: Record<string, string> = {};
-        if (bindings && Object.keys(bindings.token_bindings || {}).length > 0) {
-          for (const [token, binding] of Object.entries(bindings.token_bindings)) {
-            let value = '';
-            switch (binding.source_type) {
-              case 'client':
-              case 'tenant':
-                if (binding.source_field) {
-                  const fv = tenantData[binding.source_field];
-                  value = fv != null ? String(fv) : '';
-                }
-                break;
-              case 'system':
-                if (binding.source_field === 'current_date') value = new Date().toLocaleDateString('en-AU');
-                else if (binding.source_field === 'current_year') value = new Date().getFullYear().toString();
-                else if (binding.source_field === 'generated_by') value = user.email || '';
-                break;
-              case 'static':
-                value = binding.static_value || '';
-                break;
-            }
-            mergeData[token] = value;
-          }
-        } else {
-          ([] as { code: string; source_column: string }[]).forEach((field) => {
-            const v = tenantData[field.source_column];
-            mergeData[field.code] = v != null ? String(v) : '';
-          });
-        }
-
-        // Build list data
-        const listData: Record<string, string[]> = {};
-        if (bindings && bindings.dropdown_bindings) {
-          for (const [ddId, binding] of Object.entries(bindings.dropdown_bindings)) {
-            if (binding.list_id) {
-              const { data: items } = await supabase
-                .from('lookup_list_items')
-                .select('value, label')
-                .eq('list_id', binding.list_id)
-                .eq('is_active', true)
-                .order('sort_order');
-              if (items?.length) listData[ddId] = items.map(i => i.label || i.value);
-            }
-          }
-        }
-
-        // Download template
-        const { data: templateFile, error: dlErr } = await supabase.storage
-          .from('package-documents').download(templatePath);
-        if (dlErr || !templateFile) {
-          results.push({ document_instance_id: inst.id, document_title: doc.title, status: 'failed', error: dlErr?.message || 'Download failed' });
-          failed++;
-          continue;
-        }
-
-        const templateBytes = new Uint8Array(await templateFile.arrayBuffer());
-        const generatedBytes = await processExcelTemplate(templateBytes, mergeData, listData);
-
-        // Upload
-        const tenantName = ((tenantData.name || tenantData.companyname || 'tenant') as string)
-          .replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-        const ts = Date.now();
-        const generatedFileName = `${doc.title}_${tenantName}_${ts}.xlsx`;
-        const outputPath = `generated/${tenant_id}/${doc.id}/${generatedFileName}`;
-
-        const { error: uploadErr } = await supabase.storage
-          .from('package-documents')
-          .upload(outputPath, generatedBytes, {
-            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            upsert: true
-          });
-
-        if (uploadErr) {
-          results.push({ document_instance_id: inst.id, document_title: doc.title, status: 'failed', error: uploadErr.message });
-          failed++;
-          continue;
-        }
-
-        // Record in generated_documents
-        await supabase.from('generated_documents').insert({
-          source_document_id: doc.id,
-          tenant_id,
-          stage_id: undefined,
-          package_id: package_id || null,
-          file_path: outputPath,
-          file_name: generatedFileName,
-          generated_by: user.id,
-          status: 'generated',
-          merge_data: mergeData
+        const resp = await fetch(deliverUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            tenant_id,
+            document_version_id: versionId,
+            allow_incomplete: true,
+            force: mode === 'overwrite_all',
+          }),
         });
 
-        // Update document_instance with generation tracking
-        await supabase
-          .from('document_instances')
-          .update({
-            isgenerated: true,
-            status: 'generated',
-            generation_status: 'generated',
-            generationdate: new Date().toISOString(),
-            last_error: null,
-            updated_by: user.id,
-          })
-          .eq('id', inst.id);
+        const respBody: any = await resp.json().catch(() => ({}));
 
-        // Resolve any active errors for this instance
-        await supabase
-          .from('document_generation_errors')
-          .update({ resolved_at: new Date().toISOString(), resolved_by: user.id })
-          .eq('documentinstance_id', inst.id)
-          .is('resolved_at', null);
-
-        results.push({ document_instance_id: inst.id, document_title: doc.title, status: 'generated' });
-        generated++;
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Unknown error';
-
-        // Track failure on document_instances
-        try {
-          await supabase
-            .from('document_instances')
-            .update({ generation_status: 'failed', last_error: msg, updated_by: user.id })
-            .eq('id', inst.id);
-
-          await supabase.from('document_generation_errors').insert({
-            documentinstance_id: inst.id,
-            error_code: 'BULK_GEN_FAILED',
-            error_message: msg,
+        if (resp.ok && respBody?.success) {
+          results.push({
+            document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+            status: 'generated', reason: 'delivered',
           });
-        } catch (trackErr) {
-          console.error('Failed to track generation error:', trackErr);
+          generated++;
+          continue;
         }
 
-        results.push({ document_instance_id: inst.id, document_title: doc.title, status: 'failed', error: msg });
+        // Tailoring incomplete (422)
+        if (resp.status === 422 && respBody?.tailoring) {
+          results.push({
+            document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+            status: 'failed', reason: 'tailoring_incomplete',
+            error: respBody.error || 'Tailoring incomplete',
+          });
+          failed++;
+          continue;
+        }
+
+        const errMsg: string = respBody?.error || `HTTP ${resp.status}`;
+        const reason: ResultReason = /lock|423|resourceLocked/i.test(errMsg)
+          ? 'locked'
+          : 'delivery_failed';
+
+        results.push({
+          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          status: 'failed', reason, error: errMsg,
+        });
+        failed++;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        console.error(`[bulk-gen] delivery threw for doc ${doc.id}:`, msg);
+        results.push({
+          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          status: 'failed', reason: 'delivery_failed', error: msg,
+        });
         failed++;
       }
     }
 
-    // Audit log
+    const skipped = results.filter(r => r.status === 'skipped').length;
+    const total = results.length;
+
+    // ── Audit log (entity_id is strict uuid — use a fresh uuid per run) ──
     await supabase.from('audit_events').insert({
       action: 'bulk_generate_phase_documents',
       entity: 'bulk_generate',
-      entity_id: `${stageinstance_id}`,
+      entity_id: crypto.randomUUID(),
       user_id: user.id,
-      details: { tenant_id, stageinstance_id, package_id, mode, total: eligible.length, generated, skipped, failed }
+      details: {
+        tenant_id,
+        stageinstance_id,
+        package_id: package_id ?? null,
+        mode,
+        total,
+        generated,
+        skipped,
+        failed,
+        results,
+      },
     });
 
-    const total = eligible.length;
-    console.log(`Bulk generation complete: ${generated} generated, ${skipped} skipped, ${failed} failed out of ${total}`);
+    console.log(`[bulk-gen] complete: ${generated}/${total} generated, ${skipped} skipped, ${failed} failed`);
 
-    return new Response(JSON.stringify({ success: true, total, generated, skipped, failed, results }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+    return new Response(JSON.stringify({
+      success: true, total, generated, skipped, failed, results,
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Bulk generate error:', msg);
+    console.error('[bulk-gen] error:', msg);
     return new Response(JSON.stringify({ success: false, error: msg }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400
     });
