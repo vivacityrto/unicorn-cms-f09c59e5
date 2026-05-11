@@ -62,6 +62,17 @@ export default function AcademyPdpPage() {
             <>
               <PdpHeaderBand cycle={cycle} audience={audience} />
 
+              {unattachedCount > 0 ? (
+                <Badge
+                  variant="outline"
+                  className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+                  title="Reflections created from lesson completions outside an active PDP cycle"
+                >
+                  <Sparkles className="mr-1 h-3 w-3" />
+                  {unattachedCount} unattached reflection{unattachedCount === 1 ? "" : "s"}
+                </Badge>
+              ) : null}
+
               <PdpProgressCard
                 summary={summary ?? null}
                 currency={currency ?? null}
