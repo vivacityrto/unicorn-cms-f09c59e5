@@ -1,0 +1,1 @@
+UPDATE public.sharepoint_sites SET start_folder_name = 'UNICORN' WHERE purpose = 'master_documents';

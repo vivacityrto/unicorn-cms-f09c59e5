@@ -313,7 +313,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
                   setShowSharePointBrowser(false);
                 }}
                 defaultFilter={doc.title}
-                autoNavigateFolder={autoFolder}
+                autoNavigateFolder={`Framework/${autoFolder}`}
               />
             </DialogContent>
           </Dialog>
