@@ -8,8 +8,11 @@ import {
   useAudiences,
   useCurrentCycle,
   useCycleSummary,
+  useUnattachedReflections,
   useUserCurrency,
 } from "@/features/pdp/hooks";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles } from "lucide-react";
 import type { PdpEvidenceItem } from "@/features/pdp/types";
 import { PdpHeaderBand } from "@/components/academy/pdp/PdpHeaderBand";
 import { PdpProgressCard } from "@/components/academy/pdp/PdpProgressCard";
