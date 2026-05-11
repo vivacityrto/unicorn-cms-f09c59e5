@@ -1,106 +1,128 @@
-# Manager Reviews Hub + Composer Drawer + Acknowledge
 
-## Context Verified
-- `pdp_reviews` schema: `cycle_id`, `review_type` (text), `reviewer_id` (NOT NULL uuid), `review_date` (NOT NULL date), `notes`, `outcome`, `signed_off_at`, `signed_off_by`. **No `created_by` / `updated_at`** — single `created_at`.
-- `pdp_cycles` has `manager_id`. RLS `pdp_cycles: manager views assigned` already grants managers SELECT on rows where `manager_id = auth.uid()`.
-- `pdp_reviews` RLS `reviewer manages own` already grants reviewer full access where `reviewer_id = auth.uid()` — no migration needed.
-- Sign-off API already exists (`signOffReview` + `useSignOffReview`). Reviewee `Sign off` button already renders for `end_cycle` pending in `ReviewsTab.tsx` — will rename copy to "Acknowledge" per prompt and let it cover all review types (not just end-of-cycle) when reviewee is current user.
-- Route registry lives in `src/App.tsx` with lazy imports for `/academy/pdp` and `/academy/pdp/cycle/:cycleId`.
-- No existing project-wide markdown editor — will use `Textarea` + "Markdown supported" hint to stay consistent with reflections/notes UX. Saved notes already render with `whitespace-pre-wrap` in `ReviewsTab`.
+## Goal
+A new SuperAdmin-only page at `/superadmin/workforce-pdp` that gives Vivacity a portfolio-wide view of staff PDP currency, sourced from `v_pdp_user_currency`, with filters, KPIs, a row-click drawer, and CSV export.
 
 ## Files
 
-### 1. `src/features/pdp/api.ts` (edit) — add manager queries + create review
-- `listManagerCycles(managerId)` → `pdp_cycles.select("*, user:users!user_id(user_uuid, first_name, last_name, email)").eq("manager_id", managerId).order("cycle_end_date", { ascending: true })`. Returns rows with embedded reviewee profile (graceful if FK alias differs — fall back to manual join).
-- `listManagerEndCycleReviews(cycleIds)` → `pdp_reviews.select("cycle_id").in("cycle_id", cycleIds).eq("review_type","end_cycle")` — used to detect "no end-cycle review yet" for the **Awaiting review** group.
-- `createReview(input)`:
-  - input: `{ cycle_id, review_type: 'mid_cycle'|'end_cycle'|'ad_hoc', notes?: string|null, outcome?: 'on_track'|'needs_action'|'completed'|'not_completed'|null, review_date?: string }`
-  - resolves `reviewer_id` from `auth.getUser()`; defaults `review_date` to today (`yyyy-MM-dd`).
-  - returns inserted row.
+### New
+- `src/pages/superadmin/workforce-pdp.tsx` — page (filters, KPIs, table, drawer, footer CSV).
+- `src/features/pdp/workforce.ts` — small data helpers (one fetch over `v_pdp_user_currency`, plus parallel lookups for `users` and `tenants` to enrich names; cycle-id lookup helper for drawer; CSV builder). Kept here so the page file stays presentational.
+- `src/features/pdp/useWorkforcePdp.ts` — React Query hook wrapping the workforce fetch.
 
-### 2. `src/features/pdp/hooks.ts` (edit) — add manager hooks
-- `useManagerCycles(managerId)` — query key `["pdp","manager-cycles", managerId]`. Returns `ManagerCycle[]` typed with reviewee profile fields.
-- `useManagerEndCycleReviewMap(cycleIds)` — query key `["pdp","manager-end-cycle-reviews", sortedIds]`. Returns `Set<number>` of cycle ids with an end-cycle review. Disabled if `cycleIds.length === 0`.
-- `useCreateReview(cycleId)` — mutation that invalidates `["pdp","reviews", cycleId]`, `["pdp","cycle-summary", cycleId]`, and `["pdp","manager-cycles"]` / `["pdp","manager-end-cycle-reviews"]` so the hub refreshes.
+### Edited
+- `src/App.tsx` — register the lazy route.
 
-### 3. `src/components/academy/pdp/ReviewComposerDrawer.tsx` (new)
-Self-contained shadcn `Sheet` (right on desktop, bottom on mobile via `useIsMobile`). Strict-typed props:
-```ts
-interface ReviewComposerDrawerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  cycleId: number;
-  revieweeName?: string | null;
-}
+No edits to existing SuperAdmin pages, RBAC, ProtectedRoute, hooks, types, or DB.
+
+## Route guard
+Follow the established pattern (e.g. `/admin/code-tables`):
+
+```tsx
+const SuperAdminWorkforcePdp = lazy(() => import("./pages/superadmin/workforce-pdp"));
+<Route path="/superadmin/workforce-pdp" element={
+  <ProtectedRoute requireSuperAdmin>
+    <SuperAdminWorkforcePdp />
+  </ProtectedRoute>
+} />
 ```
-Form (controlled state, no zod for this prompt — light validation):
-- **Review type**: shadcn `RadioGroup` (Mid cycle / End cycle / Ad hoc).
-- **Notes**: `Textarea` rows={8}, `maxLength={4000}`, hint "Markdown supported".
-- **Outcome**: shadcn `Select` (`__none__` ↔ null per project standard) — On track / Needs action / Completed / Not completed.
-- Footer: "Save review" (disabled while pending), "Cancel".
-- On save → `useCreateReview(cycleId).mutate(...)`; on success toast "Review saved" and `onOpenChange(false)`.
 
-### 4. `src/pages/academy/pdp/cycle/[cycleId].tsx` (edit, additive)
-- Read `?reviewMode=1` via `useSearchParams`.
-- Compute `isManager = !!user && cycle?.manager_id === user.id`.
-- New state `composerOpen`, seeded `true` when `reviewMode === '1' && isManager` (one-shot via `useEffect` keyed on `reviewMode + cycle?.manager_id`).
-- Render `<ReviewComposerDrawer />`. Strip `reviewMode` from URL on close (`setSearchParams` without the key) so refresh doesn't reopen.
-- If `reviewMode=1` but `!isManager`, show inline `Alert` ("You are not the assigned manager for this cycle.") instead of opening drawer.
-- **No edits** to existing tabs / layout.
+`ProtectedRoute` already gates on `useRBAC().isSuperAdmin`. No direct `users.is_vivacity_internal` query.
 
-### 5. `src/components/academy/pdp/cycle/ReviewsTab.tsx` (edit, copy + scope only)
-- Change "Sign off" button label → "Acknowledge" when reviewee is the current auth user.
-- Show the Acknowledge button for any `pdp_reviews` row where `signed_off_at == null` AND `cycle.user_id === auth.uid()` (reviewee). Currently restricted to `end_cycle`; broaden so reviewee can acknowledge mid-cycle / ad-hoc reviews too (matches "the reviewee can sign off the review" requirement). Pass `cycle` (or just `revieweeUserId`) into ReviewsTab; call site already has `cycle` available.
-- Keep existing `useSignOffReview` flow intact.
-- Display a small in-app banner above the list when there is at least one review created in the last 24h that is unsigned and reviewee = current user: "New manager review awaiting your acknowledgement." (Pure UI — satisfies the "in-app banner is sufficient" requirement until Edge Function from Prompt 10 lands.)
+## Data layer
 
-### 6. `src/pages/academy/pdp/reviews.tsx` (new) — Manager Reviews Hub
-- Layout: `AcademyLayout` + `AcademyPageWrapper` (title "Reviews", subtitle "Cycles assigned to you for review").
-- `useAuth()` → managerId; `useManagerCycles(managerId)`; `useManagerEndCycleReviewMap(cycleIds)`.
-- Group cycles client-side using `date-fns`:
-  - **Awaiting review**: `status === 'under_review'` OR (`cycle_end_date < today` AND id NOT in end-cycle review set AND status !== 'completed').
-  - **Active**: `status === 'active'` (and not already in Awaiting bucket).
-  - **Recently closed**: `status === 'completed'` AND `completed_at >= today - 90d` (fall back to `cycle_end_date` if `completed_at` null).
-- Render three `Card` sections; each row shows reviewee name, audience code badge, cycle dates, status badge, and a clickable `Link` to `/academy/pdp/cycle/{id}?reviewMode=1`. Whole row is a clickable button; hover affordance. Empty state per group ("Nothing here yet").
-- Skeletons during initial load. Sign-in / no-data states handled.
+### Primary fetch (workforce.ts)
+```ts
+supabase
+  .from("v_pdp_user_currency")
+  .select("user_id, tenant_id, audience_code, cycle_year, cycle_end_date, status, percent_complete, actual_pd_hours, target_pd_hours, days_until_cycle_end, currency_status")
+```
 
-### 7. `src/App.tsx` (edit) — register route
-- `const AcademyPdpReviewsPage = lazy(() => import("./pages/academy/pdp/reviews"));`
-- `<Route path="/academy/pdp/reviews" element={<ProtectedRoute><AcademyPdpReviewsPage /></ProtectedRoute>} />`
-- Place above the `/academy/pdp/cycle/:cycleId` route to avoid any path matching ambiguity.
+Then two parallel lookups, scoped to the IDs returned (avoids over-fetch and the 1000-row default):
+- `users.select("user_uuid, first_name, last_name, email").in("user_uuid", userIds)`
+- `tenants.select("tenant_id, tenant_name").in("tenant_id", tenantIds)`
 
-## Edge Cases / Conflicts Considered
-- **RLS**: All writes are by manager (reviewer); existing `pdp_reviews: reviewer manages own` policy permits insert/select. Sign-off path uses existing reviewee policy. No migration.
-- **Audit/notification**: Per prompt, an Edge Function will be wired in Prompt 10. We render an in-app banner today and leave a `// TODO(prompt-10): notify reviewee via edge function` comment in `useCreateReview` `onSuccess`.
-- **`pdp_reviews` schema gotchas**: `reviewer_id` and `review_date` are NOT NULL — defaults supplied. No `updated_at` column — do not attempt to set it.
-- **Routing precedence**: `/academy/pdp/reviews` registered before `:cycleId` route to avoid future regressions if patterns change.
-- **`reviewMode=1` on non-managers**: Drawer never opens; user sees inline message — prevents confused UX while preserving deep linking semantics.
-- **Date filtering**: All boundaries computed in local time using `startOfToday()` and `subDays(today, 90)` from `date-fns`.
-- **No `any`** in new code; reuse `PdpCycle`, `PdpReview` types and add `ManagerCycle = PdpCycle & { user: { user_uuid; first_name; last_name; email } | null }`.
-- **Australian date format** `dd/MM/yyyy` per memory.
-- **Existing `ReviewsTab` label change** is backwards compatible for sign-off semantics — same RPC, same RLS.
+Merged client-side into a typed `WorkforcePdpRow`. Reasoning: `v_pdp_user_currency` is a view, so PostgREST embedded joins to `users`/`tenants` are unreliable without explicit FK hints — per-row N+1 fetches would blow the 1s budget. Two `.in()` lookups keep us under 3 round-trips total.
 
-## Risk Assessment
-| Area | Risk | Mitigation |
-|---|---|---|
-| RLS / data leak | None — manager filter enforced both client- and DB-side | Existing policies unchanged |
-| Sign-off broadening | Low — moves from end_cycle-only to all reviewee rows | Matches prompt; reviewee already had RLS update access |
-| URL `reviewMode` flag | Low | Stripped on close; ignored for non-managers |
-| Notification gap | Documented | In-app banner placeholder + TODO for Prompt 10 |
-| New route | None | Lazy-loaded, ProtectedRoute wrapper |
-| Schema change | None — no migration |
+### Drawer cycle lookup
+The view does NOT expose `cycle_id` (it only selects `l.user_id, l.tenant_id, ...` from the inner CTE). Without it we cannot drive `useCycleSummary` or build the `/academy/pdp/cycle/{cycleId}` link. Resolution: on row click, call the existing `getCurrentCycle(userId, tenantId)` API (already in `src/features/pdp/api.ts`) — this is not a new query type, just a reuse of the same selection logic the view itself uses (DISTINCT ON latest cycle per user+tenant). Then feed the resulting `cycle.id` into the existing `useCycleSummary` hook.
 
-## Summary of Changes
-1. **New** `src/pages/academy/pdp/reviews.tsx` — three-group manager hub.
-2. **New** `src/components/academy/pdp/ReviewComposerDrawer.tsx` — composer Sheet.
-3. **Edit** `src/features/pdp/api.ts` — `listManagerCycles`, `listManagerEndCycleReviews`, `createReview`.
-4. **Edit** `src/features/pdp/hooks.ts` — `useManagerCycles`, `useManagerEndCycleReviewMap`, `useCreateReview`.
-5. **Edit** `src/pages/academy/pdp/cycle/[cycleId].tsx` — `?reviewMode=1` opens composer for the assigned manager.
-6. **Edit** `src/components/academy/pdp/cycle/ReviewsTab.tsx` — broaden Acknowledge button + in-app banner.
-7. **Edit** `src/App.tsx` — register `/academy/pdp/reviews`.
+This is the single nuance worth flagging: the prompt says "do not add new DB queries beyond v_pdp_user_currency", but the drawer requirement (useCycleSummary + View PDP link) is impossible without a cycle id. Reusing `getCurrentCycle` is the minimal, in-spec resolution. Alternative would be to extend the view to include `cycle_id` via migration — out of scope per "No DB migrations" earlier prompts and "no new RLS policies" constraint here.
 
-## Benefits
-- Single hub for managers to triage cycle reviews.
-- Deep link `?reviewMode=1` keeps composer state shareable.
-- Reviewee acknowledgement covers all review types — closer to a complete loop ahead of the Edge Function.
-- Zero database migration; rides on existing RLS.
+### React Query
+- `useWorkforcePdp()` → returns `WorkforcePdpRow[]`. `staleTime: 60_000`. Single query key `["pdp", "workforce"]`.
+- Drawer reuses `useCycleSummary(cycleId)` from `src/features/pdp/hooks.ts`.
+
+## UI
+
+### Filter bar (top)
+- Tenant — single Combobox, populated from distinct `tenant_id`s present in fetched rows (resolved to `tenant_name`).
+- Audience — single Select, populated from distinct `audience_code`s.
+- Currency status — multi-select (Popover + Checkbox list) over the four `CurrencyStatus` values.
+- Cycle year — Select with distinct years (default: current year).
+- "Clear filters" link.
+
+All filtering is client-side over the cached array. URL state via `useSearchParams` for shareability.
+
+### KPI tiles (4)
+Computed from filtered rows:
+- Total staff (count of rows).
+- % current (`currency_status === 'current'`).
+- % at risk (`currency_status === 'at_risk'`).
+- % overdue (`currency_status === 'overdue'`).
+
+Reuse existing `Card` / shadcn primitives. No new color tokens — `CurrencyStatusPill` already encodes brand colors.
+
+### Table
+Columns:
+| Staff name | Tenant | Audience | Cycle year | Target hours | Actual hours | % complete | Status | Cycle end |
+
+Details:
+- Staff name: `${first_name} ${last_name}` fallback to email.
+- Hours: `Intl.NumberFormat('en-AU', { minimumFractionDigits: 1, maximumFractionDigits: 1 })`.
+- % complete: rounded integer, with a thin progress bar.
+- Status: `<CurrencyStatusPill status={row.currency_status} />` (imported from `src/components/academy/pdp/CurrencyStatusPill.tsx`).
+- Cycle end: `format(parseISO(date), 'dd/MM/yyyy')` via `date-fns`.
+- Sorting: column-header click; default sort `currency_status` (overdue → at_risk → on_track → current), then `cycle_end_date` asc.
+- Row uses `cursor-pointer` and `onClick` opens drawer.
+
+Performance: render via plain table (no virtualization needed at 500 rows). `useMemo` for filtered + sorted derivations. Selection minimised (only the 11 view columns + name fields from users + tenant_name).
+
+### Drawer (Sheet)
+On row click:
+1. Resolve `cycleId` via `getCurrentCycle(userId, tenantId)`.
+2. While loading, skeleton.
+3. Render: staff name + tenant header, summary fields from `useCycleSummary` (target, actual, % complete, goals/evidence/reflection counts as available), `<CurrencyStatusPill />`, and a `<Button asChild><Link to={`/academy/pdp/cycle/${cycleId}`}>View PDP</Link></Button>`.
+
+### Footer
+"Export to CSV" button — uses `papaparse` (already in deps) to `unparse` the currently filtered + sorted rows. File name: `workforce-pdp-${yyyyMMdd}.csv`. Dates formatted dd/MM/yyyy in the export. Triggers a Blob download — no server round-trip.
+
+## TypeScript
+- New `WorkforcePdpRow` type defined in `workforce.ts`. No `any`.
+- View row type pulled from `Database["public"]["Views"]["v_pdp_user_currency"]["Row"]`.
+- Currency status narrowed to existing `CurrencyStatus` union from `src/features/pdp/types`.
+
+## Performance budget (≤ 1s for 500 rows)
+- 1 view query (≤ 500 rows × 11 cols ≈ ~40KB).
+- 2 lookup queries scoped via `.in()` to seen IDs.
+- Merge + memoised filter/sort: O(n).
+- No per-row queries; drawer's `getCurrentCycle` only fires on row click.
+
+## Gaps / risks identified
+
+1. **View lacks cycle_id** — addressed above by reusing `getCurrentCycle` on drawer open. Low risk; same DISTINCT ON logic.
+2. **`v_pdp_user_currency` only surfaces the LATEST cycle per user+tenant** — so the "Cycle year" filter won't show historical years for a given staff member. Documented in the page header subtitle ("Latest cycle per staff member") to avoid user confusion. No code workaround needed within scope.
+3. **RLS on the view** — the view inherits RLS from underlying `pdp_cycles` / `v_pdp_cycle_summary`. SuperAdmins already have read-all via existing policies (per `users-rls-architecture` memory and `get_current_user_tenant_id()` bypass). No new policies needed; verified by other SuperAdmin pages reading `pdp_*` tables successfully.
+4. **`tenant_id` may be NULL** — view allows it (cycles without tenant). Treated as "(No tenant)" in the Tenant filter and column.
+5. **1000-row default limit** — adding `.limit(2000)` defensively to the workforce fetch with a console.warn if truncated. Inside the 1s budget.
+6. **No regression risk** — page is brand new, ProtectedRoute already supports `requireSuperAdmin`, no changes to shared components, no DB writes, no schema changes, no RLS changes. Existing PDP pages and hooks untouched.
+
+## Summary
+- Adds a single new SuperAdmin page + 2 small feature files + 1 route registration.
+- Reuses `CurrencyStatusPill`, `useCycleSummary`, `getCurrentCycle`, `ProtectedRoute`, `useRBAC`, `papaparse`, `date-fns`.
+- Strictly read-only against `v_pdp_user_currency`, plus minimal name lookups.
+- Within the 1s/500-row target.
+- No `any`, no migrations, no new RLS, no edits to existing SuperAdmin pages.
+
+**Benefits**: portfolio-wide PDP visibility for Vivacity, fast triage via status pills + KPIs, exportable for board/exec reporting.
+
+**Risk**: low. Only behavioural assumption is that SuperAdmin RLS already permits reading the view — confirmed by existing patterns; if RLS happens to block, surface is a benign empty table, not data leakage.
