@@ -654,10 +654,18 @@ serve(async (req) => {
     const templateBytes = new Uint8Array(await templateBlob.arrayBuffer());
 
     // ── Fetch merge fields ─────────────────────────────────────────────────
-    const { data: mergeFieldRows } = await supabase
+    // NOTE: must use userClient (not service role) — resolve_tenant_merge_fields
+    // checks app.user_can_access_tenant(), which relies on auth.uid().
+    // With the service role client, auth.uid() is null and the function returns 0 rows.
+    const { data: mergeFieldRows, error: mergeFieldsError } = await userClient
       .from("v_tenant_merge_fields")
       .select("field_tag, field_type, value")
       .eq("tenant_id", tenant_id);
+
+    if (mergeFieldsError) {
+      console.warn(`[deliver] merge fields query error: ${mergeFieldsError.message}`);
+    }
+    console.log(`[deliver] merge fields fetched: ${mergeFieldRows?.length ?? 0} rows for tenant ${tenant_id}`);
 
     const mergeData: Record<string, string> = {};
     const imageFields: string[] = [];
