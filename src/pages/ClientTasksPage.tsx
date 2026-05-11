@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useClientAllTasks, type ClientAllTask } from "@/hooks/useClientAllTasks";
 import { useTaskStatusOptions, getStatusLabel } from "@/hooks/useTaskStatusOptions";
-import { useAuth } from "@/hooks/useAuth";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,9 +25,7 @@ export default function ClientTasksPage() {
   const [showArchived, setShowArchived] = useState(false);
   const { data: tasks = [], isLoading } = useClientAllTasks(showArchived);
   const { statuses } = useTaskStatusOptions();
-  const { getTenantRole } = useAuth();
-  const { activeTenantId } = useClientTenant();
-  const isAdmin = activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false;
+  const { canManagePortalUsers } = useClientTenant();
   const [filter, setFilter] = useState<FilterType>("all");
   const [selected, setSelected] = useState<Set<number>>(new Set());
 

@@ -43,7 +43,6 @@ import {
   type TenantUserRelationshipRole,
   type TenantUserStatus,
 } from "@/hooks/use-client-tenant-users";
-import { useAuth } from "@/hooks/useAuth";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 
 import InviteUserDialog from "./users/InviteUserDialog";
@@ -208,8 +207,7 @@ function LoadingSkeleton() {
 
 export default function ClientUsersPage() {
   const { data, isLoading, isError } = useClientTenantUsers();
-  const { activeTenantId } = useClientTenant();
-  const { getTenantRole } = useAuth();
+  const { canManagePortalUsers } = useClientTenant();
   const { resend } = useInviteMutations();
 
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -219,24 +217,14 @@ export default function ClientUsersPage() {
   const activeCount = rows.filter((r) => r.row_type === "active").length;
   const invitedCount = rows.filter((r) => r.row_type === "invited").length;
 
-  const isAdmin = activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false;
-
   const inviteButton = (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-block">
-          <Button
-            disabled={!isAdmin}
-            onClick={() => setInviteOpen(true)}
-            className={!isAdmin ? "cursor-not-allowed" : ""}
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Invite user
-          </Button>
-        </span>
-      </TooltipTrigger>
-      {!isAdmin ? <TooltipContent>Admin only.</TooltipContent> : null}
-    </Tooltip>
+    <Button
+      disabled={!canManagePortalUsers}
+      onClick={() => setInviteOpen(true)}
+    >
+      <UserPlus className="mr-2 h-4 w-4" />
+      Invite user
+    </Button>
   );
 
   return (
