@@ -36,7 +36,7 @@ const CLIENT_FACING_TYPES = [
  */
 export function useClientNotifications() {
   const { profile } = useAuth();
-  const { activeTenantId } = useClientTenant();
+  const { activeTenantId, isAcademyOnly } = useClientTenant();
   const qc = useQueryClient();
 
   const query = useQuery({
@@ -52,11 +52,11 @@ export function useClientNotifications() {
       if (error) throw error;
       return (data || []) as unknown as ClientNotification[];
     },
-    enabled: !!profile?.user_uuid && !!activeTenantId,
+    enabled: !!profile?.user_uuid && !!activeTenantId && !isAcademyOnly,
   });
 
   useEffect(() => {
-    if (!profile?.user_uuid) return;
+    if (!profile?.user_uuid || isAcademyOnly) return;
     const channel = supabase
       .channel(`client-notif-live:${profile.user_uuid}`)
       .on(
@@ -73,7 +73,7 @@ export function useClientNotifications() {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [profile?.user_uuid, qc]);
+  }, [profile?.user_uuid, qc, isAcademyOnly]);
 
   const markAsRead = useMutation({
     mutationFn: async (notificationId: string) => {
@@ -99,16 +99,18 @@ export function useClientNotifications() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["client-notifications"] }),
   });
 
-  const notifications = query.data || [];
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const notifications = isAcademyOnly ? [] : (query.data || []);
+  const unreadCount = isAcademyOnly ? 0 : notifications.filter((n) => !n.is_read).length;
 
   // Grouped unread counts by type
-  const unreadByType = notifications
-    .filter((n) => !n.is_read)
-    .reduce<Record<string, number>>((acc, n) => {
-      acc[n.type] = (acc[n.type] || 0) + 1;
-      return acc;
-    }, {});
+  const unreadByType = isAcademyOnly
+    ? {}
+    : notifications
+        .filter((n) => !n.is_read)
+        .reduce<Record<string, number>>((acc, n) => {
+          acc[n.type] = (acc[n.type] || 0) + 1;
+          return acc;
+        }, {});
 
   return {
     ...query,
