@@ -295,7 +295,7 @@ export default function ClientUsersPage() {
                         <LastActive row={row} />
                       </TableCell>
                       <TableCell className="w-10 text-right">
-                        {row.row_type === "invited" && isAdmin ? (
+                        {row.row_type === "invited" && canManagePortalUsers ? (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
