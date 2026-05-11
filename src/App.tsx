@@ -1085,6 +1085,7 @@ const App = () => (
             <Route path="/academy/community" element={<ProtectedRoute><AcademyCommunity /></ProtectedRoute>} />
             <Route path="/academy/team" element={<ProtectedRoute><AcademyTeam /></ProtectedRoute>} />
             <Route path="/academy/settings" element={<ProtectedRoute><AcademySettings /></ProtectedRoute>} />
+            <Route path="/academy/pdp" element={<ProtectedRoute><AcademyPdpPage /></ProtectedRoute>} />
             {/* Client Preview Routes */}
             <Route path="/client-preview" element={<ProtectedRoute><ClientPreview /></ProtectedRoute>} />
             
