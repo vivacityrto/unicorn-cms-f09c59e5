@@ -117,7 +117,7 @@ export default function AcademyPdpCyclePage() {
                   <ReflectionsTab cycleId={cycle.id} />
                 </TabsContent>
                 <TabsContent value="reviews" className="mt-4">
-                  <ReviewsTab cycleId={cycle.id} />
+                  <ReviewsTab cycleId={cycle.id} revieweeUserId={cycle.user_id} />
                 </TabsContent>
               </Tabs>
             </div>
