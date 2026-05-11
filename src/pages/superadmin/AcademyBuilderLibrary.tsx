@@ -45,6 +45,9 @@ export default function AcademyBuilderLibrary() {
   const [search, setSearch] = useState("");
   const [newCourseOpen, setNewCourseOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  const [backfillConfirmOpen, setBackfillConfirmOpen] = useState(false);
+  const [backfillRunning, setBackfillRunning] = useState(false);
+  const qc = useQueryClient();
 
   const { data: courses = [], isLoading } = useAdminAcademyCourses({
     status: statusFilter,
@@ -52,6 +55,41 @@ export default function AcademyBuilderLibrary() {
   });
 
   const createCourse = useCreateCourse();
+
+  const runBackfill = async () => {
+    setBackfillRunning(true);
+    const tId = toast.loading("Backfilling video durations from Vimeo…");
+    try {
+      const { data, error } = await supabase.functions.invoke("backfill-vimeo-durations", {
+        body: { batchSize: 200 },
+      });
+      if (error) throw error;
+      const updated = data?.updated ?? 0;
+      const skipped = data?.skipped ?? 0;
+      const errors = data?.errors ?? 0;
+      const remaining = data?.remaining_null ?? 0;
+      toast.dismiss(tId);
+      if (remaining > 0) {
+        toast.success(`Updated ${updated}, skipped ${skipped}, errors ${errors}. Remaining: ${remaining}.`, {
+          action: {
+            label: "Run again",
+            onClick: () => { void runBackfill(); },
+          },
+          duration: 10000,
+        });
+      } else {
+        toast.success(`Updated ${updated}, skipped ${skipped}, errors ${errors}. All videos have durations.`);
+      }
+      qc.invalidateQueries({ queryKey: ["video-library"] });
+      qc.invalidateQueries({ queryKey: ["training-videos-picker"] });
+      qc.invalidateQueries({ queryKey: ["academy-course-total-minutes"] });
+    } catch (e: any) {
+      toast.dismiss(tId);
+      toast.error(e?.message || "Backfill failed");
+    } finally {
+      setBackfillRunning(false);
+    }
+  };
 
   const handleCreateCourse = async () => {
     if (!newTitle.trim()) return;
