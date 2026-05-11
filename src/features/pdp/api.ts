@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import type {
   PdpAudience,
   PdpCycle,
@@ -9,6 +10,11 @@ import type {
   PdpReflection,
   PdpReview,
 } from "./types";
+
+type GoalInsert = Database["public"]["Tables"]["pdp_goals"]["Insert"];
+type GoalUpdate = Database["public"]["Tables"]["pdp_goals"]["Update"];
+type EvidenceInsert = Database["public"]["Tables"]["pdp_evidence_items"]["Insert"];
+type ReflectionInsert = Database["public"]["Tables"]["pdp_reflections"]["Insert"];
 
 export async function listAudiences(): Promise<PdpAudience[]> {
   const { data, error } = await supabase
