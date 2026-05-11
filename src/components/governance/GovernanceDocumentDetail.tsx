@@ -282,7 +282,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         />
       )}
 
-      {showSharePointBrowser && profile?.tenant_id && (() => {
+      {showSharePointBrowser && (() => {
         const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
         const autoFolder = doc.framework_type
           ? frameworkFolderMap[doc.framework_type.toLowerCase()] || 'Other'
