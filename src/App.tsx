@@ -174,6 +174,7 @@ const AcademyLessonViewerWrapper = lazy(() => import("./pages/client/AcademyLess
 const AcademyAssessmentWrapper = lazy(() => import("./pages/client/AcademyAssessmentWrapper"));
 const AcademyAssessmentResultWrapper = lazy(() => import("./pages/client/AcademyAssessmentResultWrapper"));
 const AcademyEnrolmentsPage = lazy(() => import("./pages/superadmin/AcademyEnrolmentsPage"));
+const SuperAdminWorkforcePdp = lazy(() => import("./pages/superadmin/workforce-pdp"));
 const AcademyTenantAccessPage = lazy(() => import("./pages/superadmin/AcademyTenantAccessPage"));
 const AcademyCertificatesAdminPage = lazy(() => import("./pages/superadmin/AcademyCertificatesPage"));
 const AcademyBuilderLibrary = lazy(() => import("./pages/superadmin/AcademyBuilderLibrary"));
@@ -1075,6 +1076,7 @@ const App = () => (
             <Route path="/admin/merge-field-tags" element={<ProtectedRoute requireSuperAdmin><MergeFieldTagsAdmin /></ProtectedRoute>} />
             {/* SuperAdmin Academy Management */}
             <Route path="/superadmin/academy/enrollments" element={<ProtectedRoute requireSuperAdmin><AcademyEnrolmentsPage /></ProtectedRoute>} />
+            <Route path="/superadmin/workforce-pdp" element={<ProtectedRoute requireSuperAdmin><SuperAdminWorkforcePdp /></ProtectedRoute>} />
             <Route path="/superadmin/academy/tenant-access" element={<ProtectedRoute requireSuperAdmin><AcademyTenantAccessPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/certificates" element={<ProtectedRoute requireSuperAdmin><AcademyCertificatesAdminPage /></ProtectedRoute>} />
             <Route path="/superadmin/academy/builder" element={<ProtectedRoute requireSuperAdmin><AcademyBuilderLibrary /></ProtectedRoute>} />
