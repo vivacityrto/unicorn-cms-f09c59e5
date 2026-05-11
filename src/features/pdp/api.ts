@@ -177,6 +177,86 @@ export async function addReflection(input: AddReflectionInput): Promise<PdpRefle
 }
 
 
+export async function getCycleById(cycleId: number): Promise<PdpCycle | null> {
+  const { data, error } = await supabase
+    .from("pdp_cycles")
+    .select("*")
+    .eq("id", cycleId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+
+export type UpdateCycleInput = {
+  cycleId: number;
+  target_pd_hours?: number;
+  cycle_end_date?: string;
+  notes?: string | null;
+};
+
+export async function updateCycle(input: UpdateCycleInput): Promise<PdpCycle> {
+  const { cycleId, ...rest } = input;
+  const { data, error } = await supabase
+    .from("pdp_cycles")
+    .update(rest)
+    .eq("id", cycleId)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function closeCycle(cycleId: number, outcomeNotes: string): Promise<PdpCycle> {
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr) throw userErr;
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("Not authenticated");
+
+  const { data: existing } = await supabase
+    .from("pdp_cycles")
+    .select("notes")
+    .eq("id", cycleId)
+    .maybeSingle();
+  const prior = existing?.notes ? `${existing.notes}\n\n` : "";
+  const stamped = `[Closed ${new Date().toISOString().slice(0, 10)}] ${outcomeNotes}`;
+
+  const { data, error } = await supabase
+    .from("pdp_cycles")
+    .update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      completed_by: userId,
+      notes: `${prior}${stamped}`,
+    })
+    .eq("id", cycleId)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteGoal(goalId: number): Promise<void> {
+  const { error } = await supabase.from("pdp_goals").delete().eq("id", goalId);
+  if (error) throw error;
+}
+
+export type StandardRef = {
+  id: string;
+  framework: string;
+  code: string;
+  title: string;
+};
+
+export async function listStandardsReference(ids: string[]): Promise<StandardRef[]> {
+  if (!ids.length) return [];
+  const { data, error } = await supabase
+    .from("standards_reference")
+    .select("id, framework, code, title")
+    .in("id", ids);
+  if (error) throw error;
+  return (data ?? []) as StandardRef[];
+}
+
 export async function signOffReview(reviewId: number): Promise<PdpReview> {
   const { data: userData, error: userErr } = await supabase.auth.getUser();
   if (userErr) throw userErr;
