@@ -770,24 +770,43 @@ serve(async (req) => {
       }
     }
 
-    // ── Download template from storage ─────────────────────────────────────
+    // ── Load template bytes ────────────────────────────────────────────────
+    // Two sources, in order: Supabase storage (legacy import) → SharePoint Master Documents.
     const storagePath = version.frozen_storage_path || version.storage_path || version.file_path;
-    if (!storagePath) {
-      return new Response(JSON.stringify({ error: "No storage path on version" }), {
+    const sourceTemplateUrl = (doc.source_template_url ?? "").trim();
+    let templateBytes: Uint8Array | null = null;
+    let templateSource: "supabase_storage" | "sharepoint_master" | null = null;
+
+    if (storagePath && String(storagePath).trim() !== "") {
+      const { data: templateBlob, error: dlErr } = await supabase.storage
+        .from("document-files")
+        .download(storagePath);
+      if (dlErr || !templateBlob) {
+        throw new Error(`Failed to download template from storage: ${dlErr?.message}`);
+      }
+      templateBytes = new Uint8Array(await templateBlob.arrayBuffer());
+      templateSource = "supabase_storage";
+      console.log(`[deliver] template loaded from supabase storage: ${storagePath}`);
+    } else if (sourceTemplateUrl) {
+      try {
+        const resolved = await resolveDriveItemFromSharingUrl(sourceTemplateUrl);
+        templateBytes = await graphDownload(resolved.driveId, resolved.itemId);
+        templateSource = "sharepoint_master";
+        console.log(`[deliver] template loaded from SharePoint: ${resolved.name} (${resolved.itemId})`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return new Response(JSON.stringify({ error: `Failed to download template from SharePoint: ${msg}` }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      return new Response(JSON.stringify({ error: "No template source: neither Supabase storage_path nor documents.source_template_url is set" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const { data: templateBlob, error: dlErr } = await supabase.storage
-      .from("document-files")
-      .download(storagePath);
-
-    if (dlErr || !templateBlob) {
-      throw new Error(`Failed to download template: ${dlErr?.message}`);
-    }
-
-    const templateBytes = new Uint8Array(await templateBlob.arrayBuffer());
+    void templateSource;
 
     // ── Fetch merge fields ─────────────────────────────────────────────────
     // Delivery is a staff-only server action; resolve values with the service client
