@@ -15,7 +15,6 @@ type ResultStatus = 'generated' | 'skipped' | 'failed';
 type ResultReason =
   | 'unsupported_format'
   | 'no_template'
-  | 'template_not_imported'
   | 'already_generated'
   | 'tailoring_incomplete'
   | 'locked'
