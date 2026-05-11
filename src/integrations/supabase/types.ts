@@ -33041,6 +33041,7 @@ export type Database = {
           source_audit_response_id: number | null
           source_certificate_id: number | null
           source_enrollment_id: number | null
+          standard_id: string | null
           status: string
           title: string
           updated_at: string
@@ -33065,6 +33066,7 @@ export type Database = {
           source_audit_response_id?: number | null
           source_certificate_id?: number | null
           source_enrollment_id?: number | null
+          standard_id?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -33089,6 +33091,7 @@ export type Database = {
           source_audit_response_id?: number | null
           source_certificate_id?: number | null
           source_enrollment_id?: number | null
+          standard_id?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -33137,6 +33140,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_academy_course_progress"
             referencedColumns: ["enrollment_id"]
+          },
+          {
+            foreignKeyName: "pdp_evidence_items_standard_id_fkey"
+            columns: ["standard_id"]
+            isOneToOne: false
+            referencedRelation: "standards_reference"
+            referencedColumns: ["id"]
           },
         ]
       }

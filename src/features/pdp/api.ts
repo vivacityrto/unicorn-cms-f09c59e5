@@ -14,6 +14,7 @@ import type {
 type GoalInsert = Database["public"]["Tables"]["pdp_goals"]["Insert"];
 type GoalUpdate = Database["public"]["Tables"]["pdp_goals"]["Update"];
 type EvidenceInsert = Database["public"]["Tables"]["pdp_evidence_items"]["Insert"];
+type EvidenceUpdate = Database["public"]["Tables"]["pdp_evidence_items"]["Update"];
 type ReflectionInsert = Database["public"]["Tables"]["pdp_reflections"]["Insert"];
 
 export async function listAudiences(): Promise<PdpAudience[]> {
@@ -143,13 +144,77 @@ export type LogEvidenceInput = Partial<PdpEvidenceItem> & {
 
 export async function logEvidence(input: LogEvidenceInput): Promise<PdpEvidenceItem> {
   const { id: _omit, ...rest } = input;
+  let payload: EvidenceInsert = rest as EvidenceInsert;
+  if (!payload.created_by) {
+    const { data: userData } = await supabase.auth.getUser();
+    if (userData.user?.id) payload = { ...payload, created_by: userData.user.id };
+  }
   const { data, error } = await supabase
     .from("pdp_evidence_items")
-    .insert(rest as EvidenceInsert)
+    .insert(payload)
     .select("*")
     .single();
   if (error) throw error;
   return data;
+}
+
+export type UpdateEvidenceInput = Partial<PdpEvidenceItem> & { id: number };
+
+export async function updateEvidence(input: UpdateEvidenceInput): Promise<PdpEvidenceItem> {
+  const { id, ...rest } = input;
+  const { data, error } = await supabase
+    .from("pdp_evidence_items")
+    .update(rest as EvidenceUpdate)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function signEvidenceDocument(path: string): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from("academy-evidence")
+    .createSignedUrl(path, 60);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export type UserAcademyEnrollment = {
+  id: number;
+  course_id: number;
+  completed_at: string | null;
+  course: { id: number; title: string; estimated_minutes: number | null } | null;
+  certificate: { id: number; certificate_number: string | null } | null;
+};
+
+export async function listUserAcademyEnrollments(
+  userId: string,
+): Promise<UserAcademyEnrollment[]> {
+  const { data, error } = await supabase
+    .from("academy_enrollments")
+    .select(
+      `id, course_id, completed_at,
+       course:academy_courses!course_id ( id, title, estimated_minutes ),
+       certificate:academy_certificates!enrollment_id ( id, certificate_number )`,
+    )
+    .eq("user_id", userId)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row) => {
+    const certRaw = (row as { certificate: unknown }).certificate;
+    const cert = Array.isArray(certRaw) ? certRaw[0] ?? null : certRaw ?? null;
+    const courseRaw = (row as { course: unknown }).course;
+    const course = Array.isArray(courseRaw) ? courseRaw[0] ?? null : courseRaw ?? null;
+    return {
+      id: row.id as number,
+      course_id: row.course_id as number,
+      completed_at: row.completed_at as string | null,
+      course: course as UserAcademyEnrollment["course"],
+      certificate: cert as UserAcademyEnrollment["certificate"],
+    };
+  });
 }
 
 export type AddReflectionInput = {
