@@ -44,6 +44,15 @@ export default function AcademyLessonViewerPage() {
   const autoCompletedRef = useRef<boolean>(false);
   const prevEnrollmentStatusRef = useRef<string | null>(null);
   const { isReadOnly, blockWrite } = useReadOnlyGuard();
+  const { user, profile } = useAuth();
+  const authUserId = user?.id ?? null;
+  const tenantId = profile?.tenant_id ?? null;
+  const { data: pdpCycle } = useCurrentCycle(authUserId, tenantId);
+  const [reflectionOpen, setReflectionOpen] = useState(false);
+  const [reflectionLessonProgressId, setReflectionLessonProgressId] = useState<number | null>(null);
+  const [reflectionLessonTitle, setReflectionLessonTitle] = useState<string | null>(null);
+  const promptedLessonsRef = useRef<Set<number>>(new Set());
+  const initialCompletedSnapshotRef = useRef<Set<number> | null>(null);
 
   const numericLessonId = lessonId ? parseInt(lessonId, 10) : null;
 
