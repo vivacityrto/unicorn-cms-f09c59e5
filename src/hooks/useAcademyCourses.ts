@@ -9,7 +9,7 @@ export interface AcademyCourse {
   description: string | null;
   short_description: string | null;
   thumbnail_url: string | null;
-  target_audience: string | null;
+  target_audience: string[] | null;
   estimated_minutes: number | null;
   difficulty_level: string | null;
   status: string | null;
@@ -39,7 +39,7 @@ export function useAcademyCourses({ audienceKey }: UseAcademyCoursesOptions) {
         .from("academy_courses")
         .select("id, title, slug, description, short_description, thumbnail_url, target_audience, estimated_minutes, difficulty_level, status, tags, sort_order, certificate_enabled")
         .eq("status", "published")
-        .ilike("target_audience", `%${audienceKey}%`)
+        .contains("target_audience", [audienceKey])
         .order("sort_order", { ascending: true, nullsFirst: false })
         .order("title");
 
@@ -169,10 +169,9 @@ export function mapEnrollmentStatus(enrollmentStatus: string | null, hasCertific
 }
 
 /** Helper: get first matching tag for category display */
-export function getCourseCategory(tags: string[] | null, targetAudience: string | null): string {
+export function getCourseCategory(tags: string[] | null, targetAudience: string[] | null): string {
   if (tags && tags.length > 0) return tags[0];
-  if (targetAudience) {
-    const parts = targetAudience.split(",").map(s => s.trim());
+  if (targetAudience && targetAudience.length > 0) {
     const labelMap: Record<string, string> = {
       trainer: "Trainer",
       compliance_manager: "Compliance",
@@ -180,7 +179,7 @@ export function getCourseCategory(tags: string[] | null, targetAudience: string 
       student_support_officer: "Student Support",
       administration_assistant: "Administration",
     };
-    return labelMap[parts[0]] ?? parts[0];
+    return labelMap[targetAudience[0]] ?? targetAudience[0];
   }
   return "General";
 }

@@ -19,7 +19,7 @@ export interface PackageRow {
 export interface CourseRow {
   id: number;
   title: string;
-  target_audience: string | null;
+  target_audience: string[] | null;
   sort_order: number | null;
   status: string | null;
 }
