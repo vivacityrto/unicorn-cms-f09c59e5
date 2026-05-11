@@ -1699,17 +1699,28 @@ export default function ManageDocuments() {
                       <TableCell className="whitespace-nowrap py-6">
                         <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
                           {doc.source_template_url ? (
-                            <a
-                              href={doc.source_template_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline inline-flex items-center justify-center h-8 w-8"
-                              title={doc.source_template_url}
-                            >
-                              <Link2 className="h-4 w-4" />
-                            </a>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-muted text-primary"
+                                onClick={() => setSharepointBrowseDocId(doc.id)}
+                                title={`Change linked template file\n${doc.source_template_url}`}
+                              >
+                                <Link2 className="h-4 w-4" />
+                              </Button>
+                              <a
+                                href={doc.source_template_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+                                title="Open template file"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </>
                           ) : (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setSharepointBrowseDocId(doc.id)} title="Set SharePoint URL">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setSharepointBrowseDocId(doc.id)} title="Link template file">
                               <Link2Off className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                             </Button>
                           )}
