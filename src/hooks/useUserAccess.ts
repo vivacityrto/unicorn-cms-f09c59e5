@@ -53,7 +53,7 @@ export function useUserAccess(): UserAccessFlags {
     hasFullAccess,
     hasAcademyOnly,
     hasAnyTenant,
-    isLoading: authLoading || (enabled && isLoading),
+    isLoading: authLoading || (!!userId && profile === null) || (enabled && isLoading),
     error: (error as Error | null) ?? null,
   };
 }
