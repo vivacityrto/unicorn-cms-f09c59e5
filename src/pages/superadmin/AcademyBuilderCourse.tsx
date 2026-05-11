@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { useParams, useNavigate, useBlocker } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useModulesWithLessons, useCreateModule, useUpdateModule, useDeleteModule, useReorderModules, useCreateLesson, useUpdateLesson, useDeleteLesson, useReorderLessons, type AcademyModule, type AcademyLesson } from "@/hooks/academy/useAcademyModulesLessons";
