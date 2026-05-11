@@ -456,6 +456,90 @@ function sanitiseFileName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_\-. ]/g, "").replace(/\s+/g, "_");
 }
 
+type MergeFieldRow = {
+  field_tag: string;
+  field_type: string;
+  value: string | null;
+};
+
+async function resolveMergeFields(
+  supabase: ReturnType<typeof createServiceClient>,
+  tenantId: number,
+): Promise<MergeFieldRow[]> {
+  const { data, error } = await supabase.rpc("resolve_tenant_merge_fields", {
+    p_tenant_id: tenantId,
+  });
+
+  if (!error && Array.isArray(data) && data.length > 0) {
+    return data as MergeFieldRow[];
+  }
+
+  if (error) {
+    console.warn(`[deliver] resolve_tenant_merge_fields returned no rows: ${error.message}`);
+  }
+
+  const { data: fieldDefs, error: defsError } = await supabase
+    .from("dd_fields")
+    .select("tag, field_type, source_table, source_column, source_address_type")
+    .eq("is_active", true);
+
+  if (defsError) throw defsError;
+
+  const rows: MergeFieldRow[] = [];
+  for (const field of fieldDefs || []) {
+    let value: string | null = null;
+    if (field.source_table === "tenants" && field.source_column) {
+      const { data: row } = await supabase
+        .from("tenants")
+        .select(field.source_column)
+        .eq("id", tenantId)
+        .maybeSingle();
+      const raw = row?.[field.source_column as keyof typeof row];
+      value = raw == null ? null : String(raw);
+    } else if (field.source_table === "tenant_profile" && field.source_column) {
+      const { data: row } = await supabase
+        .from("tenant_profile")
+        .select(field.source_column)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      const raw = row?.[field.source_column as keyof typeof row];
+      value = raw == null ? null : String(raw);
+    } else if (field.source_table === "tenant_addresses") {
+      const { data: row } = await supabase
+        .from("tenant_addresses")
+        .select("address1, address2, suburb, state, postcode")
+        .eq("tenant_id", tenantId)
+        .eq("address_type", field.source_address_type)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (row) {
+        if (field.source_column === "full_address") {
+          value = [row.address1, row.address2, row.suburb, row.state, row.postcode].filter(Boolean).join(", ");
+        } else if (field.source_column === "address1") {
+          value = [row.address1, row.address2].filter(Boolean).join(", ");
+        } else if (field.source_column) {
+          const raw = row[field.source_column as keyof typeof row];
+          value = raw == null ? null : String(raw);
+        }
+      }
+    } else if (field.source_table === "tga_rto_snapshots") {
+      const { data: snap } = await supabase
+        .from("tga_rto_snapshots")
+        .select("payload")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      value = (snap?.payload as any)?.registrations?.[0]?.endDate ?? null;
+    }
+
+    rows.push({ field_tag: field.tag, field_type: field.field_type, value });
+  }
+
+  return rows;
+}
+
 // ── Main Handler ───────────────────────────────────────────────────────────
 
 serve(async (req) => {
