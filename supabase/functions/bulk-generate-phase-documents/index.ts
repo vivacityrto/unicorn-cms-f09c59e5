@@ -123,7 +123,7 @@ Deno.serve(async (req: Request) => {
     const docIds = [...new Set(instances.map(i => i.document_id))];
     const { data: docs } = await supabase
       .from('documents')
-      .select('id, title, format, uploaded_files')
+      .select('id, title, format')
       .in('id', docIds);
 
     const docMap = new Map((docs || []).map(d => [d.id, d]));
@@ -151,15 +151,6 @@ Deno.serve(async (req: Request) => {
         });
         continue;
       }
-      const hasTemplate = Array.isArray(doc.uploaded_files) && doc.uploaded_files.length > 0 && !!doc.uploaded_files[0];
-      if (!hasTemplate) {
-        results.push({
-          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
-          status: 'skipped', reason: 'no_template',
-          error: 'No template document mapped',
-        });
-        continue;
-      }
       if (mode === 'pending_only' && inst.isgenerated) {
         results.push({
           document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
@@ -179,18 +170,18 @@ Deno.serve(async (req: Request) => {
 
     // ── Resolve latest published document_version per document_id ────────
     const eligibleDocIds = [...new Set(eligible.map(e => e.doc.id))];
-    const versionByDocId = new Map<number, string>();
+    const versionByDocId = new Map<number, { id: string; storage_path?: string | null; frozen_storage_path?: string | null }>();
     if (eligibleDocIds.length > 0) {
       const { data: versions } = await supabase
         .from('document_versions')
-        .select('id, document_id, version_number, status')
+        .select('id, document_id, version_number, status, storage_path, frozen_storage_path')
         .in('document_id', eligibleDocIds)
         .eq('status', 'published')
         .order('version_number', { ascending: false });
 
       for (const v of versions || []) {
         if (!versionByDocId.has(v.document_id)) {
-          versionByDocId.set(v.document_id, v.id);
+          versionByDocId.set(v.document_id, v);
         }
       }
     }
@@ -201,12 +192,20 @@ Deno.serve(async (req: Request) => {
     let failed = 0;
 
     for (const { inst, doc } of eligible) {
-      const versionId = versionByDocId.get(doc.id);
-      if (!versionId) {
+      const version = versionByDocId.get(doc.id);
+      if (!version) {
         results.push({
           document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
           status: 'skipped', reason: 'no_published_version',
           error: 'No published version available for this document',
+        });
+        continue;
+      }
+      if (!version.storage_path && !version.frozen_storage_path) {
+        results.push({
+          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          status: 'skipped', reason: 'no_template',
+          error: 'Published version has no template storage path',
         });
         continue;
       }
@@ -220,7 +219,7 @@ Deno.serve(async (req: Request) => {
           },
           body: JSON.stringify({
             tenant_id,
-            document_version_id: versionId,
+            document_version_id: version.id,
             allow_incomplete: true,
             force: mode === 'overwrite_all',
           }),

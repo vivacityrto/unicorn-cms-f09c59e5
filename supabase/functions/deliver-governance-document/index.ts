@@ -414,7 +414,59 @@ async function processPptxTemplate(
 }
 
 /**
- * For non-DOCX/PPTX formats (e.g. XLSX), scan for merge field tags without processing.
+ * Process XLSX/XLSM templates by replacing {{Tag}} merge fields in workbook XML.
+ * Returns processed bytes AND a list of all {{...}} tags found in the template.
+ */
+async function processXlsxTemplate(
+  templateBytes: Uint8Array,
+  mergeData: Record<string, string>,
+): Promise<{ bytes: Uint8Array; detectedTags: string[] }> {
+  const blob = new Blob([templateBytes.slice().buffer]);
+  const reader = new zip.ZipReader(new zip.BlobReader(blob));
+  const entries = await reader.getEntries();
+  const writer = new zip.ZipWriter(
+    new zip.BlobWriter("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+  );
+  const detectedTagsSet = new Set<string>();
+
+  for (const entry of entries) {
+    if (!entry.getData) continue;
+    const data = await entry.getData(new zip.BlobWriter());
+    const arrayBuffer = await data.arrayBuffer();
+
+    if (entry.filename.endsWith(".xml") || entry.filename.endsWith(".rels")) {
+      let content = new TextDecoder().decode(arrayBuffer);
+      content = normalizeMergeTokens(content);
+
+      const textOnly = content.replace(/<[^>]+>/g, "");
+      const tagPattern = /\{\{\s*([^}]+?)\s*\}\}/g;
+      let match;
+      while ((match = tagPattern.exec(textOnly)) !== null) {
+        const cleanedTag = match[1].replace(/<[^>]+>/g, "").trim();
+        if (cleanedTag) detectedTagsSet.add(cleanedTag);
+      }
+
+      content = content.replace(/\{\{([^}]+)\}\}/g, (fullMatch, fieldName) => {
+        const cleanField = fieldName.replace(/<[^>]+>/g, "").trim();
+        return mergeData[cleanField] !== undefined ? escapeXml(mergeData[cleanField] || "") : fullMatch;
+      });
+
+      await writer.add(entry.filename, new zip.BlobReader(new Blob([new TextEncoder().encode(content)])));
+    } else {
+      await writer.add(entry.filename, new zip.BlobReader(new Blob([arrayBuffer])));
+    }
+  }
+
+  await reader.close();
+  const result = await writer.close();
+  return {
+    bytes: new Uint8Array(await result.arrayBuffer()),
+    detectedTags: Array.from(detectedTagsSet),
+  };
+}
+
+/**
+ * For non-DOCX/PPTX/XLSX formats (e.g. legacy XLS), scan for merge field tags without processing.
  * Returns the original bytes unchanged.
  */
 async function scanTemplateForTags(
@@ -454,6 +506,90 @@ async function scanTemplateForTags(
 
 function sanitiseFileName(name: string): string {
   return name.replace(/[^a-zA-Z0-9_\-. ]/g, "").replace(/\s+/g, "_");
+}
+
+type MergeFieldRow = {
+  field_tag: string;
+  field_type: string;
+  value: string | null;
+};
+
+async function resolveMergeFields(
+  supabase: ReturnType<typeof createServiceClient>,
+  tenantId: number,
+): Promise<MergeFieldRow[]> {
+  const { data, error } = await supabase.rpc("resolve_tenant_merge_fields", {
+    p_tenant_id: tenantId,
+  });
+
+  if (!error && Array.isArray(data) && data.length > 0) {
+    return data as MergeFieldRow[];
+  }
+
+  if (error) {
+    console.warn(`[deliver] resolve_tenant_merge_fields returned no rows: ${error.message}`);
+  }
+
+  const { data: fieldDefs, error: defsError } = await supabase
+    .from("dd_fields")
+    .select("tag, field_type, source_table, source_column, source_address_type")
+    .eq("is_active", true);
+
+  if (defsError) throw defsError;
+
+  const rows: MergeFieldRow[] = [];
+  for (const field of fieldDefs || []) {
+    let value: string | null = null;
+    if (field.source_table === "tenants" && field.source_column) {
+      const { data: row } = await supabase
+        .from("tenants")
+        .select(field.source_column)
+        .eq("id", tenantId)
+        .maybeSingle();
+      const raw = row?.[field.source_column as keyof typeof row];
+      value = raw == null ? null : String(raw);
+    } else if (field.source_table === "tenant_profile" && field.source_column) {
+      const { data: row } = await supabase
+        .from("tenant_profile")
+        .select(field.source_column)
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      const raw = row?.[field.source_column as keyof typeof row];
+      value = raw == null ? null : String(raw);
+    } else if (field.source_table === "tenant_addresses") {
+      const { data: row } = await supabase
+        .from("tenant_addresses")
+        .select("address1, address2, suburb, state, postcode")
+        .eq("tenant_id", tenantId)
+        .eq("address_type", field.source_address_type)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (row) {
+        if (field.source_column === "full_address") {
+          value = [row.address1, row.address2, row.suburb, row.state, row.postcode].filter(Boolean).join(", ");
+        } else if (field.source_column === "address1") {
+          value = [row.address1, row.address2].filter(Boolean).join(", ");
+        } else if (field.source_column) {
+          const raw = row[field.source_column as keyof typeof row];
+          value = raw == null ? null : String(raw);
+        }
+      }
+    } else if (field.source_table === "tga_rto_snapshots") {
+      const { data: snap } = await supabase
+        .from("tga_rto_snapshots")
+        .select("payload")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      value = (snap?.payload as any)?.registrations?.[0]?.endDate ?? null;
+    }
+
+    rows.push({ field_tag: field.tag, field_type: field.field_type, value });
+  }
+
+  return rows;
 }
 
 // ── Main Handler ───────────────────────────────────────────────────────────
@@ -635,7 +771,7 @@ serve(async (req) => {
     }
 
     // ── Download template from storage ─────────────────────────────────────
-    const storagePath = version.storage_path || version.file_path;
+    const storagePath = version.frozen_storage_path || version.storage_path || version.file_path;
     if (!storagePath) {
       return new Response(JSON.stringify({ error: "No storage path on version" }), {
         status: 400,
@@ -654,17 +790,9 @@ serve(async (req) => {
     const templateBytes = new Uint8Array(await templateBlob.arrayBuffer());
 
     // ── Fetch merge fields ─────────────────────────────────────────────────
-    // NOTE: must use userClient (not service role) — resolve_tenant_merge_fields
-    // checks app.user_can_access_tenant(), which relies on auth.uid().
-    // With the service role client, auth.uid() is null and the function returns 0 rows.
-    const { data: mergeFieldRows, error: mergeFieldsError } = await userClient
-      .from("v_tenant_merge_fields")
-      .select("field_tag, field_type, value")
-      .eq("tenant_id", tenant_id);
-
-    if (mergeFieldsError) {
-      console.warn(`[deliver] merge fields query error: ${mergeFieldsError.message}`);
-    }
+    // Delivery is a staff-only server action; resolve values with the service client
+    // so overwrite runs are not blocked by auth.uid()-dependent view semantics.
+    const mergeFieldRows = await resolveMergeFields(supabase, tenant_id);
     console.log(`[deliver] merge fields fetched: ${mergeFieldRows?.length ?? 0} rows for tenant ${tenant_id}`);
 
     const mergeData: Record<string, string> = {};
@@ -740,8 +868,12 @@ serve(async (req) => {
       const result = await processDocxTemplate(templateBytes, mergeData, imageData);
       processedBytes = result.bytes;
       detectedTags = result.detectedTags;
+    } else if (docFormat === 'xlsx' || docFormat === 'xlsm') {
+      const result = await processXlsxTemplate(templateBytes, mergeData);
+      processedBytes = result.bytes;
+      detectedTags = result.detectedTags;
     } else {
-      // XLSX, PDF, etc. — pass through unchanged, just scan for tags
+      // Legacy XLS, PDF, etc. — pass through unchanged, just scan for tags
       const result = await scanTemplateForTags(templateBytes);
       processedBytes = result.bytes;
       detectedTags = result.detectedTags;
