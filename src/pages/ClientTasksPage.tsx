@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useClientAllTasks, type ClientAllTask } from "@/hooks/useClientAllTasks";
 import { useTaskStatusOptions, getStatusLabel } from "@/hooks/useTaskStatusOptions";
-import { useAuth } from "@/hooks/useAuth";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,9 +25,7 @@ export default function ClientTasksPage() {
   const [showArchived, setShowArchived] = useState(false);
   const { data: tasks = [], isLoading } = useClientAllTasks(showArchived);
   const { statuses } = useTaskStatusOptions();
-  const { getTenantRole } = useAuth();
-  const { activeTenantId } = useClientTenant();
-  const isAdmin = activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false;
+  const { canManagePortalUsers } = useClientTenant();
   const [filter, setFilter] = useState<FilterType>("all");
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
@@ -113,7 +110,7 @@ export default function ClientTasksPage() {
       </div>
 
       {/* Bulk action bar — Admin only */}
-      {isAdmin && selected.size > 0 && (
+      {canManagePortalUsers && selected.size > 0 && (
         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/60 border border-border">
           <span className="text-sm font-medium text-foreground">
             {selected.size} selected
@@ -142,7 +139,7 @@ export default function ClientTasksPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50 border-border">
-                  {isAdmin && (
+                  {canManagePortalUsers && (
                     <th className="px-4 py-3 w-10">
                       <Checkbox
                         checked={selected.size === filtered.length && filtered.length > 0}
@@ -166,7 +163,7 @@ export default function ClientTasksPage() {
                     statuses={statuses}
                     isSelected={selected.has(task.id)}
                     onToggle={() => toggleSelect(task.id)}
-                    showCheckbox={isAdmin}
+                    showCheckbox={canManagePortalUsers}
                   />
                 ))}
               </tbody>
