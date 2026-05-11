@@ -1,77 +1,70 @@
-## Tenant Staff PDPs page
+## Goal
 
-A tenant-scoped mirror of the SuperAdmin Workforce PDP dashboard, available to client tenant admins for their own tenant only.
+Replace the hard-coded anon JWT in the two `generate-notifications` pg_cron job command bodies with a call to `private.cron_function_jwt()`.
 
-### Decisions (confirmed)
+## Problem with the literal SQL
 
-- Gate: `canManagePortalUsers` from `useClientTenant()` (same gate as `/client/users`: `access_scope='full'` AND primary or secondary contact).
-- Route: `/client/staff-pdps` under `ClientLayout` so it inherits `ClientTenantProvider`, `ClientRouteGuard`, and the client sidebar. The originally-requested `/tenant/staff-pdps` URL is dropped because mounting outside `/client/*` would require duplicating the provider/guard and a custom gate, contrary to the "use existing pattern" rule.
+The user-supplied SQL does `UPDATE cron.job SET command = ...`. The migration runner does not own `cron.job` and direct UPDATEs return:
 
-### Files
+```
+ERROR: 42501: permission denied for table job
+```
 
-**New: `src/pages/client/StaffPdpsPage.tsx`**
-- Wrapped page component (no `DashboardLayout` — `ClientLayout` already provides chrome).
-- Reads `activeTenantId`, `canManagePortalUsers`, `tenantUserLoading` from `useClientTenant()`.
-  - While `tenantUserLoading` or `activeTenantId === null` → skeleton.
-  - If not `canManagePortalUsers` → render an inline "You don't have access to this page" panel (no redirect; consistent with how `/client/users` blocks non-admins via `ClientRouteGuard`'s `USER_MANAGEMENT_PREFIXES`).
-- Reuses existing primitives — no duplication:
-  - `useWorkforcePdp()` from `@/features/pdp/useWorkforcePdp` for the data, then filters client-side by `r.tenant_id === activeTenantId`. The view `v_pdp_user_currency` already enforces RLS, and `useWorkforcePdp` caps at 2000 rows; per-tenant volume is far below that. (Optimisation note below.)
-  - `CurrencyStatusPill`, `useCycleSummary`, `getCurrentCycle`, types from `@/features/pdp/*`.
-  - Same `fmtDate` (dd/MM/yyyy via date-fns), `STATUS_LABEL`, `STATUS_RANK`, `numberAU` formatter as the SuperAdmin page (small local copies — no shared-utility refactor to keep blast radius zero).
-- Layout:
-  - Header: "Staff PDPs" + subtitle "Latest PDP cycle for your team."
-  - Filter bar: Audience (Select), Currency status (multi-select Popover + Checkbox), Cycle year (Select). No tenant selector.
-  - KPI tiles (4): total staff, % current, % at risk, % overdue.
-  - Table: Staff name, Audience, Cycle year, Target hrs, Actual hrs, % complete (Progress + label), Currency status pill, Cycle end (dd/MM/yyyy). No "Tenant" column. Row click → drawer.
-  - Drawer (`Sheet`): cycle summary (target/actual/% with Progress) + "View PDP" → `/academy/pdp/cycle/{cycleId}` via `getCurrentCycle(user_id, activeTenantId)` and `useCycleSummary`.
-  - Footer: disabled `Button` "Export audit pack" wrapped in a `Tooltip` saying "Coming soon".
-- Filter state stored in `useSearchParams` (audience, status, year) — same pattern as workforce page.
-- All TS strictly typed using `WorkforcePdpRow`, `CurrencyStatus`. No `any`.
+`pg_cron` exposes `cron.alter_job(job_id bigint, command text)` (SECURITY DEFINER, owned by the cron superuser) precisely for this case. It produces the same end state — `cron.job.command` is overwritten — without needing table-level UPDATE privileges.
 
-**New thin wrapper: `src/pages/client/StaffPdpsWrapper.tsx`** (matches the `*Wrapper` convention used by every other `/client/*` route in `App.tsx`).
-- Default export wraps `StaffPdpsPage` (no extra logic; just to follow the existing lazy-import naming convention).
+Confirmed current state (read-only check already done):
+- jobid 1 = `generate-notifications-meetings` (contains `eyJ...` token)
+- jobid 2 = `generate-notifications-daily` (contains `eyJ...` token)
+- `private.cron_function_jwt()` exists.
 
-**Edited: `src/App.tsx`**
-- Add `const StaffPdpsWrapperNew = lazy(() => import("./pages/client/StaffPdpsWrapper"));` near the other `Client*WrapperNew` imports.
-- Add route alongside existing `/client/*` routes:
-  `<Route path="/client/staff-pdps" element={<ProtectedRoute><StaffPdpsWrapperNew /></ProtectedRoute>} />`
-- No changes to `/superadmin/*` routes or any existing component.
+## Migration
 
-**Optional (not in scope unless requested):** sidebar entry in `ClientSidebar.tsx`. Out of scope per "do not touch existing components"; the page is reachable via direct URL until a follow-up.
+Name: `rotate_cron_job_commands_to_vault_helper`
 
-### Things explicitly NOT done
+Body uses `cron.alter_job` keyed by `jobname` (resilient to jobid drift across environments) with the exact command bodies the user specified — only the wrapping changes, the SQL inside the command string is byte-identical to the user's request:
 
-- No new RLS policies, no DB migrations, no edits to `v_pdp_user_currency`, `pdp_cycles`, or any PDP table.
-- No edits to `src/pages/superadmin/workforce-pdp.tsx`, `useWorkforcePdp.ts`, `workforce.ts`, `CurrencyStatusPill.tsx`, `features/pdp/api.ts`, or `features/pdp/hooks.ts`.
-- No ZIP/DOCX generation. Export button is a disabled stub with a tooltip.
-- No tenant selector.
+```sql
+SELECT cron.alter_job(
+  job_id := (SELECT jobid FROM cron.job WHERE jobname = 'generate-notifications-meetings'),
+  command := $j1$
+    SELECT net.http_post(
+      url := 'https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/generate-notifications',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || private.cron_function_jwt()
+      ),
+      body := '{"scope": "meetings"}'::jsonb
+    ) AS request_id;
+$j1$
+);
 
-### Deep-dive findings, gaps, and risks
+SELECT cron.alter_job(
+  job_id := (SELECT jobid FROM cron.job WHERE jobname = 'generate-notifications-daily'),
+  command := $j2$
+    SELECT net.http_post(
+      url := 'https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/generate-notifications',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || private.cron_function_jwt()
+      ),
+      body := '{"scope": "tasks_obligations"}'::jsonb
+    ) AS request_id;
+$j2$
+);
+```
 
-1. **Terminology mismatch — resolved.** The brief said "tenant_users row of role admin or owner". The schema has no `admin`/`owner` values; `tenant_users.role` is a free-text legacy column and `relationship_role` is an enum (`primary_contact | secondary_contact | user | academy_user`). Confirmed with the user: gate on `canManagePortalUsers`. This is identical to the `/client/users` gate, so no new authorisation surface is introduced.
-2. **Route placement — resolved.** `/tenant/staff-pdps` would have been outside `ClientTenantProvider` (only mounted in `ClientLayout` and `AcademyLayout`). Confirmed move to `/client/staff-pdps`.
-3. **Data scoping vs RLS.** `v_pdp_user_currency` is a SECURITY INVOKER view; tenant admins already only see their own tenant's rows (per the brief: "existing policies already permit tenant admins to read their own tenant's PDP data"). The client-side `tenant_id === activeTenantId` filter is defence-in-depth, not a primary gate.
-4. **Workforce hook reuse.** `useWorkforcePdp` returns up to 2000 rows across all tenants visible to the caller. For a tenant admin RLS will already narrow this, so reuse is safe and avoids forking a parallel hook. If a future tenant grows past ~2000 staff this would need pagination — flagged but not addressed (not relevant today).
-5. **Drawer cycle lookup.** `getCurrentCycle(user_id, activeTenantId)` is the same call pattern used by the SuperAdmin drawer; works identically for tenant admins.
-6. **`tenantUserLoading` race.** Resolved by gating render on it, mirroring `ClientRouteGuard`. Prevents the brief "no access" flash before tenant_users is fetched.
-7. **No regression to existing pages.** Only additive: one new page, one new wrapper, one new route line in `App.tsx`. No shared file is mutated.
-8. **Accessibility / a11y.** The disabled "Export audit pack" button uses `Tooltip` (focus-visible), and the table row click is mirrored on Enter via existing `TableRow` semantics — no extra keyboard handler needed since the SuperAdmin equivalent uses the same pattern (acceptable for parity; a follow-up could add explicit `role="button"` but is out of scope).
-9. **Memory consistency.** Uses `bigint` `tenant_id`, `dd/MM/yyyy`, cyan (semantic tokens via existing primitives), `__none__` sentinel for empty Selects, `tenant_users` as membership source — all aligned with project memory.
+## Verification
 
-### Risk assessment
+After the migration runs, I'll execute:
 
-- **Functional regression risk:** very low. No existing files modified except `App.tsx` (one lazy import + one route line in the `/client/*` block).
-- **Security risk:** very low. RLS unchanged; UI gate matches `/client/users`; route additionally protected by `ProtectedRoute` and the inherited `ClientRouteGuard`.
-- **Performance risk:** low. Reuses existing cached query (`["pdp","workforce"]`) — opening this page after the SuperAdmin page (or vice versa for staff who have both) hits cache; for tenant admins it's a single tenant-scoped fetch via RLS.
-- **UX risk:** low. Layout/filters mirror an already-shipped page; drawer + deep link reuse identical components.
+```sql
+SELECT jobid, jobname, command FROM cron.job WHERE command LIKE '%eyJ%';
+```
 
-### Summary of changes
+Expected: 0 rows.
 
-- Add `src/pages/client/StaffPdpsPage.tsx` (page) and `src/pages/client/StaffPdpsWrapper.tsx` (lazy wrapper).
-- Add `/client/staff-pdps` route in `src/App.tsx`.
+## Risk
 
-### Benefits
-
-- Tenant admins get the same currency-at-a-glance view Vivacity SuperAdmins use, scoped automatically to their tenant.
-- Zero duplication of business logic — all data, types, and pills come from `@/features/pdp/*`.
-- No new attack surface; gate and provider already battle-tested by `/client/users`.
+- Schedule, jobname, database, username, active flag — all preserved (only `command` changes).
+- If `private.cron_function_jwt()` ever returns NULL the Authorization header would become `'Bearer '`, causing the edge function to 401 on the next run; out of scope here since the helper is already in production use.
+- No app code, RLS, or other triggers touched.
