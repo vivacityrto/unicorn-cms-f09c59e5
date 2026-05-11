@@ -1,60 +1,70 @@
-## /academy/pdp — Learner Dashboard
+# PDP Cycle Detail View
 
-Builds the staff member's own PDP home page using existing PDP feature hooks (`src/features/pdp/hooks.ts`) and the Academy shell. Sheets/drawers referenced (Add Evidence, Add Goal, Reflection) are stubbed as placeholder components in this prompt — they will be implemented in Prompts 5–7.
+Build the learner cycle detail page at `src/pages/academy/pdp/cycle/[cycleId].tsx`, wrapped in `AcademyLayout` + `AcademyPageWrapper`, registered as a lazy route in `src/App.tsx` at `/academy/pdp/cycle/:cycleId`.
 
-### Files
+## Header band
 
-**`src/pages/academy/pdp/index.tsx`** — route entry, wrapped in `AcademyPageWrapper` (title "My Professional Development Plan", icon `Target`).
+`CycleHeaderBand.tsx` (new):
+- Title: `{audience.label} — {cycle_year}` (audience resolved via `useAudiences`)
+- Subhead: date range `dd/MM/yyyy → dd/MM/yyyy`
+- Right: status `Badge` (Planning / Active / Under review / Completed)
+- "Edit cycle" button → `EditCycleDrawer` (shadcn `Sheet`) with fields: `target_pd_hours` (number), `cycle_end_date` (shadcn date picker w/ `pointer-events-auto`), `notes` (textarea). Saves via new `useUpdateCycle` mutation (updates `pdp_cycles` row, invalidates summary + cycle queries).
+- "Close cycle" button (only when status is `active` or `under_review`) → confirmation `AlertDialog` with required `outcome_notes` textarea. On confirm: new `useCloseCycle` mutation sets `status='completed'`, `completed_at=now()`, `completed_by=auth.uid()`, appends outcome notes to `notes` column.
 
-**`src/components/academy/pdp/`** (new directory):
-- `PdpHeaderBand.tsx` — heading, audience label + cycle year subhead, right-aligned status `Badge`.
-- `PdpProgressCard.tsx` — `recharts` `RadialBarChart` (percent_complete) + stacked stats (hours logged, goals met, reflections) + `CurrencyStatusPill` beside the dial.
-- `CurrencyStatusPill.tsx` — traffic-light pill mapping `currency_status` → `current` emerald, `on_track` cyan `#23C0DD`, `at_risk` macaron `#F9CB0C`, `overdue` fuchsia `#ED1878`.
-- `PdpActionRow.tsx` — three buttons: primary "Log evidence", secondary "Add a goal", tertiary "Open my PDP cycle" → `/academy/pdp/cycle/${cycleId}`.
-- `RecommendedCoursesPanel.tsx` — up to 6 course cards.
-- `RecentEvidenceList.tsx` — 5 most recent items, type icon, title, hours, `dd/MM/yyyy`, "Add reflection" link.
-- `StartCycleEmptyState.tsx` — single CTA card; opens `StartCycleModal` (shadcn `Dialog`) that submits `useCreateCycle` with the defaults below.
-- Sheet placeholders: `AddEvidenceSheet.tsx`, `AddGoalSheet.tsx`, `AddReflectionDrawer.tsx` — render an empty shadcn `Sheet`/`Drawer` with TODO note (full UI deferred to later prompts). Page wires open/close state and selected evidence id for reflections.
+## Tabs (shadcn `Tabs`)
 
-### Route registration
+### Overview
+- Re-uses `PdpProgressCard` from Prompt 2 (dial + stats).
+- New `EvidenceByTypeChart.tsx` — `recharts` stacked `BarChart` of `sum(duration_minutes)/60` grouped by `evidence_type`. Data from `useEvidence(cycleId)` reduced client-side. Brand cyan `#23C0DD` for primary bar, fuchsia `#ED1878` for secondary stack (formal vs informal).
+- New `CurrencySplitChart.tsx` — small `BarChart` showing `vet_currency_hours` vs `industry_currency_hours` from `v_pdp_cycle_summary`.
 
-`src/App.tsx`: add `const AcademyPdpPage = lazy(() => import("./pages/academy/pdp"));` and `<Route path="/academy/pdp" element={<ProtectedRoute><AcademyPdpPage /></ProtectedRoute>} />` next to other `/academy/*` routes.
+### Goals
+`GoalsTab.tsx`:
+- `useGoals(cycleId)` + new `useStandardsReference(ids[])` to bulk-resolve `standards_reference` (joins `framework + code` → `"SRTO 3.2(c)"`).
+- Each row: priority `Badge` (high/medium/low colour), standard code chip, title, status badge, `evidence_count / target_evidence_count` progress (counts via groupBy of evidence on `goal_id`).
+- Add/Edit triggers existing `AddGoalSheet` (Prompt 5 wires the form). Delete via icon → `useDeleteGoal` mutation.
 
-### Data flow
+### Evidence
+`EvidenceTab.tsx`:
+- Table columns: `occurred_on` (dd/MM/yyyy), type (icon + label via `iconForEvidenceType` helper), title, `duration_hours` (= minutes/60), goal title, status, verified (`CheckCircle2` icon).
+- Filters: type `Select` (multi via popover), date range picker.
+- "Add evidence" opens `AddEvidenceSheet` (Prompt 6).
 
-- `useCurrentCycle(userId, tenantId)` — userId from `useAuth`, tenantId from existing tenant context. If `null` → render `StartCycleEmptyState`.
-- `useCycleSummary(cycleId)` → `percent_complete`, hours logged, goals met, reflections count.
-- `useUserCurrency(userId)` (new hook in `src/features/pdp/hooks.ts`, queries `v_pdp_user_currency`) → currency status.
-- `useAudiences()` for label resolution.
-- Recommended courses: new `useRecommendedAcademyCourses(audienceCode, userId)` query — `academy_courses` where `status='published'` and `target_audience` array contains audience code, left-anti-joined against `academy_enrollments` for the user. "Start course" calls a mutation inserting into `academy_enrollments` with `source='pdp_recommendation'`, then invalidates the recommendations query.
-- Recent evidence: `useEvidence(cycleId)` → slice top 5 by `occurred_on desc`.
+### Reflections
+`ReflectionsTab.tsx`:
+- `useReflections(cycleId)` joined client-side with `academy_lesson_progress` → `academy_lessons.title`, or `pdp_evidence_items.title` when sourced from evidence.
+- Each card: source label (lesson title / evidence title), prompt, response (`prose` styling), `created_at` (dd/MM/yyyy).
+- Read-only (new reflections are created in-lesson Prompt 7 or from an evidence row).
 
-### Start-cycle defaults
+### Reviews
+`ReviewsTab.tsx`:
+- `useReviews(cycleId)`. Rows: review type, reviewer, review_date, outcome badge, notes.
+- Pending end-of-cycle reviews show "Sign off" button → `useSignOffReview` (already exists). Wired by Prompt 8.
 
-Used by `StartCycleModal` via `useCreateCycle`:
-- `audience_code`: from user's primary role on `users` table (read-once query).
-- `cycle_year`: `new Date().getFullYear()`.
-- `cycle_start_date`: today (ISO).
-- `cycle_end_date`: today + 12 months.
-- `target_pd_hours`: `audience.target_pd_hours_default` (from `useAudiences`).
-- `status`: `'active'`.
+## Right rail (desktop only, `lg:` breakpoint)
+`AuditExportCard.tsx`:
+- "Audit-ready export" button → calls `supabase.functions.invoke('pdp-export', { body: { cycle_id } })` (Edge Function lands in Prompt 11 — button shows toast "Export coming soon" with disabled state if function returns 404; otherwise opens returned `signed_url` in a new tab and stores latest URL in component state with copy-to-clipboard.)
+- Shows last-generated timestamp.
 
-### Styling
+## Layout
+- Mobile: header + tabs + content stacked, no right rail.
+- Desktop ≥ `lg`: 2-column grid `lg:grid-cols-[1fr_320px]` with right rail.
+- Use semantic tokens; brand hex inline only on chart series and currency pill.
 
-- Mobile-first single column; `md:` breakpoint for two-column header (dial + currency pill side-by-side).
-- Use Tailwind tokens; brand hex inline only for the four currency states (cyan `#23C0DD`, macaron `#F9CB0C`, fuchsia `#ED1878`, emerald via Tailwind `emerald-500`).
-- Active nav state for "My PDP" already wired via Vivacity Acai (`#44235F`) in the nav config.
+## Data layer additions (`src/features/pdp/`)
+- `api.ts`: `updateCycle({ cycleId, target_pd_hours, cycle_end_date, notes })`, `closeCycle({ cycleId, outcomeNotes })`, `deleteGoal(goalId)`, `getCycleById(cycleId)`, `listStandardsReference(ids)`.
+- `hooks.ts`: `useCycle(cycleId)`, `useUpdateCycle`, `useCloseCycle`, `useDeleteGoal`, `useStandardsReference(ids)`.
+- All mutations invalidate `[pdp, cycle, cycleId]`, `[pdp, cycle-summary, cycleId]`, `[pdp, current-cycle]` as appropriate.
 
-### Out of scope
+## Files
+- **Created**: `src/pages/academy/pdp/cycle/[cycleId].tsx` and 8 components under `src/components/academy/pdp/cycle/` (`CycleHeaderBand`, `EditCycleDrawer`, `CloseCycleDialog`, `OverviewTab`, `EvidenceByTypeChart`, `CurrencySplitChart`, `GoalsTab`, `EvidenceTab`, `ReflectionsTab`, `ReviewsTab`, `AuditExportCard`).
+- **Edited**: `src/App.tsx` (add `/academy/pdp/cycle/:cycleId` lazy route), `src/features/pdp/api.ts` and `hooks.ts` (new functions/hooks above).
 
-- Full Add Evidence / Goal / Reflection forms (Prompts 5–7).
-- `/academy/pdp/cycle/[cycleId]` detail page (separate prompt).
-- No DB migrations, no edits to existing Academy components.
+## Out of scope
+- The Add/Edit Goal form internals (Prompt 5), Add Evidence form internals (Prompt 6), in-lesson Reflection drawer (Prompt 7), Review sign-off UX details (Prompt 8), `pdp-export` edge function (Prompt 11). Existing placeholder sheets are reused.
+- No DB migrations.
 
-### Verification
-
+## Verification
 - `bunx tsc --noEmit` clean.
-- Route loads under Academy shell with side nav and Vivacity logo.
-- With no current cycle → empty-state CTA → modal creates cycle → page rerenders with dial.
-- Currency pill colours match the four states.
-- "Start course" inserts an enrollment and the card disappears from the list.
+- Navigate from `/academy/pdp` → "Open my PDP cycle" lands on detail view.
+- Tabs switch; charts render with sample evidence; close-cycle dialog requires notes; status pill flips to Completed after close.
