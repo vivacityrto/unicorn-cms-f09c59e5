@@ -114,6 +114,7 @@ export const academyMenuSections: MenuSection[] = [
       { icon: Award, label: "Certificates", path: "/academy/certificates" },
       { icon: Calendar, label: "Events", path: "/academy/events" },
       { icon: MessageSquare, label: "Community", path: "/academy/community" },
+      { icon: Target, label: "My PDP", path: "/academy/pdp" },
     ],
   },
   {
