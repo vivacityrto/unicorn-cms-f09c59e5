@@ -20,6 +20,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { FileText, CheckCircle2, Clock, Sparkles, Loader2, AlertTriangle, ExternalLink, RefreshCw, UserCheck, XCircle, Search, Link2, Copy, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,6 +66,9 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const { bulkGenerate, generating, progress } = useBulkGeneration();
   const { toast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [overwriteChecked, setOverwriteChecked] = useState(false);
+  const [overwritePrompt, setOverwritePrompt] = useState<{ alreadyCount: number; total: number } | null>(null);
+  const [overwriteRunning, setOverwriteRunning] = useState(false);
   const [nameFilter, setNameFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [generatingSingleId, setGeneratingSingleId] = useState<number | null>(null);
@@ -93,11 +98,50 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
 
   const handleBulkGenerate = async () => {
     setConfirmOpen(false);
+    const useOverwrite = overwriteChecked;
+    setOverwriteChecked(false);
     try {
-      await bulkGenerate({ tenantId, stageInstanceId, packageId });
+      const res = await bulkGenerate({
+        tenantId,
+        stageInstanceId,
+        packageId,
+        mode: useOverwrite ? 'overwrite_all' : 'pending_only',
+        // If we're already overwriting we want the honest toast; otherwise suppress
+        // the empty toast so we can prompt for overwrite instead.
+        silentEmpty: !useOverwrite,
+      });
       refetch();
+
+      // Detect "all skipped because already_generated" → offer overwrite.
+      if (res && !useOverwrite) {
+        const { summary, results: rs } = res;
+        const alreadyCount = rs.filter(r => r.reason === 'already_generated').length;
+        const anyFailed = rs.some(r => r.status === 'failed');
+        if (summary.generated === 0 && alreadyCount > 0 && !anyFailed) {
+          setOverwritePrompt({ alreadyCount, total: summary.total });
+        }
+      }
     } catch {
       // Error handled by hook toast
+    }
+  };
+
+  const handleOverwriteConfirm = async () => {
+    if (!overwritePrompt) return;
+    setOverwriteRunning(true);
+    try {
+      await bulkGenerate({
+        tenantId,
+        stageInstanceId,
+        packageId,
+        mode: 'overwrite_all',
+      });
+      refetch();
+    } catch {
+      // toast handled by hook
+    } finally {
+      setOverwriteRunning(false);
+      setOverwritePrompt(null);
     }
   };
 
@@ -253,19 +297,49 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                 <AlertDialogHeader>
                   <AlertDialogTitle>Generate All Documents</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Generate all eligible auto-generated documents for this stage?
-                    Up to {totalCount} documents will be processed. Already-generated documents will be skipped.
+                    Up to {totalCount} documents will be processed. Already-generated documents
+                    are skipped unless you tick Overwrite.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <div className="flex items-start gap-2 rounded-md border p-3 bg-muted/30">
+                  <Checkbox
+                    id="bulk-overwrite"
+                    checked={overwriteChecked}
+                    onCheckedChange={(v) => setOverwriteChecked(v === true)}
+                    className="mt-0.5"
+                  />
+                  <label htmlFor="bulk-overwrite" className="text-sm cursor-pointer leading-tight">
+                    <span className="font-medium">Overwrite documents already marked generated</span>
+                    <span className="block text-xs text-muted-foreground mt-0.5">
+                      Regenerates every eligible template and replaces files in Client Governance.
+                    </span>
+                  </label>
+                </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel onClick={() => setOverwriteChecked(false)}>Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={handleBulkGenerate}>
-                    Generate All
+                    {overwriteChecked ? 'Overwrite All' : 'Generate All'}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           )}
+
+          <ConfirmDialog
+            open={!!overwritePrompt}
+            onOpenChange={(o) => { if (!o) setOverwritePrompt(null); }}
+            variant="warning"
+            title="Overwrite previously generated documents?"
+            description={
+              overwritePrompt
+                ? `${overwritePrompt.alreadyCount} of ${overwritePrompt.total} documents are already marked generated, so nothing was produced this run. Overwriting will regenerate every eligible template and replace the existing files in Client Governance.`
+                : ''
+            }
+            confirmText="Overwrite All"
+            cancelText="Keep Existing"
+            isLoading={overwriteRunning}
+            onConfirm={handleOverwriteConfirm}
+          />
         </div>
       </div>
 

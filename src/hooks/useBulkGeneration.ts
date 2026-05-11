@@ -14,6 +14,8 @@ interface BulkGenerateParams {
   stageInstanceId: number;
   packageId?: number;
   mode?: 'all' | 'pending_only' | 'overwrite_all';
+  /** Suppress the "Nothing generated" toast so the caller can prompt instead. */
+  silentEmpty?: boolean;
 }
 
 export type BulkResultReason =
@@ -64,7 +66,7 @@ export function useBulkGeneration() {
   const [progress, setProgress] = useState<BulkGenerationProgress | null>(null);
   const [results, setResults] = useState<BulkResult[]>([]);
 
-  const bulkGenerate = async ({ tenantId, stageInstanceId, packageId, mode = 'pending_only' }: BulkGenerateParams) => {
+  const bulkGenerate = async ({ tenantId, stageInstanceId, packageId, mode = 'pending_only', silentEmpty = false }: BulkGenerateParams) => {
     setGenerating(true);
     setProgress(null);
     setResults([]);
@@ -126,16 +128,18 @@ export function useBulkGeneration() {
           description: 'No document instances found for this stage.',
         });
       } else if (summary.generated === 0) {
-        const skipReason = dominantReason(data.results || [], 'skipped');
-        const failReason = dominantReason(data.results || [], 'failed');
-        const parts = [skipReason && `${skipReason} skipped`, failReason && `${failReason} failed`].filter(Boolean);
-        toast({
-          title: 'Nothing generated',
-          description: parts.length > 0
-            ? parts.join(', ')
-            : `${summary.skipped} skipped, ${summary.failed} failed`,
-          variant: summary.failed > 0 ? 'destructive' : 'default',
-        });
+        if (!silentEmpty) {
+          const skipReason = dominantReason(data.results || [], 'skipped');
+          const failReason = dominantReason(data.results || [], 'failed');
+          const parts = [skipReason && `${skipReason} skipped`, failReason && `${failReason} failed`].filter(Boolean);
+          toast({
+            title: 'Nothing generated',
+            description: parts.length > 0
+              ? parts.join(', ')
+              : `${summary.skipped} skipped, ${summary.failed} failed`,
+            variant: summary.failed > 0 ? 'destructive' : 'default',
+          });
+        }
       } else if (summary.failed > 0) {
         const failReason = dominantReason(data.results || [], 'failed');
         toast({
@@ -150,7 +154,7 @@ export function useBulkGeneration() {
         });
       }
 
-      return summary;
+      return { summary, results: data.results || [] };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       toast({ title: 'Generation Failed', description: msg, variant: 'destructive' });
