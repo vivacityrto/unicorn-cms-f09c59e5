@@ -1,56 +1,48 @@
-## Academy: Estimated Minutes Auto-Calc UI
+## Manage Documents — SharePoint Template Linking Improvements
 
-Backend (DB view `v_academy_course_total_minutes`, triggers, edge function `backfill-vimeo-durations`) is already in place. This plan is frontend-only.
+Three small, scoped changes in `src/pages/ManageDocuments.tsx` (no business logic, no schema changes).
 
-### Part A — Course Builder helper text + "Use this value"
+### 1. Include Framework segment in folder navigation
 
-File: `src/pages/superadmin/AcademyBuilderCourse.tsx`
+In the `Master Documents — Select Template File` dialog (lines ~2006–2035), the auto-navigated folder is currently just `RTO` / `GTO` / `CRICOS` / `Other`.
 
-1. Add a second `useQuery` next to the existing course query, keyed `["academy-course-total-minutes", courseId]`, that selects `total_lesson_minutes, lesson_count, video_lesson_count` from `v_academy_course_total_minutes` where `course_id = courseId` (`.maybeSingle()`).
-2. Invalidate this query inside `useCreateLesson` / `useUpdateLesson` / `useDeleteLesson` / `useCreateModule` / `useDeleteModule` mutations OR add it to the existing invalidations in `useAcademyModulesLessons.ts` so it refreshes when lessons change. Simplest: invalidate it from `handleSaveSettings.onSuccess` and from the modules-with-lessons hook's mutation `onSuccess` callbacks.
-3. Under the "Estimated Minutes" `<Field>` (lines ~371-377), render helper text with three states based on the totals row:
-   - `total_lesson_minutes > 0`: muted text `Auto-calculated from lessons: {n} min ({lesson_count} lessons, {video_lesson_count} with video).` followed by an inline link/button "Use this value" that sets `formState.estimated_minutes = total_lesson_minutes` (does NOT auto-save; user still clicks Save Changes).
-   - `lesson_count > 0 && total_lesson_minutes === 0`: `Lessons have no durations yet. Run "Backfill video durations" from Academy admin tools, or set lesson minutes manually.`
-   - `lesson_count === 0`: `Add modules and lessons to see an auto-calculated total.`
-4. Hide "Use this value" if the current `formState.estimated_minutes` already equals `total_lesson_minutes`.
+Update `autoFolder` to be prefixed with `Framework/`, matching what `GovernanceDocumentDetail.tsx` already does:
 
-The course-level `estimated_minutes` remains a manual field; no auto-overwrite.
+```ts
+const autoFolder = browseDoc?.framework_type
+  ? `Framework/${frameworkFolderMap[browseDoc.framework_type.toLowerCase()] || 'Other'}`
+  : 'Framework/Other';
+```
 
-### Part B — Backfill Video Durations button
+`SharePointFileBrowser` already supports slash-separated segments via `autoNavSegments`, so no change is needed there.
 
-File: `src/pages/superadmin/AcademyBuilderLibrary.tsx` (the SuperAdmin Academy admin entry page; same place where new courses are created — the natural admin tools home)
+### 2. Allow re-selecting / changing the linked template from the row
 
-1. Add a secondary outline button in the header next to "New Course": `Backfill Video Durations from Vimeo`.
-2. On click, open an `AlertDialog` with body "This will fetch durations from Vimeo for all videos missing duration data. It runs in batches and can be re-clicked safely. Continue?" and Continue/Cancel actions.
-3. On confirm, call:
-   ```ts
-   const { data, error } = await supabase.functions.invoke('backfill-vimeo-durations', { body: { batchSize: 200 } });
-   ```
-   Show a sonner toast while in flight, then a result toast: `Updated {updated}, skipped {skipped}, errors {errors}. Remaining: {remaining_null}.`
-4. Disable the button while pending. If `remaining_null > 0`, surface a follow-up toast/dialog with a "Run again" action that re-invokes the function. After completion, invalidate `["video-library"]` and `["academy-course-total-minutes"]` queries.
+Today, in the documents table action cell (lines ~1700–1715):
+- If `source_template_url` is set → renders an `<a>` that just opens the link in a new tab (no way to change it).
+- If empty → renders a button that opens the picker.
 
-### Part C — Lesson editor video duration badge
+Change behaviour so the link icon **always** opens the picker (so the user can pick or replace the template), while still giving access to the current URL:
 
-File: `src/components/academy/builder/LessonEditorPanel.tsx`
+- When `source_template_url` exists: render a `Link2` (linked) icon button styled as "linked" (primary color) that opens the picker. Add a small adjacent "open" affordance (external-link icon button) that opens the current URL in a new tab. Tooltip on the link icon: "Change linked template file" with the current URL shown.
+- When empty: keep current `Link2Off` button that opens the picker.
 
-1. The video picker already lists `useVideoLibraryPicker` results. Extend that picker hook (`src/hooks/academy/useAcademyBuilderPickers.ts`) to also select `duration_seconds` (it likely already selects basic fields — confirm and add `duration_seconds` to the select list if missing).
-2. When a `videoId` is selected, find the matching video in the picker results and compute `~{ceil(duration_seconds/60)} min`. Render a small badge next to the "Video" section heading: `🎬 ~{n} min from video` (or "duration unknown" if null).
-3. When `lessonType === "video"` and a `videoId` is selected, render the `Estimated Minutes` input as `readOnly` with a muted helper line: "Auto-set from video duration on save." For `lessonType === "video"` with no video selected yet, leave it editable so users can preview.
-4. For `text` and `resource` lesson types, behaviour is unchanged (manual input).
+This keeps the visual signal (linked vs not) while making the icon a true action that can also re-link.
 
-No mutation logic changes — the DB trigger `trg_academy_lesson_set_minutes_from_video` overrides whatever value is sent for video lessons.
+### 3. Show link status in the Edit Document form
 
-### Out of scope (per the prompt)
+In the edit dialog form (lines ~1176–1308), add a new field block (after the existing fields, before the closing `</div>` at 1308) titled **"Template File"** that:
 
-- No change to `import-vimeo-training` import path.
-- No trigger to auto-overwrite `academy_courses.estimated_minutes`.
-- No per-course backfill button.
-- No new tables, columns, or RLS changes.
+- Reads `source_template_url` from the document being edited (look up by `editingDocumentId` in `documents`).
+- If linked: shows a green/primary-tinted row with `Link2` icon, the file name (last URL segment, decoded), an "Open" link button (new tab), a "Change…" button (sets `sharepointBrowseDocId = editingDocumentId` to open the picker), and an "Unlink" button (clears `source_template_url` via the same update path as `handleSharePointLinkSelected`, then `fetchDocuments()`).
+- If not linked: shows muted "No template file linked" with a "Link template file…" button that opens the picker for the current `editingDocumentId`.
 
-### Acceptance walk-through
+The picker dialog (already mounted at the page level via `sharepointBrowseDocId`) will appear over the edit dialog. After selection, `handleSharePointLinkSelected` already calls `fetchDocuments()`, so the form reflects the new value on next render. No new state is required beyond the existing `sharepointBrowseDocId`.
 
-- Open course id 18 → Estimated Minutes editable (from prior fix), helper text shows totals or empty-state message.
-- Click "Backfill Video Durations" in Academy Builder library → toast reports progress; helper text on courses with video lessons updates after invalidation.
-- Click "Use this value" → input pre-fills; Save Changes → persists; refresh confirms.
-- Manually type a buffered value → Save → persists; helper text still shows auto-calc separately.
-- In LessonEditorPanel, picking a video shows the `🎬 ~N min from video` badge and locks the minutes input for video lessons.
+### Out of scope
+- No changes to `SharePointFileBrowser`, governance pages, or backend.
+- No changes to filtering, audit logging, or the `documents` schema.
+- No change to the "Yes/No File" indicator column.
+
+### Files touched
+- `src/pages/ManageDocuments.tsx` (only)

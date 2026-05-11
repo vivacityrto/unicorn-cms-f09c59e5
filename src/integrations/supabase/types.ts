@@ -32785,6 +32785,550 @@ export type Database = {
         }
         Relationships: []
       }
+      pdp_audiences: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          is_active: boolean
+          label: string
+          sort_order: number
+          target_pd_hours_default: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          target_pd_hours_default?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          target_pd_hours_default?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pdp_cycles: {
+        Row: {
+          audience_code: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          cycle_end_date: string
+          cycle_start_date: string
+          cycle_year: number
+          id: number
+          manager_id: string | null
+          metadata: Json
+          notes: string | null
+          opened_at: string | null
+          opened_by: string | null
+          status: string
+          target_pd_hours: number
+          tenant_id: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audience_code: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          cycle_end_date: string
+          cycle_start_date: string
+          cycle_year: number
+          id?: never
+          manager_id?: string | null
+          metadata?: Json
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string | null
+          status?: string
+          target_pd_hours?: number
+          tenant_id?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audience_code?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          cycle_end_date?: string
+          cycle_start_date?: string
+          cycle_year?: number
+          id?: never
+          manager_id?: string | null
+          metadata?: Json
+          notes?: string | null
+          opened_at?: string | null
+          opened_by?: string | null
+          status?: string
+          target_pd_hours?: number
+          tenant_id?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdp_cycles_audience_code_fkey"
+            columns: ["audience_code"]
+            isOneToOne: false
+            referencedRelation: "pdp_audiences"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      pdp_evidence_items: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          cycle_id: number
+          description: string | null
+          document_path: string | null
+          duration_minutes: number | null
+          evidence_type: string
+          external_provider: string | null
+          external_url: string | null
+          goal_id: number | null
+          id: number
+          is_formal: boolean
+          is_industry_currency: boolean
+          occurred_on: string
+          source_audit_response_id: number | null
+          source_certificate_id: number | null
+          source_enrollment_id: number | null
+          status: string
+          title: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          cycle_id: number
+          description?: string | null
+          document_path?: string | null
+          duration_minutes?: number | null
+          evidence_type: string
+          external_provider?: string | null
+          external_url?: string | null
+          goal_id?: number | null
+          id?: never
+          is_formal?: boolean
+          is_industry_currency?: boolean
+          occurred_on: string
+          source_audit_response_id?: number | null
+          source_certificate_id?: number | null
+          source_enrollment_id?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          cycle_id?: number
+          description?: string | null
+          document_path?: string | null
+          duration_minutes?: number | null
+          evidence_type?: string
+          external_provider?: string | null
+          external_url?: string | null
+          goal_id?: number | null
+          id?: never
+          is_formal?: boolean
+          is_industry_currency?: boolean
+          occurred_on?: string
+          source_audit_response_id?: number | null
+          source_certificate_id?: number | null
+          source_enrollment_id?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdp_evidence_items_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "pdp_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_evidence_items_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "v_pdp_cycle_summary"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "pdp_evidence_items_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "pdp_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_evidence_items_source_certificate_id_fkey"
+            columns: ["source_certificate_id"]
+            isOneToOne: false
+            referencedRelation: "academy_certificates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_evidence_items_source_enrollment_id_fkey"
+            columns: ["source_enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "academy_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_evidence_items_source_enrollment_id_fkey"
+            columns: ["source_enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "v_academy_course_progress"
+            referencedColumns: ["enrollment_id"]
+          },
+        ]
+      }
+      pdp_goals: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          cycle_id: number
+          description: string | null
+          id: number
+          priority: string
+          sort_order: number
+          standard_id: string | null
+          status: string
+          target_evidence_count: number
+          target_hours: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          cycle_id: number
+          description?: string | null
+          id?: never
+          priority?: string
+          sort_order?: number
+          standard_id?: string | null
+          status?: string
+          target_evidence_count?: number
+          target_hours?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          cycle_id?: number
+          description?: string | null
+          id?: never
+          priority?: string
+          sort_order?: number
+          standard_id?: string | null
+          status?: string
+          target_evidence_count?: number
+          target_hours?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdp_goals_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "pdp_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_goals_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "v_pdp_cycle_summary"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "pdp_goals_standard_id_fkey"
+            columns: ["standard_id"]
+            isOneToOne: false
+            referencedRelation: "standards_reference"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdp_reflections: {
+        Row: {
+          created_at: string
+          cycle_id: number | null
+          evidence_item_id: number | null
+          id: number
+          lesson_progress_id: number | null
+          prompt: string | null
+          response: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_id?: number | null
+          evidence_item_id?: number | null
+          id?: never
+          lesson_progress_id?: number | null
+          prompt?: string | null
+          response: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          cycle_id?: number | null
+          evidence_item_id?: number | null
+          id?: never
+          lesson_progress_id?: number | null
+          prompt?: string | null
+          response?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdp_reflections_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "pdp_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_reflections_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "v_pdp_cycle_summary"
+            referencedColumns: ["cycle_id"]
+          },
+          {
+            foreignKeyName: "pdp_reflections_evidence_item_id_fkey"
+            columns: ["evidence_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdp_evidence_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_reflections_lesson_progress_id_fkey"
+            columns: ["lesson_progress_id"]
+            isOneToOne: false
+            referencedRelation: "academy_lesson_progress"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdp_reviews: {
+        Row: {
+          created_at: string
+          cycle_id: number
+          id: number
+          notes: string | null
+          outcome: string | null
+          review_date: string
+          review_type: string
+          reviewer_id: string
+          signed_off_at: string | null
+          signed_off_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          cycle_id: number
+          id?: never
+          notes?: string | null
+          outcome?: string | null
+          review_date?: string
+          review_type?: string
+          reviewer_id: string
+          signed_off_at?: string | null
+          signed_off_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          cycle_id?: number
+          id?: never
+          notes?: string | null
+          outcome?: string | null
+          review_date?: string
+          review_type?: string
+          reviewer_id?: string
+          signed_off_at?: string | null
+          signed_off_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdp_reviews_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "pdp_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_reviews_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "v_pdp_cycle_summary"
+            referencedColumns: ["cycle_id"]
+          },
+        ]
+      }
       people_analyzer_entries: {
         Row: {
           assessed_by: string
@@ -58251,6 +58795,327 @@ export type Database = {
           tenant_id: number | null
         }
         Relationships: []
+      }
+      v_pdp_cycle_summary: {
+        Row: {
+          actual_pd_hours: number | null
+          audience_code: string | null
+          cycle_end_date: string | null
+          cycle_id: number | null
+          cycle_start_date: string | null
+          cycle_year: number | null
+          evidence_count: number | null
+          goals_met: number | null
+          goals_total: number | null
+          industry_currency_hours: number | null
+          manager_id: string | null
+          percent_complete: number | null
+          reflection_count: number | null
+          status: string | null
+          target_pd_hours: number | null
+          tenant_id: number | null
+          user_id: string | null
+          vet_currency_hours: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdp_cycles_audience_code_fkey"
+            columns: ["audience_code"]
+            isOneToOne: false
+            referencedRelation: "pdp_audiences"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      v_pdp_user_currency: {
+        Row: {
+          actual_pd_hours: number | null
+          audience_code: string | null
+          currency_status: string | null
+          cycle_end_date: string | null
+          cycle_year: number | null
+          days_until_cycle_end: number | null
+          percent_complete: number | null
+          status: string | null
+          target_pd_hours: number | null
+          tenant_id: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdp_cycles_audience_code_fkey"
+            columns: ["audience_code"]
+            isOneToOne: false
+            referencedRelation: "pdp_audiences"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "pdp_cycles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       v_phase_actions_remaining: {
         Row: {

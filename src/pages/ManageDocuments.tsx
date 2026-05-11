@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy, Link2, Link2Off } from "lucide-react";
+import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen, Copy, Link2, Link2Off, ExternalLink } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { Combobox } from "@/components/ui/combobox";
@@ -1305,6 +1305,55 @@ export default function ManageDocuments() {
                   </div>
 
 
+
+                  {editingDocumentId && (() => {
+                    const editingDoc = documents.find(d => d.id === editingDocumentId);
+                    const url = editingDoc?.source_template_url;
+                    const fileName = url ? (() => {
+                      try { return decodeURIComponent(url.split('?')[0].split('/').pop() || url); } catch { return url; }
+                    })() : null;
+                    const handleUnlink = async () => {
+                      const { error } = await supabase
+                        .from('documents')
+                        .update({ source_template_url: null })
+                        .eq('id', editingDocumentId);
+                      if (error) {
+                        sonnerToast.error('Failed to unlink template file');
+                      } else {
+                        sonnerToast.success('Template file unlinked');
+                        fetchDocuments();
+                      }
+                    };
+                    return (
+                      <div className="grid gap-2">
+                        <Label>Template File</Label>
+                        {url ? (
+                          <div className="flex items-center gap-2 p-3 rounded-md border border-primary/30 bg-primary/5">
+                            <Link2 className="h-4 w-4 text-primary shrink-0" />
+                            <span className="flex-1 min-w-0 truncate text-sm font-medium" title={url}>{fileName}</span>
+                            <a href={url} target="_blank" rel="noopener noreferrer" title="Open" className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground">
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                            <Button type="button" variant="outline" size="sm" onClick={() => setSharepointBrowseDocId(editingDocumentId)}>
+                              Change…
+                            </Button>
+                            <Button type="button" variant="ghost" size="sm" onClick={handleUnlink} className="text-destructive hover:text-destructive">
+                              Unlink
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 rounded-md border border-dashed">
+                            <Link2Off className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="flex-1 text-sm text-muted-foreground">No template file linked</span>
+                            <Button type="button" variant="outline" size="sm" onClick={() => setSharepointBrowseDocId(editingDocumentId)}>
+                              Link template file…
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   </div>
                 </div>
 
@@ -1699,17 +1748,28 @@ export default function ManageDocuments() {
                       <TableCell className="whitespace-nowrap py-6">
                         <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
                           {doc.source_template_url ? (
-                            <a
-                              href={doc.source_template_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline inline-flex items-center justify-center h-8 w-8"
-                              title={doc.source_template_url}
-                            >
-                              <Link2 className="h-4 w-4" />
-                            </a>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-muted text-primary"
+                                onClick={() => setSharepointBrowseDocId(doc.id)}
+                                title={`Change linked template file\n${doc.source_template_url}`}
+                              >
+                                <Link2 className="h-4 w-4" />
+                              </Button>
+                              <a
+                                href={doc.source_template_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
+                                title="Open template file"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </>
                           ) : (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setSharepointBrowseDocId(doc.id)} title="Set SharePoint URL">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setSharepointBrowseDocId(doc.id)} title="Link template file">
                               <Link2Off className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                             </Button>
                           )}
@@ -2007,8 +2067,8 @@ export default function ManageDocuments() {
         const browseDoc = documents.find(d => d.id === sharepointBrowseDocId);
         const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
         const autoFolder = browseDoc?.framework_type
-          ? frameworkFolderMap[browseDoc.framework_type.toLowerCase()] || 'Other'
-          : 'Other';
+          ? `Framework/${frameworkFolderMap[browseDoc.framework_type.toLowerCase()] || 'Other'}`
+          : 'Framework/Other';
         return (
           <Dialog open={true} onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}>
             <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
