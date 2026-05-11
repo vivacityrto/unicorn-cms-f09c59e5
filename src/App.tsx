@@ -224,6 +224,7 @@ const ClientSuggestionDetailWrapperNew = lazy(() => import("./pages/client/Clien
 // ClientCommunicationsWrapperNew removed — consolidated into ClientInboxPage
 const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackagesWrapper"));
 const ClientInboxWrapperNew = lazy(() => import("./pages/client/ClientInboxWrapper"));
+const StaffPdpsWrapperNew = lazy(() => import("./pages/client/StaffPdpsWrapper"));
 const TeamInboxWrapper = lazy(() => import("./pages/TeamInboxWrapper"));
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -1108,6 +1109,7 @@ const App = () => (
             <Route path="/client/notifications" element={<Navigate to="/client/inbox?tab=notifications" replace />} />
             <Route path="/client/reports" element={<ProtectedRoute><ClientReportsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/users" element={<ProtectedRoute><ClientUsersWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/staff-pdps" element={<ProtectedRoute><StaffPdpsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/team" element={<Navigate to="/client/users" replace />} />
             <Route path="/client/settings" element={<ProtectedRoute><ClientSettingsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/profile" element={<ProtectedRoute><ClientProfileWrapperNew /></ProtectedRoute>} />
