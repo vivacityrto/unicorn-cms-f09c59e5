@@ -414,7 +414,59 @@ async function processPptxTemplate(
 }
 
 /**
- * For non-DOCX/PPTX formats (e.g. XLSX), scan for merge field tags without processing.
+ * Process XLSX/XLSM templates by replacing {{Tag}} merge fields in workbook XML.
+ * Returns processed bytes AND a list of all {{...}} tags found in the template.
+ */
+async function processXlsxTemplate(
+  templateBytes: Uint8Array,
+  mergeData: Record<string, string>,
+): Promise<{ bytes: Uint8Array; detectedTags: string[] }> {
+  const blob = new Blob([templateBytes.slice().buffer]);
+  const reader = new zip.ZipReader(new zip.BlobReader(blob));
+  const entries = await reader.getEntries();
+  const writer = new zip.ZipWriter(
+    new zip.BlobWriter("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+  );
+  const detectedTagsSet = new Set<string>();
+
+  for (const entry of entries) {
+    if (!entry.getData) continue;
+    const data = await entry.getData(new zip.BlobWriter());
+    const arrayBuffer = await data.arrayBuffer();
+
+    if (entry.filename.endsWith(".xml") || entry.filename.endsWith(".rels")) {
+      let content = new TextDecoder().decode(arrayBuffer);
+      content = normalizeMergeTokens(content);
+
+      const textOnly = content.replace(/<[^>]+>/g, "");
+      const tagPattern = /\{\{\s*([^}]+?)\s*\}\}/g;
+      let match;
+      while ((match = tagPattern.exec(textOnly)) !== null) {
+        const cleanedTag = match[1].replace(/<[^>]+>/g, "").trim();
+        if (cleanedTag) detectedTagsSet.add(cleanedTag);
+      }
+
+      content = content.replace(/\{\{([^}]+)\}\}/g, (fullMatch, fieldName) => {
+        const cleanField = fieldName.replace(/<[^>]+>/g, "").trim();
+        return mergeData[cleanField] !== undefined ? escapeXml(mergeData[cleanField] || "") : fullMatch;
+      });
+
+      await writer.add(entry.filename, new zip.BlobReader(new Blob([new TextEncoder().encode(content)])));
+    } else {
+      await writer.add(entry.filename, new zip.BlobReader(new Blob([arrayBuffer])));
+    }
+  }
+
+  await reader.close();
+  const result = await writer.close();
+  return {
+    bytes: new Uint8Array(await result.arrayBuffer()),
+    detectedTags: Array.from(detectedTagsSet),
+  };
+}
+
+/**
+ * For non-DOCX/PPTX/XLSX formats (e.g. legacy XLS), scan for merge field tags without processing.
  * Returns the original bytes unchanged.
  */
 async function scanTemplateForTags(
