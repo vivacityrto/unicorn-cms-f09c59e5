@@ -282,7 +282,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         />
       )}
 
-      {showSharePointBrowser && profile?.tenant_id && (() => {
+      {showSharePointBrowser && (() => {
         const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
         const autoFolder = doc.framework_type
           ? frameworkFolderMap[doc.framework_type.toLowerCase()] || 'Other'
@@ -297,7 +297,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
                 </DialogTitle>
               </DialogHeader>
               <SharePointFileBrowser
-                tenantId={profile.tenant_id}
+                tenantId={profile?.tenant_id ?? 0}
                 sitePurpose="master_documents"
                 onSelectLink={async (url) => {
                   const { error } = await supabase
