@@ -1,10 +1,12 @@
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Target, ArrowLeft } from "lucide-react";
 import { AcademyLayout } from "@/components/layout/AcademyLayout";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useAudiences,
@@ -20,6 +22,7 @@ import { EvidenceTab } from "@/components/academy/pdp/cycle/EvidenceTab";
 import { ReflectionsTab } from "@/components/academy/pdp/cycle/ReflectionsTab";
 import { ReviewsTab } from "@/components/academy/pdp/cycle/ReviewsTab";
 import { AuditExportCard } from "@/components/academy/pdp/cycle/AuditExportCard";
+import { ReviewComposerDrawer } from "@/components/academy/pdp/ReviewComposerDrawer";
 
 export default function AcademyPdpCyclePage() {
   const { cycleId: param } = useParams<{ cycleId: string }>();
