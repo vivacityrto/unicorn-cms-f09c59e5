@@ -117,27 +117,11 @@ export function RiskOpportunityForm({
     return statusOptions.filter(status => allowed.has(status));
   }, [statusOptions, statusTransitions, currentStatus]);
 
-  // Update form when initial values change
-  useEffect(() => {
-    if (initialValues) {
-      setFormData(prev => ({
-        ...prev,
-        item_type: initialValues.item_type || prev.item_type,
-        title: initialValues.title ?? prev.title,
-        description: initialValues.description ?? prev.description,
-        why_it_matters: initialValues.why_it_matters ?? prev.why_it_matters,
-        category: initialValues.category ?? prev.category,
-        impact: initialValues.impact ?? prev.impact,
-        status: initialValues.status ?? prev.status,
-        quarter_number: initialValues.quarter_number ?? prev.quarter_number,
-        quarter_year: initialValues.quarter_year ?? prev.quarter_year,
-        linked_rock_id: initialValues.linked_rock_id ?? prev.linked_rock_id,
-        meeting_id: initialValues.meeting_id ?? prev.meeting_id,
-        meeting_segment_id: initialValues.meeting_segment_id ?? prev.meeting_segment_id,
-        source: initialValues.source ?? prev.source,
-      }));
-    }
-  }, [initialValues]);
+  // Note: formData is initialized once from initialValues on mount.
+  // Radix DialogContent unmounts on close, so each open is a fresh mount.
+  // Do NOT resync from initialValues on every render — it wipes user input
+  // whenever the parent re-renders (e.g. presence sync churn in live meetings).
+
 
   const handleSubmit = async () => {
     if (!formData.title.trim()) return;
