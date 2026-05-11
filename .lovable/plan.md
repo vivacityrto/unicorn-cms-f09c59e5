@@ -1,70 +1,60 @@
-# PDP Cycle Detail View
+# Standards Picker — Shared Component
 
-Build the learner cycle detail page at `src/pages/academy/pdp/cycle/[cycleId].tsx`, wrapped in `AcademyLayout` + `AcademyPageWrapper`, registered as a lazy route in `src/App.tsx` at `/academy/pdp/cycle/:cycleId`.
+Build `src/features/pdp/components/StandardsPicker.tsx` — a controlled standards lookup that returns a `standard_id` (uuid) on selection.
 
-## Header band
+## Framework labels (display only)
+The DB `standards_reference.framework` column will not be renamed. Active values today: `RTO` (59), `CRICOS` (11), `GTO` (7), `Membership` (5). Apply a UI-only friendly map; unknown values fall back to the raw string.
 
-`CycleHeaderBand.tsx` (new):
-- Title: `{audience.label} — {cycle_year}` (audience resolved via `useAudiences`)
-- Subhead: date range `dd/MM/yyyy → dd/MM/yyyy`
-- Right: status `Badge` (Planning / Active / Under review / Completed)
-- "Edit cycle" button → `EditCycleDrawer` (shadcn `Sheet`) with fields: `target_pd_hours` (number), `cycle_end_date` (shadcn date picker w/ `pointer-events-auto`), `notes` (textarea). Saves via new `useUpdateCycle` mutation (updates `pdp_cycles` row, invalidates summary + cycle queries).
-- "Close cycle" button (only when status is `active` or `under_review`) → confirmation `AlertDialog` with required `outcome_notes` textarea. On confirm: new `useCloseCycle` mutation sets `status='completed'`, `completed_at=now()`, `completed_by=auth.uid()`, appends outcome notes to `notes` column.
+```
+RTO        → group label "Standards for RTOs 2025"   chip "SRTO"
+CRICOS     → group label "CRICOS National Code"      chip "CRICOS"
+GTO        → group label "GTO Standards"             chip "GTO"
+Membership → group label "Credential & Membership"   chip "Cred"
+```
 
-## Tabs (shadcn `Tabs`)
+## API
 
-### Overview
-- Re-uses `PdpProgressCard` from Prompt 2 (dial + stats).
-- New `EvidenceByTypeChart.tsx` — `recharts` stacked `BarChart` of `sum(duration_minutes)/60` grouped by `evidence_type`. Data from `useEvidence(cycleId)` reduced client-side. Brand cyan `#23C0DD` for primary bar, fuchsia `#ED1878` for secondary stack (formal vs informal).
-- New `CurrencySplitChart.tsx` — small `BarChart` showing `vet_currency_hours` vs `industry_currency_hours` from `v_pdp_cycle_summary`.
+```ts
+interface StandardsPickerProps {
+  value: string | null;                                  // selected standard_id (uuid)
+  onChange: (id: string | null, ref?: StandardRef) => void;
+  frameworks?: string[];                                 // optional filter (default: all active)
+  placeholder?: string;                                  // default "Link a standard…"
+  disabled?: boolean;
+  allowClear?: boolean;                                  // default true
+}
+```
 
-### Goals
-`GoalsTab.tsx`:
-- `useGoals(cycleId)` + new `useStandardsReference(ids[])` to bulk-resolve `standards_reference` (joins `framework + code` → `"SRTO 3.2(c)"`).
-- Each row: priority `Badge` (high/medium/low colour), standard code chip, title, status badge, `evidence_count / target_evidence_count` progress (counts via groupBy of evidence on `goal_id`).
-- Add/Edit triggers existing `AddGoalSheet` (Prompt 5 wires the form). Delete via icon → `useDeleteGoal` mutation.
+Re-uses `StandardRef` from `src/features/pdp/api.ts`.
 
-### Evidence
-`EvidenceTab.tsx`:
-- Table columns: `occurred_on` (dd/MM/yyyy), type (icon + label via `iconForEvidenceType` helper), title, `duration_hours` (= minutes/60), goal title, status, verified (`CheckCircle2` icon).
-- Filters: type `Select` (multi via popover), date range picker.
-- "Add evidence" opens `AddEvidenceSheet` (Prompt 6).
+## Behaviour
 
-### Reflections
-`ReflectionsTab.tsx`:
-- `useReflections(cycleId)` joined client-side with `academy_lesson_progress` → `academy_lessons.title`, or `pdp_evidence_items.title` when sourced from evidence.
-- Each card: source label (lesson title / evidence title), prompt, response (`prose` styling), `created_at` (dd/MM/yyyy).
-- Read-only (new reflections are created in-lesson Prompt 7 or from an evidence row).
+- Trigger: shadcn `Button variant="outline"` showing `[chip] code — title` when set, else `placeholder`. Trailing `ChevronsUpDown` icon; `X` icon clears when `allowClear && value`.
+- Click opens shadcn `Popover` (`align="start"`, `w-[420px] p-0`, `pointer-events-auto`) wrapping a `Command`:
+  - `CommandInput placeholder="Search by code or keyword…"`
+  - `CommandEmpty` → "No standards match"
+  - One `CommandGroup` per framework (heading = friendly label), rows sorted by natural code order
+  - Each `CommandItem` shows: framework chip (`Badge variant="outline"`), `code`, em-dash, `title` truncated
+  - `CommandItem.value` = `${framework} ${code} ${title}` so cmdk fuzzy search hits all three
+  - Selecting an item calls `onChange(standard.id, standard)` and closes the popover
+- Co-located hook `useActiveStandards(frameworks?)` — `useQuery` keyed on `["pdp","standards-active", frameworks ?? "all"]`, fetches `id, framework, code, title` from `standards_reference` where `is_active=true`, ordered by framework then code, optional `.in('framework', frameworks)` filter.
 
-### Reviews
-`ReviewsTab.tsx`:
-- `useReviews(cycleId)`. Rows: review type, reviewer, review_date, outcome badge, notes.
-- Pending end-of-cycle reviews show "Sign off" button → `useSignOffReview` (already exists). Wired by Prompt 8.
+## States
+- Loading → disabled `CommandItem`: "Loading standards…"
+- Error → toast via `sonner` and inline "Failed to load standards"
+- Empty → `CommandEmpty`
 
-## Right rail (desktop only, `lg:` breakpoint)
-`AuditExportCard.tsx`:
-- "Audit-ready export" button → calls `supabase.functions.invoke('pdp-export', { body: { cycle_id } })` (Edge Function lands in Prompt 11 — button shows toast "Export coming soon" with disabled state if function returns 404; otherwise opens returned `signed_url` in a new tab and stores latest URL in component state with copy-to-clipboard.)
-- Shows last-generated timestamp.
-
-## Layout
-- Mobile: header + tabs + content stacked, no right rail.
-- Desktop ≥ `lg`: 2-column grid `lg:grid-cols-[1fr_320px]` with right rail.
-- Use semantic tokens; brand hex inline only on chart series and currency pill.
-
-## Data layer additions (`src/features/pdp/`)
-- `api.ts`: `updateCycle({ cycleId, target_pd_hours, cycle_end_date, notes })`, `closeCycle({ cycleId, outcomeNotes })`, `deleteGoal(goalId)`, `getCycleById(cycleId)`, `listStandardsReference(ids)`.
-- `hooks.ts`: `useCycle(cycleId)`, `useUpdateCycle`, `useCloseCycle`, `useDeleteGoal`, `useStandardsReference(ids)`.
-- All mutations invalidate `[pdp, cycle, cycleId]`, `[pdp, cycle-summary, cycleId]`, `[pdp, current-cycle]` as appropriate.
+## Styling
+- Semantic tokens only; no custom colors.
+- `pointer-events-auto` on `PopoverContent`.
 
 ## Files
-- **Created**: `src/pages/academy/pdp/cycle/[cycleId].tsx` and 8 components under `src/components/academy/pdp/cycle/` (`CycleHeaderBand`, `EditCycleDrawer`, `CloseCycleDialog`, `OverviewTab`, `EvidenceByTypeChart`, `CurrencySplitChart`, `GoalsTab`, `EvidenceTab`, `ReflectionsTab`, `ReviewsTab`, `AuditExportCard`).
-- **Edited**: `src/App.tsx` (add `/academy/pdp/cycle/:cycleId` lazy route), `src/features/pdp/api.ts` and `hooks.ts` (new functions/hooks above).
+- **Created**: `src/features/pdp/components/StandardsPicker.tsx` (component + co-located hook + framework label map).
 
 ## Out of scope
-- The Add/Edit Goal form internals (Prompt 5), Add Evidence form internals (Prompt 6), in-lesson Reflection drawer (Prompt 7), Review sign-off UX details (Prompt 8), `pdp-export` edge function (Prompt 11). Existing placeholder sheets are reused.
-- No DB migrations.
+- Renaming framework values in the DB.
+- Wiring into the goal sheet (Prompt 5) and evidence sheet (Prompt 6).
 
 ## Verification
 - `bunx tsc --noEmit` clean.
-- Navigate from `/academy/pdp` → "Open my PDP cycle" lands on detail view.
-- Tabs switch; charts render with sample evidence; close-cycle dialog requires notes; status pill flips to Completed after close.
+- Render in isolation: opens popover, fuzzy "3.2" filters to matching SRTO rows, selecting returns the uuid via `onChange`, clear button resets.
