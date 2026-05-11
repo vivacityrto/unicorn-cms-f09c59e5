@@ -99,16 +99,18 @@ export function useClientNotifications() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["client-notifications"] }),
   });
 
-  const notifications = query.data || [];
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const notifications = isAcademyOnly ? [] : (query.data || []);
+  const unreadCount = isAcademyOnly ? 0 : notifications.filter((n) => !n.is_read).length;
 
   // Grouped unread counts by type
-  const unreadByType = notifications
-    .filter((n) => !n.is_read)
-    .reduce<Record<string, number>>((acc, n) => {
-      acc[n.type] = (acc[n.type] || 0) + 1;
-      return acc;
-    }, {});
+  const unreadByType = isAcademyOnly
+    ? {}
+    : notifications
+        .filter((n) => !n.is_read)
+        .reduce<Record<string, number>>((acc, n) => {
+          acc[n.type] = (acc[n.type] || 0) + 1;
+          return acc;
+        }, {});
 
   return {
     ...query,
