@@ -57,7 +57,19 @@ export default function AcademyPdpPage() {
           ) : !userId ? (
             <p className="text-sm text-muted-foreground">Sign in to view your PDP.</p>
           ) : !cycle ? (
-            <StartCycleEmptyState userId={userId} tenantId={tenantId} />
+            <>
+              {unattachedCount > 0 ? (
+                <Badge
+                  variant="outline"
+                  className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+                  title="Reflections created from lesson completions outside an active PDP cycle"
+                >
+                  <Sparkles className="mr-1 h-3 w-3" />
+                  {unattachedCount} unattached reflection{unattachedCount === 1 ? "" : "s"}
+                </Badge>
+              ) : null}
+              <StartCycleEmptyState userId={userId} tenantId={tenantId} />
+            </>
           ) : (
             <>
               <PdpHeaderBand cycle={cycle} audience={audience} />
