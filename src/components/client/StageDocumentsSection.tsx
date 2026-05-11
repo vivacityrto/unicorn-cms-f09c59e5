@@ -66,6 +66,9 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const { bulkGenerate, generating, progress } = useBulkGeneration();
   const { toast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [overwriteChecked, setOverwriteChecked] = useState(false);
+  const [overwritePrompt, setOverwritePrompt] = useState<{ alreadyCount: number; total: number } | null>(null);
+  const [overwriteRunning, setOverwriteRunning] = useState(false);
   const [nameFilter, setNameFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [generatingSingleId, setGeneratingSingleId] = useState<number | null>(null);
