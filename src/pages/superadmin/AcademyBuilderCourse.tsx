@@ -385,7 +385,45 @@ export default function AcademyBuilderCourse() {
                   value={formState.estimated_minutes ?? ""}
                   onChange={(e) => setFormState((p) => ({ ...p, estimated_minutes: e.target.value ? parseInt(e.target.value) : null }))}
                 />
+                {(() => {
+                  const total = courseTotals?.total_lesson_minutes ?? 0;
+                  const lessonCount = courseTotals?.lesson_count ?? 0;
+                  const videoLessonCount = courseTotals?.video_lesson_count ?? 0;
+                  if (lessonCount === 0) {
+                    return (
+                      <p className="text-[11px] text-muted-foreground mt-1.5">
+                        Add modules and lessons to see an auto-calculated total.
+                      </p>
+                    );
+                  }
+                  if (total === 0) {
+                    return (
+                      <p className="text-[11px] text-muted-foreground mt-1.5">
+                        Lessons have no durations yet. Run "Backfill Video Durations" from the Academy Builder library, or set lesson minutes manually.
+                      </p>
+                    );
+                  }
+                  const matches = formState.estimated_minutes === total;
+                  return (
+                    <p className="text-[11px] text-muted-foreground mt-1.5">
+                      Auto-calculated from lessons: <span className="font-medium text-foreground">{total} min</span> ({lessonCount} lesson{lessonCount === 1 ? "" : "s"}, {videoLessonCount} with video).
+                      {!matches && (
+                        <>
+                          {" "}
+                          <button
+                            type="button"
+                            className="text-primary hover:underline font-medium"
+                            onClick={() => setFormState((p) => ({ ...p, estimated_minutes: total }))}
+                          >
+                            Use this value
+                          </button>
+                        </>
+                      )}
+                    </p>
+                  );
+                })()}
               </Field>
+
 
               <Field label="Sub-categories (Tags)">
                 <TagChipInput
