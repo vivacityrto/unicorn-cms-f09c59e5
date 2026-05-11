@@ -3,20 +3,27 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   addReflection,
+  closeCycle,
   createCycle,
+  deleteGoal,
   getCurrentCycle,
+  getCycleById,
   getCycleSummary,
   listAudiences,
   listEvidence,
   listGoals,
   listReflections,
   listReviews,
+  listStandardsReference,
   logEvidence,
   signOffReview,
+  updateCycle,
   upsertGoal,
   type AddReflectionInput,
   type CreateCycleInput,
   type LogEvidenceInput,
+  type StandardRef,
+  type UpdateCycleInput,
   type UpsertGoalInput,
 } from "./api";
 import type {
