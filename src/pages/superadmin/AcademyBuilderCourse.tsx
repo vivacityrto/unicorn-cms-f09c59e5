@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useParams, useNavigate, useBlocker } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useModulesWithLessons, useCreateModule, useUpdateModule, useDeleteModule, useReorderModules, useCreateLesson, useUpdateLesson, useDeleteLesson, useReorderLessons, type AcademyModule, type AcademyLesson } from "@/hooks/academy/useAcademyModulesLessons";
@@ -13,13 +13,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip, Sparkles, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip, Sparkles, Loader2, Upload, Save } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 import LessonEditorPanel from "@/components/academy/builder/LessonEditorPanel";
 import ImportVideosPanel from "@/components/academy/builder/ImportVideosPanel";
 import AssessmentEditorTab from "@/components/academy/builder/AssessmentEditorTab";
 import PackageRulesTab from "@/components/academy/builder/PackageRulesTab";
+import PathwayMultiSelect from "@/components/academy/PathwayMultiSelect";
+import TagChipInput from "@/components/academy/TagChipInput";
+import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
