@@ -297,7 +297,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
                 </DialogTitle>
               </DialogHeader>
               <SharePointFileBrowser
-                tenantId={profile.tenant_id}
+                tenantId={profile?.tenant_id ?? 0}
                 sitePurpose="master_documents"
                 onSelectLink={async (url) => {
                   const { error } = await supabase
