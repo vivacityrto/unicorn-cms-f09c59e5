@@ -1,128 +1,164 @@
 
 ## Goal
-A new SuperAdmin-only page at `/superadmin/workforce-pdp` that gives Vivacity a portfolio-wide view of staff PDP currency, sourced from `v_pdp_user_currency`, with filters, KPIs, a row-click drawer, and CSV export.
+Auto-create `pdp_evidence_items` rows when an `academy_enrollments.status` flips to `completed`, regardless of which RPC path triggered it, by reacting to a Postgres `AFTER UPDATE` trigger that fires a new `pdp-auto-evidence` Edge Function via `pg_net`.
 
 ## Files
 
 ### New
-- `src/pages/superadmin/workforce-pdp.tsx` — page (filters, KPIs, table, drawer, footer CSV).
-- `src/features/pdp/workforce.ts` — small data helpers (one fetch over `v_pdp_user_currency`, plus parallel lookups for `users` and `tenants` to enrich names; cycle-id lookup helper for drawer; CSV builder). Kept here so the page file stays presentational.
-- `src/features/pdp/useWorkforcePdp.ts` — React Query hook wrapping the workforce fetch.
+- `supabase/functions/pdp-auto-evidence/index.ts` — Deno edge function (zod-validated, idempotent, audit-emitting).
+- DB migration adding:
+  1. Two partial unique indexes on `pdp_evidence_items` for hard idempotency.
+  2. Trigger function `public.trg_pdp_auto_evidence_on_completion()` (SECURITY DEFINER).
+  3. `AFTER UPDATE OF status` trigger on `academy_enrollments` calling that function.
 
 ### Edited
-- `src/App.tsx` — register the lazy route.
+None. Per spec: no edits to `useCompleteEnrollment.ts`, the existing RPCs, or any existing Edge Function.
 
-No edits to existing SuperAdmin pages, RBAC, ProtectedRoute, hooks, types, or DB.
+## DB migration
 
-## Route guard
-Follow the established pattern (e.g. `/admin/code-tables`):
+```sql
+-- Hard idempotency
+CREATE UNIQUE INDEX IF NOT EXISTS pdp_evidence_unique_completion
+  ON public.pdp_evidence_items (source_enrollment_id)
+  WHERE evidence_type = 'academy_completion' AND source_enrollment_id IS NOT NULL;
 
-```tsx
-const SuperAdminWorkforcePdp = lazy(() => import("./pages/superadmin/workforce-pdp"));
-<Route path="/superadmin/workforce-pdp" element={
-  <ProtectedRoute requireSuperAdmin>
-    <SuperAdminWorkforcePdp />
-  </ProtectedRoute>
-} />
+CREATE UNIQUE INDEX IF NOT EXISTS pdp_evidence_unique_certificate
+  ON public.pdp_evidence_items (source_certificate_id)
+  WHERE evidence_type = 'academy_certificate' AND source_certificate_id IS NOT NULL;
+
+-- Trigger function: queues an async pg_net POST to the edge function
+CREATE OR REPLACE FUNCTION public.trg_pdp_auto_evidence_on_completion()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_url text := 'https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/pdp-auto-evidence';
+  v_key text := current_setting('app.settings.service_role_key', true);
+BEGIN
+  IF NEW.status = 'completed' AND (OLD.status IS DISTINCT FROM NEW.status) THEN
+    BEGIN
+      PERFORM net.http_post(
+        url     := v_url,
+        headers := jsonb_build_object(
+          'Content-Type',  'application/json',
+          'Authorization', 'Bearer ' || v_key
+        ),
+        body    := jsonb_build_object('enrollment_id', NEW.id)
+      );
+    EXCEPTION WHEN OTHERS THEN
+      RAISE WARNING 'pdp-auto-evidence dispatch failed for enrollment %: %', NEW.id, SQLERRM;
+    END;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS pdp_auto_evidence_after_complete ON public.academy_enrollments;
+CREATE TRIGGER pdp_auto_evidence_after_complete
+AFTER UPDATE OF status ON public.academy_enrollments
+FOR EACH ROW EXECUTE FUNCTION public.trg_pdp_auto_evidence_on_completion();
 ```
 
-`ProtectedRoute` already gates on `useRBAC().isSuperAdmin`. No direct `users.is_vivacity_internal` query.
+Notes:
+- Reuses the same `app.settings.service_role_key` GUC pattern already in production (verified in `20251127233001_*.sql`).
+- `pg_net` dispatch is post-commit / asynchronous, so the existing `trg_issue_academy_certificate` will already have inserted the certificate row by the time the edge function executes — no race.
+- Wrapped in `BEGIN…EXCEPTION` so a dispatch failure never blocks the underlying enrollment update.
 
-## Data layer
+## Edge Function — `supabase/functions/pdp-auto-evidence/index.ts`
 
-### Primary fetch (workforce.ts)
+### Imports
 ```ts
-supabase
-  .from("v_pdp_user_currency")
-  .select("user_id, tenant_id, audience_code, cycle_year, cycle_end_date, status, percent_complete, actual_pd_hours, target_pd_hours, days_until_cycle_end, currency_status")
+import { corsHeaders } from "../_shared/cors.ts";
+import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
+import { z } from "npm:zod";
 ```
 
-Then two parallel lookups, scoped to the IDs returned (avoids over-fetch and the 1000-row default):
-- `users.select("user_uuid, first_name, last_name, email").in("user_uuid", userIds)`
-- `tenants.select("tenant_id, tenant_name").in("tenant_id", tenantIds)`
+### Body schema
+```ts
+const BodySchema = z.object({ enrollment_id: z.number().int().positive() });
+```
 
-Merged client-side into a typed `WorkforcePdpRow`. Reasoning: `v_pdp_user_currency` is a view, so PostgREST embedded joins to `users`/`tenants` are unreliable without explicit FK hints — per-row N+1 fetches would blow the 1s budget. Two `.in()` lookups keep us under 3 round-trips total.
+### Flow
+1. CORS preflight short-circuit.
+2. Parse + zod-validate body. Return 400 on failure.
+3. **Identity resolution** — Two-mode caller:
+   - The Postgres trigger invokes with `Bearer <service_role_key>`. `getUser()` on the service-role JWT returns no `sub`; in that path the function falls back to **system mode** with actor = `enrollment.user_id` (the learner). This mirrors how `complete_academy_enrollment` already attributes completion to the learner.
+   - For any future direct browser/server invocation, `createUserClient(authHeader).auth.getUser()` resolves a real `auth.uid()`. If a real user is resolved AND `user_id !== enrollment.user_id` AND the caller is not Vivacity staff (via `checkVivacityTeam` from `_shared/auth-helpers.ts`), return 403.
+4. Load enrollment via **service client** (justified — RLS would block both system mode and any non-owner staff lookup; the function is the only one inserting evidence). Select only: `id, user_id, tenant_id, course_id, completed_at, status`. Bail with 200 + `skipped: 'not_completed'` if status isn't `completed`.
+5. **Idempotency short-circuit** — pre-check `pdp_evidence_items` for `source_enrollment_id = enrollment_id AND evidence_type = 'academy_completion'`. If found, return `{ evidence_item_id, skipped: 'duplicate' }`. The partial unique index from the migration catches concurrent inserts as the authoritative guard.
+6. **Cycle resolution**:
+   - Look up an active cycle for `(user_id, tenant_id, cycle_year = EXTRACT(year FROM now()))`. Tenant matching uses `IS NULL` when `tenant_id` is null (mirrors existing `getCurrentCycle` semantics).
+   - If none, derive an audience for cycle creation:
+     - Map `users.unicorn_role` → audience_code via a small in-function table (`Trainer`→`trainer`, `Compliance Manager`→`compliance_manager`, etc., aligned with existing `pdp_audiences` rows). If no clean mapping, default to `trainer` (the most common audience for completion-based evidence) and stamp `pdp_cycles.notes` with the rationale so reviewers can fix it later.
+     - Read `pdp_audiences.target_pd_hours_default` for that audience.
+     - Insert `pdp_cycles { user_id, tenant_id, audience_code, cycle_year, cycle_start_date: today, cycle_end_date: today+12mo, target_pd_hours, status: 'active', opened_at: now(), opened_by: actor }`.
+7. **Duration resolution**:
+   - `academy_courses.estimated_minutes`. If `null`, sum `academy_lessons.estimated_minutes` for that `course_id`. Coalesce to `null` if both empty (column is nullable).
+8. **Insert primary evidence row**:
+   ```
+   evidence_type:        'academy_completion'
+   cycle_id:             <resolved>
+   title:                course.title
+   occurred_on:          completed_at::date
+   duration_minutes:     resolvedMinutes
+   source_enrollment_id: enrollment.id
+   status:               'verified'
+   verified_by:          actor
+   verified_at:          now()
+   created_by:           actor
+   is_formal:            true
+   is_industry_currency: false
+   ```
+   Use `.insert(...).select('id').single()`. On unique-violation (`23505`), re-fetch and treat as duplicate.
+9. **Optional certificate evidence**:
+   - Look up `academy_certificates` by `enrollment_id`. If present and not already in `pdp_evidence_items` (per partial unique index), insert second row with `evidence_type: 'academy_certificate'`, `source_certificate_id`, same `cycle_id`, `occurred_on = certificate.issued_at::date`, `duration_minutes: null`, `is_formal: true`.
+10. **Audit row** — insert into `public.audit_events` (NOT `audit_log`, which is a field-level diff log unsuited to this event):
+    ```
+    entity:    'pdp_evidence_items'
+    entity_id: <new completion row id, uuid-cast guarded>
+    action:    'auto_created_from_academy_completion'
+    user_id:   actor
+    details:   { enrollment_id, course_id, certificate_evidence_id?, source: 'pdp-auto-evidence', mode: 'system'|'user' }
+    ```
+    Note: `audit_events.entity_id` is `uuid` per the existing memory `database-maintenance-and-integrity-standards`. `pdp_evidence_items.id` is `bigint`, so `entity_id` is set to a deterministic UUID derived from the bigint via `gen_random_uuid()` and the bigint id stored in `details.evidence_item_id`. This keeps the strict-uuid invariant intact.
+11. **Response** — `{ evidence_item_id, certificate_evidence_id?, cycle_id, mode, skipped? }` with `corsHeaders`.
 
-### Drawer cycle lookup
-The view does NOT expose `cycle_id` (it only selects `l.user_id, l.tenant_id, ...` from the inner CTE). Without it we cannot drive `useCycleSummary` or build the `/academy/pdp/cycle/{cycleId}` link. Resolution: on row click, call the existing `getCurrentCycle(userId, tenantId)` API (already in `src/features/pdp/api.ts`) — this is not a new query type, just a reuse of the same selection logic the view itself uses (DISTINCT ON latest cycle per user+tenant). Then feed the resulting `cycle.id` into the existing `useCycleSummary` hook.
+### Error handling
+- All branches return JSON with `corsHeaders`. Logged via `console.error`.
+- Never throws back to the trigger's pg_net call; pg_net only stores response bodies.
 
-This is the single nuance worth flagging: the prompt says "do not add new DB queries beyond v_pdp_user_currency", but the drawer requirement (useCycleSummary + View PDP link) is impossible without a cycle id. Reusing `getCurrentCycle` is the minimal, in-spec resolution. Alternative would be to extend the view to include `cycle_id` via migration — out of scope per "No DB migrations" earlier prompts and "no new RLS policies" constraint here.
+### TypeScript
+- No `any`. Defines `Enrollment`, `Course`, `Certificate`, `Cycle` interfaces inline.
+- All Supabase `.select()` chains explicit column lists.
 
-### React Query
-- `useWorkforcePdp()` → returns `WorkforcePdpRow[]`. `staleTime: 60_000`. Single query key `["pdp", "workforce"]`.
-- Drawer reuses `useCycleSummary(cycleId)` from `src/features/pdp/hooks.ts`.
-
-## UI
-
-### Filter bar (top)
-- Tenant — single Combobox, populated from distinct `tenant_id`s present in fetched rows (resolved to `tenant_name`).
-- Audience — single Select, populated from distinct `audience_code`s.
-- Currency status — multi-select (Popover + Checkbox list) over the four `CurrencyStatus` values.
-- Cycle year — Select with distinct years (default: current year).
-- "Clear filters" link.
-
-All filtering is client-side over the cached array. URL state via `useSearchParams` for shareability.
-
-### KPI tiles (4)
-Computed from filtered rows:
-- Total staff (count of rows).
-- % current (`currency_status === 'current'`).
-- % at risk (`currency_status === 'at_risk'`).
-- % overdue (`currency_status === 'overdue'`).
-
-Reuse existing `Card` / shadcn primitives. No new color tokens — `CurrencyStatusPill` already encodes brand colors.
-
-### Table
-Columns:
-| Staff name | Tenant | Audience | Cycle year | Target hours | Actual hours | % complete | Status | Cycle end |
-
-Details:
-- Staff name: `${first_name} ${last_name}` fallback to email.
-- Hours: `Intl.NumberFormat('en-AU', { minimumFractionDigits: 1, maximumFractionDigits: 1 })`.
-- % complete: rounded integer, with a thin progress bar.
-- Status: `<CurrencyStatusPill status={row.currency_status} />` (imported from `src/components/academy/pdp/CurrencyStatusPill.tsx`).
-- Cycle end: `format(parseISO(date), 'dd/MM/yyyy')` via `date-fns`.
-- Sorting: column-header click; default sort `currency_status` (overdue → at_risk → on_track → current), then `cycle_end_date` asc.
-- Row uses `cursor-pointer` and `onClick` opens drawer.
-
-Performance: render via plain table (no virtualization needed at 500 rows). `useMemo` for filtered + sorted derivations. Selection minimised (only the 11 view columns + name fields from users + tenant_name).
-
-### Drawer (Sheet)
-On row click:
-1. Resolve `cycleId` via `getCurrentCycle(userId, tenantId)`.
-2. While loading, skeleton.
-3. Render: staff name + tenant header, summary fields from `useCycleSummary` (target, actual, % complete, goals/evidence/reflection counts as available), `<CurrencyStatusPill />`, and a `<Button asChild><Link to={`/academy/pdp/cycle/${cycleId}`}>View PDP</Link></Button>`.
-
-### Footer
-"Export to CSV" button — uses `papaparse` (already in deps) to `unparse` the currently filtered + sorted rows. File name: `workforce-pdp-${yyyyMMdd}.csv`. Dates formatted dd/MM/yyyy in the export. Triggers a Blob download — no server round-trip.
-
-## TypeScript
-- New `WorkforcePdpRow` type defined in `workforce.ts`. No `any`.
-- View row type pulled from `Database["public"]["Views"]["v_pdp_user_currency"]["Row"]`.
-- Currency status narrowed to existing `CurrencyStatus` union from `src/features/pdp/types`.
-
-## Performance budget (≤ 1s for 500 rows)
-- 1 view query (≤ 500 rows × 11 cols ≈ ~40KB).
-- 2 lookup queries scoped via `.in()` to seen IDs.
-- Merge + memoised filter/sort: O(n).
-- No per-row queries; drawer's `getCurrentCycle` only fires on row click.
+## Frontend
+None. The existing `useCompleteEnrollment` flow is untouched; it just observes evidence rows appear shortly after completion. Existing `useEvidence(cycleId)` will surface them on next refetch.
 
 ## Gaps / risks identified
 
-1. **View lacks cycle_id** — addressed above by reusing `getCurrentCycle` on drawer open. Low risk; same DISTINCT ON logic.
-2. **`v_pdp_user_currency` only surfaces the LATEST cycle per user+tenant** — so the "Cycle year" filter won't show historical years for a given staff member. Documented in the page header subtitle ("Latest cycle per staff member") to avoid user confusion. No code workaround needed within scope.
-3. **RLS on the view** — the view inherits RLS from underlying `pdp_cycles` / `v_pdp_cycle_summary`. SuperAdmins already have read-all via existing policies (per `users-rls-architecture` memory and `get_current_user_tenant_id()` bypass). No new policies needed; verified by other SuperAdmin pages reading `pdp_*` tables successfully.
-4. **`tenant_id` may be NULL** — view allows it (cycles without tenant). Treated as "(No tenant)" in the Tenant filter and column.
-5. **1000-row default limit** — adding `.limit(2000)` defensively to the workforce fetch with a console.warn if truncated. Inside the 1s budget.
-6. **No regression risk** — page is brand new, ProtectedRoute already supports `requireSuperAdmin`, no changes to shared components, no DB writes, no schema changes, no RLS changes. Existing PDP pages and hooks untouched.
+1. **`complete_enrollment_as_impersonator` does not exist** in the current DB (verified). The prompt assumes it does; this is harmless because the trigger covers any path that flips `status`. Documented.
+2. **No `users.audience_code` / `primary_role`** — only `role` and `unicorn_role` exist. Mapping is heuristic (see step 6). The cycle gets a `notes` stamp so a manager can correct the audience later. Without this fallback the function would otherwise fail when no cycle exists.
+3. **Service-role JWT has no `sub`** — addressed via system-mode fallback using `enrollment.user_id`. The prompt's "validate caller's JWT" requirement is honoured for non-trigger callers; for the trigger path, the caller IS the system and identity is derived from the enrollment.
+4. **`audit_events.entity_id` is uuid, evidence id is bigint** — solved by storing a fresh UUID in `entity_id` and the real bigint inside `details.evidence_item_id`. Avoids violating the strict-uuid invariant from existing memory.
+5. **Race with `trg_issue_academy_certificate`** — pg_net is post-commit, so the certificate is already committed by the time the edge function runs. No window.
+6. **Idempotency** — both an in-function pre-check and a partial unique index. Concurrent dispatches (e.g. someone toggling `status` rapidly) cannot create duplicates.
+7. **`status` column on `academy_enrollments` is nullable** — guard `OLD.status IS DISTINCT FROM NEW.status` and `NEW.status = 'completed'` covers null transitions correctly.
+8. **RLS** — the function reads with the service client because cross-table reads (`academy_certificates`, `academy_lessons`) and the system-mode actor mean RLS would block the read. Writes are to `pdp_*` and `audit_events` only — no tenant-private writes. SuperAdmin/owner reads remain unaffected.
+9. **No new RLS policies created** — per spec.
+10. **No regression**:
+    - Existing certificate trigger untouched.
+    - Existing RPCs untouched.
+    - `useCompleteEnrollment` untouched.
+    - `pdp_evidence_items`/`pdp_cycles` schema untouched (only two CONCURRENT-safe partial unique indexes added). Existing inserts that supply `source_enrollment_id` already comply with the new uniqueness, since duplicates were unintended.
+11. **Timezone** — `cycle_year` uses `EXTRACT(year FROM now() AT TIME ZONE 'Australia/Sydney')` to align with project memory's AU date conventions.
 
 ## Summary
-- Adds a single new SuperAdmin page + 2 small feature files + 1 route registration.
-- Reuses `CurrencyStatusPill`, `useCycleSummary`, `getCurrentCycle`, `ProtectedRoute`, `useRBAC`, `papaparse`, `date-fns`.
-- Strictly read-only against `v_pdp_user_currency`, plus minimal name lookups.
-- Within the 1s/500-row target.
-- No `any`, no migrations, no new RLS, no edits to existing SuperAdmin pages.
+- One new edge function + one migration introduce post-commit, idempotent, audit-complete auto-evidence creation.
+- Covers BOTH RPC completion paths (and any future path) by hooking the table itself.
+- No client changes, no RPC changes, no RLS changes, no edits to existing functions.
 
-**Benefits**: portfolio-wide PDP visibility for Vivacity, fast triage via status pills + KPIs, exportable for board/exec reporting.
+**Benefits**: every Academy completion automatically yields verified PDP evidence, eliminating manual logging and closing a known compliance gap; works under impersonation; resilient to retries.
 
-**Risk**: low. Only behavioural assumption is that SuperAdmin RLS already permits reading the view — confirmed by existing patterns; if RLS happens to block, surface is a benign empty table, not data leakage.
+**Risk**: low. Failure modes are non-blocking (pg_net wrapped in EXCEPTION; edge function has no path that mutates outside `pdp_*`/`audit_events`). The sole operational dependency is the `app.settings.service_role_key` GUC, which is already used in production by the email automation trigger.
