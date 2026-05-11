@@ -167,25 +167,31 @@ function FileBrowserContent({
   // When start_folder_name successfully navigated, framework folders are at folderStack.length === 1
   // When start_folder_name not found or not set, framework folders are at root (folderStack.length === 0)
   useEffect(() => {
-    if (autoNavDone || !autoNavigateFolder || isLoading || items.length === 0) return;
-    // Navigate into framework folder at whatever level we ended up at
-    // (either root if start folder wasn't found, or one level deep if it was)
-    if (folderStack.length <= 1) {
-      const target = items.find(
-        (item) => item.is_folder && item.name.toLowerCase() === autoNavigateFolder.toLowerCase()
-      );
-      if (target) {
-        setAutoNavDone(true);
-        navigateToFolder(target.id, target.name);
-      } else if (folderStack.length === 0 && startFolderName) {
-        // Still waiting for start folder navigation — don't give up yet
-        return;
-      } else {
-        // No matching folder found, stop trying
-        setAutoNavDone(true);
-      }
+    if (autoNavDone || autoNavSegments.length === 0 || isLoading || items.length === 0) return;
+    const baseLevel = startFolderName ? 1 : 0;
+    const expectedLevel = baseLevel + autoNavIndex;
+    if (folderStack.length !== expectedLevel) {
+      // Wait until we've reached the expected depth (e.g. start_folder navigation finished)
+      if (folderStack.length === 0 && startFolderName) return;
+      return;
     }
-  }, [autoNavigateFolder, autoNavDone, isLoading, items, folderStack, navigateToFolder, startFolderName]);
+    const segment = autoNavSegments[autoNavIndex];
+    const target = items.find(
+      (item) => item.is_folder && item.name.toLowerCase() === segment.toLowerCase()
+    );
+    if (target) {
+      const nextIndex = autoNavIndex + 1;
+      navigateToFolder(target.id, target.name);
+      if (nextIndex >= autoNavSegments.length) {
+        setAutoNavDone(true);
+      } else {
+        setAutoNavIndex(nextIndex);
+      }
+    } else {
+      // Segment not found — stop trying
+      setAutoNavDone(true);
+    }
+  }, [autoNavSegments, autoNavDone, autoNavIndex, isLoading, items, folderStack, navigateToFolder, startFolderName]);
 
   // Filter items: always show folders, filter files by name
   const sortedItems = [...items]
