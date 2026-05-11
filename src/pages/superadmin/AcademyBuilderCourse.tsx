@@ -88,11 +88,101 @@ export default function AcademyBuilderCourse() {
   const deleteLesson = useDeleteLesson();
   const reorderLessons = useReorderLessons();
 
-  // Auto-save field
-  const autoSave = useCallback((field: string, value: any) => {
-    if (!courseId) return;
-    updateCourse.mutate({ id: courseId, data: { [field]: value } as any });
-  }, [courseId, updateCourse]);
+  // ===== Course Settings controlled form state =====
+  type SettingsForm = {
+    title: string;
+    slug: string;
+    short_description: string;
+    description: string;
+    target_audience: string[];
+    difficulty_level: string;
+    estimated_minutes: number | null;
+    tags: string[];
+    is_free: boolean;
+    certificate_enabled: boolean;
+    pass_score: number;
+  };
+
+  const buildForm = useCallback((c: any): SettingsForm => ({
+    title: c?.title ?? "",
+    slug: c?.slug ?? "",
+    short_description: c?.short_description ?? "",
+    description: c?.description ?? "",
+    target_audience: Array.isArray(c?.target_audience) ? c.target_audience : [],
+    difficulty_level: c?.difficulty_level ?? "beginner",
+    estimated_minutes: c?.estimated_minutes ?? null,
+    tags: Array.isArray(c?.tags) ? c.tags : [],
+    is_free: c?.is_free ?? false,
+    certificate_enabled: c?.certificate_enabled ?? false,
+    pass_score: c?.pass_score ?? 80,
+  }), []);
+
+  const [formState, setFormState] = useState<SettingsForm>(() => buildForm(course));
+  const baselineRef = useRef<SettingsForm>(formState);
+
+  useEffect(() => {
+    if (course) {
+      const next = buildForm(course);
+      setFormState(next);
+      baselineRef.current = next;
+    }
+  }, [course, buildForm]);
+
+  const isDirty = useMemo(
+    () => JSON.stringify(formState) !== JSON.stringify(baselineRef.current),
+    [formState]
+  );
+
+  // Distinct tag suggestions for the chip input
+  const { data: distinctTags = [] } = useQuery({
+    queryKey: ["academy-distinct-tags"],
+    queryFn: fetchDistinctAcademyTags,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Save mutation — single explicit Save Changes button
+  const saveCourseSettings = useMutation({
+    mutationFn: async (payload: SettingsForm) => {
+      if (!courseId) throw new Error("Missing courseId");
+      const { data, error } = await supabase
+        .from("academy_courses")
+        .update(payload as any)
+        .eq("id", courseId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Course settings saved");
+      qc.invalidateQueries({ queryKey: ["academy-builder-course", courseId] });
+      qc.invalidateQueries({ queryKey: ["academy-courses-admin"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Failed to save course settings"),
+  });
+
+  const handleSaveSettings = () => {
+    if (!isDirty || saveCourseSettings.isPending) return;
+    saveCourseSettings.mutate(formState);
+  };
+
+  // Unsaved-changes guard (in-app navigation)
+  useBlocker(({ currentLocation, nextLocation }) =>
+    isDirty && currentLocation.pathname !== nextLocation.pathname
+      ? !window.confirm("You have unsaved changes. Leave anyway?")
+      : false
+  );
+
+  // Unsaved-changes guard (browser tab close / reload)
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const handleAddModule = () => {
     if (!courseId) return;
