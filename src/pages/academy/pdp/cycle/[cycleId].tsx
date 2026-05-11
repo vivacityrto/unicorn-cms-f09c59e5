@@ -1,10 +1,12 @@
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Target, ArrowLeft } from "lucide-react";
 import { AcademyLayout } from "@/components/layout/AcademyLayout";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useAudiences,
@@ -20,6 +22,7 @@ import { EvidenceTab } from "@/components/academy/pdp/cycle/EvidenceTab";
 import { ReflectionsTab } from "@/components/academy/pdp/cycle/ReflectionsTab";
 import { ReviewsTab } from "@/components/academy/pdp/cycle/ReviewsTab";
 import { AuditExportCard } from "@/components/academy/pdp/cycle/AuditExportCard";
+import { ReviewComposerDrawer } from "@/components/academy/pdp/ReviewComposerDrawer";
 
 export default function AcademyPdpCyclePage() {
   const { cycleId: param } = useParams<{ cycleId: string }>();
@@ -34,6 +37,24 @@ export default function AcademyPdpCyclePage() {
   const { data: evidence } = useEvidence(valid ? cycleId : null);
 
   const audience = audiences?.find((a) => a.code === cycle?.audience_code) ?? null;
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const reviewMode = searchParams.get("reviewMode") === "1";
+  const isManager = !!user?.id && !!cycle?.manager_id && cycle.manager_id === user.id;
+  const [composerOpen, setComposerOpen] = useState(false);
+
+  useEffect(() => {
+    if (reviewMode && isManager) setComposerOpen(true);
+  }, [reviewMode, isManager]);
+
+  const handleComposerOpenChange = (open: boolean) => {
+    setComposerOpen(open);
+    if (!open && searchParams.has("reviewMode")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("reviewMode");
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   return (
     <AcademyLayout>
@@ -60,6 +81,14 @@ export default function AcademyPdpCyclePage() {
           <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
             <div className="space-y-6 min-w-0">
               <CycleHeaderBand cycle={cycle} audience={audience} />
+
+              {reviewMode && !isManager ? (
+                <Alert>
+                  <AlertDescription>
+                    You are not the assigned manager for this cycle, so the review composer is unavailable.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
 
               <Tabs defaultValue="overview" className="w-full">
                 <TabsList className="grid grid-cols-5 w-full max-w-2xl">
@@ -88,7 +117,7 @@ export default function AcademyPdpCyclePage() {
                   <ReflectionsTab cycleId={cycle.id} />
                 </TabsContent>
                 <TabsContent value="reviews" className="mt-4">
-                  <ReviewsTab cycleId={cycle.id} />
+                  <ReviewsTab cycleId={cycle.id} revieweeUserId={cycle.user_id} />
                 </TabsContent>
               </Tabs>
             </div>
@@ -101,6 +130,14 @@ export default function AcademyPdpCyclePage() {
           </div>
         )}
       </AcademyPageWrapper>
+
+      {valid && cycle ? (
+        <ReviewComposerDrawer
+          open={composerOpen && isManager}
+          onOpenChange={handleComposerOpenChange}
+          cycleId={cycle.id}
+        />
+      ) : null}
     </AcademyLayout>
   );
 }
