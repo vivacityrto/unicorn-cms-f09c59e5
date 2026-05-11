@@ -72,6 +72,21 @@ export default function AcademyBuilderCourse() {
     },
   });
 
+  // Auto-calculated lesson minutes total (from v_academy_course_total_minutes)
+  const { data: courseTotals } = useQuery({
+    queryKey: ["academy-course-total-minutes", courseId],
+    enabled: !!courseId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("v_academy_course_total_minutes")
+        .select("total_lesson_minutes, lesson_count, video_lesson_count")
+        .eq("course_id", courseId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { total_lesson_minutes: number | null; lesson_count: number | null; video_lesson_count: number | null } | null;
+    },
+  });
+
   // Modules & lessons
   const { data: modules = [], isLoading: modulesLoading } = useModulesWithLessons(courseId);
 
