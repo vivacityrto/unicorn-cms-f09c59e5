@@ -1,0 +1,1 @@
+DO $$ BEGIN RAISE NOTICE 'current_user=%, session_user=%, is_superuser=%', current_user, session_user, (SELECT rolsuper FROM pg_roles WHERE rolname = current_user); END $$;
