@@ -1305,6 +1305,55 @@ export default function ManageDocuments() {
                   </div>
 
 
+
+                  {editingDocumentId && (() => {
+                    const editingDoc = documents.find(d => d.id === editingDocumentId);
+                    const url = editingDoc?.source_template_url;
+                    const fileName = url ? (() => {
+                      try { return decodeURIComponent(url.split('?')[0].split('/').pop() || url); } catch { return url; }
+                    })() : null;
+                    const handleUnlink = async () => {
+                      const { error } = await supabase
+                        .from('documents')
+                        .update({ source_template_url: null })
+                        .eq('id', editingDocumentId);
+                      if (error) {
+                        sonnerToast.error('Failed to unlink template file');
+                      } else {
+                        sonnerToast.success('Template file unlinked');
+                        fetchDocuments();
+                      }
+                    };
+                    return (
+                      <div className="grid gap-2">
+                        <Label>Template File</Label>
+                        {url ? (
+                          <div className="flex items-center gap-2 p-3 rounded-md border border-primary/30 bg-primary/5">
+                            <Link2 className="h-4 w-4 text-primary shrink-0" />
+                            <span className="flex-1 min-w-0 truncate text-sm font-medium" title={url}>{fileName}</span>
+                            <a href={url} target="_blank" rel="noopener noreferrer" title="Open" className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground">
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                            <Button type="button" variant="outline" size="sm" onClick={() => setSharepointBrowseDocId(editingDocumentId)}>
+                              Change…
+                            </Button>
+                            <Button type="button" variant="ghost" size="sm" onClick={handleUnlink} className="text-destructive hover:text-destructive">
+                              Unlink
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 rounded-md border border-dashed">
+                            <Link2Off className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="flex-1 text-sm text-muted-foreground">No template file linked</span>
+                            <Button type="button" variant="outline" size="sm" onClick={() => setSharepointBrowseDocId(editingDocumentId)}>
+                              Link template file…
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   </div>
                 </div>
 
