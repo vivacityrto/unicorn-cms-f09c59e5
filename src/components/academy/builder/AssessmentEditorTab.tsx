@@ -23,7 +23,7 @@ interface AssessmentEditorTabProps {
   courseId: number;
   courseTitle?: string;
   courseDescription?: string | null;
-  courseTargetAudience?: string | null;
+  courseTargetAudience?: string[] | null;
 }
 
 export default function AssessmentEditorTab({ courseId, courseTitle, courseDescription, courseTargetAudience }: AssessmentEditorTabProps) {
@@ -173,7 +173,7 @@ export default function AssessmentEditorTab({ courseId, courseTitle, courseDescr
         body: {
           action: "generate_questions",
           title: courseTitle || "Untitled Course",
-          target_audience: courseTargetAudience || "training professionals",
+          target_audience: (courseTargetAudience && courseTargetAudience.length > 0) ? courseTargetAudience.join(", ") : "training professionals",
           context_text: aiContext,
         },
       });

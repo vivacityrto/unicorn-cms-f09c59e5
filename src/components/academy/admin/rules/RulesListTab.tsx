@@ -138,9 +138,9 @@ export default function RulesListTab() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">{course?.title ?? `#${r.course_id}`}</div>
-                      {course?.target_audience && (
+                      {course?.target_audience && course.target_audience.length > 0 && (
                         <div className="text-[11px] text-muted-foreground mt-0.5">
-                          {course.target_audience}
+                          {course.target_audience.join(", ")}
                         </div>
                       )}
                     </TableCell>

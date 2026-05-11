@@ -95,9 +95,8 @@ export default function RulesMatrixTab() {
   const filteredCourses = useMemo(() => {
     return courses
       .filter((c) => {
-        if (!c.target_audience) return true;
-        const aud = c.target_audience.split(",").map((s) => s.trim());
-        return aud.some((a) => audienceFilter.has(a));
+        if (!c.target_audience || c.target_audience.length === 0) return true;
+        return c.target_audience.some((a) => audienceFilter.has(a));
       })
       .filter((c) =>
         search ? c.title.toLowerCase().includes(search.toLowerCase()) : true
@@ -297,9 +296,9 @@ export default function RulesMatrixTab() {
                       }`}
                     >
                       <div className="font-medium text-sm text-foreground">{course.title}</div>
-                      {course.target_audience && (
+                      {course.target_audience && course.target_audience.length > 0 && (
                         <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
-                          {course.target_audience}
+                          {course.target_audience.join(", ")}
                         </div>
                       )}
                     </td>

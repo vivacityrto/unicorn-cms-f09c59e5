@@ -11,7 +11,7 @@ export interface AdminCourse {
   description: string | null;
   short_description: string | null;
   thumbnail_url: string | null;
-  target_audience: string | null;
+  target_audience: string[] | null;
   estimated_minutes: number | null;
   difficulty_level: string | null;
   status: string | null;
@@ -46,7 +46,7 @@ export function useAdminAcademyCourses(filters?: CourseFilters) {
         q = q.eq("status", filters.status);
       }
       if (filters?.audience) {
-        q = q.ilike("target_audience", `%${filters.audience}%`);
+        q = q.contains("target_audience", [filters.audience]);
       }
       if (filters?.search) {
         q = q.ilike("title", `%${filters.search}%`);

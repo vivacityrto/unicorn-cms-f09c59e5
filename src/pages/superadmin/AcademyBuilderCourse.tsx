@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useParams, useNavigate, useBlocker } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useModulesWithLessons, useCreateModule, useUpdateModule, useDeleteModule, useReorderModules, useCreateLesson, useUpdateLesson, useDeleteLesson, useReorderLessons, type AcademyModule, type AcademyLesson } from "@/hooks/academy/useAcademyModulesLessons";
@@ -13,13 +13,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip, Sparkles, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, Plus, GripVertical, Trash2, ChevronDown, ChevronRight, Edit2, Play, FileText, BookOpen, Paperclip, Sparkles, Loader2, Upload, Save } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 import LessonEditorPanel from "@/components/academy/builder/LessonEditorPanel";
 import ImportVideosPanel from "@/components/academy/builder/ImportVideosPanel";
 import AssessmentEditorTab from "@/components/academy/builder/AssessmentEditorTab";
 import PackageRulesTab from "@/components/academy/builder/PackageRulesTab";
+import PathwayMultiSelect from "@/components/academy/PathwayMultiSelect";
+import TagChipInput from "@/components/academy/TagChipInput";
+import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -84,11 +88,101 @@ export default function AcademyBuilderCourse() {
   const deleteLesson = useDeleteLesson();
   const reorderLessons = useReorderLessons();
 
-  // Auto-save field
-  const autoSave = useCallback((field: string, value: any) => {
-    if (!courseId) return;
-    updateCourse.mutate({ id: courseId, data: { [field]: value } as any });
-  }, [courseId, updateCourse]);
+  // ===== Course Settings controlled form state =====
+  type SettingsForm = {
+    title: string;
+    slug: string;
+    short_description: string;
+    description: string;
+    target_audience: string[];
+    difficulty_level: string;
+    estimated_minutes: number | null;
+    tags: string[];
+    is_free: boolean;
+    certificate_enabled: boolean;
+    pass_score: number;
+  };
+
+  const buildForm = useCallback((c: any): SettingsForm => ({
+    title: c?.title ?? "",
+    slug: c?.slug ?? "",
+    short_description: c?.short_description ?? "",
+    description: c?.description ?? "",
+    target_audience: Array.isArray(c?.target_audience) ? c.target_audience : [],
+    difficulty_level: c?.difficulty_level ?? "beginner",
+    estimated_minutes: c?.estimated_minutes ?? null,
+    tags: Array.isArray(c?.tags) ? c.tags : [],
+    is_free: c?.is_free ?? false,
+    certificate_enabled: c?.certificate_enabled ?? false,
+    pass_score: c?.pass_score ?? 80,
+  }), []);
+
+  const [formState, setFormState] = useState<SettingsForm>(() => buildForm(course));
+  const baselineRef = useRef<SettingsForm>(formState);
+
+  useEffect(() => {
+    if (course) {
+      const next = buildForm(course);
+      setFormState(next);
+      baselineRef.current = next;
+    }
+  }, [course, buildForm]);
+
+  const isDirty = useMemo(
+    () => JSON.stringify(formState) !== JSON.stringify(baselineRef.current),
+    [formState]
+  );
+
+  // Distinct tag suggestions for the chip input
+  const { data: distinctTags = [] } = useQuery({
+    queryKey: ["academy-distinct-tags"],
+    queryFn: fetchDistinctAcademyTags,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Save mutation — single explicit Save Changes button
+  const saveCourseSettings = useMutation({
+    mutationFn: async (payload: SettingsForm) => {
+      if (!courseId) throw new Error("Missing courseId");
+      const { data, error } = await supabase
+        .from("academy_courses")
+        .update(payload as any)
+        .eq("id", courseId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Course settings saved");
+      qc.invalidateQueries({ queryKey: ["academy-builder-course", courseId] });
+      qc.invalidateQueries({ queryKey: ["academy-courses-admin"] });
+    },
+    onError: (e: any) => toast.error(e?.message || "Failed to save course settings"),
+  });
+
+  const handleSaveSettings = () => {
+    if (!isDirty || saveCourseSettings.isPending) return;
+    saveCourseSettings.mutate(formState);
+  };
+
+  // Unsaved-changes guard (in-app navigation)
+  useBlocker(({ currentLocation, nextLocation }) =>
+    isDirty && currentLocation.pathname !== nextLocation.pathname
+      ? !window.confirm("You have unsaved changes. Leave anyway?")
+      : false
+  );
+
+  // Unsaved-changes guard (browser tab close / reload)
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const handleAddModule = () => {
     if (!courseId) return;
@@ -104,6 +198,10 @@ export default function AcademyBuilderCourse() {
 
   const handlePublish = () => {
     if (!courseId) return;
+    if ((formState.target_audience ?? []).length === 0) {
+      toast.error("Select at least one pathway before publishing");
+      return;
+    }
     const hasPublishedLessons = modules.some(m => m.lessons.some(l => l.is_published));
     if (!hasPublishedLessons) {
       toast.error("Cannot publish: no published lessons");
@@ -209,30 +307,58 @@ export default function AcademyBuilderCourse() {
           <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
             {/* Left Panel — Course Settings */}
             <div className="space-y-4 p-5 rounded-xl border" style={{ borderColor: "hsl(var(--border))" }}>
-              <h2 className="text-sm font-semibold text-foreground" style={{ color: "#7130A0" }}>Course Settings</h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-foreground" style={{ color: "#7130A0" }}>Course Settings</h2>
+                <div className="flex items-center gap-2">
+                  {course.updated_at && !isDirty && (
+                    <span className="text-[11px] text-muted-foreground">
+                      Saved {formatDistanceToNow(new Date(course.updated_at), { addSuffix: true })}
+                    </span>
+                  )}
+                  {isDirty && (
+                    <span className="text-[11px] text-amber-600">Unsaved</span>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={handleSaveSettings}
+                    disabled={!isDirty || saveCourseSettings.isPending}
+                    className="gap-1"
+                  >
+                    {saveCourseSettings.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
 
               <Field label="Title">
-                <Input defaultValue={course.title} onBlur={(e) => autoSave("title", e.target.value)} />
+                <Input value={formState.title} onChange={(e) => setFormState((p) => ({ ...p, title: e.target.value }))} />
               </Field>
 
               <Field label="Slug">
-                <Input defaultValue={course.slug} onBlur={(e) => autoSave("slug", e.target.value)} className="font-mono text-xs" />
+                <Input value={formState.slug} onChange={(e) => setFormState((p) => ({ ...p, slug: e.target.value }))} className="font-mono text-xs" />
               </Field>
 
               <Field label="Short Description">
-                <Textarea data-field="short_description" defaultValue={course.short_description ?? ""} onBlur={(e) => autoSave("short_description", e.target.value)} rows={2} />
+                <Textarea value={formState.short_description} onChange={(e) => setFormState((p) => ({ ...p, short_description: e.target.value }))} rows={2} />
               </Field>
 
               <Field label="Description">
-                <Textarea data-field="description" defaultValue={course.description ?? ""} onBlur={(e) => autoSave("description", e.target.value)} rows={4} />
+                <Textarea value={formState.description} onChange={(e) => setFormState((p) => ({ ...p, description: e.target.value }))} rows={4} />
               </Field>
 
-              <Field label="Target Audience">
-                <Input defaultValue={course.target_audience ?? ""} onBlur={(e) => autoSave("target_audience", e.target.value)} />
+              <Field label="Pathways">
+                <PathwayMultiSelect
+                  value={formState.target_audience}
+                  onChange={(v) => setFormState((p) => ({ ...p, target_audience: v }))}
+                />
               </Field>
 
               <Field label="Difficulty Level">
-                <Select defaultValue={course.difficulty_level ?? "beginner"} onValueChange={(v) => autoSave("difficulty_level", v)}>
+                <Select value={formState.difficulty_level} onValueChange={(v) => setFormState((p) => ({ ...p, difficulty_level: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="beginner">Beginner</SelectItem>
@@ -243,31 +369,50 @@ export default function AcademyBuilderCourse() {
               </Field>
 
               <Field label="Estimated Minutes">
-                <Input type="number" defaultValue={course.estimated_minutes ?? ""} onBlur={(e) => autoSave("estimated_minutes", e.target.value ? parseInt(e.target.value) : null)} />
+                <Input
+                  type="number"
+                  value={formState.estimated_minutes ?? ""}
+                  onChange={(e) => setFormState((p) => ({ ...p, estimated_minutes: e.target.value ? parseInt(e.target.value) : null }))}
+                />
               </Field>
 
-              <Field label="Tags (comma-separated)">
-                <Input defaultValue={(course.tags ?? []).join(", ")} onBlur={(e) => autoSave("tags", e.target.value.split(",").map((t: string) => t.trim()).filter(Boolean))} />
+              <Field label="Sub-categories (Tags)">
+                <TagChipInput
+                  value={formState.tags}
+                  onChange={(v) => setFormState((p) => ({ ...p, tags: v }))}
+                  suggestions={distinctTags}
+                />
               </Field>
 
-              <AiDescriptionGenerator course={course} courseId={courseId!} onGenerated={(short_desc, desc) => {
-                // Auto-save both fields with debounce
-                updateCourse.mutate({ id: courseId!, data: { short_description: short_desc, description: desc } as any });
-              }} />
+              <AiDescriptionGenerator
+                title={formState.title}
+                targetAudience={formState.target_audience}
+                difficultyLevel={formState.difficulty_level}
+                tags={formState.tags}
+                onGenerated={(short_desc, desc) =>
+                  setFormState((p) => ({ ...p, short_description: short_desc, description: desc }))
+                }
+              />
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-foreground">Free Course</span>
-                <Switch checked={course.is_free ?? false} onCheckedChange={(v) => autoSave("is_free", v)} />
+                <Switch checked={formState.is_free} onCheckedChange={(v) => setFormState((p) => ({ ...p, is_free: v }))} />
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-foreground">Certificate Enabled</span>
-                <Switch checked={course.certificate_enabled ?? false} onCheckedChange={(v) => autoSave("certificate_enabled", v)} />
+                <Switch checked={formState.certificate_enabled} onCheckedChange={(v) => setFormState((p) => ({ ...p, certificate_enabled: v }))} />
               </div>
 
-              {course.certificate_enabled && (
+              {formState.certificate_enabled && (
                 <Field label="Pass Score (%)">
-                  <Input type="number" min={0} max={100} defaultValue={course.pass_score ?? 80} onBlur={(e) => autoSave("pass_score", parseInt(e.target.value) || 80)} />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={formState.pass_score}
+                    onChange={(e) => setFormState((p) => ({ ...p, pass_score: parseInt(e.target.value) || 80 }))}
+                  />
                 </Field>
               )}
             </div>
@@ -490,7 +635,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any; courseId: number; onGenerated: (short: string, desc: string) => void }) {
+function AiDescriptionGenerator({
+  title,
+  targetAudience,
+  difficultyLevel,
+  tags,
+  onGenerated,
+}: {
+  title: string;
+  targetAudience: string[];
+  difficultyLevel: string;
+  tags: string[];
+  onGenerated: (short: string, desc: string) => void;
+}) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -501,10 +658,10 @@ function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any
       const { data, error: fnError } = await supabase.functions.invoke("academy-ai-generate", {
         body: {
           action: "generate_descriptions",
-          title: course.title,
-          target_audience: course.target_audience,
-          difficulty_level: course.difficulty_level,
-          tags: course.tags,
+          title,
+          target_audience: targetAudience.length > 0 ? targetAudience.join(", ") : "training professionals",
+          difficulty_level: difficultyLevel,
+          tags,
         },
       });
 
@@ -513,12 +670,7 @@ function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any
 
       if (data?.short_description && data?.description) {
         onGenerated(data.short_description, data.description);
-        // Force re-render of textareas by updating DOM directly
-        const shortEl = document.querySelector('[data-field="short_description"]') as HTMLTextAreaElement;
-        const descEl = document.querySelector('[data-field="description"]') as HTMLTextAreaElement;
-        if (shortEl) shortEl.value = data.short_description;
-        if (descEl) descEl.value = data.description;
-        toast.success("Descriptions generated — review and edit before saving");
+        toast.success("Descriptions generated — review and click Save Changes");
       } else {
         throw new Error("Invalid response format");
       }
@@ -538,7 +690,7 @@ function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any
         className="w-full text-xs gap-1.5"
         style={{ borderColor: "#7130A0", color: "#7130A0" }}
         onClick={handleGenerate}
-        disabled={!course.title?.trim() || generating}
+        disabled={!title?.trim() || generating}
       >
         {generating ? (
           <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating…</>
@@ -550,3 +702,4 @@ function AiDescriptionGenerator({ course, courseId, onGenerated }: { course: any
     </div>
   );
 }
+
