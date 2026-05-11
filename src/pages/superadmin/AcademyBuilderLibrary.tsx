@@ -11,12 +11,18 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock,
+  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
