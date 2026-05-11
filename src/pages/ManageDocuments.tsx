@@ -2007,8 +2007,8 @@ export default function ManageDocuments() {
         const browseDoc = documents.find(d => d.id === sharepointBrowseDocId);
         const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
         const autoFolder = browseDoc?.framework_type
-          ? frameworkFolderMap[browseDoc.framework_type.toLowerCase()] || 'Other'
-          : 'Other';
+          ? `Framework/${frameworkFolderMap[browseDoc.framework_type.toLowerCase()] || 'Other'}`
+          : 'Framework/Other';
         return (
           <Dialog open={true} onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}>
             <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
