@@ -346,11 +346,11 @@ export function EvidenceSheet({
         toast.success("Evidence updated");
       } else {
         await create.mutateAsync({
+          ...basePayload,
           cycle_id: cycleId,
           evidence_type: values.evidence_type,
           title: values.title.trim(),
           occurred_on: values.occurred_on,
-          ...basePayload,
         });
         toast.success("Evidence logged");
       }
