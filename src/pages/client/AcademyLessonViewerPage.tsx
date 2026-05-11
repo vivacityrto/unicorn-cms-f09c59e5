@@ -23,6 +23,9 @@ import {
   isPreviewBlockedError,
 } from "@/hooks/useReadOnlyGuard";
 import { friendlyDbError } from "@/lib/friendlyDbError";
+import { useAuth } from "@/hooks/useAuth";
+import { useCurrentCycle } from "@/features/pdp/hooks";
+import { QuickReflectionDrawer } from "@/components/academy/pdp/QuickReflectionDrawer";
 
 const ACCENT = "#23c0dd";
 const PROGRESS_THROTTLE_MS = 10_000;
