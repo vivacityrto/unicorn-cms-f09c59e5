@@ -146,6 +146,8 @@ function FileBrowserContent({
 }) {
   const [filterText, setFilterText] = useState(defaultFilter || '');
   const [autoNavDone, setAutoNavDone] = useState(false);
+  const [autoNavIndex, setAutoNavIndex] = useState(0);
+  const autoNavSegments = (autoNavigateFolder || '').split('/').map(s => s.trim()).filter(Boolean);
 
   const {
     items,
