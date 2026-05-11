@@ -505,7 +505,7 @@ export type Database = {
           sort_order: number | null
           status: string | null
           tags: string[] | null
-          target_audience: string | null
+          target_audience: string[] | null
           thumbnail_url: string | null
           title: string
           trailer_video_id: string | null
@@ -529,7 +529,7 @@ export type Database = {
           sort_order?: number | null
           status?: string | null
           tags?: string[] | null
-          target_audience?: string | null
+          target_audience?: string[] | null
           thumbnail_url?: string | null
           title: string
           trailer_video_id?: string | null
@@ -553,7 +553,7 @@ export type Database = {
           sort_order?: number | null
           status?: string | null
           tags?: string[] | null
-          target_audience?: string | null
+          target_audience?: string[] | null
           thumbnail_url?: string | null
           title?: string
           trailer_video_id?: string | null
