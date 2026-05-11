@@ -15,6 +15,7 @@ import {
   HelpCircle,
   ExternalLink,
   Database,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 
