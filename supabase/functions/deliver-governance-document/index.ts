@@ -690,7 +690,7 @@ serve(async (req) => {
     // ── Load version + document ────────────────────────────────────────────
     const { data: version, error: vErr } = await supabase
       .from("document_versions")
-      .select("*, document:documents!document_versions_document_id_fkey(id, title, category, format, framework_type)")
+      .select("*, document:documents!document_versions_document_id_fkey(id, title, category, format, framework_type, source_template_url)")
       .eq("id", document_version_id)
       .single();
 
