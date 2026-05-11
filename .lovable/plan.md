@@ -1,83 +1,60 @@
-## Goal
-Add a **PDP (Personal Development Plan)** feature scaffold under `src/features/pdp/` with typed API + React Query hooks, and link it from the Academy sidebar nav. No UI/page work in this pass.
+## /academy/pdp — Learner Dashboard
 
-## Step 1 — Supabase types
+Builds the staff member's own PDP home page using existing PDP feature hooks (`src/features/pdp/hooks.ts`) and the Academy shell. Sheets/drawers referenced (Add Evidence, Add Goal, Reflection) are stubbed as placeholder components in this prompt — they will be implemented in Prompts 5–7.
 
-Verified the generated types file (`src/integrations/supabase/types.ts`) already contains all six tables (`pdp_audiences`, `pdp_cycles`, `pdp_goals`, `pdp_evidence_items`, `pdp_reflections`, `pdp_reviews`) and both views (`v_pdp_cycle_summary`, `v_pdp_user_currency`). No regeneration needed — the types are already current. (I'll note this in the implementation, no migration will be run.)
+### Files
 
-## Step 2 — Create `src/features/pdp/types.ts`
+**`src/pages/academy/pdp/index.tsx`** — route entry, wrapped in `AcademyPageWrapper` (title "My Professional Development Plan", icon `Target`).
 
-Re-export row types from the generated `Database` type:
+**`src/components/academy/pdp/`** (new directory):
+- `PdpHeaderBand.tsx` — heading, audience label + cycle year subhead, right-aligned status `Badge`.
+- `PdpProgressCard.tsx` — `recharts` `RadialBarChart` (percent_complete) + stacked stats (hours logged, goals met, reflections) + `CurrencyStatusPill` beside the dial.
+- `CurrencyStatusPill.tsx` — traffic-light pill mapping `currency_status` → `current` emerald, `on_track` cyan `#23C0DD`, `at_risk` macaron `#F9CB0C`, `overdue` fuchsia `#ED1878`.
+- `PdpActionRow.tsx` — three buttons: primary "Log evidence", secondary "Add a goal", tertiary "Open my PDP cycle" → `/academy/pdp/cycle/${cycleId}`.
+- `RecommendedCoursesPanel.tsx` — up to 6 course cards.
+- `RecentEvidenceList.tsx` — 5 most recent items, type icon, title, hours, `dd/MM/yyyy`, "Add reflection" link.
+- `StartCycleEmptyState.tsx` — single CTA card; opens `StartCycleModal` (shadcn `Dialog`) that submits `useCreateCycle` with the defaults below.
+- Sheet placeholders: `AddEvidenceSheet.tsx`, `AddGoalSheet.tsx`, `AddReflectionDrawer.tsx` — render an empty shadcn `Sheet`/`Drawer` with TODO note (full UI deferred to later prompts). Page wires open/close state and selected evidence id for reflections.
 
-```ts
-import type { Database } from "@/integrations/supabase/types";
+### Route registration
 
-export type PdpAudience      = Database["public"]["Tables"]["pdp_audiences"]["Row"];
-export type PdpCycle         = Database["public"]["Tables"]["pdp_cycles"]["Row"];
-export type PdpGoal          = Database["public"]["Tables"]["pdp_goals"]["Row"];
-export type PdpEvidenceItem  = Database["public"]["Tables"]["pdp_evidence_items"]["Row"];
-export type PdpReflection    = Database["public"]["Tables"]["pdp_reflections"]["Row"];
-export type PdpReview        = Database["public"]["Tables"]["pdp_reviews"]["Row"];
-export type PdpCycleSummary  = Database["public"]["Views"]["v_pdp_cycle_summary"]["Row"];
-export type PdpUserCurrency  = Database["public"]["Views"]["v_pdp_user_currency"]["Row"];
+`src/App.tsx`: add `const AcademyPdpPage = lazy(() => import("./pages/academy/pdp"));` and `<Route path="/academy/pdp" element={<ProtectedRoute><AcademyPdpPage /></ProtectedRoute>} />` next to other `/academy/*` routes.
 
-export type PdpCycleStatus   = 'planning' | 'active' | 'under_review' | 'completed';
-export type PdpGoalStatus    = 'open' | 'in_progress' | 'met' | 'not_met' | 'deferred';
-export type PdpEvidenceType  = 'academy_completion' | 'academy_certificate' | 'external_course'
-  | 'workshop' | 'industry_placement' | 'validation_activity' | 'community_of_practice'
-  | 'conference' | 'mentoring' | 'reading' | 'audit_response' | 'other';
-export type PdpReviewType    = 'mid_cycle' | 'end_cycle' | 'ad_hoc';
-export type PdpReviewOutcome = 'on_track' | 'needs_action' | 'completed' | 'not_completed';
-export type CurrencyStatus   = 'current' | 'on_track' | 'at_risk' | 'overdue';
-```
+### Data flow
 
-## Step 3 — Create `src/features/pdp/api.ts`
+- `useCurrentCycle(userId, tenantId)` — userId from `useAuth`, tenantId from existing tenant context. If `null` → render `StartCycleEmptyState`.
+- `useCycleSummary(cycleId)` → `percent_complete`, hours logged, goals met, reflections count.
+- `useUserCurrency(userId)` (new hook in `src/features/pdp/hooks.ts`, queries `v_pdp_user_currency`) → currency status.
+- `useAudiences()` for label resolution.
+- Recommended courses: new `useRecommendedAcademyCourses(audienceCode, userId)` query — `academy_courses` where `status='published'` and `target_audience` array contains audience code, left-anti-joined against `academy_enrollments` for the user. "Start course" calls a mutation inserting into `academy_enrollments` with `source='pdp_recommendation'`, then invalidates the recommendations query.
+- Recent evidence: `useEvidence(cycleId)` → slice top 5 by `occurred_on desc`.
 
-Typed helpers using `@/integrations/supabase/client`. Strict TypeScript, no `any`. Each helper throws on Supabase error and returns parsed data. Function signatures exactly per spec:
+### Start-cycle defaults
 
-- `listAudiences()` → `PdpAudience[]`
-- `getCurrentCycle(userId, tenantId)` → most recent cycle filtered by `user_id` + `tenant_id` (handle null), ordered by `cycle_start_date desc`, `.maybeSingle()` → `PdpCycle | null`
-- `getCycleSummary(cycleId)` → single row from `v_pdp_cycle_summary` → `PdpCycleSummary | null`
-- `listGoals(cycleId)` / `listEvidence(cycleId)` / `listReflections(cycleId)` / `listReviews(cycleId)` — filtered by `cycle_id`, ordered chronologically
-- `createCycle(input)` — `Pick<PdpCycle, 'user_id'|'tenant_id'|'audience_code'|'cycle_year'|'cycle_start_date'|'cycle_end_date'|'target_pd_hours'>` → inserts and returns the new row
-- `upsertGoal(input)` — `Partial<PdpGoal> & { cycle_id; title }`; uses `upsert` keyed on `id` when present, insert otherwise
-- `logEvidence(input)` — `Partial<PdpEvidenceItem> & { cycle_id; evidence_type; title; occurred_on }`; insert
-- `addReflection(input)` — insert with the supplied optional foreign keys + `response`
-- `signOffReview(reviewId)` — `update pdp_reviews set signed_off_at = now(), signed_off_by = (auth user id resolved client-side via supabase.auth.getUser()) where id = reviewId`
+Used by `StartCycleModal` via `useCreateCycle`:
+- `audience_code`: from user's primary role on `users` table (read-once query).
+- `cycle_year`: `new Date().getFullYear()`.
+- `cycle_start_date`: today (ISO).
+- `cycle_end_date`: today + 12 months.
+- `target_pd_hours`: `audience.target_pd_hours_default` (from `useAudiences`).
+- `status`: `'active'`.
 
-`created_at` / `updated_at` are omitted from inserts per project standard.
+### Styling
 
-## Step 4 — Create `src/features/pdp/hooks.ts`
+- Mobile-first single column; `md:` breakpoint for two-column header (dial + currency pill side-by-side).
+- Use Tailwind tokens; brand hex inline only for the four currency states (cyan `#23C0DD`, macaron `#F9CB0C`, fuchsia `#ED1878`, emerald via Tailwind `emerald-500`).
+- Active nav state for "My PDP" already wired via Vivacity Acai (`#44235F`) in the nav config.
 
-React Query hooks following the pattern in `src/hooks/academy/` (typed `queryKey`, `useQuery`/`useMutation`, error toasts via `sonner`):
+### Out of scope
 
-- `useAudiences()`
-- `useCurrentCycle(userId, tenantId)` — disabled until `userId` present
-- `useCycleSummary(cycleId)`
-- `useGoals(cycleId)`, `useEvidence(cycleId)`, `useReflections(cycleId)`, `useReviews(cycleId)` — all `enabled: !!cycleId`
-- Mutations: `useCreateCycle`, `useUpsertGoal`, `useLogEvidence`, `useAddReflection`, `useSignOffReview` — invalidate the relevant list/summary keys on success and `toast.error` on failure.
+- Full Add Evidence / Goal / Reflection forms (Prompts 5–7).
+- `/academy/pdp/cycle/[cycleId]` detail page (separate prompt).
+- No DB migrations, no edits to existing Academy components.
 
-Query key shape: `['pdp', 'goals', cycleId]` etc., to make invalidation simple.
-
-## Step 5 — Sidebar nav
-
-Edit `src/config/navigationConfig.ts` only. In `academyMenuSections` → `key: "main"` items array, **append** one entry after `Community`:
-
-```ts
-{ icon: Target, label: "My PDP", path: "/academy/pdp" },
-```
-
-(`Target` from `lucide-react` — added to the existing import block.) No other nav items touched. The Academy nav already drives its own active styling; the Acai (#44235F) active colour is inherited from the existing Academy nav item rendering — no style changes are needed in the config file (it's data only). If the active colour differs from #44235F in practice, that's a renderer concern, out of scope per spec ("Do not touch any existing Academy components").
-
-## Out of scope (explicit)
-
-- No new pages, route registrations in `App.tsx`, or UI components.
-- No edits to existing Academy hooks/components/pages.
-- No DB migrations (types verified current).
-- No changes to `src/integrations/supabase/types.ts` (auto-generated).
-
-## Verification
+### Verification
 
 - `bunx tsc --noEmit` clean.
-- New files compile against the existing generated `Database` type.
-- Sidebar shows "My PDP" under Academy (route resolves to a 404 until a page is added — expected).
+- Route loads under Academy shell with side nav and Vivacity logo.
+- With no current cycle → empty-state CTA → modal creates cycle → page rerenders with dial.
+- Currency pill colours match the four states.
+- "Start course" inserts an enrollment and the card disappears from the list.
