@@ -868,8 +868,12 @@ serve(async (req) => {
       const result = await processDocxTemplate(templateBytes, mergeData, imageData);
       processedBytes = result.bytes;
       detectedTags = result.detectedTags;
+    } else if (docFormat === 'xlsx' || docFormat === 'xlsm') {
+      const result = await processXlsxTemplate(templateBytes, mergeData);
+      processedBytes = result.bytes;
+      detectedTags = result.detectedTags;
     } else {
-      // XLSX, PDF, etc. — pass through unchanged, just scan for tags
+      // Legacy XLS, PDF, etc. — pass through unchanged, just scan for tags
       const result = await scanTemplateForTags(templateBytes);
       processedBytes = result.bytes;
       detectedTags = result.detectedTags;
