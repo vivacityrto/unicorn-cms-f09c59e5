@@ -1,34 +1,52 @@
-# Fix: "Link to SharePoint" button does nothing on Master Documents detail
+## Goal
+Fix the secondary-contact gating bug so the Invite button, task checkboxes, and bulk action bar are enabled in the client portal for any contact with `canManagePortalUsers` (primary or secondary), instead of using the staff-only `getTenantRole(...) === "Admin"` check that always returns null for client portal contacts.
 
-## Root cause
-`src/components/governance/GovernanceDocumentDetail.tsx` line 285 conditionally renders the SharePoint picker dialog only when `profile?.tenant_id` is truthy:
+Scope is strictly limited to two files. No DB, RLS, or other permission logic touched.
 
-```tsx
-{showSharePointBrowser && profile?.tenant_id && (() => { ... <Dialog/> ... })()}
-```
+## Changes
 
-SuperAdmin / internal Vivacity staff browsing the global Master Documents library have no `tenant_id` on their profile, so the dialog never mounts and the button appears dead. State updates correctly — only the render is gated.
+### 1. `src/pages/ClientTasksPage.tsx`
+- Remove `import { useAuth } from "@/hooks/useAuth";` (line 4) — `getTenantRole` is the only thing pulled from it.
+- In the component body, replace:
+  ```ts
+  const { getTenantRole } = useAuth();
+  const { activeTenantId } = useClientTenant();
+  const isAdmin = activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false;
+  ```
+  with:
+  ```ts
+  const { canManagePortalUsers } = useClientTenant();
+  ```
+  (`activeTenantId` is no longer needed in this file — confirm no other usage before removing; if used elsewhere, keep it on the destructure.)
+- Replace the three `isAdmin` references (lines 116, 145, 169) with `canManagePortalUsers`. These gate:
+  - the bulk action bar (`isAdmin && selected.size > 0`)
+  - the header checkbox column
+  - the per-row `showCheckbox` prop
 
-The gate is also unnecessary: the dialog uses `<SharePointFileBrowser sitePurpose="master_documents" …/>`, which bypasses the per-tenant SharePoint settings path entirely (see `SharePointFileBrowser.tsx` lines 59–61). The `tenantId` prop is effectively unused in `master_documents` mode.
+### 2. `src/components/client/ClientUsersPage.tsx`
+- Remove `import { useAuth } from "@/hooks/useAuth";` (line 46) — `getTenantRole` is the only thing pulled from it.
+- Replace:
+  ```ts
+  const { activeTenantId } = useClientTenant();
+  const { getTenantRole } = useAuth();
+  ...
+  const isAdmin = activeTenantId ? getTenantRole(activeTenantId) === "Admin" : false;
+  ```
+  with:
+  ```ts
+  const { canManagePortalUsers } = useClientTenant();
+  ```
+  (Drop `activeTenantId` from the destructure if no longer referenced; otherwise keep it.)
+- Invite button block (lines ~225–239): remove the `<Tooltip><TooltipTrigger asChild>…</TooltipTrigger>{!isAdmin ? <TooltipContent>Admin only.</TooltipContent> : null}</Tooltip>` wrapper entirely. Render the button bare, with `disabled={!canManagePortalUsers}` and without the `cursor-not-allowed` class (since it will not be disabled for any user who actually reaches this page — `ClientRouteGuard` already blocks others).
+- Replace the remaining `isAdmin` reference at line 310 (`row.row_type === "invited" && isAdmin`) with `canManagePortalUsers` — gates the Resend / Revoke dropdown on invited rows.
+- Leave the other `Tooltip`/`TooltipProvider`/`TooltipContent` imports and usages alone (they are used by the status pill at lines 117–133 and by the page-wide `TooltipProvider` wrapper at 243/358).
 
-## Change
-
-**File:** `src/components/governance/GovernanceDocumentDetail.tsx`
-
-1. Remove the `profile?.tenant_id` requirement from the dialog render guard (line 285). Keep only `showSharePointBrowser`.
-2. Pass `profile?.tenant_id ?? 0` as the `tenantId` prop to `SharePointFileBrowser` so the prop type stays satisfied without forcing a real tenant. (The component ignores it when `sitePurpose` is set.)
-
-No other behaviour changes. The "Master Documents — Select Template File" dialog, framework auto-folder logic, save-to-`documents.source_template_url`, toast messaging, and query invalidation all stay exactly as they are.
-
-## Out of scope
-
-- No changes to `SharePointFileBrowser`, auth, or the underlying SharePoint browser hook.
-- No changes to the per-tenant SharePoint linking flow elsewhere in the app.
-- No styling or copy changes.
+## Non-goals / guardrails
+- Do not touch `ClientSidebar.tsx`, `ClientRouteGuard.tsx`, `ClientTenantContext.tsx`, `useAuth.tsx`, or any RLS/migration.
+- Do not change the task filter tabs, counts, "Show archived" toggle, task row rendering, due-date colouring, badges, user table columns, status pill, or any other unrelated UI.
+- Do not introduce a replacement tooltip or helper text on the Invite disabled state.
 
 ## Verification
-
-1. As a SuperAdmin on `/manage-documents`, open any document detail (e.g. CP.S1-Credentials Policy).
-2. Click **Link to SharePoint** → the "Master Documents — Select Template File" dialog should now open.
-3. Select a file → toast "SharePoint URL saved" appears, `documents.source_template_url` is updated, and "View Source" button shows.
-4. Confirm the per-tenant SharePoint flow on a client-scoped document detail still works (regression check).
+- Type-check passes (no dangling `getTenantRole` / `isAdmin` / `useAuth` references).
+- As a secondary contact: Invite button enabled with no tooltip; task checkboxes visible; bulk action bar appears on selection; Resend/Revoke dropdown visible on invited rows.
+- As an academy-only or non-managing user: `ClientRouteGuard` continues to block the page, so the bare Invite button is never reached.
