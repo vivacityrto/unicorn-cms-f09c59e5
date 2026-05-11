@@ -138,6 +138,7 @@ serve(async (req) => {
     const isSuperAdmin =
       userData?.global_role === "SuperAdmin" || userData?.unicorn_role === "Super Admin";
     const requestedTenantId = body.tenant_id as number | undefined;
+    const sitePurposeEarly = body.site_purpose as string | undefined;
 
     // Resolve effective tenant: SuperAdmins may pass an explicit tenant_id
     // (and may have no tenant_id of their own). Other users always use their own.
@@ -152,12 +153,16 @@ serve(async (req) => {
       }
     }
 
-    if (!tenantId) {
+    // Tenant is only required for tenant-scoped browsing. site_purpose mode
+    // (e.g. master_documents) targets a global SharePoint site and does not
+    // need a tenant — SuperAdmins viewing master docs may have no tenant_id.
+    if (!tenantId && !sitePurposeEarly) {
       return new Response(
         JSON.stringify({ error: "No tenant found for user" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
 
     // Determine browsing mode: site_purpose (global site) or tenant settings
     const sitePurpose = body.site_purpose as string | undefined;
