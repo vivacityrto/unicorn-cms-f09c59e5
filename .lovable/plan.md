@@ -1,180 +1,139 @@
-## Migration
+# Make "Generate All" deliver to the Client Governance site, not Supabase Storage
 
-**Name:** `filter_academy_only_from_message_notifications`
+## Supported formats
 
-**Transactionality:** Supabase migrations run in a single implicit transaction. All three steps (function replace × 2, backfill DELETE) commit atomically — if any step fails, none are applied.
+The bulk path must handle every format the single-doc path already handles:
 
----
+| Format | Pipeline | Notes |
+|---|---|---|
+| `.docx` | docx merge-field engine in `deliver-governance-document` | Standard governance template path |
+| `.xlsx` / `.xls` / `.xlsm` | xlsx merge engine (rewrites `xl/worksheets/*` + `xl/sharedStrings.xml`) | Already wired into the single-doc path |
+| `.pptx` | pptx merge engine in `deliver-governance-document` (the engine we built earlier — rewrites `ppt/slides/*.xml` text runs) | Same call path; bulk simply forwards |
 
-## Pre-deploy verification
+Anything else → tagged `unsupported_format` (counted as `skipped`, never attempted).
 
-Run before applying to confirm the contamination count matches the audit:
+## Full target path
 
-```sql
--- expect: 27
-SELECT count(*) AS academy_only_message_notifs
-FROM public.user_notifications n
-JOIN public.tenant_users tu
-  ON tu.user_id = n.user_id
- AND tu.tenant_id = n.tenant_id
-WHERE n.type = 'message'
-  AND tu.access_scope = 'academy_only';
-
--- baseline totals to compare against post-deploy
-SELECT
-  (SELECT count(*) FROM public.user_notifications WHERE type = 'message') AS total_message_notifs,
-  (SELECT count(*) FROM public.user_notifications WHERE type = 'message') -
-  (SELECT count(*) FROM public.user_notifications n
-     JOIN public.tenant_users tu ON tu.user_id = n.user_id AND tu.tenant_id = n.tenant_id
-    WHERE n.type = 'message' AND tu.access_scope = 'academy_only') AS expected_after_backfill;
+```
+Site: Client Governance
+  └── Documents (default doc library)
+      └── Governance
+          └── {RTOID} - {Legal Name}        ← "KS-{Legal Name}" if no RTO ID + active KickStart
+              └── {Framework}               ← RTO / CRICOS / GTO
+                  └── {Category}            ← dd_document_categories.label
+                      └── <generated file>  ← .docx / .xlsx / .pptx (extension matches source template)
 ```
 
-Expected: `27`, `total = 112`, `expected_after_backfill = 85`.
+## What's already in place
 
----
+The single‑document path (`deliver-governance-document`) already produces this exact structure for docx, xlsx and pptx, *provided* the tenant has been mapped through **Admin → SharePoint Folder Mapping**, which writes:
 
-## Migration body (single transaction)
+- `tenant_sharepoint_settings.governance_drive_id`
+- `tenant_sharepoint_settings.governance_folder_item_id` → `Governance/{RTOID} - {Legal Name}` (or `Governance/KS-{Legal Name}`)
 
-### Step 1 — Replace `fn_tm_on_message_insert`
+DB spot check confirms current usage:
 
-`CREATE OR REPLACE FUNCTION public.fn_tm_on_message_insert()` — identical to current body except the participant loop becomes:
+| tenant_id | root_name |
+|---|---|
+| 44 | `41053 - Optimistic Futures Pty Ltd` |
+| 7545 | `KS-Mariano Carlota` |
+| 7546 | `RTO Test Tenant C` |
 
-```sql
-FOR _participant IN
-  SELECT cp.user_id
-    FROM public.conversation_participants cp
-    JOIN public.tenant_users tu
-      ON tu.user_id = cp.user_id
-     AND tu.tenant_id = _tenant_id
-   WHERE cp.conversation_id = NEW.conversation_id
-     AND cp.user_id <> NEW.sender_user_uuid
-     AND COALESCE(tu.access_scope, '') <> 'academy_only'
-LOOP
-  INSERT INTO public.user_notifications
-    (user_id, tenant_id, type, title, message, link,
-     source_id, is_read, created_by, dedupe_key)
-  VALUES (
-    _participant.user_id, _tenant_id, 'message',
-    coalesce(_conv_subject, 'New message'),
-    left(NEW.body, 200),
-    '/client/inbox?tab=messages&conversation=' || NEW.conversation_id::text,
-    NEW.conversation_id::text,
-    false,
-    NEW.sender_user_uuid,
-    'tm:' || NEW.id::text || ':' || _participant.user_id::text
-  )
-  ON CONFLICT (dedupe_key) DO NOTHING;
-END LOOP;
+`deliver-governance-document` resolves framework + category subfolders under that item id and uploads with the correct content type per format.
+
+## What `bulk-generate-phase-documents` does today (the bug surface)
+
+- Treats every doc as Excel → silently corrupts `.docx` and `.pptx` files; forces `.xlsx` extension and `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` content type on everything.
+- Uploads to bucket `package-documents/generated/{tenant_id}/{doc_id}/…` — never touches SharePoint, never honours the Client Governance path.
+- Ignores `documents.is_auto_generated` (single‑doc UI requires it).
+- Does not pre‑check for a mapped template document — every row is attempted.
+- `audit_events.entity_id` inserted as a numeric string but column is strict `uuid` → audit insert silently fails, so the 5‑minute rate limit never trips.
+- `generated_documents.stage_id = undefined`.
+- Hook discards per‑row `results[]`; toast is always green.
+
+## Plan
+
+### 1. Re-route the bulk loop through `deliver-governance-document`
+
+In `supabase/functions/bulk-generate-phase-documents/index.ts`:
+
+- Keep auth, input schema, and rate‑limit guard.
+- For each eligible `document_instance`, look up the latest `published` `document_versions.id` for the underlying `document_id`, then `await` an internal call to `deliver-governance-document` with `{ tenant_id, document_version_id, allow_incomplete: true, force: (mode === 'overwrite_all') }` — the same call the single-doc UI makes at `StageDocumentsSection.tsx:123`.
+- Aggregate per‑row outcomes into `results[]`.
+
+This automatically gives bulk runs the correct Client Governance placement for **docx, xlsx and pptx**, the same merge-field engines, the same `resourceLocked` retry, the same `governance_document_deliveries` audit row, and the same `tenant_activity` event.
+
+### 2. Pre-flight check
+
+Before the loop, verify the tenant has `governance_drive_id` + `governance_folder_item_id` configured. If not, return `400 GOVERNANCE_FOLDER_MISSING` pointing the user to **Admin → SharePoint Folder Mapping** (same wording as the single-doc path). Nothing is generated.
+
+### 3. Eligibility filter with stable reason codes
+
+Pre-filter `document_instances` and tag each with a reason **before** any work runs. Every row appears in `results[]`:
+
+| Reason | Meaning |
+|---|---|
+| `unsupported_format` | `documents.format` not in `{docx, xlsx, xls, xlsm, pptx}` |
+| `no_template` | `documents.uploaded_files` empty / null — **counted as `skipped`, never attempted** |
+| `not_auto_generated` | `documents.is_auto_generated = false` |
+| `already_generated` | `mode='pending_only'` and `document_instances.isgenerated = true` |
+| `tailoring_incomplete` | propagated from `deliver-governance-document` (only if a future caller flips `allow_incomplete=false`) |
+| `locked` | propagated from Graph `resourceLocked` after retries |
+| `delivery_failed` | any other Graph/edge failure, with the underlying message |
+
+Counters:
+
+```
+total      = eligible + ineligible
+generated  = results where status='generated'
+skipped    = results where status='skipped'   (no_template, already_generated, not_auto_generated, unsupported_format)
+failed     = results where status='failed'    (locked, delivery_failed, tailoring_incomplete)
 ```
 
-Preserved: `SECURITY DEFINER`, `SET search_path = public`, surrounding `BEGIN…EXCEPTION WHEN OTHERS … RAISE WARNING` block, the `tenant_conversations` UPDATE, the early `RETURN NEW` when `_tenant_id IS NULL`.
+### 4. Surface per-row outcomes in the UI
 
-### Step 2 — Replace `fn_notify_conversation_participants`
+In `useBulkGeneration.ts` and `StageDocumentsSection.tsx`:
 
-`CREATE OR REPLACE FUNCTION public.fn_notify_conversation_participants()` — identical body except participant loop:
+- Return `results[]` from the hook (currently discarded).
+- Badge each document row with `generated / skipped / failed` plus the reason ("No template", "Tailoring incomplete", "Locked in SharePoint", etc.).
+- Replace the always-green "Bulk Generation Complete" toast with one that names the dominant outcome when `generated === 0` (e.g. "Nothing generated — 3 skipped (no template), 1 failed").
 
-```sql
-FOR _participant IN
-  SELECT cp.user_id
-    FROM public.conversation_participants cp
-    JOIN public.tenant_users tu
-      ON tu.user_id = cp.user_id
-     AND tu.tenant_id = _tenant_id
-   WHERE cp.conversation_id = NEW.conversation_id
-     AND cp.user_id <> NEW.sender_id
-     AND COALESCE(tu.access_scope, '') <> 'academy_only'
-LOOP
-  INSERT INTO public.user_notifications
-    (user_id, tenant_id, type, title, message, link, is_read, created_by, created_at)
-  VALUES (
-    _participant.user_id, _tenant_id, 'message',
-    COALESCE(_conv_subject, 'New message'),
-    LEFT(NEW.body, 200),
-    '/client/communications',
-    false, NEW.sender_id, now()
-  );
-END LOOP;
-```
+### 5. Fix the silent failures
 
-Preserved: `SECURITY DEFINER`, `SET search_path = public`, the `tenant_conversations` lookup. Note this legacy path uses `NEW.sender_id` (column on `messages`), not `sender_user_uuid`.
+- Stop inserting raw numeric strings into `audit_events.entity_id` (column is strict `uuid` per project standard). Either omit it or use a uuid for the run. This makes the existing rate limit work.
+- Drop the now-dead `generated_documents` insert from this function — `governance_document_deliveries` is the canonical governance audit table and `deliver-governance-document` already writes it.
 
-### Step 3 — Backfill delete
+### 6. Long-run safety (deferred)
 
-```sql
-DELETE FROM public.user_notifications n
-USING public.tenant_users tu
-WHERE n.type = 'message'
-  AND tu.user_id = n.user_id
-  AND tu.tenant_id = n.tenant_id
-  AND tu.access_scope = 'academy_only';
-```
+For stages with hundreds of eligible docs, return `202 Accepted` + a `bulk_run_id` and run under `EdgeRuntime.waitUntil`, with the UI polling `governance_document_deliveries` for that run. Defer until a real stage exceeds the timeout.
 
-Expected: 27 rows deleted, atomic with the function replacements.
+## What is NOT changing
 
----
+- `buildClientFolderName` (the `{RTOID} - {Legal Name}` / `KS-{Legal Name}` rule) — provisioning already produces the correct folder name and `governance_folder_item_id` already points at it.
+- `deliver-governance-document` — used as is for docx, xlsx and pptx.
+- RLS, FKs, schema — no migration required.
 
-## Post-deploy verification
+## Files touched
 
-```sql
--- 1. Zero contaminated rows remain
-SELECT count(*) AS should_be_zero
-FROM public.user_notifications n
-JOIN public.tenant_users tu
-  ON tu.user_id = n.user_id AND tu.tenant_id = n.tenant_id
-WHERE n.type = 'message' AND tu.access_scope = 'academy_only';
--- expect: 0
+- `supabase/functions/bulk-generate-phase-documents/index.ts` — replace inner Excel loop with per-doc `deliver-governance-document` invocation; add `no_template` + `unsupported_format` (incl. pptx allow-list) pre-filter; remove `processExcelTemplate`; fix audit insert.
+- `src/hooks/useBulkGeneration.ts` — return `results[]`; honest toast.
+- `src/components/client/StageDocumentsSection.tsx` — render per-row outcomes from `results[]`.
 
--- 2. Non-academy message notifications untouched
-SELECT count(*) AS non_academy_message_notifs
-FROM public.user_notifications WHERE type = 'message';
--- expect: 85 (was 112 - 27)
+## Verification
 
--- 3. Functions show the new join + filter
-SELECT proname, pg_get_functiondef(oid) ILIKE '%access_scope%' AS has_filter
-FROM pg_proc
-WHERE proname IN ('fn_tm_on_message_insert', 'fn_notify_conversation_participants');
--- expect: both has_filter = true
+On stage instance `24229` (tenant `6372`, package `15088`):
 
--- 4. Triggers still attached and enabled
-SELECT tgname, tgrelid::regclass, tgenabled
-FROM pg_trigger
-WHERE tgname IN ('trg_tm_on_message_insert','trg_notify_conversation_participants');
--- expect: both tgenabled = 'O'
+- Click **Generate All**. Expect:
+  - 3 docs badged `Skipped: no template` (the three with empty `uploaded_files`), counted in `skipped`, never touched.
+  - `Q2.D1-Student Handbook` (.docx) delivered to **Client Governance → Documents → Governance → {tenant folder} → RTO → {Category label} →** `Q2.D1-Student Handbook_…_v{n}.docx`.
+  - One `governance_document_deliveries` row with `status='delivered'`.
+  - One `audit_events` row with a valid uuid entity id.
+  - Re-clicking within 5 minutes returns `429`.
+- Pick a stage that includes a `.pptx` template → confirm the file lands in the same `{Framework}/{Category}` folder with `.pptx` extension and merge fields populated in the slides.
+- Pick a non-RTO tenant with an active KickStart → confirm placement under `Client Governance/Documents/Governance/KS-{Legal Name}/…`.
 
--- 5. Spot-check non-academy delivery still works:
---    pick an active conversation with a non-academy participant and confirm
---    the most recent tenant_messages insert created a matching user_notifications row
-SELECT tm.id AS message_id, cp.user_id AS participant,
-       tu.access_scope,
-       EXISTS (
-         SELECT 1 FROM public.user_notifications n
-         WHERE n.dedupe_key = 'tm:' || tm.id::text || ':' || cp.user_id::text
-       ) AS notif_exists
-FROM public.tenant_messages tm
-JOIN public.conversation_participants cp ON cp.conversation_id = tm.conversation_id
-JOIN public.tenant_users tu ON tu.user_id = cp.user_id AND tu.tenant_id = tm.tenant_id
-WHERE cp.user_id <> tm.sender_user_uuid
-  AND tm.created_at > now() - interval '30 days'
-ORDER BY tm.created_at DESC
-LIMIT 20;
--- expect: notif_exists = true for non-academy rows; no academy_only rows present
-```
+## Risks
 
----
-
-## Risk & rollback
-
-- **Lock impact:** `CREATE OR REPLACE FUNCTION` only locks the catalog row for the function; no lock on `tenant_messages`, `messages`, `conversation_participants`, or `user_notifications`. Backfill DELETE touches 27 rows on `user_notifications` — negligible.
-- **RLS / FKs:** untouched. No policy, constraint, or schema change.
-- **Forward compat:** new participants who are academy-only will simply be skipped from the loop — no error path, idempotent `ON CONFLICT (dedupe_key) DO NOTHING` retained on Step 1.
-- **Rollback:** revert the migration by re-applying the original two `CREATE OR REPLACE FUNCTION` bodies (recoverable from git history of this migration's diff, or from `pg_proc` snapshot we captured during audit). The 27-row DELETE is not reversible without a backup; user has approved this loss.
-
----
-
-## Summary of changes
-
-1. `fn_tm_on_message_insert` — adds `JOIN tenant_users` + `access_scope <> 'academy_only'` filter.
-2. `fn_notify_conversation_participants` — same filter applied to the legacy/dormant path.
-3. One-time DELETE removes 27 historical contaminated rows.
-
-**Benefits:** Academy-only users can no longer accumulate or receive realtime fan-out for client portal `type='message'` notifications. Closes the data-at-rest gap left by the prior client-side `useClientNotifications` short-circuit. No impact on any other notification type, edge function, or client-portal user.
+- Each delivery makes Graph calls; large bulk runs are slower but correct (mitigated by item 6).
+- If a tenant's `governance_folder_item_id` was mapped to the wrong place, files land at the wrong level — same risk as today's single-doc path. Item 2's pre-flight catches the missing case.
+- No RLS, FK, or schema changes.
