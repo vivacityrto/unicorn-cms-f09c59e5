@@ -296,9 +296,9 @@ export default function RulesMatrixTab() {
                       }`}
                     >
                       <div className="font-medium text-sm text-foreground">{course.title}</div>
-                      {course.target_audience && (
+                      {course.target_audience && course.target_audience.length > 0 && (
                         <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
-                          {course.target_audience}
+                          {course.target_audience.join(", ")}
                         </div>
                       )}
                     </td>
