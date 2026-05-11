@@ -6341,6 +6341,36 @@ export type Database = {
           },
         ]
       }
+      audit_user_events: {
+        Row: {
+          action: string
+          actor_user_uuid: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          reason: string | null
+          target_user_uuid: string
+        }
+        Insert: {
+          action: string
+          actor_user_uuid?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          reason?: string | null
+          target_user_uuid: string
+        }
+        Update: {
+          action?: string
+          actor_user_uuid?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          reason?: string | null
+          target_user_uuid?: string
+        }
+        Relationships: []
+      }
       auth_tokens: {
         Row: {
           created_at: string
@@ -62180,6 +62210,17 @@ export type Database = {
       }
       user_in_tenant: { Args: { p_tenant_id: number }; Returns: boolean }
       user_in_tenant_uuid: { Args: { p_tenant_uuid: string }; Returns: boolean }
+      user_protected_fields_unchanged_safe: {
+        Args: {
+          p_new_global_role: string
+          p_new_is_vivacity_internal: boolean
+          p_new_superadmin_level: string
+          p_new_tenant_id: number
+          p_new_unicorn_role: Database["public"]["Enums"]["unicorn_role"]
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       uuid_from_text: { Args: { p_text: string }; Returns: string }
       validate_document_readiness: {
         Args: { p_document_id: number; p_tenant_id?: number }
