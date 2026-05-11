@@ -14,6 +14,8 @@ interface BulkGenerateParams {
   stageInstanceId: number;
   packageId?: number;
   mode?: 'all' | 'pending_only' | 'overwrite_all';
+  /** Suppress the "Nothing generated" toast so the caller can prompt instead. */
+  silentEmpty?: boolean;
 }
 
 export type BulkResultReason =
