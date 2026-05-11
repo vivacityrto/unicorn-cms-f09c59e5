@@ -11,12 +11,18 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock,
+  Plus, Search, GraduationCap, BookOpen, Video, Award, Clock, RefreshCw, Loader2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -39,6 +45,9 @@ export default function AcademyBuilderLibrary() {
   const [search, setSearch] = useState("");
   const [newCourseOpen, setNewCourseOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  const [backfillConfirmOpen, setBackfillConfirmOpen] = useState(false);
+  const [backfillRunning, setBackfillRunning] = useState(false);
+  const qc = useQueryClient();
 
   const { data: courses = [], isLoading } = useAdminAcademyCourses({
     status: statusFilter,
@@ -46,6 +55,41 @@ export default function AcademyBuilderLibrary() {
   });
 
   const createCourse = useCreateCourse();
+
+  const runBackfill = async () => {
+    setBackfillRunning(true);
+    const tId = toast.loading("Backfilling video durations from Vimeo…");
+    try {
+      const { data, error } = await supabase.functions.invoke("backfill-vimeo-durations", {
+        body: { batchSize: 200 },
+      });
+      if (error) throw error;
+      const updated = data?.updated ?? 0;
+      const skipped = data?.skipped ?? 0;
+      const errors = data?.errors ?? 0;
+      const remaining = data?.remaining_null ?? 0;
+      toast.dismiss(tId);
+      if (remaining > 0) {
+        toast.success(`Updated ${updated}, skipped ${skipped}, errors ${errors}. Remaining: ${remaining}.`, {
+          action: {
+            label: "Run again",
+            onClick: () => { void runBackfill(); },
+          },
+          duration: 10000,
+        });
+      } else {
+        toast.success(`Updated ${updated}, skipped ${skipped}, errors ${errors}. All videos have durations.`);
+      }
+      qc.invalidateQueries({ queryKey: ["video-library"] });
+      qc.invalidateQueries({ queryKey: ["training-videos-picker"] });
+      qc.invalidateQueries({ queryKey: ["academy-course-total-minutes"] });
+    } catch (e: any) {
+      toast.dismiss(tId);
+      toast.error(e?.message || "Backfill failed");
+    } finally {
+      setBackfillRunning(false);
+    }
+  };
 
   const handleCreateCourse = async () => {
     if (!newTitle.trim()) return;
@@ -88,9 +132,23 @@ export default function AcademyBuilderLibrary() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Create and manage training courses for Vivacity Academy</p>
         </div>
-        <Button onClick={() => setNewCourseOpen(true)} className="text-white hover:opacity-90" style={{ backgroundColor: "#23c0dd" }}>
-          <Plus className="h-4 w-4 mr-2" /> New Course
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setBackfillConfirmOpen(true)}
+            disabled={backfillRunning}
+          >
+            {backfillRunning ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Backfill Video Durations
+          </Button>
+          <Button onClick={() => setNewCourseOpen(true)} className="text-white hover:opacity-90" style={{ backgroundColor: "#23c0dd" }}>
+            <Plus className="h-4 w-4 mr-2" /> New Course
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -206,6 +264,22 @@ export default function AcademyBuilderLibrary() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Backfill Confirmation */}
+      <AlertDialog open={backfillConfirmOpen} onOpenChange={setBackfillConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Backfill Video Durations from Vimeo</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will fetch durations from Vimeo for all videos missing duration data. It runs in batches and can be re-clicked safely. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { void runBackfill(); }}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </DashboardLayout>
   );

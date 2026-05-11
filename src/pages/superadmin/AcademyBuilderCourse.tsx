@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { useParams, useNavigate, useBlocker } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useModulesWithLessons, useCreateModule, useUpdateModule, useDeleteModule, useReorderModules, useCreateLesson, useUpdateLesson, useDeleteLesson, useReorderLessons, type AcademyModule, type AcademyLesson } from "@/hooks/academy/useAcademyModulesLessons";
@@ -69,6 +69,21 @@ export default function AcademyBuilderCourse() {
         .single();
       if (error) throw error;
       return data;
+    },
+  });
+
+  // Auto-calculated lesson minutes total (from v_academy_course_total_minutes)
+  const { data: courseTotals } = useQuery({
+    queryKey: ["academy-course-total-minutes", courseId],
+    enabled: !!courseId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("v_academy_course_total_minutes")
+        .select("total_lesson_minutes, lesson_count, video_lesson_count")
+        .eq("course_id", courseId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { total_lesson_minutes: number | null; lesson_count: number | null; video_lesson_count: number | null } | null;
     },
   });
 
@@ -166,12 +181,8 @@ export default function AcademyBuilderCourse() {
     saveCourseSettings.mutate(formState);
   };
 
-  // Unsaved-changes guard (in-app navigation)
-  useBlocker(({ currentLocation, nextLocation }) =>
-    isDirty && currentLocation.pathname !== nextLocation.pathname
-      ? !window.confirm("You have unsaved changes. Leave anyway?")
-      : false
-  );
+  // Note: in-app navigation guard via useBlocker requires a data router; this app uses BrowserRouter.
+  // The beforeunload handler below covers tab close / reload.
 
   // Unsaved-changes guard (browser tab close / reload)
   useEffect(() => {
@@ -374,7 +385,45 @@ export default function AcademyBuilderCourse() {
                   value={formState.estimated_minutes ?? ""}
                   onChange={(e) => setFormState((p) => ({ ...p, estimated_minutes: e.target.value ? parseInt(e.target.value) : null }))}
                 />
+                {(() => {
+                  const total = courseTotals?.total_lesson_minutes ?? 0;
+                  const lessonCount = courseTotals?.lesson_count ?? 0;
+                  const videoLessonCount = courseTotals?.video_lesson_count ?? 0;
+                  if (lessonCount === 0) {
+                    return (
+                      <p className="text-[11px] text-muted-foreground mt-1.5">
+                        Add modules and lessons to see an auto-calculated total.
+                      </p>
+                    );
+                  }
+                  if (total === 0) {
+                    return (
+                      <p className="text-[11px] text-muted-foreground mt-1.5">
+                        Lessons have no durations yet. Run "Backfill Video Durations" from the Academy Builder library, or set lesson minutes manually.
+                      </p>
+                    );
+                  }
+                  const matches = formState.estimated_minutes === total;
+                  return (
+                    <p className="text-[11px] text-muted-foreground mt-1.5">
+                      Auto-calculated from lessons: <span className="font-medium text-foreground">{total} min</span> ({lessonCount} lesson{lessonCount === 1 ? "" : "s"}, {videoLessonCount} with video).
+                      {!matches && (
+                        <>
+                          {" "}
+                          <button
+                            type="button"
+                            className="text-primary hover:underline font-medium"
+                            onClick={() => setFormState((p) => ({ ...p, estimated_minutes: total }))}
+                          >
+                            Use this value
+                          </button>
+                        </>
+                      )}
+                    </p>
+                  );
+                })()}
               </Field>
+
 
               <Field label="Sub-categories (Tags)">
                 <TagChipInput
