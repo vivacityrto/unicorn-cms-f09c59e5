@@ -264,6 +264,22 @@ export default function AcademyBuilderLibrary() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Backfill Confirmation */}
+      <AlertDialog open={backfillConfirmOpen} onOpenChange={setBackfillConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Backfill Video Durations from Vimeo</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will fetch durations from Vimeo for all videos missing duration data. It runs in batches and can be re-clicked safely. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { void runBackfill(); }}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </DashboardLayout>
   );
