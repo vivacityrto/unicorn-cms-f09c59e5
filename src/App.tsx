@@ -194,6 +194,7 @@ const AcademyCommunity = lazy(() => import("./pages/academy/AcademyCommunity"));
 const AcademyTeam = lazy(() => import("./pages/academy/AcademyTeam"));
 const AcademySettings = lazy(() => import("./pages/academy/AcademySettings"));
 const AcademyPdpPage = lazy(() => import("./pages/academy/pdp"));
+const AcademyPdpCyclePage = lazy(() => import("./pages/academy/pdp/cycle/[cycleId]"));
 
 // Client Preview pages
 const ClientPreview = lazy(() => import("./pages/ClientPreview"));
@@ -1086,6 +1087,7 @@ const App = () => (
             <Route path="/academy/team" element={<ProtectedRoute><AcademyTeam /></ProtectedRoute>} />
             <Route path="/academy/settings" element={<ProtectedRoute><AcademySettings /></ProtectedRoute>} />
             <Route path="/academy/pdp" element={<ProtectedRoute><AcademyPdpPage /></ProtectedRoute>} />
+            <Route path="/academy/pdp/cycle/:cycleId" element={<ProtectedRoute><AcademyPdpCyclePage /></ProtectedRoute>} />
             {/* Client Preview Routes */}
             <Route path="/client-preview" element={<ProtectedRoute><ClientPreview /></ProtectedRoute>} />
             
