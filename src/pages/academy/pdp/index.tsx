@@ -34,6 +34,8 @@ export default function AcademyPdpPage() {
   const { data: currency } = useUserCurrency(userId);
   const { data: audiences } = useAudiences();
   const audience = audiences?.find((a) => a.code === cycle?.audience_code) ?? null;
+  const { data: unattached } = useUnattachedReflections(userId);
+  const unattachedCount = unattached?.count ?? 0;
 
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
