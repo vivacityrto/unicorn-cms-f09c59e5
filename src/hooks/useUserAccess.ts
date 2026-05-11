@@ -20,7 +20,7 @@ export type UserAccessFlags = {
  * the router checks isVivacityStaff first.
  */
 export function useUserAccess(): UserAccessFlags {
-  const { user, isSuperAdmin, loading: authLoading } = useAuth();
+  const { user, profile, isSuperAdmin, loading: authLoading } = useAuth();
   const { isVivacityTeam } = useRBAC();
   const userId = user?.id ?? null;
 
