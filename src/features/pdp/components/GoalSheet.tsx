@@ -135,7 +135,7 @@ export function GoalSheet({ open, onOpenChange, cycleId, goal }: GoalSheetProps)
 
     upsert.mutate(payload, {
       onSuccess: () => {
-        // toast handled inside hook? hook only toasts on error — explicit success here
+        toast.success(isEdit ? "Goal updated" : "Goal created");
         onOpenChange(false);
       },
     });
