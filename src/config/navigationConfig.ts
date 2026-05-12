@@ -15,7 +15,7 @@ import {
   HelpCircle,
   ExternalLink,
   Database,
-  Target,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,6 +25,7 @@ export interface MenuItem {
   label: string;
   path: string;
   external?: boolean;
+  activeColor?: string;
 }
 
 // Section interface
@@ -111,10 +112,10 @@ export const academyMenuSections: MenuSection[] = [
     items: [
       { icon: LayoutDashboard, label: "Academy Dashboard", path: "/academy" },
       { icon: BookOpen, label: "My Courses", path: "/academy/courses" },
+      { icon: ClipboardList, label: "My PDP", path: "/academy/pdp", activeColor: "#44235F" },
       { icon: Award, label: "Certificates", path: "/academy/certificates" },
       { icon: Calendar, label: "Events", path: "/academy/events" },
       { icon: MessageSquare, label: "Community", path: "/academy/community" },
-      { icon: Target, label: "My PDP", path: "/academy/pdp" },
     ],
   },
   {
