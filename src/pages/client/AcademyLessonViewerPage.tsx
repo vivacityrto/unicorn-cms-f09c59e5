@@ -432,18 +432,48 @@ export default function AcademyLessonViewerPage() {
   useEffect(() => {
     if (courseLoading || lessonLoading) return;
     if (!course || !lesson) return;
+    if (isPreview) return;
+    if (actingUserLoading) return;
+    if (!actingUserId) return; // wait for acting user; if still null after load, treat as unauth elsewhere
+    if (enrollmentRawLoading || enrollmentRawFetching) return;
     if (isRevoked) {
       toast.error("Your access to this course has been revoked.");
       navigate(`/academy/course/${slug}`, { replace: true });
       return;
     }
-    if (isPreview) return;
+    if (enrollmentLoading || enrollmentFetching) return;
     if (isEnrolled) return;
     toast.error("Please enrol in this course to access this lesson.");
     navigate(`/academy/course/${slug}`, { replace: true });
-  }, [courseLoading, lessonLoading, course, lesson, isPreview, isEnrolled, isRevoked, slug, navigate]);
+  }, [
+    courseLoading,
+    lessonLoading,
+    course,
+    lesson,
+    isPreview,
+    isEnrolled,
+    isRevoked,
+    actingUserLoading,
+    actingUserId,
+    enrollmentLoading,
+    enrollmentFetching,
+    enrollmentRawLoading,
+    enrollmentRawFetching,
+    slug,
+    navigate,
+  ]);
 
-  if (courseLoading || lessonLoading) {
+  const gatingInProgress =
+    !!course &&
+    !!lesson &&
+    !isPreview &&
+    (actingUserLoading ||
+      enrollmentLoading ||
+      enrollmentFetching ||
+      enrollmentRawLoading ||
+      enrollmentRawFetching);
+
+  if (courseLoading || lessonLoading || gatingInProgress) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-6 w-48" />
