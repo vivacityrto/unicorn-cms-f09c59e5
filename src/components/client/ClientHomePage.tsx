@@ -27,6 +27,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useOpenDocumentRequest } from "@/components/layout/ClientLayout";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
+import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientHomeHero } from "@/hooks/use-client-home-hero";
 import { useClientProgress, type ClientProgress } from "@/hooks/useClientProgress";
