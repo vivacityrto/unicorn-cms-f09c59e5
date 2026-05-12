@@ -62,8 +62,6 @@ import {
   type RelationshipRole,
   RELATIONSHIP_ROLE_OPTIONS,
   relationshipRoleLabel,
-  unicornRoleFromRelationship,
-  userTypeFromRelationship,
   legacyTenantUserPatch,
   isUniqueViolation,
 } from '@/lib/roles/relationshipRole';
