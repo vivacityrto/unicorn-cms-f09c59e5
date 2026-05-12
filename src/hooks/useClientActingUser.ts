@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
+import { useClientPreview } from "@/contexts/ClientPreviewContext";
 
 export interface ActingUserProfile {
   user_uuid: string;
@@ -23,12 +24,15 @@ interface UseClientActingUserResult {
 
 /**
  * Resolves the "acting user" for the client portal.
- * - In impersonation mode: resolves the parent/primary contact user for the tenant.
+ * - In impersonation/preview mode: ClientPreviewContext.actingUserId is the
+ *   single source of truth. We never fall back to tenant_users / tenant_members,
+ *   which previously selected unactivated "ghost" users.
  * - In real client session: returns the authenticated user's profile.
  */
 export function useClientActingUser(): UseClientActingUserResult {
-  const { profile, user } = useAuth();
+  const { profile } = useAuth();
   const { activeTenantId, isPreview } = useClientTenant();
+  const { actingUserId, actingUserOptions } = useClientPreview();
   const [actingUser, setActingUser] = useState<ActingUserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isParentResolved, setIsParentResolved] = useState(false);
@@ -36,6 +40,9 @@ export function useClientActingUser(): UseClientActingUserResult {
 
   useEffect(() => {
     if (!activeTenantId) {
+      setActingUser(null);
+      setIsParentResolved(false);
+      setError(null);
       setIsLoading(false);
       return;
     }
@@ -54,96 +61,71 @@ export function useClientActingUser(): UseClientActingUserResult {
           avatar_url: profile.avatar_url,
         });
         setIsParentResolved(true);
+        setError(null);
       }
       setIsLoading(false);
       return;
     }
 
-    // Impersonation mode — resolve parent account for tenant
-    resolveParentUser(activeTenantId);
-  }, [activeTenantId, isPreview, profile]);
+    // Preview mode — only ClientPreviewContext.actingUserId is authoritative.
+    if (!actingUserId) {
+      setActingUser(null);
+      setIsParentResolved(false);
+      setError("No activated users available for this tenant yet.");
+      setIsLoading(false);
+      return;
+    }
 
-  async function resolveParentUser(tenantId: number) {
+    // Defensive: if the stored acting user is no longer in the filtered
+    // options (e.g. revoked), refuse rather than silently falling back.
+    if (
+      actingUserOptions.length > 0 &&
+      !actingUserOptions.some((o) => o.user_uuid === actingUserId)
+    ) {
+      setActingUser(null);
+      setIsParentResolved(false);
+      setError("Selected preview user is no longer available.");
+      setIsLoading(false);
+      return;
+    }
+
+    loadActingUserProfile(actingUserId);
+  }, [activeTenantId, isPreview, profile, actingUserId, actingUserOptions]);
+
+  async function loadActingUserProfile(userUuid: string) {
     setIsLoading(true);
     setError(null);
-
     try {
-      // Strategy 1: Check tenant_users for relationship_role='primary_contact'
-      const { data: primaryContact } = await supabase
-        .from("tenant_users")
-        .select("user_id")
-        .eq("tenant_id", tenantId)
-        .eq("relationship_role", "primary_contact")
-        .limit(1)
-        .maybeSingle();
-
-      let parentUserId = primaryContact?.user_id;
-
-      // Strategy 2: Fall back to tenant_members with Admin role, oldest first
-      if (!parentUserId) {
-        const { data: adminMember } = await supabase
-          .from("tenant_members")
-          .select("user_id")
-          .eq("tenant_id", tenantId)
-          .eq("role", "Admin")
-          .eq("status", "active")
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-
-        parentUserId = adminMember?.user_id;
-      }
-
-      // Strategy 3: Fall back to any active tenant member, oldest first
-      if (!parentUserId) {
-        const { data: anyMember } = await supabase
-          .from("tenant_members")
-          .select("user_id")
-          .eq("tenant_id", tenantId)
-          .eq("status", "active")
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-
-        parentUserId = anyMember?.user_id;
-      }
-
-      if (!parentUserId) {
-        setError("No parent account configured for this tenant.");
-        setIsParentResolved(false);
-        setIsLoading(false);
-        return;
-      }
-
-      // Fetch parent user profile
-      const { data: parentProfile, error: profileError } = await supabase
+      const { data, error: profileError } = await supabase
         .from("users")
         .select("user_uuid, first_name, last_name, email, phone, mobile_phone, job_title, avatar_url")
-        .eq("user_uuid", parentUserId)
-        .single();
+        .eq("user_uuid", userUuid)
+        .maybeSingle();
 
-      if (profileError || !parentProfile) {
-        setError("Could not load parent account profile.");
+      if (profileError || !data) {
+        setActingUser(null);
         setIsParentResolved(false);
+        setError("Could not load preview user profile.");
         setIsLoading(false);
         return;
       }
 
       setActingUser({
-        user_uuid: parentProfile.user_uuid,
-        first_name: parentProfile.first_name,
-        last_name: parentProfile.last_name,
-        email: parentProfile.email,
-        phone: parentProfile.phone,
-        mobile_phone: parentProfile.mobile_phone,
-        job_title: parentProfile.job_title,
-        avatar_url: parentProfile.avatar_url,
+        user_uuid: data.user_uuid,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        mobile_phone: data.mobile_phone,
+        job_title: data.job_title,
+        avatar_url: data.avatar_url,
       });
       setIsParentResolved(true);
     } catch (err) {
-      console.error("[useClientActingUser] Error resolving parent:", err);
-      setError("Error resolving parent account.");
+      console.error("[useClientActingUser] Error loading acting user:", err);
+      setActingUser(null);
       setIsParentResolved(false);
+      setError("Error loading preview user profile.");
     } finally {
       setIsLoading(false);
     }
