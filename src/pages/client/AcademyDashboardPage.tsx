@@ -72,7 +72,7 @@ export default function AcademyDashboardPage() {
   const { data: myCoursesAll = [], isLoading: coursesLoading } = useMyEnrolledCourses();
   const { profile } = useAuth();
   const { isImpersonating } = useAcademyActingUserId();
-  const { actingUserId, actingUserOptions } = useClientPreview();
+  const { actingUserId, actingUserOptions, isPreviewMode } = useClientPreview();
   const myCourses = myCoursesAll
     .filter((c) => c.enrollment_status === "active")
     .slice(0, 3);
@@ -84,8 +84,9 @@ export default function AcademyDashboardPage() {
     impersonated?.full_name?.trim().split(/\s+/)[0] ??
     impersonated?.email?.split("@")[0] ??
     null;
-  // In preview mode without a valid acting user, do not leak staff identity.
-  const firstName = isImpersonating
+  // In preview mode (impersonating or not), never leak staff identity into
+  // the academy greeting. Show empty string when no valid acting user.
+  const firstName = isPreviewMode
     ? (impersonatedFirst ?? "").trim()
     : (profile?.first_name ?? "").trim();
 
