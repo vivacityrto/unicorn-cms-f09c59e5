@@ -87,6 +87,13 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
     if (stored && canUsePreview) {
       try {
         const s: StoredPreviewSession = JSON.parse(stored);
+        const opts = s.actingUserOptions ?? [];
+        // Defensive: if the stored acting user is no longer in the filtered
+        // options, clear it silently. Prevents stale/ghost identity on reload.
+        const validActingId =
+          s.actingUserId && opts.some((o) => o.user_uuid === s.actingUserId)
+            ? s.actingUserId
+            : null;
         setIsPreviewMode(true);
         setPreviewTenant({
           id: s.tenantId,
@@ -96,8 +103,14 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
         });
         setPreviewSessionId(s.sessionId);
         setPreviewReason(s.reason);
-        setActingUserIdState(s.actingUserId ?? null);
-        setActingUserOptions(s.actingUserOptions ?? []);
+        setActingUserIdState(validActingId);
+        setActingUserOptions(opts);
+        if (validActingId !== s.actingUserId) {
+          sessionStorage.setItem(
+            PREVIEW_SESSION_KEY,
+            JSON.stringify({ ...s, actingUserId: validActingId, actingUserOptions: opts })
+          );
+        }
       } catch (e) {
         console.error("Error restoring preview session:", e);
         sessionStorage.removeItem(PREVIEW_SESSION_KEY);
