@@ -34,7 +34,7 @@ export default function AcademyLessonViewerPage() {
   const { slug, lessonId } = useParams<{ slug: string; lessonId: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { userId: actingUserId } = useAcademyActingUserId();
+  const { userId: actingUserId, isLoading: actingUserLoading } = useAcademyActingUserId();
   const enrolCourseMutation = useEnrolCourse();
   const completeEnrollmentMutation = useCompleteEnrollment();
   const [sidebarOpen, setSidebarOpen] = useState(true);
