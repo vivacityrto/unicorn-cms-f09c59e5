@@ -39,8 +39,9 @@ export interface ConversationMessage {
  */
 export function useConversationRealtime(conversationId: string | null) {
   const qc = useQueryClient();
+  const { isAcademyOnly } = useClientTenant();
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || isAcademyOnly) return;
     const channel = supabase
       .channel(`conv-live:${conversationId}`)
       .on(
@@ -60,7 +61,7 @@ export function useConversationRealtime(conversationId: string | null) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, qc]);
+  }, [conversationId, qc, isAcademyOnly]);
 }
 
 export function useClientCommunications() {
