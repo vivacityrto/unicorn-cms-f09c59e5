@@ -1,52 +1,80 @@
-## Bug
-Academy-only users (`tenant_users.access_scope = 'academy_only'`) cannot read their own `public.tenants` row. The existing SELECT policy delegates to `app.user_can_access_tenant`, whose only non-staff branch requires `access_scope = 'full'`. `ClientTenantContext` therefore receives no row, `AcademyAccessGate` defaults `academyAccessEnabled` to `false`, and the inactive Academy screen is shown even when the tenant has Academy enabled.
+# Phase 3 — Code-only migration to `relationship_role`
 
-## Fix — one additive SELECT-only RLS policy on `public.tenants`
+Phases 1 (trigger) and 2 (data backfill) are live. The legacy boolean `primary_contact` is now a derived mirror of `relationship_role` (kept in sync by `sync_primary_contact_on_role`). Phase 3 rekeys remaining read paths to query the canonical column directly.
 
-```sql
-DROP POLICY IF EXISTS tenants_select_academy_only_users ON public.tenants;
+No DB migration. Code-only. Backward-compatible because the trigger guarantees the boolean and the role agree for every role-bearing row going forward; the 6 NULL-`relationship_role` legacy rows are intentionally not surfaced as contacts by either system.
 
-CREATE POLICY tenants_select_academy_only_users
-ON public.tenants
-FOR SELECT
-TO authenticated
-USING (
-  academy_access_enabled = true
-  AND EXISTS (
-    SELECT 1 FROM public.tenant_users tu
-    WHERE tu.tenant_id = tenants.id
-      AND tu.user_id = auth.uid()
-      AND tu.access_scope = 'academy_only'
-  )
-);
-```
+---
 
-`DROP POLICY IF EXISTS` followed by `CREATE POLICY` makes the migration idempotent — re-applying succeeds without duplicate-policy errors.
+## Files changed
 
-## Privilege containment (verified against live `pg_policy`)
+### 1. `supabase/functions/bulk-send-invitations/index.ts` (line 133)
+- Replace `.eq("primary_contact", true)` with `.eq("relationship_role", "primary_contact")`.
+- Comment on line 115 left as-is (it reads "primary_contact tenant_users row" which is still semantically correct). Skip-reason string `"no_primary_contact"` (line 157) left as-is — it is part of the response audit contract.
 
-`public.tenants` writes — academy-only users remain blocked:
-- `tenants_manage_superadmin` (ALL) gated by `is_super_admin_safe(auth.uid())`.
-- `tenants_update_staff_logo` (UPDATE) gated by `is_vivacity_team_safe(auth.uid())`.
-- The new policy is `FOR SELECT` only; Postgres evaluates write policies independently, so it cannot grant any write.
+### 2. `supabase/functions/send-email-graph/index.ts` (line 190)
+- Replace `.eq("primary_contact", true)` with `.eq("relationship_role", "primary_contact")`.
 
-`public.tenant_users` (manage-user routes) — unchanged:
-- INSERT/UPDATE/DELETE require `is_tenant_parent_safe(...) OR is_super_admin_safe(...)`. Academy-only members are not tenant parents.
+### 3. `supabase/functions/send-composed-email/index.ts` (line 85)
+- Replace `.eq("primary_contact", true)` with `.eq("relationship_role", "primary_contact")`.
 
-`public.users` — unchanged:
-- Writes restricted to vivacity team / SuperAdmin / own row, with `user_protected_fields_unchanged_safe` guarding role and tenant fields.
+### 4. `src/components/audit/workspace/SendPreliminarySummaryDialog.tsx` (line 77)
+- Replace `.eq('primary_contact', true)` with `.eq('relationship_role', 'primary_contact')`.
 
-No edits to `app.user_can_access_tenant`, so blast radius for every other tenant-scoped policy is preserved.
+### 5. `src/contexts/ClientTenantContext.tsx`
+- `TenantUserRow` (lines 6–11): drop `primary_contact` and `secondary_contact`; add  
+  `relationship_role: 'primary_contact' | 'secondary_contact' | 'user' | 'academy_user' | null;`
+- SELECT (line 182): `"tenant_id, access_scope, relationship_role"`.
+- `isContact` derivation (line 204):
+  ```ts
+  const isContact =
+    tenantUser.relationship_role === 'primary_contact' ||
+    tenantUser.relationship_role === 'secondary_contact';
+  ```
+- `canAccessClientPortal` and `canManagePortalUsers` keep the `fullScope && isContact` formula. `isAcademyOnly` unchanged.
 
-## Out of scope
-No changes to `AcademyAccessGate`, `ClientTenantContext`, `useTenantAcademyAccess`, the SuperAdmin Tenant Access page, enrolment logic, or the Academy toggle.
+### 6. `src/contexts/__tests__/ClientTenantContext.test.tsx`
+- Update `TURow` to `{ tenant_id; access_scope; relationship_role }`.
+- Rewrite the existing five test fixtures to use `relationship_role`.
+- Final test set covers all five gating states:
+  1. `relationship_role:'primary_contact'` + `access_scope:'full'` → portal=true, manage=true, academyOnly=false.
+  2. `relationship_role:'secondary_contact'` + `access_scope:'full'` → portal=true, manage=true, academyOnly=false.
+  3. `relationship_role:'user'` + `access_scope:'full'` → portal=false, manage=false, academyOnly=false (new case).
+  4. `relationship_role:'academy_user'` + `access_scope:'academy_only'` → portal=false, manage=false, academyOnly=true.
+  5. `relationship_role:null` + `access_scope:'full'` → all three false (defensive).
+- Keep the resilient-resolution and multi-row-defensiveness tests; only their fixtures change to `relationship_role`.
 
-## Verification
-1. Academy-only user on `academy_access_enabled = true` tenant → `/academy` loads.
-2. Academy-only user on `academy_access_enabled = false` tenant → still sees inactive Academy screen.
-3. Academy-only user `UPDATE public.tenants …` → denied.
-4. Academy-only user insert/update/delete on `public.tenant_users` → denied.
-5. Academy-only user cannot access client portal manage-user / admin tools.
-6. Full-access client user behaviour unchanged.
-7. SuperAdmin `/superadmin/academy/tenant-access` unchanged.
-8. Re-running the migration succeeds without duplicate-policy errors (DROP IF EXISTS + CREATE).
+---
+
+## Out of scope (explicitly not touched)
+
+- `src/hooks/use-client-tenant-users.ts` ordering.
+- `src/contexts/ClientPreviewContext.tsx` — already reads both fields and OR-s them; harmless.
+- `src/components/AdminInviteUserDialog.tsx` — already prefers `relationship_role` with legacy boolean fallback; the fallback is still useful for the 6 NULL rows.
+- `src/pages/ClientDetail.tsx` line 200 (`.eq('secondary_contact', true)`) — not in the user's list.
+- `supabase/functions/invite-user`, `cancel-invite`, `resend-invite`, `provision-m365-user` — they already write/check `relationship_role` correctly; the residual `primary_contact: …` writes feed the trigger and are part of the legacy mirror.
+- All RLS policies, FKs, partial unique indexes (`uniq_tenant_one_primary_contact`, `tenant_users_one_secondary`), `src/integrations/supabase/types.ts`, and any migration.
+
+---
+
+## Audit / risk review
+
+- **Behavioural parity:** Post-Phase-2, the only rows where the legacy boolean and the role disagree are the 6 `relationship_role IS NULL` rows. None of those rows would have been returned by the old boolean filters either (their `primary_contact` is `false`), so each rekey returns the same set. ✅
+- **Trigger interaction:** No write paths change here; no risk to `sync_primary_contact_on_role` or the unique partial indexes. ✅
+- **RLS:** All four edge functions run with the service-role client; the rekey is a column swap on equally-RLS-exempt queries. The frontend SELECT on `tenant_users` already runs under the user's session and the column is exposed by existing policies (`AdminInviteUserDialog` selects it). ✅
+- **FK constraints:** Untouched. ✅
+- **Type safety:** `tenant_users.relationship_role` is present in `src/integrations/supabase/types.ts`; no regenerate needed.
+- **Audit trail:** No data mutations. The `no_primary_contact` outcome string in `bulk-send-invitations` is preserved so the audit log stays comparable across runs.
+- **Backward compatibility:** Booleans remain populated by the trigger; any other consumer still on the legacy column keeps working.
+
+## Risk: Low
+
+- Single-line query changes in 4 server/client read sites + one context type/SELECT/derivation swap.
+- Test suite expanded to cover the new canonical states explicitly.
+- No deploy-order dependency (Phase 1 trigger already keeps booleans coherent if anything is rolled back).
+
+## Verification after implementation
+
+1. `vitest run src/contexts/__tests__/ClientTenantContext.test.tsx`.
+2. Type-check passes (auto by harness).
+3. Manual smoke: load client portal as primary contact, secondary contact, plain user, academy user — gating matches the matrix above.

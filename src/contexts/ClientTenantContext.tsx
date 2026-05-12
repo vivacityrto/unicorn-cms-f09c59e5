@@ -6,8 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 interface TenantUserRow {
   tenant_id: number;
   access_scope: string;
-  primary_contact: boolean | null;
-  secondary_contact: boolean;
+  relationship_role:
+    | 'primary_contact'
+    | 'secondary_contact'
+    | 'user'
+    | 'academy_user'
+    | null;
 }
 
 interface ClientTenantContextValue {
@@ -179,7 +183,7 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
     (async () => {
       const { data, error } = await supabase
         .from("tenant_users")
-        .select("tenant_id, access_scope, primary_contact, secondary_contact")
+        .select("tenant_id, access_scope, relationship_role")
         .eq("user_id", profile.user_uuid)
         .eq("tenant_id", activeTenantId)
         .maybeSingle();
@@ -201,7 +205,9 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
     if (!tenantUser) {
       return { canAccessClientPortal: false, canManagePortalUsers: false, isAcademyOnly: false };
     }
-    const isContact = tenantUser.primary_contact === true || tenantUser.secondary_contact === true;
+    const isContact =
+      tenantUser.relationship_role === 'primary_contact' ||
+      tenantUser.relationship_role === 'secondary_contact';
     const fullScope = tenantUser.access_scope === "full";
     return {
       // Backup-admin model: BOTH primary and secondary manage users.
