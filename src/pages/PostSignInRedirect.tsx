@@ -39,8 +39,14 @@ export default function PostSignInRedirect() {
 
     if (flags.isLoading) return;
 
+    const shouldLandInAcademy = flags.hasAcademyOnly && !flags.hasFullAccess;
+
     if (flags.isVivacityStaff) {
       navigate("/dashboard", { replace: true });
+      return;
+    }
+    if (shouldLandInAcademy) {
+      navigate("/academy", { replace: true });
       return;
     }
     if (flags.hasFullAccess) {
