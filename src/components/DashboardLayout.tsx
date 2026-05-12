@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -97,6 +97,9 @@ const administrationMenuItems = [
 
 // 6. ACADEMY BUILDER Section - Super Admin Only
 const academyBuilderMenuItems = [
+  { icon: ShieldCheck, label: "Tenant Access", path: "/superadmin/academy/tenant-access" },
+  { icon: Users, label: "Enrolments", path: "/superadmin/academy/enrollments" },
+  { icon: Award, label: "Certificates", path: "/superadmin/academy/certificates" },
   { icon: GraduationCap, label: "Academy Builder", path: "/superadmin/academy/builder" },
   { icon: GraduationCap, label: "Package → Course Rules", path: "/superadmin/academy/package-course-rules" },
 ];

@@ -1,38 +1,33 @@
-# Fix: Academy-only users land on /academy
+## Fix: Expose SuperAdmin Academy admin pages in sidebar
 
-## Problem
-`src/pages/PostSignInRedirect.tsx` checks `hasFullAccess` before `hasAcademyOnly`. Users with both flags (or any with `hasFullAccess` true) get sent to `/client/home` instead of `/academy`.
+**File:** `src/components/DashboardLayout.tsx` (only)
 
-## Change (single file)
-`src/pages/PostSignInRedirect.tsx` only.
+### Change 1 — Add `Award` to lucide-react imports (line 2)
 
-Add a derived boolean and reorder the routing branches inside the existing `useEffect`:
+`Shield`, `ShieldCheck`, and `Users` are already imported. `Award` is not — add it for the Certificates link.
+
+### Change 2 — Extend `academyBuilderMenuItems` (lines 99–102)
+
+Replace the current 2-item array with 5 items, in this order:
 
 ```ts
-const shouldLandInAcademy = flags.hasAcademyOnly && !flags.hasFullAccess;
-
-if (flags.isVivacityStaff) { navigate("/dashboard", { replace: true }); return; }
-if (shouldLandInAcademy)    { navigate("/academy",   { replace: true }); return; }
-if (flags.hasFullAccess)    { navigate("/client/home", { replace: true }); return; }
-if (flags.hasAcademyOnly)   { navigate("/academy",   { replace: true }); return; }
-// no-tenant fallback (keep existing fresh-toast behavior)
-if (fresh) toast.warning("Academy access only — contact support if you expected more.");
-navigate("/academy", { replace: true });
+const academyBuilderMenuItems = [
+  { icon: ShieldCheck, label: "Tenant Access", path: "/superadmin/academy/tenant-access" },
+  { icon: Users, label: "Enrolments", path: "/superadmin/academy/enrollments" },
+  { icon: Award, label: "Certificates", path: "/superadmin/academy/certificates" },
+  { icon: GraduationCap, label: "Academy Builder", path: "/superadmin/academy/builder" },
+  { icon: GraduationCap, label: "Package → Course Rules", path: "/superadmin/academy/package-course-rules" },
+];
 ```
 
-Keep:
-- 5s timeout fallback to `/academy`
-- `fresh` toast logic for no-tenant case
-- Effect dependency array
-- All other code untouched
+### Out of scope (untouched)
 
-## Out of scope
-- `useUserAccess`, `ClientTenantContext`, `ClientRouteGuard`
-- RLS, migrations, schema, tenant data
+- Route definitions in `src/App.tsx`
+- Route protection / SuperAdmin gating (the section is already SuperAdmin-only via existing render logic at line 506)
+- `AcademyAccessGate`, `ClientTenantContext`, RLS, DB logic, tenant access toggle behaviour
 
-## Verification
-- Academy-only user → `/academy`
-- Full-access primary/secondary contact → `/client/home`
-- Vivacity staff → `/dashboard`
-- Magic link + Microsoft login → same routing (all flow through `/post-sign-in`)
-- Direct visit to `/client/home` as academy-only → still hits existing `ClientRouteGuard` fallback
+### Verification
+
+- As SuperAdmin, sidebar Academy section lists: Tenant Access, Enrolments, Certificates, Academy Builder, Package → Course Rules
+- Tenant Access link navigates to `/superadmin/academy/tenant-access`
+- Existing Academy Builder and Package → Course Rules links still work
