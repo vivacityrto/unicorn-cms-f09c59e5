@@ -34,7 +34,7 @@ export default function AcademyLessonViewerPage() {
   const { slug, lessonId } = useParams<{ slug: string; lessonId: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { userId: actingUserId } = useAcademyActingUserId();
+  const { userId: actingUserId, isLoading: actingUserLoading } = useAcademyActingUserId();
   const enrolCourseMutation = useEnrolCourse();
   const completeEnrollmentMutation = useCompleteEnrollment();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -127,9 +127,13 @@ export default function AcademyLessonViewerPage() {
   });
 
   // Fetch enrollment summary (status / progress)
-  const { data: enrollment } = useQuery({
+  const {
+    data: enrollment,
+    isLoading: enrollmentLoading,
+    isFetching: enrollmentFetching,
+  } = useQuery({
     queryKey: ["academy-enrollment-detail", course?.id, actingUserId],
-    enabled: !!course?.id,
+    enabled: !!course?.id && !!actingUserId && !actingUserLoading,
     queryFn: async () => {
       if (!actingUserId || !course?.id) return null;
       const { data } = await supabase
@@ -143,9 +147,13 @@ export default function AcademyLessonViewerPage() {
   });
 
   // Fetch raw enrollment row for expires_at / revoked_at
-  const { data: enrollmentRaw } = useQuery({
+  const {
+    data: enrollmentRaw,
+    isLoading: enrollmentRawLoading,
+    isFetching: enrollmentRawFetching,
+  } = useQuery({
     queryKey: ["academy-enrollment-raw", course?.id, actingUserId],
-    enabled: !!course?.id,
+    enabled: !!course?.id && !!actingUserId && !actingUserLoading,
     queryFn: async () => {
       if (!actingUserId || !course?.id) return null;
       const { data } = await supabase
@@ -424,18 +432,48 @@ export default function AcademyLessonViewerPage() {
   useEffect(() => {
     if (courseLoading || lessonLoading) return;
     if (!course || !lesson) return;
+    if (isPreview) return;
+    if (actingUserLoading) return;
+    if (!actingUserId) return; // wait for acting user; if still null after load, treat as unauth elsewhere
+    if (enrollmentRawLoading || enrollmentRawFetching) return;
     if (isRevoked) {
       toast.error("Your access to this course has been revoked.");
       navigate(`/academy/course/${slug}`, { replace: true });
       return;
     }
-    if (isPreview) return;
+    if (enrollmentLoading || enrollmentFetching) return;
     if (isEnrolled) return;
     toast.error("Please enrol in this course to access this lesson.");
     navigate(`/academy/course/${slug}`, { replace: true });
-  }, [courseLoading, lessonLoading, course, lesson, isPreview, isEnrolled, isRevoked, slug, navigate]);
+  }, [
+    courseLoading,
+    lessonLoading,
+    course,
+    lesson,
+    isPreview,
+    isEnrolled,
+    isRevoked,
+    actingUserLoading,
+    actingUserId,
+    enrollmentLoading,
+    enrollmentFetching,
+    enrollmentRawLoading,
+    enrollmentRawFetching,
+    slug,
+    navigate,
+  ]);
 
-  if (courseLoading || lessonLoading) {
+  const gatingInProgress =
+    !!course &&
+    !!lesson &&
+    !isPreview &&
+    (actingUserLoading ||
+      enrollmentLoading ||
+      enrollmentFetching ||
+      enrollmentRawLoading ||
+      enrollmentRawFetching);
+
+  if (courseLoading || lessonLoading || gatingInProgress) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-6 w-48" />
