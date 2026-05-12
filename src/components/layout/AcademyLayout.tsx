@@ -11,6 +11,7 @@ import {
   Building2,
   HeartHandshake,
   ClipboardList,
+  Briefcase,
   Menu,
   X,
   Sparkles,
@@ -34,12 +35,13 @@ const academyPathwaysItems = [
   { icon: ShieldCheck, label: "Compliance Manager", path: "/academy/compliance-manager" },
   { icon: Building2, label: "Governance Person", path: "/academy/governance-person" },
   { icon: HeartHandshake, label: "Student Support Officer", path: "/academy/student-support-officer" },
-  { icon: ClipboardList, label: "Administration Assistant", path: "/academy/administration-assistant" },
+  { icon: Briefcase, label: "Administration Assistant", path: "/academy/administration-assistant" },
 ];
 
 const academyMainItems = [
   { icon: LayoutDashboard, label: "Academy Dashboard", path: "/academy" },
   { icon: BookOpen, label: "My Courses", path: "/academy/courses" },
+  { icon: ClipboardList, label: "My PDP", path: "/academy/pdp" },
   { icon: Award, label: "Certificates", path: "/academy/certificates" },
   { icon: Calendar, label: "Events", path: "/academy/events" },
   { icon: MessageSquare, label: "Community", path: "/academy/community" },
