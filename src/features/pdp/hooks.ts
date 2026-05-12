@@ -162,16 +162,19 @@ export function useStartAcademyCourseFromPdp(userId: string | null | undefined) 
   return useMutation<void, Error, number>({
     mutationFn: async (courseId) => {
       if (!userId) throw new Error("Not authenticated");
-      const { error } = await supabase.from("academy_enrollments").insert({
-        course_id: courseId,
-        user_id: userId,
-        source: "pdp_recommendation",
-        status: "active",
+      const { error } = await supabase.rpc("enrol_in_academy_course", {
+        p_course_id: courseId,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: [PDP_KEY, "recommended-courses"] });
+      qc.invalidateQueries({ queryKey: ["academy-my-enrolled-courses"] });
+      qc.invalidateQueries({ queryKey: ["academy-my-courses"] });
+      qc.invalidateQueries({ queryKey: ["academy-dashboard-stats"] });
+      qc.invalidateQueries({ queryKey: ["academy-courses"] });
+      qc.invalidateQueries({ queryKey: ["academy-enrollment-detail"] });
+      qc.invalidateQueries({ queryKey: ["academy-enrollment-raw"] });
       toast.success("Enrolled — go to My Courses to start");
     },
     onError: (err) => toast.error(err.message ?? "Failed to start course"),
