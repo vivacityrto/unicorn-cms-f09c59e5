@@ -1,30 +1,38 @@
-# Remove broken "Book consult" action from client package dashboard
+# Fix: Academy-only users land on /academy
 
 ## Problem
-`src/components/client/package-dashboard/PackageActionRow.tsx` renders a "Book consult" button linking to `/consults/new?package_instance_id=...`, which is not a registered client-portal route — secondary contacts (and anyone else) hit a 404. It also uses the default primary Button variant, so it looks active before being clicked.
+`src/pages/PostSignInRedirect.tsx` checks `hasFullAccess` before `hasAcademyOnly`. Users with both flags (or any with `hasFullAccess` true) get sent to `/client/home` instead of `/academy`.
 
 ## Change (single file)
-Edit `src/components/client/package-dashboard/PackageActionRow.tsx`:
+`src/pages/PostSignInRedirect.tsx` only.
 
-1. Remove the entire "Book consult" `<Button asChild size="sm">…</Button>` block, including the two `TODO(week1-routes)` comments tied to it.
-2. Remove the now-unused `CalendarPlus` import from `lucide-react`.
-3. Keep "Open tasks" exactly as-is (`/client/tasks?package_instance_id=${packageInstanceId}`, `variant="secondary"`, `ListChecks` icon).
-4. Keep "Message CSC" exactly as-is (`/client/inbox?tab=messages`, `variant="secondary"`, `MessageSquare` icon).
-5. Leave the wrapping `<div className="flex flex-wrap gap-2">` untouched — the two remaining buttons flow cleanly on desktop and mobile.
+Add a derived boolean and reorder the routing branches inside the existing `useEffect`:
 
-## Out of scope (explicitly not touched)
-- No new route, no redirect for `/consults/new`, no `App.tsx` changes.
-- No database, migration, RPC, RLS, or edge-function changes.
-- No changes to other "Book consult" entry points (e.g. `/client/calendar` links on the client home page).
-- No styling changes to unrelated buttons.
-- No changes to route guards or secondary-contact permissions.
+```ts
+const shouldLandInAcademy = flags.hasAcademyOnly && !flags.hasFullAccess;
+
+if (flags.isVivacityStaff) { navigate("/dashboard", { replace: true }); return; }
+if (shouldLandInAcademy)    { navigate("/academy",   { replace: true }); return; }
+if (flags.hasFullAccess)    { navigate("/client/home", { replace: true }); return; }
+if (flags.hasAcademyOnly)   { navigate("/academy",   { replace: true }); return; }
+// no-tenant fallback (keep existing fresh-toast behavior)
+if (fresh) toast.warning("Academy access only — contact support if you expected more.");
+navigate("/academy", { replace: true });
+```
+
+Keep:
+- 5s timeout fallback to `/academy`
+- `fresh` toast logic for no-tenant case
+- Effect dependency array
+- All other code untouched
+
+## Out of scope
+- `useUserAccess`, `ClientTenantContext`, `ClientRouteGuard`
+- RLS, migrations, schema, tenant data
 
 ## Verification
-- `/client/packages` renders the action row with only **Open tasks** and **Message CSC**.
-- Both remaining links navigate correctly.
-- No 404 reachable from the package action row.
-- Layout stays clean at the current 1124px viewport and on mobile (`flex-wrap` already handles narrow widths with two buttons).
-- Secondary contact, primary contact, and regular client users retain access to `/client/packages`.
-
-## Risk
-Minimal. Single presentational component, no consumers depend on the removed button, no behavioural or data changes.
+- Academy-only user → `/academy`
+- Full-access primary/secondary contact → `/client/home`
+- Vivacity staff → `/dashboard`
+- Magic link + Microsoft login → same routing (all flow through `/post-sign-in`)
+- Direct visit to `/client/home` as academy-only → still hits existing `ClientRouteGuard` fallback
