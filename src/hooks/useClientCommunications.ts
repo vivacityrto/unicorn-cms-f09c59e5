@@ -65,7 +65,7 @@ export function useConversationRealtime(conversationId: string | null) {
 }
 
 export function useClientCommunications() {
-  const { activeTenantId } = useClientTenant();
+  const { activeTenantId, isAcademyOnly } = useClientTenant();
   const qc = useQueryClient();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
