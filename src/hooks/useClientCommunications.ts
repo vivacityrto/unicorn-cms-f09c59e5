@@ -107,7 +107,7 @@ export function useClientCommunications() {
           : false,
       }));
     },
-    enabled: !!activeTenantId && !!currentUserId,
+    enabled: !!activeTenantId && !!currentUserId && !isAcademyOnly,
   });
 
   // Fetch messages for a specific conversation
