@@ -62213,6 +62213,16 @@ export type Database = {
         Args: { p_days?: number; p_tenant_id: number }
         Returns: Json
       }
+      list_acting_user_options: {
+        Args: { p_tenant_id: number }
+        Returns: {
+          email: string
+          full_name: string
+          is_default: boolean
+          relationship_role: string
+          user_uuid: string
+        }[]
+      }
       list_code_tables: {
         Args: never
         Returns: {

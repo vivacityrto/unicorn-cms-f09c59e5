@@ -57,38 +57,12 @@ interface StoredPreviewSession {
 
 async function loadActingUserOptions(tenantId: number): Promise<ActingUserOption[]> {
   const { data, error } = await supabase
-    .from("tenant_users")
-    .select(
-      "user_id, relationship_role, primary_contact, users:user_id ( user_uuid, first_name, last_name, email )"
-    )
-    .eq("tenant_id", tenantId);
+    .rpc("list_acting_user_options", { p_tenant_id: tenantId });
   if (error) {
-    console.error("Failed to fetch acting user options:", error);
+    console.error("Failed to fetch acting user options (RPC):", error);
     return [];
   }
-  const options: ActingUserOption[] = [];
-  for (const row of (data ?? []) as any[]) {
-    const u = row.users;
-    if (!u || !u.user_uuid) continue; // exclude null user_uuid
-    const fullName =
-      [u.first_name, u.last_name].filter(Boolean).join(" ").trim() ||
-      u.email ||
-      "Unnamed user";
-    options.push({
-      user_uuid: u.user_uuid as string,
-      full_name: fullName,
-      email: u.email ?? "",
-      relationship_role: row.relationship_role ?? "user",
-      is_default: row.primary_contact === true || row.relationship_role === "primary_contact",
-    });
-  }
-  // Sort: default first, then by name
-  options.sort((a, b) => {
-    if (a.is_default && !b.is_default) return -1;
-    if (!a.is_default && b.is_default) return 1;
-    return a.full_name.localeCompare(b.full_name);
-  });
-  return options;
+  return (data ?? []) as ActingUserOption[];
 }
 
 export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => {
