@@ -84,7 +84,10 @@ export default function AcademyDashboardPage() {
     impersonated?.full_name?.trim().split(/\s+/)[0] ??
     impersonated?.email?.split("@")[0] ??
     null;
-  const firstName = (impersonatedFirst ?? profile?.first_name ?? "").trim();
+  // In preview mode without a valid acting user, do not leak staff identity.
+  const firstName = isImpersonating
+    ? (impersonatedFirst ?? "").trim()
+    : (profile?.first_name ?? "").trim();
 
   const statCards = [
     { label: "Courses", value: stats?.courses ?? 0, icon: BookOpen, accent: "#7130A0" },
