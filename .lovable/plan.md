@@ -1,67 +1,73 @@
-# Fix false "Please enrol" redirect on Academy lesson viewer
+## Revised Migration Plan (v4)
 
-## Problem
+Single migration. All PL/pgSQL uses `v_`-prefixed locals. No writes to `tenant_users.updated_at` (column does not exist). Enum cast uses `public.tenant_user_role` (the live type — `relationship_role_enum` does not exist).
 
-`src/pages/client/AcademyLessonViewerPage.tsx` decides "not enrolled → redirect" using only `courseLoading` and `lessonLoading`. The acting user (`useAcademyActingUserId`) and the two enrollment queries (`academy-enrollment-detail`, `academy-enrollment-raw`) can still be in flight, leaving `enrollment` momentarily null. Result: actively enrolled users (e.g. `khianbsismundo@gmail.com` on TAS Superhero) can be bounced back with the "Please enrol…" toast.
+### Confirmed live schema
+- `tenant_users.user_id uuid`; columns include `role`, `primary_contact`, `access_scope`, `relationship_role public.tenant_user_role`.
+- `tenant_members.user_id uuid`; columns include `role`, `status`, `updated_at`.
+- `users.user_uuid uuid` (PK); columns include `unicorn_role` (enum, includes `Academy User`), `user_type` (`user_type_enum`), `updated_at`.
 
-## Fix scope
+### Authoritative mapping
 
-Single file: `src/pages/client/AcademyLessonViewerPage.tsx`. No DB, RLS, edge function, migration, or Vimeo changes.
+| relationship_role | tu.role | tu.primary_contact | tu.access_scope | u.unicorn_role | u.user_type | tm.role | tm.status |
+|---|---|---|---|---|---|---|---|
+| primary_contact | parent | true | full | Admin | Client Parent | Admin | active |
+| secondary_contact | parent | false | full | Admin | Client Parent | Admin | active |
+| user | child | false | full | User | Client Child | General User | active |
+| academy_user | child | false | academy_only | Academy User | Client Child | General User | inactive |
 
-## Changes
+### 1. RPC `set_relationship_role(p_tenant_id bigint, p_user_uuid uuid, p_relationship_role public.tenant_user_role, p_reason text default null)`
 
-1. **Capture loading state from `useAcademyActingUserId`**
-   ```ts
-   const { userId: actingUserId, isLoading: actingUserLoading } = useAcademyActingUserId();
-   ```
+`SECURITY DEFINER`, `SET search_path = 'public', 'pg_temp'`.
 
-2. **Capture loading/fetching from both enrollment queries** by destructuring `isLoading` and `isFetching` from each `useQuery` call:
-   - `academy-enrollment-detail` → `enrollmentLoading`, `enrollmentFetching`
-   - `academy-enrollment-raw` → `enrollmentRawLoading`, `enrollmentRawFetching`
+Auth: SuperAdmin / Vivacity team OR caller is tenant admin on `p_tenant_id` (`tenant_users.user_id = auth.uid()` AND `relationship_role IN ('primary_contact','secondary_contact')` AND `access_scope = 'full'`).
 
-   Also: their `enabled` currently only requires `course?.id`, which means they fire with `actingUserId == null` and resolve `null`. Tighten `enabled` to `!!course?.id && !!actingUserId && !actingUserLoading` so the queries don't prematurely "succeed" with null and so their loading flags remain true until the acting user is known.
+Body — single transaction, all writes derived from `p_relationship_role`:
+1. Capture `v_old_role` from `tenant_users` for audit.
+2. `UPDATE tenant_users SET relationship_role = p_relationship_role, role = v_tu_role, primary_contact = v_tu_primary, access_scope = v_tu_access_scope WHERE tenant_id = p_tenant_id AND user_id = p_user_uuid;` (no `updated_at`).
+3. `UPDATE users SET unicorn_role = v_u_unicorn_role, user_type = v_u_user_type, updated_at = now() WHERE user_uuid = p_user_uuid;`.
+4. `INSERT INTO tenant_members (tenant_id, user_id, role, status) VALUES (p_tenant_id, p_user_uuid, v_tm_role, v_tm_status) ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = EXCLUDED.role, status = EXCLUDED.status, updated_at = now();`.
+5. Insert `audit_eos_events` with before/after `relationship_role` and `p_reason`.
 
-3. **Rewrite the access gate `useEffect` (lines 424–436)** to wait for every dependency before redirecting:
-   ```ts
-   if (courseLoading || lessonLoading) return;
-   if (!course || !lesson) return;
-   if (isPreview) return;                       // preview lessons always allowed
-   if (actingUserLoading) return;               // wait for impersonation/auth resolution
-   if (enrollmentRawLoading || enrollmentRawFetching) return;
-   if (isRevoked) {                             // revoked check first, after raw resolves
-     toast.error("Your access to this course has been revoked.");
-     navigate(`/academy/course/${slug}`, { replace: true });
-     return;
-   }
-   if (enrollmentLoading || enrollmentFetching) return;
-   if (isEnrolled) return;
-   // Only now: acting user resolved, both enrollment queries settled, not enrolled.
-   toast.error("Please enrol in this course to access this lesson.");
-   navigate(`/academy/course/${slug}`, { replace: true });
-   ```
-   Update the dependency array accordingly.
+### 2. Rewrite `accept_invitation_v2`
 
-4. **Extend the loading skeleton block** (line 438) to also cover `actingUserLoading` (and the enrollment loading flags for non-preview lessons) so the page doesn't briefly render the "no enrollment" UI before the gate decides. Keep the existing "Lesson not found" branch intact.
+Compute `v_relationship_role public.tenant_user_role` once (Vivacity-Team fallback preserved), then derive all dependent fields from the same value via the mapping table.
 
-5. **Preserve everything else**: `isExpired` derivation, `canTrackProgress` (already requires `isEnrolled`), preview lesson rendering, sidebar nav, lesson progress upserts, auto-complete + course-complete flow, PDP quick-reflection drawer, celebration modal, `useReadOnlyGuard`.
+INSERT into `tenant_users` uses derived `relationship_role`, `role`, `primary_contact`, `access_scope`.
 
-## Behavioural matrix after fix
+**ON CONFLICT (tenant_id, user_id) DO UPDATE** — derived together from the same final role:
+```
+SET relationship_role = EXCLUDED.relationship_role,
+    role              = EXCLUDED.role,
+    primary_contact   = EXCLUDED.primary_contact,
+    access_scope      = EXCLUDED.access_scope
+```
+No `tenant_users.updated_at`. Never preserves an existing primary/secondary role while overwriting access_scope.
 
-| State | Outcome |
-|---|---|
-| Loading (any of course/lesson/acting user/enrollment) | Skeleton, no toast, no redirect |
-| Preview lesson, no enrollment | Renders (unchanged) |
-| Active enrollment | Renders, progress tracked (unchanged) |
-| Revoked | "Access revoked" toast + redirect (unchanged, fires once raw query settles) |
-| Expired | Treated as not actively enrolled by `canTrackProgress`; gate behaviour unchanged |
-| Truly unenrolled, non-preview | "Please enrol…" toast + redirect (only after all queries settle) |
-| Staff impersonation in progress | Waits for `actingUserLoading` before evaluating |
+`tenant_members` upsert ON CONFLICT `(tenant_id, user_id)` mirrors `v_tm_role` / `v_tm_status` with `updated_at = now()`. `users` updated with `unicorn_role`, `user_type`, `updated_at = now()`.
 
-## Verification
+### 3. Narrow drift cleanup (one-shot UPDATE via insert tool)
 
-- Log in as `khianbsismundo@gmail.com`, open a TAS Superhero lesson directly via URL → no false toast, lesson renders.
-- Unenrolled user on a non-preview lesson → still redirected with the enrol toast after queries finish.
-- Preview lesson without enrollment → renders.
-- Revoked enrollment → "Access revoked" toast + redirect.
-- Expired enrollment → no progress writes (unchanged).
-- Lesson progress, auto-complete, course-complete celebration, PDP reflection drawer → unchanged.
+Single drifted row where `tu.access_scope = 'academy_only'` OR `tu.relationship_role = 'academy_user'`, AND (`tm.status = 'active'` OR `tm.role <> 'General User'`):
+- `UPDATE tenant_members SET role = 'General User', status = 'inactive', updated_at = now()` joined on `(tenant_id, user_id)`.
+- Insert one `audit_eos_events` row.
+
+### Scope of this ticket
+
+In scope (this migration):
+- `set_relationship_role` RPC.
+- `accept_invitation_v2` rewrite.
+- Drift cleanup (1 row).
+
+Out of scope — explicit follow-up risks tracked separately, NOT verified by this migration:
+- `TenantUsersTab.applyRelationshipRole` switching to the new RPC.
+- `invite-user` edge function `skip_email` branch deriving derived fields from `payload.relationship_role`.
+- `useClientCommunications` academy guard.
+- `has_tenant_access_safe`, bulk role downgrades, `tenant_members` deletes, support-ticket trigger changes — all unchanged.
+
+### Verification after apply (this ticket only)
+- Drift query returns 0 rows.
+- Live academy_user row: `tm.role='General User'`, `tm.status='inactive'`, `tu.access_scope='academy_only'`, `u.unicorn_role='Academy User'`.
+- `has_tenant_access_safe(7517, 'd695317e-…')` returns false.
+- Direct RPC call to `set_relationship_role` for promotion and demotion produces consistent rows across `tenant_users`, `users`, `tenant_members`, and an `audit_eos_events` entry.
+- Manual UI verification of `TenantUsersTab` dropdown / edit drawer and `invite-user skip_email` direct-add are deferred to the follow-up code ticket.
