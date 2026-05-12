@@ -182,7 +182,7 @@ export function useClientCommunications() {
 
         return mapped;
       },
-      enabled: !!conversationId,
+      enabled: !!conversationId && !isAcademyOnly,
     });
   };
 
