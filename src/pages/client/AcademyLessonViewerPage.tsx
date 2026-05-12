@@ -127,9 +127,13 @@ export default function AcademyLessonViewerPage() {
   });
 
   // Fetch enrollment summary (status / progress)
-  const { data: enrollment } = useQuery({
+  const {
+    data: enrollment,
+    isLoading: enrollmentLoading,
+    isFetching: enrollmentFetching,
+  } = useQuery({
     queryKey: ["academy-enrollment-detail", course?.id, actingUserId],
-    enabled: !!course?.id,
+    enabled: !!course?.id && !!actingUserId && !actingUserLoading,
     queryFn: async () => {
       if (!actingUserId || !course?.id) return null;
       const { data } = await supabase
@@ -143,9 +147,13 @@ export default function AcademyLessonViewerPage() {
   });
 
   // Fetch raw enrollment row for expires_at / revoked_at
-  const { data: enrollmentRaw } = useQuery({
+  const {
+    data: enrollmentRaw,
+    isLoading: enrollmentRawLoading,
+    isFetching: enrollmentRawFetching,
+  } = useQuery({
     queryKey: ["academy-enrollment-raw", course?.id, actingUserId],
-    enabled: !!course?.id,
+    enabled: !!course?.id && !!actingUserId && !actingUserLoading,
     queryFn: async () => {
       if (!actingUserId || !course?.id) return null;
       const { data } = await supabase
