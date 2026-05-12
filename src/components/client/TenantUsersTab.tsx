@@ -375,6 +375,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
               relationship_role: newRR,
               role: legacy.role,
               primary_contact: legacy.primary_contact,
+              secondary_contact: newRR === 'secondary_contact',
               users: {
                 ...m.users,
                 job_title: editForm.job_title || null,
