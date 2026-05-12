@@ -331,13 +331,13 @@ export function useClientCommunications() {
     },
   });
 
-  const conversations = conversationsQuery.data || [];
-  const totalUnread = conversations.filter((c) => c.isUnread).length;
+  const conversations = isAcademyOnly ? [] : (conversationsQuery.data || []);
+  const totalUnread = isAcademyOnly ? 0 : conversations.filter((c) => c.isUnread).length;
 
   return {
     conversations,
     totalUnread,
-    isLoading: conversationsQuery.isLoading,
+    isLoading: isAcademyOnly ? false : conversationsQuery.isLoading,
     useConversationMessages,
     sendMessage,
     createConversation,
