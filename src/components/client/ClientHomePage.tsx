@@ -332,10 +332,13 @@ export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
   const { profile } = useAuth();
   const { actingUser } = useClientActingUser();
+  const { isPreviewMode } = useClientPreview();
   const { activeTenantId } = useClientTenant();
   const openDocumentRequest = useOpenDocumentRequest();
 
-  const displayName = actingUser?.first_name || profile?.first_name;
+  // In preview mode with no valid acting user, do not leak staff identity.
+  const displayName = actingUser?.first_name
+    ?? (isPreviewMode ? "" : profile?.first_name);
   const { data: hero } = useClientHomeHero();
   const { data: progressList, isLoading: progressLoading } = useClientProgress(activeTenantId);
   const feed = useClientHomeFeed();
