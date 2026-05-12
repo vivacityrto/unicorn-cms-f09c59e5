@@ -233,7 +233,7 @@ export function useTimeInbox() {
       });
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to post drafts', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to post drafts', variant: 'destructive' });
         return false;
       }
 
@@ -269,7 +269,7 @@ export function useTimeInbox() {
       });
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to update drafts', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to update drafts', variant: 'destructive' });
         return false;
       }
 
@@ -294,7 +294,7 @@ export function useTimeInbox() {
       });
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to update drafts', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to update drafts', variant: 'destructive' });
         return false;
       }
 
@@ -318,7 +318,7 @@ export function useTimeInbox() {
       });
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to apply suggestion', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to apply suggestion', variant: 'destructive' });
         return false;
       }
 
@@ -346,7 +346,7 @@ export function useTimeInbox() {
       });
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to discard drafts', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to discard drafts', variant: 'destructive' });
         return false;
       }
 
@@ -370,7 +370,7 @@ export function useTimeInbox() {
       });
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to snooze draft', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to snooze draft', variant: 'destructive' });
         return false;
       }
 
@@ -400,7 +400,7 @@ export function useTimeInbox() {
       });
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to snooze drafts', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to snooze drafts', variant: 'destructive' });
         return false;
       }
 
