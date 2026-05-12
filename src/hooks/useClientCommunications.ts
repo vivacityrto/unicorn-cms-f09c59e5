@@ -307,6 +307,7 @@ export function useClientCommunications() {
   // Mark a conversation as read
   const markRead = useMutation({
     mutationFn: async (conversationId: string) => {
+      if (isAcademyOnly) return;
       if (!currentUserId) return;
       const { error } = await (supabase
         .from("conversation_participants" as any)
