@@ -52,6 +52,7 @@ const clientMenuItemsAfter: SidebarMenuItem[] = [
   { icon: BarChart3, label: "Reports", path: "/client/reports" },
   { icon: Lightbulb, label: "Suggestions", path: "/client/suggestions" },
   { icon: Users, label: "Users", path: "/client/users", adminOnly: true },
+  { icon: GraduationCap, label: "Staff PDPs", path: "/client/staff-pdps", adminOnly: true },
   { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },
 ];
 
