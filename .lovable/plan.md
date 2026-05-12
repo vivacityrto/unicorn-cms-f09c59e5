@@ -1,83 +1,73 @@
 ## Bug
 
-In preview mode, `useClientActingUser` ignores `ClientPreviewContext.actingUserId` (filtered via `list_acting_user_options` to real activated `auth.users`) and resolves a "parent" by querying `tenant_users` (relationship_role='primary_contact') then falling back to `tenant_members` (oldest active Admin → any active member). This selects ghost users (e.g. Peter Movsesian on tenant 5) with no `auth.users` row. Compounding it, `useAcademyActingUserId` and several consumer surfaces silently fall back to the authed staff user / `profile`, so academy reads/writes can run as the SuperAdmin and UI displays staff identity inside a tenant preview.
+`ClientPreviewContext` persists the preview session only in `sessionStorage`, which is per-tab. The Academy link in `ClientSidebar.tsx` opens `/academy` with `target="_blank"`, so the new tab starts with empty `sessionStorage`, no preview state restores, `isPreviewMode=false`, and `useAcademyActingUserId` returns the real staff `user.id`. Result: Academy greets the staff member ("Good morning, khian") instead of staying in preview.
 
-## Fix (frontend only — no DB, no RLS, no migration)
+BUG-024 fixed in-tab fallback (no ghost users, no staff fallback inside preview), but only when the context already says `isPreviewMode=true`. The new tab never gets there.
 
-### 1. `src/hooks/useClientActingUser.ts` — rewrite preview branch
+## Fix (frontend only — no DB / RLS / migration / RPC changes)
 
-- Consume `useClientPreview()`: `actingUserId`, `actingUserOptions`. Keep `useClientTenant().isPreview` as the preview signal.
-- Preview mode:
-  - `actingUserId` null → `actingUser=null`, `isParentResolved=false`, `error="No activated users available for this tenant yet."`, `isLoading=false`. Do NOT touch tenant_users/tenant_members.
-  - `actingUserId` set but not in `actingUserOptions` → same empty state, `error="Selected preview user is no longer available."` (defensive; restore-path also clears it).
-  - Otherwise fetch profile from `public.users` by `user_uuid = actingUserId` only. If row missing, surface error — never fallback.
-- Delete `resolveParentUser` (the tenant_users → tenant_members ladder) entirely — that's the ghost-user source.
-- Non-preview branch: unchanged (uses `profile` from `useAuth`).
-- Add `actingUserId` and `actingUserOptions` to effect deps.
+Single source of truth stays `ClientPreviewContext`. Add a cross-tab mirror so a tab opened from a preview tab restores the same preview cleanly, and add a guard so the mirror is never restored for the wrong auth user or after an explicit end.
 
-### 2. `src/hooks/academy/useAcademyActingUserId.ts` — no staff fallback in preview
+### 1. `src/contexts/ClientPreviewContext.tsx` — mirror to localStorage, scoped to staff
 
-- When `isPreviewMode` is true: return `userId = actingUserId` (which may be `null`). **Never** fall back to `user?.id`.
-- When not in preview: unchanged — return `user?.id`.
-- This prevents academy reads/writes from running as the SuperAdmin when a tenant has no valid activated acting user.
+- Extend `StoredPreviewSession` with `ownerUserId: string` (the staff `auth.users.id` that started the preview). Keep existing `startedAt`.
+- Introduce a second key, e.g. `PREVIEW_HANDOFF_KEY = "client_preview_handoff"`, written to `localStorage`. Keep `PREVIEW_SESSION_KEY` in `sessionStorage` as the per-tab primary (unchanged semantics for the originating tab).
+- Helper `writePreviewState(s)` writes to both `sessionStorage[PREVIEW_SESSION_KEY]` and `localStorage[PREVIEW_HANDOFF_KEY]`.
+- Helper `clearPreviewState()` removes both keys.
+- Use these helpers in:
+  - `startPreview` (replace `persistSession`)
+  - `setActingUserId` (so the picker change propagates to other tabs)
+  - `endPreview` cleanup
+- Restore effect:
+  1. Read `sessionStorage[PREVIEW_SESSION_KEY]` first (current behavior, originating tab).
+  2. If absent, read `localStorage[PREVIEW_HANDOFF_KEY]`.
+  3. Validate before restoring:
+     - `canUsePreview` is true (existing).
+     - `s.ownerUserId === session.user.id` — refuse otherwise (covers logout/login/other-user-on-same-browser).
+     - Optional age cap: `Date.now() - Date.parse(s.startedAt) < 12h` — refuse and clear handoff if older. Prevents stale restore after browser restart.
+  4. Apply current BUG-024 acting-user validation (clear `actingUserId` if not in `actingUserOptions`), then `writePreviewState` so the new tab's `sessionStorage` is also seeded and stays the per-tab primary.
+- Add a `storage` event listener: when another tab clears `PREVIEW_HANDOFF_KEY` (i.e. ended preview), this tab also runs the local cleanup (no audit write, no RPC) so all preview tabs end together. When `actingUserId` changes in the handoff record, sync the local state so the picker stays consistent across tabs.
+- Wait for `session?.user?.id` before running the restore effect so the `ownerUserId` check is meaningful. Add `session?.user?.id` to the effect deps.
 
-### 3. `src/contexts/ClientPreviewContext.tsx` — harden restore path
+### 2. `src/components/client/ClientSidebar.tsx` — keep new-tab Academy launch
 
-In the restore `useEffect` (lines 85–106), after parsing stored session:
-- If `s.actingUserId` is not present in `s.actingUserOptions`, set `actingUserId` to `null` silently and rewrite sessionStorage with the cleared value. No toast.
-- All other restore behavior unchanged. `startPreview`, audit logging, RPC unchanged.
+- No behavioral change required. The Academy `<a href="/academy" target="_blank">` continues to open in a new tab; the new tab now hydrates from `localStorage[PREVIEW_HANDOFF_KEY]`.
+- Optional defensive nicety: only render the link with `target="_blank"` when not in preview, and as a same-tab `<Link to="/academy">` when `isPreviewMode` is true. Skip this unless we see flakiness; the storage handoff alone satisfies the spec.
 
-### 4. Consumer guards — neutral display when preview has no valid acting user
+### 3. `src/hooks/academy/useAcademyActingUserId.ts` — unchanged
 
-Audit and minimally guard each surface that currently does `actingUser?.x || profile?.x` (or similar) so that in preview mode + no valid acting user, it renders neutral/empty text instead of the staff member's name/email/avatar:
+- Still returns `actingUserId` (or `null`) in preview, never falls back to staff. Once the new tab restores `isPreviewMode=true`, behavior is correct automatically.
 
-- `src/components/client/ClientHomePage.tsx`
-- `src/pages/client/AcademyDashboardPage.tsx`
-- `src/pages/client/AcademyLessonViewerPage.tsx`
-- `src/pages/client/ClientProfilePage.tsx`
-- `src/components/client/ClientTopbar.tsx`
-- `src/components/client/ImpersonationBanner.tsx`
-- `src/components/client/ViewAsClientButton.tsx`
+### 4. Consumer surfaces — unchanged
 
-Pattern (apply per file as appropriate):
-```tsx
-const { isPreviewMode } = useClientPreview();
-const { actingUser, error } = useClientActingUser();
-const displayName = actingUser
-  ? `${actingUser.first_name} ${actingUser.last_name}`
-  : isPreviewMode
-    ? "—"                                  // or short empty-state label
-    : `${profile?.first_name} ${profile?.last_name}`;
-```
-- Avatars: render initials placeholder, not staff avatar.
-- Greeting/headline copy: show "Preview — no activated user available" where it materially affects the surface (home page hero, academy dashboard hero).
-- No layout/UX redesign — minimal substitution only.
+- `AcademyDashboardPage`, `AcademyLessonViewerPage`, `ClientTopbar`, `ImpersonationBanner`, `ClientHomePage` already read from the context. No edits needed; they will see `isPreviewMode=true` after restore.
 
-### 5. No DB / RLS / migration changes
+### 5. No DB / RPC / RLS / migration changes
 
-- `list_acting_user_options` RPC unchanged.
-- `tenant_users`, `tenant_members`, `auth.users` untouched.
-- Tenant counts, dashboard stats, active/suspended counts unaffected.
+- `list_acting_user_options`, `audit_client_impersonation`, `tenants`, `tenant_users`, `tenant_members` untouched.
+- `/manage-tenants` counts and dashboard cards unaffected (no shared code touched).
 
 ## Verification
 
-1. **Tenant 5 (Vital Resus), no activated users**: Start preview → topbar/banner/home/profile/academy show neutral empty state, never Peter/Karen, never the staff user. `useAcademyActingUserId().userId === null` so academy queries don't fire as SuperAdmin.
-2. **Tenant with valid activated contact**: All surfaces show the same acting user; `useAcademyActingUserId().userId === actingUserId`.
-3. **Stored session w/ stale acting user**: Reload → silently cleared, empty state shown.
-4. **Non-preview real client login**: Profile/topbar/academy still use authenticated user (unchanged).
-5. **Switch acting user via picker**: All surfaces update consistently.
-6. **Dashboard counts** (clients, active, suspended): unchanged — no shared code touched.
+1. Tenant 5 (no activated acting user): Start preview → click Vivacity Academy → new tab opens, restores from localStorage handoff, `isPreviewMode=true`, `actingUserId=null`, Academy shows neutral empty state. Never "Good morning, khian".
+2. Tenant with valid acting user: New Academy tab shows the same acting user across topbar, banner, dashboard, lesson pages, hooks.
+3. Reload Academy tab while preview active: sessionStorage now seeded by the restore in step 1; reload restores from sessionStorage normally; if acting user is stale it is cleared per BUG-024 logic; never falls back to staff.
+4. Exit preview in either tab: `storage` event fires in sibling tabs, all preview tabs cleanup; subsequent navigations behave as real staff.
+5. Different staff user logs in on the same browser: handoff `ownerUserId` mismatch → restore refused, handoff cleared.
+6. Browser restart 12h+ later: age check refuses stale handoff.
+7. `/manage-tenants` totals, active/suspended/client counts, dashboard cards: unchanged (untouched).
+8. Non-preview Academy navigation by a real client user: unchanged (no preview record exists).
 
 ## Risk Assessment
 
-- **Low risk**: isolated to two hooks + a defensive restore guard + minimal consumer guards. No DB writes, no policy changes.
-- **Backward compatible**: non-preview path identical; preview path refuses ghost users and refuses staff fallback.
-- **Audit trail preserved**: `audit_client_impersonation` insert in `startPreview` unchanged.
-- **Intended regressions**: surfaces that previously displayed the ghost or the staff member during preview will now show neutral empty state. Academy queries that previously executed as the SuperAdmin during preview will now no-op. Both are corrections, not regressions.
+- **Low risk**: scope is one context file plus a small `storage` listener; no schema, no RLS, no RPC, no audit-flow changes.
+- **Backward compatible**: originating-tab behavior unchanged (sessionStorage still primary). New behavior only activates when sessionStorage is empty and a valid handoff exists for the current staff user.
+- **BUG-024 preserved**: acting-user validation against `actingUserOptions` runs on every restore path; `useAcademyActingUserId` and `useClientActingUser` unchanged; ghost-user resolution remains deleted.
+- **Audit trail intact**: only `startPreview`/`endPreview` write `audit_client_impersonation`; cross-tab cleanup via `storage` event does not insert/update audit rows (the originating end already wrote `ended_at`).
+- **Multi-staff browser safety**: `ownerUserId` check prevents another staff member on the same machine from inheriting a preview.
+- **Stale-restore safety**: 12h age cap + explicit clear on `endPreview` keep handoff bounded.
 
 ## Files touched
 
-- `src/hooks/useClientActingUser.ts`
-- `src/hooks/academy/useAcademyActingUserId.ts`
-- `src/contexts/ClientPreviewContext.tsx`
-- Consumer guards in: `ClientHomePage.tsx`, `AcademyDashboardPage.tsx`, `AcademyLessonViewerPage.tsx`, `ClientProfilePage.tsx`, `ClientTopbar.tsx`, `ImpersonationBanner.tsx`, `ViewAsClientButton.tsx` (only where `actingUser?.x || profile?.x` patterns exist).
+- `src/contexts/ClientPreviewContext.tsx` (handoff mirror, owner/age guard, storage listener)
+- No other files require changes for the fix to satisfy all acceptance criteria.
