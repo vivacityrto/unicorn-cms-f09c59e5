@@ -341,9 +341,60 @@ serve(async (req) => {
       console.log(`User ${payload.email} already exists with ID ${existingUser.id}. They will be added to the tenant when they accept.`);
     }
 
-    // --- SKIP EMAIL PATH: create users + tenant_users directly ---
+    // --- SKIP EMAIL PATH: create users + tenant_users + tenant_members directly ---
     if (payload.skip_email) {
       console.log(`[skip_email] Adding ${payload.email} directly without invitation`);
+
+      // Resolve final relationship_role. relationship_role is the source of truth;
+      // never infer academy from unicorn_role alone.
+      let v_relationship_role: RelationshipRole;
+      const isVivacityTarget = payload.invite_as === 'VIVACITY';
+      if (payload.relationship_role) {
+        v_relationship_role = payload.relationship_role;
+      } else if (payload.unicorn_role === 'Admin') {
+        v_relationship_role = 'primary_contact';
+      } else {
+        v_relationship_role = 'user';
+      }
+
+      // Derive all dependent fields from v_relationship_role using the authoritative mapping.
+      let v_tu_role: 'parent' | 'child';
+      let v_tu_primary: boolean;
+      let v_tu_secondary: boolean;
+      let v_tu_access_scope: 'full' | 'academy_only';
+      let v_u_unicorn_role: string;
+      let v_u_user_type: string;
+      let v_tm_role: 'Admin' | 'General User';
+      let v_tm_status: 'active' | 'inactive';
+      switch (v_relationship_role) {
+        case 'primary_contact':
+          v_tu_role = 'parent'; v_tu_primary = true;  v_tu_secondary = false; v_tu_access_scope = 'full';
+          v_u_unicorn_role = 'Admin'; v_u_user_type = 'Client Parent';
+          v_tm_role = 'Admin'; v_tm_status = 'active';
+          break;
+        case 'secondary_contact':
+          v_tu_role = 'parent'; v_tu_primary = false; v_tu_secondary = true;  v_tu_access_scope = 'full';
+          v_u_unicorn_role = 'Admin'; v_u_user_type = 'Client Parent';
+          v_tm_role = 'Admin'; v_tm_status = 'active';
+          break;
+        case 'academy_user':
+          v_tu_role = 'child'; v_tu_primary = false; v_tu_secondary = false; v_tu_access_scope = 'academy_only';
+          v_u_unicorn_role = 'Academy User'; v_u_user_type = 'Client Child';
+          v_tm_role = 'General User'; v_tm_status = 'inactive';
+          break;
+        case 'user':
+        default:
+          v_tu_role = 'child'; v_tu_primary = false; v_tu_secondary = false; v_tu_access_scope = 'full';
+          v_u_unicorn_role = 'User'; v_u_user_type = 'Client Child';
+          v_tm_role = 'General User'; v_tm_status = 'active';
+      }
+      // Internal Vivacity targets keep the supplied unicorn_role and become Vivacity Team.
+      if (isVivacityTarget) {
+        v_u_unicorn_role = payload.unicorn_role;
+        v_u_user_type = 'Vivacity Team';
+        v_tm_role = 'Admin';
+        v_tm_status = 'active';
+      }
 
       // Check if user already exists in public.users
       const { data: existingProfile } = await supabase
@@ -367,9 +418,9 @@ serve(async (req) => {
             email: payload.email.toLowerCase(),
             first_name: payload.first_name.trim(),
             last_name: (payload.last_name || '-').trim(),
-            unicorn_role: payload.unicorn_role,
-            user_type: payload.invite_as === 'VIVACITY' ? 'Vivacity' : 'Client',
-            is_team: payload.invite_as === 'VIVACITY',
+            unicorn_role: v_u_unicorn_role,
+            user_type: v_u_user_type,
+            is_team: isVivacityTarget,
             disabled: false,
             job_title: payload.job_title || null,
             phone: payload.phone_number || null,
@@ -405,14 +456,17 @@ serve(async (req) => {
         });
       }
 
-      // Create tenant_users association
+      // Create tenant_users association (do NOT write tenant_users.updated_at — column does not exist)
       const { error: tuError } = await supabase
         .from('tenant_users')
         .insert({
           user_id: userUuid,
           tenant_id: payload.tenant_id,
-          role: payload.unicorn_role === 'Admin' ? 'parent' : 'child',
-          primary_contact: payload.unicorn_role === 'Admin',
+          role: v_tu_role,
+          primary_contact: v_tu_primary,
+          secondary_contact: v_tu_secondary,
+          access_scope: v_tu_access_scope,
+          relationship_role: v_relationship_role,
         });
 
       if (tuError) {
@@ -424,6 +478,23 @@ serve(async (req) => {
         });
       }
 
+      // Mirror into tenant_members
+      const { error: tmError } = await supabase
+        .from('tenant_members')
+        .upsert(
+          {
+            tenant_id: payload.tenant_id,
+            user_id: userUuid,
+            role: v_tm_role,
+            status: v_tm_status,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'tenant_id,user_id' }
+        );
+      if (tmError) {
+        console.error('[skip_email] Failed to upsert tenant_members:', tmError);
+      }
+
       // Audit log
       await supabase.from('audit_eos_events').insert({
         tenant_id: payload.tenant_id,
@@ -433,7 +504,15 @@ serve(async (req) => {
         details: {
           email: payload.email,
           tenant_id: payload.tenant_id,
-          unicorn_role: payload.unicorn_role,
+          unicorn_role: v_u_unicorn_role,
+          user_type: v_u_user_type,
+          relationship_role: v_relationship_role,
+          access_scope: v_tu_access_scope,
+          tu_role: v_tu_role,
+          primary_contact: v_tu_primary,
+          secondary_contact: v_tu_secondary,
+          tm_role: v_tm_role,
+          tm_status: v_tm_status,
           user_uuid: userUuid,
           added_by: callerUser.user.id,
         },

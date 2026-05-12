@@ -62,8 +62,6 @@ import {
   type RelationshipRole,
   RELATIONSHIP_ROLE_OPTIONS,
   relationshipRoleLabel,
-  unicornRoleFromRelationship,
-  userTypeFromRelationship,
   legacyTenantUserPatch,
   isUniqueViolation,
 } from '@/lib/roles/relationshipRole';
@@ -166,29 +164,19 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     }
   };
 
-  // Apply a relationship_role change to a single user (writes new column +
-  // legacy patch + users.unicorn_role/user_type for back-compat).
-  // TODO(rel-role-phase-4): drop the dual-write to users.unicorn_role/user_type
-  // once RLS no longer reads from those legacy fields.
+  // Apply a relationship_role change via the transactional RPC. The RPC writes
+  // tenant_users, users, and tenant_members atomically and emits one audit row,
+  // so the frontend never writes those tables directly.
   const applyRelationshipRole = async (member: TenantMemberInfo, newRR: RelationshipRole) => {
-    const legacy = legacyTenantUserPatch(newRR);
-    const { error: tuErr } = await supabase
-      .from('tenant_users')
-      .update({ relationship_role: newRR, ...legacy })
-      .eq('tenant_id', tenantId)
-      .eq('user_id', member.user_id);
-    if (tuErr) throw tuErr;
-
-    const { error: usrErr } = await supabase
-      .from('users')
-      .update({
-        unicorn_role: unicornRoleFromRelationship(newRR),
-        user_type: userTypeFromRelationship(newRR),
-      })
-      .eq('user_uuid', member.users.user_uuid);
-    if (usrErr) throw usrErr;
-
-    return legacy;
+    const { error } = await supabase.rpc('set_relationship_role', {
+      p_tenant_id: tenantId,
+      p_user_id: member.user_id,
+      p_relationship_role: newRR,
+      p_reason: null,
+    });
+    if (error) throw error;
+    // Return derived legacy fields for in-memory state updates (matches what the RPC just wrote).
+    return legacyTenantUserPatch(newRR);
   };
 
   const handleRelationshipRoleChange = async (member: TenantMemberInfo, newRR: RelationshipRole) => {
@@ -213,7 +201,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       const legacy = await applyRelationshipRole(member, newRR);
       setMembers((prev) => prev.map((m) =>
         m.user_id === member.user_id
-          ? { ...m, relationship_role: newRR, role: legacy.role, primary_contact: legacy.primary_contact }
+          ? { ...m, relationship_role: newRR, role: legacy.role, primary_contact: legacy.primary_contact, secondary_contact: newRR === 'secondary_contact' }
           : m,
       ));
       toast.success(`Role changed: ${relationshipRoleLabel(oldRR)} → ${relationshipRoleLabel(newRR)}`);
@@ -385,6 +373,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
               relationship_role: newRR,
               role: legacy.role,
               primary_contact: legacy.primary_contact,
+              secondary_contact: newRR === 'secondary_contact',
               users: {
                 ...m.users,
                 job_title: editForm.job_title || null,

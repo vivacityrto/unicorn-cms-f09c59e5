@@ -39,8 +39,9 @@ export interface ConversationMessage {
  */
 export function useConversationRealtime(conversationId: string | null) {
   const qc = useQueryClient();
+  const { isAcademyOnly } = useClientTenant();
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || isAcademyOnly) return;
     const channel = supabase
       .channel(`conv-live:${conversationId}`)
       .on(
@@ -60,11 +61,11 @@ export function useConversationRealtime(conversationId: string | null) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, qc]);
+  }, [conversationId, qc, isAcademyOnly]);
 }
 
 export function useClientCommunications() {
-  const { activeTenantId } = useClientTenant();
+  const { activeTenantId, isAcademyOnly } = useClientTenant();
   const qc = useQueryClient();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -106,7 +107,7 @@ export function useClientCommunications() {
           : false,
       }));
     },
-    enabled: !!activeTenantId && !!currentUserId,
+    enabled: !!activeTenantId && !!currentUserId && !isAcademyOnly,
   });
 
   // Fetch messages for a specific conversation
@@ -181,13 +182,14 @@ export function useClientCommunications() {
 
         return mapped;
       },
-      enabled: !!conversationId,
+      enabled: !!conversationId && !isAcademyOnly,
     });
   };
 
   // Send a message
   const sendMessage = useMutation({
     mutationFn: async ({ conversationId, body }: { conversationId: string; body: string }) => {
+      if (isAcademyOnly) throw new Error("Conversations are not available for academy-only users");
       if (!currentUserId || !activeTenantId) throw new Error("Not authenticated");
 
       const { error } = await (supabase
@@ -229,6 +231,7 @@ export function useClientCommunications() {
       relatedEntity?: string;
       relatedEntityId?: string;
     }) => {
+      if (isAcademyOnly) throw new Error("Conversations are not available for academy-only users");
       if (!currentUserId || !activeTenantId) throw new Error("Not authenticated");
 
       const { data: conv, error: convError } = await (supabase
@@ -304,6 +307,7 @@ export function useClientCommunications() {
   // Mark a conversation as read
   const markRead = useMutation({
     mutationFn: async (conversationId: string) => {
+      if (isAcademyOnly) return;
       if (!currentUserId) return;
       const { error } = await (supabase
         .from("conversation_participants" as any)
@@ -327,13 +331,13 @@ export function useClientCommunications() {
     },
   });
 
-  const conversations = conversationsQuery.data || [];
-  const totalUnread = conversations.filter((c) => c.isUnread).length;
+  const conversations = isAcademyOnly ? [] : (conversationsQuery.data || []);
+  const totalUnread = isAcademyOnly ? 0 : conversations.filter((c) => c.isUnread).length;
 
   return {
     conversations,
     totalUnread,
-    isLoading: conversationsQuery.isLoading,
+    isLoading: isAcademyOnly ? false : conversationsQuery.isLoading,
     useConversationMessages,
     sendMessage,
     createConversation,
