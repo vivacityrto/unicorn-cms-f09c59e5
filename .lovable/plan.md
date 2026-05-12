@@ -1,73 +1,83 @@
-## Revised Migration Plan (v4)
+## Bug
 
-Single migration. All PL/pgSQL uses `v_`-prefixed locals. No writes to `tenant_users.updated_at` (column does not exist). Enum cast uses `public.tenant_user_role` (the live type — `relationship_role_enum` does not exist).
+In preview mode, `useClientActingUser` ignores `ClientPreviewContext.actingUserId` (filtered via `list_acting_user_options` to real activated `auth.users`) and resolves a "parent" by querying `tenant_users` (relationship_role='primary_contact') then falling back to `tenant_members` (oldest active Admin → any active member). This selects ghost users (e.g. Peter Movsesian on tenant 5) with no `auth.users` row. Compounding it, `useAcademyActingUserId` and several consumer surfaces silently fall back to the authed staff user / `profile`, so academy reads/writes can run as the SuperAdmin and UI displays staff identity inside a tenant preview.
 
-### Confirmed live schema
-- `tenant_users.user_id uuid`; columns include `role`, `primary_contact`, `access_scope`, `relationship_role public.tenant_user_role`.
-- `tenant_members.user_id uuid`; columns include `role`, `status`, `updated_at`.
-- `users.user_uuid uuid` (PK); columns include `unicorn_role` (enum, includes `Academy User`), `user_type` (`user_type_enum`), `updated_at`.
+## Fix (frontend only — no DB, no RLS, no migration)
 
-### Authoritative mapping
+### 1. `src/hooks/useClientActingUser.ts` — rewrite preview branch
 
-| relationship_role | tu.role | tu.primary_contact | tu.access_scope | u.unicorn_role | u.user_type | tm.role | tm.status |
-|---|---|---|---|---|---|---|---|
-| primary_contact | parent | true | full | Admin | Client Parent | Admin | active |
-| secondary_contact | parent | false | full | Admin | Client Parent | Admin | active |
-| user | child | false | full | User | Client Child | General User | active |
-| academy_user | child | false | academy_only | Academy User | Client Child | General User | inactive |
+- Consume `useClientPreview()`: `actingUserId`, `actingUserOptions`. Keep `useClientTenant().isPreview` as the preview signal.
+- Preview mode:
+  - `actingUserId` null → `actingUser=null`, `isParentResolved=false`, `error="No activated users available for this tenant yet."`, `isLoading=false`. Do NOT touch tenant_users/tenant_members.
+  - `actingUserId` set but not in `actingUserOptions` → same empty state, `error="Selected preview user is no longer available."` (defensive; restore-path also clears it).
+  - Otherwise fetch profile from `public.users` by `user_uuid = actingUserId` only. If row missing, surface error — never fallback.
+- Delete `resolveParentUser` (the tenant_users → tenant_members ladder) entirely — that's the ghost-user source.
+- Non-preview branch: unchanged (uses `profile` from `useAuth`).
+- Add `actingUserId` and `actingUserOptions` to effect deps.
 
-### 1. RPC `set_relationship_role(p_tenant_id bigint, p_user_uuid uuid, p_relationship_role public.tenant_user_role, p_reason text default null)`
+### 2. `src/hooks/academy/useAcademyActingUserId.ts` — no staff fallback in preview
 
-`SECURITY DEFINER`, `SET search_path = 'public', 'pg_temp'`.
+- When `isPreviewMode` is true: return `userId = actingUserId` (which may be `null`). **Never** fall back to `user?.id`.
+- When not in preview: unchanged — return `user?.id`.
+- This prevents academy reads/writes from running as the SuperAdmin when a tenant has no valid activated acting user.
 
-Auth: SuperAdmin / Vivacity team OR caller is tenant admin on `p_tenant_id` (`tenant_users.user_id = auth.uid()` AND `relationship_role IN ('primary_contact','secondary_contact')` AND `access_scope = 'full'`).
+### 3. `src/contexts/ClientPreviewContext.tsx` — harden restore path
 
-Body — single transaction, all writes derived from `p_relationship_role`:
-1. Capture `v_old_role` from `tenant_users` for audit.
-2. `UPDATE tenant_users SET relationship_role = p_relationship_role, role = v_tu_role, primary_contact = v_tu_primary, access_scope = v_tu_access_scope WHERE tenant_id = p_tenant_id AND user_id = p_user_uuid;` (no `updated_at`).
-3. `UPDATE users SET unicorn_role = v_u_unicorn_role, user_type = v_u_user_type, updated_at = now() WHERE user_uuid = p_user_uuid;`.
-4. `INSERT INTO tenant_members (tenant_id, user_id, role, status) VALUES (p_tenant_id, p_user_uuid, v_tm_role, v_tm_status) ON CONFLICT (tenant_id, user_id) DO UPDATE SET role = EXCLUDED.role, status = EXCLUDED.status, updated_at = now();`.
-5. Insert `audit_eos_events` with before/after `relationship_role` and `p_reason`.
+In the restore `useEffect` (lines 85–106), after parsing stored session:
+- If `s.actingUserId` is not present in `s.actingUserOptions`, set `actingUserId` to `null` silently and rewrite sessionStorage with the cleared value. No toast.
+- All other restore behavior unchanged. `startPreview`, audit logging, RPC unchanged.
 
-### 2. Rewrite `accept_invitation_v2`
+### 4. Consumer guards — neutral display when preview has no valid acting user
 
-Compute `v_relationship_role public.tenant_user_role` once (Vivacity-Team fallback preserved), then derive all dependent fields from the same value via the mapping table.
+Audit and minimally guard each surface that currently does `actingUser?.x || profile?.x` (or similar) so that in preview mode + no valid acting user, it renders neutral/empty text instead of the staff member's name/email/avatar:
 
-INSERT into `tenant_users` uses derived `relationship_role`, `role`, `primary_contact`, `access_scope`.
+- `src/components/client/ClientHomePage.tsx`
+- `src/pages/client/AcademyDashboardPage.tsx`
+- `src/pages/client/AcademyLessonViewerPage.tsx`
+- `src/pages/client/ClientProfilePage.tsx`
+- `src/components/client/ClientTopbar.tsx`
+- `src/components/client/ImpersonationBanner.tsx`
+- `src/components/client/ViewAsClientButton.tsx`
 
-**ON CONFLICT (tenant_id, user_id) DO UPDATE** — derived together from the same final role:
+Pattern (apply per file as appropriate):
+```tsx
+const { isPreviewMode } = useClientPreview();
+const { actingUser, error } = useClientActingUser();
+const displayName = actingUser
+  ? `${actingUser.first_name} ${actingUser.last_name}`
+  : isPreviewMode
+    ? "—"                                  // or short empty-state label
+    : `${profile?.first_name} ${profile?.last_name}`;
 ```
-SET relationship_role = EXCLUDED.relationship_role,
-    role              = EXCLUDED.role,
-    primary_contact   = EXCLUDED.primary_contact,
-    access_scope      = EXCLUDED.access_scope
-```
-No `tenant_users.updated_at`. Never preserves an existing primary/secondary role while overwriting access_scope.
+- Avatars: render initials placeholder, not staff avatar.
+- Greeting/headline copy: show "Preview — no activated user available" where it materially affects the surface (home page hero, academy dashboard hero).
+- No layout/UX redesign — minimal substitution only.
 
-`tenant_members` upsert ON CONFLICT `(tenant_id, user_id)` mirrors `v_tm_role` / `v_tm_status` with `updated_at = now()`. `users` updated with `unicorn_role`, `user_type`, `updated_at = now()`.
+### 5. No DB / RLS / migration changes
 
-### 3. Narrow drift cleanup (one-shot UPDATE via insert tool)
+- `list_acting_user_options` RPC unchanged.
+- `tenant_users`, `tenant_members`, `auth.users` untouched.
+- Tenant counts, dashboard stats, active/suspended counts unaffected.
 
-Single drifted row where `tu.access_scope = 'academy_only'` OR `tu.relationship_role = 'academy_user'`, AND (`tm.status = 'active'` OR `tm.role <> 'General User'`):
-- `UPDATE tenant_members SET role = 'General User', status = 'inactive', updated_at = now()` joined on `(tenant_id, user_id)`.
-- Insert one `audit_eos_events` row.
+## Verification
 
-### Scope of this ticket
+1. **Tenant 5 (Vital Resus), no activated users**: Start preview → topbar/banner/home/profile/academy show neutral empty state, never Peter/Karen, never the staff user. `useAcademyActingUserId().userId === null` so academy queries don't fire as SuperAdmin.
+2. **Tenant with valid activated contact**: All surfaces show the same acting user; `useAcademyActingUserId().userId === actingUserId`.
+3. **Stored session w/ stale acting user**: Reload → silently cleared, empty state shown.
+4. **Non-preview real client login**: Profile/topbar/academy still use authenticated user (unchanged).
+5. **Switch acting user via picker**: All surfaces update consistently.
+6. **Dashboard counts** (clients, active, suspended): unchanged — no shared code touched.
 
-In scope (this migration):
-- `set_relationship_role` RPC.
-- `accept_invitation_v2` rewrite.
-- Drift cleanup (1 row).
+## Risk Assessment
 
-Out of scope — explicit follow-up risks tracked separately, NOT verified by this migration:
-- `TenantUsersTab.applyRelationshipRole` switching to the new RPC.
-- `invite-user` edge function `skip_email` branch deriving derived fields from `payload.relationship_role`.
-- `useClientCommunications` academy guard.
-- `has_tenant_access_safe`, bulk role downgrades, `tenant_members` deletes, support-ticket trigger changes — all unchanged.
+- **Low risk**: isolated to two hooks + a defensive restore guard + minimal consumer guards. No DB writes, no policy changes.
+- **Backward compatible**: non-preview path identical; preview path refuses ghost users and refuses staff fallback.
+- **Audit trail preserved**: `audit_client_impersonation` insert in `startPreview` unchanged.
+- **Intended regressions**: surfaces that previously displayed the ghost or the staff member during preview will now show neutral empty state. Academy queries that previously executed as the SuperAdmin during preview will now no-op. Both are corrections, not regressions.
 
-### Verification after apply (this ticket only)
-- Drift query returns 0 rows.
-- Live academy_user row: `tm.role='General User'`, `tm.status='inactive'`, `tu.access_scope='academy_only'`, `u.unicorn_role='Academy User'`.
-- `has_tenant_access_safe(7517, 'd695317e-…')` returns false.
-- Direct RPC call to `set_relationship_role` for promotion and demotion produces consistent rows across `tenant_users`, `users`, `tenant_members`, and an `audit_eos_events` entry.
-- Manual UI verification of `TenantUsersTab` dropdown / edit drawer and `invite-user skip_email` direct-add are deferred to the follow-up code ticket.
+## Files touched
+
+- `src/hooks/useClientActingUser.ts`
+- `src/hooks/academy/useAcademyActingUserId.ts`
+- `src/contexts/ClientPreviewContext.tsx`
+- Consumer guards in: `ClientHomePage.tsx`, `AcademyDashboardPage.tsx`, `AcademyLessonViewerPage.tsx`, `ClientProfilePage.tsx`, `ClientTopbar.tsx`, `ImpersonationBanner.tsx`, `ViewAsClientButton.tsx` (only where `actingUser?.x || profile?.x` patterns exist).

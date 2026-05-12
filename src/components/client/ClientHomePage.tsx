@@ -27,6 +27,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useOpenDocumentRequest } from "@/components/layout/ClientLayout";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
+import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientHomeHero } from "@/hooks/use-client-home-hero";
 import { useClientProgress, type ClientProgress } from "@/hooks/useClientProgress";
@@ -332,10 +333,13 @@ export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
   const { profile } = useAuth();
   const { actingUser } = useClientActingUser();
+  const { isPreviewMode } = useClientPreview();
   const { activeTenantId } = useClientTenant();
   const openDocumentRequest = useOpenDocumentRequest();
 
-  const displayName = actingUser?.first_name || profile?.first_name;
+  // In preview mode with no valid acting user, do not leak staff identity.
+  const displayName = actingUser?.first_name
+    ?? (isPreviewMode ? "" : profile?.first_name);
   const { data: hero } = useClientHomeHero();
   const { data: progressList, isLoading: progressLoading } = useClientProgress(activeTenantId);
   const feed = useClientHomeFeed();

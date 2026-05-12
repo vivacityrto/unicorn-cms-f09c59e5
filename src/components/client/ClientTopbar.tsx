@@ -247,7 +247,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium">{getUserDisplayName()}</p>
-                <p className="text-xs text-muted-foreground truncate">{displayUser?.email || profile?.email}</p>
+                <p className="text-xs text-muted-foreground truncate">{displayUser?.email || (isPreview ? "" : profile?.email)}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
