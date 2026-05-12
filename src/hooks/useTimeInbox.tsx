@@ -96,7 +96,7 @@ export function useTimeInbox() {
 
       if (error) {
         console.error('[useTimeInbox] Error fetching drafts:', error);
-        toast({ title: 'Error', description: 'Failed to load drafts', variant: 'destructive' });
+        toast({ title: 'Error', description: error.message || 'Failed to load drafts', variant: 'destructive' });
         return;
       }
 
@@ -179,7 +179,8 @@ export function useTimeInbox() {
       });
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to post draft', variant: 'destructive' });
+        console.error('[useTimeInbox] Post draft error:', error.message, error.details, error.hint);
+        toast({ title: 'Error', description: error.message || 'Failed to post draft', variant: 'destructive' });
         return false;
       }
 
@@ -208,7 +209,8 @@ export function useTimeInbox() {
       });
 
       if (error) {
-        toast({ title: 'Error', description: 'Failed to discard draft', variant: 'destructive' });
+        console.error('[useTimeInbox] Discard draft error:', error.message, error.details, error.hint);
+        toast({ title: 'Error', description: error.message || 'Failed to discard draft', variant: 'destructive' });
         return false;
       }
 
