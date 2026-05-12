@@ -189,6 +189,7 @@ export function useClientCommunications() {
   // Send a message
   const sendMessage = useMutation({
     mutationFn: async ({ conversationId, body }: { conversationId: string; body: string }) => {
+      if (isAcademyOnly) throw new Error("Conversations are not available for academy-only users");
       if (!currentUserId || !activeTenantId) throw new Error("Not authenticated");
 
       const { error } = await (supabase
