@@ -231,6 +231,7 @@ export function useClientCommunications() {
       relatedEntity?: string;
       relatedEntityId?: string;
     }) => {
+      if (isAcademyOnly) throw new Error("Conversations are not available for academy-only users");
       if (!currentUserId || !activeTenantId) throw new Error("Not authenticated");
 
       const { data: conv, error: convError } = await (supabase
