@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.list_acting_user_options(bigint) FROM anon;
