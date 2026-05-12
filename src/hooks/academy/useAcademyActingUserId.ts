@@ -24,7 +24,11 @@ export function useAcademyActingUserId(): AcademyActingUser {
   const { isVivacityStaff, isLoading: accessLoading } = useUserAccess();
 
   const isImpersonating = isPreviewMode && !!actingUserId;
-  const userId = isImpersonating ? actingUserId : user?.id ?? null;
+  // In preview mode, NEVER fall back to the authed staff user — that would
+  // cause academy reads/writes to run as the SuperAdmin while previewing a
+  // tenant. If preview has no valid acting user, return null so consumers
+  // render an empty state and queries no-op.
+  const userId = isPreviewMode ? actingUserId : user?.id ?? null;
 
   return {
     userId,
