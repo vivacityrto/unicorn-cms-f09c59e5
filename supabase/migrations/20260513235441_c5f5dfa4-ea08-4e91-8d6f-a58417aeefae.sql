@@ -1,0 +1,1 @@
+REVOKE ALL ON public.v_workspace_audit_log FROM anon;
