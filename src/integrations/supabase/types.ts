@@ -6427,6 +6427,7 @@ export type Database = {
           id: string
           reason: string | null
           target_user_uuid: string
+          tenant_id: number | null
         }
         Insert: {
           action: string
@@ -6436,6 +6437,7 @@ export type Database = {
           id?: string
           reason?: string | null
           target_user_uuid: string
+          tenant_id?: number | null
         }
         Update: {
           action?: string
@@ -6445,8 +6447,143 @@ export type Database = {
           id?: string
           reason?: string | null
           target_user_uuid?: string
+          tenant_id?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       auth_tokens: {
         Row: {
