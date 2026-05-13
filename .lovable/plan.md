@@ -1,40 +1,90 @@
+# NEW-006 — `audit_user_events.tenant_id`
 
-# NEW-002 — Rekey `pdp_cycles` tenant-admin SELECT policy to `relationship_role`
+## Preconditions verified (read-only)
 
-## Scope
-Single RLS policy replacement on `public.pdp_cycles`. No data changes, no FK changes, no other tables, no other policies touched.
+| Check | Result |
+|---|---|
+| `public.tenants.id` type | `bigint` ✓ (FK type matches) |
+| `audit_user_events` columns (current) | `id, actor_user_uuid, target_user_uuid, action, reason, details, created_at` (7 cols) — adding `tenant_id` → **8 cols** ✓ |
+| Existing policies on `audit_user_events` | `audit_user_events_select_own`, `audit_user_events_select_superadmin` (2 SELECT) — leaves room for the new third ✓ |
+| `tenant_users` has `access_scope` + `relationship_role` | ✓ both present |
+| `audit_user_events` row count | **0** — no backfill required ✓ |
 
-## Migration
-- File: `supabase/migrations/20260513090001_pdp_cycles_tenant_admin_relationship_role.sql` (timestamp strictly after `20260513090000`)
-- Wrapped in `BEGIN; … COMMIT;`
-- Body:
-  1. `DROP POLICY IF EXISTS "pdp_cycles: tenant admins view their tenant" ON public.pdp_cycles;`
-  2. `CREATE POLICY "pdp_cycles: tenant admins view their tenant" ON public.pdp_cycles FOR SELECT USING (EXISTS (SELECT 1 FROM public.tenant_users tu WHERE tu.user_id = auth.uid() AND tu.tenant_id = pdp_cycles.tenant_id AND tu.access_scope = 'full' AND tu.relationship_role IN ('primary_contact','secondary_contact')));`
+No conflicts. SQL is safe to apply verbatim.
 
-## Untouched policies (verified)
-- `pdp_cycles: Vivacity staff manage all` (ALL)
-- `pdp_cycles: manager views assigned` (SELECT)
-- `pdp_cycles: users insert own` (INSERT)
-- `pdp_cycles: users update own while open` (UPDATE)
-- `pdp_cycles: users view own` (SELECT)
+## Migration file
 
-## Pre-checks
-- Confirm `tenant_users.relationship_role` column exists and is the canonical field (per 12 May 2026 standard).
-- Confirm policy `pdp_cycles: tenant admins view their tenant` currently uses boolean check.
+**Path**: `supabase/migrations/<timestamp>_audit_user_events_add_tenant_id.sql`
 
-## Post-check (run after apply, output included in reply)
 ```sql
-SELECT polname, pg_get_expr(polqual, polrelid) AS using_expr
-FROM pg_policy
-WHERE polrelid = 'public.pdp_cycles'::regclass
-  AND polname = 'pdp_cycles: tenant admins view their tenant';
+BEGIN;
+
+-- Add tenant_id (nullable: some events are platform-level with no tenant
+-- context, e.g. global role changes by a super admin)
+ALTER TABLE public.audit_user_events
+  ADD COLUMN IF NOT EXISTS tenant_id bigint
+    REFERENCES public.tenants(id) ON DELETE SET NULL;
+
+-- Index for tenant-scoped queries
+CREATE INDEX IF NOT EXISTS audit_user_events_tenant_idx
+  ON public.audit_user_events (tenant_id, created_at DESC);
+
+-- Tenant admins can see audit events for their own tenant
+DROP POLICY IF EXISTS "audit_user_events_select_tenant_admin"
+  ON public.audit_user_events;
+CREATE POLICY "audit_user_events_select_tenant_admin"
+  ON public.audit_user_events FOR SELECT TO authenticated
+  USING (
+    tenant_id IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.tenant_users tu
+      WHERE tu.user_id = (SELECT auth.uid())
+        AND tu.tenant_id = audit_user_events.tenant_id
+        AND tu.access_scope = 'full'
+        AND tu.relationship_role IN ('primary_contact', 'secondary_contact')
+    )
+  );
+
+COMMIT;
 ```
-Expected: `using_expr` contains `relationship_role IN ('primary_contact', 'secondary_contact')` and does NOT contain `primary_contact = true`.
 
-## Rollback
-Re-create the policy with the original boolean expression `(tu.primary_contact = true) OR (tu.secondary_contact = true)`.
+## What changes
 
-## Risk
-Very low. Behavior parity expected because the boolean columns are now trigger-maintained mirrors of `relationship_role`; the new expression reads the canonical source directly.
+- **Column**: adds nullable `tenant_id bigint` FK → `tenants(id)` `ON DELETE SET NULL`.
+- **Index**: composite `(tenant_id, created_at DESC)` for tenant-scoped recency queries.
+- **Policy**: adds third SELECT policy `audit_user_events_select_tenant_admin` granting authenticated users SELECT on rows whose `tenant_id` matches a `tenant_users` membership where `access_scope = 'full'` and `relationship_role` is `primary_contact` or `secondary_contact`.
 
-Ready to implement on approval.
+## What does NOT change
+
+- Existing `audit_user_events_select_own` and `audit_user_events_select_superadmin` policies untouched.
+- No INSERT/UPDATE/DELETE policies added (writes remain application-layer).
+- No data backfill (table empty).
+- No edits to frontend, edge functions, or generated types.
+
+## Post-apply verification
+
+```sql
+-- 1. Column shape (expect 8 rows incl. tenant_id bigint YES)
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema='public' AND table_name='audit_user_events'
+ORDER BY ordinal_position;
+
+-- 2. Policies (expect 3: own, superadmin, tenant_admin)
+SELECT policyname, cmd
+FROM pg_policies
+WHERE schemaname='public' AND tablename='audit_user_events'
+ORDER BY policyname;
+
+-- 3. FK + index sanity
+SELECT conname, pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conrelid='public.audit_user_events'::regclass AND contype='f';
+
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE schemaname='public' AND tablename='audit_user_events'
+  AND indexname='audit_user_events_tenant_idx';
+```
+
+Awaiting `apply`.
