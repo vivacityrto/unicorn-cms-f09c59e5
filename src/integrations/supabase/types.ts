@@ -61135,6 +61135,22 @@ export type Database = {
         }
         Relationships: []
       }
+      v_workspace_audit_log: {
+        Row: {
+          action: string | null
+          actor_id: string | null
+          created_at: string | null
+          domain: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string | null
+          metadata: Json | null
+          new_val: Json | null
+          old_val: Json | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       vw_client_capacity_diagnostics: {
         Row: {
           base_weekly_required: number | null
