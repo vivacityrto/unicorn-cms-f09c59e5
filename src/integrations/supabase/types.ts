@@ -17066,6 +17066,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_evidence_type: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_fields: {
         Row: {
           created_at: string
@@ -19038,7 +19065,7 @@ export type Database = {
           created_at: string
           current_version_id: string | null
           drive_id: string
-          evidence_type: Database["public"]["Enums"]["evidence_type"] | null
+          evidence_type: string | null
           file_extension: string | null
           file_name: string | null
           file_size: number | null
@@ -19065,7 +19092,7 @@ export type Database = {
           created_at?: string
           current_version_id?: string | null
           drive_id: string
-          evidence_type?: Database["public"]["Enums"]["evidence_type"] | null
+          evidence_type?: string | null
           file_extension?: string | null
           file_name?: string | null
           file_size?: number | null
@@ -19092,7 +19119,7 @@ export type Database = {
           created_at?: string
           current_version_id?: string | null
           drive_id?: string
-          evidence_type?: Database["public"]["Enums"]["evidence_type"] | null
+          evidence_type?: string | null
           file_extension?: string | null
           file_name?: string | null
           file_size?: number | null
@@ -19247,6 +19274,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_membership_usage"
             referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "document_links_evidence_type_fkey"
+            columns: ["evidence_type"]
+            isOneToOne: false
+            referencedRelation: "dd_evidence_type"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "document_links_meeting_id_fkey"
