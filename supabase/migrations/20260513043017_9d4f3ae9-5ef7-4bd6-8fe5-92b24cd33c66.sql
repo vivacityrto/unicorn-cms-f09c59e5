@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS auth_tokens_admin_update ON public.auth_tokens;
+CREATE POLICY auth_tokens_admin_update ON public.auth_tokens AS PERMISSIVE FOR UPDATE TO authenticated USING (is_super_admin_safe((SELECT auth.uid()))) WITH CHECK (is_super_admin_safe((SELECT auth.uid())));
