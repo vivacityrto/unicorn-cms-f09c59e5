@@ -1,0 +1,2 @@
+DROP POLICY IF EXISTS "dd_meeting_type_admin" ON public.dd_meeting_type;
+CREATE POLICY "dd_meeting_type_admin" ON public.dd_meeting_type AS PERMISSIVE FOR ALL TO public USING ((EXISTS ( SELECT 1 FROM users WHERE ((users.user_uuid = (SELECT auth.uid())) AND (users.unicorn_role = 'Super Admin'::unicorn_role)))));
