@@ -61518,7 +61518,11 @@ export type Database = {
         Returns: string
       }
       enrol_as_impersonator: {
-        Args: { p_course_id: number; p_target_user_id: string }
+        Args: {
+          p_course_id: number
+          p_target_user_id: string
+          p_tenant_id: number
+        }
         Returns: {
           completed_at: string | null
           course_id: number
