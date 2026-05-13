@@ -17764,6 +17764,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_srto_source: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_staff_location: {
         Row: {
           code: string
@@ -39733,7 +39760,7 @@ export type Database = {
           metadata: Json
           quality_area: string | null
           source_document: string
-          source_type: Database["public"]["Enums"]["srto_source_type"]
+          source_type: string
           source_version: string | null
           token_count: number
           updated_at: string
@@ -39752,7 +39779,7 @@ export type Database = {
           metadata?: Json
           quality_area?: string | null
           source_document: string
-          source_type: Database["public"]["Enums"]["srto_source_type"]
+          source_type: string
           source_version?: string | null
           token_count: number
           updated_at?: string
@@ -39771,12 +39798,20 @@ export type Database = {
           metadata?: Json
           quality_area?: string | null
           source_document?: string
-          source_type?: Database["public"]["Enums"]["srto_source_type"]
+          source_type?: string
           source_version?: string | null
           token_count?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "srto_corpus_source_type_fkey"
+            columns: ["source_type"]
+            isOneToOne: false
+            referencedRelation: "dd_srto_source"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       staff_provisioning_rules: {
         Row: {
@@ -62475,7 +62510,7 @@ export type Database = {
         Args: {
           filter_clause?: string
           filter_framework?: string
-          filter_source_type?: Database["public"]["Enums"]["srto_source_type"]
+          filter_source_type?: string
           match_count?: number
           match_threshold?: number
           query_embedding: string
@@ -62490,7 +62525,7 @@ export type Database = {
           quality_area: string
           similarity: number
           source_document: string
-          source_type: Database["public"]["Enums"]["srto_source_type"]
+          source_type: string
         }[]
       }
       merge_tenants: {
