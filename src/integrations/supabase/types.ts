@@ -31989,6 +31989,7 @@ export type Database = {
           entity_type: string
           id: string
           package_id: number | null
+          tenant_id: number | null
           user_id: string | null
         }
         Insert: {
@@ -32000,6 +32001,7 @@ export type Database = {
           entity_type: string
           id?: string
           package_id?: number | null
+          tenant_id?: number | null
           user_id?: string | null
         }
         Update: {
@@ -32011,6 +32013,7 @@ export type Database = {
           entity_type?: string
           id?: string
           package_id?: number | null
+          tenant_id?: number | null
           user_id?: string | null
         }
         Relationships: []
