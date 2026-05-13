@@ -17573,6 +17573,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_sch_booking_status: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_sms: {
         Row: {
           created_at: string
@@ -37535,7 +37562,7 @@ export type Database = {
           meeting_type_id: string
           org_id: string
           starts_at: string
-          status: Database["public"]["Enums"]["sch_booking_status"]
+          status: string
           updated_at: string | null
         }
         Insert: {
@@ -37553,7 +37580,7 @@ export type Database = {
           meeting_type_id: string
           org_id: string
           starts_at: string
-          status?: Database["public"]["Enums"]["sch_booking_status"]
+          status?: string
           updated_at?: string | null
         }
         Update: {
@@ -37571,7 +37598,7 @@ export type Database = {
           meeting_type_id?: string
           org_id?: string
           starts_at?: string
-          status?: Database["public"]["Enums"]["sch_booking_status"]
+          status?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -37609,6 +37636,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sch_meeting_types"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sch_bookings_status_fkey"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_sch_booking_status"
+            referencedColumns: ["value"]
           },
         ]
       }
