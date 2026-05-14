@@ -159,31 +159,6 @@ export function checkVivacityTeam(profile: UserProfile | null): boolean {
 }
 
 /**
- * Check if a user has admin access to a specific tenant.
- * 
- * @param supabase - Supabase client
- * @param userId - The user's UUID
- * @param tenantId - The tenant ID to check
- * @returns true if the user is an admin for the tenant
- */
-export async function checkTenantAdmin(
-  supabase: SupabaseClient,
-  userId: string,
-  tenantId: number
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("tenant_users")
-    .select("tenant_role")
-    .eq("user_id", userId)
-    .eq("tenant_id", tenantId)
-    .single();
-
-  if (error || !data) return false;
-
-  return data.tenant_role === "Admin" || data.tenant_role === "Owner";
-}
-
-/**
  * Check if a user has any access to a specific tenant.
  * 
  * @param supabase - Supabase client
