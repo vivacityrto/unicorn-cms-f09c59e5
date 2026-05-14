@@ -17,6 +17,7 @@ import {
   AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { DocumentRequestModal } from "@/components/client/DocumentRequestModal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Loader2, Inbox, XCircle } from "lucide-react";
 import { format } from "date-fns";
 
@@ -78,18 +79,28 @@ export function ClientDocumentRequests() {
         </div>
         {!isReadOnly ? (
           <>
-            <Button
-              size="sm"
-              className="text-xs font-medium"
-              style={{
-                backgroundColor: "hsl(189 74% 50%)",
-                color: "hsl(270 47% 26%)",
-              }}
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              New request
-            </Button>
+            {/* TODO: re-enable when document request workflow is complete */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0}>
+                    <Button
+                      size="sm"
+                      className="text-xs font-medium"
+                      style={{
+                        backgroundColor: "hsl(189 74% 50%)",
+                        color: "hsl(270 47% 26%)",
+                      }}
+                      disabled
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      New request
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Coming soon — your CSC will reach out directly for now</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <DocumentRequestModal open={createOpen} onOpenChange={setCreateOpen} />
           </>
         ) : (

@@ -285,6 +285,8 @@ type QuickAction = {
   onClick?: () => void;
   to?: string;
   emphasised?: boolean;
+  disabled?: boolean;
+  disabledTooltip?: string;
 };
 
 function QuickActionsRow({ actions }: { actions: QuickAction[] }) {
@@ -310,6 +312,21 @@ function QuickActionsRow({ actions }: { actions: QuickAction[] }) {
         const cardCls = `cursor-pointer hover:border-primary/40 transition-colors ${
           a.emphasised ? "border-2 border-primary/30 bg-primary/5" : ""
         }`;
+        if (a.disabled) {
+          return (
+            <Tooltip key={a.label}>
+              <TooltipTrigger asChild>
+                <Card
+                  aria-disabled="true"
+                  className="opacity-60 cursor-not-allowed h-full"
+                >
+                  {inner}
+                </Card>
+              </TooltipTrigger>
+              <TooltipContent>{a.disabledTooltip ?? "Coming soon"}</TooltipContent>
+            </Tooltip>
+          );
+        }
         if (a.to) {
           return (
             <Link key={a.label} to={a.to} className="block h-full">
@@ -363,11 +380,13 @@ export function ClientHomePage() {
       icon: MessageCircle,
       onClick: () => openHelpCenter("csc"),
     },
+    // TODO: re-enable when document request workflow is complete
     {
       label: "Request document",
       subtitle: "Ask Vivacity to share or create",
       icon: FileText,
-      onClick: () => openDocumentRequest(),
+      disabled: true,
+      disabledTooltip: "Coming soon — your CSC will reach out directly for now",
     },
     {
       label: "Ask the Chatbot",
@@ -453,9 +472,17 @@ export function ClientHomePage() {
                 <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Governance Register
               </Link>
             </Button>
-            <Button variant="outline" size="sm" onClick={() => openDocumentRequest()}>
-              <FileText className="h-3.5 w-3.5 mr-1" /> Request a document
-            </Button>
+            {/* TODO: re-enable when document request workflow is complete */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button variant="outline" size="sm" disabled>
+                    <FileText className="h-3.5 w-3.5 mr-1" /> Request a document
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Coming soon — your CSC will reach out directly for now</TooltipContent>
+            </Tooltip>
             <Button variant="outline" size="sm" onClick={() => openHelpCenter("chatbot")}>
               <Bot className="h-3.5 w-3.5 mr-1" /> Ask Chatbot
             </Button>

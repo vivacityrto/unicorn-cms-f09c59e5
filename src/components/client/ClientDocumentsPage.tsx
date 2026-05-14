@@ -26,6 +26,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Upload, Download, Eye, FileText, Loader2, MessageCircle, Inbox, ClipboardList, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -237,15 +238,25 @@ export function ClientDocumentsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openDocumentRequest()}
-            className="text-xs"
-          >
-            <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
-            Request a document
-          </Button>
+          {/* TODO: re-enable when document request workflow is complete */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="text-xs"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
+                    Request a document
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Coming soon — your CSC will reach out directly for now</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {!isReadOnly && (
             <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
               <DialogTrigger asChild>
