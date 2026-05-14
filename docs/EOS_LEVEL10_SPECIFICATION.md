@@ -3,6 +3,8 @@
 **Version:** 1.0  
 **Date:** 2025-10-08
 
+> **Status (2026-05):** This specification predates the EOS module's live build. Live EOS tables exist with consolidated RLS targets (one permissive policy per table/cmd — partially achieved; remaining parallel policies will be collapsed in a follow-up), a federated audit ledger (`audit_eos_events` → `v_workspace_audit_log`), and canonical helpers (`is_eos_admin`, `has_any_eos_role`, `has_tenant_access`, `is_super_admin`). Any deviation from live should be reconciled to live, not the other way around. See **CONTRIBUTING.md → Database Conventions** for rules that supersede examples here.
+
 ---
 
 ## 1. Executive Summary
@@ -586,29 +588,58 @@ Action items with owner, due date, and completion tracking.
 
 ### 5.2 RLS Policies
 
+The canonical EOS RLS pattern is **one permissive policy per (table, cmd)**, OR'ing all access paths inside a single policy body. Use the canonical helpers below — `has_eos_role(uuid, text)` does not exist in production; do not introduce it.
+
+**Canonical helpers used by EOS RLS:**
+
+| Helper | Purpose |
+|--------|---------|
+| `public.is_super_admin()` | Vivacity Super Admin bypass |
+| `public.is_vivacity_team_user(uuid)` | Internal Vivacity team |
+| `public.has_any_eos_role(uuid, bigint)` | Caller has any EOS role in this tenant (read access) |
+| `public.is_eos_admin(uuid, bigint)` | Caller is EOS admin for this tenant (write access) |
+| `public.has_tenant_access(bigint)` | Generic tenant membership check |
+
 ```sql
--- Example: eos_rocks policies
-CREATE POLICY "Users can view their tenant rocks"
-  ON eos_rocks FOR SELECT
-  USING (tenant_id = get_current_user_tenant());
-
-CREATE POLICY "Admins can manage all rocks"
-  ON eos_rocks FOR ALL
-  USING (has_eos_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Participants can update their own rocks"
-  ON eos_rocks FOR UPDATE
-  USING (owner_id = auth.uid());
-
-CREATE POLICY "Client viewers can only see client-tagged rocks"
-  ON eos_rocks FOR SELECT
+-- Read access: any EOS role in the tenant (one permissive SELECT)
+CREATE POLICY "eos_rocks_select" ON public.eos_rocks
+  FOR SELECT TO authenticated
   USING (
-    has_eos_role(auth.uid(), 'client_viewer')
-    AND client_id IN (
-      SELECT client_id FROM user_client_access WHERE user_uuid = auth.uid()
-    )
+    public.is_super_admin()
+    OR public.is_vivacity_team_user( (select auth.uid()) )
+    OR public.has_any_eos_role( (select auth.uid()), tenant_id )
+  );
+
+-- Write access: EOS admin only (one permissive ALL)
+CREATE POLICY "eos_rocks_write" ON public.eos_rocks
+  FOR ALL TO authenticated
+  USING (
+    public.is_super_admin()
+    OR public.is_eos_admin( (select auth.uid()), tenant_id )
+  )
+  WITH CHECK (
+    public.is_super_admin()
+    OR public.is_eos_admin( (select auth.uid()), tenant_id )
   );
 ```
+
+> EOS SELECT policies were targeted for consolidation to one permissive per (table, cmd) in May 2026. Some EOS tables still carry legacy parallel policies (e.g. `*_users_all`, `*_vivacity_*`) that will be collapsed in a follow-up. Do not introduce additional permissive SELECT policies — OR access paths inside a single policy body. Always wrap `auth.uid()` as `(select auth.uid())` in policy bodies.
+
+### 5.2.1 EOS Audit Ledger
+
+All EOS state-change events write to `public.audit_eos_events`:
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `tenant_id` | `bigint` | Tenant scope |
+| `user_id` | `uuid` | Actor (`auth.users.id`) |
+| `action` | `text` | Verb (e.g. `rock.created`, `todo.completed`) |
+| `entity` | `text` | Domain entity name |
+| `entity_id` | `uuid` | Affected row |
+| `details` | `jsonb` | Snapshot / diff payload |
+| `created_at` | `timestamptz` | Event timestamp |
+
+Cross-domain reads happen through `public.v_workspace_audit_log` filtered by `domain = 'eos_event'`. The view is **`service_role` only** by design — surface EOS audit UI through an edge function, never through a direct client `SELECT` on the view.
 
 ### 5.3 Permission Matrix
 
@@ -847,6 +878,8 @@ LEFT JOIN users u ON r.owner_id = u.user_uuid
 LEFT JOIN clients_legacy c ON r.client_id = c.id;
 ```
 
+> Note: `clients_legacy` is archived. New EOS reporting joins should target `public.tenants` once the `eos_rocks.client_id` FK is migrated; this snippet reflects the current legacy join only.
+
 ### 8.4 Notification System
 
 #### 8.4.1 Email Templates
@@ -883,30 +916,13 @@ serve(async (req) => {
 - **Tenant Isolation**: `tenant_id = get_current_user_tenant()`
 - **Role-based Access**: `has_eos_role(auth.uid(), 'role')`
 
-#### 8.5.2 Client Viewer Restrictions
-```sql
--- Ensure client_viewers only access assigned clients
-CREATE TABLE user_client_access (
-  user_uuid UUID REFERENCES users(user_uuid),
-  client_id UUID REFERENCES clients_legacy(id),
-  granted_by UUID REFERENCES users(user_uuid),
-  granted_at TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (user_uuid, client_id)
-);
+#### 8.5.2 Client Viewer Restrictions — DEPRECATED (design-only, not implemented)
 
--- RLS policy example
-CREATE POLICY "Client viewers restricted to assigned clients"
-  ON eos_rocks FOR SELECT
-  USING (
-    CASE 
-      WHEN has_eos_role(auth.uid(), 'client_viewer') THEN
-        client_id IN (
-          SELECT client_id FROM user_client_access WHERE user_uuid = auth.uid()
-        )
-      ELSE true
-    END
-  );
-```
+> **This subsection is design-era doc-invention.** The `user_client_access` table was never built and must not be created. The `clients_legacy` table is archived (~11 rows) and is not a target for new foreign keys.
+
+**Canonical path for viewer-style EOS access:** flow access through existing membership tables — a row in `tenant_users` plus a viewer-flavoured role classification (e.g. `tenant_csc_assignments.role_label` or a `dd_eos_role` lookup value). Enforce in RLS via `public.has_any_eos_role((select auth.uid()), tenant_id)` with the role check baked into the helper, not via a parallel access table.
+
+If a future requirement genuinely needs per-row client tagging beyond tenant scope, raise it as a new design RFC — do not resurrect `user_client_access`.
 
 ---
 
