@@ -17726,6 +17726,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_notification_status: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_org_type: {
         Row: {
           created_at: string
@@ -31180,7 +31207,7 @@ export type Database = {
           record_id: string
           record_type: string
           sent_at: string | null
-          status: Database["public"]["Enums"]["notification_status"]
+          status: string
           tenant_id: number | null
         }
         Insert: {
@@ -31196,7 +31223,7 @@ export type Database = {
           record_id: string
           record_type: string
           sent_at?: string | null
-          status?: Database["public"]["Enums"]["notification_status"]
+          status?: string
           tenant_id?: number | null
         }
         Update: {
@@ -31212,7 +31239,7 @@ export type Database = {
           record_id?: string
           record_type?: string
           sent_at?: string | null
-          status?: Database["public"]["Enums"]["notification_status"]
+          status?: string
           tenant_id?: number | null
         }
         Relationships: [
@@ -31264,6 +31291,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "notification_outbox_status_fk"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_notification_status"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "notification_outbox_tenant_id_fkey"
