@@ -307,6 +307,7 @@ serve(async (req) => {
       .from('addin_audit_log')
       .insert({
         user_uuid: unicornUser.user_uuid,
+        tenant_id: tenantId,
         action: 'addin_opened',
         surface: null,
         metadata: {
