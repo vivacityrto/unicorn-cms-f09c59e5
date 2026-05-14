@@ -103,10 +103,19 @@ All Phase 3 tables enforce:
 - Facilitator permissions for meeting management
 
 ### Helper Functions
-- `has_eos_role()`: Check specific EOS role
-- `has_any_eos_role()`: Verify any EOS access
-- `is_eos_admin()`: Admin-level checks
-- `can_facilitate_eos()`: Facilitator verification
+
+Canonical (live in `public`):
+
+| Helper | Signature | Use |
+|--------|-----------|-----|
+| `has_any_eos_role` | `(uuid, bigint)` | Any EOS role in tenant — preferred read-access gate |
+| `is_eos_admin` | `(uuid, bigint)` | EOS admin in tenant — preferred write-access gate |
+| `can_facilitate_eos` | `(uuid, bigint)` | Facilitator-level check (meeting management) |
+| `has_eos_role` | `(uuid, bigint, eos_role)` | Role-specific check via `eos_role` enum |
+
+Vivacity-wide bypasses available in every EOS policy: `public.is_super_admin()` and `public.is_vivacity_team_user(uuid)`.
+
+> Prefer the typed helpers (`has_any_eos_role`, `is_eos_admin`, `can_facilitate_eos`) in new RLS. Use `has_eos_role(_, _, _role)` only when you genuinely need a single specific role — do not stack multiple `has_eos_role` calls when `has_any_eos_role` covers the case. Always wrap `auth.uid()` as `(select auth.uid())` inside policy bodies. See `docs/EOS_LEVEL10_SPECIFICATION.md` §5.2.
 
 ### RPC Functions
 - `publish_vto()`: Create new V/TO version with audit trail
