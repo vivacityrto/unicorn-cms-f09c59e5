@@ -1,3 +1,15 @@
+> # DEPRECATED — bootstrap reference only
+>
+> The live database has 569 public tables, 1,151 migrations, and
+> canonical helpers/tables that differ from these files. **Do not
+> run any file in this directory against any database.** They are
+> preserved as historical context.
+>
+> Current truth lives in project memory and (post-refresh) in
+> CONTRIBUTING.md → Database Conventions. The 8 May 2026
+> Deployment Readiness Audit Section 3 contains the table-name
+> mapping.
+
 # Multi-Tenant Database Setup
 
 This folder contains the SQL scripts to set up the multi-tenant architecture for your Supabase database.
