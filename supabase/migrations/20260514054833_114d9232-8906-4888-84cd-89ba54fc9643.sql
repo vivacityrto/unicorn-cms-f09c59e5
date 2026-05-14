@@ -1,0 +1,2 @@
+COMMENT ON TYPE public.notification_event_type IS
+'RETENTION NOTICE (14 May 2026): Do NOT drop this enum until Phase 3B, 3C, and 3D notification enum migrations are complete and verified. Dropping early removes the rollback path for Phase 3A. Phase status: 3A complete, 3B/3C/3D not started. Decision owner: Carl + Dave.';
