@@ -12,16 +12,16 @@ This guide walks you through setting up Supabase Authentication to work with the
 ### Set Site URL
 Set your Site URL to your application's domain:
 ```
-https://preview--unicorn-2.lovable.app
+https://id-preview--7abb2c2a-f78c-4be6-b1cd-d9d294bff530.lovable.app
 ```
 *Note: Replace with your actual deployed domain when available*
 
 ### Configure Redirect URLs
 Add these redirect URLs (one per line):
 ```
-https://preview--unicorn-2.lovable.app/reset-password
-https://preview--unicorn-2.lovable.app/auth
-https://preview--unicorn-2.lovable.app/**
+https://id-preview--7abb2c2a-f78c-4be6-b1cd-d9d294bff530.lovable.app/reset-password
+https://id-preview--7abb2c2a-f78c-4be6-b1cd-d9d294bff530.lovable.app/auth
+https://id-preview--7abb2c2a-f78c-4be6-b1cd-d9d294bff530.lovable.app/**
 ```
 
 ## 📧 Step 2: Configure Email Templates

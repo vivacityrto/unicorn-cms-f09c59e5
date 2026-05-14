@@ -588,7 +588,7 @@ Action items with owner, due date, and completion tracking.
 
 ### 5.2 RLS Policies
 
-The canonical EOS RLS pattern is **one permissive policy per (table, cmd)**, OR'ing all access paths inside a single policy body. Use the canonical helpers below — `has_eos_role(uuid, text)` does not exist in production; do not introduce it.
+The canonical EOS RLS pattern is **one permissive policy per (table, cmd)**, OR'ing all access paths inside a single policy body. The `(uuid, text)` overload of `has_eos_role` does not exist — live signature is `(uuid, bigint, eos_role)`. Prefer the typed helpers (`has_any_eos_role`, `is_eos_admin`, `can_facilitate_eos`) for new RLS; reach for `has_eos_role` only when you genuinely need a single specific role.
 
 **Canonical helpers used by EOS RLS:**
 
@@ -913,8 +913,9 @@ serve(async (req) => {
 
 #### 8.5.1 RLS Enforcement
 - **Mandatory RLS** on all EOS tables
-- **Tenant Isolation**: `tenant_id = get_current_user_tenant()`
-- **Role-based Access**: `has_eos_role(auth.uid(), 'role')`
+- **Tenant Isolation**: use `public.has_tenant_access(tenant_id)` in policy USING clauses.
+- **Role-based Access**: prefer typed helpers — `public.has_any_eos_role((select auth.uid()), tenant_id)` for any-role gates, `public.is_eos_admin(...)` for admin writes, `public.can_facilitate_eos(...)` for facilitator checks. Use `public.has_eos_role(_, _, _role)` only when targeting one specific role.
+- **Vivacity bypass**: `public.is_super_admin()` and `public.is_vivacity_team_user((select auth.uid()))` are available in every EOS policy.
 
 #### 8.5.2 Client Viewer Restrictions — DEPRECATED (design-only, not implemented)
 
