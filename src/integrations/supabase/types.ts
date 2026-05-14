@@ -18498,6 +18498,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_tenant_role: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_unicorn_roles: {
         Row: {
           created_at: string
@@ -52337,7 +52364,6 @@ export type Database = {
           superadmin_level: string | null
           tenant_id: number | null
           tenant_name: string | null
-          tenant_role: string | null
           timezone: string | null
           title: string | null
           training_facility_address: string | null
@@ -52424,7 +52450,6 @@ export type Database = {
           superadmin_level?: string | null
           tenant_id?: number | null
           tenant_name?: string | null
-          tenant_role?: string | null
           timezone?: string | null
           title?: string | null
           training_facility_address?: string | null
@@ -52511,7 +52536,6 @@ export type Database = {
           superadmin_level?: string | null
           tenant_id?: number | null
           tenant_name?: string | null
-          tenant_role?: string | null
           timezone?: string | null
           title?: string | null
           training_facility_address?: string | null
@@ -62795,9 +62819,7 @@ export type Database = {
       is_super_admin_safe: { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin_user: { Args: { p_user_id: string }; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
-      is_tenant_admin:
-        | { Args: { _tenant_id: number; _user_id: string }; Returns: boolean }
-        | { Args: { p_tenant_id: number }; Returns: boolean }
+      is_tenant_admin: { Args: { p_tenant_id: number }; Returns: boolean }
       is_tenant_admin_uuid: { Args: { p_tenant_id: string }; Returns: boolean }
       is_tenant_member: { Args: { p_tenant_id: number }; Returns: boolean }
       is_tenant_member_uuid: { Args: { p_tenant_id: string }; Returns: boolean }
@@ -63987,7 +64009,6 @@ export type Database = {
         | "SUPER_ADMIN_GENERAL"
         | "CLIENT_ADMIN"
         | "CLIENT_USER"
-      tenant_role: "ADMIN" | "GENERAL_USER"
       tenant_type:
         | "compliance_system"
         | "academy_solo"
@@ -64286,7 +64307,6 @@ export const Constants = {
         "CLIENT_ADMIN",
         "CLIENT_USER",
       ],
-      tenant_role: ["ADMIN", "GENERAL_USER"],
       tenant_type: [
         "compliance_system",
         "academy_solo",
