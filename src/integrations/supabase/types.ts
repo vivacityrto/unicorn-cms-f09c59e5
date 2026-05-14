@@ -64300,7 +64300,6 @@ export type Database = {
         | "Client Parent"
         | "Client Child"
         | "Vivacity Team"
-      vivacity_role: "SUPER_ADMIN" | "TEAM_LEADER" | "TEAM_MEMBER"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -64602,7 +64601,6 @@ export const Constants = {
         "Client Child",
         "Vivacity Team",
       ],
-      vivacity_role: ["SUPER_ADMIN", "TEAM_LEADER", "TEAM_MEMBER"],
     },
   },
 } as const
