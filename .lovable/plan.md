@@ -1,165 +1,135 @@
-## Migrate `task_status` enum → `dd_task_status` lookup table
 
-### Pre-flight notes (from blast-radius audit)
+# Prompt 2 — `sql-setup/` deprecation (diff preview)
 
-- The Postgres enum `public.task_status` is **not** referenced by the codebase (0 hits across src, supabase/migrations, supabase/functions, tests). It also does not appear among the `CREATE TYPE` statements in any migration. The migration is therefore additive — it creates a `dd_` lookup with no risk of disturbing existing code paths.
-- `useTaskStatusOptions()` already follows the lookup pattern (string `value` keys + `label`), so once `dd_task_status` exists with the seeded rows, the hook becomes the canonical source.
-- Two consumer hooks (`useClientTaskInstances.ts`, `useStaffTaskInstances.ts`) already work via `status_id` / `status` text columns — no enum dependency.
-- No `=== 'backlog'` style hard-coded comparisons exist for these values that would be tied to a `task_status` enum specifically.
+Scope: `sql-setup/` only. 14 files touched, 1 renamed. No DB changes. No edits outside this directory.
 
-### What this migration does
+---
 
-1. Creates `public.dd_task_status` using the `dd_accounting_system` standard shape (`id serial PK`, `value text UNIQUE`, `label text`, `sort_order int`, `is_active boolean`, `created_at timestamptz`).
-2. Seeds the six rows byte-identical to the enum value names.
-3. Enables RLS with two policies: `SELECT` for `authenticated`, full write for `service_role` only.
-4. Adds an index on `(sort_order)` for ordered fetches and on `(is_active)` for the common filter.
-5. Runs in-transaction safety checks via `DO $$ ... ASSERT ... $$;` blocks. If any assertion fails, the whole migration rolls back automatically.
-6. Leaves the legacy `public.task_status` enum (if it exists) entirely alone for rollback safety.
+## Pre-flight: in-tree references
 
-### What this migration does NOT do
+Verified before producing this diff:
 
-- Does **not** `DROP TYPE public.task_status` — kept for rollback.
-- Does **not** alter, add, or drop any column on any other table.
-- Does **not** modify any RLS policy on any other object.
-- Does **not** touch UI components, hooks, badges, dropdowns, filters, or stats — labels remain identical because the seeded `label` values match the existing rendered text (`Backlog`, `Not Started`, `In Progress`, `Blocked`, `Completed`, `Cancelled`).
+- **`sql-setup/02-tenant-functions.sql`** is referenced in 2 places:
+  - `sql-setup/README.md:10` — internal to scope; rewritten by this prompt.
+  - `sql-setup/03-tenant-policies.sql:2` — internal to scope; banner covers it.
+  - `supabase/migrations/20251127225243_*.sql:1` — **comment-only** historical pointer (`-- Restore original tenant helper functions from sql-setup/02-tenant-functions.sql`). Out of scope per your rules; flagged for follow-up.
+- **`sql-setup/`** appears in 1 other migration as comment only:
+  - `supabase/migrations/20260206233515_*.sql:5` — `-- Reference: sql-setup/00-security-helpers-reference.sql`. Comment, not `\i`, no execution risk.
+- **No migration sources or `\i`-includes any sql-setup file.** Verified clean.
 
-### Rollback
+**Follow-up note (not actioned this prompt):** the 2 migration files contain stale path comments. Recommend a separate one-line cleanup prompt later.
 
-```sql
-DROP TABLE IF EXISTS public.dd_task_status;
--- Legacy public.task_status enum (if present) remains intact and untouched.
+---
+
+## Task 1 — Rename + banner the highest-risk file
+
+**Operation**: `git mv sql-setup/02-tenant-functions.sql sql-setup/02-tenant-functions.HISTORICAL.sql`, then prepend banner.
+
+**Diff** (file at new path; full body of original retained below banner unchanged):
+
+```diff
+--- /dev/null
++++ b/sql-setup/02-tenant-functions.HISTORICAL.sql
+@@ -0,0 +1,18 @@
++-- ============================================================
++-- DEPRECATED — DO NOT RUN
++-- ============================================================
++-- This file is preserved as historical reference only.
++--
++-- It defines is_vivacity(), is_superadmin(), and current_tenant()
++-- — none of which exist in production. Running it would create
++-- parallel helpers and silently bypass live RLS.
++--
++-- Live helpers (canonical, do not rename):
++--   public.is_staff()
++--   public.is_super_admin()                  -- and (uuid) overload
++--   public.is_vivacity_team_user(uuid)
++--   public.has_tenant_access(_tenant_id bigint)
++--   public.get_current_user_tenant()
++--
++-- For RLS conventions see CONTRIBUTING.md → Database Conventions
++-- (pending refresh) and the project memory.
++-- ============================================================
+ -- Helper functions for multi-tenant architecture
+ -- Run this SQL in your Supabase SQL editor AFTER running 01-tenant-schema.sql
+ ... (existing 240-line body unchanged) ...
+
+--- a/sql-setup/02-tenant-functions.sql
++++ /dev/null
+(rename — original path no longer resolves; `psql -f sql-setup/02-tenant-functions.sql` will fail loudly with "No such file")
 ```
 
-No data loss, no cascading failures — `dd_task_status` is a brand-new isolated object with no FK dependencies.
+---
 
-### Post-deploy verification checklist
+## Task 2 — Banner all other sql-setup/ files
 
-1. `SELECT count(*) FROM public.dd_task_status;` → **6**
-2. `SELECT count(DISTINCT value) FROM public.dd_task_status WHERE value IN ('backlog','not_started','in_progress','blocked','completed','cancelled');` → **6**
-3. `SELECT count(*) FROM public.dd_task_status WHERE value IS NULL OR label IS NULL OR sort_order IS NULL OR is_active IS NULL;` → **0**
-4. `SELECT array_agg(sort_order ORDER BY sort_order) FROM public.dd_task_status;` → `{0,1,2,3,4,5}`
-5. `SELECT relrowsecurity FROM pg_class WHERE relname = 'dd_task_status';` → `true`
-6. `SELECT polname, polroles::regrole[] FROM pg_policy WHERE polrelid = 'public.dd_task_status'::regclass;` → at least one SELECT policy for `authenticated`, write policies restricted to `service_role`
-7. Regenerate Supabase TS types and confirm `Database['public']['Tables']['dd_task_status']` is present. (`task_status` enum continues to exist or remains absent — either way, no app code depends on it.)
-8. Document in `.lovable/plan.md` under the enum-inventory section that `task_status` has been migrated to `dd_task_status` and the legacy enum is retained for rollback only.
+**SQL files (12)** — prepend the standard SQL banner verbatim, then the existing file body:
 
-### Migration SQL (ready to apply on approval)
-
-File: `supabase/migrations/<timestamp>_add_dd_task_status.sql`
-
-```sql
--- ============================================================
--- Migrate task_status enum -> dd_task_status lookup table
---
--- Additive only. Does not touch the legacy public.task_status
--- enum (retained for rollback). No existing columns altered.
---
--- Rollback:
---   DROP TABLE IF EXISTS public.dd_task_status;
---   (Legacy enum remains intact.)
--- ============================================================
-
--- 1. Table (dd_accounting_system standard shape)
-CREATE TABLE public.dd_task_status (
-  id          serial      PRIMARY KEY,
-  value       text        NOT NULL UNIQUE,
-  label       text        NOT NULL,
-  sort_order  integer     NOT NULL DEFAULT 0,
-  is_active   boolean     NOT NULL DEFAULT true,
-  created_at  timestamptz NOT NULL DEFAULT now()
-);
-
-COMMENT ON TABLE public.dd_task_status IS
-  'Lookup table for task status. Replaces legacy public.task_status enum. '
-  'Seeded byte-identical to the enum values; legacy enum retained for rollback.';
-
--- 2. Indexes for the common access patterns
-CREATE INDEX dd_task_status_sort_order_idx ON public.dd_task_status (sort_order);
-CREATE INDEX dd_task_status_is_active_idx  ON public.dd_task_status (is_active);
-
--- 3. Seed (byte-identical to enum values; labels are the rendered display strings)
-INSERT INTO public.dd_task_status (value, label, sort_order, is_active) VALUES
-  ('backlog',     'Backlog',     0, true),
-  ('not_started', 'Not Started', 1, true),
-  ('in_progress', 'In Progress', 2, true),
-  ('blocked',     'Blocked',     3, true),
-  ('completed',   'Completed',   4, true),
-  ('cancelled',   'Cancelled',   5, true);
-
--- 4. Row-Level Security
-ALTER TABLE public.dd_task_status ENABLE ROW LEVEL SECURITY;
-
--- Read: any authenticated user
-CREATE POLICY "dd_task_status_select_authenticated"
-  ON public.dd_task_status
-  FOR SELECT
-  TO authenticated
-  USING (true);
-
--- Writes: service_role only (PostgREST anon/authenticated cannot mutate)
-CREATE POLICY "dd_task_status_insert_service_role"
-  ON public.dd_task_status
-  FOR INSERT
-  TO service_role
-  WITH CHECK (true);
-
-CREATE POLICY "dd_task_status_update_service_role"
-  ON public.dd_task_status
-  FOR UPDATE
-  TO service_role
-  USING (true)
-  WITH CHECK (true);
-
-CREATE POLICY "dd_task_status_delete_service_role"
-  ON public.dd_task_status
-  FOR DELETE
-  TO service_role
-  USING (true);
-
--- 5. Belt-and-braces grant lockdown (RLS already blocks, this removes
---    the table from anon/authenticated PostgREST surface entirely).
-REVOKE ALL ON public.dd_task_status FROM PUBLIC;
-GRANT SELECT ON public.dd_task_status TO authenticated;
-GRANT ALL    ON public.dd_task_status TO service_role;
-
--- 6. In-transaction safety checks. Any failure rolls back the migration.
-DO $$
-DECLARE
-  v_total       integer;
-  v_distinct    integer;
-  v_nulls       integer;
-  v_orders      integer[];
-  v_rls_enabled boolean;
-BEGIN
-  SELECT count(*) INTO v_total FROM public.dd_task_status;
-  ASSERT v_total = 6, format('Expected 6 rows, found %s', v_total);
-
-  SELECT count(DISTINCT value) INTO v_distinct
-  FROM public.dd_task_status
-  WHERE value IN ('backlog','not_started','in_progress','blocked','completed','cancelled');
-  ASSERT v_distinct = 6, format('Expected 6 distinct seeded values, found %s', v_distinct);
-
-  SELECT count(*) INTO v_nulls
-  FROM public.dd_task_status
-  WHERE value IS NULL OR label IS NULL OR sort_order IS NULL OR is_active IS NULL;
-  ASSERT v_nulls = 0, format('Found %s null required-field values', v_nulls);
-
-  SELECT array_agg(sort_order ORDER BY sort_order) INTO v_orders
-  FROM public.dd_task_status;
-  ASSERT v_orders = ARRAY[0,1,2,3,4,5],
-    format('Sort order mismatch: %s', v_orders);
-
-  SELECT relrowsecurity INTO v_rls_enabled
-  FROM pg_class WHERE oid = 'public.dd_task_status'::regclass;
-  ASSERT v_rls_enabled = true, 'RLS not enabled on dd_task_status';
-END
-$$;
+```diff
+@@ -0,0 +1,6 @@
++-- ============================================================
++-- DEPRECATED — historical bootstrap reference only.
++-- Live DB has 569 public tables, 1,151 migrations, and helper
++-- names that differ from this file. Do not run.
++-- See CONTRIBUTING.md and project memory for current truth.
++-- ============================================================
+ (existing file body unchanged)
 ```
 
-### Sequence of work after plan approval
+Applied identically to:
 
-1. Apply the migration above (single transaction, includes assertions).
-2. Run the post-deploy checklist (queries 1–6 listed above).
-3. Confirm regenerated Supabase types include `dd_task_status`.
-4. Append a one-line completion note to `.lovable/plan.md` enum-inventory.
-5. No frontend / hook / UI changes required — `useTaskStatusOptions()` already reads from `dd_*` tables; once `dd_task_status` exists with the seeded labels, the existing pattern picks it up unchanged.
+1. `sql-setup/00-security-helpers-reference.sql`
+2. `sql-setup/01-tenant-schema.sql`
+3. `sql-setup/03-tenant-policies.sql`
+4. `sql-setup/04-seed-data.sql`
+5. `sql-setup/05-audit-schema.sql`
+6. `sql-setup/06-audit-rls-policies.sql`
+7. `sql-setup/07-audit-rpc-functions.sql`
+8. `sql-setup/08-audit-question-bank-seed.sql`
+9. `sql-setup/09-resource-hub-schema.sql`
+10. `sql-setup/10-resource-hub-storage.sql`
+11. `sql-setup/11-resource-hub-functions.sql`
+12. `sql-setup/12-resource-hub-seed.sql`
+
+**README.md** — prepend the markdown banner, then the existing README body:
+
+```diff
+@@ -0,0 +1,11 @@
++> # DEPRECATED — bootstrap reference only
++>
++> The live database has 569 public tables, 1,151 migrations, and
++> canonical helpers/tables that differ from these files. **Do not
++> run any file in this directory against any database.** They are
++> preserved as historical context.
++>
++> Current truth lives in project memory and (post-refresh) in
++> CONTRIBUTING.md → Database Conventions. The 8 May 2026
++> Deployment Readiness Audit Section 3 contains the table-name
++> mapping.
++
+ # Multi-Tenant Database Setup
+ ... (existing README body unchanged) ...
+```
+
+Note: `sql-setup/README.md:10` ("02-tenant-functions.sql - Creates helper functions…") will become a stale internal reference once the rename lands. **Per your rules I am not editing the body in this prompt** — the top banner makes the whole file inert, so the stale line is harmless. Flagged for the future CONTRIBUTING.md prompt if you want it cleaned.
+
+---
+
+## Summary
+
+| Change | File | Notes |
+|---|---|---|
+| Rename + banner | `sql-setup/02-tenant-functions.sql` → `…HISTORICAL.sql` | Highest-risk file; original path now 404s |
+| Banner only | 12 other `sql-setup/*.sql` files | Identical 6-line SQL banner |
+| Banner only | `sql-setup/README.md` | 11-line markdown banner |
+| **Total** | **14 files touched, 1 renamed** | |
+
+**Out of scope, flagged for later prompts:**
+- `supabase/migrations/20251127225243_*.sql:1` — stale path comment.
+- `supabase/migrations/20260206233515_*.sql:5` — stale path comment.
+- `sql-setup/README.md` body line 10 referencing the old filename.
+- `sql-setup/03-tenant-policies.sql` body line 2 referencing the old filename.
+
+**Rollback**: `git revert <commit>`. No DB impact.
+
+Reply **approve** to apply, or request changes to the diff.

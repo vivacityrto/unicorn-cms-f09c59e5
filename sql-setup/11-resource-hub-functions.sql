@@ -1,3 +1,9 @@
+-- ============================================================
+-- DEPRECATED — historical bootstrap reference only.
+-- Live DB has 569 public tables, 1,151 migrations, and helper
+-- names that differ from this file. Do not run.
+-- See CONTRIBUTING.md and project memory for current truth.
+-- ============================================================
 -- Resource Hub RPC Functions
 -- All functions use SECURITY DEFINER and proper search_path
 

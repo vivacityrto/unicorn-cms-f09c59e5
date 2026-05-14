@@ -1,3 +1,22 @@
+-- ============================================================
+-- DEPRECATED — DO NOT RUN
+-- ============================================================
+-- This file is preserved as historical reference only.
+--
+-- It defines is_vivacity(), is_superadmin(), and current_tenant()
+-- — none of which exist in production. Running it would create
+-- parallel helpers and silently bypass live RLS.
+--
+-- Live helpers (canonical, do not rename):
+--   public.is_staff()
+--   public.is_super_admin()                  -- and (uuid) overload
+--   public.is_vivacity_team_user(uuid)
+--   public.has_tenant_access(_tenant_id bigint)
+--   public.get_current_user_tenant()
+--
+-- For RLS conventions see CONTRIBUTING.md → Database Conventions
+-- (pending refresh) and the project memory.
+-- ============================================================
 -- Helper functions for multi-tenant architecture
 -- Run this SQL in your Supabase SQL editor AFTER running 01-tenant-schema.sql
 

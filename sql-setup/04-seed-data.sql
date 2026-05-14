@@ -1,3 +1,9 @@
+-- ============================================================
+-- DEPRECATED — historical bootstrap reference only.
+-- Live DB has 569 public tables, 1,151 migrations, and helper
+-- names that differ from this file. Do not run.
+-- See CONTRIBUTING.md and project memory for current truth.
+-- ============================================================
 -- Seed initial tenant data for testing
 -- Run this SQL in your Supabase SQL editor AFTER running 03-tenant-policies.sql
 
