@@ -174,7 +174,7 @@ function MessagesTab() {
 
   const { isReadOnly } = useClientTenant();
   const [searchParams, setSearchParams] = useSearchParams();
-  const threadParam = searchParams.get("thread");
+  const threadParam = searchParams.get("thread") ?? searchParams.get("conversation");
   const [selectedId, setSelectedId] = useState<string | null>(threadParam);
   const [filterUnread, setFilterUnread] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
