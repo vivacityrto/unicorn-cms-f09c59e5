@@ -10,7 +10,10 @@ export type NotificationEventType =
   | 'package_threshold_80'
   | 'package_threshold_95'
   | 'package_threshold_100'
-  | 'meeting_action_created';
+  | 'meeting_action_created'
+  | 'document_request_created'
+  | 'note_shared'
+  | 'note_added';
 
 export type DeliveryTarget = 'dm' | 'channel';
 
@@ -344,5 +347,17 @@ export const EVENT_TYPE_LABELS: Record<NotificationEventType, { label: string; d
   meeting_action_created: {
     label: 'Meeting Action',
     description: 'When an action is created from a meeting',
+  },
+  document_request_created: {
+    label: 'Document Request Created',
+    description: 'When a document request is created for a client',
+  },
+  note_shared: {
+    label: 'Note Shared',
+    description: 'When a note is shared with you',
+  },
+  note_added: {
+    label: 'Note Added',
+    description: 'When a note is added to your client',
   },
 };

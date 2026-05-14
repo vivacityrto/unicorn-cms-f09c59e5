@@ -18,6 +18,9 @@ const ALL_EVENT_TYPES: NotificationEventType[] = [
   'package_threshold_95',
   'package_threshold_100',
   'meeting_action_created',
+  'document_request_created',
+  'note_shared',
+  'note_added',
 ];
 
 export function NotificationRulesCard() {
