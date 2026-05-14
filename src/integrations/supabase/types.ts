@@ -31381,7 +31381,7 @@ export type Database = {
           action: string
           created_at: string
           details: Json | null
-          event_type: Database["public"]["Enums"]["notification_event_type"]
+          event_type: string
           id: string
           notification_id: string | null
           recipient_user_uuid: string
@@ -31392,7 +31392,7 @@ export type Database = {
           action: string
           created_at?: string
           details?: Json | null
-          event_type: Database["public"]["Enums"]["notification_event_type"]
+          event_type: string
           id?: string
           notification_id?: string | null
           recipient_user_uuid: string
@@ -31403,7 +31403,7 @@ export type Database = {
           action?: string
           created_at?: string
           details?: Json | null
-          event_type?: Database["public"]["Enums"]["notification_event_type"]
+          event_type?: string
           id?: string
           notification_id?: string | null
           recipient_user_uuid?: string
@@ -31411,6 +31411,13 @@ export type Database = {
           record_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_notification_audit_log_event_type"
+            columns: ["event_type"]
+            isOneToOne: false
+            referencedRelation: "dd_notification_event"
+            referencedColumns: ["value"]
+          },
           {
             foreignKeyName: "notification_audit_log_notification_id_fkey"
             columns: ["notification_id"]
@@ -31425,7 +31432,7 @@ export type Database = {
           attempt_count: number
           client_id: number | null
           created_at: string
-          event_type: Database["public"]["Enums"]["notification_event_type"]
+          event_type: string
           id: string
           last_error: string | null
           next_retry_at: string | null
@@ -31441,7 +31448,7 @@ export type Database = {
           attempt_count?: number
           client_id?: number | null
           created_at?: string
-          event_type: Database["public"]["Enums"]["notification_event_type"]
+          event_type: string
           id?: string
           last_error?: string | null
           next_retry_at?: string | null
@@ -31457,7 +31464,7 @@ export type Database = {
           attempt_count?: number
           client_id?: number | null
           created_at?: string
-          event_type?: Database["public"]["Enums"]["notification_event_type"]
+          event_type?: string
           id?: string
           last_error?: string | null
           next_retry_at?: string | null
@@ -31470,6 +31477,13 @@ export type Database = {
           tenant_id?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_notification_outbox_event_type"
+            columns: ["event_type"]
+            isOneToOne: false
+            referencedRelation: "dd_notification_event"
+            referencedColumns: ["value"]
+          },
           {
             foreignKeyName: "notification_outbox_recipient_user_uuid_fkey"
             columns: ["recipient_user_uuid"]
@@ -31690,7 +31704,7 @@ export type Database = {
         Row: {
           created_at: string
           delivery_target: Database["public"]["Enums"]["notification_delivery_target"]
-          event_type: Database["public"]["Enums"]["notification_event_type"]
+          event_type: string
           id: string
           is_enabled: boolean
           quiet_hours_end: string | null
@@ -31701,7 +31715,7 @@ export type Database = {
         Insert: {
           created_at?: string
           delivery_target?: Database["public"]["Enums"]["notification_delivery_target"]
-          event_type: Database["public"]["Enums"]["notification_event_type"]
+          event_type: string
           id?: string
           is_enabled?: boolean
           quiet_hours_end?: string | null
@@ -31712,7 +31726,7 @@ export type Database = {
         Update: {
           created_at?: string
           delivery_target?: Database["public"]["Enums"]["notification_delivery_target"]
-          event_type?: Database["public"]["Enums"]["notification_event_type"]
+          event_type?: string
           id?: string
           is_enabled?: boolean
           quiet_hours_end?: string | null
@@ -31721,6 +31735,13 @@ export type Database = {
           user_uuid?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_notification_rules_event_type"
+            columns: ["event_type"]
+            isOneToOne: false
+            referencedRelation: "dd_notification_event"
+            referencedColumns: ["value"]
+          },
           {
             foreignKeyName: "notification_rules_user_uuid_fkey"
             columns: ["user_uuid"]
@@ -62435,7 +62456,7 @@ export type Database = {
       emit_notification: {
         Args: {
           p_client_id?: number
-          p_event_type: Database["public"]["Enums"]["notification_event_type"]
+          p_event_type: string
           p_payload: Json
           p_recipient_user_uuid: string
           p_record_id: string
