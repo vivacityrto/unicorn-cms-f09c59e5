@@ -191,7 +191,7 @@ CREATE TABLE eos_scorecard_entries (
 CREATE TABLE eos_rocks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id BIGINT REFERENCES tenants(id) ON DELETE CASCADE,
-  client_id UUID REFERENCES clients_legacy(id),  -- NULL for company/team rocks
+  client_tenant_id INTEGER REFERENCES tenants(id),  -- NULL for company/team rocks; tenant_id of the client when rock_type='client'
   
   title TEXT NOT NULL,
   description TEXT,
@@ -324,7 +324,7 @@ CREATE TABLE eos_todos (
 ```sql
 -- Performance indexes
 CREATE INDEX idx_eos_rocks_tenant_quarter ON eos_rocks(tenant_id, quarter_start);
-CREATE INDEX idx_eos_rocks_client ON eos_rocks(client_id) WHERE client_id IS NOT NULL;
+CREATE INDEX idx_eos_rocks_client_tenant_id ON eos_rocks(client_tenant_id) WHERE client_tenant_id IS NOT NULL;
 CREATE INDEX idx_eos_issues_tenant_status ON eos_issues(tenant_id, status);
 CREATE INDEX idx_eos_issues_client ON eos_issues(client_id) WHERE client_id IS NOT NULL;
 CREATE INDEX idx_eos_meetings_tenant_date ON eos_meetings(tenant_id, meeting_date DESC);
@@ -449,7 +449,7 @@ const getClientRocks = async (clientId: string, quarter: string) => {
   const { data } = await supabase
     .from('eos_rocks')
     .select('*')
-    .eq('client_id', clientId)
+    .eq('client_tenant_id', clientId)
     .eq('quarter_start', getQuarterStart(quarter));
   return data;
 };
@@ -668,9 +668,9 @@ Cross-domain reads happen through `public.v_workspace_audit_log` filtered by `do
 ### 6.1 Internal Integrations
 
 #### 6.1.1 Existing Clients Module
-- **Link**: `eos_rocks.client_id` → `clients_legacy.id`
-- **Link**: `eos_issues.client_id` → `clients_legacy.id`
-- **Use Case**: Tag Rocks and Issues with specific clients for reporting
+- **Link (current)**: `eos_rocks.client_tenant_id` → `tenants.id` (renamed and remodelled 13 Feb 2026)
+- **Link (legacy, unmigrated)**: `eos_issues.client_id` → `clients_legacy.id` — issues retain the pre-2026 model; migration parked
+- **Use Case**: Tag Rocks and Issues with the client tenant for reporting; client_viewer RLS path uses these links
 
 #### 6.1.2 Existing Users/Tenants
 - **Link**: `eos_user_roles.user_uuid` → `users.user_uuid`
@@ -878,7 +878,7 @@ LEFT JOIN users u ON r.owner_id = u.user_uuid
 LEFT JOIN clients_legacy c ON r.client_id = c.id;
 ```
 
-> Note: `clients_legacy` is archived. New EOS reporting joins should target `public.tenants` once the `eos_rocks.client_id` FK is migrated; this snippet reflects the current legacy join only.
+> Note: `clients_legacy` is archived. `eos_rocks.client_tenant_id` has been migrated (13 Feb 2026) to reference `tenants(id)` directly. The SQL snippet above shows the historical join via `clients_legacy` and remains valid only for retrieving display names of pre-migration client records; new reporting joins should go `eos_rocks JOIN tenants ON tenants.id = eos_rocks.client_tenant_id` instead.
 
 ### 8.4 Notification System
 
