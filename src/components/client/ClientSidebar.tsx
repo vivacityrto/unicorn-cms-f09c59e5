@@ -59,7 +59,6 @@ const clientMenuItemsAfter: SidebarMenuItem[] = [
 interface ClientSidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  onOpenDocumentRequest: () => void;
 }
 
 function NavItem({ item, isActive, sidebarOpen: sOpen }: { item: SidebarMenuItem; isActive: boolean; sidebarOpen: boolean }) {
@@ -91,7 +90,7 @@ function NavItem({ item, isActive, sidebarOpen: sOpen }: { item: SidebarMenuItem
   );
 }
 
-export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentRequest }: ClientSidebarProps) {
+export function ClientSidebar({ sidebarOpen, setSidebarOpen }: ClientSidebarProps) {
   const location = useLocation();
   const {
     tenantName,
@@ -217,7 +216,7 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen, onOpenDocumentReque
             {sidebarOpen && <span>Help</span>}
           </button>
           <button
-            onClick={onOpenDocumentRequest}
+            onClick={() => openHelpCenter("csc")}
             className={cn(
               "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
               sidebarOpen ? "px-4" : "px-0 justify-center"

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
-import { useHelpCenter } from "@/components/help-center";
+import { useOpenDocumentRequest } from "@/components/layout/ClientLayout";
 import {
   usePortalDocuments,
   useUploadPortalDocument,
@@ -161,7 +161,7 @@ export function ClientDocumentsPage() {
   const [category, setCategory] = useState<string>("");
 
   const { activeTenantId, isReadOnly } = useClientTenant();
-  const { openHelpCenter } = useHelpCenter();
+  const openDocumentRequest = useOpenDocumentRequest();
 
   // Use existing portal_documents hooks with direction filter
   const shared = usePortalDocuments(activeTenantId, "vivacity_to_client");
@@ -240,7 +240,7 @@ export function ClientDocumentsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => openHelpCenter("csc")}
+            onClick={() => openDocumentRequest()}
             className="text-xs"
           >
             <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
