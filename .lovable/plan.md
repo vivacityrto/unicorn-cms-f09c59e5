@@ -1,19 +1,51 @@
-# Phase 3A finalisation — remove `as any` casts
+# Archive Tier-3 Orphan Consult Tables
 
-Types are already regenerated: `emit_notification.p_event_type` is now `string` in `src/integrations/supabase/types.ts`. The temporary `as any` casts on enum literals can be removed cleanly.
+## Summary
+Move `consult_entries` and `consult_logs_unmapped_quarantine` from `public` to `archive` schema. Both tables are legacy, zero rows, and have no live consumers. Policies, indexes, triggers, and outgoing FKs travel with the tables automatically.
 
-## Edits
+## Scope
+- **In scope:**
+  - `public.consult_entries` → `archive.consult_entries`
+  - `public.consult_logs_unmapped_quarantine` → `archive.consult_logs_unmapped_quarantine`
+  - Add `COMMENT ON TABLE` to both before the move (documents provenance and drop-after guidance)
+- **Out of scope:**
+  - `consult_logs` (canonical, stays in `public`)
+  - `consults` + `consult_time_entries` (Tier 2, deferred)
+  - `merge_tenants` function
+  - Any view, edge function, RPC, frontend file, or documentation
 
-**`src/lib/noteNotifications.ts`**
-- Line 133: `p_event_type: 'note_shared' as any,` → `p_event_type: 'note_shared',`
-- Line 181: `p_event_type: alreadyNotified ? 'note_shared' as any : 'note_added' as any,` → `p_event_type: alreadyNotified ? 'note_shared' : 'note_added',`
+## Migration SQL
+```sql
+-- 1. Document the legacy role on each table before move
+COMMENT ON TABLE public.consult_entries IS
+  'Legacy/design-era consultation entries table. 0 rows since
+   inception. No live consumers — no views, no functions, no
+   frontend code reads or writes. Canonical consultation table
+   is consult_logs (referenced by 5 production views). Archived
+   per 8 May audit P1 consult tables consolidation.';
 
-**`src/hooks/useDocumentRequests.tsx`**
-- Line 114: `p_event_type: 'document_request_created' as any,` → `p_event_type: 'document_request_created',`
+COMMENT ON TABLE public.consult_logs_unmapped_quarantine IS
+  'Legacy/design-era quarantine table for un-mappable consult
+   log imports — Phase 3 failsafe from migration 20260217022250.
+   0 rows since inception (consult_logs had 0 rows when the
+   backfill ran). No live consumers. Canonical consultation
+   table is consult_logs. Archived per 8 May audit P1 consult
+   tables consolidation.';
 
-## Out of scope
-- Other unrelated `as any` casts in these files (line 123 `notifRows as any`, line 176 `} as any`, and the `(supabase as any)` chain in `useDocumentRequests.tsx`) — these address separate type issues not connected to the enum migration.
-- The legacy `notification_event_type` enum is intentionally retained as a rollback safety net until 3B–3D are verified.
+-- 2. Move both tables to archive. Policies, indexes, triggers,
+--    outgoing FKs, and owned sequences travel with the tables.
+ALTER TABLE public.consult_entries SET SCHEMA archive;
+ALTER TABLE public.consult_logs_unmapped_quarantine SET SCHEMA archive;
+```
 
-## Verification
-- TypeScript build (auto-run by harness) passes with the casts removed.
+## Rollback
+```sql
+ALTER TABLE archive.consult_logs_unmapped_quarantine SET SCHEMA public;
+ALTER TABLE archive.consult_entries SET SCHEMA public;
+```
+
+## Impact
+- `types.ts` auto-regenerates and loses the two table blocks from `public` schema.
+- No application code references either table; zero frontend impact.
+- Advisor lint on these tables (if any) is resolved by removing them from `public`.
+- `archive` schema USAGE is already gated for `authenticated`; SuperAdmin-only policies travel with the tables, preserving defense-in-depth.
