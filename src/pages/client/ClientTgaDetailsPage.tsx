@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Loader2, CheckCircle2, RefreshCw, Clock, Building, FileSearch } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -211,10 +212,20 @@ export default function ClientTgaDetailsPage() {
             )}
             Confirm Reviewed
           </Button>
-          <Button variant="outline" onClick={handleRequestUpdate}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Request Update
-          </Button>
+          {/* TODO: re-enable when document request workflow is complete */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button variant="outline" disabled>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Request Update
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Coming soon — your CSC will reach out directly for now</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardContent>
       </Card>
 
