@@ -57,7 +57,7 @@ export function ClientRocksList() {
               <div className="flex-1">
                 <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
                   {rock.title}
-                  <ClientBadge clientId={rock.client_id} />
+                  <ClientBadge clientId={rock.client_tenant_id} />
                 </CardTitle>
                 {/* Seat display */}
                 <div className="flex items-center gap-2 mt-1">

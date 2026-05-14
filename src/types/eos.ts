@@ -113,7 +113,7 @@ export interface Milestone {
 export interface EosRock {
   id: string;
   tenant_id: number;
-  client_id?: number | null;
+  client_tenant_id?: number | null;
   title: string;
   description?: string;
   issue?: string | null;

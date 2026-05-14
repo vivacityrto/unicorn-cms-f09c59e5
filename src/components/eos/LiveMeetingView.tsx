@@ -444,7 +444,7 @@ export const LiveMeetingView = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <p className="font-medium">{rock.title}</p>
-                          <ClientBadge clientId={rock.client_id} />
+                          <ClientBadge clientId={rock.client_tenant_id} />
                           <Badge variant="outline" className={`text-xs ${
                             rock.rock_level === 'company' 
                               ? 'border-primary/40 text-primary' 

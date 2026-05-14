@@ -69,7 +69,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     }
     return [];
   });
-  const [clientId, setClientId] = useState<string>(rock?.client_id ? String(rock.client_id) : '');
+  const [clientId, setClientId] = useState<string>(rock?.client_tenant_id ? String(rock.client_tenant_id) : '');
   const [functionId, setFunctionId] = useState((rock as any)?.function_id || '');
   const [ownerId, setOwnerId] = useState((rock as any)?.owner_id || '');
   const [parentRockId, setParentRockId] = useState((rock as any)?.parent_rock_id || '');
@@ -127,7 +127,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
         } else {
           setMilestones([]);
         }
-        setClientId(rock.client_id ? String(rock.client_id) : '');
+        setClientId(rock.client_tenant_id ? String(rock.client_tenant_id) : '');
         setFunctionId((rock as any)?.function_id || '');
         setOwnerId((rock as any)?.owner_id || '');
         setParentRockId((rock as any)?.parent_rock_id || '');
@@ -205,7 +205,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
       const { data, error } = await supabase
         .from('eos_rocks')
-        .select('id, title, rock_level, quarter_year, quarter_number, function_id, client_id')
+        .select('id, title, rock_level, quarter_year, quarter_number, function_id, client_tenant_id')
         .eq('tenant_id', VIVACITY_TENANT_ID)
         .in('rock_level', parentLevels)
         .is('archived_at', null)
@@ -228,7 +228,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       const match = parentRocks.find(
         r => r.rock_level === 'team' &&
           r.function_id === functionId &&
-          r.client_id === Number(clientId) &&
+          r.client_tenant_id === Number(clientId) &&
           r.quarter_year === quarterYear &&
           r.quarter_number === quarterNumber
       );
@@ -240,7 +240,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       const match = parentRocks.find(
         r => r.rock_level === 'team' &&
           r.function_id === functionId &&
-          r.client_id == null &&
+          r.client_tenant_id == null &&
           r.quarter_year === quarterYear &&
           r.quarter_number === quarterNumber
       );
@@ -298,7 +298,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       milestones: milestones.filter(m => m.text.trim()).length > 0
         ? milestones.filter(m => m.text.trim())
         : null,
-      client_id: clientId ? Number(clientId) : null,
+      client_tenant_id: clientId ? Number(clientId) : null,
       rock_level: rockLevel,
       function_id: rockLevel === 'team' ? functionId : (rockLevel === 'individual' && functionId ? functionId : null),
       owner_id: ownerId || null,
