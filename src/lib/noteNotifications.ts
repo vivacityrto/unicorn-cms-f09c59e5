@@ -130,7 +130,7 @@ export async function sendNoteNotifications({
       for (const uid of filteredNotifyIds) {
         try {
           await supabase.rpc('emit_notification', {
-            p_event_type: 'note_shared' as any,
+            p_event_type: 'note_shared',
             p_recipient_user_uuid: uid,
             p_record_type: 'note',
             p_record_id: noteId,
@@ -178,7 +178,7 @@ export async function sendNoteNotifications({
 
       try {
         await supabase.rpc('emit_notification', {
-          p_event_type: alreadyNotified ? 'note_shared' as any : 'note_added' as any,
+          p_event_type: alreadyNotified ? 'note_shared' : 'note_added',
           p_recipient_user_uuid: cscUserId,
           p_record_type: 'note',
           p_record_id: noteId,
