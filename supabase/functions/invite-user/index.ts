@@ -86,7 +86,7 @@ serve(async (req) => {
     // 3. Get caller's profile and verify permissions
     const { data: callerProfile, error: roleErr } = await supabase
       .from("users")
-      .select("unicorn_role, global_role, tenant_id, tenant_role")
+      .select("unicorn_role, global_role, tenant_id")
       .eq("user_uuid", callerUser.user.id)
       .maybeSingle();
 
