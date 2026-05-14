@@ -54,6 +54,9 @@ function formatTeamsMessage(notification: NotificationOutbox): Record<string, un
     'package_threshold_95': '📊 Package Hours at 95%',
     'package_threshold_100': '🔴 Package Hours at 100%',
     'meeting_action_created': '📝 Meeting Action Created',
+    'document_request_created': '📄 Document Request Created',
+    'note_shared': '📝 Note Shared',
+    'note_added': '📝 Note Added',
   };
 
   const title = eventTitles[notification.event_type] || 'Unicorn Notification';
