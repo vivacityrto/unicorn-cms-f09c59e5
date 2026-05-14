@@ -95,7 +95,7 @@ export function ClientFooter() {
               </li>
               <li>
                 <Link
-                  to="/client/notifications"
+                  to="/client/inbox?tab=notifications"
                   className="text-sm text-white hover:text-white/80 transition-colors"
                 >
                   Notifications

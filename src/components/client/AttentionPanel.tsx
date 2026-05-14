@@ -52,7 +52,7 @@ export function AttentionPanel() {
       key: "notifications",
       icon: <Bell className="h-4 w-4 text-primary" />,
       label: `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`,
-      href: "/client/notifications",
+      href: "/client/inbox?tab=notifications",
       severity: "info",
     });
   }
