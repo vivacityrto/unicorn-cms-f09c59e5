@@ -95,7 +95,6 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
       <ClientSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        onOpenDocumentRequest={() => openDocumentRequest()}
       />
 
       {/* Main Content */}
