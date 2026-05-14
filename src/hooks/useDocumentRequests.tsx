@@ -111,7 +111,7 @@ export function useCreateDocumentRequest() {
       // Emit notification to CSC if assigned
       if (assignedTo) {
         await supabase.rpc('emit_notification', {
-          p_event_type: 'document_request_created' as any,
+          p_event_type: 'document_request_created',
           p_recipient_user_uuid: assignedTo,
           p_record_type: 'tenant_document_request',
           p_record_id: data.id,
