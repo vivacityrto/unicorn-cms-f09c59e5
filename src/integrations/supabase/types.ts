@@ -18134,6 +18134,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_staff_team: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_stage_state: {
         Row: {
           created_at: string
@@ -52377,7 +52404,7 @@ export type Database = {
           role: string | null
           rto_id: number | null
           rto_name: string | null
-          staff_team: Database["public"]["Enums"]["staff_team_type"] | null
+          staff_team: string | null
           staff_teams: string[] | null
           start_date: string | null
           state: number | null
@@ -52463,7 +52490,7 @@ export type Database = {
           role?: string | null
           rto_id?: number | null
           rto_name?: string | null
-          staff_team?: Database["public"]["Enums"]["staff_team_type"] | null
+          staff_team?: string | null
           staff_teams?: string[] | null
           start_date?: string | null
           state?: number | null
@@ -52549,7 +52576,7 @@ export type Database = {
           role?: string | null
           rto_id?: number | null
           rto_name?: string | null
-          staff_team?: Database["public"]["Enums"]["staff_team_type"] | null
+          staff_team?: string | null
           staff_teams?: string[] | null
           start_date?: string | null
           state?: number | null
@@ -52634,6 +52661,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "users_staff_team_fkey"
+            columns: ["staff_team"]
+            isOneToOne: false
+            referencedRelation: "dd_staff_team"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "users_tenant_id_fkey"
