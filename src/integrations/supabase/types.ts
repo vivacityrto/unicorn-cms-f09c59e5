@@ -17753,6 +17753,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_notification_integration_status: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_notification_status: {
         Row: {
           created_at: string
@@ -51845,7 +51872,7 @@ export type Database = {
           preferred_channel_id: string | null
           preferred_team_id: string | null
           provider: string
-          status: Database["public"]["Enums"]["notification_integration_status"]
+          status: string
           updated_at: string
           user_uuid: string
           webhook_url: string | null
@@ -51857,7 +51884,7 @@ export type Database = {
           preferred_channel_id?: string | null
           preferred_team_id?: string | null
           provider?: string
-          status?: Database["public"]["Enums"]["notification_integration_status"]
+          status?: string
           updated_at?: string
           user_uuid: string
           webhook_url?: string | null
@@ -51869,12 +51896,19 @@ export type Database = {
           preferred_channel_id?: string | null
           preferred_team_id?: string | null
           provider?: string
-          status?: Database["public"]["Enums"]["notification_integration_status"]
+          status?: string
           updated_at?: string
           user_uuid?: string
           webhook_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_notification_integrations_status_fkey"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_notification_integration_status"
+            referencedColumns: ["value"]
+          },
           {
             foreignKeyName: "user_notification_integrations_user_uuid_fkey"
             columns: ["user_uuid"]
