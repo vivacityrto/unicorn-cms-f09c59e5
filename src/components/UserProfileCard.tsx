@@ -6,11 +6,11 @@ import { Edit, Trash2, Mail, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const TEAM_LABELS: Record<string, { label: string; color: string }> = {
-  csc: { label: 'CSC', color: 'bg-emerald-500/10 text-emerald-700 border-emerald-200' },
-  csc_admin: { label: 'CSC Admin', color: 'bg-blue-500/10 text-blue-700 border-blue-200' },
-  growth: { label: 'Growth', color: 'bg-purple-500/10 text-purple-700 border-purple-200' },
+  business_growth: { label: 'Business Growth', color: 'bg-purple-500/10 text-purple-700 border-purple-200' },
+  client_success: { label: 'Client Success', color: 'bg-emerald-500/10 text-emerald-700 border-emerald-200' },
+  client_experience: { label: 'Client Experience', color: 'bg-cyan-500/10 text-cyan-700 border-cyan-200' },
+  software_development: { label: 'Software Dev', color: 'bg-blue-500/10 text-blue-700 border-blue-200' },
   leadership: { label: 'Leadership', color: 'bg-amber-500/10 text-amber-700 border-amber-200' },
-  other: { label: 'Staff', color: 'bg-gray-500/10 text-gray-700 border-gray-200' },
 };
 
 interface UserProfileCardProps {
