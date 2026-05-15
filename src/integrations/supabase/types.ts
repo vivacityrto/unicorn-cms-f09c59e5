@@ -64107,20 +64107,6 @@ export type Database = {
         | "closed"
         | "locked"
       meeting_type: "level_10" | "quarterly" | "annual"
-      notification_delivery_target: "dm" | "channel"
-      notification_event_type:
-        | "task_assigned"
-        | "task_overdue"
-        | "risk_flagged"
-        | "package_threshold_80"
-        | "package_threshold_95"
-        | "package_threshold_100"
-        | "meeting_action_created"
-        | "document_request_created"
-        | "note_shared"
-        | "note_added"
-      notification_integration_status: "connected" | "disconnected" | "error"
-      notification_status: "queued" | "sent" | "failed" | "skipped"
       rock_type: "company" | "team" | "individual"
       sch_booking_status: "pending" | "confirmed" | "rescheduled" | "cancelled"
       segment_type:
@@ -64397,21 +64383,6 @@ export const Constants = {
         "locked",
       ],
       meeting_type: ["level_10", "quarterly", "annual"],
-      notification_delivery_target: ["dm", "channel"],
-      notification_event_type: [
-        "task_assigned",
-        "task_overdue",
-        "risk_flagged",
-        "package_threshold_80",
-        "package_threshold_95",
-        "package_threshold_100",
-        "meeting_action_created",
-        "document_request_created",
-        "note_shared",
-        "note_added",
-      ],
-      notification_integration_status: ["connected", "disconnected", "error"],
-      notification_status: ["queued", "sent", "failed", "skipped"],
       rock_type: ["company", "team", "individual"],
       sch_booking_status: ["pending", "confirmed", "rescheduled", "cancelled"],
       segment_type: [
