@@ -18566,6 +18566,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_user_type: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_usersetup_links: {
         Row: {
           category: string
@@ -52420,7 +52447,7 @@ export type Database = {
           TS: string | null
           unicorn_role: Database["public"]["Enums"]["unicorn_role"]
           updated_at: string
-          user_type: Database["public"]["Enums"]["user_type_enum"]
+          user_type: string
           user_uuid: string
           website: string | null
           working_days: Json | null
@@ -52506,7 +52533,7 @@ export type Database = {
           TS?: string | null
           unicorn_role?: Database["public"]["Enums"]["unicorn_role"]
           updated_at?: string
-          user_type: Database["public"]["Enums"]["user_type_enum"]
+          user_type: string
           user_uuid?: string
           website?: string | null
           working_days?: Json | null
@@ -52592,7 +52619,7 @@ export type Database = {
           TS?: string | null
           unicorn_role?: Database["public"]["Enums"]["unicorn_role"]
           updated_at?: string
-          user_type?: Database["public"]["Enums"]["user_type_enum"]
+          user_type?: string
           user_uuid?: string
           website?: string | null
           working_days?: Json | null
@@ -52801,6 +52828,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_membership_usage"
             referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_user_type_fkey"
+            columns: ["user_type"]
+            isOneToOne: false
+            referencedRelation: "dd_user_type"
+            referencedColumns: ["value"]
           },
         ]
       }
