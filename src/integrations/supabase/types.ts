@@ -52475,7 +52475,7 @@ export type Database = {
           title: string | null
           training_facility_address: string | null
           TS: string | null
-          unicorn_role: Database["public"]["Enums"]["unicorn_role"]
+          unicorn_role: string
           updated_at: string
           user_type: string
           user_uuid: string
@@ -52561,7 +52561,7 @@ export type Database = {
           title?: string | null
           training_facility_address?: string | null
           TS?: string | null
-          unicorn_role?: Database["public"]["Enums"]["unicorn_role"]
+          unicorn_role?: string
           updated_at?: string
           user_type: string
           user_uuid?: string
@@ -52647,7 +52647,7 @@ export type Database = {
           title?: string | null
           training_facility_address?: string | null
           TS?: string | null
-          unicorn_role?: Database["public"]["Enums"]["unicorn_role"]
+          unicorn_role?: string
           updated_at?: string
           user_type?: string
           user_uuid?: string
@@ -52858,6 +52858,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_membership_usage"
             referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_unicorn_role_fk"
+            columns: ["unicorn_role"]
+            isOneToOne: false
+            referencedRelation: "dd_unicorn_roles"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "users_user_type_fkey"
@@ -64092,7 +64099,7 @@ export type Database = {
           p_new_is_vivacity_internal: boolean
           p_new_superadmin_level: string
           p_new_tenant_id: number
-          p_new_unicorn_role: Database["public"]["Enums"]["unicorn_role"]
+          p_new_unicorn_role: string
           p_user_id: string
         }
         Returns: boolean
