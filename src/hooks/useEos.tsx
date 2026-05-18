@@ -253,10 +253,10 @@ export const useEosTodos = () => {
 
   const createTodo = useMutation({
     mutationFn: async (todo: Partial<EosTodo>) => {
-      const { tenant_id, ...todoData } = todo;
+      const insertData = { ...todo, tenant_id: todo.tenant_id ?? 6372 };
       const { data, error } = await supabase
         .from('eos_todos')
-        .insert(todoData as any)
+        .insert(insertData as any)
         .select()
         .single();
       
