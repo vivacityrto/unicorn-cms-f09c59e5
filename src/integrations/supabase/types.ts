@@ -64266,13 +64266,6 @@ export type Database = {
         | "secondary_contact"
         | "user"
         | "academy_user"
-      unicorn_role:
-        | "Super Admin"
-        | "Admin"
-        | "User"
-        | "Team Leader"
-        | "Team Member"
-        | "Academy User"
       user_type_enum:
         | "Vivacity"
         | "Client"
@@ -64549,14 +64542,6 @@ export const Constants = {
         "secondary_contact",
         "user",
         "academy_user",
-      ],
-      unicorn_role: [
-        "Super Admin",
-        "Admin",
-        "User",
-        "Team Leader",
-        "Team Member",
-        "Academy User",
       ],
       user_type_enum: [
         "Vivacity",
