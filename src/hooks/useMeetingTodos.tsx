@@ -35,7 +35,7 @@ export const useMeetingTodos = (meetingId?: string) => {
         .from('eos_todos')
         .insert([{
           ...todo,
-          tenant_id: profile?.tenant_id!,
+          tenant_id: profile?.tenant_id ?? 6372,
           status: todo.status || 'Open'
         }])
         .select()
