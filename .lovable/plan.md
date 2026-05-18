@@ -1,59 +1,29 @@
-## Fix Evidence Request Frontend/DB Column-and-Value Mismatches
+## Fix evidence request status values in `useAuditPrep.ts`
 
-Three independent renames across five evidence-related files only. No DB changes, no new components, no schema edits.
+### Problem
+Frontend writes `status: 'sent'` when creating evidence requests, but the DB CHECK constraint on `evidence_requests.status` only allows: `draft`, `open`, `partially_received`, `received`, `overdue`, `closed`, `cancelled`. This causes a CHECK constraint violation on every create.
 
----
+The `sent_at` timestamp already records dispatch time — status does not need to carry that signal.
 
-### Fix 1 — `sort_order` → `display_order` (evidence_request_items only)
+### Changes
 
-The DB column is `display_order`. Frontend incorrectly uses `sort_order` in the `EvidenceRequestItem` interface, sort logic, and insert payloads.
+File: `src/hooks/useAuditPrep.ts` (2 edits only)
 
-**Files & lines:**
-- `src/hooks/useEvidenceRequests.tsx`
-  - L18: interface field `sort_order: number` → `display_order: number`
-  - L89: `a.sort_order - b.sort_order` → `a.display_order - b.display_order`
-  - L128: same sort expression → `a.display_order - b.display_order`
-  - L222: insert payload `sort_order: index` → `display_order: index`
-- `src/hooks/useAuditPrep.ts`
-  - L139: `.order('sort_order', { ascending: true })` → `.order('display_order', { ascending: true })`
-- `src/components/audit/workspace/SendEvidenceRequestDrawer.tsx`
-  - L79: `.order('sort_order', { ascending: true })` → `.order('display_order', { ascending: true })`
+1. **Line 89** — `useCreateAuditEvidenceRequest` insert payload:
+   - Change `status: 'sent'` → `status: 'open'`
+   - `sent_at: new Date().toISOString()` stays unchanged
 
-### Fix 2 — `reviewed_by_user_id` → `reviewed_by` (TypeScript interface only)
+2. **Line 206** — `useClientEvidenceRequests` query filter:
+   - Change `.in('status', ['sent', 'in_progress'])` → `.in('status', ['open', 'partially_received'])`
+   - Logic: client portal shows requests that are actively awaiting evidence (`open`) or partially fulfilled (`partially_received`). Fully received or closed requests drop out of the prep section.
 
-DB column is `reviewed_by`. Only the local `EvidenceRequestItem` interface is wrong; no read/write call sites use it yet.
-
-**File & line:**
-- `src/hooks/useEvidenceRequests.tsx`
-  - L16: `reviewed_by_user_id: string | null` → `reviewed_by: string | null`
-
-### Fix 3 — status value `revision_requested` → `resubmit_requested`
-
-DB CHECK constraint allows `resubmit_requested`, not `revision_requested`. Change only the string literal; the user-facing label "Revision needed" stays unchanged.
-
-**Files & lines:**
-- `src/hooks/useAuditPrep.ts`
-  - L173: TS union literal `'accepted' | 'revision_requested'` → `'accepted' | 'resubmit_requested'`
-- `src/components/audit/workspace/EvidenceRequestsSection.tsx`
-  - L22: status map key `revision_requested:` → `resubmit_requested:`
-  - L108: comparison `item.status === 'revision_requested'` → `item.status === 'resubmit_requested'` (keep label "Revision needed")
-  - L132: mutate payload `status: 'revision_requested'` → `status: 'resubmit_requested'`
-- `src/components/client/AuditPreparationSection.tsx`
-  - L16: status map key `revision_requested:` → `resubmit_requested:`
-  - L107: comparison `item.status === 'revision_requested'` → `item.status === 'resubmit_requested'`
-  - L125: comparison `item.status === 'revision_requested'` → `item.status === 'resubmit_requested'`
-
----
+### Out of scope
+- DB / migrations / RPCs / triggers
+- `audit_send_evidence_reminders` cron (known broken, separate fix)
+- `useEvidenceRequests.tsx` (System 1 hook)
+- Any other status-related code
 
 ### Verification
-
-1. Run `tsc --noEmit` (or build) to confirm TypeScript passes.
-2. Search project-wide for `sort_order` and `reviewed_by_user_id` and `revision_requested` inside the five evidence files — expect zero hits for the old names. Hits in academy/, pdp/, and other unrelated modules are expected and must be left untouched.
-3. Smoke: create an evidence request from CSC view → Documents → Evidence Requests → Send Request should succeed without schema cache error.
-
-### Out of scope (unchanged)
-- Any DB / migration / RPC / trigger code
-- User-visible label "Revision needed" — stays as-is
-- Other `sort_order` references in academy/, pdp/, compliance templates, etc.
-- `tenant_document_requests` feature
-- Reminder cron `audit_send_evidence_reminders` filter `WHERE er.status = 'sent'`
+1. `tsc --noEmit` passes.
+2. As CSC on `/audits/{id}` → Evidence Requests → Send → submit succeeds with no CHECK error.
+3. As TP on `/client/home`, AuditPreparationSection renders the request with upload buttons.
