@@ -34,6 +34,7 @@ export function AuditProgressCard({ linkedAuditId }: AuditProgressCardProps) {
   if (isLoading || !audit) return null;
 
   const status = audit.status as AuditStatus;
+  const isComplete = status === 'complete';
   const scorePct = audit.score_pct ?? 0;
   const assessed = audit.score_total ?? 0;
   const maxScore = audit.score_max ?? 0;
