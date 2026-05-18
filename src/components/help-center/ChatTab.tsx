@@ -6,6 +6,7 @@ import { Bot, Send, Loader2, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
@@ -77,16 +78,20 @@ export function ChatTab() {
       if (error) throw error;
 
       if (data?.thread_id) setThreadId(data.thread_id);
-      if (data?.assistant_message) {
-        setMessages(prev => [
-          ...prev,
-          {
-            id: data.assistant_message.id || crypto.randomUUID(),
-            role: "assistant",
-            content: data.assistant_message.content,
-            created_at: data.assistant_message.created_at || new Date().toISOString(),
-          },
-        ]);
+
+      if (data?.thread_id) {
+        const { data: latestMsg } = await supabase
+          .from("help_messages")
+          .select("id, role, content, created_at")
+          .eq("thread_id", data.thread_id)
+          .eq("role", "assistant")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (latestMsg) {
+          setMessages(prev => [...prev, latestMsg as Message]);
+        }
       }
     } catch (err: any) {
       console.error("Chat error:", err);
@@ -139,7 +144,23 @@ export function ChatTab() {
                       : "bg-muted text-foreground"
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === "assistant" ? (
+                    <ReactMarkdown
+                      components={{
+                        h2: ({ node, ...props }) => (
+                          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-3 mb-1 first:mt-0" {...props} />
+                        ),
+                        ul: ({ node, ...props }) => <ul className="space-y-1 pl-4" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="space-y-1 pl-4" {...props} />,
+                        li: ({ node, ...props }) => <li className="text-sm list-disc" {...props} />,
+                        p: ({ node, ...props }) => <p className="text-sm" {...props} />,
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
                 {msg.role === "user" && (
                   <div className="flex-shrink-0 h-7 w-7 rounded-full bg-secondary/10 flex items-center justify-center">
