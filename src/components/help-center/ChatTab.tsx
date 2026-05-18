@@ -144,7 +144,23 @@ export function ChatTab() {
                       : "bg-muted text-foreground"
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === "assistant" ? (
+                    <ReactMarkdown
+                      components={{
+                        h2: ({ node, ...props }) => (
+                          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-3 mb-1 first:mt-0" {...props} />
+                        ),
+                        ul: ({ node, ...props }) => <ul className="space-y-1 pl-4" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="space-y-1 pl-4" {...props} />,
+                        li: ({ node, ...props }) => <li className="text-sm list-disc" {...props} />,
+                        p: ({ node, ...props }) => <p className="text-sm" {...props} />,
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
                 {msg.role === "user" && (
                   <div className="flex-shrink-0 h-7 w-7 rounded-full bg-secondary/10 flex items-center justify-center">
