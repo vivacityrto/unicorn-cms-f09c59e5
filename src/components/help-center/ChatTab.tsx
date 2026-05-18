@@ -6,6 +6,7 @@ import { Bot, Send, Loader2, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
