@@ -86,7 +86,7 @@ export function useCreateAuditEvidenceRequest() {
           due_date: dueDate,
           category: 'audit_preparation',
           requested_by_user_id: user.id,
-          status: 'sent',
+          status: 'open',
           sent_at: new Date().toISOString(),
         } as any)
         .select('id')
@@ -203,7 +203,7 @@ export function useClientEvidenceRequests(tenantId: number | null | undefined) {
         .select('*, evidence_request_items(*)')
         .eq('tenant_id', tenantId)
         .not('audit_id', 'is', null)
-        .in('status', ['sent', 'in_progress'])
+        .in('status', ['open', 'partially_received'])
         .order('due_date', { ascending: true });
       if (error) throw error;
       return (data || []) as unknown as EvidenceRequest[];
