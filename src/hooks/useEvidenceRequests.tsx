@@ -13,9 +13,9 @@ export interface EvidenceRequestItem {
   received_document_id: string | null;
   status: string;
   review_notes: string | null;
-  reviewed_by_user_id: string | null;
+  reviewed_by: string | null;
   reviewed_at: string | null;
-  sort_order: number;
+  display_order: number;
   created_at: string;
   // Joined
   received_document?: {
@@ -86,7 +86,7 @@ export function useEvidenceRequests(tenantId: number | null) {
           ? `${req.assignee.first_name || ''} ${req.assignee.last_name || ''}`.trim() 
           : null,
         items: (req.items || []).sort((a: EvidenceRequestItem, b: EvidenceRequestItem) => 
-          a.sort_order - b.sort_order
+          a.display_order - b.display_order
         ),
       })) as EvidenceRequest[];
     },
@@ -125,7 +125,7 @@ export function useEvidenceRequest(requestId: string | null) {
           ? `${(data as any).assignee.first_name || ''} ${(data as any).assignee.last_name || ''}`.trim() 
           : null,
         items: ((data as any).items || []).sort((a: EvidenceRequestItem, b: EvidenceRequestItem) => 
-          a.sort_order - b.sort_order
+          a.display_order - b.display_order
         ),
       } as EvidenceRequest;
     },
@@ -219,7 +219,7 @@ export function useCreateEvidenceRequest() {
               guidance_text: item.guidance_text || null,
               accepted_file_types: item.accepted_file_types || null,
               is_required: item.is_required ?? true,
-              sort_order: index,
+              display_order: index,
               status: 'pending',
             }))
           );

@@ -19,7 +19,7 @@ const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-600',
   received: 'bg-blue-100 text-blue-700',
   accepted: 'bg-green-100 text-green-700',
-  revision_requested: 'bg-amber-100 text-amber-700',
+  resubmit_requested: 'bg-amber-100 text-amber-700',
 };
 
 export function EvidenceRequestsSection({ audit }: EvidenceRequestsSectionProps) {
@@ -105,7 +105,7 @@ export function EvidenceRequestsSection({ audit }: EvidenceRequestsSectionProps)
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className={cn('text-[10px]', STATUS_COLORS[item.status] || STATUS_COLORS.pending)}>
-                              {item.status === 'revision_requested' ? 'Revision needed' : item.status}
+                              {item.status === 'resubmit_requested' ? 'Revision needed' : item.status}
                             </Badge>
                             {item.status === 'received' && (
                               <>
@@ -129,7 +129,7 @@ export function EvidenceRequestsSection({ audit }: EvidenceRequestsSectionProps)
                                     size="sm"
                                     className="text-amber-600 hover:text-amber-700"
                                     onClick={() => {
-                                      reviewItem.mutate({ itemId: item.id, status: 'revision_requested', reviewNotes: revisionNotes[item.id] });
+                                      reviewItem.mutate({ itemId: item.id, status: 'resubmit_requested', reviewNotes: revisionNotes[item.id] });
                                       setRevisionNotes(prev => ({ ...prev, [item.id]: '' }));
                                     }}
                                   >

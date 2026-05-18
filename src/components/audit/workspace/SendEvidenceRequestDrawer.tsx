@@ -76,7 +76,7 @@ export function SendEvidenceRequestDrawer({ open, onOpenChange, audit }: SendEvi
         .eq('is_active', true)
         .in('section_id', sectionIds)
         .not('evidence_to_sight', 'is', null)
-        .order('sort_order', { ascending: true });
+        .order('display_order', { ascending: true });
 
       if (questions && (questions as any[]).length > 0) {
         const generated = (questions as any[]).map(q => ({
