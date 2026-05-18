@@ -1,53 +1,115 @@
-## Phase 4C Migration: `tenant_user_role` enum → `dd_relationship_role` lookup
+## Goal
+Data-only SQL migration to fix L10 segment order so **IDS** precedes **To-Do List**. No schema, RLS, or frontend changes.
 
-Create a single Supabase migration file containing the exact SQL you provided, in the order specified. No deviations, no simplifications, no additional changes.
+## Scope confirmed from DB
 
-### File contents (in order)
+| Table | L10 rows | Rows needing swap |
+|---|---|---|
+| `eos_agenda_templates` (meeting_type='L10') | 794 | 793 (1 missing one of the two segments — skipped) |
+| `eos_agenda_template_versions` (linked to L10 templates) | 794 | apply same JSON swap |
+| `eos_meeting_segments` (meetings with both segments) | 12 meetings | swap `sequence_order` pairwise |
 
-1. **Section 0 — Pre-flight assertions** (3 `DO $$` blocks)
-   - Abort if `dd_relationship_role` table already exists
-   - Abort if `tenant_users.relationship_role` has unexpected values
-   - Abort if `user_invitations.relationship_role` has unexpected values
+Segment names in data (exact strings):
+- `'To-Do List'`
+- `'IDS (Identify, Discuss, Solve)'`
 
-2. **Section 1 — Create & seed `dd_relationship_role`**
-   - Table with `id serial PK`, `value text UNIQUE`, `label`, `sort_order`, `is_active`, `created_at`
-   - Seed 4 rows: `primary_contact`, `secondary_contact`, `user`, `academy_user`
-   - Enable RLS + authenticated SELECT policy
+One template stores `duration_minutes` instead of `duration`; the swap is keyed on `name` only, so this is preserved untouched.
 
-3. **Section 2 — Migrate `tenant_users.relationship_role`**
-   - `ALTER COLUMN ... TYPE text USING ::text`
-   - Add FK `fk_tenant_users_relationship_role → dd_relationship_role(value)` (ON UPDATE CASCADE, ON DELETE RESTRICT)
+Non-L10 templates (`Quarterly`, etc.) and other segment names (Segue, Scorecard, Rock Review, Headlines, Conclude) are excluded by `meeting_type::text='L10'` and the explicit name filter.
 
-4. **Section 3 — Migrate `user_invitations.relationship_role`**
-   - Same conversion + FK pattern
+## Migration steps (single transaction)
 
-5. **Section 4 — Recreate unique partial indexes**
-   - Drop & recreate `uniq_tenant_one_primary_contact` and `uniq_tenant_one_secondary_contact` without enum casts (within same transaction → no enforcement gap)
+### Step 1 — `eos_agenda_templates`
+For each L10 row where the `segments` JSONB array contains both names and `To-Do List` appears before `IDS`, rebuild the array with the two elements swapped in place. All other elements (and their `duration` / `duration_minutes` keys) are preserved.
 
-6. **Section 5 — Recreate `set_relationship_role`** with `p_relationship_role text` and `v_old_role text`, validating against `dd_relationship_role` (full body as supplied)
+```sql
+UPDATE public.eos_agenda_templates t
+SET segments = sub.new_segments,
+    updated_at = now()
+FROM (
+  SELECT id,
+    jsonb_agg(
+      CASE
+        WHEN ord-1 = tod_idx THEN segments -> ids_idx
+        WHEN ord-1 = ids_idx THEN segments -> tod_idx
+        ELSE elem
+      END
+      ORDER BY ord
+    ) AS new_segments
+  FROM (
+    SELECT id, segments,
+      (SELECT ord-1 FROM jsonb_array_elements(segments) WITH ORDINALITY a(elem,ord)
+        WHERE elem->>'name'='To-Do List' LIMIT 1) AS tod_idx,
+      (SELECT ord-1 FROM jsonb_array_elements(segments) WITH ORDINALITY a(elem,ord)
+        WHERE elem->>'name'='IDS (Identify, Discuss, Solve)' LIMIT 1) AS ids_idx
+    FROM public.eos_agenda_templates
+    WHERE meeting_type::text='L10'
+  ) src,
+  LATERAL jsonb_array_elements(segments) WITH ORDINALITY arr(elem, ord)
+  WHERE tod_idx IS NOT NULL AND ids_idx IS NOT NULL AND tod_idx < ids_idx
+  GROUP BY id, segments, tod_idx, ids_idx
+) sub
+WHERE t.id = sub.id;
+```
 
-7. **Section 6 — Recreate `accept_invitation_v2`** with only `v_relationship_role` declared as `text` instead of `public.tenant_user_role` (full body reproduced exactly as supplied; signature unchanged)
+### Step 2 — `eos_agenda_template_versions`
+Same swap on `segments_snapshot`, scoped via join to L10 templates. Identical logic.
 
-8. **Section 7 — Rewrite two RLS policies** (`audit_user_events_select_tenant_admin`, `pdp_cycles: tenant admins view their tenant`) — drop `::tenant_user_role` casts from ARRAY literals; logic otherwise identical
+### Step 3 — `eos_meeting_segments`
+Per-meeting two-row swap of `sequence_order` using a temp negative value to dodge a unique constraint if present:
 
-9. **Section 8 — Retain legacy enum** with `COMMENT ON TYPE public.tenant_user_role` noting supersession, rollback retention, and Carl/Dave sign-off requirement before any future DROP
+```sql
+WITH pairs AS (
+  SELECT m.id AS meeting_id,
+    MAX(s.id) FILTER (WHERE s.segment_name='To-Do List') AS tod_id,
+    MAX(s.id) FILTER (WHERE s.segment_name='IDS (Identify, Discuss, Solve)') AS ids_id,
+    MAX(s.sequence_order) FILTER (WHERE s.segment_name='To-Do List') AS tod_ord,
+    MAX(s.sequence_order) FILTER (WHERE s.segment_name='IDS (Identify, Discuss, Solve)') AS ids_ord
+  FROM public.eos_meeting_segments s
+  JOIN (SELECT DISTINCT meeting_id AS id FROM public.eos_meeting_segments) m ON m.id = s.meeting_id
+  GROUP BY m.id
+  HAVING COUNT(*) FILTER (WHERE s.segment_name='To-Do List')>0
+     AND COUNT(*) FILTER (WHERE s.segment_name='IDS (Identify, Discuss, Solve)')>0
+     AND MAX(s.sequence_order) FILTER (WHERE s.segment_name='To-Do List')
+       < MAX(s.sequence_order) FILTER (WHERE s.segment_name='IDS (Identify, Discuss, Solve)')
+)
+-- park To-Do at -1*tod_id, then set IDS to old tod_ord, then To-Do to old ids_ord
+, park AS (
+  UPDATE public.eos_meeting_segments s SET sequence_order = -1
+  FROM pairs p WHERE s.id = p.tod_id RETURNING s.id
+)
+, move_ids AS (
+  UPDATE public.eos_meeting_segments s SET sequence_order = p.tod_ord
+  FROM pairs p WHERE s.id = p.ids_id RETURNING s.id
+)
+UPDATE public.eos_meeting_segments s SET sequence_order = p.ids_ord
+FROM pairs p WHERE s.id = p.tod_id;
+```
 
-10. **Rollback block** appended as `/* ... */` SQL comment at the end of the file (Steps 1–7 as you supplied)
+(Final query will collapse this into a CTE chain inside one statement; the three-phase shuffle protects any `UNIQUE (meeting_id, sequence_order)` constraint should one exist. If no unique constraint exists the temp parking is harmless.)
 
-### Not included in the migration file
+### Step 4 — Verification queries (run inline, must all return 0)
+- L10 templates still showing To-Do before IDS
+- L10 template_versions snapshots still showing To-Do before IDS
+- Meetings where To-Do.sequence_order < IDS.sequence_order
 
-- **Section 9 post-flight verification SELECTs** — these are read-only assertions to run *after* the migration, not part of the transaction. I will execute them via `supabase--read_query` once the migration is applied and report the results (row counts, column types, index defs, function signature, enum retention).
+## Audit trail
+Insert one row into `audit_events` summarising affected counts (entity `eos_agenda_templates`, action `eos.segment_order.fix_tod_after_ids`). Backfill, not user-driven, so `user_id` is null. Details JSON: `{templates_updated, versions_updated, meetings_updated}`.
 
-### Order of operations on approval
+## Out of scope (explicitly untouched)
+- RLS policies, table schema, indexes
+- Non-L10 templates and meetings (Quarterly, etc.)
+- All other segment names
+- Any frontend code — `LiveMeetingView`, agenda sidebar, navigation, Scorecard/Rocks/Headlines/Conclude segments all read `sequence_order` ASC and need no change
 
-1. Call `supabase--migration` with the single file containing Sections 0–8 + rollback comment.
-2. After you approve and the migration runs, execute the 10 post-flight checks and confirm each matches expected output.
-3. Audit the codebase for any remaining `Enums["tenant_user_role"]` TS references that will need to be cleared once `src/integrations/supabase/types.ts` regenerates (frontend already treats `relationship_role` as plain strings everywhere except generated types — no app code changes required by this migration).
+## Risk assessment
 
-### Risk notes
+| Risk | Likelihood | Mitigation |
+|---|---|---|
+| Active in-progress L10 meeting jumps segments mid-session | Low (12 meetings total with both segments) | Swap is idempotent and runs in one tx; client refetch on next nav restores correct order |
+| Unique constraint on (meeting_id, sequence_order) blocks swap | Unknown | Three-phase park-and-move avoids any collision |
+| Non-L10 affected | None | Filtered by `meeting_type::text='L10'` and explicit segment names |
+| Re-run safety | Safe | WHERE clauses skip already-correct rows |
+| Rollback | Available | Reverse migration swaps them back using identical logic |
 
-- **Transactional safety**: Sections 2–4 all run inside the migration's implicit transaction, so the unique-index drop/recreate window is closed to concurrent writers.
-- **FK on `user_invitations`**: existing NULL `relationship_role` rows (26 of 31) remain valid — FK allows NULL.
-- **Enum retention**: `public.tenant_user_role` stays in the schema; no dependent objects remain after Sections 2–7, so the COMMENT is the only marker. Safe rollback path preserved.
-- **`accept_invitation_v2` body**: reproduced verbatim from your spec — I will not re-derive it from the live DB. If the live function has drifted from what you supplied, the migration will overwrite that drift. Confirm before approval if this is a concern.
-- **No frontend / edge-function changes** required by this migration. `src/lib/roles/relationshipRole.ts` and all `relationship_role` string usages remain correct.
+Backward-compatible, audit-logged, idempotent, production-ready.
