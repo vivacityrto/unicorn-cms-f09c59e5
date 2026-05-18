@@ -1,59 +1,59 @@
-## Fix Help Centre Chatbot Reply Rendering & Markdown
+## Fix Evidence Request Frontend/DB Column-and-Value Mismatches
 
-Two surgical edits to `src/components/help-center/ChatTab.tsx` only. No other files, no schema, no edge function changes.
+Three independent renames across five evidence-related files only. No DB changes, no new components, no schema edits.
 
-### Changes
+---
 
-**1. Import ReactMarkdown** at the top of the file:
-```ts
-import ReactMarkdown from "react-markdown";
-```
+### Fix 1 — `sort_order` → `display_order` (evidence_request_items only)
 
-**2. Replace the post-invoke reply handling in `sendMessage`** — remove the `data?.assistant_message` branch and instead fetch the latest assistant message directly from `help_messages` for `data.thread_id`:
-```ts
-if (data?.thread_id) setThreadId(data.thread_id);
+The DB column is `display_order`. Frontend incorrectly uses `sort_order` in the `EvidenceRequestItem` interface, sort logic, and insert payloads.
 
-if (data?.thread_id) {
-  const { data: latestMsg } = await supabase
-    .from("help_messages")
-    .select("id, role, content, created_at")
-    .eq("thread_id", data.thread_id)
-    .eq("role", "assistant")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+**Files & lines:**
+- `src/hooks/useEvidenceRequests.tsx`
+  - L18: interface field `sort_order: number` → `display_order: number`
+  - L89: `a.sort_order - b.sort_order` → `a.display_order - b.display_order`
+  - L128: same sort expression → `a.display_order - b.display_order`
+  - L222: insert payload `sort_order: index` → `display_order: index`
+- `src/hooks/useAuditPrep.ts`
+  - L139: `.order('sort_order', { ascending: true })` → `.order('display_order', { ascending: true })`
+- `src/components/audit/workspace/SendEvidenceRequestDrawer.tsx`
+  - L79: `.order('sort_order', { ascending: true })` → `.order('display_order', { ascending: true })`
 
-  if (latestMsg) {
-    setMessages(prev => [...prev, latestMsg as Message]);
-  }
-}
-```
-This guarantees the assistant reply appears immediately without requiring a panel-switch remount.
+### Fix 2 — `reviewed_by_user_id` → `reviewed_by` (TypeScript interface only)
 
-**3. Render assistant messages with ReactMarkdown** (line ~142). User messages stay as plain `{msg.content}`:
-```tsx
-{msg.role === "assistant" ? (
-  <ReactMarkdown
-    components={{
-      h2: ({ node, ...props }) => (
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-3 mb-1 first:mt-0" {...props} />
-      ),
-      ul: ({ node, ...props }) => <ul className="space-y-1 pl-4" {...props} />,
-      ol: ({ node, ...props }) => <ol className="space-y-1 pl-4" {...props} />,
-      li: ({ node, ...props }) => <li className="text-sm list-disc" {...props} />,
-      p: ({ node, ...props }) => <p className="text-sm" {...props} />,
-    }}
-  >
-    {msg.content}
-  </ReactMarkdown>
-) : (
-  msg.content
-)}
-```
+DB column is `reviewed_by`. Only the local `EvidenceRequestItem` interface is wrong; no read/write call sites use it yet.
+
+**File & line:**
+- `src/hooks/useEvidenceRequests.tsx`
+  - L16: `reviewed_by_user_id: string | null` → `reviewed_by: string | null`
+
+### Fix 3 — status value `revision_requested` → `resubmit_requested`
+
+DB CHECK constraint allows `resubmit_requested`, not `revision_requested`. Change only the string literal; the user-facing label "Revision needed" stays unchanged.
+
+**Files & lines:**
+- `src/hooks/useAuditPrep.ts`
+  - L173: TS union literal `'accepted' | 'revision_requested'` → `'accepted' | 'resubmit_requested'`
+- `src/components/audit/workspace/EvidenceRequestsSection.tsx`
+  - L22: status map key `revision_requested:` → `resubmit_requested:`
+  - L108: comparison `item.status === 'revision_requested'` → `item.status === 'resubmit_requested'` (keep label "Revision needed")
+  - L132: mutate payload `status: 'revision_requested'` → `status: 'resubmit_requested'`
+- `src/components/client/AuditPreparationSection.tsx`
+  - L16: status map key `revision_requested:` → `resubmit_requested:`
+  - L107: comparison `item.status === 'revision_requested'` → `item.status === 'resubmit_requested'`
+  - L125: comparison `item.status === 'revision_requested'` → `item.status === 'resubmit_requested'`
+
+---
+
+### Verification
+
+1. Run `tsc --noEmit` (or build) to confirm TypeScript passes.
+2. Search project-wide for `sort_order` and `reviewed_by_user_id` and `revision_requested` inside the five evidence files — expect zero hits for the old names. Hits in academy/, pdp/, and other unrelated modules are expected and must be left untouched.
+3. Smoke: create an evidence request from CSC view → Documents → Evidence Requests → Send Request should succeed without schema cache error.
 
 ### Out of scope (unchanged)
-- CSC/Support tabs, other help centre components
-- `help-center-chat` edge function
-- Mount-time history fetch `useEffect`
-- Loading spinner, scroll behaviour, input form
-- DB schema, RLS, packages
+- Any DB / migration / RPC / trigger code
+- User-visible label "Revision needed" — stays as-is
+- Other `sort_order` references in academy/, pdp/, compliance templates, etc.
+- `tenant_document_requests` feature
+- Reminder cron `audit_send_evidence_reminders` filter `WHERE er.status = 'sent'`

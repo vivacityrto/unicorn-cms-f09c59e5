@@ -136,7 +136,7 @@ export function useGenerateRequestFromQuestions(auditId: string | undefined, tem
         .select('id, clause, audit_statement, evidence_to_sight, section_id')
         .eq('is_active', true)
         .not('evidence_to_sight', 'is', null)
-        .order('sort_order', { ascending: true });
+        .order('display_order', { ascending: true });
       if (error) throw error;
 
       // Filter to questions belonging to this template's sections
@@ -170,7 +170,7 @@ export function useReviewEvidenceItem() {
       reviewNotes,
     }: {
       itemId: string;
-      status: 'accepted' | 'revision_requested';
+      status: 'accepted' | 'resubmit_requested';
       reviewNotes?: string;
     }) => {
       const user = (await supabase.auth.getUser()).data.user;

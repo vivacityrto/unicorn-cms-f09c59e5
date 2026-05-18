@@ -13,7 +13,7 @@ const ITEM_STATUS: Record<string, { label: string; color: string }> = {
   pending: { label: 'Awaiting', color: 'bg-gray-100 text-gray-600' },
   received: { label: 'Uploaded', color: 'bg-blue-100 text-blue-700' },
   accepted: { label: 'Accepted', color: 'bg-green-100 text-green-700' },
-  revision_requested: { label: 'Revision needed', color: 'bg-amber-100 text-amber-700' },
+  resubmit_requested: { label: 'Revision needed', color: 'bg-amber-100 text-amber-700' },
 };
 
 export function AuditPreparationSection() {
@@ -104,7 +104,7 @@ export function AuditPreparationSection() {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className={cn('text-[10px]', statusCfg.color)}>{statusCfg.label}</Badge>
-                            {(item.status === 'pending' || item.status === 'revision_requested') && (
+                            {(item.status === 'pending' || item.status === 'resubmit_requested') && (
                               <Button size="sm" variant="outline" onClick={() => handleUpload(req.id, item.id)}>
                                 <Upload className="h-3.5 w-3.5 mr-1" /> Upload
                               </Button>
@@ -122,7 +122,7 @@ export function AuditPreparationSection() {
                           <p className="text-xs text-muted-foreground bg-muted/30 rounded p-2">{item.guidance_text}</p>
                         )}
 
-                        {item.status === 'revision_requested' && item.review_notes && (
+                        {item.status === 'resubmit_requested' && item.review_notes && (
                           <div className="bg-amber-50 border border-amber-200 rounded p-2">
                             <p className="text-xs text-amber-800">
                               <AlertTriangle className="h-3 w-3 inline mr-1" />
