@@ -34,6 +34,7 @@ export function AuditProgressCard({ linkedAuditId }: AuditProgressCardProps) {
   if (isLoading || !audit) return null;
 
   const status = audit.status as AuditStatus;
+  const isComplete = status === 'complete';
   const scorePct = audit.score_pct ?? 0;
   const assessed = audit.score_total ?? 0;
   const maxScore = audit.score_max ?? 0;
@@ -51,19 +52,25 @@ export function AuditProgressCard({ linkedAuditId }: AuditProgressCardProps) {
           </div>
           <div className="flex items-center gap-1.5">
             <AuditStatusBadge status={status} />
-            {audit.risk_rating && <AuditRiskBadge risk={audit.risk_rating as AuditRisk} />}
+            {isComplete && audit.risk_rating && <AuditRiskBadge risk={audit.risk_rating as AuditRisk} />}
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground truncate">{audit.title}</p>
 
-        {maxScore > 0 && (
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Score</span>
-              <span className="font-medium">{assessed} of {maxScore} assessed ({scorePct}%)</span>
+        {isComplete ? (
+          maxScore > 0 && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Score</span>
+                <span className="font-medium">{assessed} of {maxScore} assessed ({scorePct}%)</span>
+              </div>
+              <Progress value={scorePct} className="h-2" indicatorClassName={scoreColor} />
             </div>
-            <Progress value={scorePct} className="h-2" indicatorClassName={scoreColor} />
+          )
+        ) : (
+          <div className="text-xs text-muted-foreground italic">
+            Pending — audit in progress
           </div>
         )}
 
