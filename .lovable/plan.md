@@ -1,51 +1,53 @@
+## Phase 4C Migration: `tenant_user_role` enum → `dd_relationship_role` lookup
 
-## Bug
-Inserting an EOS to-do as a Vivacity staff user fails with `null value in column "tenant_id" of relation "eos_todos" violates not-null constraint`, because:
-1. `src/hooks/useMeetingTodos.tsx` line 38 passes `profile?.tenant_id!` (null for staff).
-2. `src/hooks/useEos.tsx` line 256 strips `tenant_id` from the insert payload entirely.
+Create a single Supabase migration file containing the exact SQL you provided, in the order specified. No deviations, no simplifications, no additional changes.
 
-## Fix (two files, frontend only)
+### File contents (in order)
 
-### 1. `src/hooks/useMeetingTodos.tsx`
-Replace the insert payload's tenant assignment:
-- From: `tenant_id: profile?.tenant_id!`
-- To: `tenant_id: profile?.tenant_id ?? 6372`
+1. **Section 0 — Pre-flight assertions** (3 `DO $$` blocks)
+   - Abort if `dd_relationship_role` table already exists
+   - Abort if `tenant_users.relationship_role` has unexpected values
+   - Abort if `user_invitations.relationship_role` has unexpected values
 
-### 2. `src/hooks/useEos.tsx` (createTodo mutation, ~line 254-265)
-- Remove: `const { tenant_id, ...todoData } = todo;`
-- Replace insert with:
-  ```ts
-  const insertData = { ...todo, tenant_id: todo.tenant_id ?? 6372 };
-  const { data, error } = await supabase
-    .from('eos_todos')
-    .insert(insertData as any)
-    .select()
-    .single();
-  ```
+2. **Section 1 — Create & seed `dd_relationship_role`**
+   - Table with `id serial PK`, `value text UNIQUE`, `label`, `sort_order`, `is_active`, `created_at`
+   - Seed 4 rows: `primary_contact`, `secondary_contact`, `user`, `academy_user`
+   - Enable RLS + authenticated SELECT policy
 
-## What is NOT touched
-- No RLS policy changes on `eos_todos`.
-- No schema or migration changes.
-- No changes to read queries (`useMeetingTodos` fetch, `useEos` todos query, PastMeetingSummary, Leadership/CEO dashboards).
-- No changes to `updateTodo`, display, or routing logic.
+3. **Section 2 — Migrate `tenant_users.relationship_role`**
+   - `ALTER COLUMN ... TYPE text USING ::text`
+   - Add FK `fk_tenant_users_relationship_role → dd_relationship_role(value)` (ON UPDATE CASCADE, ON DELETE RESTRICT)
 
-## Backward compatibility / impact analysis
-- **Client users**: `profile.tenant_id` is non-null, so `?? 6372` is a no-op — behaviour unchanged.
-- **Vivacity staff (L10/internal meetings)**: previously broken; now persists with `tenant_id = 6372`, matching the existing convention used by Leadership/CEO dashboards and `useVivacityTeamUsers`. Reads already filter by `tenant_id = 6372` for these dashboards, so new rows surface correctly.
-- **RLS**: `tasks_tenants_*` and EOS policies remain intact (last migration validated). Inserts by staff into tenant 6372 are already permitted by existing policies (same path used by other EOS staff writes).
-- **Audit trail**: `created_at`/`updated_at` triggers and any audit hooks on `eos_todos` are unchanged; no data is rewritten.
-- **EOS Todos page** (`EosTodos.tsx`): still reads via `useEos` which already branches `vivacity_team` vs tenant; new staff-created rows with tenant 6372 will appear in the staff branch.
-- **PastMeetingSummary**: reads by `meeting_id`, independent of tenant — unaffected.
-- **LiveMeetingView**: uses `useMeetingTodos` query keyed on `meeting_id` — unaffected.
+4. **Section 3 — Migrate `user_invitations.relationship_role`**
+   - Same conversion + FK pattern
 
-## Risk assessment
-- **Risk: low.** Two single-line changes in client hooks; no DB or auth surface touched.
-- **Edge case**: a future caller of `useEos.createTodo` that genuinely needs a different tenant can still pass `tenant_id` explicitly — the fallback only fires when omitted.
-- **Hardcoded constant `6372`**: already used elsewhere in the codebase as the canonical Vivacity tenant ID; acceptable per project memory.
+5. **Section 4 — Recreate unique partial indexes**
+   - Drop & recreate `uniq_tenant_one_primary_contact` and `uniq_tenant_one_secondary_contact` without enum casts (within same transaction → no enforcement gap)
 
-## Verification plan
-1. As Vivacity staff in LiveMeetingView: add a to-do → toast success, row appears, `tenant_id = 6372` in DB.
-2. As Vivacity staff on EOS Todos page: add a to-do → same outcome.
-3. As a client Admin user: add a to-do → row persists with the user's own `tenant_id` (unchanged).
-4. Confirm Leadership/CEO dashboard counts increment for new staff-created to-dos.
-5. Confirm existing todos still render in all four surfaces (Live, Past, EOS Todos page, dashboards).
+6. **Section 5 — Recreate `set_relationship_role`** with `p_relationship_role text` and `v_old_role text`, validating against `dd_relationship_role` (full body as supplied)
+
+7. **Section 6 — Recreate `accept_invitation_v2`** with only `v_relationship_role` declared as `text` instead of `public.tenant_user_role` (full body reproduced exactly as supplied; signature unchanged)
+
+8. **Section 7 — Rewrite two RLS policies** (`audit_user_events_select_tenant_admin`, `pdp_cycles: tenant admins view their tenant`) — drop `::tenant_user_role` casts from ARRAY literals; logic otherwise identical
+
+9. **Section 8 — Retain legacy enum** with `COMMENT ON TYPE public.tenant_user_role` noting supersession, rollback retention, and Carl/Dave sign-off requirement before any future DROP
+
+10. **Rollback block** appended as `/* ... */` SQL comment at the end of the file (Steps 1–7 as you supplied)
+
+### Not included in the migration file
+
+- **Section 9 post-flight verification SELECTs** — these are read-only assertions to run *after* the migration, not part of the transaction. I will execute them via `supabase--read_query` once the migration is applied and report the results (row counts, column types, index defs, function signature, enum retention).
+
+### Order of operations on approval
+
+1. Call `supabase--migration` with the single file containing Sections 0–8 + rollback comment.
+2. After you approve and the migration runs, execute the 10 post-flight checks and confirm each matches expected output.
+3. Audit the codebase for any remaining `Enums["tenant_user_role"]` TS references that will need to be cleared once `src/integrations/supabase/types.ts` regenerates (frontend already treats `relationship_role` as plain strings everywhere except generated types — no app code changes required by this migration).
+
+### Risk notes
+
+- **Transactional safety**: Sections 2–4 all run inside the migration's implicit transaction, so the unique-index drop/recreate window is closed to concurrent writers.
+- **FK on `user_invitations`**: existing NULL `relationship_role` rows (26 of 31) remain valid — FK allows NULL.
+- **Enum retention**: `public.tenant_user_role` stays in the schema; no dependent objects remain after Sections 2–7, so the COMMENT is the only marker. Safe rollback path preserved.
+- **`accept_invitation_v2` body**: reproduced verbatim from your spec — I will not re-derive it from the live DB. If the live function has drifted from what you supplied, the migration will overwrite that drift. Confirm before approval if this is a concern.
+- **No frontend / edge-function changes** required by this migration. `src/lib/roles/relationshipRole.ts` and all `relationship_role` string usages remain correct.
