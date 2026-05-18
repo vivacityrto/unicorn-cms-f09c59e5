@@ -78,16 +78,20 @@ export function ChatTab() {
       if (error) throw error;
 
       if (data?.thread_id) setThreadId(data.thread_id);
-      if (data?.assistant_message) {
-        setMessages(prev => [
-          ...prev,
-          {
-            id: data.assistant_message.id || crypto.randomUUID(),
-            role: "assistant",
-            content: data.assistant_message.content,
-            created_at: data.assistant_message.created_at || new Date().toISOString(),
-          },
-        ]);
+
+      if (data?.thread_id) {
+        const { data: latestMsg } = await supabase
+          .from("help_messages")
+          .select("id, role, content, created_at")
+          .eq("thread_id", data.thread_id)
+          .eq("role", "assistant")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (latestMsg) {
+          setMessages(prev => [...prev, latestMsg as Message]);
+        }
       }
     } catch (err: any) {
       console.error("Chat error:", err);
