@@ -82,11 +82,13 @@ export function textToSafeHtml(text: string): string {
  */
 export function htmlToText(html: string | null | undefined, maxLen?: number): string {
   if (!html) return '';
-  const text = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: true,
-  })
+  // Parse via a detached <div> so the browser decodes HTML entities
+  // (&nbsp;, &amp;, etc.) and strips tags in one pass. Detached
+  // elements don't execute scripts or fire event handlers, so this
+  // is XSS-safe for text extraction.
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const text = (tmp.textContent || tmp.innerText || '')
     .replace(/\s+/g, ' ')
     .trim();
   if (maxLen && text.length > maxLen) {

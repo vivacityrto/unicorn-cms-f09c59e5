@@ -1,33 +1,40 @@
-## Fix raw HTML showing in stage tooltip
+# Fix `&nbsp;` and other HTML entities surviving `htmlToText`
 
-Tooltips on `PackageStageStepper` render `stage_description` as plain text, but the data is HTML — so users see raw `<p>`, `&nbsp;`, etc. Flatten to plain text and truncate for tooltip use.
+## Problem
 
-### 1. `src/lib/sanitize.ts` — add `htmlToText` helper
+`htmlToText` in `src/lib/sanitize.ts` uses DOMPurify with `ALLOWED_TAGS: []` to strip tags. DOMPurify removes tags but does not decode HTML entities, so `&nbsp;`, `&amp;`, `&lt;`, `&quot;` etc. survive into the output and render as literal entity text in stage tooltips.
 
-Append a new exported function using the existing DOMPurify dependency:
+## Change
 
-- Strips all tags (`ALLOWED_TAGS: []`, `KEEP_CONTENT: true`) so text content is preserved
-- Collapses whitespace (`\s+` → single space) and trims
-- Optional `maxLen` truncates with an ellipsis (`…`)
-- Safely handles `null` / `undefined`
+Single file: `src/lib/sanitize.ts`.
 
-Signature: `htmlToText(html: string | null | undefined, maxLen?: number): string`
+Rewrite the body of `htmlToText` to assign the input to a detached `<div>`'s `innerHTML`, then read `textContent`. The browser parser decodes entities and strips tags in one pass. Detached elements don't execute scripts or fire event handlers, so this is XSS-safe for pure text extraction.
 
-### 2. `src/components/client/package-dashboard/PackageStageStepper.tsx`
+```ts
+export function htmlToText(html: string | null | undefined, maxLen?: number): string {
+  if (!html) return '';
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const text = (tmp.textContent || tmp.innerText || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (maxLen && text.length > maxLen) {
+    return text.slice(0, maxLen).trimEnd() + '…';
+  }
+  return text;
+}
+```
 
-- Import `htmlToText` from `@/lib/sanitize`
-- In `StageNode`'s `TooltipContent`, replace the direct `{stage.stage_description}` render with `htmlToText(stage.stage_description, 220)`
-- Keep the existing conditional so the muted description div doesn't render when there's no description
+Keep the existing JSDoc and signature. Keep the `DOMPurify` import — `sanitizeHtml`, `sanitizeEmailHtml`, and `textToSafeHtml` still use it.
 
-No other files change. No DB, no RPC, no data migration. The HTML in `stage_description` stays as-is (intentional rich storage).
+## Out of scope
 
-### Verification
+- Other helpers in `sanitize.ts`
+- Call sites (`PackageStageStepper.tsx`, etc.) — signature unchanged
+- Data / DB
+
+## Verify
 
 1. TypeScript compiles clean.
-2. Hover stages with HTML descriptions → plain text, no tags, truncated at ~220 chars with `…`.
-3. Hover short-description stages → no truncation.
-4. Hover description-less stages → only the stage name shows, no empty div.
-
-### Out of scope
-
-DB/migrations, the `stage_description` data itself, other surfaces rendering stage descriptions (e.g. `AddExistingStageDialog`), and full rich-text rendering (would use `sanitizeHtml` + `dangerouslySetInnerHTML` in a detail panel, not a tooltip).
+2. Stage tooltips containing `&nbsp;`, `&amp;`, `&lt;`, `&quot;` render the decoded characters, not literal entity text.
+3. Truncation at ~220 chars still works.
