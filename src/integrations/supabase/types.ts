@@ -63814,25 +63814,15 @@ export type Database = {
         Args: { p_issue_id: string; p_solution_text?: string; p_status: string }
         Returns: undefined
       }
-      set_relationship_role:
-        | {
-            Args: {
-              p_reason?: string
-              p_relationship_role: Database["public"]["Enums"]["tenant_user_role"]
-              p_tenant_id: number
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_reason?: string
-              p_relationship_role: string
-              p_tenant_id: number
-              p_user_id: string
-            }
-            Returns: Json
-          }
+      set_relationship_role: {
+        Args: {
+          p_reason?: string
+          p_relationship_role: string
+          p_tenant_id: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       set_user_notification_prefs: { Args: { p_prefs: Json }; Returns: string }
       split_time_entry: {
         Args: { p_reason?: string; p_splits: Json; p_time_entry_id: string }
