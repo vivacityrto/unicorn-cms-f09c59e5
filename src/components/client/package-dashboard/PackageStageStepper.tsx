@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { ClientPackageStageRow } from "@/hooks/use-client-package-stages";
+import { htmlToText } from "@/lib/sanitize";
 
 interface Props {
   stages: ClientPackageStageRow[];
