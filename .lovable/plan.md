@@ -1,22 +1,33 @@
-## Plan: Widen UserProfile.unicorn_role type to include 'Academy User'
+## Fix raw HTML showing in stage tooltip
 
-### What
-In `src/hooks/useAuth.tsx`, add `'Academy User'` to the `unicorn_role` union type on the `UserProfile` interface.
+Tooltips on `PackageStageStepper` render `stage_description` as plain text, but the data is HTML — so users see raw `<p>`, `&nbsp;`, etc. Flatten to plain text and truncate for tooltip use.
 
-### Why
-The database `users.unicorn_role` column already allows `'Academy User'` (seeded in `dd_unicorn_roles`). The TypeScript interface must reflect all valid DB values so downstream consumers can correctly narrow on this role.
+### 1. `src/lib/sanitize.ts` — add `htmlToText` helper
 
-### Exact diff
-```diff
--  unicorn_role: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User';
-+  unicorn_role: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User' | 'Academy User';
-```
+Append a new exported function using the existing DOMPurify dependency:
 
-### Validation
-1. Run `tsc --noEmit` (or `bun run build`) to confirm no new TypeScript errors from unicorn_role consumers.
-2. No other files touched.
+- Strips all tags (`ALLOWED_TAGS: []`, `KEEP_CONTENT: true`) so text content is preserved
+- Collapses whitespace (`\s+` → single space) and trims
+- Optional `maxLen` truncates with an ellipsis (`…`)
+- Safely handles `null` / `undefined`
 
-### Out of scope (explicitly excluded)
-- `src/components/InviteUserDialog.tsx`
-- Any other file
-- Any database query, hook logic, RLS policy, or SQL function
+Signature: `htmlToText(html: string | null | undefined, maxLen?: number): string`
+
+### 2. `src/components/client/package-dashboard/PackageStageStepper.tsx`
+
+- Import `htmlToText` from `@/lib/sanitize`
+- In `StageNode`'s `TooltipContent`, replace the direct `{stage.stage_description}` render with `htmlToText(stage.stage_description, 220)`
+- Keep the existing conditional so the muted description div doesn't render when there's no description
+
+No other files change. No DB, no RPC, no data migration. The HTML in `stage_description` stays as-is (intentional rich storage).
+
+### Verification
+
+1. TypeScript compiles clean.
+2. Hover stages with HTML descriptions → plain text, no tags, truncated at ~220 chars with `…`.
+3. Hover short-description stages → no truncation.
+4. Hover description-less stages → only the stage name shows, no empty div.
+
+### Out of scope
+
+DB/migrations, the `stage_description` data itself, other surfaces rendering stage descriptions (e.g. `AddExistingStageDialog`), and full rich-text rendering (would use `sanitizeHtml` + `dangerouslySetInnerHTML` in a detail panel, not a tooltip).
