@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { ClientPackageStageRow } from "@/hooks/use-client-package-stages";
+import { htmlToText } from "@/lib/sanitize";
 
 interface Props {
   stages: ClientPackageStageRow[];
@@ -146,7 +147,7 @@ function StageNode({ stage }: { stage: ClientPackageStageRow }) {
         <div className="text-xs font-medium">{stage.stage_name}</div>
         {stage.stage_description ? (
           <div className="text-xs text-muted-foreground mt-0.5 max-w-[16rem]">
-            {stage.stage_description}
+            {htmlToText(stage.stage_description, 220)}
           </div>
         ) : null}
       </TooltipContent>

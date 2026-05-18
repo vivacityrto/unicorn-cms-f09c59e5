@@ -69,3 +69,28 @@ export function textToSafeHtml(text: string): string {
     .replace(/^/, '<p>')
     .replace(/$/, '</p>');
 }
+
+/**
+ * Strip HTML to plain text. Preserves text content, decodes HTML
+ * entities (&nbsp; → space, &amp; → &, etc.), collapses whitespace.
+ * Use for surfaces where rich text needs to be flattened — e.g.
+ * tooltips, list previews, summary chips.
+ *
+ * @param html - HTML string (or null/undefined)
+ * @param maxLen - optional max length; longer text is truncated
+ *                with an ellipsis
+ */
+export function htmlToText(html: string | null | undefined, maxLen?: number): string {
+  if (!html) return '';
+  const text = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [],
+    ALLOWED_ATTR: [],
+    KEEP_CONTENT: true,
+  })
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (maxLen && text.length > maxLen) {
+    return text.slice(0, maxLen).trimEnd() + '…';
+  }
+  return text;
+}
