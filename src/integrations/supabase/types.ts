@@ -17933,6 +17933,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_relationship_role: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_rock_status: {
         Row: {
           code: number
@@ -48717,9 +48744,7 @@ export type Database = {
           created_by: string | null
           id: number
           primary_contact: boolean | null
-          relationship_role:
-            | Database["public"]["Enums"]["tenant_user_role"]
-            | null
+          relationship_role: string | null
           role: string
           secondary_contact: boolean
           tenant_id: number
@@ -48731,9 +48756,7 @@ export type Database = {
           created_by?: string | null
           id?: number
           primary_contact?: boolean | null
-          relationship_role?:
-            | Database["public"]["Enums"]["tenant_user_role"]
-            | null
+          relationship_role?: string | null
           role?: string
           secondary_contact?: boolean
           tenant_id: number
@@ -48745,15 +48768,20 @@ export type Database = {
           created_by?: string | null
           id?: number
           primary_contact?: boolean | null
-          relationship_role?:
-            | Database["public"]["Enums"]["tenant_user_role"]
-            | null
+          relationship_role?: string | null
           role?: string
           secondary_contact?: boolean
           tenant_id?: number
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_tenant_users_relationship_role"
+            columns: ["relationship_role"]
+            isOneToOne: false
+            referencedRelation: "dd_relationship_role"
+            referencedColumns: ["value"]
+          },
           {
             foreignKeyName: "tenant_users_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -51789,9 +51817,7 @@ export type Database = {
           last_name: string | null
           last_sent_at: string | null
           mailgun_message_id: string | null
-          relationship_role:
-            | Database["public"]["Enums"]["tenant_user_role"]
-            | null
+          relationship_role: string | null
           revoked_at: string | null
           revoked_reason: string | null
           status: string
@@ -51812,9 +51838,7 @@ export type Database = {
           last_name?: string | null
           last_sent_at?: string | null
           mailgun_message_id?: string | null
-          relationship_role?:
-            | Database["public"]["Enums"]["tenant_user_role"]
-            | null
+          relationship_role?: string | null
           revoked_at?: string | null
           revoked_reason?: string | null
           status?: string
@@ -51835,9 +51859,7 @@ export type Database = {
           last_name?: string | null
           last_sent_at?: string | null
           mailgun_message_id?: string | null
-          relationship_role?:
-            | Database["public"]["Enums"]["tenant_user_role"]
-            | null
+          relationship_role?: string | null
           revoked_at?: string | null
           revoked_reason?: string | null
           status?: string
@@ -51846,7 +51868,15 @@ export type Database = {
           unicorn_role?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_user_invitations_relationship_role"
+            columns: ["relationship_role"]
+            isOneToOne: false
+            referencedRelation: "dd_relationship_role"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       user_microsoft_identities: {
         Row: {
@@ -63784,15 +63814,25 @@ export type Database = {
         Args: { p_issue_id: string; p_solution_text?: string; p_status: string }
         Returns: undefined
       }
-      set_relationship_role: {
-        Args: {
-          p_reason?: string
-          p_relationship_role: Database["public"]["Enums"]["tenant_user_role"]
-          p_tenant_id: number
-          p_user_id: string
-        }
-        Returns: Json
-      }
+      set_relationship_role:
+        | {
+            Args: {
+              p_reason?: string
+              p_relationship_role: Database["public"]["Enums"]["tenant_user_role"]
+              p_tenant_id: number
+              p_user_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_reason?: string
+              p_relationship_role: string
+              p_tenant_id: number
+              p_user_id: string
+            }
+            Returns: Json
+          }
       set_user_notification_prefs: { Args: { p_prefs: Json }; Returns: string }
       split_time_entry: {
         Args: { p_reason?: string; p_splits: Json; p_time_entry_id: string }
