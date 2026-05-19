@@ -1,40 +1,38 @@
-# Fix `&nbsp;` and other HTML entities surviving `htmlToText`
+## Plan: Resolve package type labels on client packages page
 
-## Problem
+### Background
+The package type pill on `/client/packages` renders raw `package_type` codes (e.g. `regulatory_submission`) because the page has no access to `dd_package_type` labels. The lookup table already contains the correct human labels.
 
-`htmlToText` in `src/lib/sanitize.ts` uses DOMPurify with `ALLOWED_TAGS: []` to strip tags. DOMPurify removes tags but does not decode HTML entities, so `&nbsp;`, `&amp;`, `&lt;`, `&quot;` etc. survive into the output and render as literal entity text in stage tooltips.
+### Changes
 
-## Change
+#### 1. New hook: `src/hooks/usePackageTypeOptions.ts`
+Mirror `useActionStatusOptions.ts` exactly, adapted for `dd_package_type`:
+- Source table: `dd_package_type`
+- Columns selected: `code, label, sort_order`
+- Interface: `PackageTypeOption` with `code: string`, `label: string`, `sort_order: number`
+- Hook returns: `{ options, loading }`
+- Helper: `getPackageTypeLabel(code, options?)` — returns matching label, falls back to humanised title-case (same shape as `getActionStatusLabel`), returns `""` for null/undefined
+- Module-level cache to avoid redundant fetches across renders
 
-Single file: `src/lib/sanitize.ts`.
+#### 2. Update `src/components/client/ClientPackagesPage.tsx`
+- Import the new hook and helper
+- Call `const { options: packageTypes } = usePackageTypeOptions();` inside `PackageCard`
+- At line ~208, replace:
+  ```tsx
+  <Badge variant="secondary" className="text-xs">{dashboard.package_type}</Badge>
+  ```
+  with:
+  ```tsx
+  <Badge variant="secondary" className="text-xs">{getPackageTypeLabel(dashboard.package_type, packageTypes)}</Badge>
+  ```
+- Keep existing condition (`dashboard?.package_type && dashboard.package_type !== dashboard.package_name`) unchanged
 
-Rewrite the body of `htmlToText` to assign the input to a detached `<div>`'s `innerHTML`, then read `textContent`. The browser parser decodes entities and strips tags in one pass. Detached elements don't execute scripts or fire event handlers, so this is XSS-safe for pure text extraction.
+### Out of scope
+- No database changes (table already correct)
+- No staff-facing UI changes
+- No schema normalisation of `dd_package_type` (pre-existing `code` vs `value` variance)
 
-```ts
-export function htmlToText(html: string | null | undefined, maxLen?: number): string {
-  if (!html) return '';
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  const text = (tmp.textContent || tmp.innerText || '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (maxLen && text.length > maxLen) {
-    return text.slice(0, maxLen).trimEnd() + '…';
-  }
-  return text;
-}
-```
-
-Keep the existing JSDoc and signature. Keep the `DOMPurify` import — `sanitizeHtml`, `sanitizeEmailHtml`, and `textToSafeHtml` still use it.
-
-## Out of scope
-
-- Other helpers in `sanitize.ts`
-- Call sites (`PackageStageStepper.tsx`, etc.) — signature unchanged
-- Data / DB
-
-## Verify
-
-1. TypeScript compiles clean.
-2. Stage tooltips containing `&nbsp;`, `&amp;`, `&lt;`, `&quot;` render the decoded characters, not literal entity text.
-3. Truncation at ~220 chars still works.
+### Verification
+1. `tsc --noEmit` passes
+2. Client packages page renders human label (e.g. "Regulatory Submission") instead of raw code
+3. Badge styling unchanged; fallback humanisation works for unknown codes

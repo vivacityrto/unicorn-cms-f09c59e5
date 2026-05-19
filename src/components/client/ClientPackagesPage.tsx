@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Package2, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
+import { usePackageTypeOptions, getPackageTypeLabel } from "@/hooks/usePackageTypeOptions";
 
 export default function ClientPackagesPage() {
   const { data: dashboards = [], isLoading, error } = useClientPackageDashboards();
@@ -182,6 +183,7 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
   const hoursByType = useClientPackageHoursByType(packageInstanceId);
   const hoursRecent = useClientPackageHoursRecent(packageInstanceId);
   const timeline = useClientPackageHoursTimeline(packageInstanceId);
+  const { options: packageTypes } = usePackageTypeOptions();
 
   return (
     <Card>
@@ -205,7 +207,7 @@ function PackageCard({ packageInstanceId, onCollapse }: PackageCardProps) {
                 <Skeleton className="h-5 w-40" />
               )}
               {dashboard?.package_type && dashboard.package_type !== dashboard.package_name && (
-                <Badge variant="secondary" className="text-xs">{dashboard.package_type}</Badge>
+                <Badge variant="secondary" className="text-xs">{getPackageTypeLabel(dashboard.package_type, packageTypes)}</Badge>
               )}
             </div>
             {(dashboard?.start_date || dashboard?.end_date) && (
