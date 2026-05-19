@@ -41,7 +41,6 @@ import {
   useClientTenantUsers,
   type ClientTenantUserRow,
   type TenantUserRelationshipRole,
-  type TenantUserStatus,
 } from "@/hooks/use-client-tenant-users";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 
