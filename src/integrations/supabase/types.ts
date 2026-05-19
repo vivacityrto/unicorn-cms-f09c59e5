@@ -17291,6 +17291,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_eos_todo_status: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_evidence_type: {
         Row: {
           created_at: string
@@ -25463,7 +25490,7 @@ export type Database = {
           id: string
           meeting_id: string | null
           owner_id: string | null
-          status: Database["public"]["Enums"]["eos_todo_status"] | null
+          status: string | null
           tenant_id: number
           title: string
           updated_at: string | null
@@ -25481,7 +25508,7 @@ export type Database = {
           id?: string
           meeting_id?: string | null
           owner_id?: string | null
-          status?: Database["public"]["Enums"]["eos_todo_status"] | null
+          status?: string | null
           tenant_id: number
           title: string
           updated_at?: string | null
@@ -25499,7 +25526,7 @@ export type Database = {
           id?: string
           meeting_id?: string | null
           owner_id?: string | null
-          status?: Database["public"]["Enums"]["eos_todo_status"] | null
+          status?: string | null
           tenant_id?: number
           title?: string
           updated_at?: string | null
@@ -25645,6 +25672,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_status_fkey"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_todo_status"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "fk_eos_todos_workspace"
