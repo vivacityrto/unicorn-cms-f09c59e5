@@ -2073,9 +2073,14 @@ export default function ManageDocuments() {
           <Dialog open={true} onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}>
             <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+                <DialogTitle className="flex items-center gap-2 flex-wrap">
                   <FolderOpen className="h-5 w-5" />
-                  Master Documents — Select Template File
+                  <span>Master Documents — Select Template File</span>
+                  {browseDoc?.title && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      for <span className="font-medium text-foreground">{browseDoc.title}</span>
+                    </span>
+                  )}
                 </DialogTitle>
               </DialogHeader>
               <SharePointFileBrowser
