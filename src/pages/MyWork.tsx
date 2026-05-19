@@ -310,6 +310,7 @@ export default function MyWork() {
           </Table>
         </Card>
       </div>
+      </div>
     </DashboardLayout>
   );
 }
