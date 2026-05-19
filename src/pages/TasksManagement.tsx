@@ -161,9 +161,20 @@ export default function TasksManagement() {
 
       // Fetch action items from client_action_items and ops_work_items
       const [{ data: clientActions }, { data: opsActions }] = await Promise.all([
-        supabase.from("client_action_items").select("id, title, description, priority, status, due_date, tenant_id, assignee_user_id, created_at, created_by_user_id").not('status', 'in', '("done","cancelled")'),
+        supabase.from("client_action_items").select("id, title, description, priority, status, due_date, tenant_id, assignee_user_id, created_at, created_by_user_id, package_id").not('status', 'in', '("done","cancelled")'),
         supabase.from("ops_work_items").select("id, title, description, priority, status, due_at, tenant_id, owner_user_uuid, created_at, created_by, package_instance_id").not('status', 'in', '("done","cancelled")'),
       ]);
+
+      // Resolve ops package_instance_id -> package_id so the Package column can populate.
+      const opsInstanceIds = [...new Set((opsActions || []).map((a: any) => a.package_instance_id).filter(Boolean))] as number[];
+      let instanceToPackageId = new Map<number, number>();
+      if (opsInstanceIds.length > 0) {
+        const { data: instRows } = await supabase
+          .from("package_instances")
+          .select("id, package_id")
+          .in("id", opsInstanceIds);
+        if (instRows) instanceToPackageId = new Map(instRows.map((r: any) => [r.id, r.package_id]));
+      }
 
       // Fetch tenant and package names separately (no FK joins available)
       const allTenantIds = new Set<number>();
@@ -171,7 +182,11 @@ export default function TasksManagement() {
       (clientActions || []).forEach((a: any) => { if (a.tenant_id) allTenantIds.add(a.tenant_id); });
       (opsActions || []).forEach((a: any) => { if (a.tenant_id) allTenantIds.add(a.tenant_id); });
       const tenantIds = [...allTenantIds];
-      const packageIds = [...new Set(tasksData?.map((t: any) => t.package_id).filter(Boolean))];
+      const packageIdSet = new Set<number>();
+      tasksData?.forEach((t: any) => { if (t.package_id) packageIdSet.add(t.package_id); });
+      (clientActions || []).forEach((a: any) => { if (a.package_id) packageIdSet.add(a.package_id); });
+      instanceToPackageId.forEach((pid) => { if (pid) packageIdSet.add(pid); });
+      const packageIds = [...packageIdSet];
 
       let tenantsMap = new Map<number, string>();
       if (tenantIds.length > 0) {
