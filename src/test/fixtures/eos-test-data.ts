@@ -259,8 +259,8 @@ export const mockAccountability = {
     {
       id: "func-001",
       chart_id: "chart-001",
-      name: "Integrator",
-      function_type: "integrator",
+      name: "Operations",
+      function_type: "operations",
       tenant_id: VIVACITY_TENANT_ID,
       sort_order: 1,
     },
