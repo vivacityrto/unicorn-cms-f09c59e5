@@ -31,6 +31,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserAccess } from "@/hooks/useUserAccess";
 import { useTenantType } from "@/contexts/TenantTypeContext";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
+import { useClientTenant } from "@/contexts/ClientTenantContext";
 
 // Academy route titles
 const academyRouteTitles: Record<string, string> = {
@@ -70,6 +71,7 @@ export function AcademyTopBar() {
   const { hasFullAccess } = useUserAccess();
   const { academyTier } = useTenantType();
   const [searchQuery, setSearchQuery] = useState("");
+  const { isAcademyOnly } = useClientTenant();
 
   const pageTitle = academyRouteTitles[location.pathname] || "Academy";
   const breadcrumbs = getBreadcrumbs(location.pathname);
@@ -164,16 +166,18 @@ export function AcademyTopBar() {
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
         <TooltipProvider>
           {/* Notifications */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <NotificationDropdown />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Notifications</p>
-            </TooltipContent>
-          </Tooltip>
+          {!isAcademyOnly && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <NotificationDropdown />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Notifications</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
 
           {/* User Avatar Dropdown */}
           <DropdownMenu>
