@@ -44,8 +44,17 @@ interface Task {
   follower_users?: Array<{ user_uuid: string; first_name: string; last_name: string; avatar_url: string | null }>;
   file_paths?: string[];
   source?: 'task' | 'action' | 'ops';
+  priority: string | null;
+  assignee_user?: { user_uuid: string; first_name: string; last_name: string; avatar_url: string | null } | null;
 }
 type TaskStatus = "pending" | "in_progress" | "completed" | "overdue" | "extended";
+// Reused from MyWork.tsx for visual consistency across task surfaces.
+const priorityColors: Record<string, string> = {
+  urgent: 'bg-red-500/10 text-red-600 border-red-600',
+  high: 'bg-orange-500/10 text-orange-600 border-orange-600',
+  normal: 'bg-blue-500/10 text-blue-600 border-blue-600',
+  low: 'bg-gray-500/10 text-gray-600 border-gray-600',
+};
 export default function TasksManagement() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
