@@ -1,64 +1,41 @@
-# Migration: Sync `public.users.last_sign_in_at` via `handle_user_login`
+## Replace Misleading Status Column on Client Portal Users Page
 
-Decisions D1–D5 confirmed. One migration, no trigger DDL, no frontend impact.
+### Goal
+Rewrite the `StatusDot` component in `src/components/client/ClientUsersPage.tsx` to derive an honest activity status from `last_sign_in_at` instead of showing a flat "Active" label for every enabled account.
 
-## Migration SQL
+### Derivation rule (left-to-right priority, only for `row_type === 'active'`)
 
-```sql
--- 1. Amend handle_user_login: preserve user_activity insert, add public.users sync.
---    Tighten search_path to '' and fully schema-qualify per project standard.
-CREATE OR REPLACE FUNCTION public.handle_user_login()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $function$
-BEGIN
-  IF NEW.last_sign_in_at IS DISTINCT FROM OLD.last_sign_in_at THEN
-    -- Preserved: append a login row to the activity ledger
-    INSERT INTO public.user_activity (user_id, login_date)
-    VALUES (NEW.id, COALESCE(NEW.last_sign_in_at, now()));
-
-    -- New: mirror auth.users.last_sign_in_at into public.users so views
-    -- (v_client_tenant_users etc.) read an accurate value without needing
-    -- to cross the auth.users RLS boundary.
-    UPDATE public.users
-       SET last_sign_in_at = NEW.last_sign_in_at
-     WHERE user_uuid = NEW.id;
-  END IF;
-  RETURN NEW;
-END;
-$function$;
-
-REVOKE ALL ON FUNCTION public.handle_user_login() FROM PUBLIC;
-
--- 2. Idempotent backfill (~28 rows expected). Safe to rerun.
-UPDATE public.users pu
-   SET last_sign_in_at = au.last_sign_in_at
-  FROM auth.users au
- WHERE au.id = pu.user_uuid
-   AND pu.last_sign_in_at IS DISTINCT FROM au.last_sign_in_at;
+```text
+1. row.status === 'disabled'           → "Disabled"        (red dot)
+2. row.last_sign_in_at IS NULL         → "Never signed in" (grey text, no dot)
+3. (now - last_sign_in_at) < 30 days   → "Active"          (green dot)
+4. otherwise                           → "Inactive"        (amber dot)
 ```
 
-No `CREATE TRIGGER`: `on_auth_user_login` already exists, already AFTER UPDATE on `auth.users`, already bound to `public.handle_user_login()`. Replacing the function body is sufficient.
+For `row_type === 'invited'` entries, preserve the existing rendering (amber dot + "Invited" + `SentIndicator`).
 
-## Summary
+### Changes
 
-Extends the existing login trigger function to mirror `auth.users.last_sign_in_at` into `public.users.last_sign_in_at` on every sign-in, then backfills the ~28 currently out-of-sync rows. Tightens `search_path` to `''` and schema-qualifies all references. No view, hook, or frontend changes; no type regeneration impact.
+- **Import** `differenceInDays` from `date-fns` alongside existing `formatDistanceToNow` and `parseISO`.
+- **Rewrite `StatusDot`** function:
+  - Branch on `row.row_type === 'invited'` first — return the current invited layout unchanged.
+  - For active rows, apply the 4-step priority rule above.
+  - Colour tokens:
+    - Active → `bg-emerald-500`
+    - Inactive → `bg-amber-500`
+    - Disabled → `bg-destructive`
+    - Never signed in → no dot, text in `text-muted-foreground`
+  - Add a native `title` attribute to the outer wrapper showing the raw `last_sign_in_at` timestamp when present.
+- Keep the `<TableHead>Status</TableHead>` column header unchanged.
+- No changes to `LastActive`, `RolePill`, `UserCell`, or any other component in the file.
 
-## Post-deploy verification
+### Verification
 
-```sql
--- Should return 0
-SELECT count(*) FROM public.users pu
-  JOIN auth.users au ON au.id = pu.user_uuid
- WHERE pu.last_sign_in_at IS DISTINCT FROM au.last_sign_in_at;
-
--- Spot-check recently active users
-SELECT pu.email, pu.last_sign_in_at AS pu_lsi, au.last_sign_in_at AS au_lsi
-  FROM public.users pu
-  JOIN auth.users au ON au.id = pu.user_uuid
- WHERE pu.email IN ('diamondhood14@gmail.com', 'pakewit145@hilostar.com');
-```
-
-Approve this plan and I'll run the migration via `supabase--migration` in a single call.
+- `tsc --noEmit` must pass.
+- In the preview on `/client/users`:
+  - Recent sign-ins → green "Active"
+  - `last_sign_in_at` older than 30 days → amber "Inactive"
+  - `last_sign_in_at` is `null` → grey "Never signed in" (no dot)
+  - `status === 'disabled'` → red "Disabled" (overrides everything)
+  - Invited rows → unchanged
+- Hovering any active-status badge reveals the raw `last_sign_in_at` timestamp as a native browser tooltip.
