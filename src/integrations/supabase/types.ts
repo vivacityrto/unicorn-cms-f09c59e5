@@ -22051,7 +22051,7 @@ export type Database = {
           is_default: boolean | null
           is_system: boolean
           meeting_scope: string
-          meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          meeting_type: string
           segments: Json
           template_name: string
           tenant_id: number
@@ -22067,7 +22067,7 @@ export type Database = {
           is_default?: boolean | null
           is_system?: boolean
           meeting_scope?: string
-          meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          meeting_type: string
           segments?: Json
           template_name: string
           tenant_id: number
@@ -22083,7 +22083,7 @@ export type Database = {
           is_default?: boolean | null
           is_system?: boolean
           meeting_scope?: string
-          meeting_type?: Database["public"]["Enums"]["eos_meeting_type"]
+          meeting_type?: string
           segments?: Json
           template_name?: string
           tenant_id?: number
@@ -22096,6 +22096,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "eos_agenda_template_versions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eos_agenda_templates_meeting_type"
+            columns: ["meeting_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
           },
         ]
       }
@@ -23903,7 +23910,7 @@ export type Database = {
           integrator_seat_id: string | null
           is_active: boolean
           location: string | null
-          meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          meeting_type: string
           recurrence_rule: string | null
           recurrence_type: string
           required_seat_ids: string[] | null
@@ -23928,7 +23935,7 @@ export type Database = {
           integrator_seat_id?: string | null
           is_active?: boolean
           location?: string | null
-          meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          meeting_type: string
           recurrence_rule?: string | null
           recurrence_type: string
           required_seat_ids?: string[] | null
@@ -23953,7 +23960,7 @@ export type Database = {
           integrator_seat_id?: string | null
           is_active?: boolean
           location?: string | null
-          meeting_type?: Database["public"]["Enums"]["eos_meeting_type"]
+          meeting_type?: string
           recurrence_rule?: string | null
           recurrence_type?: string
           required_seat_ids?: string[] | null
@@ -24029,6 +24036,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seat_succession_status"
             referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "fk_eos_meeting_series_meeting_type"
+            columns: ["meeting_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "fk_eos_meeting_series_workspace"
@@ -24152,7 +24166,7 @@ export type Database = {
           issues_discussed: string[] | null
           location: string | null
           meeting_scope: string
-          meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          meeting_type: string
           minutes_status: string
           next_meeting_id: string | null
           notes: string | null
@@ -24196,7 +24210,7 @@ export type Database = {
           issues_discussed?: string[] | null
           location?: string | null
           meeting_scope?: string
-          meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          meeting_type: string
           minutes_status?: string
           next_meeting_id?: string | null
           notes?: string | null
@@ -24240,7 +24254,7 @@ export type Database = {
           issues_discussed?: string[] | null
           location?: string | null
           meeting_scope?: string
-          meeting_type?: Database["public"]["Enums"]["eos_meeting_type"]
+          meeting_type?: string
           minutes_status?: string
           next_meeting_id?: string | null
           notes?: string | null
@@ -24461,6 +24475,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "eos_meeting_minutes_versions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eos_meetings_meeting_type"
+            columns: ["meeting_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "fk_eos_meetings_workspace"
@@ -54040,7 +54061,7 @@ export type Database = {
           late_count: number | null
           left_early_count: number | null
           meeting_id: string | null
-          meeting_type: Database["public"]["Enums"]["eos_meeting_type"] | null
+          meeting_type: string | null
           no_show_count: number | null
           present_count: number | null
           quorum_met: boolean | null
@@ -54048,7 +54069,15 @@ export type Database = {
           status: Database["public"]["Enums"]["meeting_status"] | null
           title: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_eos_meetings_meeting_type"
+            columns: ["meeting_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       eos_past_meetings: {
         Row: {
@@ -54067,7 +54096,7 @@ export type Database = {
           is_multi_client: boolean | null
           issues_discussed: string[] | null
           location: string | null
-          meeting_type: Database["public"]["Enums"]["eos_meeting_type"] | null
+          meeting_type: string | null
           minutes_status: string | null
           notes: string | null
           parent_meeting_id: string | null
@@ -54172,6 +54201,13 @@ export type Database = {
             referencedRelation: "eos_meeting_minutes_versions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_eos_meetings_meeting_type"
+            columns: ["meeting_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
+          },
         ]
       }
       eos_quarter_options: {
@@ -54197,7 +54233,7 @@ export type Database = {
           is_multi_client: boolean | null
           issues_discussed: string[] | null
           location: string | null
-          meeting_type: Database["public"]["Enums"]["eos_meeting_type"] | null
+          meeting_type: string | null
           minutes_status: string | null
           notes: string | null
           parent_meeting_id: string | null
@@ -54301,6 +54337,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "eos_meeting_minutes_versions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eos_meetings_meeting_type"
+            columns: ["meeting_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
           },
         ]
       }
@@ -56990,13 +57033,21 @@ export type Database = {
           meeting_id: string | null
           meeting_status: Database["public"]["Enums"]["meeting_status"] | null
           meeting_title: string | null
-          meeting_type: Database["public"]["Enums"]["eos_meeting_type"] | null
+          meeting_type: string | null
           quorum_met: boolean | null
           scheduled_date: string | null
           tenant_id: number | null
           todos_created: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_eos_meetings_meeting_type"
+            columns: ["meeting_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       v_client_engagement_summary: {
         Row: {
@@ -62589,7 +62640,7 @@ export type Database = {
         Args: {
           p_duration_minutes?: number
           p_location?: string
-          p_meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          p_meeting_type: string
           p_recurrence_type: string
           p_start_date: string
           p_start_time?: string
