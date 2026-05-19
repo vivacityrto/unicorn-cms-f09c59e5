@@ -24210,7 +24210,7 @@ export type Database = {
           scorecard_data: Json | null
           series_id: string | null
           started_at: string | null
-          status: Database["public"]["Enums"]["meeting_status"]
+          status: string
           template_id: string | null
           template_version_id: string | null
           tenant_id: number
@@ -24254,7 +24254,7 @@ export type Database = {
           scorecard_data?: Json | null
           series_id?: string | null
           started_at?: string | null
-          status?: Database["public"]["Enums"]["meeting_status"]
+          status?: string
           template_id?: string | null
           template_version_id?: string | null
           tenant_id: number
@@ -24298,7 +24298,7 @@ export type Database = {
           scorecard_data?: Json | null
           series_id?: string | null
           started_at?: string | null
-          status?: Database["public"]["Enums"]["meeting_status"]
+          status?: string
           template_id?: string | null
           template_version_id?: string | null
           tenant_id?: number
@@ -24508,6 +24508,13 @@ export type Database = {
             columns: ["meeting_type"]
             isOneToOne: false
             referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_eos_meetings_status"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_meeting_status"
             referencedColumns: ["value"]
           },
           {
@@ -54093,7 +54100,7 @@ export type Database = {
           present_count: number | null
           quorum_met: boolean | null
           scheduled_date: string | null
-          status: Database["public"]["Enums"]["meeting_status"] | null
+          status: string | null
           title: string | null
         }
         Relationships: [
@@ -54102,6 +54109,13 @@ export type Database = {
             columns: ["meeting_type"]
             isOneToOne: false
             referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_eos_meetings_status"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_meeting_status"
             referencedColumns: ["value"]
           },
         ]
@@ -54136,7 +54150,7 @@ export type Database = {
           series_id: string | null
           series_title: string | null
           started_at: string | null
-          status: Database["public"]["Enums"]["meeting_status"] | null
+          status: string | null
           template_id: string | null
           template_version_id: string | null
           tenant_id: number | null
@@ -54233,6 +54247,13 @@ export type Database = {
             columns: ["meeting_type"]
             isOneToOne: false
             referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_eos_meetings_status"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_meeting_status"
             referencedColumns: ["value"]
           },
         ]
@@ -54273,7 +54294,7 @@ export type Database = {
           series_id: string | null
           series_is_active: boolean | null
           started_at: string | null
-          status: Database["public"]["Enums"]["meeting_status"] | null
+          status: string | null
           template_id: string | null
           template_version_id: string | null
           tenant_id: number | null
@@ -54370,6 +54391,13 @@ export type Database = {
             columns: ["meeting_type"]
             isOneToOne: false
             referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_eos_meetings_status"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_meeting_status"
             referencedColumns: ["value"]
           },
         ]
@@ -57058,7 +57086,7 @@ export type Database = {
           is_complete: boolean | null
           issues_created: number | null
           meeting_id: string | null
-          meeting_status: Database["public"]["Enums"]["meeting_status"] | null
+          meeting_status: string | null
           meeting_title: string | null
           meeting_type: string | null
           quorum_met: boolean | null
@@ -57072,6 +57100,13 @@ export type Database = {
             columns: ["meeting_type"]
             isOneToOne: false
             referencedRelation: "dd_eos_meeting_type"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_eos_meetings_status"
+            columns: ["meeting_status"]
+            isOneToOne: false
+            referencedRelation: "dd_meeting_status"
             referencedColumns: ["value"]
           },
         ]
