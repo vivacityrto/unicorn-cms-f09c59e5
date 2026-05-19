@@ -64337,15 +64337,6 @@ export type Database = {
         | "delivery"
         | "support"
         | "sales_marketing"
-      eos_issue_status:
-        | "Open"
-        | "Discussing"
-        | "Solved"
-        | "Archived"
-        | "In Review"
-        | "Actioning"
-        | "Escalated"
-        | "Closed"
       eos_meeting_role: "Leader" | "Member" | "Observer"
       eos_meeting_type:
         | "L10"
@@ -64597,16 +64588,6 @@ export const Constants = {
         "delivery",
         "support",
         "sales_marketing",
-      ],
-      eos_issue_status: [
-        "Open",
-        "Discussing",
-        "Solved",
-        "Archived",
-        "In Review",
-        "Actioning",
-        "Escalated",
-        "Closed",
       ],
       eos_meeting_role: ["Leader", "Member", "Observer"],
       eos_meeting_type: [
