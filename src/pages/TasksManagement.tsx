@@ -252,6 +252,8 @@ export default function TasksManagement() {
           created_by_name: getUserName(task.created_by),
           follower_users: (task.followers || []).map((id: string) => usersMap.get(id)).filter(Boolean),
           source: 'task' as const,
+          priority: null,
+          assignee_user: null,
         };
       });
 
