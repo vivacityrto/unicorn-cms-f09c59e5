@@ -29,20 +29,23 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false }: Protecte
     return <Navigate to="/login" replace />;
   }
 
-  // Check if route requires SuperAdmin access.
-  // useAuth sets loading=false as soon as the session resolves, but profile is
-  // fetched asynchronously after that. Wait for profile before judging, otherwise
-  // legitimate SuperAdmins get redirected on first paint.
-  if (requireSuperAdmin && !profile) {
+  // Wait for profile before role-gating. useAuth flips `loading` to false
+  // as soon as the session resolves, but profile is fetched asynchronously
+  // (setTimeout in onAuthStateChange / getSession). Without this gate,
+  // Vivacity staff get a transient isVivacityTeam=false and are redirected
+  // to /dashboard from non-client routes like /manage-documents.
+  if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary-dark to-secondary">
         <div className="text-white text-xl">Loading...</div>
       </div>
     );
   }
+
   if (requireSuperAdmin && !isSuperAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
+
 
   const currentPath = location.pathname;
   const isAdminRoute = ADMIN_ROUTES.some(route => currentPath.startsWith(route));
