@@ -30,6 +30,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
+import { GovernanceImportDialog } from '@/components/governance/GovernanceImportDialog';
 import { toast as sonnerToast } from 'sonner';
 type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload';
 interface Document {
@@ -2065,32 +2066,19 @@ export default function ManageDocuments() {
       {/* Master Documents SharePoint Browser Dialog */}
       {sharepointBrowseDocId && (() => {
         const browseDoc = documents.find(d => d.id === sharepointBrowseDocId);
-        const frameworkFolderMap: Record<string, string> = { rto: 'RTO', gto: 'GTO', cricos: 'CRICOS' };
-        const autoFolder = browseDoc?.framework_type
-          ? `Framework/${frameworkFolderMap[browseDoc.framework_type.toLowerCase()] || 'Other'}`
-          : 'Framework/Other';
+        if (!browseDoc) return null;
         return (
-          <Dialog open={true} onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}>
-            <DialogContent className="max-w-[95vw] w-[1400px] max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <FolderOpen className="h-5 w-5" />
-                  Master Documents — Select Template File
-                </DialogTitle>
-              </DialogHeader>
-              {profile?.tenant_id && (
-                <SharePointFileBrowser
-                  tenantId={profile.tenant_id}
-                  sitePurpose="master_documents"
-                  onSelectLink={(url, fileName) => {
-                    handleSharePointLinkSelected(url);
-                  }}
-                  defaultFilter={browseDoc?.title || ''}
-                  autoNavigateFolder={autoFolder}
-                />
-              )}
-            </DialogContent>
-          </Dialog>
+          <GovernanceImportDialog
+            open={true}
+            onOpenChange={(open) => { if (!open) setSharepointBrowseDocId(null); }}
+            documentId={browseDoc.id}
+            documentTitle={browseDoc.title || ''}
+            frameworkType={browseDoc.framework_type || null}
+            onSuccess={() => {
+              fetchDocuments();
+              setSharepointBrowseDocId(null);
+            }}
+          />
         );
       })()}
     </div>;
