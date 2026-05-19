@@ -1,26 +1,52 @@
-## Fix Actions column for Action and Ops rows
+## Problem
 
-**File:** `src/pages/TasksManagement.tsx` (Actions `<TableCell>` at lines 1264–1305)
+Clicking **Clients → Documents** (or any non-client route) sometimes bounces Vivacity staff back to `/dashboard`. This happens on fresh route mounts where `useAuth`'s `loading` has flipped to `false` but `profile` is still being fetched (the profile fetch runs in a `setTimeout` after session resolves — `src/hooks/useAuth.tsx:60-64, 77-81`).
 
-### Current behavior
-The cell renders Edit + Delete buttons only when `!task.source || task.source === 'task'`. For `action` and `ops` rows it falls through to the `—` placeholder, so users have no way to complete or delete them.
+In that window, `ProtectedRoute` (`src/components/ProtectedRoute.tsx:54`) evaluates:
 
-### Change
-Restructure the cell to render two branches inside a single flex container:
+```
+if (!isClientRoute && !isVivacityTeam) return <Navigate to="/dashboard" replace />;
+```
 
-1. **`task` source (or unset)** — unchanged Edit (Pencil) + Delete (Trash2) buttons with their existing onClick handlers.
-2. **`action` or `ops` source** — a green CheckCircle2 button (hidden when `task.completed`) calling `handleActionChange(task.id, "completed")`, plus a red Trash2 button calling `handleActionChange(task.id, "delete")`.
+With `profile === null`, `isVivacityTeam` is `false`, so `/manage-documents` (not in `CLIENT_ROUTES`) gets redirected. The same race was already guarded for `requireSuperAdmin` at lines 36–42 by waiting for `profile` — that guard just wasn't generalised.
 
-The outer `<TableCell>` keeps its current className and `onClick={e => e.stopPropagation()}`. The `—` placeholder fallback is removed since both source branches now render something.
+## Fix
 
-### Notes
-- `CheckCircle2`, `Pencil`, `Trash2` already imported.
-- `handleActionChange`, `updateTaskStatus`, `deleteTask` are untouched — they already route by id prefix.
-- Edit is intentionally not shown for action/ops rows (the edit dialog only writes `tasks_tenants`).
+In `src/components/ProtectedRoute.tsx`, before the route-classification block (currently lines 47–61), add a "profile still loading" gate that returns the existing loading screen whenever we have a user but no profile yet. This holds rendering until `profile` resolves, after which `isVivacityTeam` reflects the real role and no false redirect fires.
 
-### Verification
-- As Carl, the 'test' ops row shows green check + red trash.
-- Clicking check marks complete → persists to `ops_work_items.status='done'`.
-- Clicking trash deletes the `ops_work_items` row.
-- Task rows still show Edit + Delete.
-- No console / TS errors.
+Concretely:
+
+1. After the `if (!user)` block (line 30) and before line 47, add:
+
+   ```tsx
+   // Wait for profile before role-gating. useAuth flips `loading` to false
+   // as soon as the session resolves, but profile is fetched asynchronously
+   // (setTimeout in onAuthStateChange / getSession). Without this gate,
+   // Vivacity staff get a transient isVivacityTeam=false and are redirected
+   // to /dashboard from non-client routes like /manage-documents.
+   if (!profile) {
+     return (
+       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary-dark to-secondary">
+         <div className="text-white text-xl">Loading...</div>
+       </div>
+     );
+   }
+   ```
+
+2. Remove the now-redundant `requireSuperAdmin && !profile` block at lines 36–42 (the new general guard covers it).
+
+No other files change. `CLIENT_ROUTES`, `ADMIN_ROUTES`, RBAC logic, and the route table in `App.tsx` are untouched.
+
+## Why this is safe
+
+- For users with a valid session and profile, behaviour is unchanged (the new gate is a no-op).
+- For unauthenticated users, the earlier `if (!user)` redirect to `/login` still fires first.
+- For users whose profile row is genuinely missing, `fetchUserProfile` logs `No user profile found` and `profile` stays `null` — they'll see the loading screen instead of being silently bounced to `/dashboard`, which is the correct surfacing (and matches the pre-existing SuperAdmin guard).
+- The gate adds at most a few hundred ms of "Loading…" on first paint after a hard reload; subsequent navigations reuse the cached `profile` in `AuthContext` and render instantly.
+
+## Verification
+
+- As Dave Richards (Vivacity staff), click **Clients → Documents** repeatedly, including immediately after a hot-reload (`?__lovable_sha=…`). The page stays on `/manage-documents` every time.
+- Other non-client routes (`/manage-tenants`, `/resource-hub`, `/admin/code-tables`) no longer bounce to `/dashboard` on first mount.
+- Client-role users (unicorn_role `Admin`/`User`) hitting `/manage-documents` still get redirected to `/dashboard` once the profile resolves (existing deny-by-default behaviour).
+- TS build clean, no console errors.
