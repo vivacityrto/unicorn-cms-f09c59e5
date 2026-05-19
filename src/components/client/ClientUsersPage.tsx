@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { formatDistanceToNow, parseISO } from "date-fns";
+import { differenceInDays, formatDistanceToNow, parseISO } from "date-fns";
 import {
   UserPlus,
   AlertCircle,
@@ -41,7 +41,6 @@ import {
   useClientTenantUsers,
   type ClientTenantUserRow,
   type TenantUserRelationshipRole,
-  type TenantUserStatus,
 } from "@/hooks/use-client-tenant-users";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 
@@ -88,24 +87,48 @@ function RolePill({ row }: { row: ClientTenantUserRow }) {
 }
 
 function StatusDot({ row }: { row: ClientTenantUserRow }) {
-  const status: TenantUserStatus = row.status;
-  const colourMap: Record<TenantUserStatus, string> = {
-    active: "bg-emerald-500",
-    invited: "bg-amber-500",
-    disabled: "bg-slate-400",
-    archived: "bg-slate-300",
-  };
-  const labelMap: Record<TenantUserStatus, string> = {
-    active: "Active",
-    invited: "Invited",
-    disabled: "Disabled",
-    archived: "Archived",
-  };
+  if (row.row_type === "invited") {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+        <span className="text-sm">Invited</span>
+        <SentIndicator row={row} />
+      </div>
+    );
+  }
+
+  // Derived activity status for active row_type
+  let dotClass: string | null;
+  let label: string;
+
+  if (row.status === "disabled") {
+    dotClass = "bg-destructive";
+    label = "Disabled";
+  } else if (!row.last_sign_in_at) {
+    dotClass = null;
+    label = "Never signed in";
+  } else {
+    const days = differenceInDays(new Date(), parseISO(row.last_sign_in_at));
+    if (days < 30) {
+      dotClass = "bg-emerald-500";
+      label = "Active";
+    } else {
+      dotClass = "bg-amber-500";
+      label = "Inactive";
+    }
+  }
+
   return (
-    <div className="flex items-center gap-2">
-      <span className={`inline-block h-2 w-2 rounded-full ${colourMap[status]}`} />
-      <span className="text-sm">{labelMap[status]}</span>
-      {row.row_type === "invited" ? <SentIndicator row={row} /> : null}
+    <div
+      className="flex items-center gap-2"
+      title={row.last_sign_in_at ?? undefined}
+    >
+      {dotClass ? (
+        <span className={`inline-block h-2 w-2 rounded-full ${dotClass}`} />
+      ) : null}
+      <span className={`text-sm ${dotClass ? "" : "text-muted-foreground"}`}>
+        {label}
+      </span>
     </div>
   );
 }
