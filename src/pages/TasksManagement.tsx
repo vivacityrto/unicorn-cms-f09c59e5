@@ -431,22 +431,42 @@ export default function TasksManagement() {
   };
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
     try {
-      const updateData: any = {
-        status: newStatus
-      };
-
-      // If marking as completed, set completed flag and current timestamp
-      if (newStatus === "completed") {
-        updateData.completed = true;
+      if (taskId.startsWith('ca-')) {
+        const realId = taskId.slice(3);
+        const statusMap: Record<string, string> = {
+          not_started: 'open',
+          in_progress: 'in_progress',
+          completed: 'done',
+        };
+        const update: any = { status: statusMap[newStatus] ?? newStatus };
+        if (newStatus === 'completed') {
+          update.completed_at = new Date().toISOString();
+          update.completed_by = user?.id ?? null;
+        } else {
+          update.completed_at = null;
+          update.completed_by = null;
+        }
+        const { error } = await supabase.from('client_action_items').update(update).eq('id', realId);
+        if (error) throw error;
+      } else if (taskId.startsWith('ops-')) {
+        const realId = taskId.slice(4);
+        const statusMap: Record<string, string> = {
+          not_started: 'open',
+          in_progress: 'in_progress',
+          completed: 'done',
+        };
+        const { error } = await supabase
+          .from('ops_work_items')
+          .update({ status: statusMap[newStatus] ?? newStatus })
+          .eq('id', realId);
+        if (error) throw error;
       } else {
-        updateData.completed = false;
+        const updateData: any = { status: newStatus, completed: newStatus === 'completed' };
+        const { error } = await supabase.from("tasks_tenants").update(updateData).eq("id", taskId);
+        if (error) throw error;
       }
-      const {
-        error
-      } = await supabase.from("tasks_tenants").update(updateData).eq("id", taskId);
-      if (error) throw error;
 
-      // Update local state
+      // Optimistic update — preserve the synthesized prefixed id so row identity stays stable.
       setTasks(prevTasks => prevTasks.map(task => task.id === taskId ? {
         ...task,
         status: newStatus,
@@ -467,9 +487,14 @@ export default function TasksManagement() {
   };
   const deleteTask = async (taskId: string) => {
     try {
-      const {
-        error
-      } = await supabase.from("tasks_tenants").delete().eq("id", taskId);
+      let error: any = null;
+      if (taskId.startsWith('ca-')) {
+        ({ error } = await supabase.from('client_action_items').delete().eq('id', taskId.slice(3)));
+      } else if (taskId.startsWith('ops-')) {
+        ({ error } = await supabase.from('ops_work_items').delete().eq('id', taskId.slice(4)));
+      } else {
+        ({ error } = await supabase.from("tasks_tenants").delete().eq("id", taskId));
+      }
       if (error) throw error;
 
       // Update local state
