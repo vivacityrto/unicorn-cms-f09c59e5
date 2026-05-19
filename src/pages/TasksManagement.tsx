@@ -258,25 +258,32 @@ export default function TasksManagement() {
       });
 
       // Normalize client_action_items
-      const clientTasks: Task[] = (clientActions || []).map((a: any) => ({
-        id: `ca-${a.id}`,
-        tenant_id: a.tenant_id,
-        package_id: null,
-        task_name: a.title,
-        description: a.description,
-        due_date: a.due_date || new Date().toISOString().slice(0, 10),
-        status: a.status === 'open' ? 'not_started' : a.status,
-        completed: a.status === 'done',
-        created_by: a.created_by_user_id,
-        followers: a.assignee_user_id ? [a.assignee_user_id] : [],
-        created_at: a.created_at,
-        tenant_name: tenantsMap.get(a.tenant_id) || "N/A",
-        package_name: null,
-        created_by_name: getUserName(a.created_by_user_id),
-        follower_users: a.assignee_user_id ? [usersMap.get(a.assignee_user_id)].filter(Boolean) as any : [],
-        file_paths: [],
-        source: 'action' as const,
-      }));
+      const clientTasks: Task[] = (clientActions || []).map((a: any) => {
+        const pkg = a.package_id ? packagesMap.get(a.package_id) : null;
+        return {
+          id: `ca-${a.id}`,
+          tenant_id: a.tenant_id,
+          package_id: a.package_id ?? null,
+          task_name: a.title,
+          description: a.description,
+          due_date: a.due_date || new Date().toISOString().slice(0, 10),
+          status: a.status === 'open' ? 'not_started' : a.status,
+          completed: a.status === 'done',
+          created_by: a.created_by_user_id,
+          followers: a.assignee_user_id ? [a.assignee_user_id] : [],
+          created_at: a.created_at,
+          tenant_name: tenantsMap.get(a.tenant_id) || "N/A",
+          package_name: pkg?.name || null,
+          package_created_at: pkg?.created_at || null,
+          package_full_text: pkg?.full_text || null,
+          created_by_name: getUserName(a.created_by_user_id),
+          follower_users: a.assignee_user_id ? [usersMap.get(a.assignee_user_id)].filter(Boolean) as any : [],
+          file_paths: [],
+          source: 'action' as const,
+          priority: a.priority ?? null,
+          assignee_user: a.assignee_user_id ? (usersMap.get(a.assignee_user_id) ?? null) : null,
+        };
+      });
 
       // Normalize ops_work_items
       const opsTasks: Task[] = (opsActions || []).map((a: any) => ({
