@@ -286,25 +286,33 @@ export default function TasksManagement() {
       });
 
       // Normalize ops_work_items
-      const opsTasks: Task[] = (opsActions || []).map((a: any) => ({
-        id: `ops-${a.id}`,
-        tenant_id: a.tenant_id || 0,
-        package_id: a.package_instance_id,
-        task_name: a.title,
-        description: a.description,
-        due_date: a.due_at || new Date().toISOString().slice(0, 10),
-        status: a.status === 'open' ? 'not_started' : a.status,
-        completed: a.status === 'done',
-        created_by: a.created_by,
-        followers: a.owner_user_uuid ? [a.owner_user_uuid] : [],
-        created_at: a.created_at,
-        tenant_name: a.tenant_id ? (tenantsMap.get(a.tenant_id) || "N/A") : "General",
-        package_name: null,
-        created_by_name: getUserName(a.created_by),
-        follower_users: a.owner_user_uuid ? [usersMap.get(a.owner_user_uuid)].filter(Boolean) as any : [],
-        file_paths: [],
-        source: 'ops' as const,
-      }));
+      const opsTasks: Task[] = (opsActions || []).map((a: any) => {
+        const resolvedPkgId = a.package_instance_id ? (instanceToPackageId.get(a.package_instance_id) ?? null) : null;
+        const pkg = resolvedPkgId ? packagesMap.get(resolvedPkgId) : null;
+        return {
+          id: `ops-${a.id}`,
+          tenant_id: a.tenant_id || 0,
+          package_id: resolvedPkgId,
+          task_name: a.title,
+          description: a.description,
+          due_date: a.due_at || new Date().toISOString().slice(0, 10),
+          status: a.status === 'open' ? 'not_started' : a.status,
+          completed: a.status === 'done',
+          created_by: a.created_by,
+          followers: a.owner_user_uuid ? [a.owner_user_uuid] : [],
+          created_at: a.created_at,
+          tenant_name: a.tenant_id ? (tenantsMap.get(a.tenant_id) || "N/A") : "General",
+          package_name: pkg?.name || null,
+          package_created_at: pkg?.created_at || null,
+          package_full_text: pkg?.full_text || null,
+          created_by_name: getUserName(a.created_by),
+          follower_users: a.owner_user_uuid ? [usersMap.get(a.owner_user_uuid)].filter(Boolean) as any : [],
+          file_paths: [],
+          source: 'ops' as const,
+          priority: a.priority ?? null,
+          assignee_user: a.owner_user_uuid ? (usersMap.get(a.owner_user_uuid) ?? null) : null,
+        };
+      });
 
       const allTasks = [...transformedTasks, ...clientTasks, ...opsTasks];
       setTasks(allTasks);
