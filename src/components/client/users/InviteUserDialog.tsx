@@ -187,7 +187,7 @@ export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
                 onValueChange={(v) => setAccessLevel(v as InviteAccessLevel)}
                 className="space-y-2"
               >
-                {ACCESS_OPTIONS.map((opt) => (
+                {accessOptions.map((opt) => (
                   <label
                     key={opt.value}
                     htmlFor={`invite-access-${opt.value}`}
