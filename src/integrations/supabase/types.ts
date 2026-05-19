@@ -1439,7 +1439,7 @@ export type Database = {
           chart_id: string
           created_at: string
           description: string | null
-          function_type: Database["public"]["Enums"]["eos_function_type"] | null
+          function_type: string | null
           id: string
           name: string
           parent_function_id: string | null
@@ -1451,9 +1451,7 @@ export type Database = {
           chart_id: string
           created_at?: string
           description?: string | null
-          function_type?:
-            | Database["public"]["Enums"]["eos_function_type"]
-            | null
+          function_type?: string | null
           id?: string
           name: string
           parent_function_id?: string | null
@@ -1465,9 +1463,7 @@ export type Database = {
           chart_id?: string
           created_at?: string
           description?: string | null
-          function_type?:
-            | Database["public"]["Enums"]["eos_function_type"]
-            | null
+          function_type?: string | null
           id?: string
           name?: string
           parent_function_id?: string | null
@@ -1482,6 +1478,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "accountability_charts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_functions_function_type_fkey"
+            columns: ["function_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_function_type"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "accountability_functions_parent_function_id_fkey"
@@ -2007,9 +2010,7 @@ export type Database = {
           created_at: string
           critical_seat: boolean | null
           description: string | null
-          eos_role_type:
-            | Database["public"]["Enums"]["eos_seat_role_type"]
-            | null
+          eos_role_type: string | null
           function_id: string
           gwc_capacity: string | null
           gwc_get_it: string | null
@@ -2029,9 +2030,7 @@ export type Database = {
           created_at?: string
           critical_seat?: boolean | null
           description?: string | null
-          eos_role_type?:
-            | Database["public"]["Enums"]["eos_seat_role_type"]
-            | null
+          eos_role_type?: string | null
           function_id: string
           gwc_capacity?: string | null
           gwc_get_it?: string | null
@@ -2051,9 +2050,7 @@ export type Database = {
           created_at?: string
           critical_seat?: boolean | null
           description?: string | null
-          eos_role_type?:
-            | Database["public"]["Enums"]["eos_seat_role_type"]
-            | null
+          eos_role_type?: string | null
           function_id?: string
           gwc_capacity?: string | null
           gwc_get_it?: string | null
@@ -2114,6 +2111,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "accountability_charts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_eos_role_type_fkey"
+            columns: ["eos_role_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_seat_role_type"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "accountability_seats_function_id_fkey"
@@ -17258,6 +17262,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_eos_function_type: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_eos_roles: {
         Row: {
           created_at: string
@@ -17287,6 +17318,33 @@ export type Database = {
           label?: string
           sort_order?: number
           updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_eos_seat_role_type: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
           value?: string
         }
         Relationships: []
@@ -54828,9 +54886,7 @@ export type Database = {
       seat_linked_data: {
         Row: {
           active_rocks_count: number | null
-          eos_role_type:
-            | Database["public"]["Enums"]["eos_seat_role_type"]
-            | null
+          eos_role_type: string | null
           meetings_attended_count: number | null
           meetings_missed_count: number | null
           primary_owner_id: string | null
@@ -54839,6 +54895,13 @@ export type Database = {
           tenant_id: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "accountability_seats_eos_role_type_fkey"
+            columns: ["eos_role_type"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_seat_role_type"
+            referencedColumns: ["value"]
+          },
           {
             foreignKeyName: "accountability_seats_tenant_id_fkey"
             columns: ["tenant_id"]
