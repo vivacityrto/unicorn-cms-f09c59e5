@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import {
@@ -28,12 +28,7 @@ interface Props {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const ACCESS_OPTIONS: { value: InviteAccessLevel; label: string; description: string }[] = [
-  {
-    value: "full",
-    label: "Full access",
-    description: "Manage packages, documents and files.",
-  },
+const ALL_ACCESS_OPTIONS: { value: InviteAccessLevel; label: string; description: string }[] = [
   {
     value: "academy",
     label: "Academy only",
@@ -52,8 +47,23 @@ export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [accessLevel, setAccessLevel] = useState<InviteAccessLevel>("full");
+  const [accessLevel, setAccessLevel] = useState<InviteAccessLevel>("academy");
   const [error, setError] = useState<string | null>(null);
+
+  const hasSecondary = useMemo(
+    () =>
+      rows.some(
+        (r) =>
+          (r.row_type === "active" || r.row_type === "invited") &&
+          r.relationship_role === "secondary_contact"
+      ),
+    [rows]
+  );
+
+  const accessOptions = useMemo(
+    () => ALL_ACCESS_OPTIONS.filter((o) => o.value !== "secondary" || !hasSecondary),
+    [hasSecondary]
+  );
 
   // Reset on close
   useEffect(() => {
@@ -61,7 +71,7 @@ export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
       setEmail("");
       setFirstName("");
       setLastName("");
-      setAccessLevel("full");
+      setAccessLevel("academy");
       setError(null);
     }
   }, [open]);
@@ -177,7 +187,7 @@ export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
                 onValueChange={(v) => setAccessLevel(v as InviteAccessLevel)}
                 className="space-y-2"
               >
-                {ACCESS_OPTIONS.map((opt) => (
+                {accessOptions.map((opt) => (
                   <label
                     key={opt.value}
                     htmlFor={`invite-access-${opt.value}`}
