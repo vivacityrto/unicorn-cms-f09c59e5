@@ -17289,6 +17289,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_eos_issue_status: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_eos_roles: {
         Row: {
           created_at: string
@@ -22850,18 +22877,47 @@ export type Database = {
       }
       eos_issue_status_transitions: {
         Row: {
-          from_status: Database["public"]["Enums"]["eos_issue_status"]
-          to_status: Database["public"]["Enums"]["eos_issue_status"]
+          from_status: string
+          to_status: string
         }
         Insert: {
-          from_status: Database["public"]["Enums"]["eos_issue_status"]
-          to_status: Database["public"]["Enums"]["eos_issue_status"]
+          from_status: string
+          to_status: string
         }
         Update: {
-          from_status?: Database["public"]["Enums"]["eos_issue_status"]
-          to_status?: Database["public"]["Enums"]["eos_issue_status"]
+          from_status?: string
+          to_status?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_transitions_from_status"
+            columns: ["from_status"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_issue_status"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_transitions_from_status"
+            columns: ["from_status"]
+            isOneToOne: false
+            referencedRelation: "eos_issue_status_options"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_transitions_to_status"
+            columns: ["to_status"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_issue_status"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_transitions_to_status"
+            columns: ["to_status"]
+            isOneToOne: false
+            referencedRelation: "eos_issue_status_options"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       eos_issues: {
         Row: {
@@ -22890,7 +22946,7 @@ export type Database = {
           solution: string | null
           solved_at: string | null
           source: string | null
-          status: Database["public"]["Enums"]["eos_issue_status"] | null
+          status: string | null
           tenant_id: number
           title: string
           updated_at: string | null
@@ -22923,7 +22979,7 @@ export type Database = {
           solution?: string | null
           solved_at?: string | null
           source?: string | null
-          status?: Database["public"]["Enums"]["eos_issue_status"] | null
+          status?: string | null
           tenant_id: number
           title: string
           updated_at?: string | null
@@ -22956,7 +23012,7 @@ export type Database = {
           solution?: string | null
           solved_at?: string | null
           source?: string | null
-          status?: Database["public"]["Enums"]["eos_issue_status"] | null
+          status?: string | null
           tenant_id?: number
           title?: string
           updated_at?: string | null
@@ -23033,6 +23089,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "eos_meeting_segments"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eos_issues_status"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_issue_status"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_eos_issues_status"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "eos_issue_status_options"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "fk_eos_issues_workspace"
@@ -53888,6 +53958,12 @@ export type Database = {
         Row: {
           value: string | null
         }
+        Insert: {
+          value?: string | null
+        }
+        Update: {
+          value?: string | null
+        }
         Relationships: []
       }
       eos_issue_type_options: {
@@ -57642,11 +57718,26 @@ export type Database = {
           quarter_year: number | null
           resolved_at: string | null
           source: string | null
-          status: Database["public"]["Enums"]["eos_issue_status"] | null
+          status: string | null
           tenant_id: number | null
           title: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_eos_issues_status"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_issue_status"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_eos_issues_status"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "eos_issue_status_options"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       v_client_tenant_users: {
         Row: {
