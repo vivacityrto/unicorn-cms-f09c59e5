@@ -77,6 +77,27 @@ Deno.serve(async (req) => {
       !!callerRow?.unicorn_role &&
       (STAFF_ROLES as readonly string[]).includes(callerRow.unicorn_role);
 
+    // 3a. Academy-only pre-check (fast path): non-staff callers whose ENTIRE
+    // tenant_users footprint is academy_only cannot submit suggestions.
+    // Callers with zero tenant_users rows are also rejected.
+    if (!isStaff) {
+      const { data: scopes, error: scopesErr } = await adminClient
+        .from("tenant_users")
+        .select("access_scope")
+        .eq("user_id", callerId);
+      if (scopesErr) {
+        console.error("tenant_users scope fetch error", scopesErr);
+        return json(500, { error: scopesErr.message });
+      }
+      const rows = scopes ?? [];
+      const allAcademyOnly =
+        rows.length === 0 ||
+        rows.every((r: { access_scope: string | null }) => r.access_scope === "academy_only");
+      if (allAcademyOnly) {
+        return json(403, { error: "Suggestions are not available on your plan." });
+      }
+    }
+
     // 4. Fetch suggest_item via auth-scoped client (RLS-gated)
     const { data: item, error: itemErr } = await userClient
       .from("suggest_items")
@@ -91,6 +112,25 @@ Deno.serve(async (req) => {
     if (!item || item.is_deleted) {
       return json(404, { error: "Suggestion not found" });
     }
+
+    // 4a. Per-tenant academy-only check: defense against multi-tenant callers
+    // where one tenant is academy_only and the submitted item belongs to it.
+    if (!isStaff) {
+      const { data: tenantScope, error: tenantScopeErr } = await adminClient
+        .from("tenant_users")
+        .select("access_scope")
+        .eq("user_id", callerId)
+        .eq("tenant_id", item.tenant_id)
+        .maybeSingle();
+      if (tenantScopeErr) {
+        console.error("tenant_users per-tenant scope fetch error", tenantScopeErr);
+        return json(500, { error: tenantScopeErr.message });
+      }
+      if (tenantScope?.access_scope === "academy_only") {
+        return json(403, { error: "Suggestions are not available on your plan." });
+      }
+    }
+
     if (!isStaff && item.reported_by !== callerId) {
       return json(403, { error: "Forbidden" });
     }
