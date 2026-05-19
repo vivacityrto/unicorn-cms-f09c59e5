@@ -1177,6 +1177,15 @@ export default function TasksManagement() {
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                      {task.priority ? (
+                        <Badge variant="outline" className={cn("text-[0.7rem] capitalize", priorityColors[task.priority] || "bg-muted text-muted-foreground border-border")}>
+                          {task.priority}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
                         <Calendar className={cn("h-4 w-4", isOverdue ? "text-red-600" : "text-muted-foreground")} />
                         <span className={isOverdue ? "text-red-600 font-medium" : ""}>
@@ -1185,23 +1194,37 @@ export default function TasksManagement() {
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        {task.follower_users && task.follower_users.length > 0 ? (
-                          task.follower_users.slice(0, 3).map((follower) => (
-                            <Avatar key={follower.user_uuid} className="h-9 w-9 border border-background">
-                              {follower.avatar_url && <AvatarImage src={follower.avatar_url} />}
-                              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                {follower.first_name?.[0]}{follower.last_name?.[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground text-sm">No followers</span>
-                        )}
-                        {task.follower_users && task.follower_users.length > 3 && (
-                          <span className="text-xs text-muted-foreground ml-1">+{task.follower_users.length - 3}</span>
-                        )}
-                      </div>
+                      {task.source === 'task' || !task.source ? (
+                        <div className="flex items-center gap-1">
+                          {task.follower_users && task.follower_users.length > 0 ? (
+                            task.follower_users.slice(0, 3).map((follower) => (
+                              <Avatar key={follower.user_uuid} className="h-9 w-9 border border-background">
+                                {follower.avatar_url && <AvatarImage src={follower.avatar_url} />}
+                                <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                                  {follower.first_name?.[0]}{follower.last_name?.[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground text-sm">No followers</span>
+                          )}
+                          {task.follower_users && task.follower_users.length > 3 && (
+                            <span className="text-xs text-muted-foreground ml-1">+{task.follower_users.length - 3}</span>
+                          )}
+                        </div>
+                      ) : task.assignee_user ? (
+                        <div className="flex flex-col items-start gap-0.5">
+                          <Avatar className="h-9 w-9 border border-background">
+                            {task.assignee_user.avatar_url && <AvatarImage src={task.assignee_user.avatar_url} />}
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {task.assignee_user.first_name?.[0]}{task.assignee_user.last_name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-[10px] text-muted-foreground">Owner</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Unassigned</span>
+                      )}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
                       {task.file_paths && task.file_paths.length > 0 ? (
