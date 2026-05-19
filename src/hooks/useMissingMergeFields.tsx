@@ -161,52 +161,16 @@ export function useMissingMergeFields(tenantId: number | null) {
 
       if (upsertError) throw upsertError;
 
-      // Get tenant name for notification
-      const { data: tenantData } = await supabase
-        .from('tenants')
-        .select('name')
-        .eq('id', tenantId)
-        .single();
-
-      // Get assigned CSC user for this tenant (use limit 1 to avoid 406 on duplicates)
-      const { data: clientData } = await supabase
-        .from('clients_legacy')
-        .select('manager')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      // Get CSC user ID if manager is set
-      let cscUserId: string | null = null;
-      if (clientData?.manager) {
-        const { data: cscUser } = await supabase
-          .from('users')
-          .select('user_uuid')
-          .or(`email.eq.${clientData.manager},full_name.eq.${clientData.manager}`)
-          .single();
-        cscUserId = cscUser?.user_uuid || null;
-      }
-
-      // Create internal notification for CSC
+      // Internal notification for CSC — relocated to service-role edge function
+      // (frontend can no longer insert user_notifications for other users post-Phase-3 RLS).
       const fieldNames = Object.keys(data);
-      const notificationTitle = `${tenantData?.name || 'Client'} updated merge field information`;
-      const notificationMessage = `Fields updated: ${fieldNames.join(', ')}`;
-
-      // Use user_notifications table for internal notifications
-      if (cscUserId) {
-        await supabase
-          .from('user_notifications')
-          .insert({
-            user_id: cscUserId,
-            tenant_id: tenantId,
-            type: 'merge_data_updated',
-            title: notificationTitle,
-            message: notificationMessage,
-            link: `/tenant/${tenantId}`,
-            is_read: false,
-            created_by: user.id
-          });
+      try {
+        await supabase.functions.invoke("notify-merge-fields-updated", {
+          body: { tenant_id: tenantId, field_names: fieldNames },
+        });
+      } catch (notifyErr) {
+        // Preserve original silent behaviour — notification failure must not block save.
+        console.warn("notify-merge-fields-updated invoke failed", notifyErr);
       }
 
       // Log to client_audit_log
