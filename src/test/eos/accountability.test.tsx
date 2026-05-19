@@ -51,12 +51,12 @@ describe("EOS Accountability Chart", () => {
       });
     });
 
-    it("should include Integrator function", () => {
-      const integrator = mockAccountability.functions.find(
-        (f) => f.function_type === "integrator"
+    it("should include Operations function", () => {
+      const operations = mockAccountability.functions.find(
+        (f) => f.function_type === "operations"
       );
-      expect(integrator).toBeDefined();
-      expect(integrator?.name).toBe("Integrator");
+      expect(operations).toBeDefined();
+      expect(operations?.name).toBe("Operations");
     });
   });
 
