@@ -150,6 +150,19 @@ serve(async (req) => {
       }
     }
 
+    // Tenant admins can only invite Academy users or a Secondary contact via the client portal
+    if (isTenantAdmin && payload.invite_as === 'CLIENT') {
+      const allowed = ['academy_user', 'secondary_contact'];
+      if (!payload.relationship_role || !allowed.includes(payload.relationship_role)) {
+        return jsonResponse(403, {
+          ok: false,
+          code: "RELATIONSHIP_ROLE_NOT_ALLOWED",
+          detail: "Primary/secondary contacts can only invite Academy users or a Secondary contact.",
+        });
+      }
+    }
+
+
     // Tenant admins can only assign Admin or User roles (not Super Admin, Team Leader, etc.)
     if (!isVivacityStaff && !CLIENT_ROLES.includes(payload.unicorn_role)) {
       return jsonResponse(403, {
