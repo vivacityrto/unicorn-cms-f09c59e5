@@ -17316,6 +17316,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_eos_participant_role: {
+        Row: {
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_eos_roles: {
         Row: {
           created_at: string
@@ -23559,7 +23586,7 @@ export type Database = {
           created_at: string | null
           id: string
           meeting_id: string
-          role: Database["public"]["Enums"]["eos_participant_role"] | null
+          role: string | null
           user_id: string
         }
         Insert: {
@@ -23567,7 +23594,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           meeting_id: string
-          role?: Database["public"]["Enums"]["eos_participant_role"] | null
+          role?: string | null
           user_id: string
         }
         Update: {
@@ -23575,7 +23602,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           meeting_id?: string
-          role?: Database["public"]["Enums"]["eos_participant_role"] | null
+          role?: string | null
           user_id?: string
         }
         Relationships: [
@@ -23613,6 +23640,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_client_decisions_approvals"
             referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "fk_eos_meeting_participants_role"
+            columns: ["role"]
+            isOneToOne: false
+            referencedRelation: "dd_eos_participant_role"
+            referencedColumns: ["value"]
           },
         ]
       }
