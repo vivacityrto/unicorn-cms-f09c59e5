@@ -1,52 +1,64 @@
-## Problem
+# Migration: Sync `public.users.last_sign_in_at` via `handle_user_login`
 
-Clicking **Clients → Documents** (or any non-client route) sometimes bounces Vivacity staff back to `/dashboard`. This happens on fresh route mounts where `useAuth`'s `loading` has flipped to `false` but `profile` is still being fetched (the profile fetch runs in a `setTimeout` after session resolves — `src/hooks/useAuth.tsx:60-64, 77-81`).
+Decisions D1–D5 confirmed. One migration, no trigger DDL, no frontend impact.
 
-In that window, `ProtectedRoute` (`src/components/ProtectedRoute.tsx:54`) evaluates:
+## Migration SQL
 
+```sql
+-- 1. Amend handle_user_login: preserve user_activity insert, add public.users sync.
+--    Tighten search_path to '' and fully schema-qualify per project standard.
+CREATE OR REPLACE FUNCTION public.handle_user_login()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $function$
+BEGIN
+  IF NEW.last_sign_in_at IS DISTINCT FROM OLD.last_sign_in_at THEN
+    -- Preserved: append a login row to the activity ledger
+    INSERT INTO public.user_activity (user_id, login_date)
+    VALUES (NEW.id, COALESCE(NEW.last_sign_in_at, now()));
+
+    -- New: mirror auth.users.last_sign_in_at into public.users so views
+    -- (v_client_tenant_users etc.) read an accurate value without needing
+    -- to cross the auth.users RLS boundary.
+    UPDATE public.users
+       SET last_sign_in_at = NEW.last_sign_in_at
+     WHERE user_uuid = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.handle_user_login() FROM PUBLIC;
+
+-- 2. Idempotent backfill (~28 rows expected). Safe to rerun.
+UPDATE public.users pu
+   SET last_sign_in_at = au.last_sign_in_at
+  FROM auth.users au
+ WHERE au.id = pu.user_uuid
+   AND pu.last_sign_in_at IS DISTINCT FROM au.last_sign_in_at;
 ```
-if (!isClientRoute && !isVivacityTeam) return <Navigate to="/dashboard" replace />;
+
+No `CREATE TRIGGER`: `on_auth_user_login` already exists, already AFTER UPDATE on `auth.users`, already bound to `public.handle_user_login()`. Replacing the function body is sufficient.
+
+## Summary
+
+Extends the existing login trigger function to mirror `auth.users.last_sign_in_at` into `public.users.last_sign_in_at` on every sign-in, then backfills the ~28 currently out-of-sync rows. Tightens `search_path` to `''` and schema-qualifies all references. No view, hook, or frontend changes; no type regeneration impact.
+
+## Post-deploy verification
+
+```sql
+-- Should return 0
+SELECT count(*) FROM public.users pu
+  JOIN auth.users au ON au.id = pu.user_uuid
+ WHERE pu.last_sign_in_at IS DISTINCT FROM au.last_sign_in_at;
+
+-- Spot-check recently active users
+SELECT pu.email, pu.last_sign_in_at AS pu_lsi, au.last_sign_in_at AS au_lsi
+  FROM public.users pu
+  JOIN auth.users au ON au.id = pu.user_uuid
+ WHERE pu.email IN ('diamondhood14@gmail.com', 'pakewit145@hilostar.com');
 ```
 
-With `profile === null`, `isVivacityTeam` is `false`, so `/manage-documents` (not in `CLIENT_ROUTES`) gets redirected. The same race was already guarded for `requireSuperAdmin` at lines 36–42 by waiting for `profile` — that guard just wasn't generalised.
-
-## Fix
-
-In `src/components/ProtectedRoute.tsx`, before the route-classification block (currently lines 47–61), add a "profile still loading" gate that returns the existing loading screen whenever we have a user but no profile yet. This holds rendering until `profile` resolves, after which `isVivacityTeam` reflects the real role and no false redirect fires.
-
-Concretely:
-
-1. After the `if (!user)` block (line 30) and before line 47, add:
-
-   ```tsx
-   // Wait for profile before role-gating. useAuth flips `loading` to false
-   // as soon as the session resolves, but profile is fetched asynchronously
-   // (setTimeout in onAuthStateChange / getSession). Without this gate,
-   // Vivacity staff get a transient isVivacityTeam=false and are redirected
-   // to /dashboard from non-client routes like /manage-documents.
-   if (!profile) {
-     return (
-       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary-dark to-secondary">
-         <div className="text-white text-xl">Loading...</div>
-       </div>
-     );
-   }
-   ```
-
-2. Remove the now-redundant `requireSuperAdmin && !profile` block at lines 36–42 (the new general guard covers it).
-
-No other files change. `CLIENT_ROUTES`, `ADMIN_ROUTES`, RBAC logic, and the route table in `App.tsx` are untouched.
-
-## Why this is safe
-
-- For users with a valid session and profile, behaviour is unchanged (the new gate is a no-op).
-- For unauthenticated users, the earlier `if (!user)` redirect to `/login` still fires first.
-- For users whose profile row is genuinely missing, `fetchUserProfile` logs `No user profile found` and `profile` stays `null` — they'll see the loading screen instead of being silently bounced to `/dashboard`, which is the correct surfacing (and matches the pre-existing SuperAdmin guard).
-- The gate adds at most a few hundred ms of "Loading…" on first paint after a hard reload; subsequent navigations reuse the cached `profile` in `AuthContext` and render instantly.
-
-## Verification
-
-- As Dave Richards (Vivacity staff), click **Clients → Documents** repeatedly, including immediately after a hot-reload (`?__lovable_sha=…`). The page stays on `/manage-documents` every time.
-- Other non-client routes (`/manage-tenants`, `/resource-hub`, `/admin/code-tables`) no longer bounce to `/dashboard` on first mount.
-- Client-role users (unicorn_role `Admin`/`User`) hitting `/manage-documents` still get redirected to `/dashboard` once the profile resolves (existing deny-by-default behaviour).
-- TS build clean, no console errors.
+Approve this plan and I'll run the migration via `supabase--migration` in a single call.
