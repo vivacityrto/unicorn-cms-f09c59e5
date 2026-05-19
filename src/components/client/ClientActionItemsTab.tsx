@@ -163,37 +163,18 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
           owner_user_id: ownerUserId
         });
 
-        // Send notifications to selected "Notify" users
+        // Send notifications to selected "Notify" users — relocated to
+        // service-role edge function (frontend can no longer insert
+        // user_notifications for other users post-Phase-3 RLS).
         if (notifyUserIds.length > 0) {
           try {
-            const { data: userData } = await supabase.auth.getUser();
-            const currentUserId = userData.user?.id;
-            if (currentUserId) {
-              const { data: authorUser } = await supabase
-                .from('users')
-                .select('first_name, last_name')
-                .eq('user_uuid', currentUserId)
-                .single();
-              const authorName = authorUser
-                ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim()
-                : 'A team member';
-
-              const notifRows = notifyUserIds
-                .filter(uid => uid !== currentUserId)
-                .map(uid => ({
-                  user_id: uid,
-                  tenant_id: tenantId,
-                  title: 'Action item shared with you',
-                  message: `${authorName} created an action: "${title.substring(0, 60).trim()}${title.length > 60 ? '...' : ''}"`,
-                  type: 'action_shared',
-                  link: `/tenant/${tenantId}`,
-                  created_by: currentUserId
-                }));
-
-              if (notifRows.length > 0) {
-                await supabase.from('user_notifications').insert(notifRows);
-              }
-            }
+            await supabase.functions.invoke("notify-action-shared", {
+              body: {
+                tenant_id: tenantId,
+                action_title: title,
+                notify_user_ids: notifyUserIds,
+              },
+            });
           } catch (notifyErr) {
             console.error('Failed to send notify notifications:', notifyErr);
           }
