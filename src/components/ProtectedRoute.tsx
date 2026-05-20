@@ -14,6 +14,7 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({ children, requireSuperAdmin = false }: ProtectedRouteProps) => {
   const { user, profile, loading } = useAuth();
   const { canAccessRoute, isSuperAdmin, canAccessEOS, isVivacityTeam } = useRBAC();
+  const { hasAcademyOnly, hasFullAccess, isVivacityStaff, isLoading: accessLoading } = useUserAccess();
   const location = useLocation();
   
   // Track if we've shown the EOS redirect toast to avoid duplicates
