@@ -425,7 +425,7 @@ export function ClientHomePage() {
           cscRoleLabel={hero?.csc_role_label ?? "CSC"}
           cscAvatarUrl={hero?.csc_avatar_url ?? null}
           hasCSC={hasCSC}
-          onMessage={() => openHelpCenter("csc")}
+          onMessage={canAccessHelpCenter ? () => openHelpCenter("csc") : undefined}
         />
 
         {/* Audit readiness — empty-state aware */}
@@ -493,9 +493,11 @@ export function ClientHomePage() {
               </TooltipTrigger>
               <TooltipContent>Coming soon — your CSC will reach out directly for now</TooltipContent>
             </Tooltip>
-            <Button variant="outline" size="sm" onClick={() => openHelpCenter("chatbot")}>
-              <Bot className="h-3.5 w-3.5 mr-1" /> Ask Chatbot
-            </Button>
+            {canAccessHelpCenter && (
+              <Button variant="outline" size="sm" onClick={() => openHelpCenter("chatbot")}>
+                <Bot className="h-3.5 w-3.5 mr-1" /> Ask Chatbot
+              </Button>
+            )}
           </div>
         </div>
       </div>
