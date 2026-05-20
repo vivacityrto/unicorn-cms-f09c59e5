@@ -1,44 +1,73 @@
-## Plan: Replace tier-derived badge with relationship_role label in Academy chrome
+## Plan: Replace `/academy/settings` with `/academy/profile` reusing `ClientProfilePage`
 
 ### Problem
-The Academy dropdown badge and sidebar-bottom badge currently render `Academy {tierLabel}` — when `academyTier` is null/undefined this produces "Academy Academy". We should show the user's actual `relationship_role` label (e.g. "Academy User", "Primary Contact") instead.
+The `/academy/settings` page (`AcademySettings.tsx`) is broken — it has placeholder tabs, non-functional forms, and tier-centric billing content that doesn't match the current relationship-role model. Academy users need a working profile editor (first name, last name, phone, position) just like compliance users get on `/client/profile`.
+
+### Solution
+Reuse the existing `ClientProfilePage` inside an `AcademyLayout` wrapper, creating `/academy/profile`. Remove the dead `/academy/settings` route and its page component.
 
 ### Changes
 
-#### 1. New hook: `src/hooks/useCurrentRelationshipRole.ts`
-Create a hook that queries `tenant_users.relationship_role` for the current user's `user_uuid` on `profile.tenant_id`.
+#### 1. New wrapper file: `src/pages/client/AcademyProfileWrapper.tsx`
+Mirror `ClientProfileWrapper.tsx` exactly, but swap `ClientLayout` for `AcademyLayout`:
 
-- Returns `{ relationshipRole: RelationshipRole | null, isLoading: boolean }`
-- Uses `useAuth` for `profile.user_uuid` and `profile.tenant_id`
-- Query key: `["current-relationship-role", userUuid, tenantId]`
-- `staleTime: 5 * 60 * 1000`
-- Uses `.maybeSingle()` so missing rows return `null` rather than erroring
+```tsx
+import { AcademyLayout } from "@/components/layout/AcademyLayout";
+import { lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
-#### 2. `src/components/layout/AcademyTopBar.tsx`
-- Remove `useTenantType` import and `const { academyTier } = useTenantType();`
-- Remove the `getTierLabel()` function entirely.
-- Add imports:
-  - `useCurrentRelationshipRole` from `@/hooks/useCurrentRelationshipRole`
-  - `relationshipRoleLabel` from `@/lib/roles/relationshipRole`
-- Add `const { relationshipRole } = useCurrentRelationshipRole();`
-- Replace `<Badge>Academy {getTierLabel()}</Badge>` inner text with `{relationshipRoleLabel(relationshipRole)}`
+const ClientProfilePage = lazy(() => import("@/pages/client/ClientProfilePage"));
 
-#### 3. `src/components/layout/AcademyLayout.tsx`
-- **Keep** `useTenantType` import and `const { academyTier } = useTenantType();` — `academyTier` is still required for `showTeamSection` on line 90.
-- Add imports:
-  - `useCurrentRelationshipRole` from `@/hooks/useCurrentRelationshipRole`
-  - `relationshipRoleLabel` from `@/lib/roles/relationshipRole`
-- Add `const { relationshipRole } = useCurrentRelationshipRole();`
-- Replace sidebar-bottom badge text (lines 259-262) with `{relationshipRoleLabel(relationshipRole)}`
+export default function AcademyProfileWrapper() {
+  return (
+    <AcademyLayout>
+      <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
+        <ClientProfilePage />
+      </Suspense>
+    </AcademyLayout>
+  );
+}
+```
 
-### Out of scope
-- `useTenantType` context, `academyTier` derivation, tenant_type enum, `AcademyTier` type — unchanged.
-- `AcademySettings.tsx`, billing UI, plan comparison cards — untouched.
-- Other tier-referencing files (`useSeatLimits.ts`, `navigationConfig.ts`, etc.) — untouched.
+`ClientProfilePage` uses `useClientTenant` and `useClientActingUser`; both `ClientLayout` and `AcademyLayout` wrap children in `ClientTenantProvider` + `HelpCenterProvider`, so the profile page will continue to work unchanged.
+
+#### 2. `src/App.tsx` — route swap
+- Add lazy import: `const AcademyProfileWrapperNew = lazy(() => import("./pages/client/AcademyProfileWrapper"));`
+- Add route inside the academy routes block:
+  ```tsx
+  <Route path="/academy/profile" element={<ProtectedRoute><AcademyProfileWrapperNew /></ProtectedRoute>} />
+  ```
+- Remove lazy import: `const AcademySettings = lazy(() => import("./pages/academy/AcademySettings"));`
+- Remove route: `<Route path="/academy/settings" ... />`
+
+#### 3. `src/components/layout/AcademyLayout.tsx` — sidebar link
+Update `academyAccountItems` array:
+
+```tsx
+const academyAccountItems = [
+  { icon: User, label: "Profile", path: "/academy/profile" },
+];
+```
+
+#### 4. `src/components/layout/AcademyTopBar.tsx` — dropdown link + route title
+- Update `academyRouteTitles` map: remove `"/academy/settings": "Settings"`, add `"/academy/profile": "Profile"`.
+- Change the avatar dropdown "Profile Settings" link to point to `/academy/profile` with visible label "Profile" (instead of `/settings?tab=profile` / "Profile Settings").
+
+#### 5. Delete `src/pages/academy/AcademySettings.tsx`
+No remaining callers after step 2.
+
+### What does NOT change
+- `ClientProfilePage`, `ClientProfileWrapper`, `/client/profile` route — untouched.
+- `Settings.tsx` (the `/settings` compliance page) — untouched.
+- `useClientActingUser`, `useClientTenant`, `useAuth` — untouched.
+- Schema, RLS, RPC, edge functions.
+- Any other academy route or menu item.
 
 ### Verification
-- `rg "getTierLabel" src/components/layout/AcademyTopBar.tsx` → zero matches.
-- As `academy_user` → both badges read "Academy User".
-- As `primary_contact` or `secondary_contact` → both badges read corresponding label.
-- As user with no `tenant_users` row → badges read "—".
+- `rg "AcademySettings" src/` → zero matches (file deleted, route gone, no imports).
+- `rg "/academy/settings" src/` → zero matches.
+- Academy sidebar "Account" section shows "Profile" → navigates to `/academy/profile`.
+- Academy avatar dropdown "Profile" → navigates to `/academy/profile`.
+- Direct `/academy/settings` → 404 (route removed).
+- `/client/profile` still works for compliance users.
 - TypeScript builds clean.

@@ -52,7 +52,7 @@ const academyMainItems = [
 ];
 
 const academyAccountItems = [
-  { icon: User, label: "Settings", path: "/academy/settings" },
+  { icon: User, label: "Profile", path: "/academy/profile" },
 ];
 
 const academyTeamItems = [
