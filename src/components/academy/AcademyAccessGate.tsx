@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
-import { GraduationCap, Loader2, MessageCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useHelpCenter } from "@/components/help-center";
+import { GraduationCap, Loader2 } from "lucide-react";
 
 interface AcademyAccessGateProps {
   children: ReactNode;
@@ -14,7 +12,6 @@ interface AcademyAccessGateProps {
  */
 export default function AcademyAccessGate({ children }: AcademyAccessGateProps) {
   const { academyAccessEnabled, academyAccessLoading } = useClientTenant();
-  const { openHelpCenter } = useHelpCenter();
 
   if (academyAccessLoading) {
     return (
@@ -39,14 +36,6 @@ export default function AcademyAccessGate({ children }: AcademyAccessGateProps) 
         <p className="text-muted-foreground max-w-md mb-6">
           Your organisation's Academy access is not yet active. Contact your Vivacity consultant to get started.
         </p>
-        <Button
-          onClick={() => openHelpCenter("chatbot")}
-          className="gap-2"
-          style={{ backgroundColor: "#ed1878" }}
-        >
-          <MessageCircle className="h-4 w-4" />
-          Message CSC
-        </Button>
       </div>
     );
   }
