@@ -209,7 +209,7 @@ setInvitationData({
 unicorn_role: invitationData!.unicornRole,
             user_type: invitationData!.userType === 'vivacity' ? 'Vivacity Team' : 'Client',
           },
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/post-sign-in?fresh=1`,
         },
       });
 
