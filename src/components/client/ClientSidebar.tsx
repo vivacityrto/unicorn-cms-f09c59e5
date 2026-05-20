@@ -99,7 +99,7 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen }: ClientSidebarProp
     canManagePortalUsers,
   } = useClientTenant();
   const { isSuperAdmin } = useAuth();
-  const { openHelpCenter } = useHelpCenter();
+  const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
   // Staff in preview retain full sidebar; otherwise use tenant_user-derived gate.
   const canManageUsers = isSuperAdmin() || isPreview || canManagePortalUsers;
 
@@ -203,39 +203,41 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen }: ClientSidebarProp
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="border-t border-white/15 py-3 px-2 space-y-1">
-          <button
-            onClick={() => openHelpCenter("chatbot")}
-            className={cn(
-              "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
-              sidebarOpen ? "px-4" : "px-0 justify-center"
-            )}
-          >
-            <Bot className="w-[18px] h-[18px] flex-shrink-0" />
-            {sidebarOpen && <span>Help</span>}
-          </button>
-          <button
-            onClick={() => openHelpCenter("csc")}
-            className={cn(
-              "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
-              sidebarOpen ? "px-4" : "px-0 justify-center"
-            )}
-          >
-            <MessageCircle className="w-[18px] h-[18px] flex-shrink-0" />
-            {sidebarOpen && <span>Message CSC</span>}
-          </button>
-          <button
-            onClick={() => openHelpCenter("support")}
-            className={cn(
-              "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
-              sidebarOpen ? "px-4" : "px-0 justify-center"
-            )}
-          >
-            <Headphones className="w-[18px] h-[18px] flex-shrink-0" />
-            {sidebarOpen && <span>Support</span>}
-          </button>
-        </div>
+        {/* Footer — Help Center entries gated to primary/secondary contacts */}
+        {canAccessHelpCenter && (
+          <div className="border-t border-white/15 py-3 px-2 space-y-1">
+            <button
+              onClick={() => openHelpCenter("chatbot")}
+              className={cn(
+                "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
+                sidebarOpen ? "px-4" : "px-0 justify-center"
+              )}
+            >
+              <Bot className="w-[18px] h-[18px] flex-shrink-0" />
+              {sidebarOpen && <span>Help</span>}
+            </button>
+            <button
+              onClick={() => openHelpCenter("csc")}
+              className={cn(
+                "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
+                sidebarOpen ? "px-4" : "px-0 justify-center"
+              )}
+            >
+              <MessageCircle className="w-[18px] h-[18px] flex-shrink-0" />
+              {sidebarOpen && <span>Message CSC</span>}
+            </button>
+            <button
+              onClick={() => openHelpCenter("support")}
+              className={cn(
+                "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
+                sidebarOpen ? "px-4" : "px-0 justify-center"
+              )}
+            >
+              <Headphones className="w-[18px] h-[18px] flex-shrink-0" />
+              {sidebarOpen && <span>Support</span>}
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );
