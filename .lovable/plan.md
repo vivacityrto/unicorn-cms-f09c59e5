@@ -1,73 +1,75 @@
-## Plan: Replace `/academy/settings` with `/academy/profile` reusing `ClientProfilePage`
 
-### Problem
-The `/academy/settings` page (`AcademySettings.tsx`) is broken — it has placeholder tabs, non-functional forms, and tier-centric billing content that doesn't match the current relationship-role model. Academy users need a working profile editor (first name, last name, phone, position) just like compliance users get on `/client/profile`.
+# BUG-005 — Restrict impersonator RPCs to authenticated users only
 
-### Solution
-Reuse the existing `ClientProfilePage` inside an `AcademyLayout` wrapper, creating `/academy/profile`. Remove the dead `/academy/settings` route and its page component.
+## Verified current grant state (live DB)
 
-### Changes
+Queried `pg_proc.proacl` for both functions:
 
-#### 1. New wrapper file: `src/pages/client/AcademyProfileWrapper.tsx`
-Mirror `ClientProfileWrapper.tsx` exactly, but swap `ClientLayout` for `AcademyLayout`:
+- `public.complete_enrollment_as_impersonator(bigint, uuid)`
+  - `proacl`: `{=X/postgres, postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres}`
+  - `=X` = **PUBLIC has EXECUTE** + explicit **anon** grant. Bug confirmed.
+- `public.enrol_as_impersonator(bigint, uuid, bigint)`
+  - `proacl`: `{postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres}`
+  - PUBLIC already revoked; **anon** still present. Bug confirmed.
 
-```tsx
-import { AcademyLayout } from "@/components/layout/AcademyLayout";
-import { lazy, Suspense } from "react";
-import { Loader2 } from "lucide-react";
+Both functions are `SECURITY DEFINER` (verified earlier in chat history) and enforce staff/impersonation checks internally — but defence-in-depth requires removing the unauthenticated/anon EXECUTE so a misconfigured client or stolen anon key cannot even invoke them.
 
-const ClientProfilePage = lazy(() => import("@/pages/client/ClientProfilePage"));
+## The migration (exactly 3 statements, nothing else)
 
-export default function AcademyProfileWrapper() {
-  return (
-    <AcademyLayout>
-      <Suspense fallback={<div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
-        <ClientProfilePage />
-      </Suspense>
-    </AcademyLayout>
-  );
-}
+```sql
+-- BUG-005: restrict impersonator RPCs to authenticated users only
+REVOKE EXECUTE ON FUNCTION public.complete_enrollment_as_impersonator(bigint, uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.complete_enrollment_as_impersonator(bigint, uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.enrol_as_impersonator(bigint, uuid, bigint) FROM anon;
 ```
 
-`ClientProfilePage` uses `useClientTenant` and `useClientActingUser`; both `ClientLayout` and `AcademyLayout` wrap children in `ClientTenantProvider` + `HelpCenterProvider`, so the profile page will continue to work unchanged.
+No GRANTs. No function-body changes. No RLS or trigger changes. No frontend changes.
 
-#### 2. `src/App.tsx` — route swap
-- Add lazy import: `const AcademyProfileWrapperNew = lazy(() => import("./pages/client/AcademyProfileWrapper"));`
-- Add route inside the academy routes block:
-  ```tsx
-  <Route path="/academy/profile" element={<ProtectedRoute><AcademyProfileWrapperNew /></ProtectedRoute>} />
-  ```
-- Remove lazy import: `const AcademySettings = lazy(() => import("./pages/academy/AcademySettings"));`
-- Remove route: `<Route path="/academy/settings" ... />`
+## Post-state (expected `proacl` after migration)
 
-#### 3. `src/components/layout/AcademyLayout.tsx` — sidebar link
-Update `academyAccountItems` array:
+- `complete_enrollment_as_impersonator`: `{postgres=X, authenticated=X, service_role=X}`
+- `enrol_as_impersonator`: `{postgres=X, authenticated=X, service_role=X}`
 
-```tsx
-const academyAccountItems = [
-  { icon: User, label: "Profile", path: "/academy/profile" },
-];
-```
+Both end up identical and aligned with the project's intended impersonator-RPC access model.
 
-#### 4. `src/components/layout/AcademyTopBar.tsx` — dropdown link + route title
-- Update `academyRouteTitles` map: remove `"/academy/settings": "Settings"`, add `"/academy/profile": "Profile"`.
-- Change the avatar dropdown "Profile Settings" link to point to `/academy/profile` with visible label "Profile" (instead of `/settings?tab=profile` / "Profile Settings").
+## Impact analysis
 
-#### 5. Delete `src/pages/academy/AcademySettings.tsx`
-No remaining callers after step 2.
+### Callers
+- `src/hooks/academy/useCompleteEnrollment.ts` — calls via `supabase.rpc(...)` from the browser, which uses the **authenticated** role once a user is signed in. Unaffected.
+- `src/hooks/academy/useEnrolCourse.ts` — same. Unaffected.
+- No edge function calls these RPCs (would use `service_role`, still granted).
+- No SQL/DB code internally calls these RPCs.
 
-### What does NOT change
-- `ClientProfilePage`, `ClientProfileWrapper`, `/client/profile` route — untouched.
-- `Settings.tsx` (the `/settings` compliance page) — untouched.
-- `useClientActingUser`, `useClientTenant`, `useAuth` — untouched.
-- Schema, RLS, RPC, edge functions.
-- Any other academy route or menu item.
+### Not touched (per instructions, and verified unrelated)
+- Function bodies of both RPCs.
+- RLS policies on `academy_enrollments`.
+- Triggers `pdp_auto_evidence_after_complete`, `set_academy_enrollments_updated_at`, `trg_issue_academy_certificate`.
+- Any other function, table, grant, or policy.
 
-### Verification
-- `rg "AcademySettings" src/` → zero matches (file deleted, route gone, no imports).
-- `rg "/academy/settings" src/` → zero matches.
-- Academy sidebar "Account" section shows "Profile" → navigates to `/academy/profile`.
-- Academy avatar dropdown "Profile" → navigates to `/academy/profile`.
-- Direct `/academy/settings` → 404 (route removed).
-- `/client/profile` still works for compliance users.
-- TypeScript builds clean.
+### Backward compatibility
+- Signed-in users (authenticated role): no change — still can call.
+- Service role / edge functions: no change.
+- Anonymous / signed-out callers: were previously able to reach the function and fail inside the body's authorization checks; now blocked at the EXECUTE layer with `permission denied for function ...`. This is the intended hardening and not a regression — the app never invokes these RPCs without an authenticated session.
+
+### Audit trail
+- Migration file itself is the audit record (timestamped, in `supabase/migrations/`).
+- No `audit_events` rows are written by grant changes — consistent with how Phase 5Z and earlier grant-hardening migrations were handled.
+
+## Risk assessment
+
+| Risk | Likelihood | Mitigation |
+|---|---|---|
+| Breaks a legitimate caller | Very low | Only callers are the two React hooks, both run as `authenticated`. |
+| Future migration re-adds PUBLIC grant | Low | Pattern matches prior hardening migrations; consider a follow-up lint, but out of scope here. |
+| Types regeneration needed | None | Grant changes don't affect `Database` types. |
+| Rollback complexity | Trivial | `GRANT EXECUTE ... TO anon, PUBLIC` if ever needed (not recommended). |
+
+## Test plan (post-apply verification)
+
+1. Re-run the `pg_proc.proacl` query — confirm PUBLIC and anon are gone on both functions, `authenticated`/`postgres`/`service_role` retained.
+2. Authenticated browser session: trigger "Enrol" and "Complete enrollment" in the Academy UI (both staff-as-impersonator and normal flows still route through `enrol_in_academy_course` / `complete_academy_enrollment` for non-impersonating users, so explicitly test the impersonation path while "viewing as client").
+3. Confirm no new Supabase linter findings attributable to this migration (existing 961 pre-existing warnings remain unchanged).
+
+## Deliverable
+
+One new migration file under `supabase/migrations/` containing only the comment + the 3 `REVOKE` statements above. No other files modified.
