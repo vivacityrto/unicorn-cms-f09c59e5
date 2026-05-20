@@ -45,9 +45,21 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false }: Protecte
     );
   }
 
+  // Academy-only users must never land on /dashboard (it hangs querying
+  // tenant data they can't access). Redirect them to /academy on any
+  // non-academy route. Mirrors PostSignInRedirect's flag logic.
+  if (!accessLoading && hasAcademyOnly && !hasFullAccess && !isVivacityStaff) {
+    const isAcademyRoute = ACADEMY_ONLY_ROUTES.some(r => location.pathname.startsWith(r));
+    if (!isAcademyRoute) {
+      return <Navigate to="/academy" replace />;
+    }
+  }
+
   if (requireSuperAdmin && !isSuperAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
+
+
 
 
   const currentPath = location.pathname;
