@@ -27,7 +27,9 @@ import { AcademyFooter } from "@/components/layout/AcademyFooter";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
-import { ClientTenantProvider } from "@/contexts/ClientTenantContext";
+import { ClientTenantProvider, useClientTenant } from "@/contexts/ClientTenantContext";
+import { useAuth } from "@/hooks/useAuth";
+import { Loader2 } from "lucide-react";
 
 // Academy menu items
 const academyPathwaysItems = [
