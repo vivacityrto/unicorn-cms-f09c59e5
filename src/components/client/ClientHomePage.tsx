@@ -347,7 +347,7 @@ function QuickActionsRow({ actions }: { actions: QuickAction[] }) {
 // ───────── page ─────────
 
 export function ClientHomePage() {
-  const { openHelpCenter } = useHelpCenter();
+  const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
   const { profile } = useAuth();
   const { actingUser } = useClientActingUser();
   const { isPreviewMode } = useClientPreview();
@@ -374,12 +374,16 @@ export function ClientHomePage() {
       icon: CalendarPlus,
       to: "/client/calendar",
     },
-    {
-      label: "Message CSC",
-      subtitle: "Quick question? Send a note",
-      icon: MessageCircle,
-      onClick: () => openHelpCenter("csc"),
-    },
+    ...(canAccessHelpCenter
+      ? [
+          {
+            label: "Message CSC",
+            subtitle: "Quick question? Send a note",
+            icon: MessageCircle,
+            onClick: () => openHelpCenter("csc"),
+          } as QuickAction,
+        ]
+      : []),
     // TODO: re-enable when document request workflow is complete
     {
       label: "Request document",
@@ -388,12 +392,16 @@ export function ClientHomePage() {
       disabled: true,
       disabledTooltip: "Coming soon — your CSC will reach out directly for now",
     },
-    {
-      label: "Ask the Chatbot",
-      subtitle: "Get answers fast. Logged.",
-      icon: Bot,
-      onClick: () => openHelpCenter("chatbot"),
-    },
+    ...(canAccessHelpCenter
+      ? [
+          {
+            label: "Ask the Chatbot",
+            subtitle: "Get answers fast. Logged.",
+            icon: Bot,
+            onClick: () => openHelpCenter("chatbot"),
+          } as QuickAction,
+        ]
+      : []),
   ];
 
   return (
