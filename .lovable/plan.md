@@ -1,75 +1,68 @@
+## Bug Fix: Allow `relationship_role = 'user'` + `access_scope = 'full'` to access Client Portal
 
-# BUG-005 — Restrict impersonator RPCs to authenticated users only
+### Problem
+`src/contexts/ClientTenantContext.tsx` line 215 gates `canAccessClientPortal` on `fullScope && isContact`. Since `isContact` only matches `primary_contact`/`secondary_contact`, the `'user'` role is locked out even with full access scope. 10 live users across 9 tenants are currently affected.
 
-## Verified current grant state (live DB)
+### Fix (1 line of production code + 1 test update)
 
-Queried `pg_proc.proacl` for both functions:
-
-- `public.complete_enrollment_as_impersonator(bigint, uuid)`
-  - `proacl`: `{=X/postgres, postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres}`
-  - `=X` = **PUBLIC has EXECUTE** + explicit **anon** grant. Bug confirmed.
-- `public.enrol_as_impersonator(bigint, uuid, bigint)`
-  - `proacl`: `{postgres=X/postgres, anon=X/postgres, authenticated=X/postgres, service_role=X/postgres}`
-  - PUBLIC already revoked; **anon** still present. Bug confirmed.
-
-Both functions are `SECURITY DEFINER` (verified earlier in chat history) and enforce staff/impersonation checks internally — but defence-in-depth requires removing the unauthenticated/anon EXECUTE so a misconfigured client or stolen anon key cannot even invoke them.
-
-## The migration (exactly 3 statements, nothing else)
-
-```sql
--- BUG-005: restrict impersonator RPCs to authenticated users only
-REVOKE EXECUTE ON FUNCTION public.complete_enrollment_as_impersonator(bigint, uuid) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.complete_enrollment_as_impersonator(bigint, uuid) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.enrol_as_impersonator(bigint, uuid, bigint) FROM anon;
+**`src/contexts/ClientTenantContext.tsx`** — line 215 only:
+```ts
+canAccessClientPortal: fullScope && (isContact || tenantUser.relationship_role === 'user'),
 ```
+Line 216 (`canManagePortalUsers`) and line 217 (`isAcademyOnly`) remain untouched.
 
-No GRANTs. No function-body changes. No RLS or trigger changes. No frontend changes.
+**`src/contexts/__tests__/ClientTenantContext.test.tsx`** — update the `"user + full scope"` test:
+- `canAccessClientPortal` → `true` (was `false`)
+- `canManagePortalUsers` → `false` (unchanged)
+- `isAcademyOnly` → `false` (unchanged)
 
-## Post-state (expected `proacl` after migration)
+All 7 other tests stay identical and must keep passing.
 
-- `complete_enrollment_as_impersonator`: `{postgres=X, authenticated=X, service_role=X}`
-- `enrol_as_impersonator`: `{postgres=X, authenticated=X, service_role=X}`
+### Deep-dive verification
 
-Both end up identical and aligned with the project's intended impersonator-RPC access model.
+**Gating semantics after fix:**
 
-## Impact analysis
+| relationship_role | access_scope   | portal | manage users | academy-only |
+|-------------------|----------------|--------|--------------|--------------|
+| primary_contact   | full           | ✅     | ✅           | ❌           |
+| secondary_contact | full           | ✅     | ✅           | ❌           |
+| user              | full           | ✅ (new) | ❌         | ❌           |
+| academy_user      | academy_only   | ❌     | ❌           | ✅           |
+| null              | full           | ❌     | ❌           | ❌           |
+| any               | (other/null)   | ❌     | ❌           | ❌           |
 
-### Callers
-- `src/hooks/academy/useCompleteEnrollment.ts` — calls via `supabase.rpc(...)` from the browser, which uses the **authenticated** role once a user is signed in. Unaffected.
-- `src/hooks/academy/useEnrolCourse.ts` — same. Unaffected.
-- No edge function calls these RPCs (would use `service_role`, still granted).
-- No SQL/DB code internally calls these RPCs.
+**Downstream consumers of `canAccessClientPortal` / `canManagePortalUsers`:**
+- `ClientRouteGuard.tsx` — uses `canAccessClientPortal` to gate non-academy `/client/*` routes, and `canManagePortalUsers` to gate `/client/users`. After fix: `'user'`-role caller reaches `/client/home`, but `/client/users` still redirects them away. ✅
+- `ClientUsersPage.tsx` — invite/manage buttons gated on `canManagePortalUsers`. Unchanged. ✅
+- `ClientSidebar.tsx`, `ClientTasksPage.tsx`, `StaffPdpsPage.tsx`, `useClientNotifications.tsx`, `useClientCommunications.ts`, academy routing — none consume these flags in a way that grants management rights. ✅
+- `useUserAccess.ts` — independent path; only looks at `access_scope`, not `relationship_role`. Unaffected. ✅
+- `AcademyOnlyFallback` — only triggered when `isAcademyOnly` true or no portal access on non-academy path. `'user'+full` no longer hits fallback. ✅
 
-### Not touched (per instructions, and verified unrelated)
-- Function bodies of both RPCs.
-- RLS policies on `academy_enrollments`.
-- Triggers `pdp_auto_evidence_after_complete`, `set_academy_enrollments_updated_at`, `trg_issue_academy_certificate`.
-- Any other function, table, grant, or policy.
+**Database / RLS:** No schema change. RLS policies key off `tenant_users` membership and `has_role()`, not off `relationship_role`. A `'user'+full` member already passes RLS for tenant data reads — the bug was purely a client-side UI gate hiding data they were entitled to see.
 
-### Backward compatibility
-- Signed-in users (authenticated role): no change — still can call.
-- Service role / edge functions: no change.
-- Anonymous / signed-out callers: were previously able to reach the function and fail inside the body's authorization checks; now blocked at the EXECUTE layer with `permission denied for function ...`. This is the intended hardening and not a regression — the app never invokes these RPCs without an authenticated session.
+**Audit trail:** No writes added, no audit-logged action changed. Login/access events continue to flow through existing auth telemetry. No backfill needed.
 
-### Audit trail
-- Migration file itself is the audit record (timestamped, in `supabase/migrations/`).
-- No `audit_events` rows are written by grant changes — consistent with how Phase 5Z and earlier grant-hardening migrations were handled.
+**Backward compatibility:** Strictly additive — no caller loses access, no role gains management rights. Primary/secondary contact UX unchanged.
 
-## Risk assessment
+**Edge cases checked:**
+- Staff impersonation (`isPreview`) bypasses this gate entirely in `ClientRouteGuard` → unaffected.
+- `tenantUser === null` (loading / no membership) → still returns all false.
+- `relationship_role = null` defensive case → still false (matches existing test).
+- `access_scope = 'academy_only'` with `role = 'user'` → `fullScope` false, still blocked from portal, `isAcademyOnly` still false (only `academy_user`+`academy_only` flips academy fallback). Matches current behaviour.
+- Multi-tenant membership: gate is per active tenant, so a user can be `'user'+full` in tenant A and `academy_user` in tenant B with correct per-tenant behaviour.
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| Breaks a legitimate caller | Very low | Only callers are the two React hooks, both run as `authenticated`. |
-| Future migration re-adds PUBLIC grant | Low | Pattern matches prior hardening migrations; consider a follow-up lint, but out of scope here. |
-| Types regeneration needed | None | Grant changes don't affect `Database` types. |
-| Rollback complexity | Trivial | `GRANT EXECUTE ... TO anon, PUBLIC` if ever needed (not recommended). |
+### Test plan
+1. `bunx vitest run src/contexts/__tests__/ClientTenantContext.test.tsx` — 8 tests, all green.
+2. Manual smoke (post-deploy): one of the 10 affected accounts loads `/client/home` successfully and does NOT see Users management entry.
+3. Confirm a `primary_contact` account still sees and can use `/client/users`.
 
-## Test plan (post-apply verification)
+### Risk assessment
+- **Severity:** Low. Single-line conditional widening on a client-side gate.
+- **Blast radius:** Only `canAccessClientPortal`. Management/invite/academy/RLS paths untouched.
+- **Rollback:** Revert the one-line change; no migration to undo.
+- **Security:** No privilege escalation — `'user'+full` was always entitled to portal data per RLS; this restores intended access without granting any admin capability.
 
-1. Re-run the `pg_proc.proacl` query — confirm PUBLIC and anon are gone on both functions, `authenticated`/`postgres`/`service_role` retained.
-2. Authenticated browser session: trigger "Enrol" and "Complete enrollment" in the Academy UI (both staff-as-impersonator and normal flows still route through `enrol_in_academy_course` / `complete_academy_enrollment` for non-impersonating users, so explicitly test the impersonation path while "viewing as client").
-3. Confirm no new Supabase linter findings attributable to this migration (existing 961 pre-existing warnings remain unchanged).
-
-## Deliverable
-
-One new migration file under `supabase/migrations/` containing only the comment + the 3 `REVOKE` statements above. No other files modified.
+### Summary
+- **Changes:** 1 line in `ClientTenantContext.tsx`, 1 assertion in its test file.
+- **Benefits:** Unblocks 10 live users; aligns UI gate with `access_scope` semantics and `RELATIONSHIP_ROLE_OPTIONS` (where `'user'` is documented as "Standard team member. Full access to their organisation.").
+- **Risk:** Very low; no schema, RLS, audit, or management-rights impact.

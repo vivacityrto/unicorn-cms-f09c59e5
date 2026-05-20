@@ -212,7 +212,7 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
     return {
       // Backup-admin model: BOTH primary and secondary manage users.
       // Narrowing to secondary-only would regress today's primary-contact UX.
-      canAccessClientPortal: fullScope && isContact,
+      canAccessClientPortal: fullScope && (isContact || tenantUser.relationship_role === 'user'),
       canManagePortalUsers: fullScope && isContact,
       isAcademyOnly: tenantUser.access_scope === "academy_only",
     };
