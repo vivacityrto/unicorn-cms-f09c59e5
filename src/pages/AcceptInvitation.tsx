@@ -249,7 +249,7 @@ unicorn_role: invitationData!.unicornRole,
             title: 'Welcome back!',
             description: 'Your account was already set up. Redirecting to dashboard...',
           });
-          setTimeout(() => navigate('/dashboard'), 1500);
+          setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);
           return;
         }
       }
