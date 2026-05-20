@@ -137,7 +137,7 @@ function CSCCard({
   cscRoleLabel: string;
   cscAvatarUrl: string | null;
   hasCSC: boolean;
-  onMessage: () => void;
+  onMessage?: () => void;
 }) {
   const displayName = hasCSC ? cscName ?? "Not yet assigned" : "Not yet assigned";
 
@@ -188,17 +188,19 @@ function CSCCard({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {hasCSC ? (
-              messageBtn
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-block">{messageBtn}</span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Your CSC assignment is pending — contact info@vivacity.com.au
-                </TooltipContent>
-              </Tooltip>
+            {onMessage && (
+              hasCSC ? (
+                messageBtn
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-block">{messageBtn}</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Your CSC assignment is pending — contact info@vivacity.com.au
+                  </TooltipContent>
+                </Tooltip>
+              )
             )}
             {hasCSC ? (
               bookBtn
@@ -347,7 +349,7 @@ function QuickActionsRow({ actions }: { actions: QuickAction[] }) {
 // ───────── page ─────────
 
 export function ClientHomePage() {
-  const { openHelpCenter } = useHelpCenter();
+  const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
   const { profile } = useAuth();
   const { actingUser } = useClientActingUser();
   const { isPreviewMode } = useClientPreview();
@@ -374,12 +376,16 @@ export function ClientHomePage() {
       icon: CalendarPlus,
       to: "/client/calendar",
     },
-    {
-      label: "Message CSC",
-      subtitle: "Quick question? Send a note",
-      icon: MessageCircle,
-      onClick: () => openHelpCenter("csc"),
-    },
+    ...(canAccessHelpCenter
+      ? [
+          {
+            label: "Message CSC",
+            subtitle: "Quick question? Send a note",
+            icon: MessageCircle,
+            onClick: () => openHelpCenter("csc"),
+          } as QuickAction,
+        ]
+      : []),
     // TODO: re-enable when document request workflow is complete
     {
       label: "Request document",
@@ -388,12 +394,16 @@ export function ClientHomePage() {
       disabled: true,
       disabledTooltip: "Coming soon — your CSC will reach out directly for now",
     },
-    {
-      label: "Ask the Chatbot",
-      subtitle: "Get answers fast. Logged.",
-      icon: Bot,
-      onClick: () => openHelpCenter("chatbot"),
-    },
+    ...(canAccessHelpCenter
+      ? [
+          {
+            label: "Ask the Chatbot",
+            subtitle: "Get answers fast. Logged.",
+            icon: Bot,
+            onClick: () => openHelpCenter("chatbot"),
+          } as QuickAction,
+        ]
+      : []),
   ];
 
   return (
@@ -415,7 +425,7 @@ export function ClientHomePage() {
           cscRoleLabel={hero?.csc_role_label ?? "CSC"}
           cscAvatarUrl={hero?.csc_avatar_url ?? null}
           hasCSC={hasCSC}
-          onMessage={() => openHelpCenter("csc")}
+          onMessage={canAccessHelpCenter ? () => openHelpCenter("csc") : undefined}
         />
 
         {/* Audit readiness — empty-state aware */}
@@ -483,9 +493,11 @@ export function ClientHomePage() {
               </TooltipTrigger>
               <TooltipContent>Coming soon — your CSC will reach out directly for now</TooltipContent>
             </Tooltip>
-            <Button variant="outline" size="sm" onClick={() => openHelpCenter("chatbot")}>
-              <Bot className="h-3.5 w-3.5 mr-1" /> Ask Chatbot
-            </Button>
+            {canAccessHelpCenter && (
+              <Button variant="outline" size="sm" onClick={() => openHelpCenter("chatbot")}>
+                <Bot className="h-3.5 w-3.5 mr-1" /> Ask Chatbot
+              </Button>
+            )}
           </div>
         </div>
       </div>

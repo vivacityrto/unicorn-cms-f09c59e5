@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function PackageActionRow({ packageInstanceId }: Props) {
-  const { openHelpCenter } = useHelpCenter();
+  const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -19,10 +19,12 @@ export function PackageActionRow({ packageInstanceId }: Props) {
         </Link>
       </Button>
 
-      <Button size="sm" variant="secondary" onClick={() => openHelpCenter('csc')}>
-        <MessageSquare className="h-4 w-4 mr-1.5" />
-        Message CSC
-      </Button>
+      {canAccessHelpCenter && (
+        <Button size="sm" variant="secondary" onClick={() => openHelpCenter('csc')}>
+          <MessageSquare className="h-4 w-4 mr-1.5" />
+          Message CSC
+        </Button>
+      )}
     </div>
   );
 }

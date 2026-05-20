@@ -8,10 +8,10 @@ import { useHelpCenter } from "@/components/help-center/HelpCenterContext";
  * Opens the Help Center drawer to the chatbot tab.
  */
 export function FloatingChatbot() {
-  const { openHelpCenter, isOpen } = useHelpCenter();
+  const { openHelpCenter, isOpen, canAccess } = useHelpCenter();
 
-  // Don't show when help center is already open
-  if (isOpen) return null;
+  // Hide for users without Help Center access, or when drawer is already open
+  if (!canAccess || isOpen) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-50">

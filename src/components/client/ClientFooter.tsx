@@ -3,7 +3,7 @@ import { useHelpCenter } from "@/components/help-center";
 
 export function ClientFooter() {
   const currentYear = new Date().getFullYear();
-  const { openHelpCenter } = useHelpCenter();
+  const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
 
   return (
     <footer className="w-full" style={{ backgroundColor: "hsl(270 47% 26%)" }}>
@@ -39,39 +39,41 @@ export function ClientFooter() {
             </p>
           </div>
 
-          {/* Column 2 – Get Help */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-white/80">Get Help</h4>
-            <ul className="space-y-1.5">
-              <li>
-                <button
-                  onClick={() => openHelpCenter("chatbot")}
-                  className="text-sm text-white hover:text-white/80 transition-colors"
-                >
-                  Ask the chatbot
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => openHelpCenter("csc")}
-                  className="text-sm text-white hover:text-white/80 transition-colors"
-                >
-                  Message your CSC
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => openHelpCenter("support")}
-                  className="text-sm text-white hover:text-white/80 transition-colors"
-                >
-                  Contact support
-                </button>
-              </li>
-            </ul>
-            <p className="text-xs text-white/50 mt-2">
-              Messages are saved to your account.
-            </p>
-          </div>
+          {/* Column 2 – Get Help (gated to primary/secondary contacts) */}
+          {canAccessHelpCenter && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-white/80">Get Help</h4>
+              <ul className="space-y-1.5">
+                <li>
+                  <button
+                    onClick={() => openHelpCenter("chatbot")}
+                    className="text-sm text-white hover:text-white/80 transition-colors"
+                  >
+                    Ask the chatbot
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => openHelpCenter("csc")}
+                    className="text-sm text-white hover:text-white/80 transition-colors"
+                  >
+                    Message your CSC
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => openHelpCenter("support")}
+                    className="text-sm text-white hover:text-white/80 transition-colors"
+                  >
+                    Contact support
+                  </button>
+                </li>
+              </ul>
+              <p className="text-xs text-white/50 mt-2">
+                Messages are saved to your account.
+              </p>
+            </div>
+          )}
 
           {/* Column 3 – Quick Links */}
           <div className="space-y-2">

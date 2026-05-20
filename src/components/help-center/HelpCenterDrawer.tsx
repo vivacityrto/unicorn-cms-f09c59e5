@@ -6,7 +6,9 @@ import { ChatTab } from "./ChatTab";
 import { MessageTab } from "./MessageTab";
 
 export function HelpCenterDrawer() {
-  const { isOpen, activeTab, closeHelpCenter, setActiveTab } = useHelpCenter();
+  const { isOpen, activeTab, closeHelpCenter, setActiveTab, canAccess } = useHelpCenter();
+
+  if (!canAccess) return null;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeHelpCenter()}>
