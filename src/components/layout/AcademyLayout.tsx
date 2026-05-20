@@ -156,9 +156,38 @@ const AcademyLayoutInner = ({
     );
   };
 
+  if (academyAccessLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--viv-fuchsia)]" />
+      </div>
+    );
+  }
+
+  if (!academyAccessEnabled) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center px-6">
+        <div
+          className="flex items-center justify-center h-20 w-20 rounded-2xl mb-6"
+          style={{ background: "linear-gradient(135deg, #7130A0, #ed1878)" }}
+        >
+          <GraduationCap className="h-10 w-10 text-white" />
+        </div>
+        <h1 className="text-2xl font-bold text-foreground mb-2">Vivacity Academy</h1>
+        <p className="text-muted-foreground max-w-md">
+          Your organisation's Academy access is not yet active. Contact your Vivacity consultant to get started.
+        </p>
+        <button
+          onClick={signOut}
+          className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline mt-4"
+        >
+          Sign out
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <ClientTenantProvider>
-    <HelpCenterProvider>
     <div className="min-h-screen bg-background academy-scope">
       {/* Impersonation Banner (fixed; spacer pushes layout down) */}
       {isPreviewMode && (
