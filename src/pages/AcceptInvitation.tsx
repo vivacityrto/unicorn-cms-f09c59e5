@@ -296,7 +296,7 @@ unicorn_role: invitationData!.unicornRole,
         description: 'Redirecting...',
       });
 
-      setTimeout(() => navigate('/dashboard'), 1500);
+      setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);
     } catch (error: any) {
       toast({
         title: 'Signup failed',
