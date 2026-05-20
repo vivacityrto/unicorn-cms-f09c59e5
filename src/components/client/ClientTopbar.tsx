@@ -39,7 +39,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [notifFilter, setNotifFilter] = useState<string | null>(null);
   const { profile, signOut } = useAuth();
-  const { openHelpCenter } = useHelpCenter();
+  const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
   const { unreadCount, unreadByType, notifications, markAllAsRead, markAsRead } = useClientNotifications();
   const { activeTenantId, logoUrl } = useClientTenant();
   const { actingUser, isLoading: actingUserLoading } = useClientActingUser();
@@ -106,15 +106,17 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
 
       {/* Right: Notifications + Help + Profile */}
       <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-        {/* Help */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => openHelpCenter("chatbot")}
-          className="h-9 w-9 text-muted-foreground hover:text-foreground"
-        >
-          <HelpCircle className="h-4 w-4" />
-        </Button>
+        {/* Help — gated to primary/secondary contacts */}
+        {canAccessHelpCenter && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => openHelpCenter("chatbot")}
+            className="h-9 w-9 text-muted-foreground hover:text-foreground"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </Button>
+        )}
 
         {/* Notifications */}
         <Popover>
