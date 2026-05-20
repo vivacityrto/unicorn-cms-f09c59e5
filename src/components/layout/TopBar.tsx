@@ -251,8 +251,8 @@ export function TopBar({ showSearch = false }: TopBarProps) {
         {/* Suggestions button */}
         <SuggestionsButton />
         <TooltipProvider>
-          {/* Help Center button - Client roles only */}
-          {isClientRole && (
+          {/* Help Center button - Client roles only, gated to primary/secondary contacts */}
+          {isClientRole && helpCenter.canAccess && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
