@@ -5,7 +5,6 @@ import { useUserAccess } from '@/hooks/useUserAccess';
 import { ACADEMY_ONLY_ROUTES } from '@/config/navigationConfig';
 import { useEffect, useRef } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { toast } from '@/hooks/use-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
