@@ -1,63 +1,59 @@
-## Goal
-Stop academy-only invitees from landing on `/dashboard` (which hangs on a permanent spinner). Delegate landing-page choice to the existing role-aware `PostSignInRedirect` and add a defensive academy-user guard in `ProtectedRoute` so stale links or manual URL entry can't re-trigger the hang.
+# Gate the Help Center to primary/secondary contacts only
 
-## Scope
-Routing/redirect fix only. Two files. No schema, RPC, hook, or route-config changes.
+## Problem
+The Help Center (chatbot, CSC, support) is reachable from 15 entry points across the client portal with no role gating. Academy users and `relationship_role='user'` accounts can open the chatbot from the footer, sidebar, topbar, floating chatbot button, ClientHomePage cards, AcademyAccessGate empty state, and package dashboards — and once the drawer is open they can switch to the CSC and support tabs too.
+
+## Policy
+A user may see or open any Help Center surface only when their `tenant_users.relationship_role` on the current tenant is `primary_contact` or `secondary_contact`. Everyone else — including academy users, `relationship_role='user'`, Vivacity staff with no client-tenant row, and users still loading — sees nothing. Loading defaults to denied (no flash).
+
+## Approach
+Extend the existing `HelpCenterContext` with a single `canAccess` boolean derived from one cached query, then gate every callsite and the drawer itself.
 
 ## Changes
 
-### 1. `src/pages/AcceptInvitation.tsx` — replace all three hardcoded `/dashboard` redirects
+### 1. Extend `src/components/help-center/HelpCenterContext.tsx`
+- Import `useAuth`, `useClientTenant`, `supabase`, `useQuery`.
+- Query `tenant_users.relationship_role` where `user_id = profile.user_uuid` AND `tenant_id = activeTenantId`. React Query with `staleTime: 5 * 60_000`, `enabled` only when both ids are present.
+- Derive `canAccess = role === 'primary_contact' || role === 'secondary_contact'`. Default `false` while loading or when query is disabled.
+- Expose `canAccess: boolean` and `accessLoading: boolean` on the context value.
+- Make `openHelpCenter(tab)` early-return when `!canAccess` (defense in depth for any future callsite that forgets to gate).
 
-- **Line 212** — `signUp` options:
-  - Before: `emailRedirectTo: \`${window.location.origin}/dashboard\``
-  - After:  `emailRedirectTo: \`${window.location.origin}/post-sign-in?fresh=1\``
-- **Line 252** — existing-user (already-registered) path:
-  - Before: `setTimeout(() => navigate('/dashboard'), 1500);`
-  - After:  `setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);`
-- **Line 299** — new-user success path:
-  - Before: `setTimeout(() => navigate('/dashboard'), 1500);`
-  - After:  `setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);`
+### 2. Gate `HelpCenterDrawer.tsx`
+At the top: `if (!canAccess) return null;` — belt-and-braces backup so the drawer can never render for non-contacts, even via deep link or programmatic open.
 
-Leave the line 231 `navigate('/')` (login redirect on password mismatch) untouched — it's not a `/dashboard` redirect. Leave the toast copy at line 250 ("Redirecting to dashboard…") and line 296 ("Redirecting…") alone; users will land on the right place regardless of the toast text. (Optionally tidy line 250 to "Redirecting…" for honesty — flagged as optional, no functional impact.)
+### 3. Hide every entry point
+For each file below, wrap the button/component in `{canAccess && (...)}`. Render nothing (not a disabled state) while loading or denied.
 
-### 2. `src/components/ProtectedRoute.tsx` — add academy-only guard
+- `src/components/help-center/FloatingChatbot.tsx` — early-return `null` when `!canAccess`.
+- `src/components/layout/TopBar.tsx` — wrap the help button.
+- `src/components/client/ClientTopbar.tsx` — wrap the help button.
+- `src/components/client/ClientFooter.tsx` — hide the entire "Get Help" column (heading, three buttons, caption).
+- `src/components/client/ClientSidebar.tsx` — hide the three Help Center sidebar items.
+- `src/components/client/ClientHomePage.tsx` — gate the four `openHelpCenter` callsites (cards/buttons that wrap each call).
+- `src/components/client/package-dashboard/PackageActionRow.tsx` — hide the "Message CSC" button.
 
-Add new imports at the top:
-```ts
-import { ACADEMY_ONLY_ROUTES } from '@/config/navigationConfig';
-import { useUserAccess } from '@/hooks/useUserAccess';
-```
+### 4. Remove the AcademyAccessGate button
+In `src/components/academy/AcademyAccessGate.tsx`:
+- Delete the `Button` block (lines 42-49).
+- Delete the `useHelpCenter()` call.
+- Drop unused imports: `Button`, `MessageCircle`, `useHelpCenter`. Keep `GraduationCap` and `Loader2`.
 
-Call `useUserAccess()` alongside the existing `useAuth` / `useRBAC` hooks (unconditional — hooks rules).
-
-Insert the new check **after** the `if (!profile) { ... loading ... }` gate and **before** the `requireSuperAdmin` check (so it short-circuits the deny-by-default `/dashboard` branch). Skip the redirect while `useUserAccess` is still loading to avoid a flash redirect before flags resolve:
-
-```tsx
-const { hasAcademyOnly, hasFullAccess, isVivacityStaff, isLoading: accessLoading } = useUserAccess();
-
-if (!accessLoading && hasAcademyOnly && !hasFullAccess && !isVivacityStaff) {
-  const isAcademyRoute = ACADEMY_ONLY_ROUTES.some(r => location.pathname.startsWith(r));
-  if (!isAcademyRoute) {
-    return <Navigate to="/academy" replace />;
-  }
-}
-```
-
-Target is `/academy` — never `/dashboard` (that's the hang).
+The empty-state copy already directs the user to their Vivacity consultant, which is the right next step.
 
 ## What does NOT change
-- `useUserAccess`, `PostSignInRedirect.tsx`, `accept_invitation_v2` RPC, `App.tsx` routes, navigation menu config, any schema/view/trigger.
+- `ChatTab`, `MessageTab`, tab content, channel logic.
+- `useAuth`, `useClientTenant`, `useUserAccess`.
+- Schema, RLS, RPCs, edge functions, routes, navigation config.
 
 ## Verification
-1. `rg "/dashboard" src/pages/AcceptInvitation.tsx` → zero matches.
-2. Re-read `ProtectedRoute.tsx` and confirm the new branch targets `/academy`, not `/dashboard`.
-3. TypeScript builds clean (harness runs it automatically).
-4. Sanity-trace `PostSignInRedirect` routing for each role:
-   - Vivacity staff → `/dashboard` ✓
-   - Full-access client (primary_contact / secondary_contact / user) → `/client/home` ✓
-   - Academy-only → `/academy` ✓
-   - No tenant rows → `/academy` + warning toast (because `fresh: true`) ✓
+1. `rg "openHelpCenter\(" src/` — every callsite is either inside the context itself or wrapped in `{canAccess && ...}` / inside a component that early-returns when `!canAccess`.
+2. As `primary_contact` and `secondary_contact`: every entry point renders and opens the drawer as today.
+3. As `relationship_role='user'`: footer column, sidebar items, topbar button, floating chatbot, ClientHomePage action cards, and package dashboard "Message CSC" are all absent.
+4. As `academy_user`: same — and the AcademyAccessGate empty state renders cleanly without the deleted button. Chatbot unreachable from any path.
+5. Throttle network and reload — no flash of buttons that then disappear (loading defaults to denied).
+6. `tsc --noEmit` clean.
 
 ## Risks
-- `useUserAccess` adds one tenant_users probe for every protected route render for non-staff. Already cached 5min via React Query and short-circuits for staff — negligible cost. Loading state is gated so no flash redirect.
-- If a full-access user also has an academy_only row, the existing `PostSignInRedirect` logic (`hasAcademyOnly && !hasFullAccess`) correctly leaves them as full-access — our guard mirrors that exact condition, so no regression.
+- **Vivacity staff** have no `tenant_users` row on client tenants, so they will also lose access to the client-side Help Center surfaces. Per scope this is intended; flag if not.
+- **Existing CSC/support threads** remain in the DB; downgraded users keep history but lose the ability to start new messages via this UI. Acceptable.
+- **Future callsites:** the `openHelpCenter` no-op protects against forgotten gates, but an unhidden button is still a UX bug. Consider a follow-up lint/test.
