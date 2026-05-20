@@ -1,41 +1,63 @@
-## Replace Misleading Status Column on Client Portal Users Page
+## Goal
+Stop academy-only invitees from landing on `/dashboard` (which hangs on a permanent spinner). Delegate landing-page choice to the existing role-aware `PostSignInRedirect` and add a defensive academy-user guard in `ProtectedRoute` so stale links or manual URL entry can't re-trigger the hang.
 
-### Goal
-Rewrite the `StatusDot` component in `src/components/client/ClientUsersPage.tsx` to derive an honest activity status from `last_sign_in_at` instead of showing a flat "Active" label for every enabled account.
+## Scope
+Routing/redirect fix only. Two files. No schema, RPC, hook, or route-config changes.
 
-### Derivation rule (left-to-right priority, only for `row_type === 'active'`)
+## Changes
 
-```text
-1. row.status === 'disabled'           → "Disabled"        (red dot)
-2. row.last_sign_in_at IS NULL         → "Never signed in" (grey text, no dot)
-3. (now - last_sign_in_at) < 30 days   → "Active"          (green dot)
-4. otherwise                           → "Inactive"        (amber dot)
+### 1. `src/pages/AcceptInvitation.tsx` — replace all three hardcoded `/dashboard` redirects
+
+- **Line 212** — `signUp` options:
+  - Before: `emailRedirectTo: \`${window.location.origin}/dashboard\``
+  - After:  `emailRedirectTo: \`${window.location.origin}/post-sign-in?fresh=1\``
+- **Line 252** — existing-user (already-registered) path:
+  - Before: `setTimeout(() => navigate('/dashboard'), 1500);`
+  - After:  `setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);`
+- **Line 299** — new-user success path:
+  - Before: `setTimeout(() => navigate('/dashboard'), 1500);`
+  - After:  `setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);`
+
+Leave the line 231 `navigate('/')` (login redirect on password mismatch) untouched — it's not a `/dashboard` redirect. Leave the toast copy at line 250 ("Redirecting to dashboard…") and line 296 ("Redirecting…") alone; users will land on the right place regardless of the toast text. (Optionally tidy line 250 to "Redirecting…" for honesty — flagged as optional, no functional impact.)
+
+### 2. `src/components/ProtectedRoute.tsx` — add academy-only guard
+
+Add new imports at the top:
+```ts
+import { ACADEMY_ONLY_ROUTES } from '@/config/navigationConfig';
+import { useUserAccess } from '@/hooks/useUserAccess';
 ```
 
-For `row_type === 'invited'` entries, preserve the existing rendering (amber dot + "Invited" + `SentIndicator`).
+Call `useUserAccess()` alongside the existing `useAuth` / `useRBAC` hooks (unconditional — hooks rules).
 
-### Changes
+Insert the new check **after** the `if (!profile) { ... loading ... }` gate and **before** the `requireSuperAdmin` check (so it short-circuits the deny-by-default `/dashboard` branch). Skip the redirect while `useUserAccess` is still loading to avoid a flash redirect before flags resolve:
 
-- **Import** `differenceInDays` from `date-fns` alongside existing `formatDistanceToNow` and `parseISO`.
-- **Rewrite `StatusDot`** function:
-  - Branch on `row.row_type === 'invited'` first — return the current invited layout unchanged.
-  - For active rows, apply the 4-step priority rule above.
-  - Colour tokens:
-    - Active → `bg-emerald-500`
-    - Inactive → `bg-amber-500`
-    - Disabled → `bg-destructive`
-    - Never signed in → no dot, text in `text-muted-foreground`
-  - Add a native `title` attribute to the outer wrapper showing the raw `last_sign_in_at` timestamp when present.
-- Keep the `<TableHead>Status</TableHead>` column header unchanged.
-- No changes to `LastActive`, `RolePill`, `UserCell`, or any other component in the file.
+```tsx
+const { hasAcademyOnly, hasFullAccess, isVivacityStaff, isLoading: accessLoading } = useUserAccess();
 
-### Verification
+if (!accessLoading && hasAcademyOnly && !hasFullAccess && !isVivacityStaff) {
+  const isAcademyRoute = ACADEMY_ONLY_ROUTES.some(r => location.pathname.startsWith(r));
+  if (!isAcademyRoute) {
+    return <Navigate to="/academy" replace />;
+  }
+}
+```
 
-- `tsc --noEmit` must pass.
-- In the preview on `/client/users`:
-  - Recent sign-ins → green "Active"
-  - `last_sign_in_at` older than 30 days → amber "Inactive"
-  - `last_sign_in_at` is `null` → grey "Never signed in" (no dot)
-  - `status === 'disabled'` → red "Disabled" (overrides everything)
-  - Invited rows → unchanged
-- Hovering any active-status badge reveals the raw `last_sign_in_at` timestamp as a native browser tooltip.
+Target is `/academy` — never `/dashboard` (that's the hang).
+
+## What does NOT change
+- `useUserAccess`, `PostSignInRedirect.tsx`, `accept_invitation_v2` RPC, `App.tsx` routes, navigation menu config, any schema/view/trigger.
+
+## Verification
+1. `rg "/dashboard" src/pages/AcceptInvitation.tsx` → zero matches.
+2. Re-read `ProtectedRoute.tsx` and confirm the new branch targets `/academy`, not `/dashboard`.
+3. TypeScript builds clean (harness runs it automatically).
+4. Sanity-trace `PostSignInRedirect` routing for each role:
+   - Vivacity staff → `/dashboard` ✓
+   - Full-access client (primary_contact / secondary_contact / user) → `/client/home` ✓
+   - Academy-only → `/academy` ✓
+   - No tenant rows → `/academy` + warning toast (because `fresh: true`) ✓
+
+## Risks
+- `useUserAccess` adds one tenant_users probe for every protected route render for non-staff. Already cached 5min via React Query and short-circuits for staff — negligible cost. Loading state is gated so no flash redirect.
+- If a full-access user also has an academy_only row, the existing `PostSignInRedirect` logic (`hasAcademyOnly && !hasFullAccess`) correctly leaves them as full-access — our guard mirrors that exact condition, so no regression.

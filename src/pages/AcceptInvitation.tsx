@@ -209,7 +209,7 @@ setInvitationData({
 unicorn_role: invitationData!.unicornRole,
             user_type: invitationData!.userType === 'vivacity' ? 'Vivacity Team' : 'Client',
           },
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/post-sign-in?fresh=1`,
         },
       });
 
@@ -249,7 +249,7 @@ unicorn_role: invitationData!.unicornRole,
             title: 'Welcome back!',
             description: 'Your account was already set up. Redirecting to dashboard...',
           });
-          setTimeout(() => navigate('/dashboard'), 1500);
+          setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);
           return;
         }
       }
@@ -296,7 +296,7 @@ unicorn_role: invitationData!.unicornRole,
         description: 'Redirecting...',
       });
 
-      setTimeout(() => navigate('/dashboard'), 1500);
+      setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);
     } catch (error: any) {
       toast({
         title: 'Signup failed',
