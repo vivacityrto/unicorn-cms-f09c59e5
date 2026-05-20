@@ -1,7 +1,10 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRBAC, ADMIN_ROUTES, CLIENT_ROUTES, EOS_ROUTES } from '@/hooks/useRBAC';
+import { useUserAccess } from '@/hooks/useUserAccess';
+import { ACADEMY_ONLY_ROUTES } from '@/config/navigationConfig';
 import { useEffect, useRef } from 'react';
+import { toast } from '@/hooks/use-toast';
 import { toast } from '@/hooks/use-toast';
 
 interface ProtectedRouteProps {
