@@ -29,6 +29,8 @@ import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { ClientTenantProvider, useClientTenant } from "@/contexts/ClientTenantContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurrentRelationshipRole } from "@/hooks/useCurrentRelationshipRole";
+import { relationshipRoleLabel } from "@/lib/roles/relationshipRole";
 import { Loader2 } from "lucide-react";
 
 // Academy menu items
@@ -83,6 +85,7 @@ const AcademyLayoutInner = ({
   });
   const location = useLocation();
   const { academyTier } = useTenantType();
+  const { relationshipRole } = useCurrentRelationshipRole();
   const { isPreviewMode } = useClientPreview();
   const navRef = useRef<HTMLElement>(null);
 
@@ -255,12 +258,7 @@ const AcademyLayoutInner = ({
         <div className="p-4 border-t border-[var(--viv-purple-light)]">
           <div className="inline-flex items-center gap-2 text-xs px-2.5 py-1 rounded-full bg-[var(--viv-purple-light)] text-[var(--viv-fuchsia)] font-medium">
             <Sparkles className="h-3 w-3 text-[var(--viv-gold)]" />
-            <span>
-              Academy{" "}
-              {academyTier
-                ? academyTier.charAt(0).toUpperCase() + academyTier.slice(1)
-                : ""}
-            </span>
+            <span>{relationshipRoleLabel(relationshipRole)}</span>
           </div>
         </div>
       </aside>
