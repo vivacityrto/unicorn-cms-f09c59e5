@@ -23265,7 +23265,7 @@ export type Database = {
           marked_by: string | null
           meeting_id: string
           notes: string | null
-          role_in_meeting: Database["public"]["Enums"]["meeting_role"]
+          role_in_meeting: string
           seat_id: string | null
           updated_at: string
           user_id: string
@@ -23279,7 +23279,7 @@ export type Database = {
           marked_by?: string | null
           meeting_id: string
           notes?: string | null
-          role_in_meeting?: Database["public"]["Enums"]["meeting_role"]
+          role_in_meeting?: string
           seat_id?: string | null
           updated_at?: string
           user_id: string
@@ -23293,7 +23293,7 @@ export type Database = {
           marked_by?: string | null
           meeting_id?: string
           notes?: string | null
-          role_in_meeting?: Database["public"]["Enums"]["meeting_role"]
+          role_in_meeting?: string
           seat_id?: string | null
           updated_at?: string
           user_id?: string
@@ -23444,6 +23444,13 @@ export type Database = {
             columns: ["attendance_status"]
             isOneToOne: false
             referencedRelation: "dd_meeting_attendance_status"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_eos_meeting_attendees_role"
+            columns: ["role_in_meeting"]
+            isOneToOne: false
+            referencedRelation: "dd_meeting_role"
             referencedColumns: ["value"]
           },
         ]
@@ -62155,11 +62162,7 @@ export type Database = {
       }
       add_favourite: { Args: { p_resource_id: string }; Returns: undefined }
       add_meeting_attendee: {
-        Args: {
-          p_meeting_id: string
-          p_role?: Database["public"]["Enums"]["meeting_role"]
-          p_user_id: string
-        }
+        Args: { p_meeting_id: string; p_role?: string; p_user_id: string }
         Returns: string
       }
       add_meeting_guest: {
