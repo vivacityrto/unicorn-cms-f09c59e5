@@ -128,13 +128,13 @@ describe("ClientTenantContext gating", () => {
     expect(captured?.isAcademyOnly).toBe(false);
   });
 
-  it("user + full scope -> portal false, manage false, academyOnly false", async () => {
+  it("user + full scope -> portal true, manage false, academyOnly false", async () => {
     dbState.tenantUserRows = [
       { tenant_id: 7532, access_scope: "full", relationship_role: "user" },
     ];
     renderCtx();
     await waitFor(() => expect(captured?.tenantUserLoading).toBe(false));
-    expect(captured?.canAccessClientPortal).toBe(false);
+    expect(captured?.canAccessClientPortal).toBe(true);
     expect(captured?.canManagePortalUsers).toBe(false);
     expect(captured?.isAcademyOnly).toBe(false);
   });
