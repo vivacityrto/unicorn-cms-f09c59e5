@@ -1,0 +1,3 @@
+COMMENT ON TYPE archive.tenant_role IS 'Archived 14 May 2026 (Phase 1B-C). Column users.tenant_role dropped (stored only stale ''user'' value since RBAC migration Jan 2026). Superseded by public.dd_tenant_role (Admin / General User). Permanent DROP requires Carl/Dave sign-off after a documented stable period in production.';
+
+COMMENT ON TYPE archive.vivacity_role IS 'Archived 14 May 2026 (Phase 1C-C). Legacy ghost enum — was never attached to any column. Superseded in concept by public.dd_unicorn_roles (unicorn_role migration, Phase 4D). No dd_vivacity_role created. Permanent DROP requires Carl/Dave sign-off after a documented stable period in production.';
