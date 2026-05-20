@@ -57,11 +57,23 @@ const academyTeamItems = [
   { icon: Users, label: "Team Members", path: "/academy/team" },
 ];
 
-export const AcademyLayout = ({
+export const AcademyLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <ClientTenantProvider>
+      <HelpCenterProvider>
+        <AcademyLayoutInner>{children}</AcademyLayoutInner>
+      </HelpCenterProvider>
+    </ClientTenantProvider>
+  );
+};
+
+const AcademyLayoutInner = ({
   children,
 }: {
   children: React.ReactNode;
 }) => {
+  const { academyAccessEnabled, academyAccessLoading } = useClientTenant();
+  const { signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sectionsOpen, setSectionsOpen] = useState({
     pathways: true,
