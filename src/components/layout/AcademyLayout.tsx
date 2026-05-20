@@ -280,7 +280,5 @@ const AcademyLayoutInner = ({
       </div>
       <HelpCenterDrawer />
     </div>
-    </HelpCenterProvider>
-    </ClientTenantProvider>
   );
 };
