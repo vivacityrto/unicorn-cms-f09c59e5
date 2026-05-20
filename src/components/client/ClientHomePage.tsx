@@ -137,7 +137,7 @@ function CSCCard({
   cscRoleLabel: string;
   cscAvatarUrl: string | null;
   hasCSC: boolean;
-  onMessage: () => void;
+  onMessage?: () => void;
 }) {
   const displayName = hasCSC ? cscName ?? "Not yet assigned" : "Not yet assigned";
 
@@ -188,17 +188,19 @@ function CSCCard({
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {hasCSC ? (
-              messageBtn
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-block">{messageBtn}</span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Your CSC assignment is pending — contact info@vivacity.com.au
-                </TooltipContent>
-              </Tooltip>
+            {onMessage && (
+              hasCSC ? (
+                messageBtn
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-block">{messageBtn}</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Your CSC assignment is pending — contact info@vivacity.com.au
+                  </TooltipContent>
+                </Tooltip>
+              )
             )}
             {hasCSC ? (
               bookBtn
