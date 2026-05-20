@@ -29,7 +29,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserAccess } from "@/hooks/useUserAccess";
-import { useTenantType } from "@/contexts/TenantTypeContext";
+import { useCurrentRelationshipRole } from "@/hooks/useCurrentRelationshipRole";
+import { relationshipRoleLabel } from "@/lib/roles/relationshipRole";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 
@@ -69,26 +70,13 @@ export function AcademyTopBar() {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const { hasFullAccess } = useUserAccess();
-  const { academyTier } = useTenantType();
+  const { relationshipRole } = useCurrentRelationshipRole();
   const [searchQuery, setSearchQuery] = useState("");
   const { isAcademyOnly } = useClientTenant();
 
   const pageTitle = academyRouteTitles[location.pathname] || "Academy";
   const breadcrumbs = getBreadcrumbs(location.pathname);
   const showBreadcrumbs = breadcrumbs.length > 1;
-
-  const getTierLabel = () => {
-    switch (academyTier) {
-      case "solo":
-        return "Solo";
-      case "team":
-        return "Team";
-      case "elite":
-        return "Elite";
-      default:
-        return "Academy";
-    }
-  };
 
   const getInitials = (email: string) => {
     if (profile?.first_name && profile?.last_name) {
@@ -218,7 +206,7 @@ export function AcademyTopBar() {
                     {profile?.email}
                   </p>
                   <Badge variant="secondary" className="w-fit text-xs bg-[var(--viv-cyan-light)] text-[var(--viv-fuchsia)] border-transparent">
-                    Academy {getTierLabel()}
+                    {relationshipRoleLabel(relationshipRole)}
                   </Badge>
                 </div>
               </DropdownMenuLabel>
