@@ -64534,33 +64534,12 @@ export type Database = {
         | "ACT"
         | "NT"
       billing_status: "trial" | "active" | "overdue" | "suspended" | "cancelled"
-      eos_function_type:
-        | "leadership"
-        | "operations"
-        | "finance"
-        | "delivery"
-        | "support"
-        | "sales_marketing"
-      eos_meeting_role: "Leader" | "Member" | "Observer"
-      eos_meeting_type:
-        | "L10"
-        | "Quarterly"
-        | "Annual"
-        | "Focus_Day"
-        | "Custom"
-        | "Same_Page"
-      eos_participant_role: "Leader" | "Member" | "Observer"
       eos_role:
         | "admin"
         | "facilitator"
         | "scribe"
         | "participant"
         | "client_viewer"
-      eos_seat_role_type:
-        | "visionary"
-        | "integrator"
-        | "leadership_team"
-        | "functional_lead"
       eos_segment_type:
         | "Segue"
         | "Scorecard"
@@ -64569,7 +64548,6 @@ export type Database = {
         | "Todos"
         | "IDS"
         | "Conclude"
-      eos_todo_status: "Open" | "Complete" | "Cancelled"
       evidence_type:
         | "policy"
         | "procedure"
@@ -64579,21 +64557,6 @@ export type Database = {
         | "other"
       feature_flag: "eos_qc"
       invite_status: "INVITED" | "ACCEPTED" | "REVOKED" | "EXPIRED"
-      meeting_role:
-        | "owner"
-        | "attendee"
-        | "guest"
-        | "visionary"
-        | "integrator"
-        | "core_team"
-      meeting_status:
-        | "scheduled"
-        | "in_progress"
-        | "completed"
-        | "cancelled"
-        | "ready_to_close"
-        | "closed"
-        | "locked"
       meeting_type: "level_10" | "quarterly" | "annual"
       rock_type: "company" | "team" | "individual"
       sch_booking_status: "pending" | "confirmed" | "rescheduled" | "cancelled"
@@ -64785,36 +64748,12 @@ export const Constants = {
     Enums: {
       australian_state: ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"],
       billing_status: ["trial", "active", "overdue", "suspended", "cancelled"],
-      eos_function_type: [
-        "leadership",
-        "operations",
-        "finance",
-        "delivery",
-        "support",
-        "sales_marketing",
-      ],
-      eos_meeting_role: ["Leader", "Member", "Observer"],
-      eos_meeting_type: [
-        "L10",
-        "Quarterly",
-        "Annual",
-        "Focus_Day",
-        "Custom",
-        "Same_Page",
-      ],
-      eos_participant_role: ["Leader", "Member", "Observer"],
       eos_role: [
         "admin",
         "facilitator",
         "scribe",
         "participant",
         "client_viewer",
-      ],
-      eos_seat_role_type: [
-        "visionary",
-        "integrator",
-        "leadership_team",
-        "functional_lead",
       ],
       eos_segment_type: [
         "Segue",
@@ -64825,7 +64764,6 @@ export const Constants = {
         "IDS",
         "Conclude",
       ],
-      eos_todo_status: ["Open", "Complete", "Cancelled"],
       evidence_type: [
         "policy",
         "procedure",
@@ -64836,23 +64774,6 @@ export const Constants = {
       ],
       feature_flag: ["eos_qc"],
       invite_status: ["INVITED", "ACCEPTED", "REVOKED", "EXPIRED"],
-      meeting_role: [
-        "owner",
-        "attendee",
-        "guest",
-        "visionary",
-        "integrator",
-        "core_team",
-      ],
-      meeting_status: [
-        "scheduled",
-        "in_progress",
-        "completed",
-        "cancelled",
-        "ready_to_close",
-        "closed",
-        "locked",
-      ],
       meeting_type: ["level_10", "quarterly", "annual"],
       rock_type: ["company", "team", "individual"],
       sch_booking_status: ["pending", "confirmed", "rescheduled", "cancelled"],
