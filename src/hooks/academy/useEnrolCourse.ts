@@ -73,6 +73,15 @@ export function useEnrolCourse() {
         toast.error("This user is already enrolled under a different tenant context");
         return;
       }
+      const code = (e as any)?.code;
+      if (
+        msg.includes("invalid_target_user") ||
+        msg.includes("violates foreign key constraint") ||
+        code === "23503"
+      ) {
+        toast.error("This user's account is no longer active — please exit the preview and select a different user.");
+        return;
+      }
       toast.error(friendlyDbError(e, "useEnrolCourse"));
     },
   });
