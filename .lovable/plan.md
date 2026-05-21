@@ -1,20 +1,57 @@
-## Fix: Primary contact ordering in email edge functions
+## Goal
+Stop the linked-email list from going blank when navigating between clients, by scoping React Query invalidations and adding cache lifetime to `useLinkedEmails`.
 
-### Problem
-`send-email-graph` and `send-composed-email` pick the oldest `primary_contact` for a tenant (`created_at ASC`), while `bulk-send-invitations` already uses `DESC`. Tenants with contact changes receive emails to the wrong person.
+## Single file touched
+`src/hooks/useLinkedEmails.tsx`
 
-### Changes
-1. **`supabase/functions/send-email-graph/index.ts`** (line 191)  
-   Change `.order("created_at", { ascending: true })` to `.order("created_at", { ascending: false })`
+## Changes
 
-2. **`supabase/functions/send-composed-email/index.ts`** (line 86)  
-   Change `.order("created_at", { ascending: true })` to `.order("created_at", { ascending: false })`
+### 1. Scoped invalidation helper (DRY)
+Add a small inline helper inside the hook so all three invalidation sites use the same logic:
 
-### What stays unchanged
-- No other queries, columns, limits, or logic in either function are touched.
-- `bulk-send-invitations` is not modified.
-- No database migration.
-- No RLS or schema changes.
+```ts
+const invalidateLinkedEmails = () => {
+  if (options?.clientId !== undefined) {
+    queryClient.invalidateQueries({
+      queryKey: ["linked-emails", options.clientId, options.packageId, options.taskId],
+    });
+  } else {
+    queryClient.invalidateQueries({ queryKey: ["linked-emails"] });
+  }
+};
+```
 
-### Deployment
-Deploy both edge functions after the edits.
+Replace the three existing `queryClient.invalidateQueries({ queryKey: ["linked-emails"] })` calls (in `linkEmailMutation.onSuccess`, `updateLinkMutation.onSuccess`, and the enrichment `useEffect`) with `invalidateLinkedEmails()`.
+
+This matches the spec exactly while avoiding three copies of the same branching block.
+
+### 2. Cache lifetime on the list query
+Add to the existing `useQuery`:
+
+```ts
+staleTime: 5 * 60 * 1000,
+gcTime: 10 * 60 * 1000,
+```
+
+## Verified call sites (confirms backward compatibility)
+- `LinkedEmailsList.tsx` → `useLinkedEmails({ clientId })` — scoped invalidation hits its exact key.
+- `ClientEmailsTab.tsx` → `useLinkedEmails({ clientId: tenantId })` — scoped; manual `refetch()` unaffected.
+- `ClientStructuredNotesTab.tsx` → `useLinkedEmails({ clientId: tenantId })` — scoped invalidation refreshes its badge.
+- `LinkEmailModal.tsx` → `useLinkedEmails()` (no options) — falls through to broad invalidation, preserving today's behaviour.
+
+## Edge cases handled
+- `packageId` / `taskId` undefined → keys match the `useQuery` key shape `["linked-emails", clientId, packageId, taskId]` exactly, so invalidation lands.
+- Enrichment effect fires on every hook instance; scoping prevents cross-client cache churn but still refreshes the active client.
+- `updateLinkMutation` (currently unused in UI) future-proofed with same pattern.
+
+## Out of scope (explicitly not touched)
+`LinkEmailModal.tsx`, `ClientEmailsTab.tsx`, `ClientStructuredNotesTab.tsx`, `LinkedEmailsList.tsx`, edge functions, migrations, RLS.
+
+## Risk assessment
+- **Low.** Pure client-side cache-key change plus standard staleTime/gcTime. No data, auth, or RLS impact. Broad fallback preserved for the only unscoped caller (`LinkEmailModal`). Worst case if a future caller passes only `packageId`/`taskId` without `clientId`: it falls through to broad invalidation (today's behaviour) — safe.
+
+## Benefits
+- Per-client cache survives navigation; no more empty-list flash.
+- 5-min `staleTime` cuts redundant network round-trips when toggling tabs.
+- 10-min `gcTime` keeps recently viewed clients warm in memory.
+- Enrichment no longer thrashes unrelated clients' caches.
