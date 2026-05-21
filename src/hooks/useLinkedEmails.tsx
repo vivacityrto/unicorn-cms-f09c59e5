@@ -73,7 +73,20 @@ export function useLinkedEmails(options?: {
       if (error) throw error;
       return data as LinkedEmail[];
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
+
+  const invalidateLinkedEmails = useCallback(() => {
+    if (options?.clientId !== undefined) {
+      queryClient.invalidateQueries({
+        queryKey: ["linked-emails", options.clientId, options.packageId, options.taskId],
+      });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["linked-emails"] });
+    }
+  }, [queryClient, options?.clientId, options?.packageId, options?.taskId]);
+
 
   // Link email mutation
   const linkEmailMutation = useMutation({
