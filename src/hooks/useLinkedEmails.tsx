@@ -83,7 +83,7 @@ export function useLinkedEmails(options?: {
         queryKey: ["linked-emails", options.clientId, options.packageId, options.taskId],
       });
     } else {
-      queryClient.invalidateQueries({ queryKey: ["linked-emails"] });
+      invalidateLinkedEmails();
     }
   }, [queryClient, options?.clientId, options?.packageId, options?.taskId]);
 
