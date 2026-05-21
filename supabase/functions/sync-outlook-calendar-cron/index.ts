@@ -29,7 +29,7 @@ const corsHeaders = {
 };
 
 async function mintUserJwt(userId: string): Promise<string> {
-  const secret = new TextEncoder().encode(SUPABASE_JWT_SECRET);
+  const secret = new TextEncoder().encode(JWT_SECRET);
   const now = Math.floor(Date.now() / 1000);
   return await new SignJWT({ role: "authenticated" })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
