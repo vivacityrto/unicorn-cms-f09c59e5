@@ -59,6 +59,61 @@ export function CalendarGrid({
     return grouped;
   }, [events]);
 
+  // Per-event layout: column index + cluster total columns (greedy packing)
+  const eventLayouts = useMemo(() => {
+    const map = new Map<string, { column: number; totalColumns: number }>();
+    Object.values(eventsByDay).forEach((dayEvents) => {
+      const sorted = [...dayEvents].sort((a, b) => {
+        const sa = new Date(a.start_at).getTime();
+        const sb = new Date(b.start_at).getTime();
+        if (sa !== sb) return sa - sb;
+        return new Date(b.end_at).getTime() - new Date(a.end_at).getTime();
+      });
+
+      const columnsEndTimes: number[] = [];
+      const assignments: { id: string; column: number; start: number; end: number }[] = [];
+
+      sorted.forEach((ev) => {
+        const start = new Date(ev.start_at).getTime();
+        const end = new Date(ev.end_at).getTime();
+        let col = columnsEndTimes.findIndex((endT) => endT <= start);
+        if (col === -1) {
+          col = columnsEndTimes.length;
+          columnsEndTimes.push(end);
+        } else {
+          columnsEndTimes[col] = end;
+        }
+        assignments.push({ id: ev.id, column: col, start, end });
+      });
+
+      // Build overlap clusters (strict overlap) so members share totalColumns
+      const n = assignments.length;
+      const parent = Array.from({ length: n }, (_, i) => i);
+      const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+      const union = (a: number, b: number) => {
+        const ra = find(a), rb = find(b);
+        if (ra !== rb) parent[ra] = rb;
+      };
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const a = assignments[i], b = assignments[j];
+          if (a.start < b.end && a.end > b.start) union(i, j);
+        }
+      }
+      const clusterMaxCol = new Map<number, number>();
+      assignments.forEach((a, i) => {
+        const root = find(i);
+        clusterMaxCol.set(root, Math.max(clusterMaxCol.get(root) ?? 0, a.column));
+      });
+      assignments.forEach((a, i) => {
+        const root = find(i);
+        const totalColumns = (clusterMaxCol.get(root) ?? 0) + 1;
+        map.set(a.id, { column: a.column, totalColumns });
+      });
+    });
+    return map;
+  }, [eventsByDay]);
+
   // Month view
   if (view === 'month') {
     return <MonthView currentDate={currentDate} events={events} onEventClick={onEventClick} onCreateTimeDraft={onCreateTimeDraft} onLinkToClient={onLinkToClient} />;
