@@ -199,17 +199,40 @@ export function CalendarGrid({
                   // Only show events within visible hours
                   if (startHour < START_HOUR || startHour >= END_HOUR) return null;
 
+                  const layout = eventLayouts.get(event.id) ?? { column: 0, totalColumns: 1 };
+                  const { column, totalColumns } = layout;
+
+                  const palette = [
+                    { backgroundColor: '#7130A0', color: '#ffffff' },
+                    { backgroundColor: '#ED1878', color: '#ffffff' },
+                    { backgroundColor: '#23C0DD', color: '#1a1a1a' },
+                    { backgroundColor: '#44235F', color: '#ffffff' },
+                  ];
+
+                  const style: React.CSSProperties = {
+                    position: 'absolute',
+                    top: `${top}px`,
+                    height: `${height}px`,
+                  };
+
+                  if (totalColumns === 1) {
+                    style.left = '2px';
+                    style.right = '2px';
+                  } else {
+                    style.left = `calc(${(column / totalColumns) * 100}% + 2px)`;
+                    style.width = `calc(${(1 / totalColumns) * 100}% - 4px)`;
+                    if (event.access_scope !== 'busy_only') {
+                      const c = palette[column % palette.length];
+                      style.backgroundColor = c.backgroundColor;
+                      style.color = c.color;
+                    }
+                  }
+
                   return (
                     <CalendarEventCard
                       key={event.id}
                       event={event}
-                      style={{
-                        position: 'absolute',
-                        top: `${top}px`,
-                        left: '2px',
-                        right: '2px',
-                        height: `${height}px`,
-                      }}
+                      style={style}
                       onClick={() => onEventClick?.(event)}
                       onCreateTimeDraft={onCreateTimeDraft}
                       onLinkToClient={onLinkToClient}
