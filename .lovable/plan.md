@@ -1,68 +1,80 @@
-## Bug Fix: Allow `relationship_role = 'user'` + `access_scope = 'full'` to access Client Portal
+## Data Correction: Promote 3 users to `secondary_contact`
 
-### Problem
-`src/contexts/ClientTenantContext.tsx` line 215 gates `canAccessClientPortal` on `fullScope && isContact`. Since `isContact` only matches `primary_contact`/`secondary_contact`, the `'user'` role is locked out even with full access scope. 10 live users across 9 tenants are currently affected.
+### Verified current state (live DB)
 
-### Fix (1 line of production code + 1 test update)
+| Email | Tenant | tenant_users | users | tenant_members |
+|---|---|---|---|---|
+| accounts@wattotraining.com.au | 7507 | relationship_role=`user`, role=`child`, primary=false, secondary=false, scope=full | unicorn_role=`User`, user_type=`Client Child` | role=`General User`, active |
+| dayan@australiancollege.edu.au | 7512 | same shape | same | same |
+| emily@petstylistacademy.com.au | 7542 | same shape | same | same |
 
-**`src/contexts/ClientTenantContext.tsx`** — line 215 only:
-```ts
-canAccessClientPortal: fullScope && (isContact || tenantUser.relationship_role === 'user'),
+All three rows exist, all match the targeted tenant_id, all are currently in the broken `user`/`child` state. No drift, no missing rows, no extra memberships at these tenant_ids.
+
+### Migration (exactly as supplied — 3 statements, nothing else)
+
+```sql
+-- 1) tenant_users: promote to secondary_contact + parent
+-- trg_sync_primary_contact (verified live) will auto-set
+-- primary_contact=false, secondary_contact=true.
+UPDATE public.tenant_users
+SET relationship_role = 'secondary_contact',
+    role = 'parent'
+WHERE (user_id = (SELECT user_uuid FROM public.users WHERE email = 'accounts@wattotraining.com.au') AND tenant_id = 7507)
+   OR (user_id = (SELECT user_uuid FROM public.users WHERE email = 'dayan@australiancollege.edu.au')  AND tenant_id = 7512)
+   OR (user_id = (SELECT user_uuid FROM public.users WHERE email = 'emily@petstylistacademy.com.au') AND tenant_id = 7542);
+
+-- 2) users: align legacy unicorn_role + user_type
+UPDATE public.users
+SET unicorn_role = 'Admin',
+    user_type    = 'Client Parent'
+WHERE email IN (
+  'accounts@wattotraining.com.au',
+  'dayan@australiancollege.edu.au',
+  'emily@petstylistacademy.com.au'
+);
+
+-- 3) tenant_members: align legacy membership role
+UPDATE public.tenant_members
+SET role       = 'Admin',
+    updated_at = now()
+WHERE (user_id = (SELECT user_uuid FROM public.users WHERE email = 'accounts@wattotraining.com.au') AND tenant_id = 7507)
+   OR (user_id = (SELECT user_uuid FROM public.users WHERE email = 'dayan@australiancollege.edu.au')  AND tenant_id = 7512)
+   OR (user_id = (SELECT user_uuid FROM public.users WHERE email = 'emily@petstylistacademy.com.au') AND tenant_id = 7542);
 ```
-Line 216 (`canManagePortalUsers`) and line 217 (`isAcademyOnly`) remain untouched.
-
-**`src/contexts/__tests__/ClientTenantContext.test.tsx`** — update the `"user + full scope"` test:
-- `canAccessClientPortal` → `true` (was `false`)
-- `canManagePortalUsers` → `false` (unchanged)
-- `isAcademyOnly` → `false` (unchanged)
-
-All 7 other tests stay identical and must keep passing.
 
 ### Deep-dive verification
 
-**Gating semantics after fix:**
+**Trigger interaction (`trg_sync_primary_contact` → `sync_primary_contact_on_role`)** — verified live:
+- Branch `relationship_role = 'secondary_contact'` → forces `primary_contact:=false`, `secondary_contact:=true`. Exactly the desired end state. No manual flag setting required, no risk of double-primary.
+- No other BEFORE/AFTER triggers on `tenant_users` will demote the row or fight the assignment.
 
-| relationship_role | access_scope   | portal | manage users | academy-only |
-|-------------------|----------------|--------|--------------|--------------|
-| primary_contact   | full           | ✅     | ✅           | ❌           |
-| secondary_contact | full           | ✅     | ✅           | ❌           |
-| user              | full           | ✅ (new) | ❌         | ❌           |
-| academy_user      | academy_only   | ❌     | ❌           | ✅           |
-| null              | full           | ❌     | ❌           | ❌           |
-| any               | (other/null)   | ❌     | ❌           | ❌           |
+**Uniqueness / collision risks:**
+- Promoting to `secondary_contact` does not violate any per-tenant primary-contact uniqueness, because the trigger forces `primary_contact=false`. Even if another row in the same tenant is the primary, no conflict arises.
+- No row in any of tenants 7507 / 7512 / 7542 already holds `secondary_contact=true` for the same user (single membership per user/tenant verified above), so no duplicate-key risk.
 
-**Downstream consumers of `canAccessClientPortal` / `canManagePortalUsers`:**
-- `ClientRouteGuard.tsx` — uses `canAccessClientPortal` to gate non-academy `/client/*` routes, and `canManagePortalUsers` to gate `/client/users`. After fix: `'user'`-role caller reaches `/client/home`, but `/client/users` still redirects them away. ✅
-- `ClientUsersPage.tsx` — invite/manage buttons gated on `canManagePortalUsers`. Unchanged. ✅
-- `ClientSidebar.tsx`, `ClientTasksPage.tsx`, `StaffPdpsPage.tsx`, `useClientNotifications.tsx`, `useClientCommunications.ts`, academy routing — none consume these flags in a way that grants management rights. ✅
-- `useUserAccess.ts` — independent path; only looks at `access_scope`, not `relationship_role`. Unaffected. ✅
-- `AcademyOnlyFallback` — only triggered when `isAcademyOnly` true or no portal access on non-academy path. `'user'+full` no longer hits fallback. ✅
+**Legacy column alignment:** `unicorn_role='Admin'` + `user_type='Client Parent'` matches the documented mapping in `src/lib/roles/relationshipRole.ts` (`unicornRoleFromRelationship('secondary_contact') === 'Admin'`, `userTypeFromRelationship === 'Client Parent'`). `tenant_members.role='Admin'` matches `useAuth` RBAC's `hasTenantAdmin` expectations.
 
-**Database / RLS:** No schema change. RLS policies key off `tenant_users` membership and `has_role()`, not off `relationship_role`. A `'user'+full` member already passes RLS for tenant data reads — the bug was purely a client-side UI gate hiding data they were entitled to see.
+**Client-side effect:** With the prior `ClientTenantContext` fix already deployed, these users already had portal access via the `user`+full path. After this migration:
+- `canAccessClientPortal` → true via `isContact` branch (unchanged outcome).
+- `canManagePortalUsers` → true (new — intentional promotion).
+- Sidebar/Users page management surfaces now appear for them.
+- Academy/RLS/audit reads unaffected — RLS keys off membership, not relationship_role.
 
-**Audit trail:** No writes added, no audit-logged action changed. Login/access events continue to flow through existing auth telemetry. No backfill needed.
+**Audit trail:** `tenant_members.updated_at = now()` is set explicitly. `tenant_users` and `users` rely on existing `updated_at` triggers (no manual touch needed, per project convention). No `created_at` touched. No audit_events row is emitted by these tables' triggers — this is a SuperAdmin data correction performed via migration, which is itself the audit record (file under `supabase/migrations/`).
 
-**Backward compatibility:** Strictly additive — no caller loses access, no role gains management rights. Primary/secondary contact UX unchanged.
+**Backward compatibility:**
+- Strictly additive privilege widening for 3 named accounts at 3 named tenants. No row outside the WHERE clauses is touched.
+- No schema, RLS, function, trigger, index, or policy changes.
+- Rollback = a mirror migration restoring `relationship_role='user'`, `role='child'`, `unicorn_role='User'`, `user_type='Client Child'`, `tenant_members.role='General User'`. Reversible.
 
-**Edge cases checked:**
-- Staff impersonation (`isPreview`) bypasses this gate entirely in `ClientRouteGuard` → unaffected.
-- `tenantUser === null` (loading / no membership) → still returns all false.
-- `relationship_role = null` defensive case → still false (matches existing test).
-- `access_scope = 'academy_only'` with `role = 'user'` → `fullScope` false, still blocked from portal, `isAcademyOnly` still false (only `academy_user`+`academy_only` flips academy fallback). Matches current behaviour.
-- Multi-tenant membership: gate is per active tenant, so a user can be `'user'+full` in tenant A and `academy_user` in tenant B with correct per-tenant behaviour.
+**Tested against buggy vs clean data:**
+- Buggy (current) state: all 3 rows match WHERE clauses → all 3 update.
+- Clean state (already secondary_contact / Admin): UPDATEs become no-ops on already-correct columns; trigger still re-asserts contact flags idempotently; safe to re-run.
+- Missing user (defensive): subselect returns NULL, WHERE clause yields no match, statement no-ops without error. No accidental cross-tenant writes possible because each clause pins both `user_id` and `tenant_id`.
 
-### Test plan
-1. `bunx vitest run src/contexts/__tests__/ClientTenantContext.test.tsx` — 8 tests, all green.
-2. Manual smoke (post-deploy): one of the 10 affected accounts loads `/client/home` successfully and does NOT see Users management entry.
-3. Confirm a `primary_contact` account still sees and can use `/client/users`.
-
-### Risk assessment
-- **Severity:** Low. Single-line conditional widening on a client-side gate.
-- **Blast radius:** Only `canAccessClientPortal`. Management/invite/academy/RLS paths untouched.
-- **Rollback:** Revert the one-line change; no migration to undo.
-- **Security:** No privilege escalation — `'user'+full` was always entitled to portal data per RLS; this restores intended access without granting any admin capability.
+**Confirmed NOT touched:** schema, RLS policies, triggers, functions, lookup tables, other users, other tenants, other tenant_users rows for the same users (none exist), `created_at`, audit infrastructure.
 
 ### Summary
-- **Changes:** 1 line in `ClientTenantContext.tsx`, 1 assertion in its test file.
-- **Benefits:** Unblocks 10 live users; aligns UI gate with `access_scope` semantics and `RELATIONSHIP_ROLE_OPTIONS` (where `'user'` is documented as "Standard team member. Full access to their organisation.").
-- **Risk:** Very low; no schema, RLS, audit, or management-rights impact.
+- **Changes:** 3 UPDATE statements in a single migration file. Promotes 3 named users to `secondary_contact` at 3 specific tenants and aligns 2 legacy mirror tables.
+- **Benefits:** Restores intended Admin/secondary-contact privileges for Jenelle Watson, Dayan Kasturiratna, Emily Myatt. Aligns `tenant_users`, `users`, and `tenant_members` so all RBAC code paths (new `relationship_role` and legacy `unicorn_role`/`tenant_members.role`) agree.
+- **Risk:** Very low. Data-only, 3 rows × 3 tables = 9 row writes, fully pinned by email + tenant_id, idempotent, reversible, no schema or policy impact, no automation disturbed.
