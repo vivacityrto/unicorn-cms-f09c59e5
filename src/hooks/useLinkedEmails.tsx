@@ -203,10 +203,10 @@ export function useLinkedEmails(options?: {
       emailsToEnrich.forEach((email) => enrichmentInFlight.current.delete(email.id));
 
       if (results.some((result) => result.status === "fulfilled" && !result.value.error && !result.value.data?.error)) {
-        queryClient.invalidateQueries({ queryKey: ["linked-emails"] });
+        invalidateLinkedEmails();
       }
     });
-  }, [emails, queryClient]);
+  }, [emails, invalidateLinkedEmails]);
 
   return {
     emails: emails || [],
