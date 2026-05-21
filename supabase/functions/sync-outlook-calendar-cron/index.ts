@@ -70,23 +70,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Authorize: only service-role-signed JWTs (e.g. service role key,
-  // or the vault-stored cron_function_jwt) may trigger a global sync.
+  // Authorize: only the service-role key may trigger a global sync.
+  // pg_cron presents it via private.cron_function_jwt() (vault-stored copy).
   const auth = req.headers.get("Authorization") ?? "";
   const presented = auth.replace(/^Bearer\s+/i, "").trim();
-  let authorized = false;
-  if (presented) {
-    try {
-      const { payload } = await jwtVerify(
-        presented,
-        new TextEncoder().encode(SUPABASE_JWT_SECRET),
-      );
-      authorized = payload.role === "service_role";
-    } catch (_err) {
-      authorized = false;
-    }
-  }
-  if (!authorized) {
+  if (!presented || presented !== SUPABASE_SERVICE_ROLE_KEY) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
