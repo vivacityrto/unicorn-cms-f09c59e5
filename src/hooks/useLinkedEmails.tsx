@@ -102,7 +102,7 @@ export function useLinkedEmails(options?: {
     },
     onSuccess: () => {
       toast.success("Email linked successfully");
-      queryClient.invalidateQueries({ queryKey: ["linked-emails"] });
+      invalidateLinkedEmails();
     },
     onError: (error: Error) => {
       console.error("Link email error:", error);
