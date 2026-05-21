@@ -83,7 +83,7 @@ serve(async (req) => {
       .select("user_id")
       .eq("tenant_id", tenant_id)
       .eq("relationship_role", "primary_contact")
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
