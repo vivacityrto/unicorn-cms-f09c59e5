@@ -70,11 +70,32 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Authorize: only the service-role key may trigger a global sync.
-  // pg_cron presents it via private.cron_function_jwt() (vault-stored copy).
+  // Authorize: require a Supabase-issued service_role JWT for this project.
+  // Accept either an exact match against SUPABASE_SERVICE_ROLE_KEY (manual
+  // invocation) or any token whose decoded payload has role=service_role and
+  // ref matching this project (pg_cron via private.cron_function_jwt()).
   const auth = req.headers.get("Authorization") ?? "";
   const presented = auth.replace(/^Bearer\s+/i, "").trim();
-  if (!presented || presented !== SUPABASE_SERVICE_ROLE_KEY) {
+  let authorized = presented === SUPABASE_SERVICE_ROLE_KEY;
+  if (!authorized && presented) {
+    try {
+      const parts = presented.split(".");
+      if (parts.length === 3) {
+        const padded = parts[1] + "=".repeat((4 - (parts[1].length % 4)) % 4);
+        const json = JSON.parse(
+          new TextDecoder().decode(
+            Uint8Array.from(atob(padded.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0)),
+          ),
+        );
+        const projectRef = new URL(SUPABASE_URL).hostname.split(".")[0];
+        const notExpired = typeof json.exp !== "number" || json.exp * 1000 > Date.now();
+        authorized = json.role === "service_role" && json.iss === "supabase" && json.ref === projectRef && notExpired;
+      }
+    } catch (_err) {
+      authorized = false;
+    }
+  }
+  if (!authorized) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
