@@ -73,7 +73,20 @@ export function useLinkedEmails(options?: {
       if (error) throw error;
       return data as LinkedEmail[];
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
+
+  const invalidateLinkedEmails = useCallback(() => {
+    if (options?.clientId !== undefined) {
+      queryClient.invalidateQueries({
+        queryKey: ["linked-emails", options.clientId, options.packageId, options.taskId],
+      });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["linked-emails"] });
+    }
+  }, [queryClient, options?.clientId, options?.packageId, options?.taskId]);
+
 
   // Link email mutation
   const linkEmailMutation = useMutation({
@@ -89,7 +102,7 @@ export function useLinkedEmails(options?: {
     },
     onSuccess: () => {
       toast.success("Email linked successfully");
-      queryClient.invalidateQueries({ queryKey: ["linked-emails"] });
+      invalidateLinkedEmails();
     },
     onError: (error: Error) => {
       console.error("Link email error:", error);
@@ -123,7 +136,7 @@ export function useLinkedEmails(options?: {
     },
     onSuccess: () => {
       toast.success("Email link updated");
-      queryClient.invalidateQueries({ queryKey: ["linked-emails"] });
+      invalidateLinkedEmails();
     },
     onError: (error) => {
       console.error("Update link error:", error);
@@ -190,10 +203,10 @@ export function useLinkedEmails(options?: {
       emailsToEnrich.forEach((email) => enrichmentInFlight.current.delete(email.id));
 
       if (results.some((result) => result.status === "fulfilled" && !result.value.error && !result.value.data?.error)) {
-        queryClient.invalidateQueries({ queryKey: ["linked-emails"] });
+        invalidateLinkedEmails();
       }
     });
-  }, [emails, queryClient]);
+  }, [emails, invalidateLinkedEmails]);
 
   return {
     emails: emails || [],
