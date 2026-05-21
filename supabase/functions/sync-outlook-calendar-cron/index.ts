@@ -18,7 +18,8 @@ import { SignJWT } from "https://esm.sh/jose@5.9.6";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SUPABASE_JWT_SECRET = Deno.env.get("SUPABASE_JWT_SECRET")!;
+// SUPABASE_ prefix is reserved; the JWT signing secret is stored under EDGE_JWT_SECRET.
+const JWT_SECRET = Deno.env.get("EDGE_JWT_SECRET")!;
 
 const CONCURRENCY = 5;
 
