@@ -26,11 +26,12 @@ export function useClientAllTasks(includeArchived: boolean = false) {
     queryFn: async (): Promise<ClientAllTask[]> => {
       if (!activeTenantId) return [];
 
-      // 1. Get all package_instances for this tenant
+      // 1. Get active package_instances for this tenant
       const { data: pkgInstances, error: pkgErr } = await supabase
         .from("package_instances")
         .select("id, package_id")
-        .eq("tenant_id", activeTenantId);
+        .eq("tenant_id", activeTenantId)
+        .eq("is_active", true);
 
       if (pkgErr) throw pkgErr;
       if (!pkgInstances?.length) return [];
@@ -38,11 +39,12 @@ export function useClientAllTasks(includeArchived: boolean = false) {
       const pkgInstanceIds = pkgInstances.map((p) => p.id);
       const packageIds = [...new Set(pkgInstances.map((p) => p.package_id).filter(Boolean))] as number[];
 
-      // 2. Get stage_instances for those package instances
+      // 2. Get released stage_instances for those package instances
       const { data: stageInstances, error: stgErr } = await supabase
         .from("stage_instances")
-        .select("id, packageinstance_id, stage_id")
-        .in("packageinstance_id", pkgInstanceIds);
+        .select("id, packageinstance_id, stage_id, released_client_tasks")
+        .in("packageinstance_id", pkgInstanceIds)
+        .eq("released_client_tasks", true);
 
       if (stgErr) throw stgErr;
       if (!stageInstances?.length) return [];
@@ -50,7 +52,7 @@ export function useClientAllTasks(includeArchived: boolean = false) {
       const stageInstanceIds = stageInstances.map((s) => s.id);
       const stageIds = [...new Set(stageInstances.map((s) => s.stage_id).filter(Boolean))] as number[];
 
-      // 3. Fetch task instances, metadata, packages, and stages in parallel
+      // 3. Fetch task instances first (need IDs to bound client_tasks fetch)
       let taskQuery = supabase
         .from("client_task_instances" as any)
         .select("id, clienttask_id, stageinstance_id, status, due_date, completion_date, is_archived, archived_at")
@@ -59,11 +61,24 @@ export function useClientAllTasks(includeArchived: boolean = false) {
         taskQuery = taskQuery.eq("is_archived", false);
       }
 
-      const [taskRes, clientTaskRes, packageRes, stageRes] = await Promise.all([
-        taskQuery,
-        supabase
-          .from("client_tasks")
-          .select("id, name, priority, attachment_required"),
+      const taskRes = await taskQuery;
+      if (taskRes.error) throw taskRes.error;
+      if (!taskRes.data?.length) return [];
+
+      const clientTaskIds = [
+        ...new Set(
+          (taskRes.data as any[]).map((t) => t.clienttask_id).filter(Boolean)
+        ),
+      ] as number[];
+
+      // 4. Fetch client_tasks metadata (bounded), packages, and stages in parallel
+      const [clientTaskRes, packageRes, stageRes] = await Promise.all([
+        clientTaskIds.length > 0
+          ? supabase
+              .from("client_tasks")
+              .select("id, name, priority, attachment_required")
+              .in("id", clientTaskIds)
+          : Promise.resolve({ data: [], error: null } as any),
         supabase
           .from("packages")
           .select("id, name")
@@ -74,11 +89,8 @@ export function useClientAllTasks(includeArchived: boolean = false) {
           .in("id", stageIds),
       ]);
 
-      if (taskRes.error) throw taskRes.error;
-      if (!taskRes.data?.length) return [];
-
       // Build lookup maps
-      const taskMetaMap = new Map((clientTaskRes.data || []).map((t: any) => [t.id, { name: t.name, priority: t.priority, attachmentRequired: !!t.attachment_required }]));
+      const taskMetaMap = new Map(((clientTaskRes.data || []) as any[]).map((t: any) => [t.id, { name: t.name, priority: t.priority, attachmentRequired: !!t.attachment_required }]));
       const packageMap = new Map((packageRes.data || []).map((p: any) => [p.id, p.name]));
       const stageMap = new Map((stageRes.data || []).map((s: any) => [s.id, s.name]));
 
