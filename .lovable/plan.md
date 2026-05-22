@@ -1,38 +1,36 @@
 ## Problem
 
-In `src/components/layout/AcademyTopBar.tsx`, the page title falls back to the string `"Academy"` when `location.pathname` is absent from the `academyRouteTitles` lookup. On dynamic sub-pages (e.g. `/academy/audience/student-support-officer`, `/client/academy/audience/administration-assistant`, etc.) this produces `[icon] Academy | Academy`.
+`src/components/layout/AcademyTopBar.tsx` contains a non-functional "Search courses..." input in the center of the header. The `searchQuery` state is declared but never consumed — it filters nothing. The search block is dead UI taking up center space.
 
 ## Changes
 
 File: `src/components/layout/AcademyTopBar.tsx`
 
-### 1. Replace pageTitle resolution (line 57)
+### 1. Remove search block (lines 117–128)
+Delete the entire `{/* Center: Course Search */}` block containing the `<Search>` icon and `<Input>`.
 
-Introduce a `titleFromPath(pathname: string)` helper:
+### 2. Remove `searchQuery` state (line 64)
+Delete `const [searchQuery, setSearchQuery] = useState("");`.
 
-1. Return the lookup value if present.
-2. Otherwise split the path, take the last non-empty segment, replace dashes with spaces, and title-case it.
-3. If the derived title is `"academy"` (case-insensitive) — meaning the user is on the root `/academy` path — return an empty string so the brand label stands alone.
-4. Keep the lookup table itself unchanged.
+### 3. Remove unused imports
+- Remove `useState` from the `react` import (line 1).
+- Remove `Search` from the `lucide-react` import (line 7).
+- Remove `Input` from `@/components/ui/input` (line 12).
 
-### 2. Conditionally render divider + title block (lines 94-100)
+All three symbols are used only by the search block; removing them leaves no orphan imports.
 
-Wrap the existing `<div className="h-8 w-px ..." />` divider and the following `<h1>{pageTitle}</h1>` block in `{pageTitle && (...)}` so neither element renders when the title is empty.
-
-### 3. Preserved behaviour
-
-- The static brand label `<span>Academy</span>` stays.
-- The avatar dropdown, notification bell condition, back-link, search bar, and all other markup are untouched.
+### 4. Preserved behaviour
+- Brand label (`<span>Academy</span>`), page title block, back-link, notification bell, and avatar dropdown are untouched.
 - Staff `TopBar.tsx` is not modified.
+- The header will show left brand/title and right actions with empty padding between them.
 
 ## Verification
 
-| Route | Expected top bar |
+| Condition | Expected |
 |---|---|
-| `/academy` | `[icon] Academy` only — no divider, no duplicate |
-| `/academy/courses` | `[icon] Academy \| My Courses` |
-| `/academy/audience/student-support-officer` | `[icon] Academy \| Student Support Officer` |
-| `/academy/audience/administration-assistant` | `[icon] Academy \| Administration Assistant` |
-| `/settings?tab=profile` | `[icon] Academy \| Profile Settings` |
+| Any Academy page | Center search input is gone |
+| Wide viewport (≥1024px) | Layout remains balanced, no broken flex alignment |
+| Narrow viewport (<1024px) | No change — search was already `hidden lg:flex` |
+| Build | Passes with no unused-variable or orphan-import errors |
 
-Build must pass with no orphan imports or unused variables.
+Stop after this fix.
