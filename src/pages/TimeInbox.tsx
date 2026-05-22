@@ -666,7 +666,7 @@ export default function TimeInbox() {
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     {editingDraft.event_start_at && format(new Date(editingDraft.event_start_at), 'h:mm a')} - 
                     {editingDraft.event_end_at && format(new Date(editingDraft.event_end_at), 'h:mm a')}
-                    <span className="text-muted-foreground">({formatDuration(getDuration(editingDraft))})</span>
+                    <span className="text-muted-foreground">(Scheduled duration: {formatDuration(getDuration(editingDraft))})</span>
                   </div>
                 </div>
 
