@@ -45,6 +45,16 @@ const academyRouteTitles: Record<string, string> = {
   "/settings": "Profile Settings",
 };
 
+function titleFromPath(pathname: string): string {
+  const fromLookup = academyRouteTitles[pathname];
+  if (fromLookup) return fromLookup;
+  const segments = pathname.split("/").filter(Boolean);
+  const last = segments[segments.length - 1] ?? "";
+  const derived = last.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  if (derived.toLowerCase() === "academy") return "";
+  return derived;
+}
+
 
 export function AcademyTopBar() {
   const location = useLocation();
@@ -54,7 +64,7 @@ export function AcademyTopBar() {
   const [searchQuery, setSearchQuery] = useState("");
   const { isAcademyOnly } = useClientTenant();
 
-  const pageTitle = academyRouteTitles[location.pathname] || "Academy";
+  const pageTitle = titleFromPath(location.pathname);
 
   const getInitials = (email: string) => {
     if (profile?.first_name && profile?.last_name) {
@@ -91,13 +101,17 @@ export function AcademyTopBar() {
           <span className="text-xl font-semibold text-[var(--viv-purple)]">Academy</span>
         </div>
 
-        <div className="h-8 w-px bg-[var(--viv-purple-light)] flex-shrink-0" />
+        {pageTitle && (
+          <>
+            <div className="h-8 w-px bg-[var(--viv-purple-light)] flex-shrink-0" />
 
-        <div className="flex flex-col min-w-0">
-          <h1 className="text-xl font-semibold text-[var(--viv-purple)] truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]">
-            {pageTitle}
-          </h1>
-        </div>
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-xl font-semibold text-[var(--viv-purple)] truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]">
+                {pageTitle}
+              </h1>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Center: Course Search - hidden on smaller screens to preserve avatar */}
