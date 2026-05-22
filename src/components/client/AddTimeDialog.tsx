@@ -343,6 +343,7 @@ export function AddTimeDialog({
       ...(noteBody ? { noteDetails: noteBody } : {}),
       ...(workType ? { workType } : {}),
       ...(selectedInstanceId ? { packageId: selectedInstanceId.toString() } : {}),
+      ...(date ? { startedDate: date } : {}),
     });
     setShowNotePrompt(false);
     resetForm();
