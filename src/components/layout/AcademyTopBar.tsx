@@ -58,7 +58,7 @@ export function AcademyTopBar() {
   const { profile, signOut } = useAuth();
   const { hasFullAccess } = useUserAccess();
   const { relationshipRole } = useCurrentRelationshipRole();
-  const [searchQuery, setSearchQuery] = useState("");
+  
   const { isAcademyOnly } = useClientTenant();
 
   const pageTitle = titleFromPath(location.pathname);
