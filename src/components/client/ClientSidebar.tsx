@@ -121,7 +121,7 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen }: ClientSidebarProp
     staleTime: 5 * 60 * 1000,
   });
 
-  const complyhubUrl = complyhubData?.complyhub_url?.trim() || "https://rto.complyhub.ai/";
+  const complyhubUrl = complyhubData?.complyhub_url?.trim();
 
   const filterAdmin = (items: SidebarMenuItem[]) =>
     items.filter((item) => !item.adminOnly || canManageUsers);
@@ -215,29 +215,31 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen }: ClientSidebarProp
           )}
 
           {/* ComplyHub — opens external ComplyHub URL for this tenant */}
-          <a
-            href={complyhubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex items-center gap-3 mx-2 mb-1 transition-all text-sm rounded-lg min-h-[44px] relative text-white/80 hover:bg-white/10 hover:text-white",
-              sidebarOpen ? "px-4" : "px-0 justify-center",
-            )}
-            style={{ paddingTop: "10px", paddingBottom: "10px" }}
-          >
-            <span
-              className="w-[22px] h-[22px] rounded-md flex items-center justify-center flex-shrink-0"
-              style={{ background: "linear-gradient(135deg, #7130A0, #ED1878)" }}
+          {complyhubUrl && (
+            <a
+              href={complyhubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "flex items-center gap-3 mx-2 mb-1 transition-all text-sm rounded-lg min-h-[44px] relative text-white/80 hover:bg-white/10 hover:text-white",
+                sidebarOpen ? "px-4" : "px-0 justify-center",
+              )}
+              style={{ paddingTop: "10px", paddingBottom: "10px" }}
             >
-              <Shield className="w-3.5 h-3.5 text-white" />
-            </span>
-            {sidebarOpen && (
-              <>
-                <span className="leading-snug flex-1">ComplyHub</span>
-                <ExternalLink className="w-3.5 h-3.5 text-white/60 flex-shrink-0" aria-hidden="true" />
-              </>
-            )}
-          </a>
+              <span
+                className="w-[22px] h-[22px] rounded-md flex items-center justify-center flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, #7130A0, #ED1878)" }}
+              >
+                <Shield className="w-3.5 h-3.5 text-white" />
+              </span>
+              {sidebarOpen && (
+                <>
+                  <span className="leading-snug flex-1">ComplyHub</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-white/60 flex-shrink-0" aria-hidden="true" />
+                </>
+              )}
+            </a>
+          )}
 
 
 
