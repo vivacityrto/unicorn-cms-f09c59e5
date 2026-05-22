@@ -1,48 +1,80 @@
-## Plan: Fix Time Inbox Quick-Post Bypassing Minute Review
+## CSC-006 Fix: Pre-fill note "Started" date from time entry
 
 ### Problem
-In `src/pages/TimeInbox.tsx`, the quick-post ✓ button on each draft row calls `postDraft(draft.id)` directly, bypassing the review drawer. The drawer's editable "Minutes" field allows consultants to adjust actual time spent, but those using the quick-post button never see it. The `minutes` field on each draft is initialized to the full scheduled meeting duration by the `outlook-time-draft-worker` edge function. This causes the full scheduled duration to be logged instead of actual time spent.
+`AddTimeDialog` → note creation flow navigates to `/tenant/:id/notes?initNote=true&...` but omits the time entry's date. `TenantNotes` therefore leaves `startedDate` undefined, the note is saved with `started_date = NULL`, and the list shows "Not started".
 
-### Changes (in `src/pages/TimeInbox.tsx` only)
+### Changes
 
-1. **Quick-post button behaviour** (lines 595–608)
-   - Change `onClick` from `postDraft(draft.id)` to `openDrawer(draft)`
-   - Change tooltip from `"Post"` to `"Review & Post"`
-   - Remove `disabled={!draft.client_id}` because the drawer now allows client selection
-   - Keep all other button props (size, variant, className)
+**1. `src/components/client/AddTimeDialog.tsx` (line ~339, `handleNotePromptYes`)**
 
-2. **Drawer label clarity — Scheduled duration** (lines 661–671)
-   - In the grey info box that shows the meeting's start/end time and duration, change the duration span from:
-     ```
-     ({formatDuration(getDuration(editingDraft))})
-     ```
-     to:
-     ```
-     (Scheduled duration: {formatDuration(getDuration(editingDraft))})
-     ```
+Extend the URL params with the form's existing `date` state (already an ISO `YYYY-MM-DD` string from `setDate(new Date().toISOString().split('T')[0])`):
 
-3. **Drawer label clarity — Minutes field** (line 778)
-   - Change `<Label>Minutes</Label>` to `<Label>Actual minutes spent</Label>`
+```ts
+const params = new URLSearchParams({
+  initNote: 'true',
+  noteTitle: title,
+  timeEntryId: savedEntryId!,
+  ...(noteBody ? { noteDetails: noteBody } : {}),
+  ...(workType ? { workType } : {}),
+  ...(selectedInstanceId ? { packageId: selectedInstanceId.toString() } : {}),
+  ...(date ? { startedDate: date } : {}),   // NEW — only include when present
+});
+```
 
-### What stays unchanged
+If `date` is empty/falsy (shouldn't normally happen, but the form allows clearing), the param is omitted and the note dialog opens with no pre-filled date — matching today's behaviour for that edge case.
 
-- `src/hooks/useTimeInbox.tsx` — no changes
-- `src/hooks/useMeetings.tsx` — no changes
-- Bulk "Post Selected" button — still posts directly without drawer (intentional)
-- "Save Draft" and "Discard" drawer buttons — unchanged behaviour
-- `handlePost` logic (save then post) — unchanged
-- Database tables, RLS policies, triggers, RPCs — no changes
-- All other drawer fields (client, package, stage, work type, billable, date, notes) — untouched
-- Row-level selection, snooze, discard actions — untouched
+**2. `src/pages/TenantNotes.tsx` (useEffect at line 102)**
 
-### Testing checklist
+Read and apply the new param, then include it in the cleanup:
 
-1. **Quick-post path**: Click ✓ on a draft → drawer opens with correct data → edit "Actual minutes spent" → click Post → entry posted with updated minutes.
-2. **Drawer-edit path**: Click pencil icon on a draft → drawer opens → edit minutes → Post. Same as before.
-3. **Bulk path**: Select multiple drafts → "Post Selected" → bulk posts directly without drawer. Same as before.
-4. **Draft without client**: Click ✓ on draft with no client → drawer opens → assign client and minutes → Post. (Previously button was disabled.)
-5. **Snooze/Discard**: Individual row snooze and discard buttons continue working.
+```ts
+const urlStartedDate = searchParams.get('startedDate');
+...
+if (initNote === 'true') {
+  setNoteTitle(urlNoteTitle || '');
+  if (urlNoteDetails) setNoteText(urlNoteDetails);
+  if (urlTimeEntryId) setPendingTimeEntryId(urlTimeEntryId);
+  if (urlPkgInstanceId) setPendingPackageInstanceId(parseInt(urlPkgInstanceId));
+  if (urlStartedDate) {
+    // Parse YYYY-MM-DD as a local date (avoid UTC drift from `new Date('YYYY-MM-DD')`)
+    const [y, m, d] = urlStartedDate.split('-').map(Number);
+    if (y && m && d) setStartedDate(new Date(y, m - 1, d));
+  }
+  setIsAddDialogOpen(true);
+
+  const newParams = new URLSearchParams(searchParams);
+  newParams.delete('initNote');
+  newParams.delete('noteTitle');
+  newParams.delete('timeEntryId');
+  newParams.delete('noteDetails');
+  newParams.delete('packageInstanceId');
+  newParams.delete('startedDate');   // NEW
+  navigate(...);
+}
+```
+
+Local-date parsing avoids the classic `new Date("2026-05-22")` UTC-midnight bug that can show the previous day in AU timezones — important since the "Started" column displays a date.
+
+`startedTime` is left at its default (`12:00 PM`), matching existing manual note behaviour; the save path at line 299 already composes `started_date` from `startedDate` + `startedTime`, so the column will populate correctly.
+
+### Deep-dive findings (informational — not in scope to fix here)
+
+- **Pre-existing param mismatch**: `AddTimeDialog` emits `packageId`, but `TenantNotes` reads `packageInstanceId`. Result: package pre-selection from this flow has never worked. Out of scope for CSC-006; flagging for a separate ticket.
+- **39 historical notes** with `timeentry_id` and `started_date = NULL`: forward-only fix, as specified. A backfill could later set `started_date = time_entries.entry_date` if desired.
+- `EditTimeDialog.tsx`, `useNotes.tsx`, RLS, triggers, schema — untouched.
+- Three callers (`TenantTimeTrackerBar`, `PackageTimeSection`, `ClientTimeWidget`) all go through the same `handleNotePromptYes` path — fix benefits all of them uniformly.
+- Audit trail: `notes.started_date` is the only field affected; `created_at`/`updated_at` triggers continue to fire normally. No audit gap introduced.
 
 ### Risk assessment
 
-**Very low.** Purely frontend presentation/behaviour change in a single file. No data model, API, security, or automation changes. The `postDraft` function and `rpc_bulk_post_time_drafts` RPC remain untouched — they are still called by `handlePost` in the drawer and by `bulkPost`. Existing drafts simply get routed through the review drawer when consultants click the quick-post button, which is the intended correction.
+| Area | Risk | Mitigation |
+|---|---|---|
+| Existing pre-fills (title/details/timeEntryId/pkg) | None | Logic untouched; new param is additive |
+| Other callers of `AddTimeDialog` | None | Single shared code path |
+| Note dialog opened from other entry points (no URL param) | None | New code is conditional on `urlStartedDate` |
+| Timezone drift on date display | Mitigated | Local-date constructor avoids UTC parsing |
+| RLS / createNote / DB schema | None | No changes |
+| Edit flow for existing notes | None | `EditNoteDialog` unaffected |
+
+### Summary
+Two surgical, additive edits — one URL param producer, one consumer — restore the missing "Started" date on notes created from a time entry, with no schema, RLS, hook, or automation changes.
