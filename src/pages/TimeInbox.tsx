@@ -774,7 +774,7 @@ export default function TimeInbox() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Minutes</Label>
+                      <Label>Actual minutes spent</Label>
                       <Input
                         type="number"
                         min={1}
