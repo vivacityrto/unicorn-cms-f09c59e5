@@ -35,7 +35,7 @@ interface ClientTopbarProps {
 }
 
 export function ClientTopbar({ isPreview }: ClientTopbarProps) {
-  const [searchQuery, setSearchQuery] = useState("");
+  
   const [notifFilter, setNotifFilter] = useState<string | null>(null);
   const { profile, signOut } = useAuth();
   const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
