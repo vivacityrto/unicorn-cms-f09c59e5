@@ -83,4 +83,32 @@ export function useTenantNotes(tenantIds: number[]) {
       return result;
     },
   });
+
+  useEffect(() => {
+    if (sortedIds.length === 0) return;
+
+    const channel = supabase
+      .channel(`tenant-notes-changes-${sortedIds.join("-")}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notes" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notes" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "client_notes" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "client_notes" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, sortedIds.join(",")]);
+
+  return query;
 }
+
