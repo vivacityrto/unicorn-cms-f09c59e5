@@ -598,13 +598,12 @@ export default function TimeInbox() {
                               size="icon" 
                               variant="ghost" 
                               className="text-primary hover:text-primary/80"
-                              onClick={() => postDraft(draft.id)}
-                              disabled={!draft.client_id}
+                              onClick={() => openDrawer(draft)}
                             >
                               <Check className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Post</TooltipContent>
+                          <TooltipContent>Review & Post</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -667,7 +666,7 @@ export default function TimeInbox() {
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     {editingDraft.event_start_at && format(new Date(editingDraft.event_start_at), 'h:mm a')} - 
                     {editingDraft.event_end_at && format(new Date(editingDraft.event_end_at), 'h:mm a')}
-                    <span className="text-muted-foreground">({formatDuration(getDuration(editingDraft))})</span>
+                    <span className="text-muted-foreground">(Scheduled duration: {formatDuration(getDuration(editingDraft))})</span>
                   </div>
                 </div>
 
@@ -775,7 +774,7 @@ export default function TimeInbox() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Minutes</Label>
+                      <Label>Actual minutes spent</Label>
                       <Input
                         type="number"
                         min={1}
