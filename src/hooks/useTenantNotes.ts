@@ -18,8 +18,9 @@ const NOTE_BATCH_SIZE = 50;
  */
 export function useTenantNotes(tenantIds: number[]) {
   const sortedIds = [...tenantIds].sort((a, b) => a - b);
+  const queryClient = useQueryClient();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["tenants", "notes", sortedIds],
     enabled: sortedIds.length > 0,
     staleTime: 5 * 60 * 1000,
