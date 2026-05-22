@@ -26,11 +26,12 @@ export function useClientAllTasks(includeArchived: boolean = false) {
     queryFn: async (): Promise<ClientAllTask[]> => {
       if (!activeTenantId) return [];
 
-      // 1. Get all package_instances for this tenant
+      // 1. Get active package_instances for this tenant
       const { data: pkgInstances, error: pkgErr } = await supabase
         .from("package_instances")
         .select("id, package_id")
-        .eq("tenant_id", activeTenantId);
+        .eq("tenant_id", activeTenantId)
+        .eq("is_active", true);
 
       if (pkgErr) throw pkgErr;
       if (!pkgInstances?.length) return [];
@@ -38,11 +39,12 @@ export function useClientAllTasks(includeArchived: boolean = false) {
       const pkgInstanceIds = pkgInstances.map((p) => p.id);
       const packageIds = [...new Set(pkgInstances.map((p) => p.package_id).filter(Boolean))] as number[];
 
-      // 2. Get stage_instances for those package instances
+      // 2. Get released stage_instances for those package instances
       const { data: stageInstances, error: stgErr } = await supabase
         .from("stage_instances")
-        .select("id, packageinstance_id, stage_id")
-        .in("packageinstance_id", pkgInstanceIds);
+        .select("id, packageinstance_id, stage_id, released_client_tasks")
+        .in("packageinstance_id", pkgInstanceIds)
+        .eq("released_client_tasks", true);
 
       if (stgErr) throw stgErr;
       if (!stageInstances?.length) return [];
