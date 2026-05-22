@@ -598,13 +598,12 @@ export default function TimeInbox() {
                               size="icon" 
                               variant="ghost" 
                               className="text-primary hover:text-primary/80"
-                              onClick={() => postDraft(draft.id)}
-                              disabled={!draft.client_id}
+                              onClick={() => openDrawer(draft)}
                             >
                               <Check className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Post</TooltipContent>
+                          <TooltipContent>Review & Post</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>

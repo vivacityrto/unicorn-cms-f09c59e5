@@ -1,48 +1,48 @@
-## Side-by-side overlapping calendar events
+## Plan: Fix Time Inbox Quick-Post Bypassing Minute Review
 
-Edit only `src/components/calendar/CalendarGrid.tsx` (day/week render path). Month view, `CalendarEventCard`, hooks, and queries are untouched.
+### Problem
+In `src/pages/TimeInbox.tsx`, the quick-post ✓ button on each draft row calls `postDraft(draft.id)` directly, bypassing the review drawer. The drawer's editable "Minutes" field allows consultants to adjust actual time spent, but those using the quick-post button never see it. The `minutes` field on each draft is initialized to the full scheduled meeting duration by the `outlook-time-draft-worker` edge function. This causes the full scheduled duration to be logged instead of actual time spent.
 
-### 1. Compute per-day layout (greedy column packing)
+### Changes (in `src/pages/TimeInbox.tsx` only)
 
-Add a `useMemo` named `eventLayouts` after `eventsByDay`, producing `Map<string /*event.id*/, { column: number; totalColumns: number }>`.
+1. **Quick-post button behaviour** (lines 595–608)
+   - Change `onClick` from `postDraft(draft.id)` to `openDrawer(draft)`
+   - Change tooltip from `"Post"` to `"Review & Post"`
+   - Remove `disabled={!draft.client_id}` because the drawer now allows client selection
+   - Keep all other button props (size, variant, className)
 
-For each day's events:
-- Sort by `start_at` ascending (tiebreak by `end_at` desc so longer events take earlier columns).
-- Greedy column assignment: walk events in order; for each event place it in the first column whose last-assigned event ends `<=` this event's start. Otherwise open a new column. Record `{ column }`.
-- Overlap groups: scan again and for each event compute `totalColumns` = `(max column index among all events that strictly overlap it) + 1`. Strict overlap: `A.start < B.end && A.end > B.start` (touching ends do not overlap). Propagate group width so all members of a contiguous overlap cluster share the same `totalColumns`.
+2. **Drawer label clarity — Scheduled duration** (lines 661–671)
+   - In the grey info box that shows the meeting's start/end time and duration, change the duration span from:
+     ```
+     ({formatDuration(getDuration(editingDraft))})
+     ```
+     to:
+     ```
+     (Scheduled duration: {formatDuration(getDuration(editingDraft))})
+     ```
 
-### 2. Apply layout to event style
+3. **Drawer label clarity — Minutes field** (line 778)
+   - Change `<Label>Minutes</Label>` to `<Label>Actual minutes spent</Label>`
 
-Inside `dayEvents.map`, look up `{ column, totalColumns }` from the map (default `{0,1}`):
+### What stays unchanged
 
-- `top`, `height`, `position: 'absolute'` unchanged.
-- If `totalColumns === 1`: keep `left: '2px', right: '2px'` exactly as today. No colour override.
-- If `totalColumns > 1`:
-  - `left: \`calc(${(column / totalColumns) * 100}% + 2px)\``
-  - `width: \`calc(${(1 / totalColumns) * 100}% - 4px)\``
-  - Omit `right`.
-  - If `event.access_scope !== 'busy_only'`, set `backgroundColor` + `color` from the brand palette cycle below (modulo 4 on column index). `busy_only` events get no colour override — Tailwind keeps them grey.
+- `src/hooks/useTimeInbox.tsx` — no changes
+- `src/hooks/useMeetings.tsx` — no changes
+- Bulk "Post Selected" button — still posts directly without drawer (intentional)
+- "Save Draft" and "Discard" drawer buttons — unchanged behaviour
+- `handlePost` logic (save then post) — unchanged
+- Database tables, RLS policies, triggers, RPCs — no changes
+- All other drawer fields (client, package, stage, work type, billable, date, notes) — untouched
+- Row-level selection, snooze, discard actions — untouched
 
-Brand cycle:
-```
-0 → #7130A0 / #ffffff   (Purple)
-1 → #ED1878 / #ffffff   (Fuchsia)
-2 → #23C0DD / #1a1a1a   (Aqua)
-3 → #44235F / #ffffff   (Acai)
-```
+### Testing checklist
 
-### 3. Preserved behaviour
+1. **Quick-post path**: Click ✓ on a draft → drawer opens with correct data → edit "Actual minutes spent" → click Post → entry posted with updated minutes.
+2. **Drawer-edit path**: Click pencil icon on a draft → drawer opens → edit minutes → Post. Same as before.
+3. **Bulk path**: Select multiple drafts → "Post Selected" → bulk posts directly without drawer. Same as before.
+4. **Draft without client**: Click ✓ on draft with no client → drawer opens → assign client and minutes → Post. (Previously button was disabled.)
+5. **Snooze/Discard**: Individual row snooze and discard buttons continue working.
 
-- `compact={height < 50}` unchanged.
-- Visible-hours filter `if (startHour < START_HOUR || startHour >= END_HOUR) return null` unchanged.
-- `onEventClick`, `onCreateTimeDraft`, `onLinkToClient` unchanged.
-- Month view (`MonthView`) untouched.
-- No edits to `CalendarEventCard.tsx`, `useWorkCalendar.tsx`, `CalendarTimeCapture.tsx`, edge functions, RLS, or schema.
+### Risk assessment
 
-### Edge cases covered
-
-- Single non-overlapping event → identical to today.
-- Touching end-to-start → both full width.
-- Long event containing two shorter ones → all three rendered at 1/3 width with distinct colours.
-- `busy_only` overlapping owned event → side-by-side, busy stays grey, owned gets brand colour.
-- Events starting before `START_HOUR` already filtered before render.
+**Very low.** Purely frontend presentation/behaviour change in a single file. No data model, API, security, or automation changes. The `postDraft` function and `rpc_bulk_post_time_drafts` RPC remain untouched — they are still called by `handlePost` in the drawer and by `bulkPost`. Existing drafts simply get routed through the review drawer when consultants click the quick-post button, which is the intended correction.
