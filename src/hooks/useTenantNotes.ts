@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TenantNotesData {
@@ -17,8 +18,9 @@ const NOTE_BATCH_SIZE = 50;
  */
 export function useTenantNotes(tenantIds: number[]) {
   const sortedIds = [...tenantIds].sort((a, b) => a - b);
+  const queryClient = useQueryClient();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["tenants", "notes", sortedIds],
     enabled: sortedIds.length > 0,
     staleTime: 5 * 60 * 1000,
@@ -81,4 +83,32 @@ export function useTenantNotes(tenantIds: number[]) {
       return result;
     },
   });
+
+  useEffect(() => {
+    if (sortedIds.length === 0) return;
+
+    const channel = supabase
+      .channel(`tenant-notes-changes-${sortedIds.join("-")}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notes" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notes" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "client_notes" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "client_notes" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, sortedIds.join(",")]);
+
+  return query;
 }
+
