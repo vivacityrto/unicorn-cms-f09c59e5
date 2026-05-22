@@ -1,80 +1,34 @@
-## CSC-006 Fix: Pre-fill note "Started" date from time entry
+## Academy Breadcrumb Bug Fixes
 
-### Problem
-`AddTimeDialog` → note creation flow navigates to `/tenant/:id/notes?initNote=true&...` but omits the time entry's date. `TenantNotes` therefore leaves `startedDate` undefined, the note is saved with `started_date = NULL`, and the list shows "Not started".
+### Bug 1 — Remove redundant breadcrumb from AcademyTopBar
 
-### Changes
+`AcademyTopBar.tsx` currently renders a URL-derived breadcrumb (e.g. "Academy Dashboard > Academy") in the header bar. Every Academy page also renders its own hand-crafted breadcrumb below (via `AcademyPageWrapper` or inline). This produces two breadcrumb trails on the same page.
 
-**1. `src/components/client/AddTimeDialog.tsx` (line ~339, `handleNotePromptYes`)**
+**File:** `src/components/layout/AcademyTopBar.tsx`
 
-Extend the URL params with the form's existing `date` state (already an ISO `YYYY-MM-DD` string from `setDate(new Date().toISOString().split('T')[0])`):
+**Changes:**
+1. Remove the breadcrumb `<nav>` block (lines 119–133) inside the `showBreadcrumbs && (...)` conditional.
+2. Remove the `getBreadcrumbs` function (lines 50–67).
+3. Remove the `breadcrumbs` variable (line 78) and `showBreadcrumbs` variable (line 79).
+4. Remove the now-unused `ChevronRight` import from `lucide-react` (verify it is unused in this file after the above removals).
 
-```ts
-const params = new URLSearchParams({
-  initNote: 'true',
-  noteTitle: title,
-  timeEntryId: savedEntryId!,
-  ...(noteBody ? { noteDetails: noteBody } : {}),
-  ...(workType ? { workType } : {}),
-  ...(selectedInstanceId ? { packageId: selectedInstanceId.toString() } : {}),
-  ...(date ? { startedDate: date } : {}),   // NEW — only include when present
-});
-```
+**Keep:** `academyRouteTitles` constant — it is still used for the `pageTitle` heading (`<h1>` at line 135).
 
-If `date` is empty/falsy (shouldn't normally happen, but the form allows clearing), the param is omitted and the note dialog opens with no pre-filled date — matching today's behaviour for that edge case.
+### Bug 2 — Prevent "Vivacity Academy > Vivacity Academy"
 
-**2. `src/pages/TenantNotes.tsx` (useEffect at line 102)**
+`AcademyPageWrapper.tsx` always renders `Vivacity Academy > {title}`. The dashboard page (`AcademyDashboardPage.tsx`) passes `title="Vivacity Academy"`, producing a duplicate label.
 
-Read and apply the new param, then include it in the cleanup:
+**File:** `src/components/academy/AcademyPageWrapper.tsx`
 
-```ts
-const urlStartedDate = searchParams.get('startedDate');
-...
-if (initNote === 'true') {
-  setNoteTitle(urlNoteTitle || '');
-  if (urlNoteDetails) setNoteText(urlNoteDetails);
-  if (urlTimeEntryId) setPendingTimeEntryId(urlTimeEntryId);
-  if (urlPkgInstanceId) setPendingPackageInstanceId(parseInt(urlPkgInstanceId));
-  if (urlStartedDate) {
-    // Parse YYYY-MM-DD as a local date (avoid UTC drift from `new Date('YYYY-MM-DD')`)
-    const [y, m, d] = urlStartedDate.split('-').map(Number);
-    if (y && m && d) setStartedDate(new Date(y, m - 1, d));
-  }
-  setIsAddDialogOpen(true);
+**Changes:**
+1. Conditionally render the `<ChevronRight />` and trailing `<span>{title}</span>` only when `title !== "Vivacity Academy"`.
+2. On the dashboard, the breadcrumb shows only the "Vivacity Academy" link with no chevron and no trailing label. On sub-pages, the full path is preserved.
 
-  const newParams = new URLSearchParams(searchParams);
-  newParams.delete('initNote');
-  newParams.delete('noteTitle');
-  newParams.delete('timeEntryId');
-  newParams.delete('noteDetails');
-  newParams.delete('packageInstanceId');
-  newParams.delete('startedDate');   // NEW
-  navigate(...);
-}
-```
+**No change needed for:** `src/pages/client/AcademyCourseDetailPage.tsx` — its inline breadcrumb uses `course.title`, which can never equal "Vivacity Academy".
 
-Local-date parsing avoids the classic `new Date("2026-05-22")` UTC-midnight bug that can show the previous day in AU timezones — important since the "Started" column displays a date.
+### Verification
 
-`startedTime` is left at its default (`12:00 PM`), matching existing manual note behaviour; the save path at line 299 already composes `started_date` from `startedDate` + `startedTime`, so the column will populate correctly.
-
-### Deep-dive findings (informational — not in scope to fix here)
-
-- **Pre-existing param mismatch**: `AddTimeDialog` emits `packageId`, but `TenantNotes` reads `packageInstanceId`. Result: package pre-selection from this flow has never worked. Out of scope for CSC-006; flagging for a separate ticket.
-- **39 historical notes** with `timeentry_id` and `started_date = NULL`: forward-only fix, as specified. A backfill could later set `started_date = time_entries.entry_date` if desired.
-- `EditTimeDialog.tsx`, `useNotes.tsx`, RLS, triggers, schema — untouched.
-- Three callers (`TenantTimeTrackerBar`, `PackageTimeSection`, `ClientTimeWidget`) all go through the same `handleNotePromptYes` path — fix benefits all of them uniformly.
-- Audit trail: `notes.started_date` is the only field affected; `created_at`/`updated_at` triggers continue to fire normally. No audit gap introduced.
-
-### Risk assessment
-
-| Area | Risk | Mitigation |
-|---|---|---|
-| Existing pre-fills (title/details/timeEntryId/pkg) | None | Logic untouched; new param is additive |
-| Other callers of `AddTimeDialog` | None | Single shared code path |
-| Note dialog opened from other entry points (no URL param) | None | New code is conditional on `urlStartedDate` |
-| Timezone drift on date display | Mitigated | Local-date constructor avoids UTC parsing |
-| RLS / createNote / DB schema | None | No changes |
-| Edit flow for existing notes | None | `EditNoteDialog` unaffected |
-
-### Summary
-Two surgical, additive edits — one URL param producer, one consumer — restore the missing "Started" date on notes created from a time entry, with no schema, RLS, hook, or automation changes.
+- `/academy` (dashboard): exactly one breadcrumb reading "Vivacity Academy" (no chevron, no duplicate).
+- `/academy/courses`, `/academy/events`, etc.: exactly one breadcrumb reading "Vivacity Academy > <Page Title>".
+- Staff top bar (`TopBar.tsx`) is untouched — no regression.
+- Build passes with no orphaned imports.
