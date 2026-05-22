@@ -52,7 +52,7 @@ export function useClientAllTasks(includeArchived: boolean = false) {
       const stageInstanceIds = stageInstances.map((s) => s.id);
       const stageIds = [...new Set(stageInstances.map((s) => s.stage_id).filter(Boolean))] as number[];
 
-      // 3. Fetch task instances, metadata, packages, and stages in parallel
+      // 3. Fetch task instances first (need IDs to bound client_tasks fetch)
       let taskQuery = supabase
         .from("client_task_instances" as any)
         .select("id, clienttask_id, stageinstance_id, status, due_date, completion_date, is_archived, archived_at")
@@ -61,11 +61,24 @@ export function useClientAllTasks(includeArchived: boolean = false) {
         taskQuery = taskQuery.eq("is_archived", false);
       }
 
-      const [taskRes, clientTaskRes, packageRes, stageRes] = await Promise.all([
-        taskQuery,
-        supabase
-          .from("client_tasks")
-          .select("id, name, priority, attachment_required"),
+      const taskRes = await taskQuery;
+      if (taskRes.error) throw taskRes.error;
+      if (!taskRes.data?.length) return [];
+
+      const clientTaskIds = [
+        ...new Set(
+          (taskRes.data as any[]).map((t) => t.clienttask_id).filter(Boolean)
+        ),
+      ] as number[];
+
+      // 4. Fetch client_tasks metadata (bounded), packages, and stages in parallel
+      const [clientTaskRes, packageRes, stageRes] = await Promise.all([
+        clientTaskIds.length > 0
+          ? supabase
+              .from("client_tasks")
+              .select("id, name, priority, attachment_required")
+              .in("id", clientTaskIds)
+          : Promise.resolve({ data: [], error: null } as any),
         supabase
           .from("packages")
           .select("id, name")
@@ -75,9 +88,6 @@ export function useClientAllTasks(includeArchived: boolean = false) {
           .select("id, name")
           .in("id", stageIds),
       ]);
-
-      if (taskRes.error) throw taskRes.error;
-      if (!taskRes.data?.length) return [];
 
       // Build lookup maps
       const taskMetaMap = new Map((clientTaskRes.data || []).map((t: any) => [t.id, { name: t.name, priority: t.priority, attachmentRequired: !!t.attachment_required }]));
