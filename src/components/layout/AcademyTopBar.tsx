@@ -1,15 +1,12 @@
-import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
   Bell,
   Settings,
   LogOut,
-  Search,
   ChevronLeft,
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
