@@ -2,13 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   HelpCircle,
-  Search,
   Settings,
   LogOut,
   Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -36,7 +35,7 @@ interface ClientTopbarProps {
 }
 
 export function ClientTopbar({ isPreview }: ClientTopbarProps) {
-  const [searchQuery, setSearchQuery] = useState("");
+  
   const [notifFilter, setNotifFilter] = useState<string | null>(null);
   const { profile, signOut } = useAuth();
   const { openHelpCenter, canAccess: canAccessHelpCenter } = useHelpCenter();
@@ -87,22 +86,9 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
           loading="eager"
         />
       </div>
+      {/* Center: spacer */}
+      <div className="flex-1" />
 
-      {/* Center: Search */}
-      <div className="flex-1 max-w-md mx-4 hidden md:block">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search documents, resources, and notifications…"
-            className="pl-9 h-9 text-sm border bg-background"
-            style={{
-              borderColor: "hsl(270 20% 88%)",
-            }}
-          />
-        </div>
-      </div>
 
       {/* Right: Notifications + Help + Profile */}
       <div className="flex items-center gap-1 flex-shrink-0 ml-2">
