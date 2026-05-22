@@ -179,8 +179,8 @@ export default function AudienceHubPage({
         {renderTabButton(`All`, courses.length, ALL_TAB)}
         {visibleTags.map((b) => renderTabButton(prettyTag(b.tag), b.count, b.tag))}
         {overflowTags.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <Popover open={moreOpen} onOpenChange={setMoreOpen}>
+            <PopoverTrigger asChild>
               <button
                 className={cn(
                   "px-3 py-2 text-sm font-medium whitespace-nowrap rounded-t-md transition-colors flex items-center gap-1",
@@ -196,18 +196,30 @@ export default function AudienceHubPage({
               >
                 More <ChevronDown className="h-3.5 w-3.5" />
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {overflowTags.map((b) => (
-                <DropdownMenuItem
-                  key={b.tag}
-                  onClick={() => setActiveTag(b.tag)}
-                >
-                  {prettyTag(b.tag)} ({b.count})
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="start" collisionPadding={16}>
+              <Command>
+                <CommandInput placeholder="Search categories..." />
+                <CommandList>
+                  <CommandEmpty>No categories found.</CommandEmpty>
+                  <CommandGroup>
+                    {overflowTags.map((b) => (
+                      <CommandItem
+                        key={b.tag}
+                        value={prettyTag(b.tag)}
+                        onSelect={() => {
+                          setActiveTag(b.tag);
+                          setMoreOpen(false);
+                        }}
+                      >
+                        {prettyTag(b.tag)} ({b.count})
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         )}
       </div>
 
