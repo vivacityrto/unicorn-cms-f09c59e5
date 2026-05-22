@@ -6,12 +6,15 @@ import { cn } from "@/lib/utils";
 import CourseCard from "@/components/academy/CourseCard";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
 import {
   AcademyCourse,
   formatDuration,
