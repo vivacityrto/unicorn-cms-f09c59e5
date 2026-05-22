@@ -5,7 +5,6 @@ import {
   Settings,
   LogOut,
   Search,
-  ChevronRight,
   ChevronLeft,
   GraduationCap,
 } from "lucide-react";
@@ -46,25 +45,6 @@ const academyRouteTitles: Record<string, string> = {
   "/settings": "Profile Settings",
 };
 
-// Breadcrumb generation
-const getBreadcrumbs = (pathname: string) => {
-  const segments = pathname.split("/").filter(Boolean);
-  const breadcrumbs: { label: string; path: string }[] = [];
-
-  let currentPath = "";
-  segments.forEach((segment) => {
-    currentPath += `/${segment}`;
-    const title =
-      academyRouteTitles[currentPath] ||
-      segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
-    breadcrumbs.push({
-      label: title,
-      path: currentPath,
-    });
-  });
-
-  return breadcrumbs;
-};
 
 export function AcademyTopBar() {
   const location = useLocation();
@@ -75,8 +55,6 @@ export function AcademyTopBar() {
   const { isAcademyOnly } = useClientTenant();
 
   const pageTitle = academyRouteTitles[location.pathname] || "Academy";
-  const breadcrumbs = getBreadcrumbs(location.pathname);
-  const showBreadcrumbs = breadcrumbs.length > 1;
 
   const getInitials = (email: string) => {
     if (profile?.first_name && profile?.last_name) {
@@ -116,21 +94,6 @@ export function AcademyTopBar() {
         <div className="h-8 w-px bg-[var(--viv-purple-light)] flex-shrink-0" />
 
         <div className="flex flex-col min-w-0">
-          {showBreadcrumbs && (
-            <nav className="flex items-center gap-1 text-xs text-muted-foreground">
-              {breadcrumbs.slice(0, -1).map((crumb) => (
-                <span key={crumb.path} className="flex items-center gap-1">
-                  <Link
-                    to={crumb.path}
-                    className="hover:text-foreground transition-colors"
-                  >
-                    {crumb.label}
-                  </Link>
-                  <ChevronRight className="h-3 w-3" />
-                </span>
-              ))}
-            </nav>
-          )}
           <h1 className="text-xl font-semibold text-[var(--viv-purple)] truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]">
             {pageTitle}
           </h1>

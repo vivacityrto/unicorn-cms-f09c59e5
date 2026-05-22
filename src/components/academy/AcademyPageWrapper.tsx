@@ -29,10 +29,14 @@ export default function AcademyPageWrapper({
           <GraduationCap className="h-3.5 w-3.5" />
           Vivacity Academy
         </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <span className="font-medium" style={{ color: "#44235F" }}>
-          {title}
-        </span>
+        {title !== "Vivacity Academy" && (
+          <>
+            <ChevronRight className="h-3.5 w-3.5" />
+            <span className="font-medium" style={{ color: "#44235F" }}>
+              {title}
+            </span>
+          </>
+        )}
       </nav>
 
       {/* Page header */}
