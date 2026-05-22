@@ -121,7 +121,7 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen }: ClientSidebarProp
     staleTime: 5 * 60 * 1000,
   });
 
-  const complyhubUrl = complyhubData?.complyhub_url?.trim() || "https://rto.complyhub.ai/";
+  const complyhubUrl = complyhubData?.complyhub_url?.trim();
 
   const filterAdmin = (items: SidebarMenuItem[]) =>
     items.filter((item) => !item.adminOnly || canManageUsers);
