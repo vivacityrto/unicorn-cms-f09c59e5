@@ -1,36 +1,50 @@
-## Problem
-
-`src/components/layout/AcademyTopBar.tsx` contains a non-functional "Search courses..." input in the center of the header. The `searchQuery` state is declared but never consumed — it filters nothing. The search block is dead UI taking up center space.
+## Goal
+Add a "ComplyHub" external-link menu item to the client portal sidebar (`src/components/client/ClientSidebar.tsx`), directly below the existing "Vivacity Academy" external-link block. The item links to the tenant’s configured ComplyHub URL (or a default fallback) and opens in a new tab.
 
 ## Changes
 
-File: `src/components/layout/AcademyTopBar.tsx`
+### 1. Import additions
+- Add `Shield` to the `lucide-react` import block.
+- Add `useQuery` from `@tanstack/react-query`.
+- Add `supabase` from `@/integrations/supabase/client`.
 
-### 1. Remove search block (lines 117–128)
-Delete the entire `{/* Center: Course Search */}` block containing the `<Search>` icon and `<Input>`.
+### 2. ComplyHub URL query hook
+Inside `ClientSidebar`, after the existing `useAuth` / `useClientTenant` / `useHelpCenter` hooks, add:
 
-### 2. Remove `searchQuery` state (line 64)
-Delete `const [searchQuery, setSearchQuery] = useState("");`.
+```tsx
+const { data: complyhubData } = useQuery({
+  queryKey: ["client-sidebar-complyhub-url", activeTenantId],
+  queryFn: async () => {
+    const { data } = await supabase
+      .from("tenants")
+      .select("complyhub_url")
+      .eq("id", activeTenantId)
+      .single();
+    return data;
+  },
+  enabled: !!activeTenantId,
+  staleTime: 5 * 60 * 1000,
+});
 
-### 3. Remove unused imports
-- Remove `useState` from the `react` import (line 1).
-- Remove `Search` from the `lucide-react` import (line 7).
-- Remove `Input` from `@/components/ui/input` (line 12).
+const complyhubUrl = complyhubData?.complyhub_url?.trim() || "https://rto.complyhub.ai/";
+```
 
-All three symbols are used only by the search block; removing them leaves no orphan imports.
+### 3. Render new menu item
+Immediately after the closing `</a>` of the Academy block (after line 195, before the "Items after Academy" comment), insert a new `<a>` element that mirrors the Academy block exactly except:
 
-### 4. Preserved behaviour
-- Brand label (`<span>Academy</span>`), page title block, back-link, notification bell, and avatar dropdown are untouched.
-- Staff `TopBar.tsx` is not modified.
-- The header will show left brand/title and right actions with empty padding between them.
+- No conditional wrapper (always rendered)
+- `href={complyhubUrl}`
+- Icon: `<Shield className="w-3.5 h-3.5 text-white" />` inside the same gradient icon box
+- Label: "ComplyHub"
+- Same Tailwind classes, hover states, collapse behaviour, and `<ExternalLink>` trailing icon
+
+### 4. What is NOT changed
+- No new routes, no DB migrations, no RLS changes, no modifications to `ComplyHubCard.tsx`, `useClientTenant`, or any other file.
+- Staff `TopBar.tsx` untouched.
 
 ## Verification
-
-| Condition | Expected |
-|---|---|
-| Any Academy page | Center search input is gone |
-| Wide viewport (≥1024px) | Layout remains balanced, no broken flex alignment |
-| Narrow viewport (<1024px) | No change — search was already `hidden lg:flex` |
-| Build | Passes with no unused-variable or orphan-import errors |
-
-Stop after this fix.
+- Tenant with `complyhub_url` set → sidebar shows "ComplyHub", clicking opens that URL in new tab.
+- Tenant with `complyhub_url` NULL → sidebar shows "ComplyHub", clicking opens `https://rto.complyhub.ai/`.
+- Collapsed sidebar → only Shield icon shows.
+- `tenants` SELECT fires once on load (cached by staleTime).
+- Console clean, no orphan imports.
