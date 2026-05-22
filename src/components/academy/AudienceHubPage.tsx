@@ -91,6 +91,7 @@ export default function AudienceHubPage({
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [activeTag, setActiveTag] = useState<string>(ALL_TAB);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const { data: courses = [], isLoading, isError, error } = useAcademyCourses({
     audienceKey,
