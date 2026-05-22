@@ -1,96 +1,38 @@
-# CSC-008 — Realtime invalidation for tenant "Last note" cache
+## Problem
 
-Frontend-only fix to `src/hooks/useTenantNotes.ts`. Adds a Supabase realtime subscription on the `notes` and `client_notes` tables that invalidates the hook's React Query cache on INSERT/UPDATE, so the Manage Tenants "Last note" column refreshes immediately instead of waiting for the 5-minute `staleTime`. No DB changes, no RLS changes, no migration.
+In `src/components/layout/AcademyTopBar.tsx`, the page title falls back to the string `"Academy"` when `location.pathname` is absent from the `academyRouteTitles` lookup. On dynamic sub-pages (e.g. `/academy/audience/student-support-officer`, `/client/academy/audience/administration-assistant`, etc.) this produces `[icon] Academy | Academy`.
 
-## File: `src/hooks/useTenantNotes.ts`
+## Changes
 
-### Imports
-Add:
-```ts
-import { useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-```
+File: `src/components/layout/AcademyTopBar.tsx`
 
-### Inside `useTenantNotes`
-After the existing `useQuery(...)` call, before `return`:
+### 1. Replace pageTitle resolution (line 57)
 
-```ts
-const queryClient = useQueryClient();
+Introduce a `titleFromPath(pathname: string)` helper:
 
-useEffect(() => {
-  if (sortedIds.length === 0) return;
+1. Return the lookup value if present.
+2. Otherwise split the path, take the last non-empty segment, replace dashes with spaces, and title-case it.
+3. If the derived title is `"academy"` (case-insensitive) — meaning the user is on the root `/academy` path — return an empty string so the brand label stands alone.
+4. Keep the lookup table itself unchanged.
 
-  const channel = supabase
-    .channel(`tenant-notes-changes-${sortedIds.join("-")}`)
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "notes" },
-      () => {
-        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "notes" },
-      () => {
-        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "client_notes" },
-      () => {
-        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "client_notes" },
-      () => {
-        queryClient.invalidateQueries({ queryKey: ["tenants", "notes"] });
-      },
-    )
-    .subscribe();
+### 2. Conditionally render divider + title block (lines 94-100)
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [queryClient, sortedIds.join(",")]);
-```
+Wrap the existing `<div className="h-8 w-px ..." />` divider and the following `<h1>{pageTitle}</h1>` block in `{pageTitle && (...)}` so neither element renders when the title is empty.
 
-Refactor to capture both `query` and return it:
-```ts
-const query = useQuery({ ... });
-// effect here
-return query;
-```
+### 3. Preserved behaviour
 
-### Design notes
-- **Two source tables.** The query reads from both `notes` and `client_notes`; the subscription must cover both, otherwise client-portal notes still go stale.
-- **Invalidate by prefix.** `["tenants", "notes"]` matches every `["tenants", "notes", sortedIds]` cache entry — important because Manage Tenants passes a long id array, and other call sites may pass different arrays. Prefix invalidation guarantees they all refresh.
-- **Unique channel name per id set.** Supabase rejects duplicate channel names. Manage Tenants mounts this hook once; other consumers (if any) get a different `sortedIds.join("-")` and thus a distinct channel. The cleanup `removeChannel` runs on unmount and on id-set change, preventing leaks.
-- **Effect dependency uses `sortedIds.join(",")`.** Arrays are referentially unstable; the joined string keeps the effect stable when the same ids are passed.
-- **No DELETE listener.** Spec says INSERT and UPDATE only. Deleting a note is rare and the stale row will fall out at the 5-minute boundary; leaving DELETE off keeps the channel quieter and matches the spec.
-- **`staleTime` unchanged** (5 min) — realtime is the fast path, `staleTime` remains the fallback.
-- **`enabled`/empty guard.** If `sortedIds` is empty the query is disabled and the effect early-returns, so no channel is opened.
-
-### What is NOT touched
-- `staleTime`, `queryKey`, `queryFn`, batch logic, `tga_rto_summary` lookup.
-- `ManageTenants.tsx` `packages-changes` and `csc-assignments-changes` channels.
-- RLS, schema, migrations, edge functions.
+- The static brand label `<span>Academy</span>` stays.
+- The avatar dropdown, notification bell condition, back-link, search bar, and all other markup are untouched.
+- Staff `TopBar.tsx` is not modified.
 
 ## Verification
-1. Open Manage Tenants → "Last note" column populated.
-2. Open a tenant, add a new note → return to Manage Tenants within seconds: snippet/date reflect the new note (no 5-minute wait).
-3. Edit an existing note's title → Manage Tenants reflects the change.
-4. DevTools → Network: no polling; one WebSocket frame per note change.
-5. Navigate away from Manage Tenants → console shows no "channel already exists" warnings on return; no leaked subscriptions.
-6. Other columns (CSC, packages, registration end date, etc.) unchanged.
-7. `npm run build` / typecheck passes.
 
-## Risk assessment
-- **Low.** Hook-local change. Realtime invalidation is additive — worst case the subscription fails silently and behaviour reverts to the existing 5-minute `staleTime` fallback.
-- **Realtime enablement:** `notes` and `client_notes` must be in the `supabase_realtime` publication. If either is not, that table's events simply won't fire — the other still works, and the fallback `staleTime` still covers it. No migration is in scope per the spec; if the user reports that updates still don't appear in real time, the follow-up is enabling realtime publication on those tables.
-- **No RLS impact:** invalidation triggers a normal re-fetch under the calling user's session; existing policies continue to gate row visibility.
-- **No audit impact:** read-only client-side cache behaviour.
-- **No performance impact:** events only fire on actual writes; payload is discarded (we only call `invalidateQueries`).
+| Route | Expected top bar |
+|---|---|
+| `/academy` | `[icon] Academy` only — no divider, no duplicate |
+| `/academy/courses` | `[icon] Academy \| My Courses` |
+| `/academy/audience/student-support-officer` | `[icon] Academy \| Student Support Officer` |
+| `/academy/audience/administration-assistant` | `[icon] Academy \| Administration Assistant` |
+| `/settings?tab=profile` | `[icon] Academy \| Profile Settings` |
+
+Build must pass with no orphan imports or unused variables.
