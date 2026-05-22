@@ -90,7 +90,7 @@ export function useClientAllTasks(includeArchived: boolean = false) {
       ]);
 
       // Build lookup maps
-      const taskMetaMap = new Map((clientTaskRes.data || []).map((t: any) => [t.id, { name: t.name, priority: t.priority, attachmentRequired: !!t.attachment_required }]));
+      const taskMetaMap = new Map(((clientTaskRes.data || []) as any[]).map((t: any) => [t.id, { name: t.name, priority: t.priority, attachmentRequired: !!t.attachment_required }]));
       const packageMap = new Map((packageRes.data || []).map((p: any) => [p.id, p.name]));
       const stageMap = new Map((stageRes.data || []).map((s: any) => [s.id, s.name]));
 
