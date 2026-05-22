@@ -111,18 +111,7 @@ export function AcademyTopBar() {
         )}
       </div>
 
-      {/* Center: Course Search - hidden on smaller screens to preserve avatar */}
-      <div className="hidden lg:flex flex-1 max-w-md mx-8">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search courses..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-muted/50"
-          />
-        </div>
-      </div>
+
 
       {/* Right: Actions & Avatar - never pushed off-screen */}
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
