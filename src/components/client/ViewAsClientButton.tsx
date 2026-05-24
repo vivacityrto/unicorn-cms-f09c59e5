@@ -86,9 +86,25 @@ export function ViewAsClientButton({
         setOptionsLoading(false);
       }
     } else {
-      setActingOptions([]);
-      setSelectedActingId(null);
-      setReasonDialogOpen(true);
+      setIsStarting(true);
+      try {
+        const success = await startPreview(tenantId, undefined, null);
+        if (success) {
+          toast.success(`Now viewing as ${tenantName}`, {
+            description: "You're in preview mode",
+          });
+          navigate("/client-preview");
+        } else {
+          toast.error("Failed to start preview", {
+            description: "Could not initiate client preview mode",
+          });
+        }
+      } catch (error) {
+        console.error("Error starting preview:", error);
+        toast.error("Failed to start preview");
+      } finally {
+        setIsStarting(false);
+      }
     }
   };
 
