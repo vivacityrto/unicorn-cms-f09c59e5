@@ -1,38 +1,55 @@
-# Fix L10 meeting close failure
+# L10 agenda fixes (A, B, C)
 
-## Problem
-Closing an L10 meeting fails for non-super-admins because `generate_meeting_summary` raises an unhandled exception (wrong role check using the deprecated `eos_meeting_participants` table), which rolls back the meeting close transaction in `close_meeting_with_validation`.
+## A + B — Migration (single file)
 
-## Fix — single migration, `CREATE OR REPLACE` three functions
+### Data update on `eos_agenda_templates`
+For every row where `meeting_type = 'L10'` AND `is_archived = false`, apply a single `UPDATE` that rewrites `segments` via a `jsonb` walk:
 
-### 1. `generate_meeting_summary(uuid)`
-Remove the permission guard block:
+- **Conditional swap (directional)**: Swap positions of the elements whose `name` is `"IDS (Identify, Discuss, Solve)"` and `"Customer/Employee Headlines"` **only when** both exact names are present **AND** the current ordinal of `IDS (Identify, Discuss, Solve)` is **strictly less than** the ordinal of `Customer/Employee Headlines`. If Headlines already precedes IDS, skip the swap for that row (no-op).
+- **Rename**: Element whose `name` is exactly `"Conclude"` becomes `"Conclude / One Phrase Close"`.
+- All other segment fields (`duration`, `description`, plus position of non-matching elements) preserved.
+
+Implementation: per-row CTE that:
+1. Expands `segments` with `jsonb_array_elements WITH ORDINALITY` to compute `v_ids_ord` and `v_headlines_ord`.
+2. Rebuilds the array with `jsonb_agg(... ORDER BY ord)`, applying:
+   - swap mapping `ord → (v_headlines_ord when ord = v_ids_ord, v_ids_ord when ord = v_headlines_ord, else ord)` — **only if** `v_ids_ord IS NOT NULL AND v_headlines_ord IS NOT NULL AND v_ids_ord < v_headlines_ord`; otherwise identity mapping.
+   - rename via `CASE WHEN elem->>'name' = 'Conclude' THEN jsonb_set(elem,'{name}','"Conclude / One Phrase Close"') ELSE elem END`.
+3. Single `UPDATE … SET segments = …` per row.
+
+Verified counts: 389 L10 active templates, 388 contain both swap targets, 389 contain a `Conclude` segment. The 3 rows already in correct order will keep their order; rename still applies.
+
+### `seed_system_agenda_templates()` — both overloads CREATE OR REPLACE
+Two overloads exist (`()` and `(p_tenant_id bigint)`). Both updated so the L10 template they seed uses the exact final order and names:
+
 ```
-IF NOT (is_super_admin() OR has_meeting_role(auth.uid(), p_meeting_id, ARRAY['Leader'])) THEN
-  RAISE EXCEPTION 'Only facilitator can generate summary';
-END IF;
+Segue (5) → Scorecard (5) → Rock Review (5) →
+Customer/Employee Headlines (5) → IDS (Identify, Discuss, Solve) (60) →
+To-Do List (5) → Conclude / One Phrase Close (5)
 ```
-All other logic (idempotency, aggregations, summary insert, `is_complete` update, audit event) preserved verbatim.
 
-### 2. `close_meeting_with_validation(uuid)` — single-arg overload
-Wrap the summary call:
-```
-BEGIN
-  PERFORM generate_meeting_summary(p_meeting_id);
-EXCEPTION WHEN OTHERS THEN
-  NULL;
-END;
-```
-All other logic preserved.
+All non-L10 templates (Quarterly, Annual, Same_Page) preserved verbatim. L10 segment descriptions preserved where present.
 
-### 3. `close_meeting_with_validation(uuid, boolean)` — two-arg overload
-There is a second overload with `p_force boolean` that also calls `PERFORM generate_meeting_summary(...)` unguarded. Same wrap applied so closing via either signature is protected. All other logic preserved.
+### Not touched
+- `eos_meeting_segments` (historical meeting records).
+- Any other template type.
+- RLS policies.
 
-## Out of scope
-- No RLS changes
-- No frontend changes
-- No changes to `has_meeting_role`, `eos_meeting_attendees`, or any other function
-- No drops; all three use `CREATE OR REPLACE`
+## B — Frontend: `src/components/eos/AgendaTemplateEditor.tsx`
+Replace `DEFAULT_SEGMENTS.L10` (lines 22–30) with the seven entries in the exact required order and names. Other meeting-type defaults untouched.
 
-## Risk
-Very low. Summary becomes best-effort during close (matches the user's intent: summary failure must never block close). Permission removal on `generate_meeting_summary` is acceptable — the function is `SECURITY DEFINER` and only invoked from `close_meeting_with_validation` (which itself runs only for in-progress meetings the caller can already act on).
+## B — Frontend: `src/components/eos/LiveMeetingView.tsx` (rename only)
+Line 662: literal heading text `Conclude` → `Conclude / One Phrase Close`. Line 355 detection logic untouched.
+
+## C — Frontend: `src/components/eos/LiveMeetingView.tsx` (todo assignee)
+Mirror the existing `ownerIds` / `rockOwners` pattern (lines 82–104) for todos:
+
+1. `todoOwnerIds = useMemo(...)` — distinct non-empty `owner_id` values from `todos`.
+2. `const { data: todoOwners } = useQuery({ queryKey: ['todo-owners', todoOwnerIds], ... })` — identical shape to `rockOwners`, fetches `user_uuid, first_name, last_name` from `users`, returns `Record<string,string>` name map, `enabled: todoOwnerIds.length > 0`.
+3. In the todo card (`'todos'` case, around line 608), add below the due-date `<p>`:
+   ```
+   <p className="text-xs text-muted-foreground">
+     Assigned to: {todo.owner_id ? (todoOwners?.[todo.owner_id] ?? 'Unassigned') : 'Unassigned'}
+   </p>
+   ```
+
+No other files changed. No migration for fix C.
