@@ -175,7 +175,7 @@ export function CalendarGrid({
               <div
                 key={day.toISOString()}
                 className={cn(
-                  'flex-1 relative border-r last:border-r-0',
+                  'flex-1 relative overflow-hidden border-r last:border-r-0',
                   isToday(day) && 'bg-primary/5'
                 )}
               >
@@ -194,7 +194,8 @@ export function CalendarGrid({
                   const startHour = getHours(eventStart) + getMinutes(eventStart) / 60;
                   const durationMinutes = differenceInMinutes(eventEnd, eventStart);
                   const top = (startHour - START_HOUR) * HOUR_HEIGHT;
-                  const height = Math.max((durationMinutes / 60) * HOUR_HEIGHT, 24);
+                  const maxHeight = (END_HOUR - startHour) * HOUR_HEIGHT;
+                  const height = Math.min(Math.max((durationMinutes / 60) * HOUR_HEIGHT, 24), maxHeight);
 
                   // Only show events within visible hours
                   if (startHour < START_HOUR || startHour >= END_HOUR) return null;
