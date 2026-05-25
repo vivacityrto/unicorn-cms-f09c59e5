@@ -63,9 +63,13 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
   const [sortMode, setSortMode] = useState<'start' | 'package_start'>('start');
   const [deletingRow, setDeletingRow] = useState<PackageInstanceRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [stageCounts, setStageCounts] = useState<Record<number, { present: number; total: number; missing: { stage_id: number; name: string; sort_order: number }[] }>>({});
+  const [auditTarget, setAuditTarget] = useState<PackageInstanceRow | null>(null);
+  const [auditing, setAuditing] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+
 
     // Fetch instances and package names separately (no FK relationship in schema)
     const [instancesRes, packagesRes] = await Promise.all([
