@@ -275,6 +275,27 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
     }
   };
 
+  const handleAuditStages = async (row: PackageInstanceRow) => {
+    setAuditing(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('repair_package_instance_stages', {
+        p_package_instance_id: row.id,
+        p_dry_run: false,
+      });
+      if (error) throw error;
+      const inserted = (data as any)?.inserted_count ?? 0;
+      toast({ title: 'Stages repaired', description: `${inserted} missing stage${inserted === 1 ? '' : 's'} added to ${row.package_name}.` });
+      setAuditTarget(null);
+      await fetchData();
+      onSuccess?.();
+    } catch (err: any) {
+      toast({ title: 'Audit failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setAuditing(false);
+    }
+  };
+
+
   const sortedRows = [...rows].sort((a, b) => {
     if (sortMode === 'package_start') {
       const nameCmp = a.package_name.localeCompare(b.package_name);
