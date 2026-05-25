@@ -6,7 +6,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 const SIGNED_URL_TTL = 157_680_000; // 5 years
 const PAGE_W = 841.89;
 const PAGE_H = 595.28;
-const CENTER_X = 560;
+const CENTER_X = 510;
 
 function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
