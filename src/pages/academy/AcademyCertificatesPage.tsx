@@ -215,28 +215,24 @@ export default function AcademyCertificatesPage() {
                     <Badge variant={isExpired ? "outline" : "secondary"}>
                       {isExpired ? "Expired" : "Active"}
                     </Badge>
-                    {cert.public_url ? (
-                      <Button variant="outline" size="sm" onClick={() => handleDownload(cert)}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
-                    ) : (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <Button variant="outline" size="sm" disabled>
-                                <Download className="mr-2 h-4 w-4" />
-                                Download
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            PDF generation coming soon
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownload(cert)}
+                      disabled={generatingId === cert.id}
+                    >
+                      {generatingId === cert.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </>
+                      )}
+                    </Button>
                   </CardContent>
                 </Card>
               );
