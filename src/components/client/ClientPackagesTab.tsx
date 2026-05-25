@@ -183,21 +183,28 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
       });
       if (error) throw error;
 
-      // Create renewal instance if requested
+      // Create renewal instance if requested — route through start_client_package
+      // so stages, staff tasks, client tasks, emails, and documents are all seeded
+      // from the template (and the duplicate-type guard runs).
       if (renewPackage && renewalPackageId) {
         const newStartDate = finaliseEndDate
           ? format(finaliseEndDate, 'yyyy-MM-dd')
           : format(new Date(), 'yyyy-MM-dd');
 
-        await (supabase as any)
-          .from('package_instances')
-          .insert({
-            tenant_id: tenantId,
-            package_id: parseInt(renewalPackageId, 10),
-            start_date: newStartDate,
-            is_complete: false,
-            membership_state: 'active',
-          });
+        const { data: newInstanceId, error: renewErr } = await supabase.rpc('start_client_package', {
+          p_tenant_id: tenantId,
+          p_package_id: parseInt(renewalPackageId, 10),
+          p_assigned_csc_user_id: null,
+        });
+        if (renewErr) throw renewErr;
+
+        // RPC sets start_date = CURRENT_DATE; override to the chosen renewal start
+        if (newInstanceId && newStartDate !== format(new Date(), 'yyyy-MM-dd')) {
+          await (supabase as any)
+            .from('package_instances')
+            .update({ start_date: newStartDate })
+            .eq('id', newInstanceId);
+        }
       }
 
       toast.success(`${finaliseTarget.package_name} finalised successfully${renewPackage ? ' — renewal created' : ''}`);

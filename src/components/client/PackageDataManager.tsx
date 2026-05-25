@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format, differenceInMonths, differenceInDays } from 'date-fns';
-import { CalendarIcon, AlertTriangle, Save, Database, ArrowUpDown, Trash2 } from 'lucide-react';
+import { CalendarIcon, AlertTriangle, Save, Database, ArrowUpDown, Trash2, Wrench } from 'lucide-react';
 import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -61,9 +63,13 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
   const [sortMode, setSortMode] = useState<'start' | 'package_start'>('start');
   const [deletingRow, setDeletingRow] = useState<PackageInstanceRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [stageCounts, setStageCounts] = useState<Record<number, { present: number; total: number; missing: { stage_id: number; name: string; sort_order: number }[] }>>({});
+  const [auditTarget, setAuditTarget] = useState<PackageInstanceRow | null>(null);
+  const [auditing, setAuditing] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+
 
     // Fetch instances and package names separately (no FK relationship in schema)
     const [instancesRes, packagesRes] = await Promise.all([
@@ -95,10 +101,52 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
         included_minutes: d.included_minutes ?? 0,
       }));
       setRows(mapped);
+
+      // Compute per-instance stage audit (template total vs present)
+      const pkgIds = Array.from(new Set(mapped.map(r => r.package_id)));
+      const instIds = mapped.map(r => r.id);
+      if (instIds.length > 0) {
+        const [tplRes, instStagesRes] = await Promise.all([
+          (supabase as any)
+            .from('package_stages')
+            .select('package_id, stage_id, sort_order, stages:stage_id(id, name)')
+            .in('package_id', pkgIds),
+          (supabase as any)
+            .from('stage_instances')
+            .select('packageinstance_id, stage_id')
+            .in('packageinstance_id', instIds),
+        ]);
+
+        const tplByPkg = new Map<number, { stage_id: number; name: string; sort_order: number }[]>();
+        (tplRes.data ?? []).forEach((t: any) => {
+          const arr = tplByPkg.get(t.package_id) ?? [];
+          arr.push({ stage_id: Number(t.stage_id), name: t.stages?.name ?? `Stage #${t.stage_id}`, sort_order: t.sort_order });
+          tplByPkg.set(t.package_id, arr);
+        });
+
+        const presentByInst = new Map<number, Set<number>>();
+        (instStagesRes.data ?? []).forEach((si: any) => {
+          const set = presentByInst.get(si.packageinstance_id) ?? new Set<number>();
+          set.add(Number(si.stage_id));
+          presentByInst.set(si.packageinstance_id, set);
+        });
+
+        const counts: Record<number, { present: number; total: number; missing: { stage_id: number; name: string; sort_order: number }[] }> = {};
+        mapped.forEach(r => {
+          const tpl = tplByPkg.get(r.package_id) ?? [];
+          const present = presentByInst.get(r.id) ?? new Set<number>();
+          const missing = tpl.filter(t => !present.has(t.stage_id)).sort((a, b) => a.sort_order - b.sort_order);
+          counts[r.id] = { present: present.size, total: tpl.length, missing };
+        });
+        setStageCounts(counts);
+      } else {
+        setStageCounts({});
+      }
     }
     setEdits({});
     setLoading(false);
   }, [tenantId]);
+
 
   useEffect(() => {
     if (open) fetchData();
@@ -227,6 +275,27 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
     }
   };
 
+  const handleAuditStages = async (row: PackageInstanceRow) => {
+    setAuditing(true);
+    try {
+      const { data, error } = await (supabase as any).rpc('repair_package_instance_stages', {
+        p_package_instance_id: row.id,
+        p_dry_run: false,
+      });
+      if (error) throw error;
+      const inserted = (data as any)?.inserted_count ?? 0;
+      toast({ title: 'Stages repaired', description: `${inserted} missing stage${inserted === 1 ? '' : 's'} added to ${row.package_name}.` });
+      setAuditTarget(null);
+      await fetchData();
+      onSuccess?.();
+    } catch (err: any) {
+      toast({ title: 'Audit failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setAuditing(false);
+    }
+  };
+
+
   const sortedRows = [...rows].sort((a, b) => {
     if (sortMode === 'package_start') {
       const nameCmp = a.package_name.localeCompare(b.package_name);
@@ -312,22 +381,24 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
                 <TableHead className="text-right">Included Hrs</TableHead>
                 <TableHead className="text-center">Active</TableHead>
                 <TableHead className="text-center">Complete</TableHead>
+                <TableHead className="text-center">Stages</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Loading…
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No package instances found.
                   </TableCell>
                 </TableRow>
+
               ) : (
                 sortedRows.map(row => {
                   const eff = getEffective(row);
@@ -394,7 +465,43 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
                           onCheckedChange={(v) => setEdit(row.id, 'is_complete', v)}
                         />
                       </TableCell>
+                      <TableCell className="text-center">
+                        {(() => {
+                          const sc = stageCounts[row.id];
+                          if (!sc) return <span className="text-xs text-muted-foreground">—</span>;
+                          const ok = sc.total > 0 && sc.present >= sc.total;
+                          const empty = sc.total === 0;
+                          return (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-xs font-mono',
+                                  empty && 'border-muted text-muted-foreground',
+                                  ok && 'border-green-600 text-green-700 dark:text-green-400',
+                                  !ok && !empty && 'border-amber-600 text-amber-700 dark:text-amber-400'
+                                )}
+                                title={sc.missing.length ? `Missing: ${sc.missing.map(m => m.name).join(', ')}` : 'In sync'}
+                              >
+                                {sc.present}/{sc.total}
+                              </Badge>
+                              {!ok && !empty && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/40"
+                                  onClick={() => setAuditTarget(row)}
+                                  title="Add missing stages from template"
+                                >
+                                  <Wrench className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>
+
                         <div className="flex items-center gap-1">
                           {hasEdits(row.id) && (
                             <Button
@@ -435,6 +542,20 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
           onConfirm={() => deletingRow && handleDelete(deletingRow)}
           isDeleting={isDeleting}
         />
+
+        {auditTarget && (
+          <ConfirmDialog
+            open={!!auditTarget}
+            onOpenChange={(open) => { if (!open) setAuditTarget(null); }}
+            variant="warning"
+            title="Audit & repair stages"
+            description={`Add ${stageCounts[auditTarget.id]?.missing.length ?? 0} missing stage(s) from the template to ${auditTarget.package_name}? Missing: ${(stageCounts[auditTarget.id]?.missing ?? []).map(m => m.name).join(', ') || 'none'}.`}
+            confirmText="Add missing stages"
+            onConfirm={() => handleAuditStages(auditTarget)}
+            isLoading={auditing}
+          />
+        )}
+
       </DialogContent>
     </Dialog>
   );
