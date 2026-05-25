@@ -542,6 +542,20 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
           onConfirm={() => deletingRow && handleDelete(deletingRow)}
           isDeleting={isDeleting}
         />
+
+        {auditTarget && (
+          <ConfirmDialog
+            open={!!auditTarget}
+            onOpenChange={(open) => { if (!open) setAuditTarget(null); }}
+            variant="warning"
+            title="Audit & repair stages"
+            description={`Add ${stageCounts[auditTarget.id]?.missing.length ?? 0} missing stage(s) from the template to ${auditTarget.package_name}? Missing: ${(stageCounts[auditTarget.id]?.missing ?? []).map(m => m.name).join(', ') || 'none'}.`}
+            confirmText="Add missing stages"
+            onConfirm={() => handleAuditStages(auditTarget)}
+            isLoading={auditing}
+          />
+        )}
+
       </DialogContent>
     </Dialog>
   );
