@@ -1,16 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { AcademyLayout } from "@/components/layout/AcademyLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Award, Download, Calendar } from "lucide-react";
+import { Award, Download, Calendar, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useAcademyActingUserId } from "@/hooks/academy/useAcademyActingUserId";
@@ -84,18 +80,36 @@ function useMyCertificates() {
 }
 
 export default function AcademyCertificatesPage() {
+  const { userId } = useAcademyActingUserId();
   const { data: certificates, isLoading } = useMyCertificates();
+  const qc = useQueryClient();
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
 
-  const handleDownload = (cert: MyCertificate) => {
+  const handleDownload = async (cert: MyCertificate) => {
     if (cert.public_url) {
       window.open(cert.public_url, "_blank", "noopener,noreferrer");
       return;
     }
-    // TODO: wire to certificate-PDF Edge Function once available.
-    console.warn(
-      "[AcademyCertificates] PDF generation Edge Function not wired yet for cert",
-      cert.certificate_number
-    );
+    setGeneratingId(cert.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-certificate-pdf", {
+        body: { certificate_id: cert.id },
+      });
+      if (error || !data?.ok || !data?.data?.public_url) {
+        toast.error("Could not generate certificate. Please try again.");
+        return;
+      }
+      const url: string = data.data.public_url;
+      window.open(url, "_blank", "noopener,noreferrer");
+      qc.setQueryData<MyCertificate[]>(
+        ["academy-my-certificates", userId],
+        (prev) => prev?.map((c) => (c.id === cert.id ? { ...c, public_url: url } : c)) ?? prev,
+      );
+    } catch {
+      toast.error("Could not generate certificate. Please try again.");
+    } finally {
+      setGeneratingId(null);
+    }
   };
 
   return (
@@ -201,28 +215,24 @@ export default function AcademyCertificatesPage() {
                     <Badge variant={isExpired ? "outline" : "secondary"}>
                       {isExpired ? "Expired" : "Active"}
                     </Badge>
-                    {cert.public_url ? (
-                      <Button variant="outline" size="sm" onClick={() => handleDownload(cert)}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
-                    ) : (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <Button variant="outline" size="sm" disabled>
-                                <Download className="mr-2 h-4 w-4" />
-                                Download
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            PDF generation coming soon
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownload(cert)}
+                      disabled={generatingId === cert.id}
+                    >
+                      {generatingId === cert.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </>
+                      )}
+                    </Button>
                   </CardContent>
                 </Card>
               );
