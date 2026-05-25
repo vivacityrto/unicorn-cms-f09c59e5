@@ -63739,6 +63739,10 @@ export type Database = {
         Args: { p_meeting_id: string; p_user_id: string }
         Returns: boolean
       }
+      repair_package_instance_stages: {
+        Args: { p_dry_run?: boolean; p_package_instance_id: number }
+        Returns: Json
+      }
       request_stage_review: {
         Args: { p_reviewer_user_id: string; p_stage_release_id: string }
         Returns: Json
