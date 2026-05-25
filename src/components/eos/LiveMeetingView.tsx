@@ -103,6 +103,31 @@ export const LiveMeetingView = () => {
     enabled: ownerIds.length > 0,
   });
 
+  // Fetch owner names for todos
+  const todoOwnerIds = useMemo(() => {
+    const ids = new Set<string>();
+    todos?.forEach(t => { if (t.owner_id) ids.add(t.owner_id); });
+    return Array.from(ids);
+  }, [todos]);
+
+  const { data: todoOwners } = useQuery({
+    queryKey: ['todo-owners', todoOwnerIds],
+    queryFn: async () => {
+      if (todoOwnerIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from('users')
+        .select('user_uuid, first_name, last_name')
+        .in('user_uuid', todoOwnerIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      data?.forEach(u => {
+        map[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown';
+      });
+      return map;
+    },
+    enabled: todoOwnerIds.length > 0,
+  });
+
   // Fetch participants with explicit FK join
   const { data: participants } = useQuery({
     queryKey: ['eos-meeting-participants', meetingId],
@@ -608,6 +633,9 @@ export const LiveMeetingView = () => {
                       <p className="text-xs text-muted-foreground">
                         Due: {todo.due_date ? new Date(todo.due_date).toLocaleDateString() : 'Not set'}
                       </p>
+                      <p className="text-xs text-muted-foreground">
+                        Assigned to: {todo.owner_id ? (todoOwners?.[todo.owner_id] ?? 'Unassigned') : 'Unassigned'}
+                      </p>
                     </div>
                   </div>
                   <Badge variant={todo.status === 'Complete' ? 'default' : 'secondary'}>
@@ -659,7 +687,7 @@ export const LiveMeetingView = () => {
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-primary" />
-              Conclude
+              Conclude / One Phrase Close
             </h3>
             <div className="space-y-4">
               <div>
