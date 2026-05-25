@@ -23,10 +23,10 @@ const DEFAULT_SEGMENTS: Record<MeetingType, EosAgendaSegment[]> = {
     { name: 'Segue', duration_minutes: 5 },
     { name: 'Scorecard', duration_minutes: 5 },
     { name: 'Rock Review', duration_minutes: 5 },
+    { name: 'Customer/Employee Headlines', duration_minutes: 5 },
+    { name: 'IDS (Identify, Discuss, Solve)', duration_minutes: 60 },
     { name: 'To-Do List', duration_minutes: 5 },
-    { name: 'Headlines', duration_minutes: 5 },
-    { name: 'IDS', duration_minutes: 60 },
-    { name: 'Conclude', duration_minutes: 5 },
+    { name: 'Conclude / One Phrase Close', duration_minutes: 5 },
   ],
   Quarterly: [
     { name: 'Segue', duration_minutes: 15 },
