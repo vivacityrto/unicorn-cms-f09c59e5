@@ -101,10 +101,52 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
         included_minutes: d.included_minutes ?? 0,
       }));
       setRows(mapped);
+
+      // Compute per-instance stage audit (template total vs present)
+      const pkgIds = Array.from(new Set(mapped.map(r => r.package_id)));
+      const instIds = mapped.map(r => r.id);
+      if (instIds.length > 0) {
+        const [tplRes, instStagesRes] = await Promise.all([
+          (supabase as any)
+            .from('package_stages')
+            .select('package_id, stage_id, sort_order, stages:stage_id(id, name)')
+            .in('package_id', pkgIds),
+          (supabase as any)
+            .from('stage_instances')
+            .select('packageinstance_id, stage_id')
+            .in('packageinstance_id', instIds),
+        ]);
+
+        const tplByPkg = new Map<number, { stage_id: number; name: string; sort_order: number }[]>();
+        (tplRes.data ?? []).forEach((t: any) => {
+          const arr = tplByPkg.get(t.package_id) ?? [];
+          arr.push({ stage_id: Number(t.stage_id), name: t.stages?.name ?? `Stage #${t.stage_id}`, sort_order: t.sort_order });
+          tplByPkg.set(t.package_id, arr);
+        });
+
+        const presentByInst = new Map<number, Set<number>>();
+        (instStagesRes.data ?? []).forEach((si: any) => {
+          const set = presentByInst.get(si.packageinstance_id) ?? new Set<number>();
+          set.add(Number(si.stage_id));
+          presentByInst.set(si.packageinstance_id, set);
+        });
+
+        const counts: Record<number, { present: number; total: number; missing: { stage_id: number; name: string; sort_order: number }[] }> = {};
+        mapped.forEach(r => {
+          const tpl = tplByPkg.get(r.package_id) ?? [];
+          const present = presentByInst.get(r.id) ?? new Set<number>();
+          const missing = tpl.filter(t => !present.has(t.stage_id)).sort((a, b) => a.sort_order - b.sort_order);
+          counts[r.id] = { present: present.size, total: tpl.length, missing };
+        });
+        setStageCounts(counts);
+      } else {
+        setStageCounts({});
+      }
     }
     setEdits({});
     setLoading(false);
   }, [tenantId]);
+
 
   useEffect(() => {
     if (open) fetchData();
