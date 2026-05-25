@@ -381,22 +381,24 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
                 <TableHead className="text-right">Included Hrs</TableHead>
                 <TableHead className="text-center">Active</TableHead>
                 <TableHead className="text-center">Complete</TableHead>
+                <TableHead className="text-center">Stages</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Loading…
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No package instances found.
                   </TableCell>
                 </TableRow>
+
               ) : (
                 sortedRows.map(row => {
                   const eff = getEffective(row);
