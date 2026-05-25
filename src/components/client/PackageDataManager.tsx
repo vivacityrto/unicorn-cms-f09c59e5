@@ -465,7 +465,43 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
                           onCheckedChange={(v) => setEdit(row.id, 'is_complete', v)}
                         />
                       </TableCell>
+                      <TableCell className="text-center">
+                        {(() => {
+                          const sc = stageCounts[row.id];
+                          if (!sc) return <span className="text-xs text-muted-foreground">—</span>;
+                          const ok = sc.total > 0 && sc.present >= sc.total;
+                          const empty = sc.total === 0;
+                          return (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-xs font-mono',
+                                  empty && 'border-muted text-muted-foreground',
+                                  ok && 'border-green-600 text-green-700 dark:text-green-400',
+                                  !ok && !empty && 'border-amber-600 text-amber-700 dark:text-amber-400'
+                                )}
+                                title={sc.missing.length ? `Missing: ${sc.missing.map(m => m.name).join(', ')}` : 'In sync'}
+                              >
+                                {sc.present}/{sc.total}
+                              </Badge>
+                              {!ok && !empty && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/40"
+                                  onClick={() => setAuditTarget(row)}
+                                  title="Add missing stages from template"
+                                >
+                                  <Wrench className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>
+
                         <div className="flex items-center gap-1">
                           {hasEdits(row.id) && (
                             <Button
