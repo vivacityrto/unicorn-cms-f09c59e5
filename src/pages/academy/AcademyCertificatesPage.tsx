@@ -80,18 +80,36 @@ function useMyCertificates() {
 }
 
 export default function AcademyCertificatesPage() {
+  const { userId } = useAcademyActingUserId();
   const { data: certificates, isLoading } = useMyCertificates();
+  const qc = useQueryClient();
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
 
-  const handleDownload = (cert: MyCertificate) => {
+  const handleDownload = async (cert: MyCertificate) => {
     if (cert.public_url) {
       window.open(cert.public_url, "_blank", "noopener,noreferrer");
       return;
     }
-    // TODO: wire to certificate-PDF Edge Function once available.
-    console.warn(
-      "[AcademyCertificates] PDF generation Edge Function not wired yet for cert",
-      cert.certificate_number
-    );
+    setGeneratingId(cert.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-certificate-pdf", {
+        body: { certificate_id: cert.id },
+      });
+      if (error || !data?.ok || !data?.data?.public_url) {
+        toast.error("Could not generate certificate. Please try again.");
+        return;
+      }
+      const url: string = data.data.public_url;
+      window.open(url, "_blank", "noopener,noreferrer");
+      qc.setQueryData<MyCertificate[]>(
+        ["academy-my-certificates", userId],
+        (prev) => prev?.map((c) => (c.id === cert.id ? { ...c, public_url: url } : c)) ?? prev,
+      );
+    } catch {
+      toast.error("Could not generate certificate. Please try again.");
+    } finally {
+      setGeneratingId(null);
+    }
   };
 
   return (
