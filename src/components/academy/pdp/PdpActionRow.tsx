@@ -30,7 +30,7 @@ export function PdpActionRow({ cycleId, onLogEvidence, onAddGoal }: Props) {
         onClick={() => cycleId && navigate(`/academy/pdp/cycle/${cycleId}`)}
         disabled={!cycleId}
       >
-        Open my PDP cycle
+        Open my PDP
         <ArrowRight className="ml-2 h-4 w-4" />
       </Button>
     </div>
