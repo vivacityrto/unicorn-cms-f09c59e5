@@ -499,6 +499,12 @@ export default function AcademyLessonViewerPage() {
     return null;
   }
 
+  function stripCourseSuffix(lessonTitle: string, courseTitle: string): string {
+    if (!courseTitle) return lessonTitle;
+    const escaped = courseTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return lessonTitle.replace(new RegExp(`[-\\s]+${escaped}$`, "i"), "").trim();
+  }
+
   return (
     <div className="flex gap-0 -mx-6 -mt-2">
       {/* Sidebar */}
@@ -539,6 +545,10 @@ export default function AcademyLessonViewerPage() {
                     const active = l.id === numericLessonId;
                     const done = completedLessonIds.includes(l.id);
                     const locked = !isEnrolled && !l.is_preview;
+                    const stripped = stripCourseSuffix(l.title ?? "", course.title ?? "");
+                    const prefixMatch = stripped.match(/^(M\d+-L?\d*)-?/i);
+                    const codePrefix = prefixMatch ? prefixMatch[1] : "";
+                    const readableTitle = prefixMatch ? stripped.slice(prefixMatch[0].length).trim() : stripped;
                     return (
                       <li key={l.id}>
                         <button
@@ -560,11 +570,19 @@ export default function AcademyLessonViewerPage() {
                           ) : (
                             <span className="text-muted-foreground">{lessonIcon(l.lesson_type)}</span>
                           )}
-                          <span className="truncate">{l.title}</span>
+                          <span className="truncate flex items-center gap-1.5">
+                            {codePrefix && (
+                              <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0 bg-muted px-1 rounded">
+                                {codePrefix}
+                              </span>
+                            )}
+                            <span className="truncate">{readableTitle || l.title}</span>
+                          </span>
                         </button>
                       </li>
                     );
                   })}
+
                 </ul>
               </div>
             ))}
