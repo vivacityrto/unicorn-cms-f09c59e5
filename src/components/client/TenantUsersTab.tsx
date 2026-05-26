@@ -60,6 +60,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { TenantInviteDialog } from './TenantInviteDialog';
+import { useRBAC } from '@/hooks/useRBAC';
 import {
   type RelationshipRole,
   RELATIONSHIP_ROLE_OPTIONS,
