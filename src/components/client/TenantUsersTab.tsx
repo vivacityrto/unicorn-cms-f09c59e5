@@ -141,6 +141,59 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
+  // Detect ghost users (rows in public.users with no auth.users row) so staff
+  // can offer one-click activation. Only Vivacity staff see the result.
+  useEffect(() => {
+    if (!canActivateGhosts || members.length === 0) {
+      setGhostUserIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.all(
+        members.map(async (m) => {
+          const { data, error } = await supabase.rpc('is_ghost_user', { p_user_uuid: m.user_id });
+          if (error) return null;
+          return data === true ? m.user_id : null;
+        }),
+      );
+      if (!cancelled) {
+        setGhostUserIds(new Set(results.filter((x): x is string => !!x)));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [members, canActivateGhosts]);
+
+  const handleActivateGhost = async (member: TenantMemberInfo) => {
+    if (!canActivateGhosts) return;
+    setActivatingUserId(member.user_id);
+    try {
+      const { data, error } = await supabase.functions.invoke('activate-ghost-user', {
+        body: { user_uuid: member.user_id, tenant_id: tenantId },
+      });
+      if (error) throw error;
+      if (!data?.ok) {
+        toast.error(data?.detail || 'Activation failed');
+        return;
+      }
+      setGhostUserIds((prev) => {
+        const n = new Set(prev);
+        n.delete(member.user_id);
+        return n;
+      });
+      if (data.email_sent) {
+        toast.success(`Account activated — welcome email sent to ${data.email}`);
+      } else {
+        toast.success(`Account activated for ${data.email} — welcome email could not be sent`);
+      }
+    } catch (err: any) {
+      console.error('activate-ghost-user failed', err);
+      toast.error(err?.message || 'Activation failed');
+    } finally {
+      setActivatingUserId(null);
+    }
+  };
+
   // Resolve effective relationship_role for a member, preferring the new
   // canonical column and falling back to legacy flags for unmigrated rows.
   const getMemberRelationshipRole = (m: TenantMemberInfo): RelationshipRole => {
