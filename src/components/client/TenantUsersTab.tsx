@@ -675,9 +675,28 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                         })()
                       )}
 
+                      {/* Ghost activation — staff only */}
+                      {canActivateGhosts && ghostUserIds.has(member.user_id) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={activatingUserId === member.user_id}
+                          onClick={(e) => { e.stopPropagation(); handleActivateGhost(member); }}
+                          title="Create the auth account and email a setup link"
+                        >
+                          {activatingUserId === member.user_id ? (
+                            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                          ) : (
+                            <KeyRound className="h-3.5 w-3.5 mr-1" />
+                          )}
+                          Activate account
+                        </Button>
+                      )}
+
                       <span className="text-xs text-muted-foreground min-w-20">
                         Added {formatDate(member.created_at)}
                       </span>
+
 
                       {/* Actions Menu */}
                       {canManageUsers && (
