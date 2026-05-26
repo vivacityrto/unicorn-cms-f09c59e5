@@ -499,6 +499,12 @@ export default function AcademyLessonViewerPage() {
     return null;
   }
 
+  function stripCourseSuffix(lessonTitle: string, courseTitle: string): string {
+    if (!courseTitle) return lessonTitle;
+    const escaped = courseTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return lessonTitle.replace(new RegExp(`[-\\s]+${escaped}$`, "i"), "").trim();
+  }
+
   return (
     <div className="flex gap-0 -mx-6 -mt-2">
       {/* Sidebar */}
