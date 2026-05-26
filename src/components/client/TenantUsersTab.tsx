@@ -48,6 +48,8 @@ import {
   Trash2,
   Pencil,
   ExternalLink,
+  KeyRound,
+  Loader2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -58,6 +60,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { TenantInviteDialog } from './TenantInviteDialog';
+import { useRBAC } from '@/hooks/useRBAC';
 import {
   type RelationshipRole,
   RELATIONSHIP_ROLE_OPTIONS,
@@ -109,6 +112,7 @@ interface TenantUsersTabProps {
 
 export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUsersTabProps) {
   const { profile, isSuperAdmin, hasTenantAdmin } = useAuth();
+  const { isVivacityTeam } = useRBAC();
   const navigate = useNavigate();
   const [members, setMembers] = useState<TenantMemberInfo[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
@@ -116,10 +120,14 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<TenantMemberInfo | null>(null);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const [ghostUserIds, setGhostUserIds] = useState<Set<string>>(new Set());
+  const [activatingUserId, setActivatingUserId] = useState<string | null>(null);
 
   // RBAC: Check permissions using helper functions
   const canManageUsers = isSuperAdmin() || hasTenantAdmin(tenantId);
   const canChangeRoles = isSuperAdmin() || hasTenantAdmin(tenantId);
+  // Only Vivacity staff can activate ghost accounts — never expose in client portal.
+  const canActivateGhosts = isSuperAdmin() || isVivacityTeam;
 
   // Edit drawer state
   const [editingMember, setEditingMember] = useState<TenantMemberInfo | null>(null);
@@ -132,6 +140,59 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     fetchPendingInvites();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
+
+  // Detect ghost users (rows in public.users with no auth.users row) so staff
+  // can offer one-click activation. Only Vivacity staff see the result.
+  useEffect(() => {
+    if (!canActivateGhosts || members.length === 0) {
+      setGhostUserIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.all(
+        members.map(async (m) => {
+          const { data, error } = await supabase.rpc('is_ghost_user', { p_user_uuid: m.user_id });
+          if (error) return null;
+          return data === true ? m.user_id : null;
+        }),
+      );
+      if (!cancelled) {
+        setGhostUserIds(new Set(results.filter((x): x is string => !!x)));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [members, canActivateGhosts]);
+
+  const handleActivateGhost = async (member: TenantMemberInfo) => {
+    if (!canActivateGhosts) return;
+    setActivatingUserId(member.user_id);
+    try {
+      const { data, error } = await supabase.functions.invoke('activate-ghost-user', {
+        body: { user_uuid: member.user_id, tenant_id: tenantId },
+      });
+      if (error) throw error;
+      if (!data?.ok) {
+        toast.error(data?.detail || 'Activation failed');
+        return;
+      }
+      setGhostUserIds((prev) => {
+        const n = new Set(prev);
+        n.delete(member.user_id);
+        return n;
+      });
+      if (data.email_sent) {
+        toast.success(`Account activated — welcome email sent to ${data.email}`);
+      } else {
+        toast.success(`Account activated for ${data.email} — welcome email could not be sent`);
+      }
+    } catch (err: any) {
+      console.error('activate-ghost-user failed', err);
+      toast.error(err?.message || 'Activation failed');
+    } finally {
+      setActivatingUserId(null);
+    }
+  };
 
   // Resolve effective relationship_role for a member, preferring the new
   // canonical column and falling back to legacy flags for unmigrated rows.
@@ -614,9 +675,28 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                         })()
                       )}
 
+                      {/* Ghost activation — staff only */}
+                      {canActivateGhosts && ghostUserIds.has(member.user_id) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={activatingUserId === member.user_id}
+                          onClick={(e) => { e.stopPropagation(); handleActivateGhost(member); }}
+                          title="Create the auth account and email a setup link"
+                        >
+                          {activatingUserId === member.user_id ? (
+                            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                          ) : (
+                            <KeyRound className="h-3.5 w-3.5 mr-1" />
+                          )}
+                          Activate account
+                        </Button>
+                      )}
+
                       <span className="text-xs text-muted-foreground min-w-20">
                         Added {formatDate(member.created_at)}
                       </span>
+
 
                       {/* Actions Menu */}
                       {canManageUsers && (

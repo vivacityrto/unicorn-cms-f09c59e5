@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.send-password-reset]
 verify_jwt = false
 
+[functions.activate-ghost-user]
+verify_jwt = false
+
 [functions.generate-document]
 verify_jwt = false
 
