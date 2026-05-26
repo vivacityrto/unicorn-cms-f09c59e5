@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { GraduationCap, ChevronRight } from "lucide-react";
 
 interface AcademyPageWrapperProps {
-  title: string;
-  subtitle: string;
-  icon: ReactNode;
+  title?: string;
+  subtitle?: string;
+  icon?: ReactNode;
   accentColour?: string;
   children: ReactNode;
 }
