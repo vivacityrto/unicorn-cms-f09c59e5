@@ -112,6 +112,7 @@ interface TenantUsersTabProps {
 
 export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUsersTabProps) {
   const { profile, isSuperAdmin, hasTenantAdmin } = useAuth();
+  const { isVivacityTeam } = useRBAC();
   const navigate = useNavigate();
   const [members, setMembers] = useState<TenantMemberInfo[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
@@ -119,10 +120,14 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [userToRemove, setUserToRemove] = useState<TenantMemberInfo | null>(null);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const [ghostUserIds, setGhostUserIds] = useState<Set<string>>(new Set());
+  const [activatingUserId, setActivatingUserId] = useState<string | null>(null);
 
   // RBAC: Check permissions using helper functions
   const canManageUsers = isSuperAdmin() || hasTenantAdmin(tenantId);
   const canChangeRoles = isSuperAdmin() || hasTenantAdmin(tenantId);
+  // Only Vivacity staff can activate ghost accounts — never expose in client portal.
+  const canActivateGhosts = isSuperAdmin() || isVivacityTeam;
 
   // Edit drawer state
   const [editingMember, setEditingMember] = useState<TenantMemberInfo | null>(null);
