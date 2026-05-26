@@ -43,6 +43,8 @@ const academyRouteTitles: Record<string, string> = {
 };
 
 function titleFromPath(pathname: string): string {
+  // Suppress raw lesson ID on lesson viewer routes — breadcrumb inside the page handles context
+  if (/^\/academy\/course\/[^/]+\/lesson\/[^/]+/.test(pathname)) return "";
   const fromLookup = academyRouteTitles[pathname];
   if (fromLookup) return fromLookup;
   const segments = pathname.split("/").filter(Boolean);

@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { GraduationCap, ChevronRight } from "lucide-react";
 
 interface AcademyPageWrapperProps {
-  title: string;
-  subtitle: string;
-  icon: ReactNode;
+  title?: string;
+  subtitle?: string;
+  icon?: ReactNode;
   accentColour?: string;
   children: ReactNode;
 }
@@ -29,7 +29,7 @@ export default function AcademyPageWrapper({
           <GraduationCap className="h-3.5 w-3.5" />
           Vivacity Academy
         </Link>
-        {title !== "Vivacity Academy" && (
+        {title && title !== "Vivacity Academy" && (
           <>
             <ChevronRight className="h-3.5 w-3.5" />
             <span className="font-medium" style={{ color: "#44235F" }}>
@@ -40,20 +40,22 @@ export default function AcademyPageWrapper({
       </nav>
 
       {/* Page header */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <span style={{ color: accentColour }}>{icon}</span>
-          <h1 className="text-3xl font-bold text-[var(--viv-purple)]">{title}</h1>
+      {title && (
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            {icon && <span style={{ color: accentColour }}>{icon}</span>}
+            <h1 className="text-3xl font-bold text-[var(--viv-purple)]">{title}</h1>
+          </div>
+          {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
+          {/* Accent bar */}
+          <div
+            className="h-[3px] w-full mt-3 rounded-full"
+            style={{
+              background: "linear-gradient(to right, #7130A0, #ed1878)",
+            }}
+          />
         </div>
-        <p className="text-muted-foreground">{subtitle}</p>
-        {/* Accent bar */}
-        <div
-          className="h-[3px] w-full mt-3 rounded-full"
-          style={{
-            background: "linear-gradient(to right, #7130A0, #ed1878)",
-          }}
-        />
-      </div>
+      )}
 
       {/* Page content */}
       {children}

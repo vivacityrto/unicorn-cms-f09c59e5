@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Target } from "lucide-react";
+
 import { AcademyLayout } from "@/components/layout/AcademyLayout";
 import AcademyPageWrapper from "@/components/academy/AcademyPageWrapper";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,11 +46,7 @@ export default function AcademyPdpPage() {
 
   return (
     <AcademyLayout>
-      <AcademyPageWrapper
-        title="My Professional Development Plan"
-        subtitle="Track your hours, goals, evidence, and reflections in one place."
-        icon={<Target className="h-7 w-7" />}
-      >
+      <AcademyPageWrapper>
         <div className="space-y-6">
           {initialLoading ? (
             <Skeleton className="h-48 w-full" />
