@@ -234,9 +234,15 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
     }
   }, [entry, open]);
 
+  const isParentDefined = entry?.work_type === 'parent_defined';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!entry) return;
+    if (isParentDefined) {
+      toast({ title: 'Entry is locked', description: 'Parent-allocated entries cannot be edited. Delete to unlock the package.', variant: 'destructive' });
+      return;
+    }
 
     const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
     if (totalMinutes <= 0) return;
