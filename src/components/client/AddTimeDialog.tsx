@@ -258,6 +258,52 @@ export function AddTimeDialog({
     }
   }, [open, defaultScopeTag, tenantId]);
 
+  // Fetch parent tenant (if this tenant is a child) — used by parent_defined work type
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data: rel } = await (supabase as any)
+        .from('tenant_relationships')
+        .select('parent_tenant_id')
+        .eq('child_tenant_id', tenantId)
+        .limit(1)
+        .maybeSingle();
+      const parentId = rel?.parent_tenant_id ? Number(rel.parent_tenant_id) : null;
+      if (!parentId) { setParentTenant(null); return; }
+      const { data: parent } = await (supabase as any)
+        .from('tenants')
+        .select('id, rto_id, rto_name, name')
+        .eq('id', parentId)
+        .maybeSingle();
+      if (parent) {
+        setParentTenant({
+          id: Number(parent.id),
+          rto_id: parent.rto_id ?? null,
+          rto_name: parent.rto_name ?? null,
+          name: parent.name ?? null,
+        });
+      } else {
+        setParentTenant(null);
+      }
+    })();
+  }, [open, tenantId]);
+
+  // When user selects "Parent Defined" work type, auto-fill from selected package + parent
+  useEffect(() => {
+    if (!isParentDefined || !selectedInstance) return;
+    if (selectedInstance.start_date) {
+      setDate(selectedInstance.start_date);
+    }
+    const mins = selectedInstance.total_minutes || 0;
+    setHours(String(Math.floor(mins / 60)));
+    setMinutes(String(mins % 60));
+    setIsBillable(false);
+    setWorkSubType('');
+    setNotes(buildParentDefinedNote(parentTenant));
+  }, [isParentDefined, selectedInstance, parentTenant]);
+
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
