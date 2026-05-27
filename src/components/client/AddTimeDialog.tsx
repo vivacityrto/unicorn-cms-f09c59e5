@@ -63,9 +63,11 @@ interface PackageInstance {
   id: number;
   package_id: number;
   package_name: string;
+  package_slug: string | null;
   is_kickstart: boolean;
   start_date: string | null;
   total_minutes: number;
+  included_minutes: number;
 }
 
 interface ParentTenantInfo {
@@ -76,6 +78,13 @@ interface ParentTenantInfo {
 }
 
 const PARENT_DEFINED_CODE = 'parent_defined';
+const KICKSTART_CODE = 'kickstart_tas';
+const KICKSTART_TAS_MINUTES = 420;        // 7h per TAS
+const KICKSTART_FLOOR_MINUTES = 1680;     // 28h consult floor
+const KICKSTART_CAP_BY_SLUG: Record<string, number> = {
+  '/package-m-sar': 1680, // 28h
+  '/package-m-dr': 3780,  // 63h
+};
 
 function buildParentDefinedNote(parent: ParentTenantInfo | null): string {
   const label = parent
@@ -83,6 +92,11 @@ function buildParentDefinedNote(parent: ParentTenantInfo | null): string {
     : 'Parent Organisation';
   return `Time entry is locked for Child packages. All time is administered/allocated/entered against parent: ${label}`;
 }
+
+function buildKickstartNote(tas: number): string {
+  return `KickStart TAS — ${tas} TAS (${tas * 7}h)`;
+}
+
 
 interface AddTimeDialogProps {
   open: boolean;
@@ -131,9 +145,27 @@ export function AddTimeDialog({
   const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
   const [savedTotalMinutes, setSavedTotalMinutes] = useState(0);
   const [parentTenant, setParentTenant] = useState<ParentTenantInfo | null>(null);
+  const [kickstartUsedMinutes, setKickstartUsedMinutes] = useState(0);
+  const [instanceTotalUsedMinutes, setInstanceTotalUsedMinutes] = useState(0);
+  const [kickstartTas, setKickstartTas] = useState(1);
+  const [kickstartNoteEdited, setKickstartNoteEdited] = useState(false);
 
   const isParentDefined = workType === PARENT_DEFINED_CODE;
+  const isKickstart = workType === KICKSTART_CODE;
   const selectedInstance = activeInstances.find(i => i.id === selectedInstanceId) || null;
+
+  const kickstartCap = selectedInstance?.package_slug
+    ? KICKSTART_CAP_BY_SLUG[selectedInstance.package_slug] ?? 0
+    : 0;
+  const kickstartCapRemaining = Math.max(0, kickstartCap - kickstartUsedMinutes);
+  const consultRoom = selectedInstance
+    ? Math.max(0, selectedInstance.included_minutes - KICKSTART_FLOOR_MINUTES - instanceTotalUsedMinutes)
+    : 0;
+  const maxKickstartTas = selectedInstance && kickstartCap > 0
+    ? Math.floor(Math.min(kickstartCapRemaining, consultRoom) / KICKSTART_TAS_MINUTES)
+    : 0;
+  const kickstartEligible = maxKickstartTas >= 1;
+
 
   // Fetch work types from dd_work_types lookup
   useEffect(() => {
@@ -227,7 +259,7 @@ export function AddTimeDialog({
         // Fetch package names separately (no FK relationship)
         const pkgIds = [...new Set(piData.map((pi) => Number(pi.package_id)).filter(Boolean))];
         const { data: pkgData, error: pkgErr } = pkgIds.length > 0
-          ? await supabase.from('packages').select('id, name, package_type').in('id', pkgIds)
+          ? await supabase.from('packages').select('id, name, slug, package_type').in('id', pkgIds)
           : { data: [], error: null };
 
         console.log('[AddTimeDialog] packages lookup', { pkgIds, pkgData, pkgErr });
@@ -237,13 +269,16 @@ export function AddTimeDialog({
           const pkg = pkgMap.get(Number(pi.package_id));
           const hoursMinutes = ((Number(pi.hours_included) || 0) + (Number(pi.hours_added) || 0)) * 60;
           const includedMinutes = Number(pi.included_minutes) || 0;
+          const total = Math.max(hoursMinutes, includedMinutes);
           return {
             id: pi.id,
             package_id: Number(pi.package_id),
             package_name: pkg?.name || `Package #${pi.id}`,
+            package_slug: pkg?.slug ?? null,
             is_kickstart: (pkg?.package_type || '').toLowerCase() === 'kickstart',
             start_date: pi.start_date ?? null,
-            total_minutes: Math.max(hoursMinutes, includedMinutes),
+            total_minutes: total,
+            included_minutes: total,
           };
         });
 
@@ -254,6 +289,7 @@ export function AddTimeDialog({
         } else {
           setSelectedInstanceId(null);
         }
+
       })();
     }
   }, [open, defaultScopeTag, tenantId]);
@@ -302,13 +338,55 @@ export function AddTimeDialog({
     setNotes(buildParentDefinedNote(parentTenant));
   }, [isParentDefined, selectedInstance, parentTenant]);
 
+  // Fetch existing usage (kickstart_tas + total) for the selected package instance
+  useEffect(() => {
+    if (!open || !selectedInstanceId) {
+      setKickstartUsedMinutes(0);
+      setInstanceTotalUsedMinutes(0);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from('time_entries')
+        .select('duration_minutes, work_type')
+        .eq('package_instance_id', selectedInstanceId);
+      const rows = (data || []) as Array<{ duration_minutes: number | null; work_type: string | null }>;
+      let total = 0;
+      let kick = 0;
+      for (const r of rows) {
+        const m = Number(r.duration_minutes) || 0;
+        total += m;
+        if (r.work_type === KICKSTART_CODE) kick += m;
+      }
+      setKickstartUsedMinutes(kick);
+      setInstanceTotalUsedMinutes(total);
+    })();
+  }, [open, selectedInstanceId]);
+
+  // Kickstart auto-fill: force billable=true and seed notes/duration when TAS changes
+  useEffect(() => {
+    if (!isKickstart) return;
+    setIsBillable(true);
+    setWorkSubType('');
+    const safeTas = Math.max(1, Math.min(kickstartTas, Math.max(1, maxKickstartTas)));
+    setHours(String(safeTas * 7));
+    setMinutes('0');
+    if (!kickstartNoteEdited) {
+      setNotes(buildKickstartNote(safeTas));
+    }
+  }, [isKickstart, kickstartTas, maxKickstartTas, kickstartNoteEdited]);
+
+
+
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
+    const totalMinutes = isKickstart
+      ? kickstartTas * KICKSTART_TAS_MINUTES
+      : (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
     if (totalMinutes <= 0) return;
 
     if (activeInstances.length > 1 && !selectedInstanceId) {
@@ -326,6 +404,18 @@ export function AddTimeDialog({
         return;
       }
     }
+
+    if (isKickstart) {
+      if (!selectedInstanceId) {
+        toast({ title: 'Package required', description: 'Select a M-SAR or M-DR membership package.', variant: 'destructive' });
+        return;
+      }
+      if (!kickstartEligible || kickstartTas < 1 || kickstartTas > maxKickstartTas) {
+        toast({ title: 'TAS limit exceeded', description: `Max ${maxKickstartTas} TAS available on this package.`, variant: 'destructive' });
+        return;
+      }
+    }
+
 
     setSaving(true);
     try {
@@ -410,6 +500,9 @@ export function AddTimeDialog({
     setNotifyClient(false);
     setSavedEntryId(null);
     setSavedTotalMinutes(0);
+    setKickstartTas(1);
+    setKickstartNoteEdited(false);
+
   };
 
   const handleNotePromptYes = () => {
@@ -501,49 +594,83 @@ export function AddTimeDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>Duration</Label>
-              <div className="flex items-center gap-1.5">
-                <Input
-                  type="number"
-                  min="0"
-                  max="24"
-                  value={hours}
-                  onChange={(e) => setHours(e.target.value)}
-                  className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
-                  readOnly={isParentDefined}
-                />
-                <span className="text-sm text-muted-foreground shrink-0">hrs</span>
-                <Input
-                  type="number"
-                  min="0"
-                  max="45"
-                  step="15"
-                  value={minutes}
-                  onChange={(e) => {
-                    const val = Math.round(parseInt(e.target.value) / 15) * 15;
-                    setMinutes(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
-                  }}
-                  className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
-                  readOnly={isParentDefined}
-                />
-                <span className="text-sm text-muted-foreground shrink-0">min</span>
-              </div>
+              <Label>{isKickstart ? 'TAS' : 'Duration'}</Label>
+              {isKickstart ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={Math.max(1, maxKickstartTas)}
+                    step={1}
+                    value={kickstartTas}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value);
+                      const safe = Math.max(1, Math.min(Math.max(1, maxKickstartTas), isNaN(v) ? 1 : v));
+                      setKickstartTas(safe);
+                    }}
+                    className="text-center w-20"
+                  />
+                  <span className="text-sm text-muted-foreground shrink-0">
+                    × 7h = <strong>{kickstartTas * 7}h 0m</strong>
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="24"
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value)}
+                    className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
+                    readOnly={isParentDefined}
+                  />
+                  <span className="text-sm text-muted-foreground shrink-0">hrs</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="45"
+                    step="15"
+                    value={minutes}
+                    onChange={(e) => {
+                      const val = Math.round(parseInt(e.target.value) / 15) * 15;
+                      setMinutes(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
+                    }}
+                    className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
+                    readOnly={isParentDefined}
+                  />
+                  <span className="text-sm text-muted-foreground shrink-0">min</span>
+                </div>
+              )}
             </div>
+
           </div>
 
           {/* Work Type — from dd_work_types lookup */}
           <div className="space-y-2">
             <Label htmlFor="work-type">Work Type</Label>
-            <Select value={workType} onValueChange={(v) => { setWorkType(v); setWorkSubType(''); }}>
+            <Select
+              value={workType}
+              onValueChange={(v) => {
+                setWorkType(v);
+                setWorkSubType('');
+                if (v === KICKSTART_CODE) {
+                  setKickstartTas(1);
+                  setKickstartNoteEdited(false);
+                }
+              }}
+            >
               <SelectTrigger id="work-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {workTypes.map((type) => (
-                  <SelectItem key={type.code} value={type.code}>
-                    {type.label}
-                  </SelectItem>
-                ))}
+                {workTypes
+                  .filter((type) => type.code !== KICKSTART_CODE || kickstartEligible)
+                  .map((type) => (
+                    <SelectItem key={type.code} value={type.code}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             {isParentDefined && !parentTenant && (
@@ -557,7 +684,14 @@ export function AddTimeDialog({
                 <strong>{parentTenant.rto_id ?? parentTenant.id} - {parentTenant.rto_name ?? parentTenant.name}</strong>
               </p>
             )}
+            {isKickstart && selectedInstance && (
+              <p className="text-xs text-muted-foreground">
+                1 TAS = 7h. Max <strong>{maxKickstartTas}</strong> TAS available on this package
+                (cap {Math.floor(kickstartCap / 60)}h, used {Math.floor(kickstartUsedMinutes / 60)}h; 28h consult floor enforced).
+              </p>
+            )}
           </div>
+
 
           {/* Work Sub Type — filtered by category based on work type */}
           {(() => {
@@ -616,7 +750,10 @@ export function AddTimeDialog({
               id="notes"
               placeholder="What did you work on?"
               value={isRecording && interimTranscript ? (notes ? notes + ' ' + interimTranscript : interimTranscript) : notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) => {
+                setNotes(e.target.value);
+                if (isKickstart) setKickstartNoteEdited(true);
+              }}
               rows={4}
             />
           </div>
@@ -628,9 +765,10 @@ export function AddTimeDialog({
               id="billable"
               checked={isBillable}
               onCheckedChange={setIsBillable}
-              disabled={isParentDefined}
+              disabled={isParentDefined || isKickstart}
             />
           </div>
+
 
           {/* Notify team member */}
           <div className="space-y-2">
@@ -671,9 +809,10 @@ export function AddTimeDialog({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving || (isParentDefined && !parentTenant)}>
+              <Button type="submit" disabled={saving || (isParentDefined && !parentTenant) || (isKickstart && !kickstartEligible)}>
                 {saving ? 'Saving...' : 'Add Time'}
               </Button>
+
             </div>
           </DialogFooter>
         </form>
