@@ -208,7 +208,7 @@ export function AddTimeDialog({
       (async () => {
         const { data: piData } = await supabase
           .from('package_instances')
-          .select('id, package_id')
+          .select('id, package_id, start_date, hours_included, hours_added, included_minutes')
           .eq('tenant_id', tenantId)
           .eq('is_complete', false)
           .eq('is_active', true)
@@ -231,11 +231,15 @@ export function AddTimeDialog({
 
         const instances: PackageInstance[] = piData.map((pi: any) => {
           const pkg = pkgMap.get(Number(pi.package_id));
+          const hoursMinutes = ((Number(pi.hours_included) || 0) + (Number(pi.hours_added) || 0)) * 60;
+          const includedMinutes = Number(pi.included_minutes) || 0;
           return {
             id: pi.id,
             package_id: Number(pi.package_id),
             package_name: pkg?.name || `Package #${pi.id}`,
             is_kickstart: (pkg?.package_type || '').toLowerCase() === 'kickstart',
+            start_date: pi.start_date ?? null,
+            total_minutes: Math.max(hoursMinutes, includedMinutes),
           };
         });
 
