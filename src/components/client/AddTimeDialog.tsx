@@ -553,7 +553,7 @@ export function AddTimeDialog({
             )}
             {isParentDefined && parentTenant && (
               <p className="text-xs text-muted-foreground">
-                Locks the package and allocates its full consult time against parent:{' '}
+                Shared package — locks this child's time entry. The parent organisation's time is not affected. Parent:{' '}
                 <strong>{parentTenant.rto_id ?? parentTenant.id} - {parentTenant.rto_name ?? parentTenant.name}</strong>
               </p>
             )}
