@@ -632,16 +632,28 @@ export function AddTimeDialog({
           {/* Work Type — from dd_work_types lookup */}
           <div className="space-y-2">
             <Label htmlFor="work-type">Work Type</Label>
-            <Select value={workType} onValueChange={(v) => { setWorkType(v); setWorkSubType(''); }}>
+            <Select
+              value={workType}
+              onValueChange={(v) => {
+                setWorkType(v);
+                setWorkSubType('');
+                if (v === KICKSTART_CODE) {
+                  setKickstartTas(1);
+                  setKickstartNoteEdited(false);
+                }
+              }}
+            >
               <SelectTrigger id="work-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {workTypes.map((type) => (
-                  <SelectItem key={type.code} value={type.code}>
-                    {type.label}
-                  </SelectItem>
-                ))}
+                {workTypes
+                  .filter((type) => type.code !== KICKSTART_CODE || kickstartEligible)
+                  .map((type) => (
+                    <SelectItem key={type.code} value={type.code}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             {isParentDefined && !parentTenant && (
@@ -655,7 +667,14 @@ export function AddTimeDialog({
                 <strong>{parentTenant.rto_id ?? parentTenant.id} - {parentTenant.rto_name ?? parentTenant.name}</strong>
               </p>
             )}
+            {isKickstart && selectedInstance && (
+              <p className="text-xs text-muted-foreground">
+                1 TAS = 7h. Max <strong>{maxKickstartTas}</strong> TAS available on this package
+                (cap {Math.floor(kickstartCap / 60)}h, used {Math.floor(kickstartUsedMinutes / 60)}h; 28h consult floor enforced).
+              </p>
+            )}
           </div>
+
 
           {/* Work Sub Type — filtered by category based on work type */}
           {(() => {
