@@ -318,7 +318,7 @@ export function AddTimeDialog({
 
     if (isParentDefined) {
       if (!selectedInstanceId) {
-        toast({ title: 'Package required', description: 'Select a package to allocate to the parent organisation.', variant: 'destructive' });
+        toast({ title: 'Package required', description: 'Select a package to mark as parent-shared.', variant: 'destructive' });
         return;
       }
       if (!parentTenant) {
