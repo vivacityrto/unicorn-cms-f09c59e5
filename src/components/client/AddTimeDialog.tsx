@@ -628,6 +628,7 @@ export function AddTimeDialog({
               id="billable"
               checked={isBillable}
               onCheckedChange={setIsBillable}
+              disabled={isParentDefined}
             />
           </div>
 
