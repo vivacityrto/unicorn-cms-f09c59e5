@@ -63,9 +63,11 @@ interface PackageInstance {
   id: number;
   package_id: number;
   package_name: string;
+  package_slug: string | null;
   is_kickstart: boolean;
   start_date: string | null;
   total_minutes: number;
+  included_minutes: number;
 }
 
 interface ParentTenantInfo {
@@ -76,6 +78,13 @@ interface ParentTenantInfo {
 }
 
 const PARENT_DEFINED_CODE = 'parent_defined';
+const KICKSTART_CODE = 'kickstart_tas';
+const KICKSTART_TAS_MINUTES = 420;        // 7h per TAS
+const KICKSTART_FLOOR_MINUTES = 1680;     // 28h consult floor
+const KICKSTART_CAP_BY_SLUG: Record<string, number> = {
+  '/package-m-sar': 1680, // 28h
+  '/package-m-dr': 3780,  // 63h
+};
 
 function buildParentDefinedNote(parent: ParentTenantInfo | null): string {
   const label = parent
@@ -83,6 +92,11 @@ function buildParentDefinedNote(parent: ParentTenantInfo | null): string {
     : 'Parent Organisation';
   return `Time entry is locked for Child packages. All time is administered/allocated/entered against parent: ${label}`;
 }
+
+function buildKickstartNote(tas: number): string {
+  return `KickStart TAS — ${tas} TAS (${tas * 7}h)`;
+}
+
 
 interface AddTimeDialogProps {
   open: boolean;
