@@ -316,6 +316,17 @@ export function AddTimeDialog({
       return;
     }
 
+    if (isParentDefined) {
+      if (!selectedInstanceId) {
+        toast({ title: 'Package required', description: 'Select a package to allocate to the parent organisation.', variant: 'destructive' });
+        return;
+      }
+      if (!parentTenant) {
+        toast({ title: 'No parent organisation', description: 'This tenant has no parent relationship configured.', variant: 'destructive' });
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       // Insert directly into time_entries — allocation happens via DB trigger
