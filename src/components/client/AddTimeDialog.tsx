@@ -130,6 +130,10 @@ export function AddTimeDialog({
   const [showNotePrompt, setShowNotePrompt] = useState(false);
   const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
   const [savedTotalMinutes, setSavedTotalMinutes] = useState(0);
+  const [parentTenant, setParentTenant] = useState<ParentTenantInfo | null>(null);
+
+  const isParentDefined = workType === PARENT_DEFINED_CODE;
+  const selectedInstance = activeInstances.find(i => i.id === selectedInstanceId) || null;
 
   // Fetch work types from dd_work_types lookup
   useEffect(() => {
