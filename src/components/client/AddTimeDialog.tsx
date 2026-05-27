@@ -733,7 +733,10 @@ export function AddTimeDialog({
               id="notes"
               placeholder="What did you work on?"
               value={isRecording && interimTranscript ? (notes ? notes + ' ' + interimTranscript : interimTranscript) : notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) => {
+                setNotes(e.target.value);
+                if (isKickstart) setKickstartNoteEdited(true);
+              }}
               rows={4}
             />
           </div>
@@ -745,9 +748,10 @@ export function AddTimeDialog({
               id="billable"
               checked={isBillable}
               onCheckedChange={setIsBillable}
-              disabled={isParentDefined}
+              disabled={isParentDefined || isKickstart}
             />
           </div>
+
 
           {/* Notify team member */}
           <div className="space-y-2">
