@@ -333,6 +333,12 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
               This entry locks the package as parent-shared. The parent organisation's time is not affected — delete this entry to allow normal time entry on the child.
             </div>
           )}
+          {isKickstartTas && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              KickStart TAS block — fixed at 7h × TAS. Delete this entry to adjust.
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Person</Label>
             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
