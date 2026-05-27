@@ -64,6 +64,24 @@ interface PackageInstance {
   package_id: number;
   package_name: string;
   is_kickstart: boolean;
+  start_date: string | null;
+  total_minutes: number;
+}
+
+interface ParentTenantInfo {
+  id: number;
+  rto_id: string | null;
+  rto_name: string | null;
+  name: string | null;
+}
+
+const PARENT_DEFINED_CODE = 'parent_defined';
+
+function buildParentDefinedNote(parent: ParentTenantInfo | null): string {
+  const label = parent
+    ? `${parent.rto_id ?? parent.id} - ${parent.rto_name ?? parent.name ?? 'Parent Organisation'}`
+    : 'Parent Organisation';
+  return `Time entry is locked for Child packages. All time is administered/allocated/entered against parent: ${label}`;
 }
 
 interface AddTimeDialogProps {
@@ -112,6 +130,10 @@ export function AddTimeDialog({
   const [showNotePrompt, setShowNotePrompt] = useState(false);
   const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
   const [savedTotalMinutes, setSavedTotalMinutes] = useState(0);
+  const [parentTenant, setParentTenant] = useState<ParentTenantInfo | null>(null);
+
+  const isParentDefined = workType === PARENT_DEFINED_CODE;
+  const selectedInstance = activeInstances.find(i => i.id === selectedInstanceId) || null;
 
   // Fetch work types from dd_work_types lookup
   useEffect(() => {
@@ -190,7 +212,7 @@ export function AddTimeDialog({
       (async () => {
         const { data: piData } = await supabase
           .from('package_instances')
-          .select('id, package_id')
+          .select('id, package_id, start_date, hours_included, hours_added, included_minutes')
           .eq('tenant_id', tenantId)
           .eq('is_complete', false)
           .eq('is_active', true)
@@ -213,11 +235,15 @@ export function AddTimeDialog({
 
         const instances: PackageInstance[] = piData.map((pi: any) => {
           const pkg = pkgMap.get(Number(pi.package_id));
+          const hoursMinutes = ((Number(pi.hours_included) || 0) + (Number(pi.hours_added) || 0)) * 60;
+          const includedMinutes = Number(pi.included_minutes) || 0;
           return {
             id: pi.id,
             package_id: Number(pi.package_id),
             package_name: pkg?.name || `Package #${pi.id}`,
             is_kickstart: (pkg?.package_type || '').toLowerCase() === 'kickstart',
+            start_date: pi.start_date ?? null,
+            total_minutes: Math.max(hoursMinutes, includedMinutes),
           };
         });
 
@@ -232,6 +258,52 @@ export function AddTimeDialog({
     }
   }, [open, defaultScopeTag, tenantId]);
 
+  // Fetch parent tenant (if this tenant is a child) — used by parent_defined work type
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data: rel } = await (supabase as any)
+        .from('tenant_relationships')
+        .select('parent_tenant_id')
+        .eq('child_tenant_id', tenantId)
+        .limit(1)
+        .maybeSingle();
+      const parentId = rel?.parent_tenant_id ? Number(rel.parent_tenant_id) : null;
+      if (!parentId) { setParentTenant(null); return; }
+      const { data: parent } = await (supabase as any)
+        .from('tenants')
+        .select('id, rto_id, rto_name, name')
+        .eq('id', parentId)
+        .maybeSingle();
+      if (parent) {
+        setParentTenant({
+          id: Number(parent.id),
+          rto_id: parent.rto_id ?? null,
+          rto_name: parent.rto_name ?? null,
+          name: parent.name ?? null,
+        });
+      } else {
+        setParentTenant(null);
+      }
+    })();
+  }, [open, tenantId]);
+
+  // When user selects "Parent Defined" work type, auto-fill from selected package + parent
+  useEffect(() => {
+    if (!isParentDefined || !selectedInstance) return;
+    if (selectedInstance.start_date) {
+      setDate(selectedInstance.start_date);
+    }
+    const mins = selectedInstance.total_minutes || 0;
+    setHours(String(Math.floor(mins / 60)));
+    setMinutes(String(mins % 60));
+    setIsBillable(false);
+    setWorkSubType('');
+    setNotes(buildParentDefinedNote(parentTenant));
+  }, [isParentDefined, selectedInstance, parentTenant]);
+
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -242,6 +314,17 @@ export function AddTimeDialog({
     if (activeInstances.length > 1 && !selectedInstanceId) {
       toast({ title: 'Package required', description: 'Please select a package before adding time.', variant: 'destructive' });
       return;
+    }
+
+    if (isParentDefined) {
+      if (!selectedInstanceId) {
+        toast({ title: 'Package required', description: 'Select a package to allocate to the parent organisation.', variant: 'destructive' });
+        return;
+      }
+      if (!parentTenant) {
+        toast({ title: 'No parent organisation', description: 'This tenant has no parent relationship configured.', variant: 'destructive' });
+        return;
+      }
     }
 
     setSaving(true);
@@ -413,6 +496,8 @@ export function AddTimeDialog({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                readOnly={isParentDefined}
+                className={isParentDefined ? 'bg-muted' : undefined}
               />
             </div>
             <div className="space-y-2">
@@ -424,7 +509,8 @@ export function AddTimeDialog({
                   max="24"
                   value={hours}
                   onChange={(e) => setHours(e.target.value)}
-                  className="text-center w-16"
+                  className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
+                  readOnly={isParentDefined}
                 />
                 <span className="text-sm text-muted-foreground shrink-0">hrs</span>
                 <Input
@@ -437,7 +523,8 @@ export function AddTimeDialog({
                     const val = Math.round(parseInt(e.target.value) / 15) * 15;
                     setMinutes(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
                   }}
-                  className="text-center w-16"
+                  className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
+                  readOnly={isParentDefined}
                 />
                 <span className="text-sm text-muted-foreground shrink-0">min</span>
               </div>
@@ -459,6 +546,17 @@ export function AddTimeDialog({
                 ))}
               </SelectContent>
             </Select>
+            {isParentDefined && !parentTenant && (
+              <p className="text-xs text-destructive">
+                This tenant has no parent organisation configured. Set a parent relationship before using Parent Defined.
+              </p>
+            )}
+            {isParentDefined && parentTenant && (
+              <p className="text-xs text-muted-foreground">
+                Locks the package and allocates its full consult time against parent:{' '}
+                <strong>{parentTenant.rto_id ?? parentTenant.id} - {parentTenant.rto_name ?? parentTenant.name}</strong>
+              </p>
+            )}
           </div>
 
           {/* Work Sub Type — filtered by category based on work type */}
@@ -530,6 +628,7 @@ export function AddTimeDialog({
               id="billable"
               checked={isBillable}
               onCheckedChange={setIsBillable}
+              disabled={isParentDefined}
             />
           </div>
 
@@ -572,7 +671,7 @@ export function AddTimeDialog({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || (isParentDefined && !parentTenant)}>
                 {saving ? 'Saving...' : 'Add Time'}
               </Button>
             </div>
