@@ -671,7 +671,7 @@ export function AddTimeDialog({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || (isParentDefined && !parentTenant)}>
                 {saving ? 'Saving...' : 'Add Time'}
               </Button>
             </div>
