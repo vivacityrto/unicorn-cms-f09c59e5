@@ -486,6 +486,9 @@ export function AddTimeDialog({
     setNotifyClient(false);
     setSavedEntryId(null);
     setSavedTotalMinutes(0);
+    setKickstartTas(1);
+    setKickstartNoteEdited(false);
+
   };
 
   const handleNotePromptYes = () => {
