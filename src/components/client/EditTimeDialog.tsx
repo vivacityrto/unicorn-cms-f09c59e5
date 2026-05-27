@@ -323,8 +323,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
         <form onSubmit={handleSubmit} className="space-y-4">
           {isParentDefined && (
             <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              This entry locks the package — all consult time is allocated against the parent organisation.
-              Delete this entry to unlock the package for normal time entry.
+              This entry locks the package as parent-shared. The parent organisation's time is not affected — delete this entry to allow normal time entry on the child.
             </div>
           )}
           <div className="space-y-2">
