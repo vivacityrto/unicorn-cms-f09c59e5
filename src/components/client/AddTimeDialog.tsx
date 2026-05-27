@@ -338,6 +338,46 @@ export function AddTimeDialog({
     setNotes(buildParentDefinedNote(parentTenant));
   }, [isParentDefined, selectedInstance, parentTenant]);
 
+  // Fetch existing usage (kickstart_tas + total) for the selected package instance
+  useEffect(() => {
+    if (!open || !selectedInstanceId) {
+      setKickstartUsedMinutes(0);
+      setInstanceTotalUsedMinutes(0);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from('time_entries')
+        .select('duration_minutes, work_type')
+        .eq('package_instance_id', selectedInstanceId);
+      const rows = (data || []) as Array<{ duration_minutes: number | null; work_type: string | null }>;
+      let total = 0;
+      let kick = 0;
+      for (const r of rows) {
+        const m = Number(r.duration_minutes) || 0;
+        total += m;
+        if (r.work_type === KICKSTART_CODE) kick += m;
+      }
+      setKickstartUsedMinutes(kick);
+      setInstanceTotalUsedMinutes(total);
+    })();
+  }, [open, selectedInstanceId]);
+
+  // Kickstart auto-fill: force billable=true and seed notes/duration when TAS changes
+  useEffect(() => {
+    if (!isKickstart) return;
+    setIsBillable(true);
+    setWorkSubType('');
+    const safeTas = Math.max(1, Math.min(kickstartTas, Math.max(1, maxKickstartTas)));
+    setHours(String(safeTas * 7));
+    setMinutes('0');
+    if (!kickstartNoteEdited) {
+      setNotes(buildKickstartNote(safeTas));
+    }
+  }, [isKickstart, kickstartTas, maxKickstartTas, kickstartNoteEdited]);
+
+
+
 
 
   const handleSubmit = async (e: React.FormEvent) => {
