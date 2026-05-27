@@ -384,7 +384,9 @@ export function AddTimeDialog({
     e.preventDefault();
     if (!user) return;
 
-    const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
+    const totalMinutes = isKickstart
+      ? kickstartTas * KICKSTART_TAS_MINUTES
+      : (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
     if (totalMinutes <= 0) return;
 
     if (activeInstances.length > 1 && !selectedInstanceId) {
@@ -402,6 +404,18 @@ export function AddTimeDialog({
         return;
       }
     }
+
+    if (isKickstart) {
+      if (!selectedInstanceId) {
+        toast({ title: 'Package required', description: 'Select a M-SAR or M-DR membership package.', variant: 'destructive' });
+        return;
+      }
+      if (!kickstartEligible || kickstartTas < 1 || kickstartTas > maxKickstartTas) {
+        toast({ title: 'TAS limit exceeded', description: `Max ${maxKickstartTas} TAS available on this package.`, variant: 'destructive' });
+        return;
+      }
+    }
+
 
     setSaving(true);
     try {
