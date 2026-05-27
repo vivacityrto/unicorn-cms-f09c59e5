@@ -792,9 +792,10 @@ export function AddTimeDialog({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={saving || (isParentDefined && !parentTenant)}>
+              <Button type="submit" disabled={saving || (isParentDefined && !parentTenant) || (isKickstart && !kickstartEligible)}>
                 {saving ? 'Saving...' : 'Add Time'}
               </Button>
+
             </div>
           </DialogFooter>
         </form>
