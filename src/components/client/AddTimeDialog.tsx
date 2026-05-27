@@ -145,9 +145,27 @@ export function AddTimeDialog({
   const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
   const [savedTotalMinutes, setSavedTotalMinutes] = useState(0);
   const [parentTenant, setParentTenant] = useState<ParentTenantInfo | null>(null);
+  const [kickstartUsedMinutes, setKickstartUsedMinutes] = useState(0);
+  const [instanceTotalUsedMinutes, setInstanceTotalUsedMinutes] = useState(0);
+  const [kickstartTas, setKickstartTas] = useState(1);
+  const [kickstartNoteEdited, setKickstartNoteEdited] = useState(false);
 
   const isParentDefined = workType === PARENT_DEFINED_CODE;
+  const isKickstart = workType === KICKSTART_CODE;
   const selectedInstance = activeInstances.find(i => i.id === selectedInstanceId) || null;
+
+  const kickstartCap = selectedInstance?.package_slug
+    ? KICKSTART_CAP_BY_SLUG[selectedInstance.package_slug] ?? 0
+    : 0;
+  const kickstartCapRemaining = Math.max(0, kickstartCap - kickstartUsedMinutes);
+  const consultRoom = selectedInstance
+    ? Math.max(0, selectedInstance.included_minutes - KICKSTART_FLOOR_MINUTES - instanceTotalUsedMinutes)
+    : 0;
+  const maxKickstartTas = selectedInstance && kickstartCap > 0
+    ? Math.floor(Math.min(kickstartCapRemaining, consultRoom) / KICKSTART_TAS_MINUTES)
+    : 0;
+  const kickstartEligible = maxKickstartTas >= 1;
+
 
   // Fetch work types from dd_work_types lookup
   useEffect(() => {
