@@ -1,45 +1,32 @@
 ## Goal
-Make the lesson list sidebar on `AcademyLessonViewerPage` easier to scan by removing redundant course name suffixes and visually separating lesson code prefixes from human-readable titles.
 
-## File
-`src/pages/client/AcademyLessonViewerPage.tsx`
+Wire up the `parent_defined` work type so selecting it on `AddTimeDialog` consumes the entire package’s consult budget in one entry, auto-prefilling date (package start date), duration (full package consult minutes), and notes referencing the parent organisation. After the entry is created, the package is locked against further time entries via a DB trigger.
 
-## Changes
+## Scope
 
-### 1. Strip course name suffix from lesson titles (sidebar only)
+- `AddTimeDialog.tsx` — parent branch, auto-fill logic, parent lookup.
+- `EditTimeDialog.tsx` — readonly view for parent_defined entries.
+- One DB migration: trigger on `time_entries`.
+- One data fix: `dd_work_types` typo.
 
-Add a local helper function just before the JSX `return`:
+No changes to hooks, stats, or package detail pages.
 
+## Corrected notes copy
+
+Auto-prefilled notes:
 ```
-function stripCourseSuffix(lessonTitle: string, courseTitle: string): string {
-  const escaped = courseTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return lessonTitle.replace(new RegExp(`[-\\s]+${escaped}$`, "i"), "").trim();
-}
-```
-
-Use it when rendering each lesson title in the sidebar lesson list. Only affects the sidebar; lesson titles elsewhere (breadcrumb, page heading, course overview) remain unchanged.
-
-### 2. Split code prefix from human-readable title
-
-After stripping the course suffix, extract a code prefix matching `/^(M\d+-L?\d*)-?/i` and render it as a small mono badge next to the remaining readable title.
-
-```
-<span className="truncate flex items-center gap-1.5">
-  {codePrefix && (
-    <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0 bg-muted px-1 rounded">
-      {codePrefix}
-    </span>
-  )}
-  <span className="truncate">{readableTitle || l.title}</span>
-</span>
+Time entry is locked for Child packages. All time is administered/allocated/entered against parent: {rto_id} - {rto_name}
 ```
 
-If no code prefix is found, fall back to the stripped title as-is.
+## Lock mechanism
 
-## Out of scope
-- Module section headers
-- Progress bar
-- Lock/check icons
-- Active state styling
-- Navigation behaviour
-- Any other part of the lesson viewer page
+New `BEFORE INSERT OR UPDATE` trigger on `time_entries`:
+- If `NEW.package_instance_id IS NOT NULL` AND a different row already exists for that `package_instance_id` with `work_type='parent_defined'`, raise:
+  `EXCEPTION 'Package is allocated to parent organisation; no further time entries allowed.'`
+
+## Files
+
+- `src/components/client/AddTimeDialog.tsx`
+- `src/components/client/EditTimeDialog.tsx`
+- Migration: `time_entries` trigger
+- Data update: `dd_work_types` typo fix
