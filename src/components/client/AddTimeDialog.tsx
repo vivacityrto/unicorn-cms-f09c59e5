@@ -496,6 +496,8 @@ export function AddTimeDialog({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                readOnly={isParentDefined}
+                className={isParentDefined ? 'bg-muted' : undefined}
               />
             </div>
             <div className="space-y-2">
@@ -507,7 +509,8 @@ export function AddTimeDialog({
                   max="24"
                   value={hours}
                   onChange={(e) => setHours(e.target.value)}
-                  className="text-center w-16"
+                  className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
+                  readOnly={isParentDefined}
                 />
                 <span className="text-sm text-muted-foreground shrink-0">hrs</span>
                 <Input
@@ -520,7 +523,8 @@ export function AddTimeDialog({
                     const val = Math.round(parseInt(e.target.value) / 15) * 15;
                     setMinutes(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
                   }}
-                  className="text-center w-16"
+                  className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
+                  readOnly={isParentDefined}
                 />
                 <span className="text-sm text-muted-foreground shrink-0">min</span>
               </div>
@@ -542,6 +546,17 @@ export function AddTimeDialog({
                 ))}
               </SelectContent>
             </Select>
+            {isParentDefined && !parentTenant && (
+              <p className="text-xs text-destructive">
+                This tenant has no parent organisation configured. Set a parent relationship before using Parent Defined.
+              </p>
+            )}
+            {isParentDefined && parentTenant && (
+              <p className="text-xs text-muted-foreground">
+                Locks the package and allocates its full consult time against parent:{' '}
+                <strong>{parentTenant.rto_id ?? parentTenant.id} - {parentTenant.rto_name ?? parentTenant.name}</strong>
+              </p>
+            )}
           </div>
 
           {/* Work Sub Type — filtered by category based on work type */}
