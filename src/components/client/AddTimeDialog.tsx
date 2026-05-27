@@ -577,34 +577,56 @@ export function AddTimeDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label>Duration</Label>
-              <div className="flex items-center gap-1.5">
-                <Input
-                  type="number"
-                  min="0"
-                  max="24"
-                  value={hours}
-                  onChange={(e) => setHours(e.target.value)}
-                  className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
-                  readOnly={isParentDefined}
-                />
-                <span className="text-sm text-muted-foreground shrink-0">hrs</span>
-                <Input
-                  type="number"
-                  min="0"
-                  max="45"
-                  step="15"
-                  value={minutes}
-                  onChange={(e) => {
-                    const val = Math.round(parseInt(e.target.value) / 15) * 15;
-                    setMinutes(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
-                  }}
-                  className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
-                  readOnly={isParentDefined}
-                />
-                <span className="text-sm text-muted-foreground shrink-0">min</span>
-              </div>
+              <Label>{isKickstart ? 'TAS' : 'Duration'}</Label>
+              {isKickstart ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={Math.max(1, maxKickstartTas)}
+                    step={1}
+                    value={kickstartTas}
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value);
+                      const safe = Math.max(1, Math.min(Math.max(1, maxKickstartTas), isNaN(v) ? 1 : v));
+                      setKickstartTas(safe);
+                    }}
+                    className="text-center w-20"
+                  />
+                  <span className="text-sm text-muted-foreground shrink-0">
+                    × 7h = <strong>{kickstartTas * 7}h 0m</strong>
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="24"
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value)}
+                    className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
+                    readOnly={isParentDefined}
+                  />
+                  <span className="text-sm text-muted-foreground shrink-0">hrs</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="45"
+                    step="15"
+                    value={minutes}
+                    onChange={(e) => {
+                      const val = Math.round(parseInt(e.target.value) / 15) * 15;
+                      setMinutes(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
+                    }}
+                    className={`text-center w-16 ${isParentDefined ? 'bg-muted' : ''}`}
+                    readOnly={isParentDefined}
+                  />
+                  <span className="text-sm text-muted-foreground shrink-0">min</span>
+                </div>
+              )}
             </div>
+
           </div>
 
           {/* Work Type — from dd_work_types lookup */}
