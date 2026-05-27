@@ -235,6 +235,8 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   }, [entry, open]);
 
   const isParentDefined = entry?.work_type === 'parent_defined';
+  const isKickstartTas = entry?.work_type === 'kickstart_tas';
+  const isLocked = isParentDefined || isKickstartTas;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,6 +245,11 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
       toast({ title: 'Entry is locked', description: 'Parent-allocated entries cannot be edited. Delete to unlock the package.', variant: 'destructive' });
       return;
     }
+    if (isKickstartTas) {
+      toast({ title: 'Entry is locked', description: 'KickStart TAS entries are fixed at 7h × TAS. Delete this entry to adjust.', variant: 'destructive' });
+      return;
+    }
+
 
     const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
     if (totalMinutes <= 0) return;
