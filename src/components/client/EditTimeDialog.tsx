@@ -562,8 +562,8 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
+            <Button type="submit" disabled={saving || isParentDefined}>
+              {saving ? 'Saving...' : isParentDefined ? 'Locked' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </form>
