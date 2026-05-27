@@ -64,6 +64,24 @@ interface PackageInstance {
   package_id: number;
   package_name: string;
   is_kickstart: boolean;
+  start_date: string | null;
+  total_minutes: number;
+}
+
+interface ParentTenantInfo {
+  id: number;
+  rto_id: string | null;
+  rto_name: string | null;
+  name: string | null;
+}
+
+const PARENT_DEFINED_CODE = 'parent_defined';
+
+function buildParentDefinedNote(parent: ParentTenantInfo | null): string {
+  const label = parent
+    ? `${parent.rto_id ?? parent.id} - ${parent.rto_name ?? parent.name ?? 'Parent Organisation'}`
+    : 'Parent Organisation';
+  return `Time entry is locked for Child packages. All time is administered/allocated/entered against parent: ${label}`;
 }
 
 interface AddTimeDialogProps {
