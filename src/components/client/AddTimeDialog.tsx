@@ -241,7 +241,7 @@ export function AddTimeDialog({
         // Fetch package names separately (no FK relationship)
         const pkgIds = [...new Set(piData.map((pi) => Number(pi.package_id)).filter(Boolean))];
         const { data: pkgData, error: pkgErr } = pkgIds.length > 0
-          ? await supabase.from('packages').select('id, name, package_type').in('id', pkgIds)
+          ? await supabase.from('packages').select('id, name, slug, package_type').in('id', pkgIds)
           : { data: [], error: null };
 
         console.log('[AddTimeDialog] packages lookup', { pkgIds, pkgData, pkgErr });
@@ -251,13 +251,16 @@ export function AddTimeDialog({
           const pkg = pkgMap.get(Number(pi.package_id));
           const hoursMinutes = ((Number(pi.hours_included) || 0) + (Number(pi.hours_added) || 0)) * 60;
           const includedMinutes = Number(pi.included_minutes) || 0;
+          const total = Math.max(hoursMinutes, includedMinutes);
           return {
             id: pi.id,
             package_id: Number(pi.package_id),
             package_name: pkg?.name || `Package #${pi.id}`,
+            package_slug: pkg?.slug ?? null,
             is_kickstart: (pkg?.package_type || '').toLowerCase() === 'kickstart',
             start_date: pi.start_date ?? null,
-            total_minutes: Math.max(hoursMinutes, includedMinutes),
+            total_minutes: total,
+            included_minutes: total,
           };
         });
 
@@ -268,6 +271,7 @@ export function AddTimeDialog({
         } else {
           setSelectedInstanceId(null);
         }
+
       })();
     }
   }, [open, defaultScopeTag, tenantId]);
