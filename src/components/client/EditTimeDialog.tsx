@@ -321,7 +321,12 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Person selector */}
+          {isParentDefined && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              This entry locks the package — all consult time is allocated against the parent organisation.
+              Delete this entry to unlock the package for normal time entry.
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Person</Label>
             <Select value={selectedUserId} onValueChange={setSelectedUserId}>
