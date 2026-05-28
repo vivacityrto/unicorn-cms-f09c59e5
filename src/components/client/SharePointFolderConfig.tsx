@@ -999,6 +999,7 @@ function SharedFolderSection({
         .update({
           shared_folder_item_id: null,
           shared_folder_name: null,
+          shared_folder_url: null,
           updated_at: new Date().toISOString(),
         } as any)
         .eq('id', settings.id);
