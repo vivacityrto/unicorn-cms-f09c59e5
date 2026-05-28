@@ -172,6 +172,7 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
     isLoading,
     error,
     downloading,
+    currentFolderId,
     navigateToFolder,
     navigateBack,
     navigateToRoot,
