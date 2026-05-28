@@ -72,24 +72,13 @@ export function ClientGovernanceDocumentsPage() {
   const debouncedSearch = useDebounced(search, 250);
 
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["client-governance-documents-v3", activeTenantId],
+    queryKey: ["client-governance-documents-v4", activeTenantId],
     enabled: !!activeTenantId && canAccess,
     queryFn: async (): Promise<GovernanceDocRow[]> => {
       const [diRes, catRes, fwRes] = await Promise.all([
         (supabase as any)
           .from("document_instances")
-          .select(`
-            id,
-            document_title,
-            generationdate,
-            generated_file_url,
-            stageinstance_id,
-            source_document:documents!document_instances_document_id_fkey (
-              description,
-              category,
-              framework_type
-            )
-          `)
+          .select("id, document_title, generationdate, generated_file_url, stageinstance_id, document_id")
           .eq("tenant_id", activeTenantId)
           .eq("status", "generated"),
         supabase.from("dd_document_categories").select("value, label, sort_order"),
@@ -98,8 +87,30 @@ export function ClientGovernanceDocumentsPage() {
 
       if (diRes.error) throw diRes.error;
 
-      // Resolve package names — no FK constraints exist on this chain,
-      // so use flat queries and join manually in JS.
+      // Flat query for document metadata (PostgREST join unreliable without full FK chain)
+      const documentIds = [...new Set(
+        (diRes.data || []).map((r: any) => r.document_id).filter(Boolean)
+      )] as number[];
+
+      const docById = new Map<number, { title: string; description: string | null; category: string | null; framework_type: string | null }>();
+
+      if (documentIds.length > 0) {
+        const { data: docRows } = await (supabase as any)
+          .from("documents")
+          .select("id, title, description, category, framework_type")
+          .in("id", documentIds);
+
+        (docRows || []).forEach((d: any) => {
+          docById.set(d.id, {
+            title: d.title,
+            description: d.description ?? null,
+            category: d.category ?? null,
+            framework_type: d.framework_type ?? null,
+          });
+        });
+      }
+
+      // Flat query for package names via stageinstance_id chain
       const stageIds = [...new Set(
         (diRes.data || []).map((r: any) => r.stageinstance_id).filter(Boolean)
       )] as number[];
@@ -156,21 +167,20 @@ export function ClientGovernanceDocumentsPage() {
       (fwRes.data || []).forEach((f: any) => fwMap.set(f.value, f.label));
 
       const mapped: GovernanceDocRow[] = (diRes.data || []).map((r: any) => {
-        const cat = r.source_document?.category
-          ? catMap.get(r.source_document.category)
-          : undefined;
-        const fwLabel = r.source_document?.framework_type
-          ? fwMap.get(r.source_document.framework_type) ?? r.source_document.framework_type
+        const doc = docById.get(r.document_id);
+        const cat = doc?.category ? catMap.get(doc.category) : undefined;
+        const fwLabel = doc?.framework_type
+          ? fwMap.get(doc.framework_type) ?? doc.framework_type
           : null;
         return {
           id: String(r.id),
           generated_at: r.generationdate,
           file_path: r.generated_file_url ?? null,
-          file_name: r.document_title ?? null,
-          title: r.document_title ?? null,
-          description: r.source_document?.description ?? null,
-          category: r.source_document?.category ?? null,
-          framework_type: r.source_document?.framework_type ?? null,
+          file_name: r.document_title ?? doc?.title ?? null,
+          title: r.document_title ?? doc?.title ?? null,
+          description: doc?.description ?? null,
+          category: doc?.category ?? null,
+          framework_type: doc?.framework_type ?? null,
           category_label: cat?.label ?? null,
           category_sort: cat?.sort_order ?? null,
           framework_label: fwLabel,
