@@ -91,8 +91,8 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const [toggling, setToggling] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [browsingSharedFolder, setBrowsingSharedFolder] = useState(false);
-  const [sharedFolderBrowseItems, setSharedFolderBrowseItems] = useState<Array<{ id: string; name: string; is_folder: boolean }>>([]);
-  const [sharedFolderBrowseStack, setSharedFolderBrowseStack] = useState<Array<{ id: string; name: string }>>([]);
+  const [sharedFolderBrowseItems, setSharedFolderBrowseItems] = useState<Array<{ id: string; name: string; is_folder: boolean; web_url: string | null }>>([]);
+  const [sharedFolderBrowseStack, setSharedFolderBrowseStack] = useState<Array<{ id: string; name: string; web_url: string | null }>>([]);
   const [sharedFolderBrowseLoading, setSharedFolderBrowseLoading] = useState(false);
   const [savingSharedFolder, setSavingSharedFolder] = useState(false);
 
