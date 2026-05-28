@@ -8,9 +8,19 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FolderOpen, ExternalLink, BookOpen } from 'lucide-react';
+import {
+  FolderOpen,
+  ExternalLink,
+  BookOpen,
+  Folder,
+  FileText,
+  ChevronLeft,
+  Download,
+  Loader2,
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
+import { useSharePointBrowser } from '@/hooks/useSharePointBrowser';
 
 interface ReferenceLink {
   id: string;
@@ -24,6 +34,8 @@ export default function ClientFilesPage() {
   const [sharedFolderUrl, setSharedFolderUrl] = useState<string | null>(null);
   const [referenceLinks, setReferenceLinks] = useState<ReferenceLink[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const browser = useSharePointBrowser(tenantId, { useSharedFolder: true });
 
   useEffect(() => {
     if (!tenantId) return;
@@ -96,6 +108,80 @@ export default function ClientFilesPage() {
                   Open Shared Folder
                 </a>
               </Button>
+
+              {/* Inline folder browser */}
+              <div className="mt-6 border-t pt-4 space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  {browser.folderStack.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={browser.navigateBack}>
+                      <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                    </Button>
+                  )}
+                  <nav className="flex items-center gap-1 text-muted-foreground flex-wrap">
+                    <button
+                      type="button"
+                      className="hover:text-foreground"
+                      onClick={browser.navigateToRoot}
+                    >
+                      {sharedFolderName ?? 'Shared Folder'}
+                    </button>
+                    {browser.folderStack.slice(1).map((seg, i) => (
+                      <span key={`${seg.id}-${i}`} className="flex items-center gap-1">
+                        <span>/</span>
+                        <span>{seg.name}</span>
+                      </span>
+                    ))}
+                  </nav>
+                </div>
+
+                {browser.isLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                  </div>
+                ) : browser.error ? (
+                  <p className="text-sm text-destructive">
+                    {(browser.error as Error).message || 'Failed to load folder contents.'}
+                  </p>
+                ) : browser.items.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4">This folder is empty.</p>
+                ) : (
+                  <ul className="divide-y rounded-md border">
+                    {browser.items.map((item) => (
+                      <li key={item.id} className="flex items-center gap-3 p-2.5">
+                        {item.is_folder ? (
+                          <>
+                            <Folder className="h-4 w-4 text-primary shrink-0" />
+                            <button
+                              type="button"
+                              className="text-sm font-medium text-left flex-1 hover:underline"
+                              onClick={() => browser.navigateToFolder(item.id, item.name)}
+                            >
+                              {item.name}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="text-sm flex-1 truncate">{item.name}</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={browser.downloading === item.id}
+                              onClick={() => browser.downloadFile(item.id, item.name)}
+                            >
+                              {browser.downloading === item.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Download className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
