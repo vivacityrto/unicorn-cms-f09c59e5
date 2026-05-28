@@ -221,6 +221,15 @@ serve(async (req) => {
       root_name = settings.root_name || "SharePoint";
     }
 
+    // Resolve effective root boundary once, used by both list and download.
+    const useSharedRoot =
+      !sitePurpose &&
+      body.use_shared_folder === true &&
+      !!spSettings?.shared_folder_item_id;
+    const effectiveRootId: string | null = useSharedRoot
+      ? (spSettings!.shared_folder_item_id as string)
+      : root_item_id;
+
     // Get user's Microsoft token, fall back to app-level token
     const { data: tokenData } = await supabaseAdmin
       .from("oauth_tokens")
@@ -256,21 +265,20 @@ serve(async (req) => {
     // ===================== LIST FOLDER CONTENTS =====================
     if (action === "list") {
       let folderId: string;
-      let effectiveRootId: string | null;
+      let listIsRoot: boolean;
 
       if (sitePurpose) {
         // For site_purpose mode: browse from drive root or specified folder
         folderId = (body.folder_id as string) || "root";
-        effectiveRootId = null; // no root constraint
+        listIsRoot = folderId === "root";
       } else {
-        // Standard tenant mode with root constraint
-        const useSharedRoot = body.use_shared_folder === true && spSettings?.shared_folder_item_id;
-        effectiveRootId = useSharedRoot ? (spSettings!.shared_folder_item_id as string) : root_item_id;
+        // Standard tenant mode with root constraint (shared-folder aware)
         folderId = (body.folder_id as string) || effectiveRootId!;
+        listIsRoot = folderId === effectiveRootId;
 
-        // If browsing a subfolder, verify it's within root
-        if (folderId !== root_item_id && root_item_id) {
-          const withinRoot = await verifyWithinRoot(accessToken, drive_id, folderId, root_item_id);
+        // If browsing a subfolder, verify it's within the effective root
+        if (folderId !== effectiveRootId && effectiveRootId) {
+          const withinRoot = await verifyWithinRoot(accessToken, drive_id, folderId, effectiveRootId);
           if (!withinRoot) {
             return new Response(
               JSON.stringify({ error: "Access denied — folder is outside the configured root" }),
@@ -318,7 +326,6 @@ serve(async (req) => {
 
       let displayRootName = root_name;
       if (!sitePurpose && spSettings) {
-        const useSharedRoot = body.use_shared_folder === true && spSettings.shared_folder_item_id;
         displayRootName = useSharedRoot ? ((spSettings.shared_folder_name as string) || (spSettings.root_name as string)) : (spSettings.root_name as string);
       }
 
@@ -326,7 +333,7 @@ serve(async (req) => {
         JSON.stringify({
           items,
           folder_id: folderId,
-          is_root: sitePurpose ? folderId === "root" : folderId === effectiveRootId,
+          is_root: listIsRoot,
           root_name: displayRootName,
           start_folder_name: startFolderName,
         }),
@@ -345,8 +352,8 @@ serve(async (req) => {
       }
 
       // Verify within root (server-side enforcement) — skip for site_purpose mode
-      if (!sitePurpose && root_item_id) {
-        const withinRoot = await verifyWithinRoot(accessToken, drive_id, itemId, root_item_id);
+      if (!sitePurpose && effectiveRootId) {
+        const withinRoot = await verifyWithinRoot(accessToken, drive_id, itemId, effectiveRootId);
         if (!withinRoot) {
           return new Response(
             JSON.stringify({ error: "Access denied — file is outside the configured root folder" }),
