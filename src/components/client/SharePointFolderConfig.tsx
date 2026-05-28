@@ -52,6 +52,7 @@ interface SharePointSettings {
   validation_error: string | null;
   shared_folder_item_id: string | null;
   shared_folder_name: string | null;
+  shared_folder_url: string | null;
   governance_folder_item_id: string | null;
   governance_folder_url: string | null;
   governance_folder_name: string | null;
