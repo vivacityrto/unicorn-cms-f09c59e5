@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 
-const STORAGE_BUCKET = "document-files";
+
 
 interface GovernanceDocRow {
   id: string;
