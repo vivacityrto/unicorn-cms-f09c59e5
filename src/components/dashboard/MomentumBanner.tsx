@@ -41,8 +41,8 @@ function getSubtitle(state: MomentumState, variant: 'internal' | 'client'): stri
 function getCtaHref(state: MomentumState, variant: 'internal' | 'client'): string {
   const primaryReason = state.pause_reason[0];
   if (variant === 'client') {
-    if (primaryReason === 'risk_unresolved') return '/client/documents';
-    return '/client/documents';
+    if (primaryReason === 'risk_unresolved') return '/client/governance-documents';
+    return '/client/governance-documents';
   }
   // Internal
   if (primaryReason === 'risk_unresolved') return `/manage-tenants/${state.tenant_id}`;
