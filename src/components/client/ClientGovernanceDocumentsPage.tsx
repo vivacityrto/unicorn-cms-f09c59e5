@@ -72,7 +72,7 @@ export function ClientGovernanceDocumentsPage() {
   const debouncedSearch = useDebounced(search, 250);
 
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["client-governance-documents-v2", activeTenantId],
+    queryKey: ["client-governance-documents-v3", activeTenantId],
     enabled: !!activeTenantId && canAccess,
     queryFn: async (): Promise<GovernanceDocRow[]> => {
       const [diRes, catRes, fwRes] = await Promise.all([
@@ -88,11 +88,6 @@ export function ClientGovernanceDocumentsPage() {
               description,
               category,
               framework_type
-            ),
-            stage_instance:stage_instances!document_instances_stageinstance_id_fkey (
-              package_instance:package_instances!stage_instances_packageinstance_id_fkey (
-                package:packages!package_instances_package_id_fkey ( name )
-              )
             )
           `)
           .eq("tenant_id", activeTenantId)
@@ -102,6 +97,56 @@ export function ClientGovernanceDocumentsPage() {
       ]);
 
       if (diRes.error) throw diRes.error;
+
+      // Resolve package names — no FK constraints exist on this chain,
+      // so use flat queries and join manually in JS.
+      const stageIds = [...new Set(
+        (diRes.data || []).map((r: any) => r.stageinstance_id).filter(Boolean)
+      )] as number[];
+
+      const packageNameByStageId = new Map<number, string>();
+
+      if (stageIds.length > 0) {
+        const { data: siRows } = await (supabase as any)
+          .from("stage_instances")
+          .select("id, packageinstance_id")
+          .in("id", stageIds);
+
+        const piIds = [...new Set(
+          (siRows || []).map((r: any) => r.packageinstance_id).filter(Boolean)
+        )] as number[];
+
+        if (piIds.length > 0) {
+          const { data: piRows } = await (supabase as any)
+            .from("package_instances")
+            .select("id, package_id")
+            .in("id", piIds);
+
+          const pkgIds = [...new Set(
+            (piRows || []).map((r: any) => r.package_id).filter(Boolean)
+          )] as number[];
+
+          if (pkgIds.length > 0) {
+            const { data: pkgRows } = await (supabase as any)
+              .from("packages")
+              .select("id, name")
+              .in("id", pkgIds);
+
+            const pkgNameById = new Map<number, string>(
+              (pkgRows || []).map((r: any) => [r.id, r.name])
+            );
+            const piPkgById = new Map<number, number>(
+              (piRows || []).map((r: any) => [r.id, r.package_id])
+            );
+
+            (siRows || []).forEach((si: any) => {
+              const pkgId = piPkgById.get(si.packageinstance_id);
+              const name = pkgId ? pkgNameById.get(pkgId) : undefined;
+              if (si.id && name) packageNameByStageId.set(si.id, name);
+            });
+          }
+        }
+      }
 
       const catMap = new Map<string, { label: string; sort_order: number | null }>();
       (catRes.data || []).forEach((c: any) =>
@@ -129,8 +174,9 @@ export function ClientGovernanceDocumentsPage() {
           category_label: cat?.label ?? null,
           category_sort: cat?.sort_order ?? null,
           framework_label: fwLabel,
-          package_name:
-            r.stage_instance?.package_instance?.package?.name ?? null,
+          package_name: r.stageinstance_id
+            ? (packageNameByStageId.get(r.stageinstance_id) ?? null)
+            : null,
         };
       });
 
@@ -144,6 +190,7 @@ export function ClientGovernanceDocumentsPage() {
       return mapped;
     },
   });
+
 
 
   const categoryOptions = useMemo(() => {
