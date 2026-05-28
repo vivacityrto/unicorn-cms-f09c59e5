@@ -326,7 +326,6 @@ serve(async (req) => {
 
       let displayRootName = root_name;
       if (!sitePurpose && spSettings) {
-        const useSharedRoot = body.use_shared_folder === true && spSettings.shared_folder_item_id;
         displayRootName = useSharedRoot ? ((spSettings.shared_folder_name as string) || (spSettings.root_name as string)) : (spSettings.root_name as string);
       }
 
@@ -334,7 +333,7 @@ serve(async (req) => {
         JSON.stringify({
           items,
           folder_id: folderId,
-          is_root: sitePurpose ? folderId === "root" : folderId === effectiveRootId,
+          is_root: listIsRoot,
           root_name: displayRootName,
           start_folder_name: startFolderName,
         }),
