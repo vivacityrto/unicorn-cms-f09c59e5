@@ -20,7 +20,6 @@ interface ReferenceLink {
 
 export default function ClientFilesPage() {
   const { activeTenantId: tenantId } = useClientTenant();
-  const [folderUrl, setFolderUrl] = useState<string | null>(null);
   const [sharedFolderName, setSharedFolderName] = useState<string | null>(null);
   const [sharedFolderUrl, setSharedFolderUrl] = useState<string | null>(null);
   const [referenceLinks, setReferenceLinks] = useState<ReferenceLink[]>([]);
@@ -33,7 +32,7 @@ export default function ClientFilesPage() {
       const [settingsRes, linksRes] = await Promise.all([
         supabase
           .from('tenant_sharepoint_settings')
-          .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status, client_access_enabled, shared_folder_name, shared_folder_url')
+          .select('shared_folder_name, shared_folder_url')
           .eq('tenant_id', tenantId)
           .maybeSingle(),
         supabase
@@ -45,12 +44,6 @@ export default function ClientFilesPage() {
       ]);
 
       const s = settingsRes.data as any;
-      if (s?.provisioning_status === 'success' && s?.client_access_enabled) {
-        // Use effective URL based on setup_mode
-        const url = s.setup_mode === 'manual' ? s.manual_folder_url : s.root_folder_url;
-        setFolderUrl(url || null);
-      }
-
       setSharedFolderName(s?.shared_folder_name ?? null);
       setSharedFolderUrl(s?.shared_folder_url ?? null);
 
@@ -80,33 +73,6 @@ export default function ClientFilesPage() {
         </p>
       </div>
 
-      {/* Client Folder */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <FolderOpen className="h-5 w-5" />
-            Client SharePoint Folder
-          </CardTitle>
-          <CardDescription>
-            This folder is used for shared audit evidence and client files.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {folderUrl ? (
-            <Button asChild size="lg">
-              <a href={folderUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Open Client Files
-              </a>
-            </Button>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No folder has been configured yet. Contact your Vivacity consultant for access.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Shared Folder */}
       <Card>
         <CardHeader>
@@ -119,17 +85,17 @@ export default function ClientFilesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {sharedFolderName ? (
+          {sharedFolderUrl ? (
             <div className="space-y-3">
-              <p className="text-sm font-medium">{sharedFolderName}</p>
-              {sharedFolderUrl && (
-                <Button asChild size="lg">
-                  <a href={sharedFolderUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Open Shared Folder
-                  </a>
-                </Button>
+              {sharedFolderName && (
+                <p className="text-sm font-medium">{sharedFolderName}</p>
               )}
+              <Button asChild size="lg">
+                <a href={sharedFolderUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open Shared Folder
+                </a>
+              </Button>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">

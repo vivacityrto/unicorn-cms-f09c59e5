@@ -1,21 +1,12 @@
-# Fix ClientGovernanceDocumentsPage data source
+Change 1 — Remove the legacy "Client SharePoint Folder" card
+- Delete the entire `{/* Client Folder */}` `<Card>` block (lines 83-108)
+- Remove the `folderUrl` state variable and its `setFolderUrl` setter
+- Remove the logic that populates `folderUrl` (the `provisioning_status === 'success' && client_access_enabled` block inside the useEffect)
+- Simplify the `tenant_sharepoint_settings` query to only select `shared_folder_name, shared_folder_url` — remove `root_folder_url, manual_folder_url, setup_mode, provisioning_status, client_access_enabled`
 
-Single file change: `src/components/client/ClientGovernanceDocumentsPage.tsx`
+Change 2 — Fix the Shared Folder card condition
+- Replace the current gating condition (`sharedFolderName ? ... : ...`) with `sharedFolderUrl ? ... : ...`
+- In the truthy branch: show `sharedFolderName` (if set) as display text above the "Open Shared Folder" button
+- In the falsy branch: show the muted text "Your shared folder hasn't been configured yet. Contact your Vivacity consultant."
 
-## Changes
-
-1. **Replace `queryFn`** in the `useQuery` call to query `document_instances` (filtered by `tenant_id` + `status = 'generated'`) joined to `documents` (for description/category/framework_type) and `stage_instances → package_instances → packages` (for package name). Enrich rows with labels from `dd_document_categories` and `dd_governance_framework` lookup maps, then sort by category sort_order then title.
-
-2. **Bump `queryKey`** to `["client-governance-documents-v2", activeTenantId]` to bust the old cache.
-
-3. **Replace `handleDownload`** to open `row.file_path` (a direct URL from `generated_file_url`) in a new tab via `window.open(..., "_blank", "noopener,noreferrer")`.
-
-4. **Remove** the `STORAGE_BUCKET` constant and any `supabase.storage` import/usage — no longer needed.
-
-## Out of scope
-
-UI, filters, empty states, access guard, `GovernanceDocRow` type shape, and all other code remain untouched.
-
-## Risk
-
-Very low. Read-only client query against existing tables with established RLS. No schema, RLS, or backend changes.
+No other changes — Reference Library, loading skeleton, page heading, or any other component remain untouched.
