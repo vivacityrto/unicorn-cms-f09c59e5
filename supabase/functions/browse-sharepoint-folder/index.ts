@@ -352,8 +352,8 @@ serve(async (req) => {
       }
 
       // Verify within root (server-side enforcement) — skip for site_purpose mode
-      if (!sitePurpose && root_item_id) {
-        const withinRoot = await verifyWithinRoot(accessToken, drive_id, itemId, root_item_id);
+      if (!sitePurpose && effectiveRootId) {
+        const withinRoot = await verifyWithinRoot(accessToken, drive_id, itemId, effectiveRootId);
         if (!withinRoot) {
           return new Response(
             JSON.stringify({ error: "Access denied — file is outside the configured root folder" }),
