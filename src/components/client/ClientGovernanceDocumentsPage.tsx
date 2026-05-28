@@ -188,28 +188,11 @@ export function ClientGovernanceDocumentsPage() {
     setFrameworkFilter("all");
   };
 
-  const handleDownload = async (row: GovernanceDocRow) => {
+  const handleDownload = (row: GovernanceDocRow) => {
     if (!row.file_path) return;
-    const { data, error } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .createSignedUrl(row.file_path, 60, {
-        download: row.file_name ?? true,
-      } as any);
-    if (error || !data?.signedUrl) {
-      toast({
-        title: "Download failed",
-        description: error?.message ?? "Could not create download link.",
-        variant: "destructive",
-      });
-      return;
-    }
-    const a = document.createElement("a");
-    a.href = data.signedUrl;
-    a.download = row.file_name ?? "";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    window.open(row.file_path, "_blank", "noopener,noreferrer");
   };
+
 
   if (!canAccess) {
     return <Navigate to="/client/home" replace />;
