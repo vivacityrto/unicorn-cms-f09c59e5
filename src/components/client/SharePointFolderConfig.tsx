@@ -955,8 +955,8 @@ function SharedFolderSection({
     loadFolder(); // load root
   };
 
-  const navigateInto = (folderId: string, folderName: string) => {
-    setSharedFolderBrowseStack([...sharedFolderBrowseStack, { id: folderId, name: folderName }]);
+  const navigateInto = (folderId: string, folderName: string, webUrl: string | null) => {
+    setSharedFolderBrowseStack([...sharedFolderBrowseStack, { id: folderId, name: folderName, web_url: webUrl }]);
     loadFolder(folderId);
   };
 
@@ -968,7 +968,7 @@ function SharedFolderSection({
     loadFolder(parentId);
   };
 
-  const selectAsSharedFolder = async (folderId: string, folderName: string) => {
+  const selectAsSharedFolder = async (folderId: string, folderName: string, webUrl: string | null) => {
     setSavingSharedFolder(true);
     try {
       const { error } = await supabase
@@ -976,6 +976,7 @@ function SharedFolderSection({
         .update({
           shared_folder_item_id: folderId,
           shared_folder_name: folderName,
+          shared_folder_url: webUrl,
           updated_at: new Date().toISOString(),
         } as any)
         .eq('id', settings.id);
