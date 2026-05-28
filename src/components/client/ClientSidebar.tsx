@@ -1,7 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
-  FileText,
   FolderOpen,
   Library,
   Calendar,
@@ -22,6 +21,7 @@ import {
   GraduationCap,
   ExternalLink,
   Lightbulb,
+  ScrollText,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +42,7 @@ const clientMenuItemsBefore: SidebarMenuItem[] = [
   { icon: LayoutDashboard, label: "Home", path: "/client/home" },
   { icon: CheckSquare, label: "Tasks", path: "/client/tasks" },
   { icon: Package2, label: "Packages", path: "/client/packages" },
-  { icon: FileText, label: "Documents", path: "/client/documents" },
+  { icon: ScrollText, label: "Governance Documents", path: "/client/governance-documents", adminOnly: true },
   { icon: FolderOpen, label: "Files", path: "/client/files" },
 ];
 
