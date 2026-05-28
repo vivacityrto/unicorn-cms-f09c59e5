@@ -107,6 +107,38 @@ export default function ClientFilesPage() {
         </CardContent>
       </Card>
 
+      {/* Shared Folder */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <FolderOpen className="h-5 w-5" />
+            Shared Folder
+          </CardTitle>
+          <CardDescription>
+            Your organisation's shared document folder.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {sharedFolderName ? (
+            <div className="space-y-3">
+              <p className="text-sm font-medium">{sharedFolderName}</p>
+              {sharedFolderUrl && (
+                <Button asChild size="lg">
+                  <a href={sharedFolderUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Shared Folder
+                  </a>
+                </Button>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Your shared folder hasn't been configured yet. Contact your Vivacity consultant.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Reference Library */}
       {referenceLinks.length > 0 && (
         <Card>
