@@ -139,6 +139,7 @@ export function useSharePointBrowser(tenantId: number | null, options?: { useSha
               action: 'download',
               tenant_id: tenantId,
               item_id: itemId,
+              use_shared_folder: useSharedFolder,
             },
           }
         );
