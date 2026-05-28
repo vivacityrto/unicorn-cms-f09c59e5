@@ -265,21 +265,20 @@ serve(async (req) => {
     // ===================== LIST FOLDER CONTENTS =====================
     if (action === "list") {
       let folderId: string;
-      let effectiveRootId: string | null;
+      let listIsRoot: boolean;
 
       if (sitePurpose) {
         // For site_purpose mode: browse from drive root or specified folder
         folderId = (body.folder_id as string) || "root";
-        effectiveRootId = null; // no root constraint
+        listIsRoot = folderId === "root";
       } else {
-        // Standard tenant mode with root constraint
-        const useSharedRoot = body.use_shared_folder === true && spSettings?.shared_folder_item_id;
-        effectiveRootId = useSharedRoot ? (spSettings!.shared_folder_item_id as string) : root_item_id;
+        // Standard tenant mode with root constraint (shared-folder aware)
         folderId = (body.folder_id as string) || effectiveRootId!;
+        listIsRoot = folderId === effectiveRootId;
 
-        // If browsing a subfolder, verify it's within root
-        if (folderId !== root_item_id && root_item_id) {
-          const withinRoot = await verifyWithinRoot(accessToken, drive_id, folderId, root_item_id);
+        // If browsing a subfolder, verify it's within the effective root
+        if (folderId !== effectiveRootId && effectiveRootId) {
+          const withinRoot = await verifyWithinRoot(accessToken, drive_id, folderId, effectiveRootId);
           if (!withinRoot) {
             return new Response(
               JSON.stringify({ error: "Access denied — folder is outside the configured root" }),
