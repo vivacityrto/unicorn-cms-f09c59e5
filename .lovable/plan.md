@@ -1,110 +1,103 @@
-# Governance Documents (Client Portal)
+# Shared Folder URL — Capture & Expose to Client Portal
 
-Replace the existing **Documents** feature in the client portal with a new read-only **Governance Documents** page available only to primary/secondary contacts.
+## Goal
+Persist the SharePoint `web_url` of the shared folder when a SuperAdmin picks it, then surface it in the client portal Files page as an "Open Shared Folder" button.
 
-## 1. Remove the Documents feature from the client portal
+---
 
-**Sidebar — `src/components/client/ClientSidebar.tsx`**
-- Remove the `{ icon: FileText, label: "Documents", path: "/client/documents" }` entry from `clientMenuItemsBefore`.
-- Remove the now-unused `FileText` import if nothing else uses it.
+## 1. Database migration (additive only)
 
-**Router — `src/App.tsx`**
-- Remove the lazy import `ClientDocumentsWrapperNew` and the `<Route path="/client/documents" …>`.
+`public.tenant_sharepoint_settings`:
+- Add column `shared_folder_url text NULL` (nullable, no default, no constraint).
+- No changes to other columns, indexes, RLS policies, grants, triggers, or FKs.
+- Existing rows remain valid (NULL = legacy row, handled gracefully by UI).
+- The existing `updated_at` trigger continues to fire unchanged.
 
-**Incoming links to `/client/documents`** (must be updated so nothing routes to the removed page):
-- `src/components/client/ClientHomePage.tsx` — two `<Link to="/client/documents…">` (one plain, one `?tab=governance`). Repoint both to `/client/governance-documents`. The second is only meaningful for users who can access it — wrap that link (or render plain text) when `canManagePortalUsers` is false.
-- `src/components/client/ClientFooter.tsx` — link `/client/documents` → repoint to `/client/governance-documents`.
-- `src/components/client/ClientUpcomingAuditSection.tsx` — link `/client/documents` → repoint to `/client/governance-documents`.
-- `src/components/dashboard/MomentumBanner.tsx` — both branches return `/client/documents`; repoint to `/client/governance-documents`.
-- `src/components/layout/TopBar.tsx` — replace the `"/client/documents": "Documents"` breadcrumb entry with `"/client/governance-documents": "Governance Documents"`.
+After migration, `src/integrations/supabase/types.ts` will be regenerated automatically — no manual edits.
 
-**Files that can be deleted** (verified only referenced by the removed client Documents route):
-- `src/pages/client/ClientDocumentsWrapper.tsx`
-- `src/components/client/ClientDocumentsPage.tsx`
-- `src/components/client/ClientGovernanceRegister.tsx`
-- `src/components/client/ClientDocumentRequests.tsx`
+## 2. Admin — `src/components/client/SharePointFolderConfig.tsx`
 
-**Out of scope / left alone:**
-- `src/components/DashboardLayout.tsx` — staff dashboard layout, unrelated to client portal sidebar; keep its Documents entry untouched.
-- `src/hooks/useDocumentRequests.tsx` — used by staff code paths; leave in place.
-- All other Documents code outside the client portal (e.g. `DocumentsHub`, `ClientSharePointDocumentsTab`, staff-side `ClientPortalDocuments`).
+Scope: **`SharedFolderSection` only.** `GovernanceFolderSection`, root config, validation, provisioning, status badges — all untouched.
 
-## 2. Add the Governance Documents sidebar entry
+Changes:
+- `SharePointSettings` interface (line 42–62): add `shared_folder_url: string | null;`.
+- Prop type for `sharedFolderBrowseItems` / setter: widen item shape from `{ id; name; is_folder }` to `{ id; name; is_folder; web_url }`.
+- Prop type for `sharedFolderBrowseStack` / setter: widen from `{ id; name }` to `{ id; name; web_url }`. The parent component's `useState` initializers will need the same widening — caller-side type only, no behavior change.
+- `loadFolder`: in the `.filter((i) => i.is_folder)` map, preserve `web_url` from the edge function response (already returned by `browse-sharepoint-folder`, currently dropped).
+- `navigateInto(folderId, folderName, webUrl)`: accept and push `web_url` onto the stack; update the click handler in the folder list to pass `item.web_url`.
+- `selectAsSharedFolder(folderId, folderName, webUrl)`: accept third arg, include `shared_folder_url: webUrl` in the update payload. Keep `updated_at: new Date().toISOString()` (DB trigger relies on it being present in payload per the request).
+- The "Use ... as Shared Folder" button (line 1063–1071) pulls the current stack entry's `web_url` and passes it through.
+- `clearSharedFolder`: include `shared_folder_url: null` in the update payload. Keep `updated_at` field as-is.
 
-In `clientMenuItemsBefore`, in the same slot vacated by Documents (immediately after Packages):
+No changes to: governance section, root folder browsing, validation buttons, provisioning flow, or anything outside `SharedFolderSection` and its caller-provided state types.
 
-```ts
-{ icon: ScrollText, label: "Governance Documents", path: "/client/governance-documents", adminOnly: true }
+## 3. Client — `src/pages/client/ClientFilesPage.tsx`
+
+- Extend the `tenant_sharepoint_settings` select to include `shared_folder_name, shared_folder_url`.
+- Add local state `sharedFolderName: string | null` and `sharedFolderUrl: string | null` populated from the same query (unconditional — not gated by `client_access_enabled` or `provisioning_status`).
+- Insert a new `<Card>` between the existing "Client SharePoint Folder" card and the "Reference Library" card:
+  - Title: `Shared Folder` with `FolderOpen` icon (already imported).
+  - Description: `Your organisation's shared document folder.`
+  - Body:
+    - If `sharedFolderName` is set and `sharedFolderUrl` is set → folder name + `Open Shared Folder` button (`<a target="_blank" rel="noopener noreferrer">`).
+    - If `sharedFolderName` is set but `sharedFolderUrl` is null → folder name only, no button (legacy row support).
+    - If `sharedFolderName` is null → muted text: `Your shared folder hasn't been configured yet. Contact your Vivacity consultant.`
+- Skeleton/loading branch unaffected.
+
+No new RLS, no new hooks, no AI logic, no business rules.
+
+---
+
+## Technical Details
+
+### Edge function alignment
+`supabase/functions/browse-sharepoint-folder` already returns `web_url` for every item (confirmed via `SharePointItem` interface in `useSharePointBrowser.tsx`). No edge function change required.
+
+### RLS / Grants
+`tenant_sharepoint_settings` RLS continues to govern read access for clients via existing tenant-membership policies. Adding a nullable column requires no policy or grant changes. The client `select` runs under `authenticated` role and only adds two columns to the existing column list — same access path as `root_folder_url` today.
+
+### Backward compatibility
+- Existing rows: `shared_folder_url` defaults to NULL. Admin UI's "Change" button re-saves with the URL, eliminating legacy NULLs over time. Client UI renders the legacy case (name only, no button) gracefully.
+- Existing callers of `tenant_sharepoint_settings` (e.g., `SharePointFileBrowser`, `useSharePointBrowser`, governance flows) do not reference `shared_folder_url` and are unaffected.
+
+### Audit
+Schema change is additive; no destructive migration. Admin update path continues to flow through the same `tenant_sharepoint_settings` row, so any existing `updated_at` trigger / audit hook continues to fire.
+
+---
+
+## Files Touched
+
+```text
+supabase/migrations/<new>.sql                          (additive column)
+src/components/client/SharePointFolderConfig.tsx       (SharedFolderSection + state types only)
+src/pages/client/ClientFilesPage.tsx                   (query + new card)
+src/integrations/supabase/types.ts                     (auto-regenerated)
 ```
 
-Import `ScrollText` from `lucide-react`. The existing `filterAdmin` + `canManageUsers` logic already gates `adminOnly` entries to primary/secondary contacts (and SuperAdmins/preview).
+## Out of Scope (Explicit)
+- GovernanceFolderSection or root folder config in `SharePointFolderConfig.tsx`
+- RLS policies, grants, or new tables
+- Edge function changes
+- Gating the new client card on `client_access_enabled` or `provisioning_status`
+- Removing `updated_at` from any update payload
+- Frontend AI suggestions
 
-## 3. New route + wrapper
+---
 
-- Add a lazy route `/client/governance-documents` in `src/App.tsx` rendering the new page inside `ClientLayout` (mirror the wrapper pattern used by other client pages such as `ClientDocumentsWrapper`).
-- Create `src/pages/client/ClientGovernanceDocumentsWrapper.tsx` that wraps `ClientGovernanceDocumentsPage` in `<ClientLayout>`.
+## Summary, Benefits, Risks
 
-## 4. New component — `ClientGovernanceDocumentsPage`
+**Summary.** One additive `text NULL` column, one localized edit inside `SharedFolderSection` to thread `web_url` through browse → stack → save, and a new always-rendered card on the client Files page.
 
-Create `src/components/client/ClientGovernanceDocumentsPage.tsx`.
+**Benefits.**
+- Clients gain one-click access to their shared SharePoint folder without consultant intervention.
+- Eliminates a manual support touchpoint while preserving the existing admin picker UX.
+- Fully backward-compatible: legacy rows continue to render; re-saving auto-populates the URL.
 
-**Access guard**
-- Read `{ activeTenantId, canManagePortalUsers, isPreview }` from `useClientTenant()`, plus `isSuperAdmin` from `useAuth()`.
-- If `!(canManagePortalUsers || isPreview || isSuperAdmin())`, `<Navigate to="/client/home" replace />`. Matches the sidebar gate.
-
-**Data query** (React Query, keyed on `activeTenantId`):
-
-```sql
-SELECT
-  gd.id, gd.generated_at, gd.file_path, gd.file_name,
-  d.title, d.description, d.category, d.framework_type,
-  cat.label  AS category_label,  cat.sort_order AS category_sort,
-  fw.label   AS framework_label,
-  p.name     AS package_name
-FROM generated_documents gd
-JOIN documents d ON d.id = gd.source_document_id
-LEFT JOIN dd_document_categories cat ON cat.value = d.category
-LEFT JOIN dd_governance_framework  fw  ON fw.value  = d.framework_type
-LEFT JOIN stage_instances si   ON si.id = gd.stage_id
-LEFT JOIN package_instances pi ON pi.id = si.packageinstance_id
-LEFT JOIN packages p           ON p.id  = pi.package_id
-WHERE gd.tenant_id = :activeTenantId
-  AND gd.status = 'generated'
-  AND gd.is_client_visible = true
-ORDER BY cat.sort_order NULLS LAST, d.title ASC;
-```
-
-Implemented as a Supabase `.from('generated_documents').select(...)` with nested foreign-table selects, then a small client-side flatten. (Existing RLS already restricts `generated_documents` to the tenant's users — no policy changes needed.)
-
-**Page layout** (styled to match `ClientPackagesPage`, reusing `Table`, `Input`, `Select`, `Badge`, `Button`, `Skeleton` from `@/components/ui/*`):
-- Heading: `Governance Documents`
-- Sub-heading (muted): `Documents generated for your organisation as part of your compliance package.`
-- Filter row:
-  - Debounced (~250 ms) search input across `title`, `description`, `category_label`, `framework_label`.
-  - Category `Select` — distinct `category_label`s present in the loaded results.
-  - Framework `Select` — distinct `framework_label`s present in the loaded results.
-  - `Clear filters` button shown when any filter is active.
-- Table columns: Document Title · Category · Framework · Description (1-line truncate + tooltip with full text) · Package (`—` if null) · Generated (formatted `DD Month YYYY` via `date-fns` `dd MMMM yyyy`) · Actions (Download).
-
-**Download**
-- For each row with `file_path`, call `supabase.storage.from(<bucket>).createSignedUrl(file_path, 60)` on click, then trigger download using an `<a download={file_name}>` programmatic click.
-- If `file_path` is null, render disabled `Button` with tooltip `File not available`.
-- Bucket name: discover from existing generation code during implementation (likely `generated-documents`); if absent, fall back to the bucket already used by staff `DocumentsHub` downloads to stay consistent.
-
-**States**
-- Loading: skeleton rows.
-- Empty after filters: `No governance documents found.`
-- Zero records for tenant: `No governance documents have been generated for your organisation yet. These will appear here once your consultant has generated them as part of your package.`
-- Read-only: no edit/delete/upload.
-
-## 5. Verification
-
-- Build passes; sidebar shows **Governance Documents** in the Packages slot for admins only.
-- Visiting `/client/documents` no longer resolves (route removed); legacy links (Footer, HomePage, MomentumBanner, UpcomingAudit, TopBar breadcrumb) all point to the new path.
-- Page renders, filters/search/clear work, signed-URL download works, disabled state shown when `file_path` is null, both empty states render correctly.
-- Non-admin client user is redirected from `/client/governance-documents` to `/client/home`.
-
-## Out of scope
-- Schema changes (all required tables/columns already exist).
-- Any staff-facing Documents UI.
-- The previously discussed SharePoint recursive folder-copy work (separate plan, still pending approval).
+**Risk assessment.**
+- *Schema risk:* Negligible. Nullable additive column, no constraints, no policy changes, types auto-regenerate.
+- *Admin UI risk:* Low. Changes are scoped to one section; widened tuple types are caller-local. No behavior change for governance/root flows.
+- *Client UI risk:* Very low. New card is purely read-only; uses `target="_blank" rel="noopener noreferrer"` for safe external navigation.
+- *RLS / tenancy:* Unchanged. New column inherits existing row-level policies. Cross-tenant exposure not possible.
+- *FK constraints:* None added or affected.
+- *Audit trail:* Preserved — `updated_at` retained, single-row update path unchanged.
+- *Backfill:* None required. Admins repopulating via UI is sufficient.
