@@ -938,7 +938,9 @@ function SharedFolderSection({
         body: { action: 'list', tenant_id: tenantId, folder_id: folderId || undefined },
       });
       if (error || data?.error) throw new Error(data?.error || error?.message);
-      const folders = (data.items || []).filter((i: any) => i.is_folder);
+      const folders = (data.items || [])
+        .filter((i: any) => i.is_folder)
+        .map((i: any) => ({ id: i.id, name: i.name, is_folder: true, web_url: i.web_url ?? null }));
       setSharedFolderBrowseItems(folders);
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to load folders', variant: 'destructive' });
