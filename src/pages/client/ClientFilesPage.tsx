@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -17,7 +17,9 @@ import {
   ChevronLeft,
   Download,
   Loader2,
+  Upload,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
 import { useSharePointBrowser } from '@/hooks/useSharePointBrowser';
@@ -34,6 +36,8 @@ export default function ClientFilesPage() {
   const [sharedFolderUrl, setSharedFolderUrl] = useState<string | null>(null);
   const [referenceLinks, setReferenceLinks] = useState<ReferenceLink[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const browser = useSharePointBrowser(tenantId, { useSharedFolder: true });
 
@@ -132,7 +136,67 @@ export default function ClientFilesPage() {
                       </span>
                     ))}
                   </nav>
+                  <div className="ml-auto">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={uploading}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {uploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-1" />
+                      )}
+                      {uploading ? 'Uploading…' : 'Upload file'}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file || !tenantId) return;
+                        if (file.size > 52_428_800) {
+                          toast.error('File too large. Maximum 50 MB.');
+                          e.target.value = '';
+                          return;
+                        }
+                        setUploading(true);
+                        try {
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          formData.append('tenant_id', String(tenantId));
+                          formData.append('use_shared_folder', 'true');
+                          if (browser.currentFolderId) {
+                            formData.append('parent_folder_id', browser.currentFolderId);
+                          }
+                          const { data, error } = await supabase.functions.invoke(
+                            'upload-sharepoint-file',
+                            { body: formData },
+                          );
+                          if (error || (data as { error?: string })?.error) {
+                            throw new Error(
+                              error?.message ||
+                                (data as { error?: string })?.error ||
+                                'Upload failed',
+                            );
+                          }
+                          toast.success(`"${file.name}" uploaded successfully.`);
+                          browser.refetch();
+                        } catch (err: unknown) {
+                          toast.error(
+                            err instanceof Error ? err.message : 'Upload failed. Please try again.',
+                          );
+                        } finally {
+                          setUploading(false);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
+
 
                 {browser.isLoading ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
