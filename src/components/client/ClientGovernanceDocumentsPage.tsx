@@ -72,35 +72,36 @@ export function ClientGovernanceDocumentsPage() {
   const debouncedSearch = useDebounced(search, 250);
 
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["client-governance-documents", activeTenantId],
+    queryKey: ["client-governance-documents-v2", activeTenantId],
     enabled: !!activeTenantId && canAccess,
     queryFn: async (): Promise<GovernanceDocRow[]> => {
-      const [gdRes, catRes, fwRes] = await Promise.all([
+      const [diRes, catRes, fwRes] = await Promise.all([
         (supabase as any)
-          .from("generated_documents")
-          .select(
-            `
+          .from("document_instances")
+          .select(`
             id,
-            generated_at,
-            file_path,
-            file_name,
-            source_document:documents!generated_documents_source_document_id_fkey (
-              title,
+            document_title,
+            generationdate,
+            generated_file_url,
+            stageinstance_id,
+            source_document:documents!document_instances_document_id_fkey (
               description,
               category,
               framework_type
             ),
-            package:packages!generated_documents_package_id_fkey ( name )
-          `
-          )
+            stage_instance:stage_instances!document_instances_stageinstance_id_fkey (
+              package_instance:package_instances!stage_instances_packageinstance_id_fkey (
+                package:packages!package_instances_package_id_fkey ( name )
+              )
+            )
+          `)
           .eq("tenant_id", activeTenantId)
-          .eq("status", "generated")
-          .eq("is_client_visible", true),
+          .eq("status", "generated"),
         supabase.from("dd_document_categories").select("value, label, sort_order"),
         supabase.from("dd_governance_framework").select("value, label"),
       ]);
 
-      if (gdRes.error) throw gdRes.error;
+      if (diRes.error) throw diRes.error;
 
       const catMap = new Map<string, { label: string; sort_order: number | null }>();
       (catRes.data || []).forEach((c: any) =>
@@ -109,7 +110,7 @@ export function ClientGovernanceDocumentsPage() {
       const fwMap = new Map<string, string>();
       (fwRes.data || []).forEach((f: any) => fwMap.set(f.value, f.label));
 
-      const mapped: GovernanceDocRow[] = (gdRes.data || []).map((r: any) => {
+      const mapped: GovernanceDocRow[] = (diRes.data || []).map((r: any) => {
         const cat = r.source_document?.category
           ? catMap.get(r.source_document.category)
           : undefined;
@@ -117,18 +118,19 @@ export function ClientGovernanceDocumentsPage() {
           ? fwMap.get(r.source_document.framework_type) ?? r.source_document.framework_type
           : null;
         return {
-          id: r.id,
-          generated_at: r.generated_at,
-          file_path: r.file_path,
-          file_name: r.file_name,
-          title: r.source_document?.title ?? null,
+          id: String(r.id),
+          generated_at: r.generationdate,
+          file_path: r.generated_file_url ?? null,
+          file_name: r.document_title ?? null,
+          title: r.document_title ?? null,
           description: r.source_document?.description ?? null,
           category: r.source_document?.category ?? null,
           framework_type: r.source_document?.framework_type ?? null,
           category_label: cat?.label ?? null,
           category_sort: cat?.sort_order ?? null,
           framework_label: fwLabel,
-          package_name: r.package?.name ?? null,
+          package_name:
+            r.stage_instance?.package_instance?.package?.name ?? null,
         };
       });
 
@@ -142,6 +144,7 @@ export function ClientGovernanceDocumentsPage() {
       return mapped;
     },
   });
+
 
   const categoryOptions = useMemo(() => {
     const set = new Set<string>();
