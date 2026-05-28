@@ -196,8 +196,8 @@ export function ClientUpcomingAuditSection() {
 
         <div className="flex gap-2 pt-2">
           <Button variant="outline" size="sm" asChild>
-            <Link to="/client/documents">
-              <FileText className="h-3.5 w-3.5 mr-1" /> Upload documents
+            <Link to="/client/governance-documents">
+              <FileText className="h-3.5 w-3.5 mr-1" /> Governance Documents
             </Link>
           </Button>
         </div>

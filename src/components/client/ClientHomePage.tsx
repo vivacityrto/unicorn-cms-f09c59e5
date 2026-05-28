@@ -463,8 +463,8 @@ export function ClientHomePage() {
           <h3 className="font-semibold text-foreground mb-3">Quick links</h3>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild>
-              <Link to="/client/documents">
-                <FileText className="h-3.5 w-3.5 mr-1" /> Documents
+              <Link to="/client/governance-documents">
+                <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Governance Documents
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
@@ -475,11 +475,6 @@ export function ClientHomePage() {
             <Button variant="outline" size="sm" asChild>
               <Link to="/client/resource-hub">
                 <Library className="h-3.5 w-3.5 mr-1" /> Resource Hub
-              </Link>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/client/documents?tab=governance">
-                <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Governance Register
               </Link>
             </Button>
             {/* TODO: re-enable when document request workflow is complete */}

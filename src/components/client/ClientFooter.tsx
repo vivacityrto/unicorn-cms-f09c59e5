@@ -81,10 +81,10 @@ export function ClientFooter() {
             <ul className="space-y-1.5">
               <li>
                 <Link
-                  to="/client/documents"
+                  to="/client/governance-documents"
                   className="text-sm text-white hover:text-white/80 transition-colors"
                 >
-                  Documents
+                  Governance Documents
                 </Link>
               </li>
               <li>

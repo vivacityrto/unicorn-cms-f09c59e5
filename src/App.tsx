@@ -206,7 +206,7 @@ const ClientCalendarWrapperLegacy = lazy(() => import("./pages/ClientCalendarWra
 
 // Client Portal pages (isolated layout)
 const ClientHomeWrapperNew = lazy(() => import("./pages/client/ClientHomeWrapper"));
-const ClientDocumentsWrapperNew = lazy(() => import("./pages/client/ClientDocumentsWrapper"));
+const ClientGovernanceDocumentsWrapperNew = lazy(() => import("./pages/client/ClientGovernanceDocumentsWrapper"));
 const ClientResourceHubWrapperNew = lazy(() => import("./pages/client/ClientResourceHubWrapper"));
 const ClientCalendarWrapperNew = lazy(() => import("./pages/client/ClientCalendarWrapper"));
 // ClientNotificationsWrapperNew removed — consolidated into ClientInboxPage
@@ -1102,7 +1102,8 @@ const App = () => (
             <Route path="/client/tasks" element={<ProtectedRoute><ClientTasksWrapperNew /></ProtectedRoute>} />
             <Route path="/client/packages" element={<ProtectedRoute><ClientPackagesWrapperNew /></ProtectedRoute>} />
             <Route path="/client/communications" element={<Navigate to="/client/inbox?tab=messages" replace />} />
-            <Route path="/client/documents" element={<ProtectedRoute><ClientDocumentsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/governance-documents" element={<ProtectedRoute><ClientGovernanceDocumentsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/documents" element={<Navigate to="/client/governance-documents" replace />} />
             <Route path="/client/resource-hub" element={<ProtectedRoute><ClientResourceHubWrapperNew /></ProtectedRoute>} />
             <Route path="/client/resource-hub/:categoryId" element={<ProtectedRoute><ClientResourceHubWrapperNew /></ProtectedRoute>} />
             <Route path="/client/calendar" element={<ProtectedRoute><ClientCalendarWrapperNew /></ProtectedRoute>} />

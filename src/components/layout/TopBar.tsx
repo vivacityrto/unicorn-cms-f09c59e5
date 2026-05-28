@@ -92,7 +92,7 @@ const routeTitles: Record<string, string> = {
   "/team-settings": "Team Settings",
   // Client portal routes
   "/client/home": "Home",
-  "/client/documents": "Documents",
+  "/client/governance-documents": "Governance Documents",
   "/client/resource-hub": "Resource Hub",
   "/client/calendar": "Calendar",
   "/client/notifications": "Notifications",
