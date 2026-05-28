@@ -36,6 +36,8 @@ export default function ClientFilesPage() {
   const [sharedFolderUrl, setSharedFolderUrl] = useState<string | null>(null);
   const [referenceLinks, setReferenceLinks] = useState<ReferenceLink[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const browser = useSharePointBrowser(tenantId, { useSharedFolder: true });
 
