@@ -33,7 +33,7 @@ export default function ClientFilesPage() {
       const [settingsRes, linksRes] = await Promise.all([
         supabase
           .from('tenant_sharepoint_settings')
-          .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status, client_access_enabled')
+          .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status, client_access_enabled, shared_folder_name, shared_folder_url')
           .eq('tenant_id', tenantId)
           .maybeSingle(),
         supabase
@@ -44,12 +44,15 @@ export default function ClientFilesPage() {
           .order('sort_order'),
       ]);
 
-      const s = settingsRes.data;
+      const s = settingsRes.data as any;
       if (s?.provisioning_status === 'success' && s?.client_access_enabled) {
         // Use effective URL based on setup_mode
         const url = s.setup_mode === 'manual' ? s.manual_folder_url : s.root_folder_url;
         setFolderUrl(url || null);
       }
+
+      setSharedFolderName(s?.shared_folder_name ?? null);
+      setSharedFolderUrl(s?.shared_folder_url ?? null);
 
       setReferenceLinks((linksRes.data || []) as ReferenceLink[]);
       setLoading(false);
