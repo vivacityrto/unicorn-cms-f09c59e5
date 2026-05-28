@@ -21,6 +21,8 @@ interface ReferenceLink {
 export default function ClientFilesPage() {
   const { activeTenantId: tenantId } = useClientTenant();
   const [folderUrl, setFolderUrl] = useState<string | null>(null);
+  const [sharedFolderName, setSharedFolderName] = useState<string | null>(null);
+  const [sharedFolderUrl, setSharedFolderUrl] = useState<string | null>(null);
   const [referenceLinks, setReferenceLinks] = useState<ReferenceLink[]>([]);
   const [loading, setLoading] = useState(true);
 
