@@ -1067,7 +1067,7 @@ function SharedFolderSection({
                 className="h-7 text-xs"
                 onClick={() => {
                   const current = sharedFolderBrowseStack[sharedFolderBrowseStack.length - 1];
-                  selectAsSharedFolder(current.id, current.name);
+                  selectAsSharedFolder(current.id, current.name, current.web_url);
                 }}
                 disabled={savingSharedFolder}
               >
