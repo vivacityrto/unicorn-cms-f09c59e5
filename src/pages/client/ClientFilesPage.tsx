@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -17,7 +17,9 @@ import {
   ChevronLeft,
   Download,
   Loader2,
+  Upload,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientTenant } from '@/contexts/ClientTenantContext';
 import { useSharePointBrowser } from '@/hooks/useSharePointBrowser';
