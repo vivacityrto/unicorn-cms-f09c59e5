@@ -52,6 +52,7 @@ interface SharePointSettings {
   validation_error: string | null;
   shared_folder_item_id: string | null;
   shared_folder_name: string | null;
+  shared_folder_url: string | null;
   governance_folder_item_id: string | null;
   governance_folder_url: string | null;
   governance_folder_name: string | null;
@@ -90,8 +91,8 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const [toggling, setToggling] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [browsingSharedFolder, setBrowsingSharedFolder] = useState(false);
-  const [sharedFolderBrowseItems, setSharedFolderBrowseItems] = useState<Array<{ id: string; name: string; is_folder: boolean }>>([]);
-  const [sharedFolderBrowseStack, setSharedFolderBrowseStack] = useState<Array<{ id: string; name: string }>>([]);
+  const [sharedFolderBrowseItems, setSharedFolderBrowseItems] = useState<Array<{ id: string; name: string; is_folder: boolean; web_url: string | null }>>([]);
+  const [sharedFolderBrowseStack, setSharedFolderBrowseStack] = useState<Array<{ id: string; name: string; web_url: string | null }>>([]);
   const [sharedFolderBrowseLoading, setSharedFolderBrowseLoading] = useState(false);
   const [savingSharedFolder, setSavingSharedFolder] = useState(false);
 
@@ -919,10 +920,10 @@ function SharedFolderSection({
   tenantId: number;
   browsingSharedFolder: boolean;
   setBrowsingSharedFolder: (v: boolean) => void;
-  sharedFolderBrowseItems: Array<{ id: string; name: string; is_folder: boolean }>;
-  setSharedFolderBrowseItems: (v: Array<{ id: string; name: string; is_folder: boolean }>) => void;
-  sharedFolderBrowseStack: Array<{ id: string; name: string }>;
-  setSharedFolderBrowseStack: (v: Array<{ id: string; name: string }>) => void;
+  sharedFolderBrowseItems: Array<{ id: string; name: string; is_folder: boolean; web_url: string | null }>;
+  setSharedFolderBrowseItems: (v: Array<{ id: string; name: string; is_folder: boolean; web_url: string | null }>) => void;
+  sharedFolderBrowseStack: Array<{ id: string; name: string; web_url: string | null }>;
+  setSharedFolderBrowseStack: (v: Array<{ id: string; name: string; web_url: string | null }>) => void;
   sharedFolderBrowseLoading: boolean;
   setSharedFolderBrowseLoading: (v: boolean) => void;
   savingSharedFolder: boolean;
@@ -937,7 +938,9 @@ function SharedFolderSection({
         body: { action: 'list', tenant_id: tenantId, folder_id: folderId || undefined },
       });
       if (error || data?.error) throw new Error(data?.error || error?.message);
-      const folders = (data.items || []).filter((i: any) => i.is_folder);
+      const folders = (data.items || [])
+        .filter((i: any) => i.is_folder)
+        .map((i: any) => ({ id: i.id, name: i.name, is_folder: true, web_url: i.web_url ?? null }));
       setSharedFolderBrowseItems(folders);
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to load folders', variant: 'destructive' });
@@ -952,8 +955,8 @@ function SharedFolderSection({
     loadFolder(); // load root
   };
 
-  const navigateInto = (folderId: string, folderName: string) => {
-    setSharedFolderBrowseStack([...sharedFolderBrowseStack, { id: folderId, name: folderName }]);
+  const navigateInto = (folderId: string, folderName: string, webUrl: string | null) => {
+    setSharedFolderBrowseStack([...sharedFolderBrowseStack, { id: folderId, name: folderName, web_url: webUrl }]);
     loadFolder(folderId);
   };
 
@@ -965,7 +968,7 @@ function SharedFolderSection({
     loadFolder(parentId);
   };
 
-  const selectAsSharedFolder = async (folderId: string, folderName: string) => {
+  const selectAsSharedFolder = async (folderId: string, folderName: string, webUrl: string | null) => {
     setSavingSharedFolder(true);
     try {
       const { error } = await supabase
@@ -973,6 +976,7 @@ function SharedFolderSection({
         .update({
           shared_folder_item_id: folderId,
           shared_folder_name: folderName,
+          shared_folder_url: webUrl,
           updated_at: new Date().toISOString(),
         } as any)
         .eq('id', settings.id);
@@ -995,6 +999,7 @@ function SharedFolderSection({
         .update({
           shared_folder_item_id: null,
           shared_folder_name: null,
+          shared_folder_url: null,
           updated_at: new Date().toISOString(),
         } as any)
         .eq('id', settings.id);
@@ -1062,7 +1067,7 @@ function SharedFolderSection({
                 className="h-7 text-xs"
                 onClick={() => {
                   const current = sharedFolderBrowseStack[sharedFolderBrowseStack.length - 1];
-                  selectAsSharedFolder(current.id, current.name);
+                  selectAsSharedFolder(current.id, current.name, current.web_url);
                 }}
                 disabled={savingSharedFolder}
               >
@@ -1085,7 +1090,7 @@ function SharedFolderSection({
                 <button
                   key={item.id}
                   className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted/50 text-left"
-                  onClick={() => navigateInto(item.id, item.name)}
+                  onClick={() => navigateInto(item.id, item.name, item.web_url)}
                 >
                   <FolderOpen className="h-4 w-4 text-primary flex-shrink-0" />
                   {item.name}
