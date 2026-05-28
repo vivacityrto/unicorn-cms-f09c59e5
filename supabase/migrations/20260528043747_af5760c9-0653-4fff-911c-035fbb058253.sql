@@ -1,0 +1,1 @@
+ALTER TABLE public.tenant_sharepoint_settings ADD COLUMN IF NOT EXISTS shared_folder_url text NULL;

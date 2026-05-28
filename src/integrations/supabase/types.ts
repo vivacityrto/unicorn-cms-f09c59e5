@@ -48223,6 +48223,7 @@ export type Database = {
           setup_mode: string
           shared_folder_item_id: string | null
           shared_folder_name: string | null
+          shared_folder_url: string | null
           site_id: string | null
           template_id: string | null
           tenant_id: number
@@ -48261,6 +48262,7 @@ export type Database = {
           setup_mode?: string
           shared_folder_item_id?: string | null
           shared_folder_name?: string | null
+          shared_folder_url?: string | null
           site_id?: string | null
           template_id?: string | null
           tenant_id: number
@@ -48299,6 +48301,7 @@ export type Database = {
           setup_mode?: string
           shared_folder_item_id?: string | null
           shared_folder_name?: string | null
+          shared_folder_url?: string | null
           site_id?: string | null
           template_id?: string | null
           tenant_id?: number
