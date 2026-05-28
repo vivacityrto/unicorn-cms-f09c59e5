@@ -920,10 +920,10 @@ function SharedFolderSection({
   tenantId: number;
   browsingSharedFolder: boolean;
   setBrowsingSharedFolder: (v: boolean) => void;
-  sharedFolderBrowseItems: Array<{ id: string; name: string; is_folder: boolean }>;
-  setSharedFolderBrowseItems: (v: Array<{ id: string; name: string; is_folder: boolean }>) => void;
-  sharedFolderBrowseStack: Array<{ id: string; name: string }>;
-  setSharedFolderBrowseStack: (v: Array<{ id: string; name: string }>) => void;
+  sharedFolderBrowseItems: Array<{ id: string; name: string; is_folder: boolean; web_url: string | null }>;
+  setSharedFolderBrowseItems: (v: Array<{ id: string; name: string; is_folder: boolean; web_url: string | null }>) => void;
+  sharedFolderBrowseStack: Array<{ id: string; name: string; web_url: string | null }>;
+  setSharedFolderBrowseStack: (v: Array<{ id: string; name: string; web_url: string | null }>) => void;
   sharedFolderBrowseLoading: boolean;
   setSharedFolderBrowseLoading: (v: boolean) => void;
   savingSharedFolder: boolean;
