@@ -221,6 +221,15 @@ serve(async (req) => {
       root_name = settings.root_name || "SharePoint";
     }
 
+    // Resolve effective root boundary once, used by both list and download.
+    const useSharedRoot =
+      !sitePurpose &&
+      body.use_shared_folder === true &&
+      !!spSettings?.shared_folder_item_id;
+    const effectiveRootId: string | null = useSharedRoot
+      ? (spSettings!.shared_folder_item_id as string)
+      : root_item_id;
+
     // Get user's Microsoft token, fall back to app-level token
     const { data: tokenData } = await supabaseAdmin
       .from("oauth_tokens")
