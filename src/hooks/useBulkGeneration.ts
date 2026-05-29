@@ -375,4 +375,3 @@ export function useBulkGeneration() {
   return { bulkGenerate, generating, progress, liveResults, currentDoc, completedCount, planSize, cancelGeneration };
 }
 
-}
