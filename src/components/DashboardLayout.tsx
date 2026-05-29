@@ -167,6 +167,7 @@ export const DashboardLayout = ({
   const { canAccessAdmin, canAccessAdvanced, isSuperAdmin } = useRBAC();
   const { isViewingAsClient } = useViewMode();
   const navRef = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   
   // Profile setup reminder for Vivacity Team
   const {
@@ -610,7 +611,7 @@ export const DashboardLayout = ({
         <TimeInboxBanner />
 
         {/* Page Content - w-full min-w-0 prevents content collapse */}
-        <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">{children}</main>
+        <main ref={mainRef} className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">{children}</main>
 
         {/* Footer: Client footer for client view, Utility footer for Vivacity team */}
         {showVivacityMenu ? <UtilityFooter /> : <ClientFooter />}
@@ -618,6 +619,7 @@ export const DashboardLayout = ({
         {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
         <AskVivPanel />
         <AskVivFloatingLauncher />
+        <ScrollToTopButton scrollRef={mainRef} />
 
         {/* Help Center Drawer (available for client roles) */}
         <HelpCenterDrawer />
