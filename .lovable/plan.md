@@ -1,117 +1,83 @@
+# Plan: Mirror governance documents into Shared Folder / "- Governance"
 
-## Scope
+Update `deliver-governance-document` to copy each generated file into the tenant's Shared Folder under a `- Governance` subtree, plus framework + category subfolders. Surface a new `SHARED_FOLDER_MISSING` pre-flight error through `bulk-generate-phase-documents` and the UI.
 
-Update `src/components/client/ClientGovernanceDocumentsPage.tsx` and add one new database view `public.v_client_governance_documents`.
+## 1. `supabase/functions/deliver-governance-document/index.ts`
+
+**1a. Extend SharePoint settings fetch (line 961-965):**
+Add `drive_id, shared_folder_item_id` to the select list.
+
+**1b. Add second pre-flight after the governance check (after line 987):**
+```ts
+if (!spSettings?.drive_id || !spSettings?.shared_folder_item_id) {
+  const errorMsg = "No shared folder configured for this tenant. Please configure the Shared Folder in Admin → Integrations → SharePoint before generating documents.";
+  await supabase.from("governance_document_deliveries").insert({ /* same shape as governance block, status: "failed", error_message: errorMsg */ });
+  return new Response(
+    JSON.stringify({ error: errorMsg, error_code: "SHARED_FOLDER_MISSING" }),
+    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+  );
+}
+```
+
+**1c. Add second upload after line 1077 (`console.log("[deliver] Uploaded to SharePoint...")`), before the document_instances update:**
+
+Wrapped in `try/catch` so failure never breaks the primary delivery:
+- Resolve shared folder root via `graphGet /drives/{drive_id}/items/{shared_folder_item_id}` to compute its server-relative path.
+- `ensureFolder(drive_id, sharedPath, "- Governance")` → captures itemId.
+- If `doc.framework_type` set: `ensureFolder(...)` under `- Governance/<FRAMEWORK>` using same `frameworkType.toUpperCase()` logic.
+- If `doc.category` set: lookup `dd_document_categories.label` (reuse the value already fetched higher up if available, otherwise re-query) and `ensureFolder(...)` for that label.
+- Upload `processedBytes` with same `FOUR_MB` threshold + `graphUploadSmall` / `graphUploadSession` using the same `deliveredFileName`.
+- On any error: `console.warn` and capture message into local `sharedFolderError` string. No retries (keep behaviour simple; primary upload is the source of truth).
+
+**1d. Include warning in success response (line 1158-1170):**
+Extend the existing `warnings` object with `shared_folder_error: sharedFolderError ?? null`.
+
+Note: we do NOT create a second `governance_document_deliveries` row — the mirror is a courtesy copy. The audit record + tracked SharePoint URL remain the governance copy.
+
+## 2. `supabase/functions/bulk-generate-phase-documents/index.ts`
+
+Currently the pre-flight only checks the governance folder (lines 77-89). The new `SHARED_FOLDER_MISSING` error comes from per-document calls to `deliver-governance-document` inside the loop (line 228+).
+
+**Change in the per-doc loop (around line 268):**
+After parsing `respBody`, detect `respBody.error_code === 'SHARED_FOLDER_MISSING'` (or status 400 with that code) and short-circuit the whole bulk run — return immediately:
+```ts
+return new Response(JSON.stringify({
+  success: false,
+  error: respBody.error,
+  error_code: 'SHARED_FOLDER_MISSING',
+}), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+```
+This mirrors how `GOVERNANCE_FOLDER_MISSING` is surfaced at the pre-flight; configuration errors should not be reported as per-document failures.
+
+(Optionally also add `shared_folder_item_id` + `drive_id` to the pre-flight select+check for early failure. Including this for parity with governance check.)
+
+## 3. `src/hooks/useBulkGeneration.ts`
+
+Extend the existing `error_code` branch (lines 87-95) to also handle `SHARED_FOLDER_MISSING`:
+```ts
+if (dataBody?.error_code === 'SHARED_FOLDER_MISSING') {
+  toast({
+    title: 'Shared Folder Not Configured',
+    description: 'Shared folder is not configured for this client. Please set it up in Admin → Integrations → SharePoint before generating documents.',
+    variant: 'destructive',
+  });
+  return null;
+}
+```
+
+## 4. `src/components/client/StageDocumentsSection.tsx`
+
+In the single-document delivery error handler (lines 177-185 where `GOVERNANCE_FOLDER_MISSING` is handled) and the catch fallback (line 240), add a parallel `SHARED_FOLDER_MISSING` branch with the same user-facing message.
 
 ## Migration
 
-```sql
-CREATE OR REPLACE VIEW public.v_client_governance_documents
-WITH (security_invoker = true)
-AS
-SELECT
-  di.id,
-  di.tenant_id,
-  di.document_id,
-  di.generationdate,
-  di.generated_file_url,
-  di.status,
-  di.document_title,
-  d.title          AS doc_title,
-  d.description,
-  d.category,
-  d.framework_type,
-  STRING_AGG(DISTINCT p.name, ', ' ORDER BY p.name) AS active_package_names
-FROM public.document_instances di
-JOIN public.documents d ON d.id = di.document_id
-LEFT JOIN public.stage_instances si ON si.id = di.stageinstance_id
-LEFT JOIN public.package_instances pi
-  ON pi.id = si.packageinstance_id
-  AND pi.membership_state = 'active'
-LEFT JOIN public.packages p ON p.id = pi.package_id
-GROUP BY
-  di.id, di.tenant_id, di.document_id, di.generationdate,
-  di.generated_file_url, di.status, di.document_title,
-  d.title, d.description, d.category, d.framework_type;
-
-GRANT SELECT ON public.v_client_governance_documents TO authenticated;
-GRANT SELECT ON public.v_client_governance_documents TO service_role;
-```
-
-- `security_invoker = true` — required; underlying-table RLS is enforced for the caller. No RLS policies on any base table are modified.
-- Grants for `authenticated` and `service_role` only (no `anon`).
-- Idempotent (`CREATE OR REPLACE VIEW`).
-- Rollback: `DROP VIEW public.v_client_governance_documents;`
-
-## Page changes — `ClientGovernanceDocumentsPage.tsx`
-
-### Change 1 — Framework filter from `dd_governance_framework`
-
-- Replace `frameworkOptions` (which derives from loaded rows) with an array built from `fwRes.data` containing `{ value, label }` pairs.
-- The query currently returns only `GovernanceDocRow[]`. Change the `queryFn` return to `{ rows, frameworks, governanceFolderUrl }` so the framework list and folder URL are cached together.
-- `frameworkFilter` state still defaults to `"all"`. Comparison in `filtered` becomes `r.framework_type !== frameworkFilter` (compare by canonical `value`, e.g. `"RTO"`).
-- Dropdown `<SelectItem value={fw.value}>{fw.label}</SelectItem>`.
-- Table cell still renders `row.framework_label` (label resolved via `fwMap`).
-
-### Change 2 — Actions column (View + SharePoint)
-
-- Add to the same `Promise.all`:
-  ```ts
-  (supabase as any)
-    .from("tenant_sharepoint_settings")
-    .select("governance_folder_url")
-    .eq("tenant_id", activeTenantId)
-    .maybeSingle()
-  ```
-  Store `governanceFolderUrl = spRes.data?.governance_folder_url ?? null`. Use `maybeSingle()` so a missing row is not an error.
-- Imports: add `Eye`, `ExternalLink` from `lucide-react`; drop unused `Download` import once the button is removed; remove unused `useToast` / `toast` if not referenced elsewhere (keep if still used).
-- Render two buttons in the Actions cell:
-  - **View** — same `window.open(row.file_path, "_blank", "noopener,noreferrer")` behaviour and the same disabled + "File not available" tooltip when `file_path` is null. Replaces Download verbatim.
-  - **SharePoint** — only rendered when `governanceFolderUrl` is a non-empty string. `onClick={() => window.open(governanceFolderUrl!, "_blank", "noopener,noreferrer")}`.
-- Layout: wrap both buttons in `<div className="flex justify-end gap-2">` to preserve right-alignment.
-
-### Change 3 — Packages column + view consumption
-
-- Replace the four-step fetch chain (`document_instances` → `documents` → `stage_instances` → `package_instances` → `packages`) with a single call:
-  ```ts
-  (supabase as any)
-    .from("v_client_governance_documents")
-    .select("id, document_id, generationdate, generated_file_url, document_title, doc_title, description, category, framework_type, active_package_names")
-    .eq("tenant_id", activeTenantId)
-    .eq("status", "generated")
-  ```
-- Map row → `GovernanceDocRow`:
-  - `file_name` / `title` ← `document_title ?? doc_title`
-  - `category_label` / `category_sort` ← `catMap.get(category)`
-  - `framework_label` ← `fwMap.get(framework_type) ?? framework_type`
-  - `package_name` ← `active_package_names` (already comma-separated; rename intent preserved without renaming the field)
-- Keep the existing sort: `category_sort` then `title`.
-- `status = 'generated'` filter preserved verbatim.
-
-### Untouched
-
-- `dd_document_categories` fetch and category filter behaviour.
-- Sort logic, empty-state copy, search behaviour.
-- `canAccess` guard and `Navigate` redirect.
-- All other pages, hooks, edge functions, RLS policies, FK constraints.
+None required. Schema already has `drive_id` and `shared_folder_item_id` on `tenant_sharepoint_settings`.
 
 ## Risk assessment
 
-| Area | Risk | Mitigation |
-|------|------|-----------|
-| RLS on underlying tables | View must not bypass RLS | `security_invoker = true` enforces caller's policies on `document_instances`, `documents`, `stage_instances`, `package_instances`, `packages` |
-| Tenant isolation | View exposes `tenant_id` from `document_instances`; query filters by `tenant_id = activeTenantId`; underlying RLS still gates rows | No regression; defence-in-depth preserved |
-| Package aggregation correctness | `LEFT JOIN ... AND pi.membership_state = 'active'` ensures only active packages contribute; documents with no active package still appear with `NULL` `active_package_names` | Matches "Active packages only" intent without dropping rows |
-| Filter semantics change | Switching framework comparison from label to value changes URL-less state shape; no persisted state exists for this filter | Safe — local component state only |
-| Removed Download label | Users may look for "Download" copy | New "View" button uses identical open-in-new-tab behaviour |
-| SharePoint button absence | Tenants without `governance_folder_url` will not see the button | Conditional render avoids broken links |
-| Audit logging | Read-only view, no mutations introduced | No audit impact |
-| Backward compatibility | Old query key `client-governance-documents-v4` should be bumped to invalidate stale cache shape | Use `client-governance-documents-v5` |
-
-## Benefits
-
-- One round-trip query replaces a 4-step chain (~75% fewer requests, lower latency).
-- Framework filter is now complete (all configured frameworks, not just those present in current rows) and uses stable codes per project conventions.
-- Clients gain a one-click jump to their tenant's SharePoint governance folder.
-- View is reusable for other governance reporting surfaces.
-
+- **Backward compatible:** existing tenants with shared folder configured (the common case) work unchanged. Tenants missing shared folder get a clear actionable error instead of silent partial behaviour.
+- **No RLS / FK changes.**
+- **Audit safe:** primary delivery audit row + activity log unchanged; mirror copy failures only surface as a warning, never corrupt audit history.
+- **Performance:** one extra Graph round-trip per generated doc (resolve path + ensure 1-3 folders + 1 upload). Acceptable; bulk is already rate-limited to 1 run / 5 min / tenant.
+- **Risk: mirror upload silently failing.** Mitigated by warning surfaced in response and `console.warn` log; UI doesn't currently surface `warnings.shared_folder_error` — out of scope per the request, but worth a follow-up.
+- **Risk: governance row inserted for the failed pre-flight.** Matches existing `GOVERNANCE_FOLDER_MISSING` pattern, so it's intentional.

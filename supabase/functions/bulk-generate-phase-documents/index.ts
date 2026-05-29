@@ -76,7 +76,7 @@ Deno.serve(async (req: Request) => {
     // ── Pre-flight: SharePoint governance folder must be mapped ──────────
     const { data: spSettings } = await supabase
       .from('tenant_sharepoint_settings')
-      .select('governance_drive_id, governance_folder_item_id')
+      .select('governance_drive_id, governance_folder_item_id, drive_id, shared_folder_item_id')
       .eq('tenant_id', tenant_id)
       .maybeSingle();
 
@@ -87,6 +87,15 @@ Deno.serve(async (req: Request) => {
         error_code: 'GOVERNANCE_FOLDER_MISSING',
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
     }
+
+    if (!spSettings?.drive_id || !spSettings?.shared_folder_item_id) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'No shared folder configured for this tenant. Please configure the Shared Folder in Admin → Integrations → SharePoint before generating documents.',
+        error_code: 'SHARED_FOLDER_MISSING',
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
+    }
+
 
     // ── Rate limit: 1 bulk gen per tenant per 5 min ──────────────────────
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -242,8 +251,20 @@ Deno.serve(async (req: Request) => {
         const respBody = await resp.json().catch(() => ({})) as {
           success?: boolean;
           error?: string;
+          error_code?: string;
           tailoring?: unknown;
         };
+
+        // Configuration errors should abort the whole bulk run, not be reported
+        // as per-document failures.
+        if (respBody?.error_code === 'SHARED_FOLDER_MISSING' || respBody?.error_code === 'GOVERNANCE_FOLDER_MISSING') {
+          return new Response(JSON.stringify({
+            success: false,
+            error: respBody.error,
+            error_code: respBody.error_code,
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
+        }
+
 
         if (resp.ok && respBody?.success) {
           results.push({

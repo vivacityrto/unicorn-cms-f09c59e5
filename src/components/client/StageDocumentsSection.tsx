@@ -189,8 +189,18 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
           return;
         }
 
+        if (errorCode === 'SHARED_FOLDER_MISSING') {
+          toast({
+            title: 'Shared Folder Not Configured',
+            description: 'Shared folder is not configured for this client. Please set it up in Admin → Integrations → SharePoint before generating documents.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
         throw new Error(errorMsg);
       }
+
 
       // Handle 422 — tailoring incomplete
       if (response.data?.error && response.data?.tailoring) {
@@ -238,13 +248,21 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       const isGovernanceMissing = msg.includes('GOVERNANCE_FOLDER_MISSING') || msg.includes('governance folder configured');
+      const isSharedMissing = msg.includes('SHARED_FOLDER_MISSING') || msg.includes('shared folder configured');
       toast({
-        title: isGovernanceMissing ? 'Governance Folder Not Configured' : 'Generation Failed',
-        description: isGovernanceMissing
-          ? 'Please verify the governance folder for this tenant before generating documents. Go to Admin → SharePoint Folder Mapping to run folder verification.'
-          : msg,
+        title: isSharedMissing
+          ? 'Shared Folder Not Configured'
+          : isGovernanceMissing
+            ? 'Governance Folder Not Configured'
+            : 'Generation Failed',
+        description: isSharedMissing
+          ? 'Shared folder is not configured for this client. Please set it up in Admin → Integrations → SharePoint before generating documents.'
+          : isGovernanceMissing
+            ? 'Please verify the governance folder for this tenant before generating documents. Go to Admin → SharePoint Folder Mapping to run folder verification.'
+            : msg,
         variant: 'destructive',
       });
+
     } finally {
       setGeneratingSingleId(null);
     }

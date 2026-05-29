@@ -960,7 +960,7 @@ serve(async (req) => {
     // ── Resolve SharePoint folder ──────────────────────────────────────────
     const { data: spSettings } = await supabase
       .from("tenant_sharepoint_settings")
-      .select("governance_drive_id, governance_folder_item_id")
+      .select("governance_drive_id, governance_folder_item_id, drive_id, shared_folder_item_id")
       .eq("tenant_id", tenant_id)
       .maybeSingle();
 
@@ -985,6 +985,29 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    if (!spSettings?.drive_id || !spSettings?.shared_folder_item_id) {
+      const errorMsg = "No shared folder configured for this tenant. Please configure the Shared Folder in Admin → Integrations → SharePoint before generating documents.";
+      await supabase.from("governance_document_deliveries").insert({
+        tenant_id,
+        document_id: doc.id,
+        document_version_id,
+        snapshot_id: snapshotId,
+        status: "failed",
+        delivered_file_name: deliveredFileName,
+        delivered_by: userId,
+        error_message: errorMsg,
+        tailoring_completeness_pct: completeness,
+        missing_merge_fields: missingTags,
+        invalid_merge_fields: invalidTags,
+        tailoring_risk_level: riskLevel,
+      });
+      return new Response(
+        JSON.stringify({ error: errorMsg, error_code: "SHARED_FOLDER_MISSING" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
 
     const driveId = spSettings.governance_drive_id;
     let parentItemId = spSettings.governance_folder_item_id;
@@ -1076,6 +1099,51 @@ serve(async (req) => {
 
     console.log(`[deliver] Uploaded to SharePoint: ${driveItem.webUrl}`);
 
+    // ── Mirror copy into tenant Shared Folder under "- Governance" ─────────
+    let sharedFolderError: string | null = null;
+    try {
+      const sharedDriveId = spSettings.drive_id as string;
+      const sharedRootId = spSettings.shared_folder_item_id as string;
+
+      const sharedRootInfo = await graphGet<DriveItem>(
+        `/drives/${sharedDriveId}/items/${sharedRootId}`,
+      );
+      if (!sharedRootInfo.ok) {
+        throw new Error(`Could not resolve shared folder root (${sharedRootId})`);
+      }
+      const sharedParentRef = sharedRootInfo.data.parentReference as { path?: string } | undefined;
+      const sharedFullPath = sharedParentRef?.path
+        ? `${sharedParentRef.path.replace(/^\/drives\/[^/]+\/root:/, '')}/${sharedRootInfo.data.name}`
+        : sharedRootInfo.data.name;
+      let sharedCleanPath = sharedFullPath.replace(/^\//, '');
+
+      const govSub = await ensureFolder(sharedDriveId, sharedCleanPath, "- Governance");
+      let sharedParentItemId = govSub.itemId;
+      sharedCleanPath = `${sharedCleanPath}/- Governance`;
+
+      if (frameworkType) {
+        const fwSub = await ensureFolder(sharedDriveId, sharedCleanPath, frameworkType.toUpperCase());
+        sharedParentItemId = fwSub.itemId;
+        sharedCleanPath = `${sharedCleanPath}/${frameworkType.toUpperCase()}`;
+      }
+
+      if (categorySubfolder) {
+        const catSub = await ensureFolder(sharedDriveId, sharedCleanPath, categorySubfolder);
+        sharedParentItemId = catSub.itemId;
+      }
+
+      if (processedBytes.byteLength < FOUR_MB) {
+        await graphUploadSmall(sharedDriveId, sharedParentItemId, deliveredFileName, processedBytes);
+      } else {
+        await graphUploadSession(sharedDriveId, sharedParentItemId, deliveredFileName, processedBytes);
+      }
+      console.log(`[deliver] Mirrored to Shared Folder /- Governance for tenant ${tenant_id}`);
+    } catch (mirrorErr) {
+      sharedFolderError = mirrorErr instanceof Error ? mirrorErr.message : String(mirrorErr);
+      console.warn(`[deliver] Shared folder mirror failed: ${sharedFolderError}`);
+    }
+
+
     // ── Update document_instances with generation tracking ─────────────────
     const { data: matchedInstances } = await supabase
       .from("document_instances")
@@ -1164,7 +1232,9 @@ serve(async (req) => {
           unreplaced_fields: unreplacedTags,
           invalid_fields: invalidTags,
           missing_fields: missingTags,
+          shared_folder_error: sharedFolderError,
         },
+
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );

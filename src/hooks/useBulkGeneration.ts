@@ -94,6 +94,15 @@ export function useBulkGeneration() {
           });
           return null;
         }
+        if (dataBody?.error_code === 'SHARED_FOLDER_MISSING') {
+          toast({
+            title: 'Shared Folder Not Configured',
+            description: 'Shared folder is not configured for this client. Please set it up in Admin → Integrations → SharePoint before generating documents.',
+            variant: 'destructive',
+          });
+          return null;
+        }
+
         throw new Error(dataBody?.error || response.error.message);
       }
 
