@@ -1,4 +1,4 @@
-import { useState, createContext, useContext, useEffect, useRef } from "react";
+import { useState, createContext, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -41,7 +41,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentUserUuid = profile?.user_uuid ?? null;
-  const mainRef = useRef<HTMLElement>(null);
+  
 
   useEffect(() => {
     if (!activeTenantId) return;
@@ -118,7 +118,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Page Content */}
-          <main ref={mainRef} className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">
+          <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">
             {children}
           </main>
 
@@ -161,7 +161,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         </TooltipContent>
       </Tooltip>
 
-      <ScrollToTopButton scrollRef={mainRef} />
+      <ScrollToTopButton />
 
       <ClientAskVivPanel
         isOpen={isAskVivOpen}
