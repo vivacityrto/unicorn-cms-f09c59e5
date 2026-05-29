@@ -225,30 +225,16 @@ export function useBulkGeneration() {
           } | null;
 
           // Configuration errors abort the whole run
-          if (bodyData?.error_code === 'GOVERNANCE_FOLDER_MISSING') {
-            toast({
-              title: 'Governance Folder Not Configured',
-              description: 'This tenant does not have a governance folder mapped in SharePoint. Go to Admin → SharePoint Folder Mapping, select this tenant, and click "Verify & Create Default" or "Select Folder" to configure it.',
-              variant: 'destructive',
-            });
+          const mappedDoc = bodyData?.error_code ? ERROR_CODE_MESSAGES[bodyData.error_code] : undefined;
+          if (mappedDoc) {
+            toast({ title: mappedDoc.title, description: mappedDoc.description, variant: 'destructive' });
             cancelledRef.current = true;
-            outcome = { ...outcome, status: 'failed', reason: 'delivery_failed', error: bodyData.error || 'Governance folder missing' };
+            outcome = { ...outcome, status: 'failed', reason: 'delivery_failed', error: bodyData?.error || mappedDoc.description };
             working[idx] = outcome;
             setLiveResults([...working]);
             break;
           }
-          if (bodyData?.error_code === 'SHARED_FOLDER_MISSING') {
-            toast({
-              title: 'Shared Folder Not Configured',
-              description: 'Shared folder is not configured for this client. Please set it up in Admin → Integrations → SharePoint before generating documents.',
-              variant: 'destructive',
-            });
-            cancelledRef.current = true;
-            outcome = { ...outcome, status: 'failed', reason: 'delivery_failed', error: bodyData.error || 'Shared folder missing' };
-            working[idx] = outcome;
-            setLiveResults([...working]);
-            break;
-          }
+
 
           if (resp.error) {
             // Tailoring incomplete (422) — bodyData may still carry tailoring
