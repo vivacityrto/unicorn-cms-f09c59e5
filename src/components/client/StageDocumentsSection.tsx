@@ -189,8 +189,18 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
           return;
         }
 
+        if (errorCode === 'SHARED_FOLDER_MISSING') {
+          toast({
+            title: 'Shared Folder Not Configured',
+            description: 'Shared folder is not configured for this client. Please set it up in Admin → Integrations → SharePoint before generating documents.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
         throw new Error(errorMsg);
       }
+
 
       // Handle 422 — tailoring incomplete
       if (response.data?.error && response.data?.tailoring) {
