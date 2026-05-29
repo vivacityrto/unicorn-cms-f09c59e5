@@ -87,7 +87,8 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const ClientImpactPage = lazy(() => import("./pages/ClientImpactPage"));
  const EosRockAnalysis = lazy(() => import("./pages/EosRockAnalysis"));
  const EosLeadershipDashboard = lazy(() => import("./pages/EosLeadershipDashboard"));
- const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+  const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+  const ActivateAccount = lazy(() => import("./pages/ActivateAccount"));
  const Audits = lazy(() => import("./pages/Audits"));
  const AuditWorkspace = lazy(() => import("./pages/AuditWorkspace"));
  const AuditWorkspaceNew = lazy(() => import("./pages/AuditWorkspaceNew"));
@@ -267,6 +268,7 @@ const App = () => (
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/activate" element={<ActivateAccount />} />
             <Route path="/accept-invitation" element={<AcceptInvitationWrapper />} />
             <Route path="/post-sign-in" element={<PostSignInRedirect />} />
             <Route 
