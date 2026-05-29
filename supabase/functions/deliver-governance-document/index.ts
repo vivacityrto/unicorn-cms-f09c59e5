@@ -739,6 +739,8 @@ serve(async (req) => {
 
       if (snapshotId) {
         idempotencyQuery.eq("snapshot_id", snapshotId);
+      } else {
+        idempotencyQuery.is("snapshot_id", null);
       }
 
       const { data: existing } = await idempotencyQuery.maybeSingle();
@@ -767,6 +769,8 @@ serve(async (req) => {
           .eq("status", cleanStatus);
         if (snapshotId) {
           delQuery.eq("snapshot_id", snapshotId);
+        } else {
+          delQuery.is("snapshot_id", null);
         }
         await delQuery;
       }
