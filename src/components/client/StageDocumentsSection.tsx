@@ -64,7 +64,8 @@ function categoriseError(error: string | null): { label: string; description: st
 
 export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, debug, isVivacityStaff }: StageDocumentsSectionProps) {
   const { documents, loading, totalCount, refetch } = useStageDocuments({ stageInstanceId, tenantId, debug });
-  const { bulkGenerate, generating, progress, liveResults, currentDoc, completedCount, cancelGeneration } = useBulkGeneration();
+  const { bulkGenerate, generating, progress, liveResults, currentDoc, completedCount, planSize, cancelGeneration } = useBulkGeneration();
+
   const [progressDialogOpen, setProgressDialogOpen] = useState(false);
 
   const { toast } = useToast();
