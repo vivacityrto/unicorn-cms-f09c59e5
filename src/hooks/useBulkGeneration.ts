@@ -129,12 +129,14 @@ export function useBulkGeneration() {
     cancelledRef.current = true;
   };
 
-  const bulkGenerate = async ({ tenantId, stageInstanceId, packageId, mode = 'pending_only', silentEmpty = false }: BulkGenerateParams) => {
     setGenerating(true);
     setProgress(null);
     setLiveResults([]);
     setCurrentDoc(null);
     setCompletedCount(0);
+    setPlanSize(0);
+    cancelledRef.current = false;
+
     cancelledRef.current = false;
 
     // Build the final summary outside the try so finally can audit
