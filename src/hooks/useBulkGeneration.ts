@@ -87,7 +87,22 @@ function dominantReason(results: BulkResult[], status: BulkResult['status']): st
   if (counts.size === 0) return null;
   const [reason, n] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
   return `${n} ${REASON_LABEL[reason]}`;
-}
+
+const ERROR_CODE_MESSAGES: Record<string, { title: string; description: string }> = {
+  GOVERNANCE_FOLDER_MISSING: {
+    title: 'Governance Folder Not Configured',
+    description: 'No governance folder is configured for this client. Go to Admin → Integrations → SharePoint to set one up before generating.',
+  },
+  SHARED_FOLDER_MISSING: {
+    title: 'Shared Folder Not Configured',
+    description: 'No shared folder is configured for this client. Go to Admin → Integrations → SharePoint to set one up before generating.',
+  },
+  RATE_LIMITED: {
+    title: 'Rate Limited',
+    description: 'A bulk generation was run for this client in the last 5 minutes. Please wait before trying again.',
+  },
+};
+
 
 function tally(items: LiveResult[]): BulkGenerationProgress {
   let generated = 0, skipped = 0, failed = 0;
