@@ -9,6 +9,14 @@ interface BulkGenerateRequest {
   stageinstance_id: number;
   package_id?: number;
   mode: 'all' | 'pending_only' | 'overwrite_all';
+  plan_only?: boolean;
+  record_audit?: boolean;
+  // record_audit payload fields
+  total?: number;
+  generated?: number;
+  skipped?: number;
+  failed?: number;
+  results?: BulkResult[];
 }
 
 type ResultStatus = 'generated' | 'skipped' | 'failed';
@@ -20,7 +28,8 @@ type ResultReason =
   | 'locked'
   | 'delivery_failed'
   | 'no_published_version'
-  | 'delivered';
+  | 'delivered'
+  | 'cancelled';
 
 interface BulkResult {
   document_instance_id: number;
@@ -31,7 +40,21 @@ interface BulkResult {
   error?: string;
 }
 
+interface PlanItem {
+  document_instance_id: number;
+  document_id: number;
+  document_version_id: string;
+  document_title: string;
+}
+
 const SUPPORTED_FORMATS = new Set(['docx', 'xlsx', 'xls', 'xlsm', 'pptx']);
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status,
+  });
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -51,9 +74,16 @@ Deno.serve(async (req: Request) => {
     if (userError || !user) throw new Error('Unauthorized');
 
     const body: BulkGenerateRequest = await req.json();
-    const { tenant_id, stageinstance_id, package_id, mode = 'pending_only' } = body;
+    const {
+      tenant_id,
+      stageinstance_id,
+      package_id,
+      mode = 'pending_only',
+      plan_only = false,
+      record_audit = false,
+    } = body;
 
-    console.log('[bulk-gen] request', { tenant_id, stageinstance_id, package_id, mode, user: user.id });
+    console.log('[bulk-gen] request', { tenant_id, stageinstance_id, package_id, mode, plan_only, record_audit, user: user.id });
 
     // Verify tenant access (SuperAdmin bypass)
     const { data: userProfile } = await supabase
@@ -73,6 +103,36 @@ Deno.serve(async (req: Request) => {
       if (!tenantMember) throw new Error('Access denied');
     }
 
+    // ── record_audit: write the bulk-run summary row and return ──────────
+    if (record_audit) {
+      const total = body.total ?? 0;
+      const generated = body.generated ?? 0;
+      const skipped = body.skipped ?? 0;
+      const failed = body.failed ?? 0;
+      const results = body.results ?? [];
+
+      await supabase.from('audit_events').insert({
+        action: 'bulk_generate_phase_documents',
+        entity: 'bulk_generate',
+        entity_id: crypto.randomUUID(),
+        user_id: user.id,
+        details: {
+          tenant_id,
+          stageinstance_id,
+          package_id: package_id ?? null,
+          mode,
+          total,
+          generated,
+          skipped,
+          failed,
+          results,
+          source: 'frontend_orchestrated',
+        },
+      });
+
+      return jsonResponse({ success: true });
+    }
+
     // ── Pre-flight: SharePoint governance folder must be mapped ──────────
     const { data: spSettings } = await supabase
       .from('tenant_sharepoint_settings')
@@ -81,21 +141,20 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (!spSettings?.governance_drive_id || !spSettings?.governance_folder_item_id) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         error: 'No governance folder configured for this tenant. Please verify the governance folder from the SharePoint Folder Mapping page (Admin → SharePoint Folder Mapping) before generating documents.',
         error_code: 'GOVERNANCE_FOLDER_MISSING',
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
+      }, 400);
     }
 
     if (!spSettings?.drive_id || !spSettings?.shared_folder_item_id) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         error: 'No shared folder configured for this tenant. Please configure the Shared Folder in Admin → Integrations → SharePoint before generating documents.',
         error_code: 'SHARED_FOLDER_MISSING',
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
+      }, 400);
     }
-
 
     // ── Rate limit: 1 bulk gen per tenant per 5 min ──────────────────────
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -108,10 +167,10 @@ Deno.serve(async (req: Request) => {
       .limit(1);
 
     if (recentBulk && recentBulk.length > 0) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         error: 'Rate limited. Please wait 5 minutes between bulk generations.'
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 429 });
+      }, 429);
     }
 
     // ── Fetch document_instances for this stage instance ─────────────────
@@ -123,9 +182,10 @@ Deno.serve(async (req: Request) => {
 
     if (instError) throw instError;
     if (!instances || instances.length === 0) {
-      return new Response(JSON.stringify({
-        success: true, total: 0, generated: 0, skipped: 0, failed: 0, results: []
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      if (plan_only) {
+        return jsonResponse({ success: true, plan: [], total_eligible: 0, skipped: [] });
+      }
+      return jsonResponse({ success: true, total: 0, generated: 0, skipped: 0, failed: 0, results: [] });
     }
 
     // ── Fetch document metadata ──────────────────────────────────────────
@@ -171,10 +231,10 @@ Deno.serve(async (req: Request) => {
     }
 
     if (eligible.length > 500) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         error: `Batch too large (${eligible.length}). Maximum is 500 documents per call.`
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
+      }, 400);
     }
 
     // ── Resolve latest published document_version per document_id ────────
@@ -195,11 +255,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // ── Per-document delivery via deliver-governance-document ────────────
-    const deliverUrl = `${supabaseUrl}/functions/v1/deliver-governance-document`;
-    let generated = 0;
-    let failed = 0;
-
+    // ── Build plan / pre-finalised skipped, sharing logic between modes ──
+    const plan: PlanItem[] = [];
     for (const { inst, doc } of eligible) {
       const version = versionByDocId.get(doc.id);
       const sp = (version?.storage_path ?? '').trim();
@@ -207,8 +264,6 @@ Deno.serve(async (req: Request) => {
       const sourceUrl = ((doc as { source_template_url?: string | null }).source_template_url ?? '').trim();
 
       if (!version) {
-        // No published version row at all — deliver requires a document_version_id.
-        // If a SharePoint source exists, surface that as the actionable reason.
         results.push({
           document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
           status: 'skipped', reason: sourceUrl ? 'no_published_version' : 'no_template',
@@ -228,11 +283,30 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // Choose template source: prefer Supabase storage if present, else SharePoint.
-      version.storage_path = sp || fsp || null;
-      const templateSource = (sp || fsp) ? 'supabase_storage' : 'sharepoint_master';
-      console.log(`[bulk-gen] doc ${doc.id} (${doc.title}) → ${templateSource}`);
+      plan.push({
+        document_instance_id: inst.id,
+        document_id: doc.id,
+        document_version_id: version.id,
+        document_title: doc.title,
+      });
+    }
 
+    // ── plan_only: return the planned + already-skipped list ────────────
+    if (plan_only) {
+      return jsonResponse({
+        success: true,
+        plan,
+        total_eligible: plan.length,
+        skipped: results, // all entries here are status='skipped'
+      });
+    }
+
+    // ── Legacy path: keep running the loop server-side for back-compat ──
+    const deliverUrl = `${supabaseUrl}/functions/v1/deliver-governance-document`;
+    let generated = 0;
+    let failed = 0;
+
+    for (const item of plan) {
       try {
         const resp = await fetch(deliverUrl, {
           method: 'POST',
@@ -242,7 +316,7 @@ Deno.serve(async (req: Request) => {
           },
           body: JSON.stringify({
             tenant_id,
-            document_version_id: version.id,
+            document_version_id: item.document_version_id,
             allow_incomplete: true,
             force: mode === 'overwrite_all',
           }),
@@ -255,30 +329,26 @@ Deno.serve(async (req: Request) => {
           tailoring?: unknown;
         };
 
-        // Configuration errors should abort the whole bulk run, not be reported
-        // as per-document failures.
         if (respBody?.error_code === 'SHARED_FOLDER_MISSING' || respBody?.error_code === 'GOVERNANCE_FOLDER_MISSING') {
-          return new Response(JSON.stringify({
+          return jsonResponse({
             success: false,
             error: respBody.error,
             error_code: respBody.error_code,
-          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
+          }, 400);
         }
-
 
         if (resp.ok && respBody?.success) {
           results.push({
-            document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+            document_instance_id: item.document_instance_id, document_id: item.document_id, document_title: item.document_title,
             status: 'generated', reason: 'delivered',
           });
           generated++;
           continue;
         }
 
-        // Tailoring incomplete (422)
         if (resp.status === 422 && respBody?.tailoring) {
           results.push({
-            document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+            document_instance_id: item.document_instance_id, document_id: item.document_id, document_title: item.document_title,
             status: 'failed', reason: 'tailoring_incomplete',
             error: respBody.error || 'Tailoring incomplete',
           });
@@ -292,15 +362,15 @@ Deno.serve(async (req: Request) => {
           : 'delivery_failed';
 
         results.push({
-          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          document_instance_id: item.document_instance_id, document_id: item.document_id, document_title: item.document_title,
           status: 'failed', reason, error: errMsg,
         });
         failed++;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        console.error(`[bulk-gen] delivery threw for doc ${doc.id}:`, msg);
+        console.error(`[bulk-gen] delivery threw for doc ${item.document_id}:`, msg);
         results.push({
-          document_instance_id: inst.id, document_id: doc.id, document_title: doc.title,
+          document_instance_id: item.document_instance_id, document_id: item.document_id, document_title: item.document_title,
           status: 'failed', reason: 'delivery_failed', error: msg,
         });
         failed++;
@@ -310,7 +380,6 @@ Deno.serve(async (req: Request) => {
     const skipped = results.filter(r => r.status === 'skipped').length;
     const total = results.length;
 
-    // ── Audit log (entity_id is strict uuid — use a fresh uuid per run) ──
     await supabase.from('audit_events').insert({
       action: 'bulk_generate_phase_documents',
       entity: 'bulk_generate',
@@ -331,15 +400,13 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[bulk-gen] complete: ${generated}/${total} generated, ${skipped} skipped, ${failed} failed`);
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success: true, total, generated, skipped, failed, results,
-    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    });
 
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     console.error('[bulk-gen] error:', msg);
-    return new Response(JSON.stringify({ success: false, error: msg }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400
-    });
+    return jsonResponse({ success: false, error: msg }, 400);
   }
 });
