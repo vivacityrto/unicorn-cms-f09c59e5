@@ -154,14 +154,22 @@ export function useBulkGeneration() {
       });
 
       if (planResp.error) {
-        const dataBody = planResp.data as { error?: string; error_code?: string } | null;
-        const mapped = dataBody?.error_code ? ERROR_CODE_MESSAGES[dataBody.error_code] : undefined;
+        let errorCode: string | undefined;
+        let errorMessage: string | undefined;
+        try {
+          const errorBody = await (planResp.error as any).context?.json?.();
+          errorCode = errorBody?.error_code;
+          errorMessage = errorBody?.error;
+        } catch { /* ignore parse errors */ }
+
+        const mapped = errorCode ? ERROR_CODE_MESSAGES[errorCode] : undefined;
         if (mapped) {
           toast({ title: mapped.title, description: mapped.description, variant: 'destructive' });
           return null;
         }
-        throw new Error(dataBody?.error || planResp.error.message || 'Planning failed');
+        throw new Error(errorMessage || planResp.error.message || 'Planning failed');
       }
+
 
 
       const planData = planResp.data as PlanResponse;
