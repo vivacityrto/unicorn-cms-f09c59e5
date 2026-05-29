@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CheckCircle2, ChevronUp, Clock, Loader2, Minus, X, XCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { LiveResult, LiveStatus } from '@/hooks/useBulkGeneration';
 
 interface Props {
@@ -190,9 +191,24 @@ export function BulkGenerationProgressDialog({
                           {r.document_title}
                         </p>
                         {(r.status === 'failed' || r.status === 'skipped') && (r.error || r.reason) && (
-                          <p className={`text-xs truncate ${r.status === 'failed' ? 'text-destructive' : 'text-muted-foreground'}`}>
-                            {r.error || r.reason}
-                          </p>
+                          r.status === 'failed' ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <p className="text-xs text-destructive truncate max-w-[280px] cursor-default">
+                                    {r.error || r.reason}
+                                  </p>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[320px]">
+                                  <p className="text-xs break-words">{r.error || r.reason}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {r.error || r.reason}
+                            </p>
+                          )
                         )}
                       </div>
                       <span className={`text-xs shrink-0 ${meta.className.replace('animate-spin', '')}`}>
