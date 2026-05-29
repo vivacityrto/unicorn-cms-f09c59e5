@@ -135,6 +135,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
     if (!overwritePrompt) return;
     setOverwriteRunning(true);
     setProgressDialogOpen(true);
+    try {
 
       await bulkGenerate({
         tenantId,
