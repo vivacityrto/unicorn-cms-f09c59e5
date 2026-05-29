@@ -67,6 +67,8 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const { bulkGenerate, generating, progress, liveResults, currentDoc, completedCount, planSize, cancelGeneration } = useBulkGeneration();
 
   const [progressDialogOpen, setProgressDialogOpen] = useState(false);
+  const [progressMinimised, setProgressMinimised] = useState(false);
+
 
   const { toast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
