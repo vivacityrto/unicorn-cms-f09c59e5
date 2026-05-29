@@ -154,24 +154,14 @@ export function useBulkGeneration() {
 
       if (planResp.error) {
         const dataBody = planResp.data as { error?: string; error_code?: string } | null;
-        if (dataBody?.error_code === 'GOVERNANCE_FOLDER_MISSING') {
-          toast({
-            title: 'Governance Folder Not Configured',
-            description: 'This tenant does not have a governance folder mapped in SharePoint. Go to Admin → SharePoint Folder Mapping, select this tenant, and click "Verify & Create Default" or "Select Folder" to configure it.',
-            variant: 'destructive',
-          });
+        const mapped = dataBody?.error_code ? ERROR_CODE_MESSAGES[dataBody.error_code] : undefined;
+        if (mapped) {
+          toast({ title: mapped.title, description: mapped.description, variant: 'destructive' });
           return null;
         }
-        if (dataBody?.error_code === 'SHARED_FOLDER_MISSING') {
-          toast({
-            title: 'Shared Folder Not Configured',
-            description: 'Shared folder is not configured for this client. Please set it up in Admin → Integrations → SharePoint before generating documents.',
-            variant: 'destructive',
-          });
-          return null;
-        }
-        throw new Error(dataBody?.error || planResp.error.message);
+        throw new Error(dataBody?.error || planResp.error.message || 'Planning failed');
       }
+
 
       const planData = planResp.data as PlanResponse;
       if (!planData?.success) throw new Error(planData?.error || 'Planning failed');
