@@ -1,19 +1,32 @@
-Create a new edge function `supabase/functions/generate-recovery-link/index.ts` based on `send-password-reset` with three targeted changes:
+## Objective
+Add a "Copy Recovery Link" button inside the existing Password Reset section of `AdminActions.tsx`. This button is only visible to Super Admins and copies a password recovery link to the clipboard via the new `generate-recovery-link` edge function.
 
-1. **Restrict to Super Admin only** — Remove `isTenantAdmin` path and cross-tenant guard. Keep only the check `callerData.unicorn_role === "Super Admin" && (callerData.user_type === "Vivacity" || callerData.user_type === "Vivacity Team")`. Return `403 { ok: false, code: "INSUFFICIENT_PERMISSIONS" }` otherwise.
+## Scope
+- **File:** `src/components/profile/AdminActions.tsx`
+- **No other files touched.**
+- **No existing handlers or UI modified** (e.g. `handleSendPasswordReset`, AlertDialog, Account Status, Role Type, Warning footer, `canManage` guard all remain untouched).
 
-2. **Remove all Mailgun/email logic** — Strip MAILGUN env vars, Mailgun fetch, email HTML template construction, and the success response message.
+## Implementation Steps
 
-3. **Return the action_link directly** — After `generateLink` succeeds, return `200 { ok: true, action_link: <linkData.properties.action_link>, email: <targetUser.email> }`.
+1. **Lucide import** — Add `Copy` to the existing `lucide-react` import block alongside `Key`, `Mail`, etc.
 
-Everything else is kept as-is:
+2. **State** — Add `copyingLink` / `setCopyingLink` immediately after the existing `sendingReset` state declaration.
 
-- Inline CORS preflight and headers
-- Auth token extraction via `Authorization` header
-- Caller lookup from `public.users`
-- Target user lookup from `public.users`
-- `auth.users` existence check via `listUsers` (return `400 AUTH_USER_NOT_FOUND` if missing)
-- `generateLink` call with `type: "recovery"` and `redirectTo: ${origin}/reset-password`
-- `audit_eos_events` insert with `action: "recovery_link_copied"`
-- Catch-all `500 UNEXPECTED_ERROR` handler
-- No changes to any other file, edge function, database table, or UI component.
+3. **Handler** — Add `handleCopyRecoveryLink` immediately after `handleSendPasswordReset`. It will:
+   - Invoke `generate-recovery-link` via `supabase.functions.invoke` with `{ user_uuid: user.user_uuid }`.
+   - Validate `data.ok`, throw on edge-function or network errors.
+   - Copy `data.action_link` to `navigator.clipboard`.
+   - Show a success `toast` with a warning not to email the link.
+   - Show an error `toast` on failure.
+   - Always reset `copyingLink` in `finally`.
+
+4. **Button** — Insert a new `Button` inside the existing `div.p-3.rounded-lg.bg-background.border` (Password Reset section), directly below the existing AlertDialog. Render conditionally with `{isSuperAdmin && ...}`.
+   - `variant="outline"`, `size="sm"`, `className="w-full"`.
+   - Show `Loader2` + "Generating..." while `copyingLink` is true.
+   - Show `Copy` icon + "Copy Recovery Link" otherwise.
+
+## Success Criteria
+- Super Admin sees "Copy Recovery Link" button in Password Reset section.
+- Non-Super Admin does not see the button.
+- Clicking it generates a recovery link, copies to clipboard, and shows a success toast with expiry warning.
+- Errors surface via toast without breaking the UI.

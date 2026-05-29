@@ -16,7 +16,8 @@ import {
   Users,
   Key,
   Loader2,
-  Mail
+  Mail,
+  Copy
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -131,6 +132,7 @@ export function AdminActions({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
+  const [copyingLink, setCopyingLink] = useState(false);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   
   // Simplified state
@@ -300,6 +302,34 @@ export function AdminActions({
     }
   };
 
+  const handleCopyRecoveryLink = async () => {
+    try {
+      setCopyingLink(true);
+      const { data, error } = await supabase.functions.invoke('generate-recovery-link', {
+        body: { user_uuid: user.user_uuid },
+      });
+      if (data && !data.ok) {
+        throw new Error(data.detail || data.code || 'Failed to generate recovery link');
+      }
+      if (error) {
+        throw new Error(error.message || 'Failed to generate recovery link');
+      }
+      await navigator.clipboard.writeText(data.action_link);
+      toast({
+        title: 'Recovery Link Copied',
+        description: `Link for ${data.email} copied to clipboard. Send via Teams or SMS — do not email it. Expires in 1 hour.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setCopyingLink(false);
+    }
+  };
+
   const getRoleLabel = (value: RoleType) => 
     ROLE_TYPES.find(r => r.value === value)?.label || value;
 
@@ -415,6 +445,28 @@ export function AdminActions({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
+            {isSuperAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={copyingLink}
+                className="w-full"
+                onClick={handleCopyRecoveryLink}
+              >
+                {copyingLink ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy Recovery Link
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
 
