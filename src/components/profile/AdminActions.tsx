@@ -445,6 +445,28 @@ export function AdminActions({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
+            {isSuperAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={copyingLink}
+                className="w-full"
+                onClick={handleCopyRecoveryLink}
+              >
+                {copyingLink ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy Recovery Link
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
 
