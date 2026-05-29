@@ -52,8 +52,8 @@ serve(async (req) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
     const [{ data: isStaff }, { data: isSA }] = await Promise.all([
-      userClient.rpc("is_vivacity_team_safe"),
-      userClient.rpc("is_super_admin_safe"),
+      userClient.rpc("is_vivacity_team_safe", { p_user_id: caller.id }),
+      userClient.rpc("is_super_admin_safe", { p_user_id: caller.id }),
     ]);
     if (!isStaff && !isSA) {
       return json(403, { ok: false, code: "FORBIDDEN", detail: "Vivacity staff only" });
