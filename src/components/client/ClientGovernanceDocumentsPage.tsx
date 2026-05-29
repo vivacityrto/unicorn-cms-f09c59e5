@@ -364,16 +364,22 @@ export function ClientGovernanceDocumentsPage() {
                             <TooltipContent>File not available</TooltipContent>
                           </Tooltip>
                         )}
-                        {showSharePointButton && (
+                        {row.file_path && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={handleOpenSharePoint}
+                            onClick={() => handleOpenSharePointFolder(row)}
+                            disabled={openingSharePointId === row.id}
                           >
-                            <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                            {openingSharePointId === row.id ? (
+                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                            )}
                             SharePoint
                           </Button>
                         )}
+
                       </div>
                     </TableCell>
                   </TableRow>
