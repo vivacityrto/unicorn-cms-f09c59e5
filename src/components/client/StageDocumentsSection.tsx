@@ -605,11 +605,30 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                {isGeneratingSingle ? (
+                {doc.generation_status === 'failed' ? (
+                  doc.last_error ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="destructive" className="text-xs cursor-help">
+                            Failed
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[280px] whitespace-pre-wrap">
+                          <p className="text-xs font-medium">{categoriseError(doc.last_error).label}</p>
+                          <p className="text-xs text-muted-foreground mt-1 break-words">{doc.last_error}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Badge variant="destructive" className="text-xs">Failed</Badge>
+                  )
+                ) : isGeneratingSingle ? (
                   <Badge variant="secondary" className="text-xs gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Generating…
                   </Badge>
+
                 ) : canGenerate && !doc.has_sharepoint_link ? (
                   <TooltipProvider>
                     <Tooltip>
