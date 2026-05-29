@@ -404,7 +404,10 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
             <span className="text-xs text-muted-foreground">{filteredDocuments.length} of {documents.length}</span>
           )}
         </div>
+      )}
+
       <BulkGenerationProgressDialog
+
         open={progressDialogOpen && (generating || liveResults.length > 0)}
         generating={generating}
         liveResults={liveResults}
