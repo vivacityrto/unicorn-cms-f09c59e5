@@ -418,8 +418,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         onClose={() => { setProgressDialogOpen(false); setProgressMinimised(false); }}
       />
 
-        onClose={() => setProgressDialogOpen(false)}
-      />
+
 
 
       {/* Merge field warnings dialog */}
