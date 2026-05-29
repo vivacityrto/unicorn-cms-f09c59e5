@@ -71,7 +71,7 @@ serve(async (req) => {
     // 4. Lookup ghost in public.users
     const { data: ghost, error: ghostErr } = await admin
       .from("users")
-      .select("email, first_name, last_name")
+      .select("email, first_name, last_name, unicorn_role")
       .eq("user_uuid", body.user_uuid)
       .maybeSingle();
     if (ghostErr) {
@@ -202,6 +202,22 @@ serve(async (req) => {
         emailError = await mg.text();
         console.error("Mailgun send failed", mg.status, emailError);
       }
+    }
+
+    // Best-effort: record in user_invitations for Manage Invites visibility
+    try {
+      await admin.from("user_invitations").insert({
+        email: ghost.email,
+        status: "sent",
+        invited_by: caller.id,
+        tenant_id: body.tenant_id,
+        unicorn_role: ghost.unicorn_role ?? "User",
+        first_name: ghost.first_name ?? "",
+        last_name: ghost.last_name ?? null,
+        last_sent_at: new Date().toISOString(),
+      });
+    } catch (inviteLogErr) {
+      console.error("user_invitations insert failed (non-fatal)", inviteLogErr);
     }
 
     // 10. Audit (best-effort)
