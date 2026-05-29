@@ -1,28 +1,21 @@
-## Problem
-Both layouts use `min-h-screen flex-col` outer containers, so the browser scrolls via `window`. The `<main>` element with `overflow-y-auto` has no fixed-height parent, so its `scrollTop` stays 0 and no scroll events fire. The `ScrollToTopButton` (which listens to a `scrollRef`) never becomes visible.
+Fix the `activate-ghost-user` edge function by adding the missing `p_user_id` argument to the two staff-check RPC calls.
 
-## Changes
+File: `supabase/functions/activate-ghost-user/index.ts`
 
-### 1. `src/components/ui/ScrollToTopButton.tsx`
-- Remove the `scrollRef` prop and `ScrollToTopButtonProps` interface.
-- Change `useEffect` to attach to `window.addEventListener("scroll", onScroll, { passive: true })`.
-- Show button when `window.scrollY > 50`.
-- On click, call `window.scrollTo({ top: 0, behavior: "smooth" })`.
-- Keep all existing visual styling, positioning (`bottom-20 right-6 z-40`), opacity transition, and `aria-label` exactly as-is.
+Change lines 54–57 from:
+```ts
+const [{ data: isStaff }, { data: isSA }] = await Promise.all([
+  userClient.rpc("is_vivacity_team_safe"),
+  userClient.rpc("is_super_admin_safe"),
+]);
+```
 
-### 2. `src/components/layout/ClientLayout.tsx`
-- Remove `const mainRef = useRef<HTMLElement>(null)`.
-- Remove `ref={mainRef}` from the `<main>` element.
-- Change `<ScrollToTopButton scrollRef={mainRef} />` to `<ScrollToTopButton />`.
-- Remove `useRef` from the React import if it becomes unused.
+To:
+```ts
+const [{ data: isStaff }, { data: isSA }] = await Promise.all([
+  userClient.rpc("is_vivacity_team_safe", { p_user_id: caller.id }),
+  userClient.rpc("is_super_admin_safe", { p_user_id: caller.id }),
+]);
+```
 
-### 3. `src/components/DashboardLayout.tsx`
-- Remove `const mainRef = useRef<HTMLElement>(null)`.
-- Remove `ref={mainRef}` from the `<main>` element.
-- Change `<ScrollToTopButton scrollRef={mainRef} />` to `<ScrollToTopButton />`.
-- Leave `useRef` in the import because `navRef` still uses it.
-
-## Non-goals
-- No changes to Ask Viv button positioning or styling.
-- No changes to any other components, pages, edge functions, or database objects.
-- No changes to the scroll button's visual styling.
+No other changes to this file, any UI, any other edge function, or any database object.
