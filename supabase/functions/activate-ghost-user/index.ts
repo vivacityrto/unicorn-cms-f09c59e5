@@ -114,6 +114,11 @@ serve(async (req) => {
       id: body.user_uuid,
       email: ghostEmail,
       email_confirm: true,
+      user_metadata: {
+        first_name: ghost.first_name ?? '',
+        last_name: ghost.last_name ?? '',
+        full_name: `${ghost.first_name ?? ''} ${ghost.last_name ?? ''}`.trim(),
+      },
     });
     if (createErr) {
       console.error("createUser failed", createErr);
