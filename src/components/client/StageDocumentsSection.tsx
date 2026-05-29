@@ -187,26 +187,30 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         const errorCode = body?.error_code || '';
         const errorMsg = body?.error || response.error.message;
 
-        if (errorCode === 'GOVERNANCE_FOLDER_MISSING') {
-          toast({
+        const ERROR_CODE_TOAST: Record<string, { title: string; description: string }> = {
+          GOVERNANCE_FOLDER_MISSING: {
             title: 'Governance Folder Not Configured',
-            description: 'This tenant does not have a governance folder mapped in SharePoint. Go to Admin → SharePoint Folder Mapping, select this tenant, and click "Verify & Create Default" or "Select Folder" to configure it.',
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        if (errorCode === 'SHARED_FOLDER_MISSING') {
-          toast({
+            description: 'No governance folder is configured for this client. Go to Admin → Integrations → SharePoint to set one up before generating.',
+          },
+          SHARED_FOLDER_MISSING: {
             title: 'Shared Folder Not Configured',
-            description: 'Shared folder is not configured for this client. Please set it up in Admin → Integrations → SharePoint before generating documents.',
-            variant: 'destructive',
-          });
+            description: 'No shared folder is configured for this client. Go to Admin → Integrations → SharePoint to set one up before generating.',
+          },
+          RATE_LIMITED: {
+            title: 'Rate Limited',
+            description: 'A bulk generation was run for this client in the last 5 minutes. Please wait before trying again.',
+          },
+        };
+
+        const mapped = ERROR_CODE_TOAST[errorCode];
+        if (mapped) {
+          toast({ title: mapped.title, description: mapped.description, variant: 'destructive' });
           return;
         }
 
-        throw new Error(errorMsg);
+        throw new Error(errorMsg || 'Generation failed');
       }
+
 
 
       // Handle 422 — tailoring incomplete
