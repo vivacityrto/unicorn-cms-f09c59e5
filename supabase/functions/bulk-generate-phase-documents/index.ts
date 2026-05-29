@@ -157,20 +157,22 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Rate limit: 1 bulk gen per tenant per 5 min ──────────────────────
-    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    const { data: recentBulk } = await supabase
-      .from('audit_events')
-      .select('id')
-      .eq('entity', 'bulk_generate')
-      .eq('action', 'bulk_generate_phase_documents')
-      .gte('created_at', fiveMinAgo)
-      .limit(1);
+    if (!plan_only) {
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { data: recentBulk } = await supabase
+        .from('audit_events')
+        .select('id')
+        .eq('entity', 'bulk_generate')
+        .eq('action', 'bulk_generate_phase_documents')
+        .gte('created_at', fiveMinAgo)
+        .limit(1);
 
-    if (recentBulk && recentBulk.length > 0) {
-      return jsonResponse({
-        success: false,
-        error: 'Rate limited. Please wait 5 minutes between bulk generations.'
-      }, 429);
+      if (recentBulk && recentBulk.length > 0) {
+        return jsonResponse({
+          success: false,
+          error: 'Rate limited. Please wait 5 minutes between bulk generations.'
+        }, 429);
+      }
     }
 
     // ── Fetch document_instances for this stage instance ─────────────────
