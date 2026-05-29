@@ -1,25 +1,42 @@
-Plan: Two UI changes to ClientGovernanceDocumentsPage.tsx
+## Goal
+Move the scroll-to-top button out of `ClientGovernanceDocumentsPage` and make it a reusable component wired into both `ClientLayout` and `DashboardLayout`, so it watches the real scroll container (`<main>`) and doesn't overlap the Ask Viv button.
 
-Scope: Single file only — src/components/client/ClientGovernanceDocumentsPage.tsx. No backend, no other components.
+## Files
 
-Change 1 — Framework column display
-In the table body (line ~320), replace the Framework cell content from:
-  {row.framework_label ?? "—"}
-to:
-  {row.framework_type ?? "—"}
+### 1. `src/components/client/ClientGovernanceDocumentsPage.tsx` — remove
+- Delete `showScrollTop` state and the `useEffect` window scroll listener.
+- Delete the floating scroll-to-top `<Button>` JSX.
+- Remove `ChevronUp` from the lucide-react imports (assuming it's only used by the scroll button — will verify on read; if used elsewhere, leave it).
+- No other changes — query logic, framework column, filters all untouched.
 
-Preserved:
-- Filter dropdown continues showing full labels via frameworkOptions.label
-- fwMap and framework_label remain untouched
-- Search haystack keeps r.framework_label for full-name search
+### 2. `src/components/ui/ScrollToTopButton.tsx` — new
+```tsx
+type Props = { scrollRef: React.RefObject<HTMLElement> };
+```
+- `useState` for `visible`.
+- `useEffect`: attach `scroll` listener to `scrollRef.current`; set visible when `scrollTop > 50`. Cleanup on unmount/ref change.
+- Click handler: `scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })`.
+- Render existing `<Button variant="outline" size="sm">` with `ChevronUp` icon, classes: `fixed bottom-20 right-6 z-40 rounded-full shadow-md transition-opacity duration-300` plus `opacity-100` or `opacity-0 pointer-events-none` based on `visible`.
+- `aria-label="Scroll to top"`.
 
-Change 2 — Scroll-to-top button
-- Add showScrollTop boolean state and a window scroll listener inside useEffect
-- Show the button when window.scrollY > 300; otherwise hide
-- Button: fixed position at bottom-right (fixed bottom-6 right-6 z-50)
-- Use existing <Button> component with variant="outline" and a subtle shadow
-- Icon: ChevronUp from lucide-react (add to existing import line)
-- On click: window.scrollTo({ top: 0, behavior: 'smooth' })
-- Animate visibility with an opacity transition (e.g., transition-opacity duration-300)
+### 3. `src/components/layout/ClientLayout.tsx` — wire up
+- `import { useRef }`, `import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton"`.
+- Inside `ClientLayoutInner`: `const mainRef = useRef<HTMLElement>(null);`
+- Attach `ref={mainRef}` to the existing `<main className="flex-1 ...">`.
+- Render `<ScrollToTopButton scrollRef={mainRef} />` as a sibling of the Ask Viv `<Tooltip>` block.
+- Ask Viv button untouched.
 
-Nothing else in the file is changed. No edge functions, no DB changes, no query logic changes.
+### 4. `src/components/DashboardLayout.tsx` — wire up
+- Same pattern: add `useRef` import + `ScrollToTopButton` import.
+- `const mainRef = useRef<HTMLElement>(null);`
+- Attach to existing `<main>` element.
+- Render `<ScrollToTopButton scrollRef={mainRef} />` next to `<AskVivFloatingLauncher />`.
+- `AskVivFloatingLauncher` untouched.
+
+## Non-goals
+- No edge function, DB, migration, or query changes.
+- No changes to Ask Viv styling/positioning.
+- No changes to any other pages or components.
+
+## Risk
+Low. New component is isolated; layout edits are additive (ref + sibling render). The only deletion is the broken scroll-to-top in the governance page, which currently does nothing useful because it listens to `window.scrollY`.
