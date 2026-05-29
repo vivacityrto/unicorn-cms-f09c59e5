@@ -1,51 +1,64 @@
-## Fix: get-sharepoint-parent-folder always returns 404
+## Plan: Fix get-sharepoint-parent-folder 404 bugs
 
-### Root cause (confirmed)
-`supabase/functions/get-sharepoint-parent-folder/index.ts` line 56 calls `supabase.auth.getClaims(token)`, which does not exist on `@supabase/supabase-js@2`. On the anon client this leaves the auth context unset, so the subsequent RLS-scoped query on `tenant_sharepoint_settings` runs as `anon` and returns no row → the function falls through to the 404 "SharePoint not configured for this tenant".
+Edit `supabase/functions/get-sharepoint-parent-folder/index.ts` only.
 
-### Change (single file)
-`supabase/functions/get-sharepoint-parent-folder/index.ts` — auth section only.
+### Changes
 
-1. Initialise the Supabase client with the service role key and drop the `global.headers.Authorization` option:
-   ```ts
-   const supabase = createClient(
-     Deno.env.get("SUPABASE_URL")!,
-     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-   );
-   ```
-2. Replace the broken `getClaims` block with the standard `getUser(token)` pattern, returning 401 on failure. Remove the unused `claimsData` / `claimsError` symbols.
-   ```ts
-   const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-   if (userError || !user) {
-     return json({ error: "Unauthorized" }, 401);
-   }
-   ```
-3. Keep the existing `tenant_sharepoint_settings` query unchanged — including the explicit `.eq("tenant_id", tenant_id)` filter, which becomes the sole tenant-isolation guard now that the query runs under service role.
+**1. Zod schema (line 8)** — make `tenant_id` optional so the frontend keeps working unchanged:
+```ts
+tenant_id: z.number().int().positive().optional(),
+```
 
-Nothing else in the file changes: Zod validation, `resolveDriveItemFromSharingUrl`, the `graphGet(...parent...)` call, status codes, and response shape are all preserved.
+**2. Remove tenant gate (lines 49–74)** — delete the service-role `createClient`, the `tenant_sharepoint_settings` query, and both error returns (`spErr`, `!spRow`). The `getUser(token)` auth check is the tenant boundary.
 
-### Out of scope (explicitly untouched)
-- `supabase/functions/_shared/graph-app-client.ts`
-- All frontend code (the `handleOpenSharePointFolder` caller continues to send `{ file_url, tenant_id }` and receive `{ folder_url }`)
-- Database tables, views, migrations, RLS policies
-- Any other edge function
+Since `getUser` still needs a Supabase client, retain a minimal client created with `SUPABASE_URL` + `SUPABASE_ANON_KEY` solely to call `auth.getUser(token)`. No DB queries remain. Remove the unused destructure of `tenant_id`.
 
-### Reference
-`supabase/functions/verify-compliance-folder/index.ts` uses the same service-role + `getUser(token)` pattern in production.
+**3. Fix Bug 1 (lines 88–99)** — replace the invalid `/parent` navigation with a two-step lookup:
 
-### Backward compatibility
-- Request contract unchanged (`POST { file_url, tenant_id }`, Bearer token).
-- Response contract unchanged (`200 { folder_url }`, `401`, `400`, `404`, `422`, `502`).
-- Success path now reachable for the first time — the 404 was a bug, not a feature any caller depended on.
+```ts
+// Step 1: fetch the item to get its parentReference.id
+const itemResp = await graphGet<{ parentReference?: { id?: string } }>(
+  `/drives/${resolved.driveId}/items/${resolved.itemId}?$select=parentReference`,
+);
+if (!itemResp.ok) {
+  console.warn("[get-sharepoint-parent-folder] item fetch failed:", itemResp.status);
+  return json(
+    { error: `Failed to fetch drive item (Graph ${itemResp.status})` },
+    itemResp.status >= 400 && itemResp.status < 600 ? itemResp.status : 502,
+  );
+}
+const parentId = itemResp.data?.parentReference?.id;
+if (!parentId) {
+  return json({ error: "Drive item has no parent reference" }, 502);
+}
 
-### Tenant isolation
-Authentication is still enforced (401 if `getUser` fails). Tenant scoping moves from RLS to the explicit `.eq("tenant_id", tenant_id)` filter on `tenant_sharepoint_settings`. A malicious authenticated caller could pass an arbitrary `tenant_id`; the function would then return either a parent SharePoint URL (if that tenant exists) or 404. **This is a behavioural change vs. the intended-but-broken RLS design.** Mitigations to consider:
+// Step 2: fetch the parent folder
+const parentResp = await graphGet<{ id?: string; name?: string; webUrl?: string }>(
+  `/drives/${resolved.driveId}/items/${parentId}?$select=id,name,webUrl`,
+);
+```
 
-- The endpoint only returns a SharePoint `webUrl` for a file the caller already possesses a sharing URL to (they must pass `file_url` themselves). It doesn't enumerate or leak tenant data beyond the parent folder URL of a file the caller can already address.
-- If stricter isolation is required, add a membership check via `has_tenant_access(user.id, tenant_id)` or `get_current_user_tenant_id()` before the `tenant_sharepoint_settings` lookup. **Not included in this fix** per the user's "auth section only" scope, but flagged as a follow-up.
+The existing `!parentResp.ok` block, `folderUrl = parentResp.data?.webUrl` check, and `{ folder_url }` response remain unchanged.
+
+### Final flow
+OPTIONS → method check → Bearer validation → `getUser(token)` → Zod parse → `resolveDriveItemFromSharingUrl` → fetch item (`$select=parentReference`) → read `parentReference.id` → fetch parent (`$select=id,name,webUrl`) → return `{ folder_url: webUrl }`.
+
+### Microsoft Graph v1.0 correctness
+- `GET /drives/{drive-id}/items/{item-id}` is the canonical DriveItem retrieval endpoint and `parentReference` is a documented property containing `{ driveId, id, path, ... }`.
+- `/drives/{drive-id}/items/{item-id}/parent` is **not** an exposed navigation property on DriveItem in v1.0 — Graph returns 404. The two-step approach is the documented pattern.
+- Same drive is used for both calls, so no cross-drive permission issue.
+- `$select=parentReference` and `$select=id,name,webUrl` are valid OData projections.
+
+### Error handling preserved
+- 401 on missing/invalid Bearer or `getUser` failure — unchanged.
+- 400 on Zod failure or invalid JSON — unchanged (tenant_id now optional).
+- 422 on `resolveDriveItemFromSharingUrl` throw — unchanged.
+- Graph failures propagate status (400–599) or fall back to 502 — same pattern applied to both new calls.
+- 502 when `webUrl` missing — unchanged.
 
 ### Risk assessment
-- **Low** for the primary bug fix — mirrors a proven pattern already in production (`verify-compliance-folder`).
-- **Low–medium** for tenant isolation — the new model relies on the `tenant_id` filter rather than RLS. Acceptable given the limited data exposed (parent folder webUrl of a file the caller already has), but a follow-up membership check is recommended.
-- **No** impact on Graph API behaviour, response shape, error codes, or callers.
-- **No** migrations, no secret changes (`SUPABASE_SERVICE_ROLE_KEY` is auto-provisioned).
+- **Low.** Surface area limited to one file. Auth boundary preserved via `getUser`. Response shape `{ folder_url }` unchanged, so frontend (`StageDocumentsSection.tsx` and callers of this function) is unaffected.
+- **Tenant isolation:** Previously enforced by the existence check on `tenant_sharepoint_settings`. After fix, isolation relies on (a) authenticated user via `getUser`, and (b) Graph app-only client returning data only for SharePoint items the Vivacity app has access to. The `file_url` is already a tenant-bound SharePoint sharing URL stored on documents the user has RLS access to upstream. This matches the user's stated intent ("auth check is the correct and sufficient tenant boundary").
+- **Backward compatibility:** Frontend continues sending `tenant_id`; optional schema accepts it without error. No DB schema changes. No other functions touched.
+- **Behavioral change:** Six tenants previously blocked with 404 will now succeed. Tenants whose Graph access genuinely fails will still get a Graph-status error surfaced via the improved error toasts.
+- **No new failure modes** introduced beyond the two new Graph-status passthroughs, which use the same status-clamping pattern already proven for `parentResp`.

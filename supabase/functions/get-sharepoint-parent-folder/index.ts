@@ -5,7 +5,7 @@ import { graphGet, resolveDriveItemFromSharingUrl } from "../_shared/graph-app-c
 
 const BodySchema = z.object({
   file_url: z.string().url(),
-  tenant_id: z.number().int().positive(),
+  tenant_id: z.number().int().positive().optional(),
 });
 
 function json(body: unknown, status: number) {
