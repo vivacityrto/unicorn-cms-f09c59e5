@@ -2,11 +2,12 @@ import { useMemo, useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Eye, ExternalLink, Search, ScrollText } from "lucide-react";
+import { Eye, ExternalLink, Loader2, Search, ScrollText } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,8 +56,8 @@ interface FrameworkOption {
 interface GovernanceQueryResult {
   rows: GovernanceDocRow[];
   frameworks: FrameworkOption[];
-  governanceFolderUrl: string | null;
 }
+
 
 function useDebounced<T>(value: T, delay = 250): T {
   const [debounced, setDebounced] = useState(value);
@@ -70,19 +71,21 @@ function useDebounced<T>(value: T, delay = 250): T {
 export function ClientGovernanceDocumentsPage() {
   const { activeTenantId, canManagePortalUsers, isPreview } = useClientTenant();
   const { isSuperAdmin } = useAuth();
+  const { toast } = useToast();
 
   const canAccess = canManagePortalUsers || isPreview || isSuperAdmin();
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [frameworkFilter, setFrameworkFilter] = useState<string>("all");
+  const [openingSharePointId, setOpeningSharePointId] = useState<string | null>(null);
   const debouncedSearch = useDebounced(search, 250);
 
   const { data, isLoading } = useQuery({
     queryKey: ["client-governance-documents-v5", activeTenantId],
     enabled: !!activeTenantId && canAccess,
     queryFn: async (): Promise<GovernanceQueryResult> => {
-      const [vRes, catRes, fwRes, spRes] = await Promise.all([
+      const [vRes, catRes, fwRes] = await Promise.all([
         (supabase as any)
           .from("v_client_governance_documents")
           .select(
@@ -92,11 +95,6 @@ export function ClientGovernanceDocumentsPage() {
           .eq("status", "generated"),
         supabase.from("dd_document_categories").select("value, label, sort_order"),
         supabase.from("dd_governance_framework").select("value, label"),
-        (supabase as any)
-          .from("tenant_sharepoint_settings")
-          .select("governance_folder_url")
-          .eq("tenant_id", activeTenantId)
-          .maybeSingle(),
       ]);
 
       if (vRes.error) throw vRes.error;
@@ -141,16 +139,12 @@ export function ClientGovernanceDocumentsPage() {
         return (a.title ?? "").localeCompare(b.title ?? "");
       });
 
-      const governanceFolderUrl =
-        (spRes as any)?.data?.governance_folder_url ?? null;
-
-      return { rows, frameworks, governanceFolderUrl };
+      return { rows, frameworks };
     },
   });
 
   const rows = data?.rows ?? [];
   const frameworkOptions = data?.frameworks ?? [];
-  const governanceFolderUrl = data?.governanceFolderUrl ?? null;
 
   const categoryOptions = useMemo(() => {
     const set = new Set<string>();
@@ -190,19 +184,33 @@ export function ClientGovernanceDocumentsPage() {
 
   const handleView = (row: GovernanceDocRow) => {
     if (!row.file_path) return;
-    window.open(row.file_path, "_blank", "noopener,noreferrer");
+    const viewUrl = row.file_path.replace("action=default", "action=view");
+    window.open(viewUrl, "_blank", "noopener,noreferrer");
   };
 
-  const handleOpenSharePoint = () => {
-    if (!governanceFolderUrl) return;
-    window.open(governanceFolderUrl, "_blank", "noopener,noreferrer");
+  const handleOpenSharePointFolder = async (row: GovernanceDocRow) => {
+    if (!row.file_path) return;
+    setOpeningSharePointId(row.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("get-sharepoint-parent-folder", {
+        body: { file_url: row.file_path, tenant_id: activeTenantId },
+      });
+      if (error || !data?.folder_url) {
+        throw new Error(error?.message ?? "No folder URL returned");
+      }
+      window.open(data.folder_url, "_blank", "noopener,noreferrer");
+    } catch {
+      toast({ title: "Could not open SharePoint folder", variant: "destructive" });
+    } finally {
+      setOpeningSharePointId(null);
+    }
   };
 
   if (!canAccess) {
     return <Navigate to="/client/home" replace />;
   }
 
-  const showSharePointButton = !!governanceFolderUrl;
+
 
   return (
     <TooltipProvider delayDuration={150}>
