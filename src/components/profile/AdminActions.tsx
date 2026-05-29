@@ -130,9 +130,9 @@ export function AdminActions({
   onUpdate 
 }: AdminActionsProps) {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [copyingLink, setCopyingLink] = useState(false);
-  const [sendingReset, setSendingReset] = useState(false);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   
   // Simplified state
