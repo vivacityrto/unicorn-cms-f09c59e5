@@ -22,6 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import vivIcon from "@/assets/viv-icon.png";
+import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { useClientRequestActions } from "@/hooks/useClientRequestActions";
 import type { DocumentRequestPrefill } from "@/components/client/DocumentRequestModal";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentUserUuid = profile?.user_uuid ?? null;
+  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!activeTenantId) return;
@@ -116,7 +118,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Page Content */}
-          <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">
+          <main ref={mainRef} className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">
             {children}
           </main>
 
