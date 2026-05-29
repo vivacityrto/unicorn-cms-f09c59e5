@@ -87,6 +87,7 @@ function dominantReason(results: BulkResult[], status: BulkResult['status']): st
   if (counts.size === 0) return null;
   const [reason, n] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
   return `${n} ${REASON_LABEL[reason]}`;
+}
 
 const ERROR_CODE_MESSAGES: Record<string, { title: string; description: string }> = {
   GOVERNANCE_FOLDER_MISSING: {
