@@ -302,6 +302,34 @@ export function AdminActions({
     }
   };
 
+  const handleCopyRecoveryLink = async () => {
+    try {
+      setCopyingLink(true);
+      const { data, error } = await supabase.functions.invoke('generate-recovery-link', {
+        body: { user_uuid: user.user_uuid },
+      });
+      if (data && !data.ok) {
+        throw new Error(data.detail || data.code || 'Failed to generate recovery link');
+      }
+      if (error) {
+        throw new Error(error.message || 'Failed to generate recovery link');
+      }
+      await navigator.clipboard.writeText(data.action_link);
+      toast({
+        title: 'Recovery Link Copied',
+        description: `Link for ${data.email} copied to clipboard. Send via Teams or SMS — do not email it. Expires in 1 hour.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setCopyingLink(false);
+    }
+  };
+
   const getRoleLabel = (value: RoleType) => 
     ROLE_TYPES.find(r => r.value === value)?.label || value;
 
