@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Eye, ExternalLink, Loader2, Search, ScrollText, ChevronUp } from "lucide-react";
+import { Eye, ExternalLink, Loader2, Search, ScrollText } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
@@ -80,14 +80,6 @@ export function ClientGovernanceDocumentsPage() {
   const [frameworkFilter, setFrameworkFilter] = useState<string>("all");
   const [openingSharePointId, setOpeningSharePointId] = useState<string | null>(null);
   const debouncedSearch = useDebounced(search, 250);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setShowScrollTop(window.scrollY > 300);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ["client-governance-documents-v5", activeTenantId],
@@ -397,17 +389,6 @@ export function ClientGovernanceDocumentsPage() {
           </Table>
         </div>
       </div>
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        aria-label="Scroll to top"
-        className={`fixed bottom-6 right-6 z-50 rounded-full shadow-md transition-opacity duration-300 ${
-          showScrollTop ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      >
-        <ChevronUp className="h-4 w-4" />
-      </Button>
     </TooltipProvider>
   );
 }
