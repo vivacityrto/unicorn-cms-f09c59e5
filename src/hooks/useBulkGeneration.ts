@@ -180,6 +180,8 @@ export function useBulkGeneration() {
 
       const plan = planData.plan ?? [];
       const skippedFromPlan = planData.skipped ?? [];
+      setPlanSize(plan.length);
+
 
       // Seed liveResults: planned (pending) first, then already-skipped at the end
       const seed: LiveResult[] = [
