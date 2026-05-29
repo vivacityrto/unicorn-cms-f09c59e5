@@ -64,8 +64,11 @@ function categoriseError(error: string | null): { label: string; description: st
 
 export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, debug, isVivacityStaff }: StageDocumentsSectionProps) {
   const { documents, loading, totalCount, refetch } = useStageDocuments({ stageInstanceId, tenantId, debug });
-  const { bulkGenerate, generating, progress, liveResults, currentDoc, completedCount, cancelGeneration } = useBulkGeneration();
+  const { bulkGenerate, generating, progress, liveResults, currentDoc, completedCount, planSize, cancelGeneration } = useBulkGeneration();
+
   const [progressDialogOpen, setProgressDialogOpen] = useState(false);
+  const [progressMinimised, setProgressMinimised] = useState(false);
+
 
   const { toast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -404,15 +407,21 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
       )}
 
       <BulkGenerationProgressDialog
+
         open={progressDialogOpen && (generating || liveResults.length > 0)}
         generating={generating}
         liveResults={liveResults}
         currentDoc={currentDoc}
         completedCount={completedCount}
-        totalCount={liveResults.length}
+        planSize={planSize}
+        minimised={progressMinimised}
+        onMinimise={() => setProgressMinimised(true)}
+        onExpand={() => setProgressMinimised(false)}
         onCancel={cancelGeneration}
-        onClose={() => setProgressDialogOpen(false)}
+        onClose={() => { setProgressDialogOpen(false); setProgressMinimised(false); }}
       />
+
+
 
 
       {/* Merge field warnings dialog */}

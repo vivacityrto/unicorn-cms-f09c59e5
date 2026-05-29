@@ -121,19 +121,22 @@ export function useBulkGeneration() {
   const [liveResults, setLiveResults] = useState<LiveResult[]>([]);
   const [currentDoc, setCurrentDoc] = useState<string | null>(null);
   const [completedCount, setCompletedCount] = useState(0);
+  const [planSize, setPlanSize] = useState(0);
   const cancelledRef = useRef(false);
+
 
   const cancelGeneration = () => {
     cancelledRef.current = true;
   };
-
   const bulkGenerate = async ({ tenantId, stageInstanceId, packageId, mode = 'pending_only', silentEmpty = false }: BulkGenerateParams) => {
     setGenerating(true);
     setProgress(null);
     setLiveResults([]);
     setCurrentDoc(null);
     setCompletedCount(0);
+    setPlanSize(0);
     cancelledRef.current = false;
+
 
     // Build the final summary outside the try so finally can audit
     let finalResults: BulkResult[] = [];
@@ -177,6 +180,8 @@ export function useBulkGeneration() {
 
       const plan = planData.plan ?? [];
       const skippedFromPlan = planData.skipped ?? [];
+      setPlanSize(plan.length);
+
 
       // Seed liveResults: planned (pending) first, then already-skipped at the end
       const seed: LiveResult[] = [
@@ -367,5 +372,6 @@ export function useBulkGeneration() {
     }
   };
 
-  return { bulkGenerate, generating, progress, liveResults, currentDoc, completedCount, cancelGeneration };
+  return { bulkGenerate, generating, progress, liveResults, currentDoc, completedCount, planSize, cancelGeneration };
 }
+
