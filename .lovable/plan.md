@@ -1,10 +1,27 @@
-Update `supabase/functions/activate-ghost-user/index.ts` with two changes:
+In `supabase/functions/activate-ghost-user/index.ts`, update the `admin.auth.admin.createUser()` call at step 7 to pass `user_metadata` containing the ghost user's name fields.
 
-1. **Step 4 ghost lookup** — add `unicorn_role` to the `.select()`:
-   - Change `.select("email, first_name, last_name")` to `.select("email, first_name, last_name, unicorn_role")`
+```text
+Current call (lines 113–117):
+  await admin.auth.admin.createUser({
+    id: body.user_uuid,
+    email: ghostEmail,
+    email_confirm: true,
+  });
+```
 
-2. **Insert into `user_invitations` after Step 9 (Mailgun)** — add a best-effort block before the audit insert (Step 10):
-   - Insert a row with `email`, `status: "sent"`, `invited_by: caller.id`, `tenant_id: body.tenant_id`, `unicorn_role: ghost.unicorn_role ?? "User"`, `first_name`, `last_name`, and `last_sent_at`
-   - Wrap in `try/catch` so a logging failure never blocks activation
+Change to:
 
-No other files, edge functions, database objects, or UI components are touched.
+```text
+  await admin.auth.admin.createUser({
+    id: body.user_uuid,
+    email: ghostEmail,
+    email_confirm: true,
+    user_metadata: {
+      first_name: ghost.first_name ?? '',
+      last_name: ghost.last_name ?? '',
+      full_name: `${ghost.first_name ?? ''} ${ghost.last_name ?? ''}`.trim(),
+    },
+  });
+```
+
+No other code is modified. `ghost.first_name` and `ghost.last_name` are already selected at line 74 and are in scope.
