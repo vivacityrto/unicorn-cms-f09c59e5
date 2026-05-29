@@ -960,7 +960,7 @@ serve(async (req) => {
     // ── Resolve SharePoint folder ──────────────────────────────────────────
     const { data: spSettings } = await supabase
       .from("tenant_sharepoint_settings")
-      .select("governance_drive_id, governance_folder_item_id")
+      .select("governance_drive_id, governance_folder_item_id, drive_id, shared_folder_item_id")
       .eq("tenant_id", tenant_id)
       .maybeSingle();
 
@@ -985,6 +985,29 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    if (!spSettings?.drive_id || !spSettings?.shared_folder_item_id) {
+      const errorMsg = "No shared folder configured for this tenant. Please configure the Shared Folder in Admin → Integrations → SharePoint before generating documents.";
+      await supabase.from("governance_document_deliveries").insert({
+        tenant_id,
+        document_id: doc.id,
+        document_version_id,
+        snapshot_id: snapshotId,
+        status: "failed",
+        delivered_file_name: deliveredFileName,
+        delivered_by: userId,
+        error_message: errorMsg,
+        tailoring_completeness_pct: completeness,
+        missing_merge_fields: missingTags,
+        invalid_merge_fields: invalidTags,
+        tailoring_risk_level: riskLevel,
+      });
+      return new Response(
+        JSON.stringify({ error: errorMsg, error_code: "SHARED_FOLDER_MISSING" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
 
     const driveId = spSettings.governance_drive_id;
     let parentItemId = spSettings.governance_folder_item_id;
