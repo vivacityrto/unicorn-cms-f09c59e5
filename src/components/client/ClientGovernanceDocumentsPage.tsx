@@ -411,4 +411,3 @@ export function ClientGovernanceDocumentsPage() {
     </TooltipProvider>
   );
 }
-}
