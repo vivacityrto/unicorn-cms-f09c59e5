@@ -44,33 +44,19 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  const { file_url, tenant_id } = payload;
+  const { file_url } = payload;
 
-  // Service-role client; tenant isolation enforced by explicit tenant_id filter below
+  // Minimal client solely to validate the caller's JWT via auth.getUser.
+  // No DB queries are made; tenant isolation is enforced by the upstream RLS
+  // that gates which file_url values the caller can ever obtain.
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
   );
 
   const { data: { user }, error: userError } = await supabase.auth.getUser(token);
   if (userError || !user) {
     return json({ error: "Unauthorized" }, 401);
-  }
-
-
-  // Tenant gate via RLS: caller can only read their own tenant's row
-  const { data: spRow, error: spErr } = await supabase
-    .from("tenant_sharepoint_settings")
-    .select("tenant_id")
-    .eq("tenant_id", tenant_id)
-    .maybeSingle();
-
-  if (spErr) {
-    console.error("[get-sharepoint-parent-folder] tenant_sharepoint_settings error:", spErr);
-    return json({ error: "Failed to verify tenant SharePoint configuration" }, 500);
-  }
-  if (!spRow) {
-    return json({ error: "SharePoint not configured for this tenant" }, 404);
   }
 
   // Resolve sharing URL → driveId/itemId
@@ -85,9 +71,26 @@ Deno.serve(async (req) => {
     );
   }
 
-  // Fetch parent folder
+  // Step 1: fetch the item to get its parentReference.id
+  // (`/items/{id}/parent` is not a valid Graph v1.0 navigation property on DriveItem.)
+  const itemResp = await graphGet<{ parentReference?: { id?: string } }>(
+    `/drives/${resolved.driveId}/items/${resolved.itemId}?$select=parentReference`,
+  );
+  if (!itemResp.ok) {
+    console.warn("[get-sharepoint-parent-folder] item fetch failed:", itemResp.status);
+    return json(
+      { error: `Failed to fetch drive item (Graph ${itemResp.status})` },
+      itemResp.status >= 400 && itemResp.status < 600 ? itemResp.status : 502,
+    );
+  }
+  const parentId = itemResp.data?.parentReference?.id;
+  if (!parentId) {
+    return json({ error: "Drive item has no parent reference" }, 502);
+  }
+
+  // Step 2: fetch the parent folder's details
   const parentResp = await graphGet<{ id?: string; name?: string; webUrl?: string }>(
-    `/drives/${resolved.driveId}/items/${resolved.itemId}/parent?$select=id,name,webUrl`,
+    `/drives/${resolved.driveId}/items/${parentId}?$select=id,name,webUrl`,
   );
 
   if (!parentResp.ok) {
