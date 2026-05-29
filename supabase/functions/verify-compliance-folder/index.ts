@@ -101,15 +101,15 @@ Deno.serve(async (req: Request) => {
 
     const driveId = govSite.drive_id;
 
-    // Load existing governance settings (include root_name for folder naming)
+    // Load existing governance settings
     const { data: spSettings } = await supabase
       .from('tenant_sharepoint_settings')
-      .select('governance_folder_item_id, governance_drive_id, root_name')
+      .select('governance_folder_item_id, governance_drive_id')
       .eq('tenant_id', tenant_id)
       .maybeSingle();
 
-    // Use existing client root folder name if available, otherwise build from tenant data
-    const tenantFolderName = (spSettings?.root_name as string | null) || buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name);
+    // Always derive folder name from the tenant's current legal name
+    const tenantFolderName = buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name);
 
     // Check if governance folder already exists AND is actually the client folder (not the start folder container)
     if (spSettings?.governance_folder_item_id) {
