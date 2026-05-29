@@ -46,17 +46,17 @@ Deno.serve(async (req) => {
 
   const { file_url, tenant_id } = payload;
 
-  // User-scoped client (RLS enforces tenant isolation)
+  // Service-role client; tenant isolation enforced by explicit tenant_id filter below
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-  if (claimsError || !claimsData?.claims) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !user) {
     return json({ error: "Unauthorized" }, 401);
   }
+
 
   // Tenant gate via RLS: caller can only read their own tenant's row
   const { data: spRow, error: spErr } = await supabase
