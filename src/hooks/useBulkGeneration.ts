@@ -232,24 +232,28 @@ export function useBulkGeneration() {
             tailoring?: unknown;
           } | null;
 
-          // Configuration errors abort the whole run
-          const mappedDoc = bodyData?.error_code ? ERROR_CODE_MESSAGES[bodyData.error_code] : undefined;
-          if (mappedDoc) {
-            toast({ title: mappedDoc.title, description: mappedDoc.description, variant: 'destructive' });
-            cancelledRef.current = true;
-            outcome = { ...outcome, status: 'failed', reason: 'delivery_failed', error: bodyData?.error || mappedDoc.description };
-            working[idx] = outcome;
-            setLiveResults([...working]);
-            break;
-          }
-
-
           if (resp.error) {
-            // Tailoring incomplete (422) — bodyData may still carry tailoring
-            if (bodyData?.tailoring) {
-              outcome = { ...outcome, status: 'failed', reason: 'tailoring_incomplete', error: bodyData.error || 'Tailoring incomplete' };
+            let respErrorCode: string | undefined;
+            let respErrorBody: { error?: string; error_code?: string; tailoring?: unknown } | undefined;
+            try {
+              respErrorBody = await (resp.error as any).context?.json?.();
+              respErrorCode = respErrorBody?.error_code;
+            } catch { /* ignore */ }
+
+            const mappedDoc = respErrorCode ? ERROR_CODE_MESSAGES[respErrorCode] : undefined;
+            if (mappedDoc) {
+              toast({ title: mappedDoc.title, description: mappedDoc.description, variant: 'destructive' });
+              cancelledRef.current = true;
+              outcome = { ...outcome, status: 'failed', reason: 'delivery_failed', error: respErrorBody?.error || mappedDoc.description };
+              working[idx] = outcome;
+              setLiveResults([...working]);
+              break;
+            }
+
+            if (respErrorBody?.tailoring) {
+              outcome = { ...outcome, status: 'failed', reason: 'tailoring_incomplete', error: respErrorBody.error || 'Tailoring incomplete' };
             } else {
-              const errMsg = bodyData?.error || resp.error.message || 'Delivery failed';
+              const errMsg = respErrorBody?.error || resp.error.message || 'Delivery failed';
               const reason: BulkResultReason = /lock|423|resourceLocked/i.test(errMsg) ? 'locked' : 'delivery_failed';
               outcome = { ...outcome, status: 'failed', reason, error: errMsg };
             }
