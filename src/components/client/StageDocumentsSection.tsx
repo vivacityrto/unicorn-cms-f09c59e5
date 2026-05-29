@@ -404,16 +404,20 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
             <span className="text-xs text-muted-foreground">{filteredDocuments.length} of {documents.length}</span>
           )}
         </div>
-      )}
-
       <BulkGenerationProgressDialog
         open={progressDialogOpen && (generating || liveResults.length > 0)}
         generating={generating}
         liveResults={liveResults}
         currentDoc={currentDoc}
         completedCount={completedCount}
-        totalCount={liveResults.length}
+        planSize={planSize}
+        minimised={progressMinimised}
+        onMinimise={() => setProgressMinimised(true)}
+        onExpand={() => setProgressMinimised(false)}
         onCancel={cancelGeneration}
+        onClose={() => { setProgressDialogOpen(false); setProgressMinimised(false); }}
+      />
+
         onClose={() => setProgressDialogOpen(false)}
       />
 
