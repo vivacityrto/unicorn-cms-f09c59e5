@@ -128,7 +128,7 @@ export function useBulkGeneration() {
   const cancelGeneration = () => {
     cancelledRef.current = true;
   };
-
+  const bulkGenerate = async ({ tenantId, stageInstanceId, packageId, mode = 'pending_only', silentEmpty = false }: BulkGenerateParams) => {
     setGenerating(true);
     setProgress(null);
     setLiveResults([]);
@@ -137,7 +137,6 @@ export function useBulkGeneration() {
     setPlanSize(0);
     cancelledRef.current = false;
 
-    cancelledRef.current = false;
 
     // Build the final summary outside the try so finally can audit
     let finalResults: BulkResult[] = [];
