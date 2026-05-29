@@ -1680,13 +1680,13 @@ export default function ManageDocuments() {
                           )}
                         </TableCell>
                       )}
-                      <TableCell className="py-6 border-r border-border/50" style={{
+                      <TableCell className="py-6 border-r border-border/50 overflow-hidden" style={{
                 minWidth: '200px',
                 maxWidth: '300px'
               }}>
                         <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2 whitespace-nowrap">
-                            <span className="font-semibold text-foreground">{doc.title}</span>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-semibold text-foreground truncate">{doc.title}</span>
                             {isNew && <Badge variant="outline" className="text-xs font-medium" style={{
                       borderColor: "#22C55E",
                       color: "#22C55E",
