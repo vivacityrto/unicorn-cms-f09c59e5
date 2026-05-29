@@ -251,8 +251,20 @@ Deno.serve(async (req: Request) => {
         const respBody = await resp.json().catch(() => ({})) as {
           success?: boolean;
           error?: string;
+          error_code?: string;
           tailoring?: unknown;
         };
+
+        // Configuration errors should abort the whole bulk run, not be reported
+        // as per-document failures.
+        if (respBody?.error_code === 'SHARED_FOLDER_MISSING' || respBody?.error_code === 'GOVERNANCE_FOLDER_MISSING') {
+          return new Response(JSON.stringify({
+            success: false,
+            error: respBody.error,
+            error_code: respBody.error_code,
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
+        }
+
 
         if (resp.ok && respBody?.success) {
           results.push({
