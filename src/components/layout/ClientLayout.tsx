@@ -161,6 +161,8 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         </TooltipContent>
       </Tooltip>
 
+      <ScrollToTopButton scrollRef={mainRef} />
+
       <ClientAskVivPanel
         isOpen={isAskVivOpen}
         onClose={() => setIsAskVivOpen(false)}

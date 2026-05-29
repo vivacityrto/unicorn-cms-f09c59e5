@@ -11,6 +11,7 @@ import { ClientFooter } from "@/components/client/ClientFooter";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 import { FacilitatorModeBanner } from "@/components/eos/FacilitatorModeBanner";
 import { AskVivPanel, AskVivFloatingLauncher } from "@/components/ask-viv";
+import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
 import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupReminderModal";
