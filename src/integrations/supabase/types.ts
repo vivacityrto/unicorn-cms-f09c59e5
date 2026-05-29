@@ -19781,6 +19781,13 @@ export type Database = {
             referencedRelation: "document_instances"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "document_generation_errors_documentinstance_id_fkey"
+            columns: ["documentinstance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_governance_documents"
+            referencedColumns: ["id"]
+          },
         ]
       }
       document_instances: {
@@ -57264,6 +57271,45 @@ export type Database = {
           total_todos?: never
         }
         Relationships: []
+      }
+      v_client_governance_documents: {
+        Row: {
+          active_package_names: string | null
+          category: string | null
+          description: string | null
+          doc_title: string | null
+          document_id: number | null
+          document_title: string | null
+          framework_type: string | null
+          generated_file_url: string | null
+          generationdate: string | null
+          id: number | null
+          status: string | null
+          tenant_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_instances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "document_instances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_instances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_phase_timeline"
+            referencedColumns: ["document_id"]
+          },
+        ]
       }
       v_client_home_feed: {
         Row: {
