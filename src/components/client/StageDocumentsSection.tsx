@@ -2,12 +2,13 @@ import { useState, useMemo, useEffect } from 'react';
 import { useStageDocuments } from '@/hooks/useStageDocuments';
 import { TaskDescriptionButton } from './TaskDescriptionDialog';
 import { useBulkGeneration } from '@/hooks/useBulkGeneration';
+import { BulkGenerationProgressDialog } from './BulkGenerationProgressDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -63,7 +64,9 @@ function categoriseError(error: string | null): { label: string; description: st
 
 export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, debug, isVivacityStaff }: StageDocumentsSectionProps) {
   const { documents, loading, totalCount, refetch } = useStageDocuments({ stageInstanceId, tenantId, debug });
-  const { bulkGenerate, generating, progress } = useBulkGeneration();
+  const { bulkGenerate, generating, progress, liveResults, currentDoc, completedCount, cancelGeneration } = useBulkGeneration();
+  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
+
   const { toast } = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [overwriteChecked, setOverwriteChecked] = useState(false);
@@ -100,6 +103,8 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
     setConfirmOpen(false);
     const useOverwrite = overwriteChecked;
     setOverwriteChecked(false);
+    setProgressDialogOpen(true);
+
     try {
       const res = await bulkGenerate({
         tenantId,
@@ -129,7 +134,9 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   const handleOverwriteConfirm = async () => {
     if (!overwritePrompt) return;
     setOverwriteRunning(true);
+    setProgressDialogOpen(true);
     try {
+
       await bulkGenerate({
         tenantId,
         stageInstanceId,
@@ -392,23 +399,17 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
         </div>
       )}
 
-      {generating && (
-        <div className="px-4 py-2 border-b bg-primary/5">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Generating documents...
-          </div>
-          <Progress value={0} className="h-1.5" />
-        </div>
-      )}
+      <BulkGenerationProgressDialog
+        open={progressDialogOpen && (generating || liveResults.length > 0)}
+        generating={generating}
+        liveResults={liveResults}
+        currentDoc={currentDoc}
+        completedCount={completedCount}
+        totalCount={liveResults.length}
+        onCancel={cancelGeneration}
+        onClose={() => setProgressDialogOpen(false)}
+      />
 
-      {progress && !generating && (
-        <div className="px-4 py-2 border-b bg-primary/5 text-xs text-muted-foreground flex items-center gap-3">
-          <span className="text-green-600 font-medium">{progress.generated} generated</span>
-          {progress.skipped > 0 && <span>{progress.skipped} skipped</span>}
-          {progress.failed > 0 && <span className="text-destructive">{progress.failed} failed</span>}
-        </div>
-      )}
 
       {/* Merge field warnings dialog */}
       <AlertDialog open={!!mergeWarnings} onOpenChange={(open) => { if (!open) setMergeWarnings(null); }}>
@@ -604,11 +605,30 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                {isGeneratingSingle ? (
+                {doc.generation_status === 'failed' ? (
+                  doc.last_error ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="destructive" className="text-xs cursor-help">
+                            Failed
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[280px] whitespace-pre-wrap">
+                          <p className="text-xs font-medium">{categoriseError(doc.last_error).label}</p>
+                          <p className="text-xs text-muted-foreground mt-1 break-words">{doc.last_error}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Badge variant="destructive" className="text-xs">Failed</Badge>
+                  )
+                ) : isGeneratingSingle ? (
                   <Badge variant="secondary" className="text-xs gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Generating…
                   </Badge>
+
                 ) : canGenerate && !doc.has_sharepoint_link ? (
                   <TooltipProvider>
                     <Tooltip>
