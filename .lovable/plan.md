@@ -1,91 +1,117 @@
-# Add File Upload to Client Files Tab Browser
 
-## Overview
-Enable clients to upload files into the SharePoint folder they're currently browsing on the Files tab. Adds one hook field, one new edge function, and one UI block on `ClientFilesPage`.
+## Scope
 
-## Scope (exactly 3 changes)
+Update `src/components/client/ClientGovernanceDocumentsPage.tsx` and add one new database view `public.v_client_governance_documents`.
 
-### 1. `src/hooks/useSharePointBrowser.tsx` — expose current folder ID
-Add `currentFolderId` to the returned object. No other changes to the hook (state, queries, navigation, downloads all unchanged → fully backward-compatible for existing consumers including `ClientGovernanceDocumentsPage` and `SharePointFileBrowser`).
+## Migration
 
-### 2. New edge function `supabase/functions/upload-sharepoint-file/index.ts`
-Multipart upload endpoint mirroring `browse-sharepoint-folder` auth/tenant/SharePoint-settings patterns.
+```sql
+CREATE OR REPLACE VIEW public.v_client_governance_documents
+WITH (security_invoker = true)
+AS
+SELECT
+  di.id,
+  di.tenant_id,
+  di.document_id,
+  di.generationdate,
+  di.generated_file_url,
+  di.status,
+  di.document_title,
+  d.title          AS doc_title,
+  d.description,
+  d.category,
+  d.framework_type,
+  STRING_AGG(DISTINCT p.name, ', ' ORDER BY p.name) AS active_package_names
+FROM public.document_instances di
+JOIN public.documents d ON d.id = di.document_id
+LEFT JOIN public.stage_instances si ON si.id = di.stageinstance_id
+LEFT JOIN public.package_instances pi
+  ON pi.id = si.packageinstance_id
+  AND pi.membership_state = 'active'
+LEFT JOIN public.packages p ON p.id = pi.package_id
+GROUP BY
+  di.id, di.tenant_id, di.document_id, di.generationdate,
+  di.generated_file_url, di.status, di.document_title,
+  d.title, d.description, d.category, d.framework_type;
 
-**Auth flow** (parity with browse function):
-- Extract Bearer token from `Authorization` header → 401 if missing.
-- `supabaseAdmin.auth.getUser(token)` → 401 if invalid.
-- Lookup `public.users` for `tenant_id`, `unicorn_role`, `global_role`.
-- SuperAdmin (`global_role='SuperAdmin'` OR `unicorn_role='Super Admin'`) may pass an explicit `tenant_id` override via FormData; non-SuperAdmins always use their own `tenant_id`. Return 400 if no tenant resolved.
-
-**SharePoint settings**:
-- Load `tenant_sharepoint_settings` for tenant. Require `is_enabled=true` AND `validation_status='valid'`. Else 400.
-
-**Effective root + parent folder resolution**:
-```ts
-const useSharedRoot = use_shared_folder === 'true' && !!settings.shared_folder_item_id;
-const effectiveRootId = useSharedRoot ? settings.shared_folder_item_id : settings.root_item_id;
-const parentFolderId = parent_folder_id?.trim() || effectiveRootId;
-if (!parentFolderId) return 400; // no root configured
-if (parent_folder_id && parent_folder_id !== effectiveRootId) {
-  const ok = await verifyWithinRoot(appToken, drive_id, parent_folder_id, effectiveRootId);
-  if (!ok) return 403; // boundary breach
-}
+GRANT SELECT ON public.v_client_governance_documents TO authenticated;
+GRANT SELECT ON public.v_client_governance_documents TO service_role;
 ```
-`verifyWithinRoot` is inlined (copied verbatim from `browse-sharepoint-folder/index.ts` — no cross-function imports).
 
-**Token**: app-level only via `getAppToken()` from `_shared/graph-app-client.ts` (write access via `Sites.Selected`). Do not use user OAuth tokens for uploads — keeps audit attribution to the caller via `user_id` rather than mixing token identities.
+- `security_invoker = true` — required; underlying-table RLS is enforced for the caller. No RLS policies on any base table are modified.
+- Grants for `authenticated` and `service_role` only (no `anon`).
+- Idempotent (`CREATE OR REPLACE VIEW`).
+- Rollback: `DROP VIEW public.v_client_governance_documents;`
 
-**File handling**:
-- Parse `multipart/form-data` via `await req.formData()`.
-- Reject if no `file` field or `file.size === 0` → 400.
-- Reject if `file.size > 52_428_800` → 400 `{ error: "File too large. Maximum 50 MB." }`.
-- Sanitise filename: strip path separators (`/`, `\`), trim, fallback to `upload-<timestamp>` if empty. (Defensive — Graph rejects bad names anyway, but cleaner errors.)
-- `< 4_194_304` → `graphUploadSmall(drive_id, parentFolderId, fileName, await file.arrayBuffer())`.
-- `>= 4_194_304` → `graphUploadSession(drive_id, parentFolderId, fileName, new Uint8Array(await file.arrayBuffer()))`.
+## Page changes — `ClientGovernanceDocumentsPage.tsx`
 
-**Audit**:
-- Insert into `sharepoint_access_log`: `{ user_id: user.id, tenant_id, action: 'upload', drive_id, item_id: uploadedItem.id, file_name: fileName }`. Service-role client bypasses the existing INSERT policy (`user_id = auth.uid()`), which is the same pattern `browse-sharepoint-folder` uses for `download` rows. Schema verified — all required columns present, `created_at` defaulted.
-- Audit insert failures are logged but do not fail the request (upload already succeeded server-side).
+### Change 1 — Framework filter from `dd_governance_framework`
 
-**Response**: `{ success: true, item_id, file_name, web_url }`.
+- Replace `frameworkOptions` (which derives from loaded rows) with an array built from `fwRes.data` containing `{ value, label }` pairs.
+- The query currently returns only `GovernanceDocRow[]`. Change the `queryFn` return to `{ rows, frameworks, governanceFolderUrl }` so the framework list and folder URL are cached together.
+- `frameworkFilter` state still defaults to `"all"`. Comparison in `filtered` becomes `r.framework_type !== frameworkFilter` (compare by canonical `value`, e.g. `"RTO"`).
+- Dropdown `<SelectItem value={fw.value}>{fw.label}</SelectItem>`.
+- Table cell still renders `row.framework_label` (label resolved via `fwMap`).
 
-**CORS**: identical header block to `browse-sharepoint-folder` (allows the same Supabase client headers). Handle `OPTIONS` preflight. Include `corsHeaders` on every response, including errors.
+### Change 2 — Actions column (View + SharePoint)
 
-**Config**: edge functions deploy with `verify_jwt = false` by default — we validate in code. No `supabase/config.toml` edit needed.
+- Add to the same `Promise.all`:
+  ```ts
+  (supabase as any)
+    .from("tenant_sharepoint_settings")
+    .select("governance_folder_url")
+    .eq("tenant_id", activeTenantId)
+    .maybeSingle()
+  ```
+  Store `governanceFolderUrl = spRes.data?.governance_folder_url ?? null`. Use `maybeSingle()` so a missing row is not an error.
+- Imports: add `Eye`, `ExternalLink` from `lucide-react`; drop unused `Download` import once the button is removed; remove unused `useToast` / `toast` if not referenced elsewhere (keep if still used).
+- Render two buttons in the Actions cell:
+  - **View** — same `window.open(row.file_path, "_blank", "noopener,noreferrer")` behaviour and the same disabled + "File not available" tooltip when `file_path` is null. Replaces Download verbatim.
+  - **SharePoint** — only rendered when `governanceFolderUrl` is a non-empty string. `onClick={() => window.open(governanceFolderUrl!, "_blank", "noopener,noreferrer")}`.
+- Layout: wrap both buttons in `<div className="flex justify-end gap-2">` to preserve right-alignment.
 
-### 3. `src/pages/client/ClientFilesPage.tsx` — upload UI
-Inside the existing `sharedFolderUrl ? (...)` branch, inside `<div className="mt-6 border-t pt-4 space-y-3">`, between the breadcrumb row and the file list:
+### Change 3 — Packages column + view consumption
 
-- Add imports: `useRef` (extend existing React import), `Upload` from `lucide-react`, `toast` from `sonner`.
-- Add state: `const [uploading, setUploading] = useState(false);`
-- Add ref: `const fileInputRef = useRef<HTMLInputElement>(null);`
-- Render an outline `Button` ("Upload file" / "Uploading…" with `Upload` or `Loader2` icon) and a hidden `<input type="file">`.
-- On change: 50 MB client-side guard, build `FormData` (`file`, `tenant_id`, `use_shared_folder: 'true'`, optional `parent_folder_id: browser.currentFolderId`), call `supabase.functions.invoke('upload-sharepoint-file', { body: formData })`, toast success/error, `browser.refetch()`, reset `e.target.value`.
-- Button placed inside the existing breadcrumb row container (right-aligned via `ml-auto`) so layout stays compact and only renders when `sharedFolderUrl` is truthy.
+- Replace the four-step fetch chain (`document_instances` → `documents` → `stage_instances` → `package_instances` → `packages`) with a single call:
+  ```ts
+  (supabase as any)
+    .from("v_client_governance_documents")
+    .select("id, document_id, generationdate, generated_file_url, document_title, doc_title, description, category, framework_type, active_package_names")
+    .eq("tenant_id", activeTenantId)
+    .eq("status", "generated")
+  ```
+- Map row → `GovernanceDocRow`:
+  - `file_name` / `title` ← `document_title ?? doc_title`
+  - `category_label` / `category_sort` ← `catMap.get(category)`
+  - `framework_label` ← `fwMap.get(framework_type) ?? framework_type`
+  - `package_name` ← `active_package_names` (already comma-separated; rename intent preserved without renaming the field)
+- Keep the existing sort: `category_sort` then `title`.
+- `status = 'generated'` filter preserved verbatim.
 
-## Risk Assessment
+### Untouched
+
+- `dd_document_categories` fetch and category filter behaviour.
+- Sort logic, empty-state copy, search behaviour.
+- `canAccess` guard and `Navigate` redirect.
+- All other pages, hooks, edge functions, RLS policies, FK constraints.
+
+## Risk assessment
 
 | Area | Risk | Mitigation |
-|---|---|---|
-| Boundary enforcement | Client passes arbitrary `parent_folder_id` outside tenant root | `verifyWithinRoot` walks parentReferences against `effectiveRootId` — same logic browse function uses for download |
-| RLS on audit log | INSERT policy requires `user_id = auth.uid()` | Service-role client bypasses RLS; `user_id` set to authenticated caller — matches existing `download` audit pattern |
-| Token scope | Uploads need write permission | `getAppToken()` uses `Sites.Selected` granted to SharePoint sites; same token used by other write paths (e.g. governance delivery) |
-| Large files | Graph rejects >4 MB on simple PUT | Size-based routing to `graphUploadSession` (chunked) |
-| Memory | Buffering full file in edge function | 50 MB hard cap keeps memory bounded |
-| Existing consumers of hook | Adding `currentFolderId` to return | Purely additive; no breaking change |
-| Tenant isolation | SuperAdmin override could leak | Override gated on `isSuperAdmin` check (same as browse function); non-admins ignored with warning log |
-| FK constraints | None added | `sharepoint_access_log.user_id` and `tenant_id` already validated by existing FKs |
-| RLS policies | None touched | No migration; zero policy changes |
-| Backward compatibility | All existing browse/download/navigation behaviour unchanged | Hook addition is purely additive; edge function is new; UI change is additive inside an existing conditional branch |
+|------|------|-----------|
+| RLS on underlying tables | View must not bypass RLS | `security_invoker = true` enforces caller's policies on `document_instances`, `documents`, `stage_instances`, `package_instances`, `packages` |
+| Tenant isolation | View exposes `tenant_id` from `document_instances`; query filters by `tenant_id = activeTenantId`; underlying RLS still gates rows | No regression; defence-in-depth preserved |
+| Package aggregation correctness | `LEFT JOIN ... AND pi.membership_state = 'active'` ensures only active packages contribute; documents with no active package still appear with `NULL` `active_package_names` | Matches "Active packages only" intent without dropping rows |
+| Filter semantics change | Switching framework comparison from label to value changes URL-less state shape; no persisted state exists for this filter | Safe — local component state only |
+| Removed Download label | Users may look for "Download" copy | New "View" button uses identical open-in-new-tab behaviour |
+| SharePoint button absence | Tenants without `governance_folder_url` will not see the button | Conditional render avoids broken links |
+| Audit logging | Read-only view, no mutations introduced | No audit impact |
+| Backward compatibility | Old query key `client-governance-documents-v4` should be bumped to invalidate stale cache shape | Use `client-governance-documents-v5` |
 
-## Out of Scope (explicitly not touched)
-- `browse-sharepoint-folder/index.ts`
-- `SharePointFileBrowser.tsx`, `SharePointFolderConfig.tsx`
-- `sharepoint_access_log` schema and RLS
-- All other pages, hooks, edge functions, or migrations
+## Benefits
 
-## Verification After Build
-1. Upload a small (<4 MB) file from the Files tab at folder root → appears in browser refresh, `sharepoint_access_log` row recorded with `action='upload'`.
-2. Navigate into subfolder → upload → file lands in correct subfolder.
-3. Attempt >50 MB → client-side block; bypass client → server returns 400.
-4. Confirm `ClientGovernanceDocumentsPage` (other `useSharePointBrowser` consumer) still functions unchanged.
+- One round-trip query replaces a 4-step chain (~75% fewer requests, lower latency).
+- Framework filter is now complete (all configured frameworks, not just those present in current rows) and uses stable codes per project conventions.
+- Clients gain a one-click jump to their tenant's SharePoint governance folder.
+- View is reusable for other governance reporting surfaces.
+
