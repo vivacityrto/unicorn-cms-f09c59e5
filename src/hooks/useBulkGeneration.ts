@@ -121,7 +121,9 @@ export function useBulkGeneration() {
   const [liveResults, setLiveResults] = useState<LiveResult[]>([]);
   const [currentDoc, setCurrentDoc] = useState<string | null>(null);
   const [completedCount, setCompletedCount] = useState(0);
+  const [planSize, setPlanSize] = useState(0);
   const cancelledRef = useRef(false);
+
 
   const cancelGeneration = () => {
     cancelledRef.current = true;
