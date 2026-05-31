@@ -51,6 +51,7 @@ export default function CohortAccessSenderJob() {
 
   const [job, setJob] = useState<Job | null>(null);
   const [items, setItems] = useState<Item[]>([]);
+  const [tenantNames, setTenantNames] = useState<Map<number, string>>(new Map());
   const [draining, setDraining] = useState(false);
   const [autoDrain, setAutoDrain] = useState(true);
   const drainAbortRef = useRef(false);
@@ -62,7 +63,22 @@ export default function CohortAccessSenderJob() {
       supabase.from("cohort_send_job_items").select("*").eq("job_id", jobId).order("id").limit(1000),
     ]);
     if (j) setJob(j as any);
-    if (it) setItems(it as any);
+    if (it) {
+      setItems(it as any);
+      const uniqueIds = Array.from(
+        new Set((it as any[]).map((i) => i.tenant_id).filter((id): id is number => id != null))
+      );
+      if (uniqueIds.length > 0) {
+        const { data: tenants } = await supabase.from("tenants").select("id, name").in("id", uniqueIds);
+        const map = new Map<number, string>();
+        for (const t of (tenants ?? []) as Array<{ id: number; name: string }>) {
+          if (t?.id != null && t?.name) map.set(t.id, t.name);
+        }
+        setTenantNames(map);
+      } else {
+        setTenantNames(new Map());
+      }
+    }
   };
 
   useEffect(() => { refresh(); }, [jobId]);
