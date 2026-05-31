@@ -1,0 +1,1 @@
+ALTER TABLE public.eos_issues ALTER COLUMN tenant_id DROP NOT NULL;
