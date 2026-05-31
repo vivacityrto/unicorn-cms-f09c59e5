@@ -1,40 +1,38 @@
-## Objective
-Update the `v_auth_user_state` view so that users whose `tenant_id` is null in `public.users` (e.g. ghost users created via the invite flow) still resolve a `tenant_id` by looking up `public.tenant_users`.
+# Fix: cannot close an Issue/Opportunity
+
+## Root cause
+
+`useRisksOpportunities.updateItem` validates the status change against rows in `public.eos_issue_status_transitions` (via `useEosStatusTransitions` + `isValidStatusTransition`). The current table only allows these paths to `Closed`:
+
+- `Escalated → Closed`
+- `Solved → Closed`
+
+There is no `Open → Closed` row, so picking "Closed" on an Open item throws the toast shown in the screenshot:
+`Invalid status transition: "Open" → "Closed". Allowed transitions from "Open": Discussing, In Review, Archived`.
+
+No code is broken — the workflow data is just too strict for what the UI exposes (the status dropdown lets users pick Closed from any state).
 
 ## Change
-Replace the `tenant_id` column in the view from:
 
-```
-u.tenant_id
-```
+Single data migration on `public.eos_issue_status_transitions` — insert the missing direct-to-Closed transitions so users can close an item from any active working state. No schema, RLS, grant, function, or app code changes.
 
-To:
+Add rows (idempotent `ON CONFLICT DO NOTHING`):
 
-```sql
-COALESCE(
-  u.tenant_id,
-  (
-    SELECT tu.tenant_id
-    FROM public.tenant_users tu
-    WHERE tu.user_id = u.user_uuid
-    ORDER BY
-      CASE tu.relationship_role
-        WHEN 'primary_contact'   THEN 1
-        WHEN 'secondary_contact' THEN 2
-        WHEN 'user'              THEN 3
-        ELSE 4
-      END,
-      tu.created_at DESC
-    LIMIT 1
-  )
-) AS tenant_id
-```
+- `Open → Closed`
+- `Discussing → Closed`
+- `Actioning → Closed`
+- `In Review → Closed`
 
-## Guarantees
-- The subquery is `LIMIT 1`, so exactly one row per user is preserved.
-- Users with `tenant_id` already set on `public.users` are completely unaffected.
-- All other view columns remain unchanged.
-- No RLS or grant changes needed — existing permissions stay correct.
+`Solved → Closed` and `Escalated → Closed` already exist and stay. `Archived → Closed` is intentionally **not** added (Archived is a terminal storage state; the existing `Archived → Open` reopen path is preserved).
 
-## SQL
-A `CREATE OR REPLACE VIEW` statement with the above column change.
+## Out of scope
+
+- No change to `useRisksOpportunities.tsx`, the status dropdown, or the EOS options hook.
+- No change to other transitions (Discussing/Actioning/etc. workflow stays as-is).
+- No change to `eos_issues` table, RLS, or triggers.
+
+## Verification
+
+After approval and migration run:
+1. On `/eos/risks-opportunities`, change an Open item's status to `Closed` — should succeed with "Item updated successfully".
+2. Existing transitions (Open → Discussing, Solved → Closed, etc.) continue to work.
