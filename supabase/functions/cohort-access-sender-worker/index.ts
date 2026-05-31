@@ -150,6 +150,13 @@ serve(async (req) => {
         p_item_id: item.id, p_outcome: outcome, p_reason: reason,
       });
 
+      if (payload?.ok === true && typeof payload?.action_link === "string" && payload.action_link.length > 0) {
+        await admin
+          .from("cohort_send_job_items")
+          .update({ action_link: payload.action_link })
+          .eq("id", item.id);
+      }
+
       drained++;
       if (outcome === "sent") { sent++; consecutiveLocal = 0; }
       else if (outcome === "skipped") { skipped++; consecutiveLocal = 0; }

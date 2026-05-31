@@ -13960,6 +13960,7 @@ export type Database = {
       }
       cohort_send_job_items: {
         Row: {
+          action_link: string | null
           attempts: number
           created_at: string
           email: string | null
@@ -13977,6 +13978,7 @@ export type Database = {
           user_uuid: string
         }
         Insert: {
+          action_link?: string | null
           attempts?: number
           created_at?: string
           email?: string | null
@@ -13994,6 +13996,7 @@ export type Database = {
           user_uuid: string
         }
         Update: {
+          action_link?: string | null
           attempts?: number
           created_at?: string
           email?: string | null
