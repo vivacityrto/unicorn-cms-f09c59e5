@@ -798,6 +798,31 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                               <Pencil className="h-4 w-4 mr-2" />
                               Edit User
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              disabled={actionUserId === member.user_id && actionKind === 'reset'}
+                              onSelect={(e) => { e.preventDefault(); handleSendPasswordReset(member); }}
+                            >
+                              {actionUserId === member.user_id && actionKind === 'reset' ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <KeyRound className="h-4 w-4 mr-2" />
+                              )}
+                              Send Password Reset
+                            </DropdownMenuItem>
+                            {isSuperAdmin() && (
+                              <DropdownMenuItem
+                                disabled={actionUserId === member.user_id && actionKind === 'recovery'}
+                                onSelect={(e) => { e.preventDefault(); handleCopyRecoveryLink(member); }}
+                              >
+                                {actionUserId === member.user_id && actionKind === 'recovery' ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Link2 className="h-4 w-4 mr-2" />
+                                )}
+                                Copy Recovery Link
+                              </DropdownMenuItem>
+                            )}
                             {member.user_id !== profile?.user_uuid && (
                               <>
                                 <DropdownMenuSeparator />
