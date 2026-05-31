@@ -836,7 +836,98 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         </Card>
       )}
 
+      {/* Bulk action toolbar — staff only, when there are members */}
+      {canManageUsers && members.length > 0 && (
+        <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Checkbox
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                onCheckedChange={(c) => toggleSelectAll(c === true)}
+                aria-label="Select all team members"
+              />
+              <span className="text-sm font-medium">
+                {selectedIds.size === 0
+                  ? 'Select team members for a bulk action'
+                  : `${selectedIds.size} selected`}
+              </span>
+              <Separator orientation="vertical" className="h-5 mx-1" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  selectByPredicate((m) => {
+                    const s = computeState(m);
+                    return s === 'ghost' || s === 'invited';
+                  })
+                }
+              >
+                Select all not-yet-activated
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => selectByPredicate((m) => !m.users.last_sign_in_at && !m.users.disabled)}
+              >
+                Select all never-logged-in
+              </Button>
+              {selectedIds.size > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {canActivateGhosts && (() => {
+                const { run, skip } = previewSplit('activate');
+                return (
+                  <Button
+                    size="sm"
+                    onClick={() => runBulk('activate')}
+                    disabled={bulkRunning !== null || run === 0}
+                  >
+                    {bulkRunning === 'activate' ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <KeyRound className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Activate accounts
+                    <Badge variant="secondary" className="ml-2">
+                      {run} will run · {skip} skipped
+                    </Badge>
+                  </Button>
+                );
+              })()}
+              {(() => {
+                const { run, skip } = previewSplit('reset');
+                return (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => runBulk('reset')}
+                    disabled={bulkRunning !== null || run === 0}
+                  >
+                    {bulkRunning === 'reset' ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Mail className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Send password reset
+                    <Badge variant="secondary" className="ml-2">
+                      {run} will run · {skip} skipped
+                    </Badge>
+                  </Button>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Users List */}
+
       <Card>
         <CardContent className="p-0">
           {members.length === 0 ? (
