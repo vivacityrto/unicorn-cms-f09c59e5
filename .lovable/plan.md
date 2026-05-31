@@ -1,31 +1,27 @@
-## Plan: Add action_link fallback for ghost activation email failures
+## PART A — Migration
+Add nullable `action_link text` column to `public.cohort_send_job_items` via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. No other schema changes; no GRANT/RLS changes needed (existing table policies apply).
 
-### Context
-When the `activate-ghost-user` edge function successfully creates an auth account but fails to send the welcome email (e.g. Mailgun misconfigured), callers currently have no way to recover. They get a plain toast saying the email could not be sent, but no actionable link to share manually.
+## PART B — `supabase/functions/cohort-access-sender-worker/index.ts`
+After the `record_cohort_item_outcome` RPC call (line 149-151), add:
 
-### Changes
+```ts
+if (payload?.ok === true && typeof payload?.action_link === "string" && payload.action_link.length > 0) {
+  await admin
+    .from("cohort_send_job_items")
+    .update({ action_link: payload.action_link })
+    .eq("id", item.id);
+}
+```
 
-**PART A — `supabase/functions/activate-ghost-user/index.ts`**
+Uses the existing `admin` service-role client. No-op for `send-password-reset` (never returns action_link).
 
-Add `action_link` to the success response payload. When `email_sent` is true, return `null`; otherwise return the generated recovery link so the caller can present a "Copy link" fallback.
+## PART C — `src/pages/admin/CohortAccessSenderJob.tsx`
+1. Add `action_link: string | null` to the `Item` interface (line 34-45). `.select("*")` already covers it.
+2. Add a `Copy` icon to lucide-react import (line 12).
+3. Add `<TableHead>Link</TableHead>` after the "Reason" header (after line 221).
+4. Add a corresponding `<TableCell>` after the Reason cell (after line 239) rendering a small `Copy` button when `it.action_link` is truthy. On click:
+   - `await navigator.clipboard.writeText(it.action_link)` then toast `"Link copied — send via Teams or email."`
+   - On failure, toast showing the link text so user can copy manually.
+5. In `exportCsv` (lines 121-134): add `"action_link"` to headers after `"reason"`, and add `it.action_link ?? ""` to the row array in the matching position.
 
-````text
-  action_link: emailSent ? null : actionLink,
-````
-
-**PART B — `src/components/client/TenantUsersTab.tsx`**
-
-Update the `handleActivateGhost` email-failure toast branch:
-
-1. If `data.action_link` is present, show a toast with a "Copy link" action button.
-2. When clicked, copy `data.action_link` to the clipboard via `navigator.clipboard.writeText()`.
-3. After copying, show a second confirming toast: "Link copied — paste it into Teams or email to the user directly."
-4. If `data.action_link` is null or missing, fall back to the original plain toast.
-
-The `email_sent === true` branch remains unchanged.
-
-### Safety
-- Existing callers ignore unexpected JSON fields; adding `action_link` is backward-compatible.
-- The frontend only shows the copy button when `action_link` is truthy, so null/missing values safely fall back.
-
-No other files are touched.
+No other files touched.
