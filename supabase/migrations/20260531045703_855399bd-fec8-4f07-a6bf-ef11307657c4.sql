@@ -1,0 +1,1 @@
+ALTER TABLE public.cohort_send_job_items ADD COLUMN IF NOT EXISTS action_link text;
