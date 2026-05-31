@@ -300,6 +300,159 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     }
   };
 
+  // ───────── Bulk state-aware actions ─────────
+  type AccountState = 'ghost' | 'invited' | 'active' | 'disabled';
+  type BulkAction = 'activate' | 'reset';
+  type BulkOutcome = 'sent' | 'skipped' | 'failed' | 'aborted';
+  interface BulkResultRow {
+    user_uuid: string;
+    email: string | null;
+    action: BulkAction;
+    outcome: BulkOutcome;
+    reason?: string;
+  }
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRunning, setBulkRunning] = useState<null | BulkAction>(null);
+  const [bulkResults, setBulkResults] = useState<{
+    action: BulkAction;
+    rows: BulkResultRow[];
+    partial: boolean;
+  } | null>(null);
+
+  // Clear selection when the underlying member list changes (tenant switch, refresh).
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [tenantId]);
+
+  const computeState = (m: TenantMemberInfo): AccountState => {
+    if (m.users.disabled) return 'disabled';
+    if (ghostUserIds.has(m.user_id)) return 'ghost';
+    if (!m.users.last_sign_in_at) return 'invited';
+    return 'active';
+  };
+
+  const isValidFor = (state: AccountState, action: BulkAction): { ok: true } | { ok: false; reason: string } => {
+    if (state === 'disabled') return { ok: false, reason: 'Account disabled — re-enable first' };
+    if (action === 'activate') {
+      if (state === 'ghost') return { ok: true };
+      return { ok: false, reason: 'Already activated — use Send password reset' };
+    }
+    // reset
+    if (state === 'ghost') return { ok: false, reason: 'No auth account yet — use Activate' };
+    return { ok: true };
+  };
+
+  const toggleSelect = (userId: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(userId); else next.delete(userId);
+      return next;
+    });
+  };
+
+  const allSelected = members.length > 0 && members.every((m) => selectedIds.has(m.user_id));
+  const someSelected = selectedIds.size > 0 && !allSelected;
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectedIds(checked ? new Set(members.map((m) => m.user_id)) : new Set());
+  };
+
+  const selectByPredicate = (pred: (m: TenantMemberInfo) => boolean) => {
+    setSelectedIds(new Set(members.filter(pred).map((m) => m.user_id)));
+  };
+
+  const selectedMembers = members.filter((m) => selectedIds.has(m.user_id));
+  const previewSplit = (action: BulkAction) => {
+    let run = 0;
+    let skip = 0;
+    for (const m of selectedMembers) {
+      const v = isValidFor(computeState(m), action);
+      if (v.ok) run += 1; else skip += 1;
+    }
+    return { run, skip };
+  };
+
+  const runBulk = async (action: BulkAction, restrictTo?: Set<string>) => {
+    const pool = restrictTo
+      ? selectedMembers.filter((m) => restrictTo.has(m.user_id))
+      : selectedMembers;
+    if (pool.length === 0) return;
+
+    // Pre-skip rows locally; only send eligible uuids to the orchestrator.
+    const localSkips: BulkResultRow[] = [];
+    const eligible: TenantMemberInfo[] = [];
+    for (const m of pool) {
+      const v = isValidFor(computeState(m), action);
+      if (v.ok) eligible.push(m);
+      else localSkips.push({
+        user_uuid: m.user_id,
+        email: m.users.email,
+        action,
+        outcome: 'skipped',
+        reason: v.reason,
+      });
+    }
+
+    setBulkRunning(action);
+    try {
+      let serverRows: BulkResultRow[] = [];
+      let partial = false;
+      if (eligible.length > 0) {
+        const { data, error } = await supabase.functions.invoke('bulk-account-actions', {
+          body: {
+            tenant_id: tenantId,
+            action,
+            user_uuids: eligible.map((m) => m.user_id),
+          },
+        });
+        if (error) {
+          // Network/timeout — mark everyone we sent as aborted so the user sees them.
+          serverRows = eligible.map((m) => ({
+            user_uuid: m.user_id,
+            email: m.users.email,
+            action,
+            outcome: 'aborted' as BulkOutcome,
+            reason: error.message || 'Request failed — partial results unavailable',
+          }));
+          partial = true;
+        } else if (!data?.ok) {
+          serverRows = eligible.map((m) => ({
+            user_uuid: m.user_id,
+            email: m.users.email,
+            action,
+            outcome: 'failed' as BulkOutcome,
+            reason: data?.detail || data?.code || 'Bulk request rejected',
+          }));
+        } else {
+          serverRows = (data.details || []) as BulkResultRow[];
+          partial = !!data.partial_failure;
+        }
+      }
+      setBulkResults({ action, rows: [...localSkips, ...serverRows], partial });
+      // Refresh members + ghost set so the UI reflects new state.
+      fetchMembers();
+    } catch (err: any) {
+      console.error('bulk-account-actions failed', err);
+      toast.error("Bulk action failed — please try again");
+    } finally {
+      setBulkRunning(null);
+    }
+  };
+
+  const retryFailedAndAborted = () => {
+    if (!bulkResults) return;
+    const ids = new Set(
+      bulkResults.rows
+        .filter((r) => r.outcome === 'failed' || r.outcome === 'aborted')
+        .map((r) => r.user_uuid),
+    );
+    if (ids.size === 0) return;
+    setBulkResults(null);
+    runBulk(bulkResults.action, ids);
+  };
+
+
+
 
   // Resolve effective relationship_role for a member, preferring the new
   // canonical column and falling back to legacy flags for unmigrated rows.
