@@ -1035,8 +1035,9 @@ const App = () => (
             <Route path="/admin/team-users" element={<ProtectedRoute><TeamUsers /></ProtectedRoute>} />
             <Route path="/admin/team-users/new-starter" element={<ProtectedRoute requireSuperAdmin><NewStarterWizard /></ProtectedRoute>} />
             <Route path="/admin/bulk-invite" element={<ProtectedRoute requireSuperAdmin><BulkInvite /></ProtectedRoute>} />
-            <Route path="/admin/cohort-sender" element={<ProtectedRoute><CohortAccessSender /></ProtectedRoute>} />
-            <Route path="/admin/cohort-sender/jobs/:jobId" element={<ProtectedRoute><CohortAccessSenderJob /></ProtectedRoute>} />
+            <Route path="/admin/cohort-sender" element={<ProtectedRoute requireSuperAdmin><CohortAccessSender /></ProtectedRoute>} />
+            <Route path="/admin/cohort-sender/jobs/:jobId" element={<ProtectedRoute requireSuperAdmin><CohortAccessSenderJob /></ProtectedRoute>} />
+
 
             <Route path="/admin/diagnostics/zero-progress-packages" element={<ProtectedRoute requireSuperAdmin><AdminZeroProgressPackagesPage /></ProtectedRoute>} />
             <Route path="/admin/tenant-users" element={<ProtectedRoute><TenantUsers /></ProtectedRoute>} />
