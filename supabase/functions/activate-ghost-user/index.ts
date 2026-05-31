@@ -249,6 +249,7 @@ serve(async (req) => {
       email: ghost.email,
       email_sent: emailSent,
       email_error: emailError,
+      action_link: emailSent ? null : actionLink,
       detail: emailSent
         ? "Account activated and welcome email sent"
         : "Account activated; welcome email could not be sent — resend via password reset",

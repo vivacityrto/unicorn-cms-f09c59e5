@@ -1,16 +1,31 @@
-### Fix 1 — Expiry timer (24h → 7 days)
-In `getTimeRemaining` (line 297), change the expires calculation from `24 * 60 * 60 * 1000` to `7 * 24 * 60 * 60 * 1000`.
+## Plan: Add action_link fallback for ghost activation email failures
 
-In the Expired summary card description (line 622), change the text from `"Past 24-hour window"` to `"Past 7-day window"`.
+### Context
+When the `activate-ghost-user` edge function successfully creates an auth account but fails to send the welcome email (e.g. Mailgun misconfigured), callers currently have no way to recover. They get a plain toast saying the email could not be sent, but no actionable link to share manually.
 
-### Fix 2 — Ghost users show as Verified
-1. In the `UserStatus` type definition (around line 37), add `is_in_auth: boolean`.
-2. In `fetchUserStatuses`, after building `authUserMap` from `auth.users`, set `is_in_auth: authUserMap.has(user.email)` on each status-map entry.
-3. In the table row render (around line 756), change the `isVerified` check from `const isVerified = !!userStatus;` to `const isVerified = !!userStatus && userStatus.is_in_auth === true;`.
+### Changes
 
-### Fix 3 — Re-invite button backwards visibility
-In the Re-invite button inline `style` prop (around line 517), flip the ternary:
-- From: `selectedInvites.size > 0 ? 'none' : 'inline-flex'`
-- To:   `selectedInvites.size > 0 ? 'inline-flex' : 'none'`
+**PART A — `supabase/functions/activate-ghost-user/index.ts`**
 
-No other logic, layout, or imports are changed.
+Add `action_link` to the success response payload. When `email_sent` is true, return `null`; otherwise return the generated recovery link so the caller can present a "Copy link" fallback.
+
+````text
+  action_link: emailSent ? null : actionLink,
+````
+
+**PART B — `src/components/client/TenantUsersTab.tsx`**
+
+Update the `handleActivateGhost` email-failure toast branch:
+
+1. If `data.action_link` is present, show a toast with a "Copy link" action button.
+2. When clicked, copy `data.action_link` to the clipboard via `navigator.clipboard.writeText()`.
+3. After copying, show a second confirming toast: "Link copied — paste it into Teams or email to the user directly."
+4. If `data.action_link` is null or missing, fall back to the original plain toast.
+
+The `email_sent === true` branch remains unchanged.
+
+### Safety
+- Existing callers ignore unexpected JSON fields; adding `action_link` is backward-compatible.
+- The frontend only shows the copy button when `action_link` is truthy, so null/missing values safely fall back.
+
+No other files are touched.
