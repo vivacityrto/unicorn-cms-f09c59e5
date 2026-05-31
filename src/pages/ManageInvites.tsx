@@ -157,7 +157,8 @@ export default function ManageInvites() {
           created_at: user.created_at,
           unicorn_role: user.unicorn_role,
           user_type: user.user_type,
-          last_sign_in_at: authUserMap.get(user.email) || null
+          last_sign_in_at: authUserMap.get(user.email) || null,
+          is_in_auth: authUserMap.has(user.email)
         });
       });
 
