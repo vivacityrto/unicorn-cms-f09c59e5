@@ -23476,7 +23476,7 @@ export type Database = {
           solved_at: string | null
           source: string | null
           status: string | null
-          tenant_id: number
+          tenant_id: number | null
           title: string
           updated_at: string | null
           why_it_matters: string | null
@@ -23509,7 +23509,7 @@ export type Database = {
           solved_at?: string | null
           source?: string | null
           status?: string | null
-          tenant_id: number
+          tenant_id?: number | null
           title: string
           updated_at?: string | null
           why_it_matters?: string | null
@@ -23542,7 +23542,7 @@ export type Database = {
           solved_at?: string | null
           source?: string | null
           status?: string | null
-          tenant_id?: number
+          tenant_id?: number | null
           title?: string
           updated_at?: string | null
           why_it_matters?: string | null
