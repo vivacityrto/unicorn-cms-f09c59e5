@@ -51,6 +51,9 @@ import {
   KeyRound,
   Link2,
   Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -59,6 +62,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { toast } from 'sonner';
 import { TenantInviteDialog } from './TenantInviteDialog';
 import { useRBAC } from '@/hooks/useRBAC';
@@ -279,6 +299,165 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       setActionKind(null);
     }
   };
+
+  // ───────── Bulk state-aware actions ─────────
+  type AccountState = 'ghost' | 'invited' | 'active' | 'disabled';
+  type BulkAction = 'activate' | 'reset';
+  type BulkOutcome = 'sent' | 'skipped' | 'failed' | 'aborted';
+  interface BulkResultRow {
+    user_uuid: string;
+    email: string | null;
+    action: BulkAction;
+    outcome: BulkOutcome;
+    reason?: string;
+  }
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRunning, setBulkRunning] = useState<null | BulkAction>(null);
+  const [bulkResults, setBulkResults] = useState<{
+    action: BulkAction;
+    rows: BulkResultRow[];
+    partial: boolean;
+  } | null>(null);
+
+  // Clear selection when the underlying member list changes (tenant switch, refresh).
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [tenantId]);
+
+  const computeState = (m: TenantMemberInfo): AccountState => {
+    if (m.users.disabled) return 'disabled';
+    if (ghostUserIds.has(m.user_id)) return 'ghost';
+    if (!m.users.last_sign_in_at) return 'invited';
+    return 'active';
+  };
+
+  // Returns null when the action is valid for the state, otherwise a skip reason.
+  const invalidReason = (state: AccountState, action: BulkAction): string | null => {
+    if (state === 'disabled') return 'Account disabled — re-enable first';
+    if (action === 'activate') {
+      if (state === 'ghost') return null;
+      return 'Already activated — use Send password reset';
+    }
+    // reset
+    if (state === 'ghost') return 'No auth account yet — use Activate';
+    return null;
+  };
+
+
+  const toggleSelect = (userId: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(userId); else next.delete(userId);
+      return next;
+    });
+  };
+
+  const allSelected = members.length > 0 && members.every((m) => selectedIds.has(m.user_id));
+  const someSelected = selectedIds.size > 0 && !allSelected;
+  const toggleSelectAll = (checked: boolean) => {
+    setSelectedIds(checked ? new Set(members.map((m) => m.user_id)) : new Set());
+  };
+
+  const selectByPredicate = (pred: (m: TenantMemberInfo) => boolean) => {
+    setSelectedIds(new Set(members.filter(pred).map((m) => m.user_id)));
+  };
+
+  const selectedMembers = members.filter((m) => selectedIds.has(m.user_id));
+  const previewSplit = (action: BulkAction) => {
+    let run = 0;
+    let skip = 0;
+    for (const m of selectedMembers) {
+      if (invalidReason(computeState(m), action) == null) run += 1; else skip += 1;
+    }
+    return { run, skip };
+  };
+
+  const runBulk = async (action: BulkAction, restrictTo?: Set<string>) => {
+    const pool = restrictTo
+      ? selectedMembers.filter((m) => restrictTo.has(m.user_id))
+      : selectedMembers;
+    if (pool.length === 0) return;
+
+    // Pre-skip rows locally; only send eligible uuids to the orchestrator.
+    const localSkips: BulkResultRow[] = [];
+    const eligible: TenantMemberInfo[] = [];
+    for (const m of pool) {
+      const reason = invalidReason(computeState(m), action);
+      if (reason == null) {
+        eligible.push(m);
+      } else {
+        localSkips.push({
+          user_uuid: m.user_id,
+          email: m.users.email,
+          action,
+          outcome: 'skipped',
+          reason,
+        });
+      }
+    }
+
+
+
+    setBulkRunning(action);
+    try {
+      let serverRows: BulkResultRow[] = [];
+      let partial = false;
+      if (eligible.length > 0) {
+        const { data, error } = await supabase.functions.invoke('bulk-account-actions', {
+          body: {
+            tenant_id: tenantId,
+            action,
+            user_uuids: eligible.map((m) => m.user_id),
+          },
+        });
+        if (error) {
+          // Network/timeout — mark everyone we sent as aborted so the user sees them.
+          serverRows = eligible.map((m) => ({
+            user_uuid: m.user_id,
+            email: m.users.email,
+            action,
+            outcome: 'aborted' as BulkOutcome,
+            reason: error.message || 'Request failed — partial results unavailable',
+          }));
+          partial = true;
+        } else if (!data?.ok) {
+          serverRows = eligible.map((m) => ({
+            user_uuid: m.user_id,
+            email: m.users.email,
+            action,
+            outcome: 'failed' as BulkOutcome,
+            reason: data?.detail || data?.code || 'Bulk request rejected',
+          }));
+        } else {
+          serverRows = (data.details || []) as BulkResultRow[];
+          partial = !!data.partial_failure;
+        }
+      }
+      setBulkResults({ action, rows: [...localSkips, ...serverRows], partial });
+      // Refresh members + ghost set so the UI reflects new state.
+      fetchMembers();
+    } catch (err: any) {
+      console.error('bulk-account-actions failed', err);
+      toast.error("Bulk action failed — please try again");
+    } finally {
+      setBulkRunning(null);
+    }
+  };
+
+  const retryFailedAndAborted = () => {
+    if (!bulkResults) return;
+    const ids = new Set(
+      bulkResults.rows
+        .filter((r) => r.outcome === 'failed' || r.outcome === 'aborted')
+        .map((r) => r.user_uuid),
+    );
+    if (ids.size === 0) return;
+    setBulkResults(null);
+    runBulk(bulkResults.action, ids);
+  };
+
+
 
 
   // Resolve effective relationship_role for a member, preferring the new
@@ -657,7 +836,98 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         </Card>
       )}
 
+      {/* Bulk action toolbar — staff only, when there are members */}
+      {canManageUsers && members.length > 0 && (
+        <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Checkbox
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                onCheckedChange={(c) => toggleSelectAll(c === true)}
+                aria-label="Select all team members"
+              />
+              <span className="text-sm font-medium">
+                {selectedIds.size === 0
+                  ? 'Select team members for a bulk action'
+                  : `${selectedIds.size} selected`}
+              </span>
+              <Separator orientation="vertical" className="h-5 mx-1" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  selectByPredicate((m) => {
+                    const s = computeState(m);
+                    return s === 'ghost' || s === 'invited';
+                  })
+                }
+              >
+                Select all not-yet-activated
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => selectByPredicate((m) => !m.users.last_sign_in_at && !m.users.disabled)}
+              >
+                Select all never-logged-in
+              </Button>
+              {selectedIds.size > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {canActivateGhosts && (() => {
+                const { run, skip } = previewSplit('activate');
+                return (
+                  <Button
+                    size="sm"
+                    onClick={() => runBulk('activate')}
+                    disabled={bulkRunning !== null || run === 0}
+                  >
+                    {bulkRunning === 'activate' ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <KeyRound className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Activate accounts
+                    <Badge variant="secondary" className="ml-2">
+                      {run} will run · {skip} skipped
+                    </Badge>
+                  </Button>
+                );
+              })()}
+              {(() => {
+                const { run, skip } = previewSplit('reset');
+                return (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => runBulk('reset')}
+                    disabled={bulkRunning !== null || run === 0}
+                  >
+                    {bulkRunning === 'reset' ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Mail className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Send password reset
+                    <Badge variant="secondary" className="ml-2">
+                      {run} will run · {skip} skipped
+                    </Badge>
+                  </Button>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Users List */}
+
       <Card>
         <CardContent className="p-0">
           {members.length === 0 ? (
@@ -686,6 +956,15 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                     onClick={() => canManageUsers && openEditDrawer(member)}
                   >
                     <div className="flex items-center gap-3">
+                      {canManageUsers && (
+                        <span onClick={(e) => e.stopPropagation()} className="flex items-center">
+                          <Checkbox
+                            checked={selectedIds.has(member.user_id)}
+                            onCheckedChange={(c) => toggleSelect(member.user_id, c === true)}
+                            aria-label={`Select ${user.email}`}
+                          />
+                        </span>
+                      )}
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={user.avatar_url || undefined} />
                         <AvatarFallback>
@@ -1062,6 +1341,86 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Bulk action results */}
+      <Dialog open={bulkResults !== null} onOpenChange={(open) => !open && setBulkResults(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {bulkResults?.action === 'activate' ? 'Activate accounts' : 'Send password reset'} — results
+            </DialogTitle>
+            <DialogDescription>
+              {bulkResults && (() => {
+                const s = {
+                  sent: bulkResults.rows.filter((r) => r.outcome === 'sent').length,
+                  skipped: bulkResults.rows.filter((r) => r.outcome === 'skipped').length,
+                  failed: bulkResults.rows.filter((r) => r.outcome === 'failed').length,
+                  aborted: bulkResults.rows.filter((r) => r.outcome === 'aborted').length,
+                };
+                return (
+                  <span>
+                    Sent {s.sent} · Skipped {s.skipped} · Failed {s.failed} · Not sent (aborted) {s.aborted}
+                    {bulkResults.partial && ' — partial results shown'}
+                  </span>
+                );
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[55vh] overflow-y-auto border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Outcome</TableHead>
+                  <TableHead>Reason</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bulkResults?.rows.map((r) => (
+                  <TableRow key={r.user_uuid + r.outcome}>
+                    <TableCell className="font-mono text-xs">{r.email || r.user_uuid}</TableCell>
+                    <TableCell className="text-xs">
+                      {r.action === 'activate' ? 'Activate' : 'Reset'}
+                    </TableCell>
+                    <TableCell>
+                      {r.outcome === 'sent' && (
+                        <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/30">
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Sent
+                        </Badge>
+                      )}
+                      {r.outcome === 'skipped' && (
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30">
+                          <AlertCircle className="h-3 w-3 mr-1" /> Skipped
+                        </Badge>
+                      )}
+                      {r.outcome === 'failed' && (
+                        <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
+                          <XCircle className="h-3 w-3 mr-1" /> Failed
+                        </Badge>
+                      )}
+                      {r.outcome === 'aborted' && (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground">
+                          <XCircle className="h-3 w-3 mr-1" /> Not sent
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{r.reason || '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            {bulkResults && bulkResults.rows.some((r) => r.outcome === 'failed' || r.outcome === 'aborted') && (
+              <Button variant="outline" onClick={retryFailedAndAborted} disabled={bulkRunning !== null}>
+                Retry failed only
+              </Button>
+            )}
+            <Button onClick={() => setBulkResults(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
