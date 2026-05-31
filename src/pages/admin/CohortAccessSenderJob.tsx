@@ -244,7 +244,7 @@ export default function CohortAccessSenderJob() {
                   {items.map((it) => (
                     <TableRow key={it.id}>
                       <TableCell className="text-xs">{it.email}</TableCell>
-                      <TableCell className="text-xs">{it.tenant_id ?? "—"}</TableCell>
+                      <TableCell className="text-xs">{tenantNames.get(it.tenant_id as number) ?? (it.tenant_id ? it.tenant_id.toString() : "—")}</TableCell>
                       <TableCell><Badge variant="outline">{it.state_snapshot}</Badge></TableCell>
                       <TableCell><Badge variant="outline">{it.planned_action}</Badge></TableCell>
                       <TableCell>
