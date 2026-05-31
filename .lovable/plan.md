@@ -1,32 +1,35 @@
-## Goal
+## Root cause
 
-Add an intermediate landing page at `/activate` so security scanners (link previewers, antivirus URL checkers) don't consume one-time Supabase recovery tokens before the user clicks. Token consumption only happens on explicit button click.
+The sync is running successfully, but it is still saving the wrong registration period.
 
-## Changes
+For RTO `31716`, TGA is returning registrations in newest-to-oldest order:
 
-### 1. Create `src/pages/ActivateAccount.tsx` (new)
+- `2018-12-23` to `2025-12-22` — ASQA, renewal under consideration
+- `2013-12-23` to `2018-12-22`
+- `2012-06-29` to `2013-12-22`
+- `2008-12-23` to `2012-06-28` — old QLD registration transfer
 
-Public route, no auth, no Supabase client calls. Mirrors `ResetPassword.tsx` styling:
-- Purple→fuchsia gradient background, unicorn logo, white card
-- Reads `token`, `type`, `email` from `useSearchParams`
-- If `email` present: heading "You're setting up your password for {email}"
-- Single cyan button "Set Up My Password" → on click sets `window.location.href` to:
-  `https://yxkgdalkbrriasiyyrwk.supabase.co/auth/v1/verify?token={token}&type={type}&redirect_to={origin}/reset-password`
-- If `token` missing: show "This link is invalid. Please contact your administrator." with no button
+The database still shows `registration_end_date = 2012-06-28`, which means the deployed `tga-rto-sync` function is still using the old selection logic, even though the local code has been corrected. The “TGA Sync Complete” toast confirms scope data is refreshing, but the deployed function is not saving the corrected summary date yet.
 
-### 2. `src/App.tsx`
+## Plan
 
-- Add lazy import alongside line 90: `const ActivateAccount = lazy(() => import("./pages/ActivateAccount"));`
-- Add `<Route path="/activate" element={<ActivateAccount />} />` next to the `/reset-password` route (~line 269)
+1. **Deploy the corrected `tga-rto-sync` edge function**
+   - Deploy the existing local fix that sorts registrations by latest `endDate` before choosing the registration period.
+   - Do not change frontend UI or unrelated sync logic.
 
-### 3. `src/components/profile/AdminActions.tsx`
+2. **Run a targeted sync for tenant `7483` / RTO `31716`**
+   - Invoke `tga-rto-sync` with the current authenticated session.
+   - Confirm it completes successfully.
 
-In `handleCopyRecoveryLink`, after `data.action_link` is returned:
-- Parse the Supabase URL, extract `token` and `type` (default `'recovery'`)
-- Build `activateUrl = ${origin}/activate?token=...&type=...&email=...` (email URI-encoded)
-- Copy `activateUrl` to clipboard instead of the raw Supabase URL
-- Update toast description to: `Link for ${data.email} copied to clipboard. Send it directly via Teams or SMS — it opens a landing page before consuming the token. Expires in 1 hour.`
+3. **Verify the stored summary data**
+   - Check `public.tga_rto_summary` for tenant `7483` and RTO `31716`.
+   - Expected result: `registration_end_date = 2025-12-22`, not `2012-06-28`.
 
-## Out of scope
+4. **Confirm the visible UI will update**
+   - The Integration tab and re-registration badge both read from `tga_rto_summary.registration_end_date`, so once the deployed function writes `2025-12-22`, the UI should show the correct date after refresh/query invalidation.
 
-No changes to `ResetPassword.tsx`, `AcceptInvitationWrapper.tsx`, edge functions, or any other file.
+## Files / services touched
+
+- Deploy only: `supabase/functions/tga-rto-sync/index.ts`
+- No database schema changes planned.
+- No changes to `tga-sync`, frontend components, or unrelated files unless verification shows a separate cache/query issue.
