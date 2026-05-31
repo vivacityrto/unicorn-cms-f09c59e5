@@ -332,16 +332,18 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     return 'active';
   };
 
-  const isValidFor = (state: AccountState, action: BulkAction): { ok: true } | { ok: false; reason: string } => {
-    if (state === 'disabled') return { ok: false, reason: 'Account disabled — re-enable first' };
+  // Returns null when the action is valid for the state, otherwise a skip reason.
+  const invalidReason = (state: AccountState, action: BulkAction): string | null => {
+    if (state === 'disabled') return 'Account disabled — re-enable first';
     if (action === 'activate') {
-      if (state === 'ghost') return { ok: true };
-      return { ok: false, reason: 'Already activated — use Send password reset' };
+      if (state === 'ghost') return null;
+      return 'Already activated — use Send password reset';
     }
     // reset
-    if (state === 'ghost') return { ok: false, reason: 'No auth account yet — use Activate' };
-    return { ok: true };
+    if (state === 'ghost') return 'No auth account yet — use Activate';
+    return null;
   };
+
 
   const toggleSelect = (userId: string, checked: boolean) => {
     setSelectedIds((prev) => {
