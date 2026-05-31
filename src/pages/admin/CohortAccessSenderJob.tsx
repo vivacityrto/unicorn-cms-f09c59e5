@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, ArrowLeft, Play, Pause, X, Download } from "lucide-react";
+import { Loader2, ArrowLeft, Play, Pause, X, Download, Copy } from "lucide-react";
 import { format } from "date-fns";
 
 interface Job {
@@ -42,6 +42,7 @@ interface Item {
   reason: string | null;
   attempts: number;
   processed_at: string | null;
+  action_link: string | null;
 }
 
 export default function CohortAccessSenderJob() {
@@ -120,10 +121,10 @@ export default function CohortAccessSenderJob() {
 
   const exportCsv = () => {
     if (!items.length) return;
-    const headers = ["email", "tenant_id", "state_snapshot", "planned_action", "outcome", "reason", "attempts", "processed_at"];
+    const headers = ["email", "tenant_id", "state_snapshot", "planned_action", "outcome", "reason", "action_link", "attempts", "processed_at"];
     const lines = [headers.join(",")];
     for (const it of items) {
-      const row = [it.email ?? "", it.tenant_id ?? "", it.state_snapshot, it.planned_action, it.outcome, (it.reason ?? "").replace(/"/g, '""'), it.attempts, it.processed_at ?? ""];
+      const row = [it.email ?? "", it.tenant_id ?? "", it.state_snapshot, it.planned_action, it.outcome, (it.reason ?? "").replace(/"/g, '""'), it.action_link ?? "", it.attempts, it.processed_at ?? ""];
       lines.push(row.map((v) => /[",\n]/.test(String(v)) ? `"${v}"` : String(v)).join(","));
     }
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
@@ -219,6 +220,7 @@ export default function CohortAccessSenderJob() {
                     <TableHead>Planned</TableHead>
                     <TableHead>Outcome</TableHead>
                     <TableHead>Reason</TableHead>
+                    <TableHead>Link</TableHead>
                     <TableHead>Processed</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -237,6 +239,25 @@ export default function CohortAccessSenderJob() {
                         }>{it.outcome}</Badge>
                       </TableCell>
                       <TableCell className="text-xs">{it.reason ?? ""}</TableCell>
+                      <TableCell className="text-xs">
+                        {it.action_link ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2"
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(it.action_link as string);
+                                toast({ title: "Link copied — send via Teams or email." });
+                              } catch {
+                                toast({ title: "Copy failed — copy manually", description: it.action_link as string });
+                              }
+                            }}
+                          >
+                            <Copy className="h-3 w-3 mr-1" /> Copy
+                          </Button>
+                        ) : ""}
+                      </TableCell>
                       <TableCell className="text-xs">{it.processed_at ? format(new Date(it.processed_at), "dd/MM HH:mm:ss") : ""}</TableCell>
                     </TableRow>
                   ))}
