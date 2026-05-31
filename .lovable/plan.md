@@ -1,11 +1,40 @@
-In `supabase/functions/invite-user/index.ts`, find the `skip_email` path where a new user is inserted into `public.users` (lines 428-440). The insert currently omits `tenant_id`.
+## Objective
+Update the `v_auth_user_state` view so that users whose `tenant_id` is null in `public.users` (e.g. ghost users created via the invite flow) still resolve a `tenant_id` by looking up `public.tenant_users`.
 
-Change:
-- Add `tenant_id: payload.tenant_id` to the `.insert({...})` object on line 429.
+## Change
+Replace the `tenant_id` column in the view from:
 
-Constraints:
-- Do not modify the `update` path (existing user found by email, lines 421-423).
-- Do not change anything else in this file.
-- No other files need to change.
+```
+u.tenant_id
+```
 
-The `payload.tenant_id` is already validated earlier in the function and is available in scope.
+To:
+
+```sql
+COALESCE(
+  u.tenant_id,
+  (
+    SELECT tu.tenant_id
+    FROM public.tenant_users tu
+    WHERE tu.user_id = u.user_uuid
+    ORDER BY
+      CASE tu.relationship_role
+        WHEN 'primary_contact'   THEN 1
+        WHEN 'secondary_contact' THEN 2
+        WHEN 'user'              THEN 3
+        ELSE 4
+      END,
+      tu.created_at DESC
+    LIMIT 1
+  )
+) AS tenant_id
+```
+
+## Guarantees
+- The subquery is `LIMIT 1`, so exactly one row per user is preserved.
+- Users with `tenant_id` already set on `public.users` are completely unaffected.
+- All other view columns remain unchanged.
+- No RLS or grant changes needed — existing permissions stay correct.
+
+## SQL
+A `CREATE OR REPLACE VIEW` statement with the above column change.
