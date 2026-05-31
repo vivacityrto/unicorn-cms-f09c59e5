@@ -41,6 +41,7 @@ type UserStatus = {
   unicorn_role: string | null;
   user_type: string | null;
   last_sign_in_at: string | null;
+  is_in_auth: boolean;
 };
 
 export default function ManageInvites() {
