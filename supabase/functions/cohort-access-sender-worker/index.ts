@@ -102,6 +102,16 @@ serve(async (req) => {
         skipped++; drained++; continue;
       }
 
+      // Activate requires a tenant assignment; skip if missing.
+      if (action === "activate" && (item.tenant_id === null || item.tenant_id === undefined)) {
+        await userClient.rpc("record_cohort_item_outcome", {
+          p_item_id: item.id, p_outcome: "skipped", p_reason: "No tenant assigned — cannot activate",
+        });
+        skipped++; drained++; continue;
+      }
+
+
+
       const invokeBody = action === "activate"
         ? { user_uuid: item.user_uuid, tenant_id: item.tenant_id }
         : { user_uuid: item.user_uuid };
