@@ -91,6 +91,7 @@ const administrationMenuItems = [
   { icon: Shield, label: "Team Users", path: "/admin/team-users" },
   { icon: Building2, label: "Tenant Users", path: "/admin/tenant-users" },
   { icon: Mail, label: "Manage Invites", path: "/manage-invites", superAdminOnly: true },
+  { icon: Send, label: "Cohort Sender", path: "/admin/cohort-sender", superAdminOnly: true },
   { icon: ShieldCheck, label: "User Audit", path: "/admin/user-audit", superAdminOnly: true },
   { icon: ScrollText, label: "Audit Logs", path: "/audit-logs", superAdminOnly: true },
   { icon: Mail, label: "Email Templates", path: "/admin/email-templates", superAdminOnly: true },
