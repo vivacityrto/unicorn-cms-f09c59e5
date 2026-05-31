@@ -1341,6 +1341,86 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Bulk action results */}
+      <Dialog open={bulkResults !== null} onOpenChange={(open) => !open && setBulkResults(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {bulkResults?.action === 'activate' ? 'Activate accounts' : 'Send password reset'} — results
+            </DialogTitle>
+            <DialogDescription>
+              {bulkResults && (() => {
+                const s = {
+                  sent: bulkResults.rows.filter((r) => r.outcome === 'sent').length,
+                  skipped: bulkResults.rows.filter((r) => r.outcome === 'skipped').length,
+                  failed: bulkResults.rows.filter((r) => r.outcome === 'failed').length,
+                  aborted: bulkResults.rows.filter((r) => r.outcome === 'aborted').length,
+                };
+                return (
+                  <span>
+                    Sent {s.sent} · Skipped {s.skipped} · Failed {s.failed} · Not sent (aborted) {s.aborted}
+                    {bulkResults.partial && ' — partial results shown'}
+                  </span>
+                );
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[55vh] overflow-y-auto border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Action</TableHead>
+                  <TableHead>Outcome</TableHead>
+                  <TableHead>Reason</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bulkResults?.rows.map((r) => (
+                  <TableRow key={r.user_uuid + r.outcome}>
+                    <TableCell className="font-mono text-xs">{r.email || r.user_uuid}</TableCell>
+                    <TableCell className="text-xs">
+                      {r.action === 'activate' ? 'Activate' : 'Reset'}
+                    </TableCell>
+                    <TableCell>
+                      {r.outcome === 'sent' && (
+                        <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/30">
+                          <CheckCircle2 className="h-3 w-3 mr-1" /> Sent
+                        </Badge>
+                      )}
+                      {r.outcome === 'skipped' && (
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30">
+                          <AlertCircle className="h-3 w-3 mr-1" /> Skipped
+                        </Badge>
+                      )}
+                      {r.outcome === 'failed' && (
+                        <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">
+                          <XCircle className="h-3 w-3 mr-1" /> Failed
+                        </Badge>
+                      )}
+                      {r.outcome === 'aborted' && (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground">
+                          <XCircle className="h-3 w-3 mr-1" /> Not sent
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{r.reason || '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            {bulkResults && bulkResults.rows.some((r) => r.outcome === 'failed' || r.outcome === 'aborted') && (
+              <Button variant="outline" onClick={retryFailedAndAborted} disabled={bulkRunning !== null}>
+                Retry failed only
+              </Button>
+            )}
+            <Button onClick={() => setBulkResults(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+
   );
 }
