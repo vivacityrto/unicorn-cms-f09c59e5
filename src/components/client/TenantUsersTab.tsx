@@ -204,6 +204,20 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       });
       if (data.email_sent) {
         toast.success(`Account activated — welcome email sent to ${data.email}`);
+      } else if (data.action_link) {
+        toast.success(`Account activated for ${data.email} — welcome email could not be sent`, {
+          action: {
+            label: 'Copy link',
+            onClick: async () => {
+              try {
+                await navigator.clipboard.writeText(data.action_link);
+                toast.success('Link copied — paste it into Teams or email to the user directly.');
+              } catch {
+                toast.message('Copy manually', { description: data.action_link });
+              }
+            },
+          },
+        });
       } else {
         toast.success(`Account activated for ${data.email} — welcome email could not be sent`);
       }
