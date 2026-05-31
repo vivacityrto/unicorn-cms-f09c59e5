@@ -383,15 +383,19 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     const eligible: TenantMemberInfo[] = [];
     for (const m of pool) {
       const v = isValidFor(computeState(m), action);
-      if (v.ok) eligible.push(m);
-      else localSkips.push({
-        user_uuid: m.user_id,
-        email: m.users.email,
-        action,
-        outcome: 'skipped',
-        reason: v.reason,
-      });
+      if (v.ok) {
+        eligible.push(m);
+      } else {
+        localSkips.push({
+          user_uuid: m.user_id,
+          email: m.users.email,
+          action,
+          outcome: 'skipped',
+          reason: v.reason,
+        });
+      }
     }
+
 
     setBulkRunning(action);
     try {
