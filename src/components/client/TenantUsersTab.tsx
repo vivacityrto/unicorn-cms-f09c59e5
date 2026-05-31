@@ -51,6 +51,9 @@ import {
   KeyRound,
   Link2,
   Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -59,6 +62,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { toast } from 'sonner';
 import { TenantInviteDialog } from './TenantInviteDialog';
 import { useRBAC } from '@/hooks/useRBAC';
