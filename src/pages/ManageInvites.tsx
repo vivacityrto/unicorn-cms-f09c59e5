@@ -41,6 +41,7 @@ type UserStatus = {
   unicorn_role: string | null;
   user_type: string | null;
   last_sign_in_at: string | null;
+  is_in_auth: boolean;
 };
 
 export default function ManageInvites() {
@@ -156,7 +157,8 @@ export default function ManageInvites() {
           created_at: user.created_at,
           unicorn_role: user.unicorn_role,
           user_type: user.user_type,
-          last_sign_in_at: authUserMap.get(user.email) || null
+          last_sign_in_at: authUserMap.get(user.email) || null,
+          is_in_auth: authUserMap.has(user.email)
         });
       });
 
@@ -294,7 +296,7 @@ export default function ManageInvites() {
 
   const getTimeRemaining = (createdAt: string): { hours: number; label: string; variant: 'default' | 'destructive' } => {
     const created = new Date(createdAt);
-    const expiresAt = new Date(created.getTime() + 24 * 60 * 60 * 1000); // 24 hours
+    const expiresAt = new Date(created.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
     const now = new Date();
     const remaining = expiresAt.getTime() - now.getTime();
     
@@ -514,7 +516,7 @@ export default function ManageInvites() {
                           className={isTeamLeader ? "gap-2 bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "gap-2"}
                           variant="default"
                           disabled={isTeamLeader}
-                          style={{ display: selectedInvites.size > 0 ? 'none' : 'inline-flex' }}
+                          style={{ display: selectedInvites.size > 0 ? 'inline-flex' : 'none' }}
                         >
                           <RefreshCw className="h-4 w-4" />
                           Re-invite ({selectedInvites.size})
@@ -619,7 +621,7 @@ export default function ManageInvites() {
             <CardContent>
               <div className="text-2xl font-bold">{stats.expired}</div>
               <p className="text-xs text-muted-foreground">
-                Past 24-hour window
+                Past 7-day window
               </p>
             </CardContent>
           </Card>
@@ -753,7 +755,7 @@ export default function ManageInvites() {
                   const tenantName = tenantNames.get(invite.tenant_id) || `ID: ${invite.tenant_id}`;
                   const userStatus = userStatuses.get(invite.email);
                   // If user exists in users table, they've successfully signed up - show Verified
-                  const isVerified = !!userStatus;
+                  const isVerified = !!userStatus && userStatus.is_in_auth === true;
                   const statusBadge = isVerified 
                     ? { variant: 'default' as const, icon: CheckCircle, label: 'Verified', color: 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]' }
                     : getStatusBadge(invite.status, invite.expires_at);
