@@ -436,7 +436,17 @@ serve(async (req) => {
 
     if (orgData.registrations?.length > 0) {
       const now = new Date();
-      const currentReg = orgData.registrations.find((r: any) => !r.endDate || new Date(r.endDate) > now) || orgData.registrations[orgData.registrations.length - 1];
+      // Prefer a registration that is still active (no endDate or endDate in the future).
+      // Otherwise fall back to the registration with the LATEST endDate — this matters for
+      // RTOs in "Re-Registration Pending" where the most recent endDate may already be past
+      // but the registration is still legally in force while the renewal is considered.
+      // The TGA payload is NOT reliably ordered, so we must not pick by array position.
+      const sortedByEnd = [...orgData.registrations].sort((a: any, b: any) => {
+        const ad = a.endDate ? new Date(a.endDate).getTime() : Number.POSITIVE_INFINITY;
+        const bd = b.endDate ? new Date(b.endDate).getTime() : Number.POSITIVE_INFINITY;
+        return bd - ad; // descending: open-ended first, then newest endDate
+      });
+      const currentReg = sortedByEnd.find((r: any) => !r.endDate || new Date(r.endDate) > now) || sortedByEnd[0];
       if (currentReg) {
         registrationStartDate = currentReg.startDate || null;
         registrationEndDate = currentReg.endDate || null;
