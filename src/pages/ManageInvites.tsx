@@ -296,7 +296,7 @@ export default function ManageInvites() {
 
   const getTimeRemaining = (createdAt: string): { hours: number; label: string; variant: 'default' | 'destructive' } => {
     const created = new Date(createdAt);
-    const expiresAt = new Date(created.getTime() + 24 * 60 * 60 * 1000); // 24 hours
+    const expiresAt = new Date(created.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
     const now = new Date();
     const remaining = expiresAt.getTime() - now.getTime();
     
