@@ -113,7 +113,7 @@ serve(async (req: Request): Promise<Response> => {
           code: "AUTH_USER_NOT_FOUND",
           detail: "This user has not yet activated their account. Please send them an invitation instead.",
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
