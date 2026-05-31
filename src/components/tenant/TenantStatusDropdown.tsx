@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,7 @@ interface TenantStatusDropdownProps {
 export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, onNonActiveChange, clientId }: TenantStatusDropdownProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const [options, setOptions] = useState<StatusOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
@@ -118,6 +120,14 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
       });
 
       onStatusChange(newStatus);
+
+      // Invalidate caches so Manage Clients list, dashboards and tenant detail
+      // immediately reflect the new status (otherwise the 5-min staleTime on
+      // useTenantsBasic keeps showing the old "Active" badge).
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-triage'] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio-cockpit'] });
 
       // Auto-insert a note recording the status change
       if (clientId) {
