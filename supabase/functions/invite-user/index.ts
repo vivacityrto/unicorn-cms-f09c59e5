@@ -437,6 +437,7 @@ serve(async (req) => {
             disabled: false,
             job_title: payload.job_title || null,
             phone: payload.phone_number || null,
+            tenant_id: payload.tenant_id,
           });
 
         if (insertError) {
