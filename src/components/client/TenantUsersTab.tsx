@@ -956,6 +956,15 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                     onClick={() => canManageUsers && openEditDrawer(member)}
                   >
                     <div className="flex items-center gap-3">
+                      {canManageUsers && (
+                        <span onClick={(e) => e.stopPropagation()} className="flex items-center">
+                          <Checkbox
+                            checked={selectedIds.has(member.user_id)}
+                            onCheckedChange={(c) => toggleSelect(member.user_id, c === true)}
+                            aria-label={`Select ${user.email}`}
+                          />
+                        </span>
+                      )}
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={user.avatar_url || undefined} />
                         <AvatarFallback>
