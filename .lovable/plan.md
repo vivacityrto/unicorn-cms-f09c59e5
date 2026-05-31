@@ -1,14 +1,11 @@
-Add a tenant-assignment guard in the cohort-access-sender-worker edge function.
+In `supabase/functions/invite-user/index.ts`, find the `skip_email` path where a new user is inserted into `public.users` (lines 428-440). The insert currently omits `tenant_id`.
 
-### What
-In `supabase/functions/cohort-access-sender-worker/index.ts`, inside the item processing loop, add a guard immediately after the `planned_action` mismatch check and before the `invokeBody` construction.
+Change:
+- Add `tenant_id: payload.tenant_id` to the `.insert({...})` object on line 429.
 
-### Change
-If the job `action` is `"activate"` and `item.tenant_id` is `null` or `undefined`:
-- Record outcome `"skipped"` with reason `"No tenant assigned — cannot activate"` via `record_cohort_item_outcome`
-- Increment `skipped` and `drained`
-- `continue` to the next item
+Constraints:
+- Do not modify the `update` path (existing user found by email, lines 421-423).
+- Do not change anything else in this file.
+- No other files need to change.
 
-The `"reset"` action is intentionally left unguarded because it does not require `tenant_id`.
-
-No other files are touched. No schema changes are needed — `"skipped"` is already a valid outcome.
+The `payload.tenant_id` is already validated earlier in the function and is available in scope.
