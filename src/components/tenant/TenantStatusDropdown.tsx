@@ -47,6 +47,7 @@ interface TenantStatusDropdownProps {
 export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, onNonActiveChange, clientId }: TenantStatusDropdownProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
   const [options, setOptions] = useState<StatusOption[]>([]);
   const [saving, setSaving] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
