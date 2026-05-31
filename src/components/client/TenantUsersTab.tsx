@@ -243,19 +243,26 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       const { data, error } = await supabase.functions.invoke('send-password-reset', {
         body: { user_uuid: member.user_id },
       });
-      if (error) {
-        toast.error("Couldn't send reset email — please try again");
+      // supabase-js sets `error` on any non-2xx; the JSON body lives on error.context.
+      let payload: any = data;
+      if (error && (error as any).context?.json) {
+        try { payload = await (error as any).context.json(); } catch { /* ignore */ }
+      } else if (error && (error as any).context?.text) {
+        try { payload = JSON.parse(await (error as any).context.text()); } catch { /* ignore */ }
+      }
+      if (payload?.ok) {
+        toast.success(`Password reset email sent to ${payload.email}`);
         return;
       }
-      if (data?.ok) {
-        toast.success(`Password reset email sent to ${data.email}`);
-        return;
-      }
-      if (data?.code === 'AUTH_USER_NOT_FOUND') {
+      if (payload?.code === 'AUTH_USER_NOT_FOUND') {
         toast.info("This user hasn't activated their account yet — use Activate account instead");
         return;
       }
-      toast.error(mapAuthActionError(data?.code, "Couldn't send reset email — please try again") ?? "Couldn't send reset email — please try again");
+      if (error && !payload?.code) {
+        toast.error("Couldn't send reset email — please try again");
+        return;
+      }
+      toast.error(mapAuthActionError(payload?.code, "Couldn't send reset email — please try again") ?? "Couldn't send reset email — please try again");
     } catch (err: any) {
       console.error('send-password-reset failed', err);
       toast.error("Couldn't send reset email — please try again");
