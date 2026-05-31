@@ -51,6 +51,7 @@ export default function CohortAccessSenderJob() {
 
   const [job, setJob] = useState<Job | null>(null);
   const [items, setItems] = useState<Item[]>([]);
+  const [tenantNames, setTenantNames] = useState<Map<number, string>>(new Map());
   const [draining, setDraining] = useState(false);
   const [autoDrain, setAutoDrain] = useState(true);
   const drainAbortRef = useRef(false);
@@ -62,7 +63,22 @@ export default function CohortAccessSenderJob() {
       supabase.from("cohort_send_job_items").select("*").eq("job_id", jobId).order("id").limit(1000),
     ]);
     if (j) setJob(j as any);
-    if (it) setItems(it as any);
+    if (it) {
+      setItems(it as any);
+      const uniqueIds = Array.from(
+        new Set((it as any[]).map((i) => i.tenant_id).filter((id): id is number => id != null))
+      );
+      if (uniqueIds.length > 0) {
+        const { data: tenants } = await supabase.from("tenants").select("id, name").in("id", uniqueIds);
+        const map = new Map<number, string>();
+        for (const t of (tenants ?? []) as Array<{ id: number; name: string }>) {
+          if (t?.id != null && t?.name) map.set(t.id, t.name);
+        }
+        setTenantNames(map);
+      } else {
+        setTenantNames(new Map());
+      }
+    }
   };
 
   useEffect(() => { refresh(); }, [jobId]);
@@ -228,7 +244,7 @@ export default function CohortAccessSenderJob() {
                   {items.map((it) => (
                     <TableRow key={it.id}>
                       <TableCell className="text-xs">{it.email}</TableCell>
-                      <TableCell className="text-xs">{it.tenant_id ?? "—"}</TableCell>
+                      <TableCell className="text-xs">{tenantNames.get(it.tenant_id as number) ?? (it.tenant_id ? it.tenant_id.toString() : "—")}</TableCell>
                       <TableCell><Badge variant="outline">{it.state_snapshot}</Badge></TableCell>
                       <TableCell><Badge variant="outline">{it.planned_action}</Badge></TableCell>
                       <TableCell>
