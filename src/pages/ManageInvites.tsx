@@ -621,7 +621,7 @@ export default function ManageInvites() {
             <CardContent>
               <div className="text-2xl font-bold">{stats.expired}</div>
               <p className="text-xs text-muted-foreground">
-                Past 24-hour window
+                Past 7-day window
               </p>
             </CardContent>
           </Card>
