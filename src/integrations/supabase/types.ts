@@ -51,6 +51,13 @@ export type Database = {
             foreignKeyName: "documents_categories_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "documents_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -2074,6 +2081,13 @@ export type Database = {
             foreignKeyName: "accountability_seats_backup_owner_user_id_fkey"
             columns: ["backup_owner_user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "accountability_seats_backup_owner_user_id_fkey"
+            columns: ["backup_owner_user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -2499,6 +2513,13 @@ export type Database = {
             foreignKeyName: "addin_audit_log_user_uuid_fkey"
             columns: ["user_uuid"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "addin_audit_log_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -2699,6 +2720,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ai_client_query_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -3383,6 +3411,13 @@ export type Database = {
             foreignKeyName: "ai_interaction_logs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ai_interaction_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -3475,6 +3510,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ai_quality_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -3606,6 +3648,13 @@ export type Database = {
             foreignKeyName: "ai_review_flags_flagged_by_fkey"
             columns: ["flagged_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ai_review_flags_flagged_by_fkey"
+            columns: ["flagged_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -3642,6 +3691,13 @@ export type Database = {
             columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ai_review_flags_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -6956,6 +7012,13 @@ export type Database = {
             foreignKeyName: "broadcast_campaigns_created_by_fk"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "broadcast_campaigns_created_by_fk"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -7373,6 +7436,13 @@ export type Database = {
             foreignKeyName: "calendar_shares_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "calendar_shares_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -7409,6 +7479,13 @@ export type Database = {
             columns: ["owner_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "calendar_shares_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -7451,6 +7528,13 @@ export type Database = {
             columns: ["viewer_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "calendar_shares_viewer_user_uuid_fkey"
+            columns: ["viewer_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -8473,6 +8557,13 @@ export type Database = {
             columns: ["user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "chat_sessions_user_fk"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -11528,6 +11619,13 @@ export type Database = {
             foreignKeyName: "client_document_requests_assigned_to_user_fk"
             columns: ["assigned_to_user_uuid"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_document_requests_assigned_to_user_fk"
+            columns: ["assigned_to_user_uuid"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -11571,6 +11669,13 @@ export type Database = {
             columns: ["requested_by_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_document_requests_requested_by_user_fk"
+            columns: ["requested_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -11784,6 +11889,13 @@ export type Database = {
             foreignKeyName: "client_document_shares_shared_by_user_fk"
             columns: ["shared_by_user_uuid"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_document_shares_shared_by_user_fk"
+            columns: ["shared_by_user_uuid"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -11820,6 +11932,13 @@ export type Database = {
             columns: ["shared_with_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_document_shares_shared_with_user_fk"
+            columns: ["shared_with_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -12044,6 +12163,13 @@ export type Database = {
             columns: ["uploaded_by_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_documents_uploaded_by_user_fk"
+            columns: ["uploaded_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -12590,6 +12716,13 @@ export type Database = {
             foreignKeyName: "client_liaisons_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_liaisons_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -12626,6 +12759,13 @@ export type Database = {
             columns: ["vivacity_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_liaisons_vivacity_user_id_fkey"
+            columns: ["vivacity_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -12908,6 +13048,13 @@ export type Database = {
             foreignKeyName: "client_portal_sessions_acting_user_fk"
             columns: ["acting_user_uuid"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_acting_user_fk"
+            columns: ["acting_user_uuid"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -13077,6 +13224,13 @@ export type Database = {
             columns: ["viewer_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_viewer_user_fk"
+            columns: ["viewer_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -13804,6 +13958,134 @@ export type Database = {
         }
         Relationships: []
       }
+      cohort_send_job_items: {
+        Row: {
+          attempts: number
+          created_at: string
+          email: string | null
+          id: number
+          job_id: string
+          locked_at: string | null
+          locked_by: string | null
+          outcome: string
+          planned_action: string
+          processed_at: string | null
+          reason: string | null
+          skip_reason: string | null
+          state_snapshot: string
+          tenant_id: number | null
+          user_uuid: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          email?: string | null
+          id?: number
+          job_id: string
+          locked_at?: string | null
+          locked_by?: string | null
+          outcome?: string
+          planned_action: string
+          processed_at?: string | null
+          reason?: string | null
+          skip_reason?: string | null
+          state_snapshot: string
+          tenant_id?: number | null
+          user_uuid: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          email?: string | null
+          id?: number
+          job_id?: string
+          locked_at?: string | null
+          locked_by?: string | null
+          outcome?: string
+          planned_action?: string
+          processed_at?: string | null
+          reason?: string | null
+          skip_reason?: string | null
+          state_snapshot?: string
+          tenant_id?: number | null
+          user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohort_send_job_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "cohort_send_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cohort_send_jobs: {
+        Row: {
+          action: string
+          batch_size: number
+          cap: number
+          consecutive_failures: number
+          created_at: string
+          created_by: string
+          filter_json: Json
+          finished_at: string | null
+          id: string
+          notes: string | null
+          started_at: string | null
+          status: string
+          throttle_ms: number
+          total_failed: number
+          total_planned: number
+          total_resolved: number
+          total_sent: number
+          total_skipped: number
+          updated_at: string
+        }
+        Insert: {
+          action: string
+          batch_size?: number
+          cap?: number
+          consecutive_failures?: number
+          created_at?: string
+          created_by: string
+          filter_json?: Json
+          finished_at?: string | null
+          id?: string
+          notes?: string | null
+          started_at?: string | null
+          status?: string
+          throttle_ms?: number
+          total_failed?: number
+          total_planned?: number
+          total_resolved?: number
+          total_sent?: number
+          total_skipped?: number
+          updated_at?: string
+        }
+        Update: {
+          action?: string
+          batch_size?: number
+          cap?: number
+          consecutive_failures?: number
+          created_at?: string
+          created_by?: string
+          filter_json?: Json
+          finished_at?: string | null
+          id?: string
+          notes?: string | null
+          started_at?: string | null
+          status?: string
+          throttle_ms?: number
+          total_failed?: number
+          total_planned?: number
+          total_resolved?: number
+          total_sent?: number
+          total_skipped?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       compliance_audit_responses: {
         Row: {
           audit_id: string
@@ -13867,6 +14149,13 @@ export type Database = {
             columns: ["responded_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_audit_responses_responded_by_fkey"
+            columns: ["responded_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -13964,6 +14253,13 @@ export type Database = {
             foreignKeyName: "compliance_audits_auditor_user_id_fkey"
             columns: ["auditor_user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_audits_auditor_user_id_fkey"
+            columns: ["auditor_user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -14000,6 +14296,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_audits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -14247,6 +14550,13 @@ export type Database = {
             foreignKeyName: "compliance_corrective_actions_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_corrective_actions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -14290,6 +14600,13 @@ export type Database = {
             columns: ["verified_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_corrective_actions_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -14908,6 +15225,13 @@ export type Database = {
             foreignKeyName: "compliance_task_definitions_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -14981,6 +15305,13 @@ export type Database = {
             columns: ["completed_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -15200,6 +15531,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -15532,6 +15870,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -16120,6 +16465,13 @@ export type Database = {
             foreignKeyName: "consult_time_entries_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "consult_time_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -16211,6 +16563,13 @@ export type Database = {
             foreignKeyName: "consultant_assignment_audit_lo_previous_consultant_user_id_fkey"
             columns: ["previous_consultant_user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_lo_previous_consultant_user_id_fkey"
+            columns: ["previous_consultant_user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -16247,6 +16606,13 @@ export type Database = {
             columns: ["selected_consultant_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_lo_selected_consultant_user_id_fkey"
+            columns: ["selected_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -16604,6 +16970,13 @@ export type Database = {
             columns: ["selected_consultant_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_selected_consultant_user_id_fkey"
+            columns: ["selected_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -20816,6 +21189,13 @@ export type Database = {
             foreignKeyName: "documents_stages_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "documents_stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -21623,6 +22003,13 @@ export type Database = {
             columns: ["user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_messages_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -22536,6 +22923,13 @@ export type Database = {
             foreignKeyName: "eos_function_team_members_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_function_team_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -22712,6 +23106,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_function_team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -23320,6 +23721,13 @@ export type Database = {
             foreignKeyName: "eos_meeting_attendees_marked_by_fkey"
             columns: ["marked_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_meeting_attendees_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -23412,6 +23820,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_meeting_attendees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -24482,6 +24897,13 @@ export type Database = {
             columns: ["quorum_override_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_meetings_quorum_override_by_fkey"
+            columns: ["quorum_override_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -25853,6 +26275,13 @@ export type Database = {
             foreignKeyName: "eos_todos_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -25924,6 +26353,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_todos_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -26014,6 +26450,13 @@ export type Database = {
             foreignKeyName: "eos_user_roles_assigned_by_fkey"
             columns: ["assigned_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_user_roles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -26050,6 +26493,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -26605,6 +27055,13 @@ export type Database = {
             foreignKeyName: "evidence_request_items_reviewed_by_fkey"
             columns: ["reviewed_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "evidence_request_items_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -26739,6 +27196,13 @@ export type Database = {
             foreignKeyName: "evidence_request_templates_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "evidence_request_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -26845,6 +27309,13 @@ export type Database = {
             foreignKeyName: "evidence_requests_assigned_to_client_user_id_fkey"
             columns: ["assigned_to_client_user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "evidence_requests_assigned_to_client_user_id_fkey"
+            columns: ["assigned_to_client_user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -26923,6 +27394,13 @@ export type Database = {
             columns: ["requested_by_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "evidence_requests_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -27666,6 +28144,13 @@ export type Database = {
             foreignKeyName: "generated_documents_shared_by_fkey"
             columns: ["shared_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "generated_documents_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -28354,6 +28839,13 @@ export type Database = {
             foreignKeyName: "invitation_tokens_invited_by_fkey"
             columns: ["invited_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "invitation_tokens_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -28813,6 +29305,13 @@ export type Database = {
             foreignKeyName: "legacy_login_snapshot_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "legacy_login_snapshot_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -28904,6 +29403,13 @@ export type Database = {
             foreignKeyName: "lifecycle_checklist_instances_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "lifecycle_checklist_instances_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -28940,6 +29446,13 @@ export type Database = {
             columns: ["completed_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "lifecycle_checklist_instances_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -28989,6 +29502,13 @@ export type Database = {
             columns: ["target_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "lifecycle_checklist_instances_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -29226,6 +29746,13 @@ export type Database = {
             foreignKeyName: "lifecycle_checklist_templates_default_assignee_id_fkey"
             columns: ["default_assignee_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "lifecycle_checklist_templates_default_assignee_id_fkey"
+            columns: ["default_assignee_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -29379,6 +29906,13 @@ export type Database = {
             foreignKeyName: "meeting_action_items_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meeting_action_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -29415,6 +29949,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meeting_action_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -29532,6 +30073,13 @@ export type Database = {
             columns: ["assigned_to_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meeting_action_tasks_assigned_to_user_uuid_fkey"
+            columns: ["assigned_to_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -30112,6 +30660,13 @@ export type Database = {
             foreignKeyName: "meeting_notes_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meeting_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -30657,6 +31212,13 @@ export type Database = {
             columns: ["owner_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meetings_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -31718,6 +32280,13 @@ export type Database = {
             foreignKeyName: "notification_outbox_recipient_user_uuid_fkey"
             columns: ["recipient_user_uuid"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "notification_outbox_recipient_user_uuid_fkey"
+            columns: ["recipient_user_uuid"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -31990,6 +32559,13 @@ export type Database = {
             foreignKeyName: "notification_rules_user_uuid_fkey"
             columns: ["user_uuid"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "notification_rules_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -32221,6 +32797,13 @@ export type Database = {
             foreignKeyName: "ops_time_logs_user_uuid_fkey"
             columns: ["user_uuid"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_time_logs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -32319,6 +32902,13 @@ export type Database = {
             foreignKeyName: "ops_work_items_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -32362,6 +32952,13 @@ export type Database = {
             columns: ["owner_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -35331,6 +35928,13 @@ export type Database = {
             foreignKeyName: "portal_document_audit_actor_user_id_fkey"
             columns: ["actor_user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_document_audit_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -35540,6 +36144,13 @@ export type Database = {
             foreignKeyName: "portal_document_categories_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_document_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -35726,6 +36337,13 @@ export type Database = {
             foreignKeyName: "portal_documents_deleted_by_fkey"
             columns: ["deleted_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_documents_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -35839,6 +36457,13 @@ export type Database = {
             columns: ["shared_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_documents_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -36021,6 +36646,13 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -36577,6 +37209,13 @@ export type Database = {
             foreignKeyName: "processes_approved_by_fkey"
             columns: ["approved_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "processes_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -36613,6 +37252,13 @@ export type Database = {
             columns: ["owner_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "processes_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -36764,6 +37410,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -38402,6 +39055,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "rto_tips_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -40764,6 +41424,13 @@ export type Database = {
             foreignKeyName: "staff_provisioning_runs_requested_by_fkey"
             columns: ["requested_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -40813,6 +41480,13 @@ export type Database = {
             foreignKeyName: "staff_provisioning_runs_target_user_id_fkey"
             columns: ["target_user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -40849,6 +41523,13 @@ export type Database = {
             columns: ["team_leader_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "staff_provisioning_runs_team_leader_id_fkey"
+            columns: ["team_leader_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -42080,6 +42761,13 @@ export type Database = {
             foreignKeyName: "suggest_attachments_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_attachments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -42362,6 +43050,13 @@ export type Database = {
             foreignKeyName: "suggest_items_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -42398,6 +43093,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -42440,6 +43142,13 @@ export type Database = {
             columns: ["released_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -42482,6 +43191,13 @@ export type Database = {
             columns: ["reported_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -42524,6 +43240,13 @@ export type Database = {
             columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -42747,6 +43470,13 @@ export type Database = {
             foreignKeyName: "suggest_items_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "suggest_items_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -42853,6 +43583,13 @@ export type Database = {
             foreignKeyName: "support_requests_assigned_to_user_id_fkey"
             columns: ["assigned_to_user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "support_requests_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -42889,6 +43626,13 @@ export type Database = {
             columns: ["requested_by_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "support_requests_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -44092,6 +44836,13 @@ export type Database = {
             foreignKeyName: "team_leader_assignments_leader_user_uuid_fkey"
             columns: ["leader_user_uuid"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "team_leader_assignments_leader_user_uuid_fkey"
+            columns: ["leader_user_uuid"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -44128,6 +44879,13 @@ export type Database = {
             columns: ["member_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "team_leader_assignments_member_user_uuid_fkey"
+            columns: ["member_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -44649,6 +45407,13 @@ export type Database = {
             foreignKeyName: "tenant_compliance_memberships_assigned_csc_user_id_fkey"
             columns: ["assigned_csc_user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_assigned_csc_user_id_fkey"
+            columns: ["assigned_csc_user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -44685,6 +45450,13 @@ export type Database = {
             columns: ["assigned_team_leader_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_assigned_team_leader_user_id_fkey"
+            columns: ["assigned_team_leader_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -44939,6 +45711,13 @@ export type Database = {
             foreignKeyName: "tenant_conversations_assigned_to_user_fk"
             columns: ["assigned_to_user_uuid"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_assigned_to_user_fk"
+            columns: ["assigned_to_user_uuid"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -44975,6 +45754,13 @@ export type Database = {
             columns: ["created_by_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_created_by_user_fk"
+            columns: ["created_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -45184,6 +45970,13 @@ export type Database = {
             columns: ["csc_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_csc_assignments_csc_user_id_fkey"
+            columns: ["csc_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -46375,6 +47168,13 @@ export type Database = {
             foreignKeyName: "tenant_members_user_id_users_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_members_user_id_users_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -46517,6 +47317,13 @@ export type Database = {
             columns: ["sender_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_messages_sender_user_fk"
+            columns: ["sender_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -48471,6 +49278,13 @@ export type Database = {
             foreignKeyName: "tenant_sharepoint_settings_verified_by_fkey"
             columns: ["verified_by"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -49251,6 +50065,13 @@ export type Database = {
             foreignKeyName: "tenant_users_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -49488,6 +50309,13 @@ export type Database = {
             columns: ["assigned_consultant_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["assigned_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -49978,6 +50806,13 @@ export type Database = {
             columns: ["ack_by_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tga_rto_acknowledgements_ack_by_user_fk"
+            columns: ["ack_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -52240,6 +53075,13 @@ export type Database = {
             foreignKeyName: "user_microsoft_identities_user_uuid_fkey"
             columns: ["user_uuid"]
             isOneToOne: true
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_microsoft_identities_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: true
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -52323,6 +53165,13 @@ export type Database = {
             columns: ["user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_notification_integrations_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -52576,6 +53425,13 @@ export type Database = {
             foreignKeyName: "user_ui_prefs_user_uuid_fkey"
             columns: ["user_uuid"]
             isOneToOne: true
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_ui_prefs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: true
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -52682,6 +53538,13 @@ export type Database = {
             columns: ["user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_win_banner_state_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -53007,6 +53870,13 @@ export type Database = {
             columns: ["cover_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "users_cover_user_id_fkey"
+            columns: ["cover_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -53425,6 +54295,13 @@ export type Database = {
             columns: ["performed_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "vector_index_logs_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -54518,6 +55395,13 @@ export type Database = {
             foreignKeyName: "meetings_owner_user_uuid_fkey"
             columns: ["owner_user_uuid"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meetings_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -55343,6 +56227,13 @@ export type Database = {
             columns: ["backup_owner_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "accountability_seats_backup_owner_user_id_fkey"
+            columns: ["backup_owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -56246,6 +57137,169 @@ export type Database = {
           tenant_id: number | null
         }
         Relationships: []
+      }
+      v_auth_user_state: {
+        Row: {
+          account_state: string | null
+          auth_created_at: string | null
+          disabled: boolean | null
+          email: string | null
+          is_ghost: boolean | null
+          last_sign_in_at: string | null
+          tenant_id: number | null
+          unicorn_role: string | null
+          user_type: string | null
+          user_uuid: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_unicorn_role_fk"
+            columns: ["unicorn_role"]
+            isOneToOne: false
+            referencedRelation: "dd_unicorn_roles"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "users_user_type_fkey"
+            columns: ["user_type"]
+            isOneToOne: false
+            referencedRelation: "dd_user_type"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       v_clickup_comments: {
         Row: {
@@ -57350,6 +58404,13 @@ export type Database = {
             columns: ["csc_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_csc_assignments_csc_user_id_fkey"
+            columns: ["csc_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -59596,6 +60657,13 @@ export type Database = {
             foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
             columns: ["assigned_csc_user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["assigned_csc_user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -59768,6 +60836,13 @@ export type Database = {
             columns: ["assigned_csc_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["assigned_csc_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -59981,6 +61056,13 @@ export type Database = {
             columns: ["owner_user_uuid"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -61888,6 +62970,13 @@ export type Database = {
             foreignKeyName: "tenant_compliance_memberships_assigned_csc_user_id_fkey"
             columns: ["assigned_csc_user_id"]
             isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_assigned_csc_user_id_fkey"
+            columns: ["assigned_csc_user_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_labour_efficiency"
             referencedColumns: ["csc_user_id"]
           },
@@ -61924,6 +63013,13 @@ export type Database = {
             columns: ["assigned_team_leader_user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_assigned_team_leader_user_id_fkey"
+            columns: ["assigned_team_leader_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -62913,6 +64009,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      finalise_cohort_job: { Args: { p_job_id: string }; Returns: string }
       finalise_meeting_minutes: {
         Args: { p_meeting_id: string; p_summary: string }
         Returns: string
@@ -63554,6 +64651,27 @@ export type Database = {
         Args: { p_days?: number; p_tenant_id: number }
         Returns: Json
       }
+      launch_cohort_job: {
+        Args: {
+          p_action: string
+          p_batch_size?: number
+          p_cap?: number
+          p_filter: Json
+          p_notes?: string
+          p_throttle_ms?: number
+        }
+        Returns: string
+      }
+      lease_cohort_job_items: {
+        Args: { p_job_id: string; p_limit?: number; p_worker_id: string }
+        Returns: {
+          email: string
+          id: number
+          planned_action: string
+          tenant_id: number
+          user_uuid: string
+        }[]
+      }
       list_acting_user_options: {
         Args: { p_tenant_id: number }
         Returns: {
@@ -63752,6 +64870,11 @@ export type Database = {
             }
             Returns: string
           }
+      reclaim_stale_cohort_locks: { Args: never; Returns: number }
+      record_cohort_item_outcome: {
+        Args: { p_item_id: number; p_outcome: string; p_reason?: string }
+        Returns: undefined
+      }
       record_resource_usage: {
         Args: { p_downloaded?: boolean; p_resource_id: string }
         Returns: undefined
@@ -63803,6 +64926,19 @@ export type Database = {
       resolve_billing_tenant_id: {
         Args: { _tenant_id: number }
         Returns: number
+      }
+      resolve_cohort: {
+        Args: { p_cap?: number; p_filter: Json }
+        Returns: {
+          account_state: string
+          email: string
+          last_sign_in_at: string
+          tenant_id: number
+          tenant_name: string
+          truncated: boolean
+          unicorn_role: string
+          user_uuid: string
+        }[]
       }
       resolve_tenant_for_task: { Args: { p_task_id: string }; Returns: number }
       resolve_tenant_merge_fields: {
@@ -64266,6 +65402,10 @@ export type Database = {
         | { Args: never; Returns: undefined }
         | { Args: { p_tenant_id: number }; Returns: undefined }
       set_active_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
+      set_cohort_job_status: {
+        Args: { p_job_id: string; p_status: string }
+        Returns: undefined
+      }
       set_issue_status: {
         Args: { p_issue_id: string; p_solution_text?: string; p_status: string }
         Returns: undefined
