@@ -280,24 +280,30 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       const { data, error } = await supabase.functions.invoke('generate-recovery-link', {
         body: { user_uuid: member.user_id },
       });
-      if (error) {
-        toast.error("Couldn't generate recovery link — please try again");
-        return;
+      let payload: any = data;
+      if (error && (error as any).context?.json) {
+        try { payload = await (error as any).context.json(); } catch { /* ignore */ }
+      } else if (error && (error as any).context?.text) {
+        try { payload = JSON.parse(await (error as any).context.text()); } catch { /* ignore */ }
       }
-      if (data?.ok && data.action_link) {
+      if (payload?.ok && payload.action_link) {
         try {
-          await navigator.clipboard.writeText(data.action_link);
+          await navigator.clipboard.writeText(payload.action_link);
           toast.success('Recovery link copied');
         } catch {
-          toast.message('Copy manually', { description: data.action_link });
+          toast.message('Copy manually', { description: payload.action_link });
         }
         return;
       }
-      if (data?.code === 'AUTH_USER_NOT_FOUND') {
+      if (payload?.code === 'AUTH_USER_NOT_FOUND') {
         toast.info("This user hasn't activated their account yet — use Activate account instead");
         return;
       }
-      toast.error(mapAuthActionError(data?.code, "Couldn't generate recovery link — please try again") ?? "Couldn't generate recovery link — please try again");
+      if (error && !payload?.code) {
+        toast.error("Couldn't generate recovery link — please try again");
+        return;
+      }
+      toast.error(mapAuthActionError(payload?.code, "Couldn't generate recovery link — please try again") ?? "Couldn't generate recovery link — please try again");
     } catch (err: any) {
       console.error('generate-recovery-link failed', err);
       toast.error("Couldn't generate recovery link — please try again");
