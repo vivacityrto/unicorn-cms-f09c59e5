@@ -195,6 +195,92 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     }
   };
 
+  // Per-row in-flight tracker for password reset / recovery link actions.
+  const [actionUserId, setActionUserId] = useState<string | null>(null);
+  const [actionKind, setActionKind] = useState<'reset' | 'recovery' | null>(null);
+
+  const mapAuthActionError = (code?: string, fallback = "Couldn't complete that action — please try again") => {
+    switch (code) {
+      case 'AUTH_USER_NOT_FOUND':
+        return null; // handled separately with toast.info
+      case 'INSUFFICIENT_PERMISSIONS':
+        return "You don't have permission to do that";
+      case 'CROSS_TENANT_NOT_ALLOWED':
+        return 'This user belongs to a different tenant';
+      case 'USER_NOT_FOUND':
+      case 'MAILGUN_NOT_CONFIGURED':
+      case 'LINK_GENERATION_FAILED':
+        return fallback;
+      default:
+        return fallback;
+    }
+  };
+
+  const handleSendPasswordReset = async (member: TenantMemberInfo) => {
+    setActionUserId(member.user_id);
+    setActionKind('reset');
+    try {
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
+        body: { user_uuid: member.user_id },
+      });
+      if (error) {
+        toast.error("Couldn't send reset email — please try again");
+        return;
+      }
+      if (data?.ok) {
+        toast.success(`Password reset email sent to ${data.email}`);
+        return;
+      }
+      if (data?.code === 'AUTH_USER_NOT_FOUND') {
+        toast.info("This user hasn't activated their account yet — use Activate account instead");
+        return;
+      }
+      toast.error(mapAuthActionError(data?.code, "Couldn't send reset email — please try again") ?? "Couldn't send reset email — please try again");
+    } catch (err: any) {
+      console.error('send-password-reset failed', err);
+      toast.error("Couldn't send reset email — please try again");
+    } finally {
+      setActionUserId(null);
+      setActionKind(null);
+    }
+  };
+
+  const handleCopyRecoveryLink = async (member: TenantMemberInfo) => {
+    if (!isSuperAdmin()) return;
+    setActionUserId(member.user_id);
+    setActionKind('recovery');
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-recovery-link', {
+        body: { user_uuid: member.user_id },
+      });
+      if (error) {
+        toast.error("Couldn't generate recovery link — please try again");
+        return;
+      }
+      if (data?.ok && data.action_link) {
+        try {
+          await navigator.clipboard.writeText(data.action_link);
+          toast.success('Recovery link copied');
+        } catch {
+          toast.message('Copy manually', { description: data.action_link });
+        }
+        return;
+      }
+      if (data?.code === 'AUTH_USER_NOT_FOUND') {
+        toast.info("This user hasn't activated their account yet — use Activate account instead");
+        return;
+      }
+      toast.error(mapAuthActionError(data?.code, "Couldn't generate recovery link — please try again") ?? "Couldn't generate recovery link — please try again");
+    } catch (err: any) {
+      console.error('generate-recovery-link failed', err);
+      toast.error("Couldn't generate recovery link — please try again");
+    } finally {
+      setActionUserId(null);
+      setActionKind(null);
+    }
+  };
+
+
   // Resolve effective relationship_role for a member, preferring the new
   // canonical column and falling back to legacy flags for unmigrated rows.
   const getMemberRelationshipRole = (m: TenantMemberInfo): RelationshipRole => {
