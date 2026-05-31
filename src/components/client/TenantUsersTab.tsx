@@ -368,8 +368,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     let run = 0;
     let skip = 0;
     for (const m of selectedMembers) {
-      const v = isValidFor(computeState(m), action);
-      if (v.ok) run += 1; else skip += 1;
+      if (invalidReason(computeState(m), action) == null) run += 1; else skip += 1;
     }
     return { run, skip };
   };
@@ -384,8 +383,8 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     const localSkips: BulkResultRow[] = [];
     const eligible: TenantMemberInfo[] = [];
     for (const m of pool) {
-      const v = isValidFor(computeState(m), action);
-      if (v.ok) {
+      const reason = invalidReason(computeState(m), action);
+      if (reason == null) {
         eligible.push(m);
       } else {
         localSkips.push({
@@ -393,10 +392,11 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           email: m.users.email,
           action,
           outcome: 'skipped',
-          reason: v.reason,
+          reason,
         });
       }
     }
+
 
 
     setBulkRunning(action);
