@@ -121,6 +121,14 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
 
       onStatusChange(newStatus);
 
+      // Invalidate caches so Manage Clients list, dashboards and tenant detail
+      // immediately reflect the new status (otherwise the 5-min staleTime on
+      // useTenantsBasic keeps showing the old "Active" badge).
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-triage'] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio-cockpit'] });
+
       // Auto-insert a note recording the status change
       if (clientId) {
         const fromDesc = options.find(o => o.value === currentStatus)?.description || currentStatus;
