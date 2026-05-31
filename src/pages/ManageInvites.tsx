@@ -516,7 +516,7 @@ export default function ManageInvites() {
                           className={isTeamLeader ? "gap-2 bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "gap-2"}
                           variant="default"
                           disabled={isTeamLeader}
-                          style={{ display: selectedInvites.size > 0 ? 'none' : 'inline-flex' }}
+                          style={{ display: selectedInvites.size > 0 ? 'inline-flex' : 'none' }}
                         >
                           <RefreshCw className="h-4 w-4" />
                           Re-invite ({selectedInvites.size})
