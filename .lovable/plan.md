@@ -1,35 +1,78 @@
-## Root cause
+# Add password reset & recovery link actions to Team Members menu
 
-The sync is running successfully, but it is still saving the wrong registration period.
+## File to change (only one)
 
-For RTO `31716`, TGA is returning registrations in newest-to-oldest order:
+`src/components/client/TenantUsersTab.tsx` — this renders the Tenant detail "Users" tab and the per-row ⋮ menu (verified: `DropdownMenu` at lines 703–727, uses `MoreVertical`, already gated by `canManageUsers`).
 
-- `2018-12-23` to `2025-12-22` — ASQA, renewal under consideration
-- `2013-12-23` to `2018-12-22`
-- `2012-06-29` to `2013-12-22`
-- `2008-12-23` to `2012-06-28` — old QLD registration transfer
+No other file is touched. No new context, no new client, no new toast lib — `toast` from sonner and `supabase` from `@/integrations/supabase/client` are already imported in this file; `useAuth`/`useRBAC` are already used (`isSuperAdmin`, `isVivacityTeam`, `profile`, etc.) so Super-Admin gating uses existing state.
 
-The database still shows `registration_end_date = 2012-06-28`, which means the deployed `tga-rto-sync` function is still using the old selection logic, even though the local code has been corrected. The “TGA Sync Complete” toast confirms scope data is refreshing, but the deployed function is not saving the corrected summary date yet.
+## Menu additions (inside the existing `<DropdownMenuContent>`)
 
-## Plan
+Order in the menu after "Edit User", before the destructive "Remove from tenant" separator:
 
-1. **Deploy the corrected `tga-rto-sync` edge function**
-   - Deploy the existing local fix that sorts registrations by latest `endDate` before choosing the registration period.
-   - Do not change frontend UI or unrelated sync logic.
+1. `Send Password Reset` — visible to all callers who already pass `canManageUsers` (SuperAdmin or tenant Admin); the edge function itself re-checks authority.
+2. `Copy Recovery Link` — rendered **only when `isSuperAdmin()` is true**, matching the edge function's super-admin-only contract.
 
-2. **Run a targeted sync for tenant `7483` / RTO `31716`**
-   - Invoke `tga-rto-sync` with the current authenticated session.
-   - Confirm it completes successfully.
+Both items: icon from `lucide-react` (`KeyRound` for reset, `Link2` for recovery — both already common in this codebase), `disabled` while the row's call is in flight, no `onSelect` default-close interference.
 
-3. **Verify the stored summary data**
-   - Check `public.tga_rto_summary` for tenant `7483` and RTO `31716`.
-   - Expected result: `registration_end_date = 2025-12-22`, not `2012-06-28`.
+## Local state
 
-4. **Confirm the visible UI will update**
-   - The Integration tab and re-registration badge both read from `tga_rto_summary.registration_end_date`, so once the deployed function writes `2025-12-22`, the UI should show the correct date after refresh/query invalidation.
+Add a single `actionUserId: string | null` (the `user_id` of the row currently being acted on) plus an `actionKind: 'reset' | 'recovery' | null` so we can disable just the relevant item. Reuse existing toast pattern (`toast.success` / `toast.error` / `toast.info`).
 
-## Files / services touched
+## Handlers
 
-- Deploy only: `supabase/functions/tga-rto-sync/index.ts`
-- No database schema changes planned.
-- No changes to `tga-sync`, frontend components, or unrelated files unless verification shows a separate cache/query issue.
+```text
+handleSendPasswordReset(member):
+  set in-flight
+  { data, error } = supabase.functions.invoke('send-password-reset',
+                       { body: { user_uuid: member.user_id } })
+  network/error → toast.error('Could not send password reset')
+  data.ok       → toast.success(`Password reset email sent to ${data.email}`)
+  data.ok===false → map data.code (see below)
+  finally clear in-flight
+
+handleCopyRecoveryLink(member):
+  guard isSuperAdmin(); set in-flight
+  invoke('generate-recovery-link', { body: { user_uuid: member.user_id } })
+  on ok:true → navigator.clipboard.writeText(data.action_link)
+               toast.success('Recovery link copied')
+  on ok:false → map data.code
+  finally clear in-flight
+```
+
+The frontend never constructs a URL. `action_link` is used verbatim from the response.
+
+## Error code → message map
+
+- `AUTH_USER_NOT_FOUND` → `toast.info("This user hasn't activated their account yet — use Activate account instead")` (the existing "Activate account" button already shows for ghosts to Vivacity staff at line 679).
+- `INSUFFICIENT_PERMISSIONS` → "You don't have permission to do that."
+- `CROSS_TENANT_NOT_ALLOWED` → "This user isn't part of this tenant."
+- `USER_NOT_FOUND` → "User record not found."
+- `MAILGUN_NOT_CONFIGURED` → "Email service isn't configured — contact support."
+- `LINK_GENERATION_FAILED` → "Could not generate the link — try again."
+- Anything else / network error → generic "Something went wrong — try again."
+
+Australian English throughout ("Authorised", "couldn't", etc.).
+
+## Super-Admin gating
+
+`isSuperAdmin()` is already destructured from `useAuth()` in this file (used on line 130 for `canActivateGhosts`). The "Copy Recovery Link" `<DropdownMenuItem>` is wrapped in `{isSuperAdmin() && (...)}` so tenant Admins never see it. No new RBAC plumbing.
+
+## Ghost user surfacing
+
+When `send-password-reset` returns `AUTH_USER_NOT_FOUND`, we already know it's a ghost. The toast directs the staff member to the "Activate account" inline button that this same file renders to Vivacity staff (line 684) — no extra UI needed. For tenant Admins (who can't see Activate), the same toast text tells them what's happening; they'll contact Vivacity.
+
+## What could go wrong
+
+- **Clipboard API blocked** (insecure context / permission denied): wrap `navigator.clipboard.writeText` in try/catch; on failure show the link in a toast with a "copy manually" hint rather than silently succeeding.
+- **Double-click race**: prevented by per-row `actionUserId + actionKind` disabling the item while in flight.
+- **Stale session / 401 from invoke**: caught by the generic error branch; toast asks user to refresh.
+- **Tenant Admin clicking Reset for a user from another tenant** (shouldn't be visible but defence-in-depth): edge function returns `CROSS_TENANT_NOT_ALLOWED`, mapped to a clear message.
+- **Ghost user**: handled explicitly via `AUTH_USER_NOT_FOUND` toast — never shows a generic failure.
+- **Menu close-on-select swallowing the spinner**: items will be plain `<DropdownMenuItem>`; the toast confirms outcome after the menu closes, which is the existing pattern used by "Activate account".
+
+## Out of scope (explicitly)
+
+- No edge function changes or new functions.
+- No URL construction in the frontend.
+- No rename of `user_uuid`, no new tenant scoping, no new provider.
