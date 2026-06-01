@@ -80,9 +80,14 @@ export function ChartBuilder() {
     [vivacityTeamUsers]
   );
 
-  // Edit is allowed if: has permission AND (Facilitator Mode is ON OR chart is Draft)
-  // Once activated, editing requires Facilitator Mode
-  const canEdit = hasEditPermission && (isFacilitatorMode || chart?.status === 'Draft' || !chart);
+  // Edit gate:
+  // - Draft (or no chart yet): any user with edit permission can edit.
+  // - Active: only SuperAdmin, and only after explicitly clicking "Edit chart".
+  // - Archived: read-only.
+  const isActive = chart?.status === 'Active';
+  const isDraft = chart?.status === 'Draft' || !chart;
+  const canEdit =
+    hasEditPermission && (isDraft || (isActive && isSuperAdmin && editingActive));
 
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
