@@ -25,7 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid, Network, FileText } from 'lucide-react';
+import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid, Network, FileText, Pencil } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useAccountabilityChart } from '@/hooks/useAccountabilityChart';
@@ -35,12 +35,15 @@ import { AccountabilityGaps } from './AccountabilityGaps';
 import { OrgChartView } from './OrgChartView';
 import { EosChartGrid } from './EosChartGrid';
 import { STATUS_COLORS, type ChartStatus, type UserBasic, type SeatWithDetails } from '@/types/accountabilityChart';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useAuth } from '@/hooks/useAuth';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 
 export function ChartBuilder() {
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const { profile } = useAuth();
+  const isSuperAdmin =
+    profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin';
+  const [editingActive, setEditingActive] = useState(false);
   const {
     chart,
     isLoading,
