@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
  * Only visible when Facilitator Mode is active.
  */
 export function FacilitatorAlertsPanel() {
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const isFacilitatorMode = useEosFacilitatorEligible();
   const { activeAlerts, newAlerts, isLoading, refetch } = useEosAlerts();
   const { detectAndCreateAlerts } = useStuckDetection();
 
