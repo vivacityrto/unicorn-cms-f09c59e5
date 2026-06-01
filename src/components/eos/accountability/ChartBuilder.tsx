@@ -25,7 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid, Network, FileText } from 'lucide-react';
+import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid, Network, FileText, Pencil } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useAccountabilityChart } from '@/hooks/useAccountabilityChart';
@@ -35,12 +35,15 @@ import { AccountabilityGaps } from './AccountabilityGaps';
 import { OrgChartView } from './OrgChartView';
 import { EosChartGrid } from './EosChartGrid';
 import { STATUS_COLORS, type ChartStatus, type UserBasic, type SeatWithDetails } from '@/types/accountabilityChart';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useAuth } from '@/hooks/useAuth';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 
 export function ChartBuilder() {
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const { profile } = useAuth();
+  const isSuperAdmin =
+    profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin';
+  const [editingActive, setEditingActive] = useState(false);
   const {
     chart,
     isLoading,
@@ -77,9 +80,14 @@ export function ChartBuilder() {
     [vivacityTeamUsers]
   );
 
-  // Edit is allowed if: has permission AND (Facilitator Mode is ON OR chart is Draft)
-  // Once activated, editing requires Facilitator Mode
-  const canEdit = hasEditPermission && (isFacilitatorMode || chart?.status === 'Draft' || !chart);
+  // Edit gate:
+  // - Draft (or no chart yet): any user with edit permission can edit.
+  // - Active: only SuperAdmin, and only after explicitly clicking "Edit chart".
+  // - Archived: read-only.
+  const isActive = chart?.status === 'Active';
+  const isDraft = chart?.status === 'Draft' || !chart;
+  const canEdit =
+    hasEditPermission && (isDraft || (isActive && isSuperAdmin && editingActive));
 
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
@@ -266,29 +274,45 @@ export function ChartBuilder() {
         </Alert>
       )}
 
-      {/* Read-only mode indicator */}
-      {chart.status === 'Active' && !isFacilitatorMode && hasEditPermission && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Read-only mode.</strong> Enable Facilitator Mode to edit the active chart.
-          </AlertDescription>
+      {/* Active chart — Edit button for SuperAdmins, read-only notice otherwise */}
+      {isActive && hasEditPermission && !editingActive && (
+        <Alert className="flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 mt-0.5" />
+            <AlertDescription>
+              <strong>Read-only.</strong>{' '}
+              {isSuperAdmin
+                ? 'Click Edit chart to make changes to this Active chart.'
+                : 'Only a Super Admin can edit an Active chart.'}
+            </AlertDescription>
+          </div>
+          {isSuperAdmin && (
+            <Button size="sm" onClick={() => setEditingActive(true)}>
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit chart
+            </Button>
+          )}
         </Alert>
       )}
 
-      {/* Facilitator Mode Guidance */}
-      {isFacilitatorMode && (
-        <Alert className="bg-primary/5 border-primary/20">
-          <Users className="h-4 w-4 text-primary" />
-          <AlertDescription className="text-sm">
-            <strong>Facilitator Mode active.</strong> You can add/edit Functions, Seats, and Accountabilities. 
-            Each seat should have 3-7 accountabilities and exactly one primary owner.
-          </AlertDescription>
+      {/* Editing an Active chart banner */}
+      {isActive && editingActive && isSuperAdmin && (
+        <Alert className="bg-primary/5 border-primary/20 flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2">
+            <Users className="h-4 w-4 text-primary mt-0.5" />
+            <AlertDescription className="text-sm">
+              <strong>Editing an Active chart.</strong> Changes apply immediately.
+              Each seat should have 3-7 accountabilities and exactly one primary owner.
+            </AlertDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setEditingActive(false)}>
+            Done
+          </Button>
         </Alert>
       )}
 
-      {/* Validation Warnings */}
-      {(seatsWithoutOwner > 0 || seatsWithBadAccountabilityCount.tooFew > 0 || seatsWithBadAccountabilityCount.tooMany > 0 || overloadedOwners.length > 0) && isFacilitatorMode && (
+      {/* Validation Warnings — visible whenever the chart is editable */}
+      {canEdit && (seatsWithoutOwner > 0 || seatsWithBadAccountabilityCount.tooFew > 0 || seatsWithBadAccountabilityCount.tooMany > 0 || overloadedOwners.length > 0) && (
         <div className="flex flex-wrap gap-2">
           {seatsWithoutOwner > 0 && (
             <Badge variant="outline" className="gap-1 text-warning border-warning/50">

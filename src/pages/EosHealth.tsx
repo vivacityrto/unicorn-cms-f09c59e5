@@ -27,7 +27,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEosHealth } from '@/hooks/useEosHealth';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useEosFacilitatorEligible } from '@/hooks/useEosFacilitatorEligible';
 import { useEosAlerts } from '@/hooks/useEosAlerts';
 import { AlertsList } from '@/components/eos/alerts';
 import { 
@@ -82,7 +82,7 @@ export default function EosHealth() {
 
 function HealthContent() {
   const { health, isLoading } = useEosHealth();
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const isFacilitatorMode = useEosFacilitatorEligible();
   const [expandedDimensions, setExpandedDimensions] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'health' | 'alerts'>('health');
 

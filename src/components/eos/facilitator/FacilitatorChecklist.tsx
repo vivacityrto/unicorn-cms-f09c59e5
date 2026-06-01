@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, Circle, Clock, Users, AlertTriangle, Lightbulb } from 'lucide-react';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useEosFacilitatorEligible } from '@/hooks/useEosFacilitatorEligible';
 import type { EosMeetingSegment, MeetingType } from '@/types/eos';
 
 interface FacilitatorChecklistProps {
@@ -78,7 +78,7 @@ export function FacilitatorChecklist({
   quorumMet = true,
   meetingStartTime,
 }: FacilitatorChecklistProps) {
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const isFacilitatorMode = useEosFacilitatorEligible();
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
 
   // Calculate elapsed time

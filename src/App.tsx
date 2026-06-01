@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
-import { FacilitatorModeProvider } from "./contexts/FacilitatorModeContext";
+
 import { TenantTypeProvider } from "./contexts/TenantTypeContext";
 import { ClientPreviewProvider } from "./contexts/ClientPreviewContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -262,7 +262,6 @@ const App = () => (
             <TenantTypeProvider>
             <ClientPreviewProvider>
             <ViewModeProvider>
-            <FacilitatorModeProvider>
              <CelebrationProvider>
              <ChunkErrorBoundary>
              <Suspense fallback={<LazyLoadFallback />}>
@@ -1149,7 +1148,6 @@ const App = () => (
              </Suspense>
              </ChunkErrorBoundary>
             </CelebrationProvider>
-            </FacilitatorModeProvider>
             </ViewModeProvider>
             </ClientPreviewProvider>
             </TenantTypeProvider>

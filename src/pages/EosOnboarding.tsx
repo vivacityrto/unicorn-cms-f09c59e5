@@ -22,7 +22,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { useEosReadiness } from '@/hooks/useEosReadiness';
 import { READINESS_STATE_COLORS } from '@/types/eosReadiness';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useEosFacilitatorEligible } from '@/hooks/useEosFacilitatorEligible';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import type { OnboardingCategory, OnboardingChecklistItem } from '@/types/eosReadiness';
@@ -55,7 +55,7 @@ export default function EosOnboarding() {
 
 function OnboardingContent() {
   const { readiness, isLoading } = useEosReadiness();
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const isFacilitatorMode = useEosFacilitatorEligible();
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['foundation', 'vision']);
 
   const toggleCategory = (categoryId: string) => {

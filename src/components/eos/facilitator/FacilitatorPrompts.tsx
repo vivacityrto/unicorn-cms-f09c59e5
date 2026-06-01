@@ -1,5 +1,5 @@
 import { Info, MessageCircle, AlertTriangle, Lightbulb, CheckCircle } from 'lucide-react';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useEosFacilitatorEligible } from '@/hooks/useEosFacilitatorEligible';
 import { cn } from '@/lib/utils';
 
 interface FacilitatorPromptProps {
@@ -23,7 +23,7 @@ export function FacilitatorPrompt({
   context,
   className,
 }: FacilitatorPromptProps) {
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const isFacilitatorMode = useEosFacilitatorEligible();
 
   if (!isFacilitatorMode) {
     return null;

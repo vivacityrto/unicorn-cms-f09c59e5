@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, ArrowRight, CheckCircle, Circle, Lightbulb, Rocket } from 'lucide-react';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useEosFacilitatorEligible } from '@/hooks/useEosFacilitatorEligible';
 import { useEosReadiness } from '@/hooks/useEosReadiness';
 import { READINESS_STATE_COLORS } from '@/types/eosReadiness';
 import { cn } from '@/lib/utils';
@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
  * Only visible when Facilitator Mode is active.
  */
 export function FacilitatorOnboardingPanel() {
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const isFacilitatorMode = useEosFacilitatorEligible();
   const { readiness, isLoading } = useEosReadiness();
 
   if (!isFacilitatorMode || isLoading || !readiness) {

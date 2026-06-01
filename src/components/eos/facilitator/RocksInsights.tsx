@@ -1,7 +1,7 @@
 import { AlertTriangle, TrendingDown, User, Clock, Lightbulb } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useEosFacilitatorEligible } from '@/hooks/useEosFacilitatorEligible';
 import { differenceInDays, isPast } from 'date-fns';
 
 interface Rock {
@@ -32,7 +32,7 @@ interface RockInsight {
  * - Rocks repeatedly off-track
  */
 export function RocksInsights({ rocks }: RocksInsightsProps) {
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const isFacilitatorMode = useEosFacilitatorEligible();
 
   if (!isFacilitatorMode || !rocks?.length) {
     return null;

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, ArrowRight, Bell, RefreshCw, Loader2 } from 'lucide-react';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useEosFacilitatorEligible } from '@/hooks/useEosFacilitatorEligible';
 import { useEosAlerts, useStuckDetection } from '@/hooks/useEosAlerts';
 import { AlertCard } from '@/components/eos/alerts';
 import { SEVERITY_COLORS, SEVERITY_LABELS } from '@/types/eosAlerts';
@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
  * Only visible when Facilitator Mode is active.
  */
 export function FacilitatorAlertsPanel() {
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const isFacilitatorMode = useEosFacilitatorEligible();
   const { activeAlerts, newAlerts, isLoading, refetch } = useEosAlerts();
   const { detectAndCreateAlerts } = useStuckDetection();
 
