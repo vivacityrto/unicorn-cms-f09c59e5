@@ -1148,7 +1148,6 @@ const App = () => (
              </Suspense>
              </ChunkErrorBoundary>
             </CelebrationProvider>
-            </FacilitatorModeProvider>
             </ViewModeProvider>
             </ClientPreviewProvider>
             </TenantTypeProvider>
