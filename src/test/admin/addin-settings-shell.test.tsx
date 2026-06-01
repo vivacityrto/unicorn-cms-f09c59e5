@@ -94,9 +94,6 @@ vi.mock("@/components/dashboard/TimeInboxWidget", () => ({
   TimeInboxBanner: () => null,
 }));
 
-vi.mock("@/components/eos/FacilitatorModeBanner", () => ({
-  FacilitatorModeBanner: () => null,
-}));
 
 vi.mock("@/components/profile/ProfileSetupReminderModal", () => ({
   ProfileSetupReminderModal: () => null,
