@@ -214,7 +214,7 @@ serve(async (req) => {
 
     const explicitParent =
       typeof parentFolderIdRaw === "string" ? parentFolderIdRaw.trim() : "";
-    const parentFolderId = explicitParent || effectiveRootId;
+    let parentFolderId = explicitParent || effectiveRootId;
 
     if (!parentFolderId || !effectiveRootId) {
       return jsonResponse(400, {
@@ -231,8 +231,22 @@ serve(async (req) => {
       return jsonResponse(500, { error: "Failed to acquire SharePoint token" });
     }
 
-    // Boundary enforcement
-    if (explicitParent && explicitParent !== effectiveRootId) {
+    // Shared-root uploads always land in the "- Uploads" subfolder
+    if (useSharedRoot) {
+      try {
+        parentFolderId = await findOrCreateUploadsFolder(
+          accessToken,
+          drive_id,
+          effectiveRootId,
+        );
+      } catch (e) {
+        console.error("[upload-sp] Uploads folder resolve failed:", e);
+        return jsonResponse(502, { error: "Failed to resolve uploads folder" });
+      }
+    }
+
+    // Boundary enforcement (skip when shared root — uploads folder is by construction inside it)
+    if (!useSharedRoot && explicitParent && explicitParent !== effectiveRootId) {
       const ok = await verifyWithinRoot(
         accessToken,
         drive_id,
