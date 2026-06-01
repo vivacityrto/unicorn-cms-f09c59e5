@@ -273,17 +273,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
           {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
           <AskVivButton />
 
-          {/* Facilitator Mode Toggle */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <FacilitatorModeToggle />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Facilitator Mode</p>
-            </TooltipContent>
-          </Tooltip>
+
 
           {/* Notifications */}
           <Tooltip>
