@@ -262,7 +262,6 @@ const App = () => (
             <TenantTypeProvider>
             <ClientPreviewProvider>
             <ViewModeProvider>
-            <FacilitatorModeProvider>
              <CelebrationProvider>
              <ChunkErrorBoundary>
              <Suspense fallback={<LazyLoadFallback />}>
