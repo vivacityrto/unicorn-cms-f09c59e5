@@ -62,6 +62,59 @@ function sanitiseFileName(name: string): string {
   return cleaned || `upload-${Date.now()}`;
 }
 
+/**
+ * Find or create the "- Uploads" subfolder directly under the given root item.
+ * Throws on any Graph error; caller maps to a 502 response.
+ */
+async function findOrCreateUploadsFolder(
+  accessToken: string,
+  driveId: string,
+  rootItemId: string,
+): Promise<string> {
+  const FOLDER_NAME = "- Uploads";
+  const filter = encodeURIComponent(`name eq '${FOLDER_NAME}'`);
+  const findRes = await fetch(
+    `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${rootItemId}/children?$select=id,name,folder&$filter=${filter}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+
+  if (!findRes.ok) {
+    const text = await findRes.text();
+    throw new Error(`Graph find failed (${findRes.status}): ${text}`);
+  }
+
+  const findJson = await findRes.json();
+  const existing = Array.isArray(findJson.value)
+    ? findJson.value.find((it: any) => it?.folder)
+    : null;
+  if (existing?.id) return existing.id as string;
+
+  const createRes = await fetch(
+    `https://graph.microsoft.com/v1.0/drives/${driveId}/items/${rootItemId}/children`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: FOLDER_NAME,
+        folder: {},
+        "@microsoft.graph.conflictBehavior": "fail",
+      }),
+    },
+  );
+
+  if (!createRes.ok) {
+    const text = await createRes.text();
+    throw new Error(`Graph create failed (${createRes.status}): ${text}`);
+  }
+
+  const created = await createRes.json();
+  if (!created?.id) throw new Error("Graph create returned no id");
+  return created.id as string;
+}
+
 function jsonResponse(status: number, body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {
     status,
