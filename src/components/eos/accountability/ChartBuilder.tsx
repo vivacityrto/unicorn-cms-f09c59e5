@@ -274,29 +274,45 @@ export function ChartBuilder() {
         </Alert>
       )}
 
-      {/* Read-only mode indicator */}
-      {chart.status === 'Active' && !isFacilitatorMode && hasEditPermission && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Read-only mode.</strong> Enable Facilitator Mode to edit the active chart.
-          </AlertDescription>
+      {/* Active chart — Edit button for SuperAdmins, read-only notice otherwise */}
+      {isActive && hasEditPermission && !editingActive && (
+        <Alert className="flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2">
+            <Info className="h-4 w-4 mt-0.5" />
+            <AlertDescription>
+              <strong>Read-only.</strong>{' '}
+              {isSuperAdmin
+                ? 'Click Edit chart to make changes to this Active chart.'
+                : 'Only a Super Admin can edit an Active chart.'}
+            </AlertDescription>
+          </div>
+          {isSuperAdmin && (
+            <Button size="sm" onClick={() => setEditingActive(true)}>
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit chart
+            </Button>
+          )}
         </Alert>
       )}
 
-      {/* Facilitator Mode Guidance */}
-      {isFacilitatorMode && (
-        <Alert className="bg-primary/5 border-primary/20">
-          <Users className="h-4 w-4 text-primary" />
-          <AlertDescription className="text-sm">
-            <strong>Facilitator Mode active.</strong> You can add/edit Functions, Seats, and Accountabilities. 
-            Each seat should have 3-7 accountabilities and exactly one primary owner.
-          </AlertDescription>
+      {/* Editing an Active chart banner */}
+      {isActive && editingActive && isSuperAdmin && (
+        <Alert className="bg-primary/5 border-primary/20 flex items-center justify-between gap-3">
+          <div className="flex items-start gap-2">
+            <Users className="h-4 w-4 text-primary mt-0.5" />
+            <AlertDescription className="text-sm">
+              <strong>Editing an Active chart.</strong> Changes apply immediately.
+              Each seat should have 3-7 accountabilities and exactly one primary owner.
+            </AlertDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setEditingActive(false)}>
+            Done
+          </Button>
         </Alert>
       )}
 
-      {/* Validation Warnings */}
-      {(seatsWithoutOwner > 0 || seatsWithBadAccountabilityCount.tooFew > 0 || seatsWithBadAccountabilityCount.tooMany > 0 || overloadedOwners.length > 0) && isFacilitatorMode && (
+      {/* Validation Warnings — visible whenever the chart is editable */}
+      {canEdit && (seatsWithoutOwner > 0 || seatsWithBadAccountabilityCount.tooFew > 0 || seatsWithBadAccountabilityCount.tooMany > 0 || overloadedOwners.length > 0) && (
         <div className="flex flex-wrap gap-2">
           {seatsWithoutOwner > 0 && (
             <Badge variant="outline" className="gap-1 text-warning border-warning/50">
