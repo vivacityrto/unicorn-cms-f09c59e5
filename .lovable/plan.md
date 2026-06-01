@@ -1,62 +1,60 @@
-# Remove Facilitator Mode toggle; replace with always-on guidance + per-chart Edit button (SuperAdmin only)
-
 ## Goal
-Kill the redundant global Facilitator Mode toggle in the top bar. Keep the genuinely useful EOS guidance panels visible to eligible staff at all times. Replace the Accountability Chart edit-latch with an explicit per-chart **Edit** button that only SuperAdmins can use on Active charts.
+Route shared-root uploads into a dedicated `- Uploads` subfolder under the tenant's shared root in SharePoint, auto-creating it on first use.
 
 ## Changes
 
-### 1. Remove the toggle, banner, and provider
-- Delete `<FacilitatorModeToggle />` from `src/components/layout/TopBar.tsx` (line 280) and the import (line 32).
-- Delete `<FacilitatorModeBanner />` from `src/components/DashboardLayout.tsx` (line 609) and the import (line 12).
-- Remove `<FacilitatorModeProvider>` wrapper in `src/App.tsx` (lines 265, 1152) and the import (line 9).
-- Delete files:
-  - `src/contexts/FacilitatorModeContext.tsx`
-  - `src/components/eos/FacilitatorModeToggle.tsx`
-  - `src/components/eos/FacilitatorModeBanner.tsx`
+**File:** `supabase/functions/upload-sharepoint-file/index.ts`
 
-### 2. Make EOS guidance panels always-on for eligible staff
-Each of these components currently early-returns `null` when Facilitator Mode is off. Replace the `useFacilitatorMode()` check with an eligibility check (`profile.unicorn_role === 'Super Admin' || 'Team Leader'`) via a small shared helper hook `useEosFacilitatorEligible()` (placed in `src/hooks/useEosFacilitatorEligible.ts`).
+### 1. Add `findOrCreateUploadsFolder` helper
+A new async function near the other Graph helpers:
+- `GET /v1.0/drives/{drive_id}/items/{rootId}/children?$select=id,name,folder&$filter=name eq '- Uploads'`
+- If `value[0]` exists and has a truthy `folder` property, return its `id`.
+- Otherwise `POST /v1.0/drives/{drive_id}/items/{rootId}/children` with:
+  ```json
+  { "name": "- Uploads", "folder": {}, "@microsoft.graph.conflictBehavior": "fail" }
+  ```
+  Return the created item's `id`.
+- Any non-OK Graph response throws; caller maps to 502.
 
-Files updated to use the new hook (remove `useFacilitatorMode`, swap the gate):
-- `src/components/eos/facilitator/FacilitatorAlertsPanel.tsx`
-- `src/components/eos/facilitator/FacilitatorChecklist.tsx`
-- `src/components/eos/facilitator/FacilitatorHealthPanel.tsx`
-- `src/components/eos/facilitator/FacilitatorOnboardingPanel.tsx`
-- `src/components/eos/facilitator/FacilitatorPrompts.tsx`
-- `src/components/eos/facilitator/QCInsights.tsx`
-- `src/components/eos/facilitator/RocksInsights.tsx`
-- `src/pages/EosHealth.tsx` (line 195 guidance block → eligibility check)
-- `src/pages/EosOnboarding.tsx` (lines 137, 172, 271 → eligibility check; rename prop `isFacilitatorMode` → `showFacilitatorGuidance` for clarity)
+### 2. Wire it in after token acquisition (~line 180)
+After `accessToken = await getAppToken()` succeeds, and before the boundary check:
 
-### 3. Accountability Chart — per-chart Edit button (SuperAdmin only)
-In `src/components/eos/accountability/ChartBuilder.tsx`:
-- Remove the `useFacilitatorMode` import and usage.
-- Add local state: `const [editingActive, setEditingActive] = useState(false)`.
-- Add SuperAdmin check: `const isSuperAdmin = profile?.unicorn_role === 'Super Admin'`.
-- Replace the edit gate:
-  - **Before:** `canEdit = hasEditPermission && (isFacilitatorMode || chart?.status === 'Draft' || !chart)`
-  - **After:** `canEdit = hasEditPermission && (chart?.status === 'Draft' || !chart || (chart?.status === 'Active' && isSuperAdmin && editingActive))`
-- When `chart.status === 'Active'` and `isSuperAdmin` and not yet editing: render an inline **"Edit chart"** button (cyan, with pencil icon) in the chart header. Clicking sets `editingActive = true`.
-- While `editingActive` is true: show a small banner *"You are editing an Active chart"* with a **"Done"** button that sets `editingActive = false`.
-- Non-SuperAdmins viewing an Active chart see read-only, no Edit button — even if they have `hasEditPermission`.
-- The seat-warning panel (lines 280, 291) and any other `isFacilitatorMode`-gated UI in this file: show whenever `canEdit` is true (i.e., during any edit session) instead of facilitator mode.
+```ts
+let parentFolderId = explicitParent || effectiveRootId;
 
-### 4. Tests
-- `src/test/admin/addin-settings-shell.test.tsx` (lines 97-98): drop the `FacilitatorModeBanner` mock — the file no longer exists.
-- Spot-check any other test mocks of the deleted modules.
+if (useSharedRoot) {
+  let uploadsTargetId: string;
+  try {
+    uploadsTargetId = await findOrCreateUploadsFolder(
+      accessToken,
+      drive_id,
+      effectiveRootId,
+    );
+  } catch (e) {
+    console.error("[upload-sp] Uploads folder resolve failed:", e);
+    return jsonResponse(502, { error: "Failed to resolve uploads folder" });
+  }
+  parentFolderId = uploadsTargetId; // overrides any explicitParent
+}
+```
 
-## What does NOT change
-- All EOS guidance/alerts/insights stay in the product — they're just always visible to Super Admin & Team Leader inside EOS pages.
-- Team Members and client users continue to see no facilitator-only UI.
-- `/eos/health` and stuck-alert data are untouched.
-- No DB, RLS, or backend changes.
+`parentFolderId` (currently `const` at line 164) becomes `let`, or is moved/reassigned in this block.
 
-## Behavioural diff (user-facing)
-- Top bar loses the green "FA… Active" pill on every page.
-- Light blue banner on EOS pages is gone.
-- EOS pages (Health, Onboarding, Meetings, Rocks, QC) automatically show their facilitator guidance to Super Admin and Team Leader users.
-- Accountability Chart: Active charts show an **"Edit chart"** button — but only to SuperAdmins. Team Leaders can no longer edit a published Active chart (this is a tightening).
+### 3. Skip boundary check when `useSharedRoot`
+Update the guard at line 182:
+```ts
+if (!useSharedRoot && explicitParent && explicitParent !== effectiveRootId) {
+  // existing verifyWithinRoot call unchanged
+}
+```
+Rationale: the `- Uploads` folder is created as a direct child of `effectiveRootId`, so traversal is unnecessary.
 
-## Risk
-- Low. Pure UX/permission refactor; no schema changes, no data migration.
-- The one tightening: Team Leaders lose the ability to edit Active Accountability Charts. Per your direction this is intentional (SuperAdmin only).
+## Out of scope
+- No frontend changes — `ClientFilesPage.tsx` keeps sending `parent_folder_id`; it is now ignored when `useSharedRoot` is true.
+- No DB migrations, no new env vars, no changes to non-shared-root upload flow.
+
+## Verification
+- Upload with `useSharedFolder=true` on a tenant with no existing `- Uploads` folder → folder created, file lands inside it.
+- Upload again → existing folder reused (no duplicate, no error).
+- Upload with `useSharedFolder=false` → behaviour unchanged.
+- Simulated Graph 5xx on find/create → 502 `{ error: "Failed to resolve uploads folder" }`.
