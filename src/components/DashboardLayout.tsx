@@ -605,9 +605,6 @@ export const DashboardLayout = ({
         {/* Top Bar */}
         <TopBar />
 
-        {/* Facilitator Mode Banner */}
-        <FacilitatorModeBanner />
-
         {/* Time Inbox Banner */}
         <TimeInboxBanner />
 
