@@ -9,7 +9,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { UtilityFooter } from "@/components/layout/UtilityFooter";
 import { ClientFooter } from "@/components/client/ClientFooter";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
-import { FacilitatorModeBanner } from "@/components/eos/FacilitatorModeBanner";
+
 import { AskVivPanel, AskVivFloatingLauncher } from "@/components/ask-viv";
 import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
