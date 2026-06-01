@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Activity, ArrowRight, AlertCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useEosFacilitatorEligible } from '@/hooks/useEosFacilitatorEligible';
 import { useEosHealth } from '@/hooks/useEosHealth';
 import { HEALTH_BAND_COLORS, HEALTH_BAND_LABELS, type TrendDirection } from '@/types/eosHealth';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ const TREND_ICONS: Record<TrendDirection, typeof TrendingUp> = {
  * Only visible when Facilitator Mode is active.
  */
 export function FacilitatorHealthPanel() {
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const isFacilitatorMode = useEosFacilitatorEligible();
   const { health, isLoading } = useEosHealth();
 
   if (!isFacilitatorMode || isLoading || !health) {

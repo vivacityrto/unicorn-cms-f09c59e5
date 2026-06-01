@@ -2,7 +2,7 @@ import { AlertCircle, CheckCircle, Clock, FileText, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useEosFacilitatorEligible } from '@/hooks/useEosFacilitatorEligible';
 import type { QCStatus } from '@/types/qc';
 
 interface QCConversation {
@@ -29,7 +29,7 @@ interface QCInsightsProps {
  * - Neutral facilitation prompts
  */
 export function QCInsights({ conversations }: QCInsightsProps) {
-  const { isFacilitatorMode } = useFacilitatorMode();
+  const isFacilitatorMode = useEosFacilitatorEligible();
 
   if (!isFacilitatorMode || !conversations?.length) {
     return null;
