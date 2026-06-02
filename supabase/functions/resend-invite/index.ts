@@ -68,7 +68,7 @@ serve(async (req) => {
     }
 
     // Parse payload
-    let payload: { invitation_id: string };
+    let payload: { invitation_id: string; skip_email?: boolean };
     try {
       payload = await req.json();
     } catch {
@@ -150,8 +150,8 @@ serve(async (req) => {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const newTokenHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    // New expiration: 24 hours from now
-    const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    // New expiration: 7 days from now
+    const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     // 8. Update invitation with new token and expiration
     const { error: updateErr } = await supabase
@@ -161,6 +161,8 @@ serve(async (req) => {
         expires_at: newExpiresAt.toISOString(),
         last_sent_at: new Date().toISOString(),
         status: 'pending', // Reset to pending in case it was expired
+        delivery_status: null,
+        delivery_event_at: null,
       })
       .eq("id", payload.invitation_id);
 
@@ -179,16 +181,41 @@ serve(async (req) => {
     console.log('Generated resend invite URL:', inviteUrl);
 
     // 10. Determine user type based on tenant
-    const VIVACITY_TENANT_ID = 319;
+    const VIVACITY_TENANT_ID = 6372;
     const userType = invitation.tenant_id === VIVACITY_TENANT_ID ? 'vivacity' : 'client';
+
+    // 10b. Handle skip_email — generate link only, no send, no audit_invites
+    if (payload.skip_email === true) {
+      await supabase.from("audit_eos_events").insert({
+        tenant_id: invitation.tenant_id,
+        entity: "user_invitations",
+        action: "copy_invite_link",
+        entity_id: payload.invitation_id,
+        user_id: callerUser.user.id,
+        reason: "Invitation link generated without sending email",
+        details: {
+          email: invitation.email,
+          tenant_id: invitation.tenant_id,
+          unicorn_role: invitation.unicorn_role,
+        },
+      });
+
+      console.log(`Generated invite link without sending email for ${invitation.email}`);
+
+      return jsonResponse(200, {
+        ok: true,
+        action_link: inviteUrl,
+        detail: "Link generated without sending email",
+        email: invitation.email,
+      });
+    }
 
     // 11. Send invitation email
     try {
       await supabase.functions.invoke('send-invitation-email', {
         body: {
-          email: invitation.email,
-          inviteUrl,
-          userType,
+          invitation_id: payload.invitation_id,
+          token_plaintext: newToken,
         }
       });
       console.log(`Resent invitation email to ${invitation.email}`);
