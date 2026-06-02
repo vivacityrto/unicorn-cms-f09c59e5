@@ -155,14 +155,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isTimeLogPromptOpen, setIsTimeLogPromptOpen] = useState(false);
-  const [pendingTimeLogData, setPendingTimeLogData] = useState<{ duration: number; noteType: string; title: string; noteId: string; workType: string; workDate: string } | null>(null);
-  const [pendingBillable, setPendingBillable] = useState(true);
-  // Editable fields inside the time-log dialog (seeded from pendingTimeLogData)
-  const [editableDuration, setEditableDuration] = useState<number>(0);
-  const [editableWorkType, setEditableWorkType] = useState<string>('general');
-  const [editableWorkDate, setEditableWorkDate] = useState<string>('');
-  const [workTypeOptions, setWorkTypeOptions] = useState<{ code: string; label: string }[]>([]);
+
+
 
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
@@ -298,24 +292,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     fetchStatusOptions();
   }, []);
 
-  // Fetch work type options for time-log dialog
-  useEffect(() => {
-    const fetchWorkTypeOptions = async () => {
-      const { data } = await supabase
-        .from('dd_work_types' as any)
-        .select('code, label')
-        .eq('is_active', true)
-        .order('sort_order');
-      if (data) {
-        setWorkTypeOptions(
-          (data as any[])
-            .filter((r) => r.code !== 'parent_defined' && r.code !== 'kickstart_tas')
-            .map((r) => ({ code: r.code, label: r.label }))
-        );
-      }
-    };
-    fetchWorkTypeOptions();
-  }, []);
+
+
 
 
   // Convert to action item state
@@ -652,23 +630,39 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       }
       setIsAddDialogOpen(false);
 
-      // Prompt time log for ALL new notes (regardless of type/duration)
+      // Inline time entry creation for new notes if duration > 0
       const parsedDur = duration ? parseInt(duration, 10) : 0;
-      if (!selectedNote && noteId) {
-        const mappedWorkType = noteType === 'phone-call' ? 'phone-call' : noteType === 'meeting' ? 'meeting' : 'general';
-        const today = new Date().toISOString().slice(0, 10);
-        setPendingTimeLogData({
-          duration: parsedDur,
-          noteType,
-          title: title || content.substring(0, 60),
-          noteId,
-          workType: mappedWorkType,
-          workDate: today,
-        });
-        setEditableDuration(parsedDur);
-        setEditableWorkType(mappedWorkType);
-        setEditableWorkDate(today);
-        setIsTimeLogPromptOpen(true);
+      if (!selectedNote && noteId && parsedDur > 0) {
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData.user) {
+            const mappedWorkType = noteType === 'phone-call' ? 'phone-call' : noteType === 'meeting' ? 'meeting' : 'general';
+            const today = new Date().toISOString().slice(0, 10);
+            const { data: inserted, error: insertErr } = await supabase
+              .from('time_entries')
+              .insert({
+                tenant_id: tenantId,
+                client_id: tenantId,
+                user_id: userData.user.id,
+                duration_minutes: parsedDur,
+                work_type: mappedWorkType,
+                notes: title || content.substring(0, 100),
+                is_billable: true,
+                start_at: `${today}T00:00:00`,
+                source: 'manual',
+                scope_tag: 'RTO',
+              })
+              .select('id')
+              .single();
+            if (!insertErr && inserted?.id) {
+              await supabase.from('notes').update({ timeentry_id: inserted.id } as any).eq('id', noteId);
+              toast({ title: 'Note and time entry saved', description: `${parsedDur} minutes logged` });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to create linked time entry:', err);
+          toast({ title: 'Note saved', description: 'Could not create time entry — add it manually in the Time tab', variant: 'destructive' });
+        }
       }
 
       
@@ -755,23 +749,42 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
 
       setIsAddDialogOpen(false);
 
-      // Prompt time log for ALL new notes (regardless of type/duration)
-      if (!selectedNote && createdNoteId) {
-        const mappedWorkType = data.noteType === 'phone-call' ? 'phone-call' : data.noteType === 'meeting' ? 'meeting' : 'general';
-        const today = new Date().toISOString().slice(0, 10);
-        setPendingTimeLogData({
-          duration: parsedDuration,
-          noteType: data.noteType,
-          title: data.title || data.content.substring(0, 60),
-          noteId: createdNoteId,
-          workType: mappedWorkType,
-          workDate: today,
-        });
-        setEditableDuration(parsedDuration);
-        setEditableWorkType(mappedWorkType);
-        setEditableWorkDate(today);
-        setIsTimeLogPromptOpen(true);
+      // Inline time entry creation when user opted in via the form
+      if (!selectedNote && data.logTime && data.timeDuration && parseInt(data.timeDuration, 10) > 0 && createdNoteId) {
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData.user) {
+            const { data: inserted, error: insertErr } = await supabase
+              .from('time_entries')
+              .insert({
+                tenant_id: tenantId,
+                client_id: tenantId,
+                user_id: userData.user.id,
+                duration_minutes: parseInt(data.timeDuration, 10),
+                work_type: data.timeWorkType,
+                notes: data.title || data.content.substring(0, 100),
+                is_billable: data.timeBillable,
+                start_at: `${data.timeDate}T00:00:00`,
+                source: 'manual',
+                scope_tag: 'RTO',
+              })
+              .select('id')
+              .single();
+
+            if (!insertErr && inserted?.id) {
+              await supabase
+                .from('notes')
+                .update({ timeentry_id: inserted.id } as any)
+                .eq('id', createdNoteId);
+              toast({ title: 'Note and time entry saved', description: `${data.timeDuration} minutes logged` });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to create linked time entry:', err);
+          toast({ title: 'Note saved', description: 'Could not create time entry — add it manually in the Time tab', variant: 'destructive' });
+        }
       }
+
 
 
       resetForm();
@@ -779,47 +792,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       setSaving(false);
     }
   }, [activePackages, selectedNote, tenantId, updateNote, createNote, tags, resetForm]);
-  
-  const handleTimeLogConfirm = async () => {
-    if (!pendingTimeLogData) return;
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
 
-      const { data: inserted, error: insertErr } = await supabase
-        .from('time_entries')
-        .insert({
-          tenant_id: tenantId,
-          client_id: tenantId,
-          user_id: userData.user.id,
-          duration_minutes: editableDuration,
-          work_type: editableWorkType,
-          notes: pendingTimeLogData.title,
-          is_billable: pendingBillable,
-          start_at: `${editableWorkDate}T00:00:00`,
-          source: 'manual',
-          scope_tag: 'RTO',
-        })
-        .select('id')
-        .single();
-      if (insertErr) throw insertErr;
 
-      if (inserted?.id) {
-        await supabase
-          .from('notes')
-          .update({ timeentry_id: inserted.id } as any)
-          .eq('id', pendingTimeLogData.noteId);
-      }
-
-      toast({ title: 'Time logged', description: 'Linked to note' });
-    } catch (err) {
-      console.error('Failed to log time:', err);
-      toast({ title: 'Error', description: 'Failed to log time entry', variant: 'destructive' });
-    } finally {
-      setIsTimeLogPromptOpen(false);
-      setPendingTimeLogData(null);
-    }
-  };
 
 
   const handleDelete = async () => {
@@ -1687,75 +1661,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         </DialogContent>
       </Dialog>
 
-      {/* Time Log Prompt */}
-      <Dialog open={isTimeLogPromptOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsTimeLogPromptOpen(false);
-          setPendingTimeLogData(null);
-          setPendingBillable(true);
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Log time for this note?</DialogTitle>
-            <DialogDescription>
-              Optionally log a time entry that will be linked to the note you just saved.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="time-log-duration">Duration (minutes)</Label>
-              <Input
-                id="time-log-duration"
-                type="number"
-                min={0}
-                value={editableDuration}
-                onChange={(e) => setEditableDuration(parseInt(e.target.value, 10) || 0)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="time-log-worktype">Work type</Label>
-              <Select value={editableWorkType} onValueChange={setEditableWorkType}>
-                <SelectTrigger id="time-log-worktype">
-                  <SelectValue placeholder="Select work type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {workTypeOptions.map((wt) => (
-                    <SelectItem key={wt.code} value={wt.code}>{wt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="time-log-date">Date</Label>
-              <Input
-                id="time-log-date"
-                type="date"
-                value={editableWorkDate}
-                onChange={(e) => setEditableWorkDate(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch
-                id="billable-toggle"
-                checked={pendingBillable}
-                onCheckedChange={setPendingBillable}
-              />
-              <Label htmlFor="billable-toggle" className="text-sm font-medium cursor-pointer">
-                Billable
-              </Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsTimeLogPromptOpen(false);
-              setPendingTimeLogData(null);
-              setPendingBillable(true);
-            }}>Skip</Button>
-            <Button onClick={handleTimeLogConfirm}>Log time</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+
 
 
       {/* Compose Email Dialog for "Send Now" email notes */}

@@ -62,6 +62,11 @@ export interface NoteFormData {
   notifyUserIds: string[];
   notifyClient: boolean;
   elapsedTimerSeconds: number;
+  logTime: boolean;
+  timeDuration: string;
+  timeWorkType: string;
+  timeDate: string;
+  timeBillable: boolean;
 }
 
 export interface ActivePackage {
@@ -228,6 +233,24 @@ export function NoteFormDialog({
   const [draftRestoredAt, setDraftRestoredAt] = useState<Date | null>(null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
+  // Inline time-entry state
+  const [logTime, setLogTime] = useState(false);
+  const [timeWorkType, setTimeWorkType] = useState('general');
+  const [timeDate, setTimeDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [timeBillable, setTimeBillable] = useState(true);
+  const [timeWorkTypeOptions, setTimeWorkTypeOptions] = useState<{ code: string; label: string }[]>([]);
+
+  useEffect(() => {
+    supabase.from('dd_work_types' as any).select('code, label').eq('is_active', true).order('sort_order')
+      .then(({ data }) => {
+        if (data) setTimeWorkTypeOptions(
+          (data as any[])
+            .filter((d) => d.code !== 'parent_defined' && d.code !== 'kickstart_tas')
+            .map((d) => ({ code: d.code, label: d.label }))
+        );
+      });
+  }, []);
+
   // ── Fetch dropdown options if not provided ──
   useEffect(() => {
     if (propTypeOptions) return;
@@ -304,6 +327,10 @@ export function NoteFormDialog({
     setSelectedPackageInfo(null);
     setDraftRestored(false);
     setDraftRestoredAt(null);
+    setLogTime(false);
+    setTimeWorkType('general');
+    setTimeDate(new Date().toISOString().slice(0, 10));
+    setTimeBillable(true);
   }, []);
 
   // ── Populate form when opening ──
@@ -405,14 +432,26 @@ export function NoteFormDialog({
   }, [initialNote]);
 
   // ── Derived state ──
-  const showsDuration = showDuration && DURATION_TYPES.includes(noteType);
+  const showsDuration = showDuration;
   const getDefaultStatus = (type: string) => DURATION_TYPES.includes(type) ? 'completed' : 'noted';
+
+  const NOTE_TYPE_TO_WORK_TYPE: Record<string, string> = {
+    'phone-call': 'phone-call',
+    'meeting': 'meeting',
+    'action': 'general',
+    'follow-up': 'general',
+    'general': 'general',
+    'tenant': 'general',
+    'risk': 'general',
+    'escalation': 'general',
+  };
 
   const handleNoteTypeChange = (type: string) => {
     setNoteType(type);
     if (mode === 'create') setNoteStatus(getDefaultStatus(type));
     if (type === 'email' && mode === 'create') setEmailMode('prompt');
     else setEmailMode(null);
+    setTimeWorkType(NOTE_TYPE_TO_WORK_TYPE[type] || 'general');
   };
 
   // ── Timer handlers ──
@@ -510,6 +549,11 @@ export function NoteFormDialog({
         notifyUserIds,
         notifyClient,
         elapsedTimerSeconds: elapsedTime,
+        logTime,
+        timeDuration: duration,
+        timeWorkType,
+        timeDate,
+        timeBillable,
       });
       clearDraft(draftKey);
       setDraftRestored(false);
@@ -677,15 +721,8 @@ export function NoteFormDialog({
               </div>
             )}
 
-            {/* Duration row */}
-            {showsDuration && (
-              <div className="grid gap-4 grid-cols-1 max-w-xs">
-                <div className="space-y-2">
-                  <Label>Duration (mins)</Label>
-                  <Input type="number" min={0} step={15} value={duration} onChange={e => setDuration(e.target.value)} placeholder="0" />
-                </div>
-              </div>
-            )}
+
+
 
             {/* Title */}
             <div className="space-y-2">
@@ -739,6 +776,48 @@ export function NoteFormDialog({
                 tenantId={tenantId}
               />
             </div>
+
+            {/* Log Time Entry */}
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Switch id="log-time" checked={logTime} onCheckedChange={setLogTime} />
+                <Label htmlFor="log-time" className="cursor-pointer font-medium text-sm flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  Log time entry with this note
+                </Label>
+              </div>
+              {logTime && (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Duration (minutes)</Label>
+                    <Input type="number" min={0} step={5} value={duration} onChange={e => setDuration(e.target.value)} placeholder="0" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Work Type</Label>
+                    <Select value={timeWorkType} onValueChange={setTimeWorkType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-background">
+                        {timeWorkTypeOptions.map(opt => (
+                          <SelectItem key={opt.code} value={opt.code}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Date</Label>
+                    <Input type="date" value={timeDate} onChange={e => setTimeDate(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5 flex items-end">
+                    <div className="flex items-center gap-2 pb-2">
+                      <Switch id="time-billable" checked={timeBillable} onCheckedChange={setTimeBillable} />
+                      <Label htmlFor="time-billable" className="cursor-pointer text-sm">Billable</Label>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+
 
 
             {/* Assignees (legacy – EditNoteDialog style) */}
