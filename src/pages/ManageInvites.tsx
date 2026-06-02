@@ -867,19 +867,36 @@ export default function ManageInvites() {
                       {isSuperAdmin && (
                         <TableCell className="py-6 text-center" onClick={(e) => e.stopPropagation()}>
                           {(invite.status === 'pending' || invite.status === 'sent') && !isVerified ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => {
-                                setRevokeTarget(invite);
-                                setRevokeReason("");
-                                setRevokeDialogOpen(true);
-                              }}
-                            >
-                              <Ban className="h-4 w-4 mr-1" />
-                              Revoke
-                            </Button>
+                            <div className="flex items-center gap-2 justify-center">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                disabled={copyingLinkId === invite.id}
+                                onClick={() => {
+                                  setRevokeTarget(invite);
+                                  setRevokeReason("");
+                                  setRevokeDialogOpen(true);
+                                }}
+                              >
+                                <Ban className="h-4 w-4 mr-1" />
+                                Revoke
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-primary hover:text-primary hover:bg-primary/10"
+                                disabled={copyingLinkId === invite.id}
+                                onClick={() => handleCopyLink(invite)}
+                              >
+                                {copyingLinkId === invite.id ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <LinkIcon className="h-4 w-4 mr-1" />
+                                )}
+                                Copy link
+                              </Button>
+                            </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
