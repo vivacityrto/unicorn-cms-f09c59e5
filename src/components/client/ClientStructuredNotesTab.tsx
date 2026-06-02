@@ -190,6 +190,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
   const [notifyClient, setNotifyClient] = useState(false);
   const { data: vivacityTeam = [] } = useVivacityTeamUsers();
+  const [timeEntryError, setTimeEntryError] = useState<string | null>(null);
   
   // Email note type state
   const [emailMode, setEmailMode] = useState<'prompt' | 'send_now' | 'already_sent' | null>(null);
@@ -675,6 +676,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   // Adapter for NoteFormDialog → existing save logic
   const handleNoteFormSave = useCallback(async (data: NoteFormData) => {
     setSaving(true);
+    setTimeEntryError(null);
     try {
       const selectedPkg = activePackages.find(p => String(p.instance_id) === data.packageInstanceId);
       const parsedDuration = data.duration ? parseInt(data.duration, 10) : 0;
@@ -769,11 +771,13 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           });
 
           if (rpcError) {
-            console.error('Time entry RPC error:', rpcError);
+            console.error('[NoteTimeEntry] RPC error:', rpcError);
+            setTimeEntryError(rpcError.message);
             toast({
               title: 'Note saved — time entry failed',
               description: rpcError.message,
               variant: 'destructive',
+              duration: 10000,
             });
           } else {
             // RPC doesn't return the new entry id directly; fetch the most recent entry for this client to get the id for linking
@@ -803,14 +807,17 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             toast({
               title: 'Note and time entry saved',
               description: `${durationMins} min logged`,
+              duration: 10000,
             });
           }
         } catch (err: any) {
-          console.error('Failed to create linked time entry:', err);
+          console.error('[NoteTimeEntry] RPC error:', err);
+          setTimeEntryError(err?.message || 'Unknown error');
           toast({
             title: 'Note saved — time entry failed',
             description: err?.message || 'Unknown error. Check the browser console.',
             variant: 'destructive',
+            duration: 10000,
           });
         }
       }
@@ -1085,6 +1092,12 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             </div>
           </div>
         </CardHeader>
+        {timeEntryError && (
+          <div className="mx-4 mb-3 p-3 rounded-md bg-destructive/10 border border-destructive/30 text-sm text-destructive flex items-start justify-between gap-2">
+            <span><strong>Last time entry failed:</strong> {timeEntryError}</span>
+            <button className="shrink-0 text-xs underline" onClick={() => setTimeEntryError(null)}>Dismiss</button>
+          </div>
+        )}
         <CardContent>
           {/* ClickUp Tasks Panel */}
           {parentTypeFilter === 'clickup' ? (
