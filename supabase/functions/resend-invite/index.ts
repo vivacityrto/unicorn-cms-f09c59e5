@@ -181,16 +181,41 @@ serve(async (req) => {
     console.log('Generated resend invite URL:', inviteUrl);
 
     // 10. Determine user type based on tenant
-    const VIVACITY_TENANT_ID = 319;
+    const VIVACITY_TENANT_ID = 6372;
     const userType = invitation.tenant_id === VIVACITY_TENANT_ID ? 'vivacity' : 'client';
+
+    // 10b. Handle skip_email — generate link only, no send, no audit_invites
+    if (payload.skip_email === true) {
+      await supabase.from("audit_eos_events").insert({
+        tenant_id: invitation.tenant_id,
+        entity: "user_invitations",
+        action: "copy_invite_link",
+        entity_id: payload.invitation_id,
+        user_id: callerUser.user.id,
+        reason: "Invitation link generated without sending email",
+        details: {
+          email: invitation.email,
+          tenant_id: invitation.tenant_id,
+          unicorn_role: invitation.unicorn_role,
+        },
+      });
+
+      console.log(`Generated invite link without sending email for ${invitation.email}`);
+
+      return jsonResponse(200, {
+        ok: true,
+        action_link: inviteUrl,
+        detail: "Link generated without sending email",
+        email: invitation.email,
+      });
+    }
 
     // 11. Send invitation email
     try {
       await supabase.functions.invoke('send-invitation-email', {
         body: {
-          email: invitation.email,
-          inviteUrl,
-          userType,
+          invitation_id: payload.invitation_id,
+          token_plaintext: newToken,
         }
       });
       console.log(`Resent invitation email to ${invitation.email}`);
