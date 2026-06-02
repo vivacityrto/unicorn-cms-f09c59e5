@@ -306,9 +306,11 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     const fetchActivePackages = async () => {
       const { data: instances } = await supabase
         .from('package_instances')
-        .select('id, package_id')
+        .select('id, package_id, start_date')
         .eq('tenant_id', tenantId)
-        .eq('is_complete', false);
+        .eq('is_complete', false)
+        .eq('is_active', true)
+        .order('start_date', { ascending: false });
 
       if (!instances || instances.length === 0) {
         setActivePackages([]);
@@ -329,8 +331,13 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       setActivePackages(
         instances
           .filter(i => i.package_id && pkgMap.has(i.package_id))
-          .map(i => ({ instance_id: i.id, package_id: i.package_id!, name: pkgMap.get(i.package_id!)! }))
-          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(i => ({
+            instance_id: i.id,
+            package_id: i.package_id!,
+            name: pkgMap.get(i.package_id!)!,
+            start_date: i.start_date ?? '',
+          }))
+          .sort((a, b) => b.start_date.localeCompare(a.start_date))
       );
     };
     fetchActivePackages();
