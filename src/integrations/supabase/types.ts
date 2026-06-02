@@ -52972,6 +52972,8 @@ export type Database = {
           accepted_at: string | null
           accepted_by_user_id: string | null
           created_at: string | null
+          delivery_event_at: string | null
+          delivery_status: string | null
           email: string
           expires_at: string
           first_name: string
@@ -52993,6 +52995,8 @@ export type Database = {
           accepted_at?: string | null
           accepted_by_user_id?: string | null
           created_at?: string | null
+          delivery_event_at?: string | null
+          delivery_status?: string | null
           email: string
           expires_at?: string
           first_name?: string
@@ -53014,6 +53018,8 @@ export type Database = {
           accepted_at?: string | null
           accepted_by_user_id?: string | null
           created_at?: string | null
+          delivery_event_at?: string | null
+          delivery_status?: string | null
           email?: string
           expires_at?: string
           first_name?: string
