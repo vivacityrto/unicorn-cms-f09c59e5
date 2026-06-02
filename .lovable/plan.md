@@ -1,44 +1,60 @@
-## Plan: Add "Copy link" button to ManageInvites Actions column
+## Plan: Mailgun delivery webhook + Manage Invites delivery status
 
-### Scope
-Single file change: `src/pages/ManageInvites.tsx`. No other files touched.
+The migration adding `delivery_status` and `delivery_event_at` to `user_invitations` has already been approved and applied.
 
-### Changes
+### 1. New edge function — `supabase/functions/mailgun-webhook/index.ts`
 
-1. **Import `Link` icon** from `lucide-react` alongside existing imports.
+- Public POST, no JWT. Add `[functions.mailgun-webhook] verify_jwt = false` to `supabase/config.toml`.
+- CORS preflight returns 200.
+- Always returns `200 { ok: true }` so Mailgun never retries.
+- Uses service-role client to bypass RLS.
 
-2. **Add `copyingLinkId` state**:
-   ```
-   const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
-   ```
+Signature verification (runs first if `MAILGUN_WEBHOOK_SIGNING_KEY` secret is present):
+- HMAC-SHA256 over `timestamp + token` using the signing key.
+- Hex-compare against `body.signature.signature`; mismatch → log and return 200 (no processing).
+- If secret missing, log a warning and continue (no enforcement yet).
 
-3. **Add `handleCopyLink` async function**:
-   - Accept `invite: InviteRow`.
-   - Set `copyingLinkId` to `invite.id`.
-   - Get current session token via `supabase.auth.getSession()`.
-   - Call `supabase.functions.invoke('resend-invite', { body: { invitation_id: invite.id, skip_email: true }, headers: token ? { Authorization: \`Bearer ${token}\` } : undefined })`.
-   - If `data?.action_link` exists:
-     - Try `navigator.clipboard.writeText(data.action_link)`.
-     - On success: toast "Link copied" / "Paste it into Teams, email, or WhatsApp."
-     - On clipboard failure: toast "Link ready" / `data.action_link`.
-   - If no `action_link` or error: toast "Could not generate link" / `error?.message || "The resend-invite function did not return a link."`, variant "destructive".
-   - Finally: clear `copyingLinkId`.
+Event processing:
+1. Parse JSON body.
+2. Read `event-data.event`, `event-data.severity`, `event-data.message.headers["message-id"]`, `event-data.timestamp`.
+3. Strip surrounding `<…>` from message-id.
+4. Map:
+   - `delivered` → `delivered`
+   - `failed` + `permanent` → `bounced`
+   - `failed` + `temporary` → `failed`
+   - `complained` → `complained`
+   - else → log + 200.
+5. Lookup `user_invitations` by `mailgun_message_id`. Not found → log + 200.
+6. Update `delivery_status` + `delivery_event_at = to_timestamp(timestamp)`.
+7. `console.log` outcome.
 
-4. **Update Actions cell rendering** (inside the `isSuperAdmin` guard):
-   - Condition for showing both buttons: `(invite.status === 'pending' || invite.status === 'sent') && !isVerified`
-   - When condition matches, wrap Revoke + Copy link in `<div className="flex items-center gap-2">`.
-   - **Copy link button**:
-     - `size="sm"`, `variant="ghost"`, `className="text-primary hover:text-primary hover:bg-primary/10"`
-     - `disabled={copyingLinkId === invite.id}`
-     - Icon: `Link` (or `Loader2` spinner when `copyingLinkId === invite.id`)
-     - Label: "Copy link" (or spinner when loading)
-   - **Revoke button**: add `disabled={copyingLinkId === invite.id}` so both buttons disable while copying.
-   - When condition does not match, keep existing em-dash fallback.
+No other tables touched, no emails sent, no other functions invoked.
 
-### Constraints preserved
-- `isSuperAdmin` guard stays on the entire Actions column.
-- Revoke logic, AlertDialogs, Re-invite dialog, Delete dialog, stat cards, filters, search, pagination, realtime subscription, and row data fetching remain untouched.
-- Copy link only for `sent`/`pending` + unverified rows.
-- No verified, expired, or failed rows get the button.
-- Cell width consistency maintained via `flex` wrapper inside existing column bounds.
-- No database or migration changes.
+### 2. Frontend — `src/pages/ManageInvites.tsx`
+
+- Extend `InviteRow` with `delivery_status?: 'delivered' | 'bounced' | 'failed' | 'complained' | null` and `delivery_event_at?: string | null`. Existing `select("*")` already returns the columns.
+- Add `import { useRBAC } from "@/hooks/useRBAC"` and `const { isVivacityTeam } = useRBAC();` next to the existing `useAuth()` call.
+- Status cell: wrap the existing badge in `flex flex-col gap-1`. When `delivery_status` is set and not `delivered`, render a second compact badge:
+  - `bounced` → `destructive` variant, `AlertCircle`, "Bounced"
+  - `failed` → `warning` variant, `AlertCircle`, "Delivery failed"
+  - `complained` → `destructive` variant, `AlertCircle`, "Spam report"
+- Actions column: widen the outer header + cell guard from `isSuperAdmin` to `isSuperAdmin || isVivacityTeam`.
+- Inside the cell, compute:
+  ```ts
+  const canRevoke = (invite.status === 'sent' || invite.status === 'pending')
+    && !isVerified && isSuperAdmin;
+  const canCopyLink = (invite.status === 'sent' || invite.status === 'pending')
+    && !isVerified
+    && (isSuperAdmin || isVivacityTeam)
+    && (isSuperAdmin || invite.delivery_status === 'bounced' || invite.delivery_status === 'failed');
+  ```
+  Render Revoke and/or Copy link inside the existing `flex items-center gap-2 justify-center` wrapper; when neither applies, render the em-dash. When only Copy link applies (Vivacity Team on a bounced/failed row), render Copy link alone — no em-dash beside it.
+
+Untouched: Revoke logic, AlertDialogs, Re-invite dialog, Delete dialog, stat cards, filters, search, pagination, realtime subscription, `getTimeRemaining`, `getStatusBadge`, fetch query, row data hooks.
+
+### 3. Post-ship
+Register webhook in Mailgun (Sending → Webhooks, Domain-level) for `delivered`, `failed`, `complained` at:
+```
+https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/mailgun-webhook
+```
+Optionally add the `MAILGUN_WEBHOOK_SIGNING_KEY` secret from Mailgun → Sending → Webhook signing key to enforce signature verification.
