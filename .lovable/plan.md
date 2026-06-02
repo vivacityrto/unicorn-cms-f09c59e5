@@ -1,58 +1,66 @@
-### 1. Frontend — `src/pages/admin/CohortAccessSender.tsx`
+# Apply dedup migration to `v_client_governance_documents`
 
-- **State**: `const [selectedPreviewUuids, setSelectedPreviewUuids] = useState<Set<string>>(new Set())`.
-- After `setPreview(data)` in `runPreview`, call `setSelectedPreviewUuids(new Set(data.map(r => r.user_uuid)))` (all opted-in by default). Also clear it in any flow that clears `preview`.
-- **Checkbox column** as first column of preview table:
-  - Header: master checkbox driving Select All / Deselect All across the full resolved array (not just the visible `.slice(0, 25)`), matching the existing tenant picker checkbox pattern. Show indeterminate / checked when `selectedPreviewUuids.size === preview.length`.
-  - Body: per-row `Checkbox` toggling `user_uuid` membership in the set.
-- **previewSummary** counts only rows where `selectedPreviewUuids.has(r.user_uuid)`. Badges and `expectedConfirm` derive from this.
-- **Selection-change side effect**: a `useEffect` on `selectedPreviewUuids` calls `setConfirmText("")` so the user must retype confirmation whenever selection changes.
-- **Launch**:
-  - Pass `p_include_uuids: Array.from(selectedPreviewUuids)` to the `launch_cohort_job` RPC only when the selection differs from the full resolved set (otherwise omit / pass `null`).
-  - Disable Launch button when `selectedPreviewUuids.size === 0` and show inline warning: "No recipients selected."
+Single migration, no code changes.
 
-**Unchanged**: filter UI, `resolve_cohort` call, recent jobs list, job results table, toasts, navigation.
-
-### 2. Migration — extend `public.launch_cohort_job`
-
-Replace the existing function with one extra trailing parameter:
+## Migration SQL
 
 ```sql
-CREATE OR REPLACE FUNCTION public.launch_cohort_job(
-  p_action       text,
-  p_filter       jsonb,
-  p_cap          int    DEFAULT 1000,
-  p_batch_size   int    DEFAULT 10,
-  p_throttle_ms  int    DEFAULT 400,
-  p_notes        text   DEFAULT NULL,
-  p_include_uuids uuid[] DEFAULT NULL
+CREATE OR REPLACE VIEW public.v_client_governance_documents
+WITH (security_invoker = true)
+AS
+WITH ranked AS (
+  SELECT
+    di.id,
+    di.tenant_id,
+    di.document_id,
+    di.generationdate,
+    di.generated_file_url,
+    di.status,
+    di.document_title,
+    di.stageinstance_id,
+    pi.id           AS pi_id,
+    pi.start_date   AS pi_start_date,
+    p.name          AS package_name,
+    ROW_NUMBER() OVER (
+      PARTITION BY di.tenant_id, di.document_id
+      ORDER BY pi.start_date DESC NULLS LAST,
+               pi.id         DESC NULLS LAST,
+               di.id         DESC
+    ) AS rn
+  FROM public.document_instances di
+  LEFT JOIN public.stage_instances   si ON si.id = di.stageinstance_id
+  LEFT JOIN public.package_instances pi ON pi.id = si.packageinstance_id
+                                       AND pi.membership_state <> 'cancelled'
+  LEFT JOIN public.packages          p  ON p.id  = pi.package_id
+  WHERE si.id IS NULL OR pi.id IS NOT NULL
 )
+SELECT
+  r.id, r.tenant_id, r.document_id, r.generationdate, r.generated_file_url,
+  r.status, r.document_title,
+  d.title AS doc_title, d.description, d.category, d.framework_type,
+  r.package_name AS active_package_names
+FROM ranked r
+JOIN public.documents d ON d.id = r.document_id
+WHERE r.rn = 1;
+
+GRANT SELECT ON public.v_client_governance_documents TO authenticated;
+GRANT SELECT ON public.v_client_governance_documents TO service_role;
 ```
 
-Inside the `resolved` CTE add a filter:
+## Post-deploy verification (run after migration)
 
-```sql
-WITH resolved AS (
-  SELECT *
-  FROM public.resolve_cohort(p_filter, LEAST(GREATEST(COALESCE(p_cap,1000),1),1000)) r
-  WHERE p_include_uuids IS NULL OR r.user_uuid = ANY(p_include_uuids)
-)
-```
+- 3a: zero-duplicate assertion
+- 3b: tenant 7517 (Test RTO A) → 23 rows, all M-RR
+- 3c: tenant 6328 → 1 row per document, all M-RC
+- 3d: tenant 6328 — confirm each row matches the latest non-cancelled `package_instance`
+- 3e: standalone-doc sanity (expect 0)
 
-Everything else in the function body is preserved verbatim (job insert, item insert with routing matrix, totals update, audit row). Behaviour with `p_include_uuids = NULL` is identical to today.
+Results will be reported back inline.
 
-Re-issue grants for the new signature:
+## Rollback (if needed)
 
-```sql
-REVOKE ALL    ON FUNCTION public.launch_cohort_job(text,jsonb,int,int,int,text,uuid[]) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.launch_cohort_job(text,jsonb,int,int,int,text,uuid[]) TO authenticated;
-```
+Re-run the original `CREATE OR REPLACE VIEW` definition captured in the prior plan §4. Atomic, no data touched.
 
-Drop the old 6-arg signature to avoid ambiguity:
-
-```sql
-DROP FUNCTION IF EXISTS public.launch_cohort_job(text,jsonb,int,int,int,text);
-```
-
-### Out of scope
-No changes to `resolve_cohort`, `lease_cohort_job_items`, tables, RLS, or any other RPC. No new env vars or secrets.
+## Out of scope
+- No frontend, edge function, or schema changes.
+- No new indexes.
