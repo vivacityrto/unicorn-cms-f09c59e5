@@ -168,7 +168,7 @@ export default function CohortAccessSender() {
     const will_send = action === "activate" ? counts.activate : counts.reset;
     const will_skip = counts.skip_disabled + counts.skip_state_mismatch;
     return { ...counts, will_send, will_skip, total: preview.length, truncated: preview[0]?.truncated || false };
-  }, [preview, action]);
+  }, [preview, action, selectedPreviewUuids]);
 
   const expectedConfirm = previewSummary ? `Send to ${previewSummary.will_send} people` : "";
 
