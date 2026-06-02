@@ -64527,6 +64527,7 @@ export type Database = {
           p_batch_size?: number
           p_cap?: number
           p_filter: Json
+          p_include_uuids?: string[]
           p_notes?: string
           p_throttle_ms?: number
         }
