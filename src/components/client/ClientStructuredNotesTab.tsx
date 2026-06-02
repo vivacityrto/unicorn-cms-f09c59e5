@@ -769,7 +769,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             p_client_id: tenantId,
             p_duration_minutes: durationMins,
             p_date: data.timeDate,
-            p_package_id: null,
+            p_package_id: selectedPkg?.package_id ?? activePackages[0]?.package_id ?? null,
             p_stage_id: null,
             p_task_id: null,
             p_work_type: data.timeWorkType,
