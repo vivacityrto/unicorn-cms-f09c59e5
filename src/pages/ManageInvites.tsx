@@ -66,6 +66,7 @@ export default function ManageInvites() {
   const [revokeTarget, setRevokeTarget] = useState<InviteRow | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
   const [revoking, setRevoking] = useState(false);
+  const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
   const itemsPerPage = 20;
   const { profile } = useAuth();
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';
