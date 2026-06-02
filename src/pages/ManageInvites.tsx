@@ -733,6 +733,9 @@ export default function ManageInvites() {
                   { value: "expired", label: "Expired", icon: AlertCircle, iconColor: "text-orange-600" },
                   { value: "verified", label: "Verified", icon: ShieldCheck, iconColor: "text-green-600" },
                   { value: "failed", label: "Failed", icon: XCircle, iconColor: "text-red-600" },
+                  { value: "bounced", label: "Bounced", icon: AlertCircle, iconColor: "text-red-600" },
+                  { value: "delivery-failed", label: "Delivery failed", icon: AlertCircle, iconColor: "text-orange-600" },
+                  { value: "spam", label: "Spam report", icon: AlertCircle, iconColor: "text-red-600" },
                 ].map((option, index, array) => {
                   const Icon = option.icon;
                   const isSelected = statusFilter === option.value;
