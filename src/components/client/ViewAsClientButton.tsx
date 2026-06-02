@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useClientPreview, type ActingUserOption } from "@/contexts/ClientPreviewContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ export function ViewAsClientButton({
   compact = false,
 }: ViewAsClientButtonProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile } = useAuth();
   const { startPreview, canUsePreview, loading, fetchActingUserOptions } = useClientPreview();
   const [reasonDialogOpen, setReasonDialogOpen] = useState(false);
@@ -88,7 +89,7 @@ export function ViewAsClientButton({
     } else {
       setIsStarting(true);
       try {
-        const success = await startPreview(tenantId, undefined, null);
+        const success = await startPreview(tenantId, undefined, null, location.pathname);
         if (success) {
           toast.success(`Now viewing as ${tenantName}`, {
             description: "You're in preview mode",
@@ -112,7 +113,7 @@ export function ViewAsClientButton({
     setIsStarting(true);
     try {
       const acting = selectedMode === "academy" || isAcademyOnly ? selectedActingId : null;
-      const success = await startPreview(tenantId, reason || undefined, acting);
+      const success = await startPreview(tenantId, reason || undefined, acting, location.pathname);
 
       if (success) {
         setReasonDialogOpen(false);

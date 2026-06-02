@@ -6,7 +6,7 @@ import { Eye, X, Building2, Shield, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export function ImpersonationBanner() {
-  const { isPreviewMode, previewTenant, actingUserId, actingUserOptions, endPreview, loading } = useClientPreview();
+  const { isPreviewMode, previewTenant, actingUserId, actingUserOptions, endPreview, loading, returnPath } = useClientPreview();
   const { isVivacityStaff } = useUserAccess();
   const navigate = useNavigate();
 
@@ -15,9 +15,10 @@ export function ImpersonationBanner() {
   }
 
   const handleExit = async () => {
+    const target = returnPath ?? "/dashboard";
     await endPreview();
     if (isVivacityStaff) {
-      navigate("/dashboard");
+      navigate(target);
     } else {
       navigate("/");
     }

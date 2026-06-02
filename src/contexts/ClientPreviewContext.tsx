@@ -28,8 +28,9 @@ interface ClientPreviewContextValue {
   loading: boolean;
   actingUserId: string | null;
   actingUserOptions: ActingUserOption[];
+  returnPath: string | null;
 
-  startPreview: (tenantId: number, reason?: string, actingUserId?: string | null) => Promise<boolean>;
+  startPreview: (tenantId: number, reason?: string, actingUserId?: string | null, returnPath?: string | null) => Promise<boolean>;
   endPreview: () => Promise<void>;
   setActingUserId: (uuid: string | null) => void;
   fetchActingUserOptions: (tenantId: number) => Promise<ActingUserOption[]>;
@@ -61,6 +62,7 @@ interface StoredPreviewSession {
   // Staff auth.users.id that started the preview. Used to refuse handoff
   // restore for any other authenticated user on the same browser.
   ownerUserId: string;
+  returnPath: string | null;
 }
 
 async function loadActingUserOptions(tenantId: number): Promise<ActingUserOption[]> {
@@ -104,6 +106,7 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
   const [loading, setLoading] = useState(false);
   const [actingUserId, setActingUserIdState] = useState<string | null>(null);
   const [actingUserOptions, setActingUserOptions] = useState<ActingUserOption[]>([]);
+  const [returnPath, setReturnPath] = useState<string | null>(null);
 
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
   const canUsePreview = isSuperAdmin || isTeamLeader;
@@ -174,6 +177,7 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
       setPreviewReason(s.reason);
       setActingUserIdState(validActingId);
       setActingUserOptions(opts);
+      setReturnPath(s.returnPath ?? null);
 
       // Always normalize storage so this tab now has a per-tab primary,
       // and the cross-tab mirror reflects the validated state.
@@ -259,7 +263,7 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
   }, []);
 
   const startPreview = useCallback(
-    async (tenantId: number, reason?: string, initialActingUserId?: string | null): Promise<boolean> => {
+    async (tenantId: number, reason?: string, initialActingUserId?: string | null, returnPathArg?: string | null): Promise<boolean> => {
       if (!canUsePreview || !session?.user?.id) {
         console.error("User cannot use preview mode");
         return false;
@@ -313,6 +317,7 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
           actingUserId: resolvedActingId,
           actingUserOptions: opts,
           ownerUserId: session.user.id,
+          returnPath: returnPathArg ?? null,
         };
 
         writePreviewState(previewState);
@@ -328,6 +333,7 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
         setPreviewReason(reason || null);
         setActingUserIdState(resolvedActingId);
         setActingUserOptions(opts);
+        setReturnPath(returnPathArg ?? null);
 
         queryClient.invalidateQueries();
 
@@ -350,6 +356,7 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
       setPreviewReason(null);
       setActingUserIdState(null);
       setActingUserOptions([]);
+      setReturnPath(null);
       clearPreviewState();
     };
 
@@ -383,6 +390,7 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
         loading,
         actingUserId,
         actingUserOptions,
+        returnPath,
         startPreview,
         endPreview,
         setActingUserId,

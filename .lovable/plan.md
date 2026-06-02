@@ -1,66 +1,36 @@
-# Apply dedup migration to `v_client_governance_documents`
+## Objective
+When a Vivacity staff member exits the "View as Client" preview session, redirect them back to the page they were on before entering preview instead of always sending them to `/dashboard`.
 
-Single migration, no code changes.
+## Files to modify
 
-## Migration SQL
+### 1. src/contexts/ClientPreviewContext.tsx
+- Add `returnPath: string | null` to the preview state and context value.
+- Add `returnPath` to the `StoredPreviewSession` interface and the sessionStorage/localStorage persistence.
+- Update `startPreview` signature to accept `returnPath?: string` and persist it.
+- Update `endPreview` cleanup / `clearPreviewState` to clear `returnPath`.
+- Update the restore `useEffect` to read `returnPath` from stored sessions and set it in state.
 
-```sql
-CREATE OR REPLACE VIEW public.v_client_governance_documents
-WITH (security_invoker = true)
-AS
-WITH ranked AS (
-  SELECT
-    di.id,
-    di.tenant_id,
-    di.document_id,
-    di.generationdate,
-    di.generated_file_url,
-    di.status,
-    di.document_title,
-    di.stageinstance_id,
-    pi.id           AS pi_id,
-    pi.start_date   AS pi_start_date,
-    p.name          AS package_name,
-    ROW_NUMBER() OVER (
-      PARTITION BY di.tenant_id, di.document_id
-      ORDER BY pi.start_date DESC NULLS LAST,
-               pi.id         DESC NULLS LAST,
-               di.id         DESC
-    ) AS rn
-  FROM public.document_instances di
-  LEFT JOIN public.stage_instances   si ON si.id = di.stageinstance_id
-  LEFT JOIN public.package_instances pi ON pi.id = si.packageinstance_id
-                                       AND pi.membership_state <> 'cancelled'
-  LEFT JOIN public.packages          p  ON p.id  = pi.package_id
-  WHERE si.id IS NULL OR pi.id IS NOT NULL
-)
-SELECT
-  r.id, r.tenant_id, r.document_id, r.generationdate, r.generated_file_url,
-  r.status, r.document_title,
-  d.title AS doc_title, d.description, d.category, d.framework_type,
-  r.package_name AS active_package_names
-FROM ranked r
-JOIN public.documents d ON d.id = r.document_id
-WHERE r.rn = 1;
+### 2. src/components/client/ViewAsClientButton.tsx
+- Import `useLocation` from react-router-dom.
+- Capture `location.pathname` before calling `startPreview` in both:
+  - The direct portal flow (`handleViewClient` for `mode === "portal"`)
+  - The academy dialog confirmation flow (`handleStartPreview`)
+- Pass the captured pathname as `returnPath` to `startPreview`.
 
-GRANT SELECT ON public.v_client_governance_documents TO authenticated;
-GRANT SELECT ON public.v_client_governance_documents TO service_role;
-```
+### 3. src/components/client/ImpersonationBanner.tsx
+- Import `returnPath` from the preview context.
+- In `handleExit`, after `await endPreview()`, navigate to `returnPath ?? "/dashboard"` when `isVivacityStaff` is true.
+- Leave the non-staff fallback (`/`) unchanged.
 
-## Post-deploy verification (run after migration)
+## Technical constraints
+- No database or migration changes.
+- Store only `pathname`, not query strings or hashes.
+- If `returnPath` is missing or empty (legacy session), fall back to `/dashboard` for staff.
+- No other logic changes.
 
-- 3a: zero-duplicate assertion
-- 3b: tenant 7517 (Test RTO A) → 23 rows, all M-RR
-- 3c: tenant 6328 → 1 row per document, all M-RC
-- 3d: tenant 6328 — confirm each row matches the latest non-cancelled `package_instance`
-- 3e: standalone-doc sanity (expect 0)
-
-Results will be reported back inline.
-
-## Rollback (if needed)
-
-Re-run the original `CREATE OR REPLACE VIEW` definition captured in the prior plan §4. Atomic, no data touched.
-
-## Out of scope
-- No frontend, edge function, or schema changes.
-- No new indexes.
+## Acceptance criteria
+- Staff entering preview from any internal page (e.g. `/dashboard`, `/manage-clients`) returns to that exact page on exit.
+- Academy and portal modes both capture the correct return path.
+- The change survives a page refresh during preview.
+- Non-staff exit behaviour is unchanged.
+- Legacy preview sessions without a stored `returnPath` still fall back to `/dashboard`.
