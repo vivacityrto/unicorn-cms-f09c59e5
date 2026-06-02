@@ -571,6 +571,7 @@ export function NoteFormDialog({
         logTime,
         timeDuration: duration,
         timeWorkType,
+        timeWorkSubType,
         timeDate,
         timeBillable,
       });
