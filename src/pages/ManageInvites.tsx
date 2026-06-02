@@ -861,52 +861,77 @@ export default function ManageInvites() {
                           {labelForRole(invite)}
                         </Badge>
                       </TableCell>
-                      <TableCell className={`py-6 ${isSuperAdmin ? 'border-r border-border/50' : ''}`}>
-                        <div className="badge-container">
+                      <TableCell className={`py-6 ${canSeeActions ? 'border-r border-border/50' : ''}`}>
+                        <div className="flex flex-col gap-1 items-start">
                           <Badge variant={statusBadge.variant} className={statusBadge.color}>
                             <StatusBadgeIcon className="mr-1 h-3 w-3" />
                             {statusBadge.label}
                           </Badge>
+                          {invite.delivery_status && invite.delivery_status !== 'delivered' && (() => {
+                            const ds = invite.delivery_status;
+                            const cfg = ds === 'bounced'
+                              ? { variant: 'destructive' as const, label: 'Bounced' }
+                              : ds === 'failed'
+                              ? { variant: 'warning' as const, label: 'Delivery failed' }
+                              : { variant: 'destructive' as const, label: 'Spam report' };
+                            return (
+                              <Badge variant={cfg.variant} className="text-xs">
+                                <AlertCircle className="mr-1 h-3 w-3" />
+                                {cfg.label}
+                              </Badge>
+                            );
+                          })()}
                         </div>
                       </TableCell>
-                      {isSuperAdmin && (
-                        <TableCell className="py-6 text-center" onClick={(e) => e.stopPropagation()}>
-                          {(invite.status === 'pending' || invite.status === 'sent') && !isVerified ? (
-                            <div className="flex items-center gap-2 justify-center">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                disabled={copyingLinkId === invite.id}
-                                onClick={() => {
-                                  setRevokeTarget(invite);
-                                  setRevokeReason("");
-                                  setRevokeDialogOpen(true);
-                                }}
-                              >
-                                <Ban className="h-4 w-4 mr-1" />
-                                Revoke
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-primary hover:text-primary hover:bg-primary/10"
-                                disabled={copyingLinkId === invite.id}
-                                onClick={() => handleCopyLink(invite)}
-                              >
-                                {copyingLinkId === invite.id ? (
-                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                ) : (
-                                  <LinkIcon className="h-4 w-4 mr-1" />
+                      {canSeeActions && (() => {
+                        const canActOnInvite = (invite.status === 'pending' || invite.status === 'sent') && !isVerified;
+                        const canRevoke = canActOnInvite && isSuperAdmin;
+                        const canCopyLink = canActOnInvite
+                          && (isSuperAdmin || isVivacityTeam)
+                          && (isSuperAdmin || invite.delivery_status === 'bounced' || invite.delivery_status === 'failed');
+                        return (
+                          <TableCell className="py-6 text-center" onClick={(e) => e.stopPropagation()}>
+                            {canRevoke || canCopyLink ? (
+                              <div className="flex items-center gap-2 justify-center">
+                                {canRevoke && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    disabled={copyingLinkId === invite.id}
+                                    onClick={() => {
+                                      setRevokeTarget(invite);
+                                      setRevokeReason("");
+                                      setRevokeDialogOpen(true);
+                                    }}
+                                  >
+                                    <Ban className="h-4 w-4 mr-1" />
+                                    Revoke
+                                  </Button>
                                 )}
-                                Copy link
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                      )}
+                                {canCopyLink && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-primary hover:text-primary hover:bg-primary/10"
+                                    disabled={copyingLinkId === invite.id}
+                                    onClick={() => handleCopyLink(invite)}
+                                  >
+                                    {copyingLinkId === invite.id ? (
+                                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                    ) : (
+                                      <LinkIcon className="h-4 w-4 mr-1" />
+                                    )}
+                                    Copy link
+                                  </Button>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                        );
+                      })()}
                     </TableRow>
                   );
                 })}
