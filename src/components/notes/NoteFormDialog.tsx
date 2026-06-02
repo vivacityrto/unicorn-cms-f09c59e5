@@ -327,6 +327,10 @@ export function NoteFormDialog({
     setSelectedPackageInfo(null);
     setDraftRestored(false);
     setDraftRestoredAt(null);
+    setLogTime(false);
+    setTimeWorkType('general');
+    setTimeDate(new Date().toISOString().slice(0, 10));
+    setTimeBillable(true);
   }, []);
 
   // ── Populate form when opening ──
