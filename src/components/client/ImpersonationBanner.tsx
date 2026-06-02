@@ -15,10 +15,10 @@ export function ImpersonationBanner() {
   }
 
   const handleExit = async () => {
-    const target = returnPath ?? "/dashboard";
+    const target = returnPath ?? "/manage-tenants";
     await endPreview();
     if (isVivacityStaff) {
-      navigate(target);
+      navigate(target, { replace: true });
     } else {
       navigate("/");
     }

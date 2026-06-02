@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
+import { useUserAccess } from "@/hooks/useUserAccess";
 import { Loader2 } from "lucide-react";
 import { AcademyOnlyFallback } from "@/components/client/AcademyOnlyFallback";
 
@@ -25,6 +26,7 @@ export function ClientRouteGuard({ children }: { children: ReactNode }) {
     isAcademyOnly,
     isPreview,
   } = useClientTenant();
+  const { isVivacityStaff } = useUserAccess();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -73,6 +75,11 @@ export function ClientRouteGuard({ children }: { children: ReactNode }) {
   }
 
   // Staff impersonation bypasses tenant_user gating — staff already have access.
+  if (!isPreview && isVivacityStaff) {
+    navigate("/manage-tenants", { replace: true });
+    return null;
+  }
+
   if (!isPreview) {
     const path = location.pathname;
     const isAcademyAllowed = ACADEMY_ONLY_ALLOWED_PREFIXES.some((p) => path.startsWith(p));
