@@ -235,11 +235,13 @@ export function NoteFormDialog({
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   // Inline time-entry state
-  const [logTime, setLogTime] = useState(false);
+  const [logTime, setLogTime] = useState(true);
   const [timeWorkType, setTimeWorkType] = useState('general');
+  const [timeWorkSubType, setTimeWorkSubType] = useState('');
   const [timeDate, setTimeDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [timeBillable, setTimeBillable] = useState(true);
   const [timeWorkTypeOptions, setTimeWorkTypeOptions] = useState<{ code: string; label: string }[]>([]);
+  const [timeWorkSubTypeOptions, setTimeWorkSubTypeOptions] = useState<{ code: string; label: string; category: string }[]>([]);
 
   useEffect(() => {
     supabase.from('dd_work_types' as any).select('code, label').eq('is_active', true).order('sort_order')
@@ -250,7 +252,23 @@ export function NoteFormDialog({
             .map((d) => ({ code: d.code, label: d.label }))
         );
       });
+    supabase.from('dd_work_sub_type' as any).select('code, label, category').eq('is_active', true).order('sort_order')
+      .then(({ data }) => { if (data) setTimeWorkSubTypeOptions(data as any[]); });
   }, []);
+
+  // Reset sub type whenever work type changes
+  useEffect(() => {
+    setTimeWorkSubType('');
+  }, [timeWorkType]);
+
+  const subTypeCategory =
+    timeWorkType === 'consultation' ? 'consultation'
+    : (timeWorkType === 'document_review' || timeWorkType === 'document_development') ? 'document'
+    : timeWorkType === 'meeting' ? 'meeting'
+    : null;
+  const filteredSubTypes = subTypeCategory
+    ? timeWorkSubTypeOptions.filter(o => o.category === subTypeCategory)
+    : [];
 
   // ── Fetch dropdown options if not provided ──
   useEffect(() => {
