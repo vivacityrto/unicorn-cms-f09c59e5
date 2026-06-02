@@ -752,37 +752,66 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       // Inline time entry creation when user opted in via the form
       if (!selectedNote && data.logTime && data.timeDuration && parseInt(data.timeDuration, 10) > 0 && createdNoteId) {
         try {
-          const { data: userData } = await supabase.auth.getUser();
-          if (userData.user) {
-            const { data: inserted, error: insertErr } = await supabase
+          const durationMins = parseInt(data.timeDuration, 10);
+
+          // Use RPC (SECURITY DEFINER) to bypass RLS on time_entries
+          const { error: rpcError } = await supabase.rpc('rpc_add_time_entry' as any, {
+            p_tenant_id: tenantId,
+            p_client_id: tenantId,
+            p_duration_minutes: durationMins,
+            p_date: data.timeDate,
+            p_package_id: null,
+            p_stage_id: null,
+            p_task_id: null,
+            p_work_type: data.timeWorkType,
+            p_notes: data.title || data.content.substring(0, 100),
+            p_is_billable: data.timeBillable,
+          });
+
+          if (rpcError) {
+            console.error('Time entry RPC error:', rpcError);
+            toast({
+              title: 'Note saved — time entry failed',
+              description: rpcError.message,
+              variant: 'destructive',
+            });
+          } else {
+            // RPC doesn't return the new entry id directly; fetch the most recent entry for this client to get the id for linking
+            const { data: latestEntry } = await supabase
               .from('time_entries')
-              .insert({
-                tenant_id: tenantId,
-                client_id: tenantId,
-                user_id: userData.user.id,
-                duration_minutes: parseInt(data.timeDuration, 10),
-                work_type: data.timeWorkType,
-                work_sub_type: data.timeWorkSubType || null,
-                notes: data.title || data.content.substring(0, 100),
-                is_billable: data.timeBillable,
-                start_at: `${data.timeDate}T00:00:00`,
-                source: 'manual',
-                scope_tag: 'RTO',
-              })
               .select('id')
+              .eq('client_id', tenantId)
+              .order('created_at', { ascending: false })
+              .limit(1)
               .single();
 
-            if (!insertErr && inserted?.id) {
+            if (latestEntry?.id) {
               await supabase
                 .from('notes')
-                .update({ timeentry_id: inserted.id } as any)
+                .update({ timeentry_id: latestEntry.id } as any)
                 .eq('id', createdNoteId);
-              toast({ title: 'Note and time entry saved', description: `${data.timeDuration} minutes logged` });
             }
+
+            // Also update work_sub_type if provided (RPC doesn't have that param)
+            if (data.timeWorkSubType && latestEntry?.id) {
+              await supabase
+                .from('time_entries')
+                .update({ work_sub_type: data.timeWorkSubType } as any)
+                .eq('id', latestEntry.id);
+            }
+
+            toast({
+              title: 'Note and time entry saved',
+              description: `${durationMins} min logged`,
+            });
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error('Failed to create linked time entry:', err);
-          toast({ title: 'Note saved', description: 'Could not create time entry — add it manually in the Time tab', variant: 'destructive' });
+          toast({
+            title: 'Note saved — time entry failed',
+            description: err?.message || 'Unknown error. Check the browser console.',
+            variant: 'destructive',
+          });
         }
       }
 
