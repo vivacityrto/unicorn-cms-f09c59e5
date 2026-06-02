@@ -1,26 +1,35 @@
-## Summary
-Two small UI-only fixes in client impersonation flow — no database changes.
+## Plan: Add Mailgun delivery outcome filters to ManageInvites
 
-## Fix 1 — `src/components/client/ImpersonationBanner.tsx`
+### Goal
+Extend the status filter dropdown in `ManageInvites.tsx` with three new options that filter by `delivery_status` values reported by the Mailgun webhook.
 
-- In `handleExit`, change fallback path from `"/dashboard"` to `"/manage-tenants"`.
-- Add `{ replace: true }` to the `navigate(target)` call so client portal pages do not remain in the browser back stack.
-- Non-staff exit path (`navigate("/")`) stays unchanged.
+### Files changed
+- `src/pages/ManageInvites.tsx`
 
-## Fix 2 — `src/components/client/ClientRouteGuard.tsx`
+### Changes
 
-- Import `useUserAccess`.
-- Derive `isVivacityStaff`.
-- Insert, before the existing `!isPreview` access-scope block:
-  ```
-  if (!isPreview && isVivacityStaff) {
-    navigate("/manage-tenants", { replace: true });
-    return null;
-  }
-  ```
-- All academy-only client logic and remaining route guards stay exactly as they are.
+#### 1. Status filter dropdown options
+Add three entries after the existing `"failed"` option in the dropdown array (line 729):
 
-## Constraints
-- Two files only.
-- No database changes, no migrations.
-- No other logic touched.
+- `{ value: "bounced", label: "Bounced", icon: AlertCircle, iconColor: "text-red-600" }`
+- `{ value: "delivery-failed", label: "Delivery failed", icon: AlertCircle, iconColor: "text-orange-600" }`
+- `{ value: "spam", label: "Spam report", icon: AlertCircle, iconColor: "text-red-600" }`
+
+#### 2. Filter button display text
+Add three new display labels in the filter button area (after line 709):
+
+- `{statusFilter === "bounced" && "Bounced"}`
+- `{statusFilter === "delivery-failed" && "Delivery failed"}`
+- `{statusFilter === "spam" && "Spam report"}`
+
+#### 3. matchesStatus logic
+Add three new conditions to the `matchesStatus` expression (after line 440):
+
+- `(statusFilter === "bounced" && invite.delivery_status === 'bounced') ||`
+- `(statusFilter === "delivery-failed" && invite.delivery_status === 'failed') ||`
+- `(statusFilter === "spam" && invite.delivery_status === 'complained') ||`
+
+### What stays unchanged
+- All existing filter values (`all`, `pending`, `sent`, `expired`, `verified`, `failed`) and their logic
+- Stat cards, table, pagination, row actions, realtime subscription
+- Dropdown search input, option styling pattern, divider separators

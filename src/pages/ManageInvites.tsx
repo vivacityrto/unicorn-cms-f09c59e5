@@ -440,7 +440,10 @@ export default function ManageInvites() {
       (statusFilter === "failed" && invite.status === "failed") ||
       (statusFilter === "expired" && (invite.status === "expired" || isExpired)) ||
       (statusFilter === "verified" && invite.status === "sent" && userStatuses.get(invite.email)?.email_confirmed_at) ||
-      (statusFilter === "pending" && (invite.status === "pending" || (invite.status === "sent" && !userStatuses.get(invite.email)?.email_confirmed_at)));
+      (statusFilter === "pending" && (invite.status === "pending" || (invite.status === "sent" && !userStatuses.get(invite.email)?.email_confirmed_at))) ||
+      (statusFilter === "bounced" && invite.delivery_status === 'bounced') ||
+      (statusFilter === "delivery-failed" && invite.delivery_status === 'failed') ||
+      (statusFilter === "spam" && invite.delivery_status === 'complained');
     
     const matchesDate = isWithinDateRange(invite.created_at);
     
