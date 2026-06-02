@@ -440,7 +440,10 @@ export default function ManageInvites() {
       (statusFilter === "failed" && invite.status === "failed") ||
       (statusFilter === "expired" && (invite.status === "expired" || isExpired)) ||
       (statusFilter === "verified" && invite.status === "sent" && userStatuses.get(invite.email)?.email_confirmed_at) ||
-      (statusFilter === "pending" && (invite.status === "pending" || (invite.status === "sent" && !userStatuses.get(invite.email)?.email_confirmed_at)));
+      (statusFilter === "pending" && (invite.status === "pending" || (invite.status === "sent" && !userStatuses.get(invite.email)?.email_confirmed_at))) ||
+      (statusFilter === "bounced" && invite.delivery_status === 'bounced') ||
+      (statusFilter === "delivery-failed" && invite.delivery_status === 'failed') ||
+      (statusFilter === "spam" && invite.delivery_status === 'complained');
     
     const matchesDate = isWithinDateRange(invite.created_at);
     
@@ -707,6 +710,9 @@ export default function ManageInvites() {
                   {statusFilter === "expired" && "Expired"}
                   {statusFilter === "verified" && "Verified"}
                   {statusFilter === "failed" && "Failed"}
+                  {statusFilter === "bounced" && "Bounced"}
+                  {statusFilter === "delivery-failed" && "Delivery failed"}
+                  {statusFilter === "spam" && "Spam report"}
                 </span>
                 <Filter className="h-4 w-4 ml-2 text-muted-foreground/60 shrink-0" />
               </Button>
@@ -727,6 +733,9 @@ export default function ManageInvites() {
                   { value: "expired", label: "Expired", icon: AlertCircle, iconColor: "text-orange-600" },
                   { value: "verified", label: "Verified", icon: ShieldCheck, iconColor: "text-green-600" },
                   { value: "failed", label: "Failed", icon: XCircle, iconColor: "text-red-600" },
+                  { value: "bounced", label: "Bounced", icon: AlertCircle, iconColor: "text-red-600" },
+                  { value: "delivery-failed", label: "Delivery failed", icon: AlertCircle, iconColor: "text-orange-600" },
+                  { value: "spam", label: "Spam report", icon: AlertCircle, iconColor: "text-red-600" },
                 ].map((option, index, array) => {
                   const Icon = option.icon;
                   const isSelected = statusFilter === option.value;
