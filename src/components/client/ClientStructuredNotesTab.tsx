@@ -292,24 +292,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     fetchStatusOptions();
   }, []);
 
-  // Fetch work type options for time-log dialog
-  useEffect(() => {
-    const fetchWorkTypeOptions = async () => {
-      const { data } = await supabase
-        .from('dd_work_types' as any)
-        .select('code, label')
-        .eq('is_active', true)
-        .order('sort_order');
-      if (data) {
-        setWorkTypeOptions(
-          (data as any[])
-            .filter((r) => r.code !== 'parent_defined' && r.code !== 'kickstart_tas')
-            .map((r) => ({ code: r.code, label: r.label }))
-        );
-      }
-    };
-    fetchWorkTypeOptions();
-  }, []);
+
+
 
 
   // Convert to action item state
