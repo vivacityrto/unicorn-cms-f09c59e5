@@ -156,8 +156,14 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isTimeLogPromptOpen, setIsTimeLogPromptOpen] = useState(false);
-  const [pendingTimeLogData, setPendingTimeLogData] = useState<{ duration: number; noteType: string; title: string } | null>(null);
+  const [pendingTimeLogData, setPendingTimeLogData] = useState<{ duration: number; noteType: string; title: string; noteId: string; workType: string; workDate: string } | null>(null);
   const [pendingBillable, setPendingBillable] = useState(true);
+  // Editable fields inside the time-log dialog (seeded from pendingTimeLogData)
+  const [editableDuration, setEditableDuration] = useState<number>(0);
+  const [editableWorkType, setEditableWorkType] = useState<string>('general');
+  const [editableWorkDate, setEditableWorkDate] = useState<string>('');
+  const [workTypeOptions, setWorkTypeOptions] = useState<{ code: string; label: string }[]>([]);
+
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedPackageInfo, setSelectedPackageInfo] = useState<PackageInfo | null>(null);
@@ -291,6 +297,26 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     };
     fetchStatusOptions();
   }, []);
+
+  // Fetch work type options for time-log dialog
+  useEffect(() => {
+    const fetchWorkTypeOptions = async () => {
+      const { data } = await supabase
+        .from('dd_work_types' as any)
+        .select('code, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (data) {
+        setWorkTypeOptions(
+          (data as any[])
+            .filter((r) => r.code !== 'parent_defined' && r.code !== 'kickstart_tas')
+            .map((r) => ({ code: r.code, label: r.label }))
+        );
+      }
+    };
+    fetchWorkTypeOptions();
+  }, []);
+
 
   // Convert to action item state
   const [actionTitle, setActionTitle] = useState('');
@@ -625,13 +651,26 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         }
       }
       setIsAddDialogOpen(false);
-      
-      // Prompt time log for meeting/phone-call/action with duration
+
+      // Prompt time log for ALL new notes (regardless of type/duration)
       const parsedDur = duration ? parseInt(duration, 10) : 0;
-      if (!selectedNote && showsDuration && parsedDur > 0) {
-        setPendingTimeLogData({ duration: parsedDur, noteType, title: title || content.substring(0, 60) });
+      if (!selectedNote && noteId) {
+        const mappedWorkType = noteType === 'phone-call' ? 'phone-call' : noteType === 'meeting' ? 'meeting' : 'general';
+        const today = new Date().toISOString().slice(0, 10);
+        setPendingTimeLogData({
+          duration: parsedDur,
+          noteType,
+          title: title || content.substring(0, 60),
+          noteId,
+          workType: mappedWorkType,
+          workDate: today,
+        });
+        setEditableDuration(parsedDur);
+        setEditableWorkType(mappedWorkType);
+        setEditableWorkDate(today);
         setIsTimeLogPromptOpen(true);
       }
+
       
       resetForm();
     } finally {
@@ -716,11 +755,24 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
 
       setIsAddDialogOpen(false);
 
-      // Prompt time log for comm types with duration
-      if (!selectedNote && DURATION_NOTE_TYPES.includes(data.noteType) && parsedDuration > 0) {
-        setPendingTimeLogData({ duration: parsedDuration, noteType: data.noteType, title: data.title || data.content.substring(0, 60) });
+      // Prompt time log for ALL new notes (regardless of type/duration)
+      if (!selectedNote && createdNoteId) {
+        const mappedWorkType = data.noteType === 'phone-call' ? 'phone-call' : data.noteType === 'meeting' ? 'meeting' : 'general';
+        const today = new Date().toISOString().slice(0, 10);
+        setPendingTimeLogData({
+          duration: parsedDuration,
+          noteType: data.noteType,
+          title: data.title || data.content.substring(0, 60),
+          noteId: createdNoteId,
+          workType: mappedWorkType,
+          workDate: today,
+        });
+        setEditableDuration(parsedDuration);
+        setEditableWorkType(mappedWorkType);
+        setEditableWorkDate(today);
         setIsTimeLogPromptOpen(true);
       }
+
 
       resetForm();
     } finally {
@@ -733,18 +785,33 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
-      
-      await supabase.from('time_entries').insert({
-        tenant_id: tenantId,
-        user_id: userData.user.id,
-        duration_minutes: pendingTimeLogData.duration,
-        work_type: pendingTimeLogData.noteType,
-        notes: pendingTimeLogData.title,
-        client_id: tenantId,
-        is_billable: pendingBillable
-      });
-      
-      toast({ title: 'Time logged', description: `${pendingTimeLogData.duration} minutes logged` });
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from('time_entries')
+        .insert({
+          tenant_id: tenantId,
+          client_id: tenantId,
+          user_id: userData.user.id,
+          duration_minutes: editableDuration,
+          work_type: editableWorkType,
+          notes: pendingTimeLogData.title,
+          is_billable: pendingBillable,
+          start_at: `${editableWorkDate}T00:00:00`,
+          source: 'manual',
+          scope_tag: 'RTO',
+        })
+        .select('id')
+        .single();
+      if (insertErr) throw insertErr;
+
+      if (inserted?.id) {
+        await supabase
+          .from('notes')
+          .update({ timeentry_id: inserted.id } as any)
+          .eq('id', pendingTimeLogData.noteId);
+      }
+
+      toast({ title: 'Time logged', description: 'Linked to note' });
     } catch (err) {
       console.error('Failed to log time:', err);
       toast({ title: 'Error', description: 'Failed to log time entry', variant: 'destructive' });
@@ -753,6 +820,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       setPendingTimeLogData(null);
     }
   };
+
 
   const handleDelete = async () => {
     if (!selectedNote) return;
@@ -1620,38 +1688,75 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       </Dialog>
 
       {/* Time Log Prompt */}
-      <AlertDialog open={isTimeLogPromptOpen} onOpenChange={(open) => {
+      <Dialog open={isTimeLogPromptOpen} onOpenChange={(open) => {
         if (!open) {
           setIsTimeLogPromptOpen(false);
           setPendingTimeLogData(null);
           setPendingBillable(true);
         }
       }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Log Time Entry?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Would you like to log {pendingTimeLogData?.duration} minutes as a time entry for this {pendingTimeLogData?.noteType === 'phone-call' ? 'phone call' : pendingTimeLogData?.noteType}?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex items-center gap-3 px-1 py-2">
-            <Switch
-              id="billable-toggle"
-              checked={pendingBillable}
-              onCheckedChange={setPendingBillable}
-            />
-            <Label htmlFor="billable-toggle" className="text-sm font-medium cursor-pointer">
-              Billable
-            </Label>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log time for this note?</DialogTitle>
+            <DialogDescription>
+              Optionally log a time entry that will be linked to the note you just saved.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="time-log-duration">Duration (minutes)</Label>
+              <Input
+                id="time-log-duration"
+                type="number"
+                min={0}
+                value={editableDuration}
+                onChange={(e) => setEditableDuration(parseInt(e.target.value, 10) || 0)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="time-log-worktype">Work type</Label>
+              <Select value={editableWorkType} onValueChange={setEditableWorkType}>
+                <SelectTrigger id="time-log-worktype">
+                  <SelectValue placeholder="Select work type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {workTypeOptions.map((wt) => (
+                    <SelectItem key={wt.code} value={wt.code}>{wt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="time-log-date">Date</Label>
+              <Input
+                id="time-log-date"
+                type="date"
+                value={editableWorkDate}
+                onChange={(e) => setEditableWorkDate(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="billable-toggle"
+                checked={pendingBillable}
+                onCheckedChange={setPendingBillable}
+              />
+              <Label htmlFor="billable-toggle" className="text-sm font-medium cursor-pointer">
+                Billable
+              </Label>
+            </div>
           </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>No thanks</AlertDialogCancel>
-            <AlertDialogAction onClick={handleTimeLogConfirm}>
-              Yes, log time
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-       </AlertDialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsTimeLogPromptOpen(false);
+              setPendingTimeLogData(null);
+              setPendingBillable(true);
+            }}>Skip</Button>
+            <Button onClick={handleTimeLogConfirm}>Log time</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       {/* Compose Email Dialog for "Send Now" email notes */}
       <ComposeEmailDialog
