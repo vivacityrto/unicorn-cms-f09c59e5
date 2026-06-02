@@ -378,18 +378,18 @@ export default function ManageInvites() {
       const isExpired = i.expires_at && new Date(i.expires_at) < new Date();
       const userStatus = userStatuses.get(i.email);
       // Pending = not expired AND user hasn't registered yet
-      return !isExpired && !userStatus;
+      return !isExpired && (!userStatus || !userStatus.is_in_auth);
     }).length,
     expired: invites.filter(i => {
       const isExpired = i.expires_at && new Date(i.expires_at) < new Date();
       const userStatus = userStatuses.get(i.email);
       // Expired = past expiry AND user hasn't registered
-      return isExpired && !userStatus;
+      return isExpired && (!userStatus || !userStatus.is_in_auth);
     }).length,
     verified: invites.filter(i => {
-      // Verified = user exists in users table (they've registered)
+      // Verified = user exists in auth.users (they've registered)
       const userStatus = userStatuses.get(i.email);
-      return !!userStatus;
+      return !!userStatus && userStatus.is_in_auth === true;
     }).length,
   };
 
