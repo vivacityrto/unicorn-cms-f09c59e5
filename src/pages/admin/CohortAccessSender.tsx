@@ -139,11 +139,13 @@ export default function CohortAccessSender() {
   }, [tenants, tenantQuery]);
 
   const runPreview = async () => {
-    setPreviewLoading(true); setPreview(null); setConfirmText("");
+    setPreviewLoading(true); setPreview(null); setConfirmText(""); setSelectedPreviewUuids(new Set());
     try {
       const { data, error } = await supabase.rpc("resolve_cohort", { p_filter: filterJson, p_cap: cap });
       if (error) throw error;
-      setPreview((data || []) as ResolvedRow[]);
+      const rows = (data || []) as ResolvedRow[];
+      setPreview(rows);
+      setSelectedPreviewUuids(new Set(rows.map((r) => r.user_uuid)));
     } catch (e: any) {
       toast({ title: "Preview failed", description: e?.message || String(e), variant: "destructive" });
     } finally {
@@ -155,6 +157,7 @@ export default function CohortAccessSender() {
     if (!preview) return null;
     const counts = { activate: 0, reset: 0, skip_disabled: 0, skip_state_mismatch: 0 };
     for (const r of preview) {
+      if (!selectedPreviewUuids.has(r.user_uuid)) continue;
       if (r.account_state === "disabled") counts.skip_disabled++;
       else if (r.account_state === "ghost") {
         if (action === "activate") counts.activate++; else counts.skip_state_mismatch++;
