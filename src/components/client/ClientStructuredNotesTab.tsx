@@ -792,47 +792,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       setSaving(false);
     }
   }, [activePackages, selectedNote, tenantId, updateNote, createNote, tags, resetForm]);
-  
-  const handleTimeLogConfirm = async () => {
-    if (!pendingTimeLogData) return;
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
 
-      const { data: inserted, error: insertErr } = await supabase
-        .from('time_entries')
-        .insert({
-          tenant_id: tenantId,
-          client_id: tenantId,
-          user_id: userData.user.id,
-          duration_minutes: editableDuration,
-          work_type: editableWorkType,
-          notes: pendingTimeLogData.title,
-          is_billable: pendingBillable,
-          start_at: `${editableWorkDate}T00:00:00`,
-          source: 'manual',
-          scope_tag: 'RTO',
-        })
-        .select('id')
-        .single();
-      if (insertErr) throw insertErr;
 
-      if (inserted?.id) {
-        await supabase
-          .from('notes')
-          .update({ timeentry_id: inserted.id } as any)
-          .eq('id', pendingTimeLogData.noteId);
-      }
-
-      toast({ title: 'Time logged', description: 'Linked to note' });
-    } catch (err) {
-      console.error('Failed to log time:', err);
-      toast({ title: 'Error', description: 'Failed to log time entry', variant: 'destructive' });
-    } finally {
-      setIsTimeLogPromptOpen(false);
-      setPendingTimeLogData(null);
-    }
-  };
 
 
   const handleDelete = async () => {
