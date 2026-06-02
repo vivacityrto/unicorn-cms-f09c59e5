@@ -1661,75 +1661,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         </DialogContent>
       </Dialog>
 
-      {/* Time Log Prompt */}
-      <Dialog open={isTimeLogPromptOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsTimeLogPromptOpen(false);
-          setPendingTimeLogData(null);
-          setPendingBillable(true);
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Log time for this note?</DialogTitle>
-            <DialogDescription>
-              Optionally log a time entry that will be linked to the note you just saved.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="time-log-duration">Duration (minutes)</Label>
-              <Input
-                id="time-log-duration"
-                type="number"
-                min={0}
-                value={editableDuration}
-                onChange={(e) => setEditableDuration(parseInt(e.target.value, 10) || 0)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="time-log-worktype">Work type</Label>
-              <Select value={editableWorkType} onValueChange={setEditableWorkType}>
-                <SelectTrigger id="time-log-worktype">
-                  <SelectValue placeholder="Select work type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {workTypeOptions.map((wt) => (
-                    <SelectItem key={wt.code} value={wt.code}>{wt.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="time-log-date">Date</Label>
-              <Input
-                id="time-log-date"
-                type="date"
-                value={editableWorkDate}
-                onChange={(e) => setEditableWorkDate(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch
-                id="billable-toggle"
-                checked={pendingBillable}
-                onCheckedChange={setPendingBillable}
-              />
-              <Label htmlFor="billable-toggle" className="text-sm font-medium cursor-pointer">
-                Billable
-              </Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsTimeLogPromptOpen(false);
-              setPendingTimeLogData(null);
-              setPendingBillable(true);
-            }}>Skip</Button>
-            <Button onClick={handleTimeLogConfirm}>Log time</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+
 
 
       {/* Compose Email Dialog for "Send Now" email notes */}
