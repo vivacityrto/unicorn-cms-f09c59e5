@@ -236,6 +236,7 @@ export function NoteFormDialog({
 
   // Inline time-entry state
   const [logTime, setLogTime] = useState(true);
+  const [durationError, setDurationError] = useState(false);
   const [timeWorkType, setTimeWorkType] = useState('general');
   const [timeWorkSubType, setTimeWorkSubType] = useState('');
   const [timeDate, setTimeDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -549,6 +550,18 @@ export function NoteFormDialog({
 
   // ── Save ──
   const handleSave = async () => {
+    if (logTime) {
+      const parsedDur = parseInt(duration, 10);
+      if (!duration || isNaN(parsedDur) || parsedDur <= 0) {
+        setDurationError(true);
+        toast({
+          title: 'Duration required',
+          description: 'Enter the number of minutes to log for this time entry, or turn off "Log time entry".',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
     if (!content.trim() || saving) return;
     setInternalSaving(true);
     try {
@@ -759,7 +772,7 @@ export function NoteFormDialog({
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Duration (minutes)</Label>
-                    <Input type="number" min={0} step={5} value={duration} onChange={e => setDuration(e.target.value)} placeholder="0" />
+                    <Input type="number" min={0} step={5} value={duration} onChange={e => { setDuration(e.target.value); if (durationError) setDurationError(false); }} placeholder="0" className={durationError ? 'border-destructive' : ''} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Work Type</Label>
