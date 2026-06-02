@@ -366,6 +366,16 @@ export default function CohortAccessSender() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={preview!.length > 0 && selectedPreviewUuids.size === preview!.length}
+                            onCheckedChange={(checked) => {
+                              if (checked) setSelectedPreviewUuids(new Set(preview!.map((r) => r.user_uuid)));
+                              else setSelectedPreviewUuids(new Set());
+                            }}
+                            aria-label="Select all recipients"
+                          />
+                        </TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Tenant</TableHead>
                         <TableHead>State</TableHead>
@@ -375,6 +385,20 @@ export default function CohortAccessSender() {
                     <TableBody>
                       {preview!.slice(0, 25).map((r) => (
                         <TableRow key={r.user_uuid}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedPreviewUuids.has(r.user_uuid)}
+                              onCheckedChange={(checked) => {
+                                setSelectedPreviewUuids((prev) => {
+                                  const next = new Set(prev);
+                                  if (checked) next.add(r.user_uuid);
+                                  else next.delete(r.user_uuid);
+                                  return next;
+                                });
+                              }}
+                              aria-label={`Select ${r.email}`}
+                            />
+                          </TableCell>
                           <TableCell className="text-xs">{r.email}</TableCell>
                           <TableCell className="text-xs">{r.tenant_name ?? r.tenant_id ?? "—"}</TableCell>
                           <TableCell><Badge variant="outline">{r.account_state}</Badge></TableCell>
@@ -384,14 +408,24 @@ export default function CohortAccessSender() {
                     </TableBody>
                   </Table>
                   {preview!.length > 25 && (
-                    <p className="text-xs text-muted-foreground p-2">Showing first 25 of {preview!.length}.</p>
+                    <p className="text-xs text-muted-foreground p-2">
+                      Showing first 25 of {preview!.length}. Select All applies to all {preview!.length} rows.
+                    </p>
                   )}
                 </div>
 
                 <div className="space-y-2 pt-2">
+                  <p className="text-xs text-muted-foreground">
+                    {selectedPreviewUuids.size} of {preview!.length} recipients selected.
+                  </p>
+                  {selectedPreviewUuids.size === 0 && (
+                    <Alert variant="destructive">
+                      <AlertDescription>No recipients selected.</AlertDescription>
+                    </Alert>
+                  )}
                   <Label className="text-sm">Type to confirm: <code className="font-mono">{expectedConfirm}</code></Label>
                   <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={expectedConfirm} />
-                  <Button onClick={launch} disabled={launching || confirmText.trim() !== expectedConfirm || previewSummary.will_send === 0}>
+                  <Button onClick={launch} disabled={launching || confirmText.trim() !== expectedConfirm || previewSummary.will_send === 0 || selectedPreviewUuids.size === 0}>
                     {launching ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Launching…</> : <><Send className="h-4 w-4 mr-2" />Launch job</>}
                   </Button>
                 </div>
