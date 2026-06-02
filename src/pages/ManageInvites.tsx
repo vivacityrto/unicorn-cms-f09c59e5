@@ -72,8 +72,10 @@ export default function ManageInvites() {
   const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
   const itemsPerPage = 20;
   const { profile } = useAuth();
+  const { isVivacityTeam } = useRBAC();
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';
   const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
+  const canSeeActions = isSuperAdmin || isVivacityTeam;
 
   const handleRevoke = async () => {
     if (!revokeTarget || !revokeReason.trim()) return;
