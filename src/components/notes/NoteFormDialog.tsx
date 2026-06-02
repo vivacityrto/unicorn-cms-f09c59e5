@@ -346,8 +346,9 @@ export function NoteFormDialog({
     setSelectedPackageInfo(null);
     setDraftRestored(false);
     setDraftRestoredAt(null);
-    setLogTime(false);
+    setLogTime(true);
     setTimeWorkType('general');
+    setTimeWorkSubType('');
     setTimeDate(new Date().toISOString().slice(0, 10));
     setTimeBillable(true);
   }, []);
