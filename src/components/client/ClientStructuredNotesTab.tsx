@@ -651,13 +651,26 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         }
       }
       setIsAddDialogOpen(false);
-      
-      // Prompt time log for meeting/phone-call/action with duration
+
+      // Prompt time log for ALL new notes (regardless of type/duration)
       const parsedDur = duration ? parseInt(duration, 10) : 0;
-      if (!selectedNote && showsDuration && parsedDur > 0) {
-        setPendingTimeLogData({ duration: parsedDur, noteType, title: title || content.substring(0, 60) });
+      if (!selectedNote && noteId) {
+        const mappedWorkType = noteType === 'phone-call' ? 'phone-call' : noteType === 'meeting' ? 'meeting' : 'general';
+        const today = new Date().toISOString().slice(0, 10);
+        setPendingTimeLogData({
+          duration: parsedDur,
+          noteType,
+          title: title || content.substring(0, 60),
+          noteId,
+          workType: mappedWorkType,
+          workDate: today,
+        });
+        setEditableDuration(parsedDur);
+        setEditableWorkType(mappedWorkType);
+        setEditableWorkDate(today);
         setIsTimeLogPromptOpen(true);
       }
+
       
       resetForm();
     } finally {
