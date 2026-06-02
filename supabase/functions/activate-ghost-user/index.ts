@@ -224,7 +224,9 @@ serve(async (req) => {
         first_name: ghost.first_name ?? "",
         last_name: ghost.last_name ?? null,
         last_sent_at: new Date().toISOString(),
+        mailgun_message_id: mailgunMessageId,
       });
+
     } catch (inviteLogErr) {
       console.error("user_invitations insert failed (non-fatal)", inviteLogErr);
     }
