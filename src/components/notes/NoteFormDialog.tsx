@@ -432,14 +432,26 @@ export function NoteFormDialog({
   }, [initialNote]);
 
   // ── Derived state ──
-  const showsDuration = showDuration && DURATION_TYPES.includes(noteType);
+  const showsDuration = showDuration;
   const getDefaultStatus = (type: string) => DURATION_TYPES.includes(type) ? 'completed' : 'noted';
+
+  const NOTE_TYPE_TO_WORK_TYPE: Record<string, string> = {
+    'phone-call': 'phone-call',
+    'meeting': 'meeting',
+    'action': 'general',
+    'follow-up': 'general',
+    'general': 'general',
+    'tenant': 'general',
+    'risk': 'general',
+    'escalation': 'general',
+  };
 
   const handleNoteTypeChange = (type: string) => {
     setNoteType(type);
     if (mode === 'create') setNoteStatus(getDefaultStatus(type));
     if (type === 'email' && mode === 'create') setEmailMode('prompt');
     else setEmailMode(null);
+    setTimeWorkType(NOTE_TYPE_TO_WORK_TYPE[type] || 'general');
   };
 
   // ── Timer handlers ──
