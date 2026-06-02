@@ -150,6 +150,7 @@ serve(async (req) => {
     // 9. Send branded welcome email via Mailgun
     let emailSent = false;
     let emailError: string | null = null;
+    let mailgunMessageId: string | null = null;
     if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
       emailError = "Mailgun not configured";
       console.warn("Mailgun not configured — skipping welcome email");
@@ -202,12 +203,15 @@ serve(async (req) => {
         body: fd,
       });
       if (mg.ok) {
+        const mgResult = await mg.json();
         emailSent = true;
+        mailgunMessageId = mgResult?.id ?? null;
       } else {
         emailError = await mg.text();
         console.error("Mailgun send failed", mg.status, emailError);
       }
     }
+
 
     // Best-effort: record in user_invitations for Manage Invites visibility
     try {
@@ -220,7 +224,9 @@ serve(async (req) => {
         first_name: ghost.first_name ?? "",
         last_name: ghost.last_name ?? null,
         last_sent_at: new Date().toISOString(),
+        mailgun_message_id: mailgunMessageId,
       });
+
     } catch (inviteLogErr) {
       console.error("user_invitations insert failed (non-fatal)", inviteLogErr);
     }
