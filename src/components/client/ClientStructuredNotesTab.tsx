@@ -785,18 +785,33 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
-      
-      await supabase.from('time_entries').insert({
-        tenant_id: tenantId,
-        user_id: userData.user.id,
-        duration_minutes: pendingTimeLogData.duration,
-        work_type: pendingTimeLogData.noteType,
-        notes: pendingTimeLogData.title,
-        client_id: tenantId,
-        is_billable: pendingBillable
-      });
-      
-      toast({ title: 'Time logged', description: `${pendingTimeLogData.duration} minutes logged` });
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from('time_entries')
+        .insert({
+          tenant_id: tenantId,
+          client_id: tenantId,
+          user_id: userData.user.id,
+          duration_minutes: editableDuration,
+          work_type: editableWorkType,
+          notes: pendingTimeLogData.title,
+          is_billable: pendingBillable,
+          start_at: `${editableWorkDate}T00:00:00`,
+          source: 'manual',
+          scope_tag: 'RTO',
+        })
+        .select('id')
+        .single();
+      if (insertErr) throw insertErr;
+
+      if (inserted?.id) {
+        await supabase
+          .from('notes')
+          .update({ timeentry_id: inserted.id } as any)
+          .eq('id', pendingTimeLogData.noteId);
+      }
+
+      toast({ title: 'Time logged', description: 'Linked to note' });
     } catch (err) {
       console.error('Failed to log time:', err);
       toast({ title: 'Error', description: 'Failed to log time entry', variant: 'destructive' });
@@ -805,6 +820,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       setPendingTimeLogData(null);
     }
   };
+
 
   const handleDelete = async () => {
     if (!selectedNote) return;
