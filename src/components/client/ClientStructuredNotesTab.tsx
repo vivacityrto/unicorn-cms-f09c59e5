@@ -630,23 +630,39 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       }
       setIsAddDialogOpen(false);
 
-      // Prompt time log for ALL new notes (regardless of type/duration)
+      // Inline time entry creation for new notes if duration > 0
       const parsedDur = duration ? parseInt(duration, 10) : 0;
-      if (!selectedNote && noteId) {
-        const mappedWorkType = noteType === 'phone-call' ? 'phone-call' : noteType === 'meeting' ? 'meeting' : 'general';
-        const today = new Date().toISOString().slice(0, 10);
-        setPendingTimeLogData({
-          duration: parsedDur,
-          noteType,
-          title: title || content.substring(0, 60),
-          noteId,
-          workType: mappedWorkType,
-          workDate: today,
-        });
-        setEditableDuration(parsedDur);
-        setEditableWorkType(mappedWorkType);
-        setEditableWorkDate(today);
-        setIsTimeLogPromptOpen(true);
+      if (!selectedNote && noteId && parsedDur > 0) {
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData.user) {
+            const mappedWorkType = noteType === 'phone-call' ? 'phone-call' : noteType === 'meeting' ? 'meeting' : 'general';
+            const today = new Date().toISOString().slice(0, 10);
+            const { data: inserted, error: insertErr } = await supabase
+              .from('time_entries')
+              .insert({
+                tenant_id: tenantId,
+                client_id: tenantId,
+                user_id: userData.user.id,
+                duration_minutes: parsedDur,
+                work_type: mappedWorkType,
+                notes: title || content.substring(0, 100),
+                is_billable: true,
+                start_at: `${today}T00:00:00`,
+                source: 'manual',
+                scope_tag: 'RTO',
+              })
+              .select('id')
+              .single();
+            if (!insertErr && inserted?.id) {
+              await supabase.from('notes').update({ timeentry_id: inserted.id } as any).eq('id', noteId);
+              toast({ title: 'Note and time entry saved', description: `${parsedDur} minutes logged` });
+            }
+          }
+        } catch (err) {
+          console.error('Failed to create linked time entry:', err);
+          toast({ title: 'Note saved', description: 'Could not create time entry — add it manually in the Time tab', variant: 'destructive' });
+        }
       }
 
       
