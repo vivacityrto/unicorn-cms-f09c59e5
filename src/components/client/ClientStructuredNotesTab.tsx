@@ -755,11 +755,24 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
 
       setIsAddDialogOpen(false);
 
-      // Prompt time log for comm types with duration
-      if (!selectedNote && DURATION_NOTE_TYPES.includes(data.noteType) && parsedDuration > 0) {
-        setPendingTimeLogData({ duration: parsedDuration, noteType: data.noteType, title: data.title || data.content.substring(0, 60) });
+      // Prompt time log for ALL new notes (regardless of type/duration)
+      if (!selectedNote && createdNoteId) {
+        const mappedWorkType = data.noteType === 'phone-call' ? 'phone-call' : data.noteType === 'meeting' ? 'meeting' : 'general';
+        const today = new Date().toISOString().slice(0, 10);
+        setPendingTimeLogData({
+          duration: parsedDuration,
+          noteType: data.noteType,
+          title: data.title || data.content.substring(0, 60),
+          noteId: createdNoteId,
+          workType: mappedWorkType,
+          workDate: today,
+        });
+        setEditableDuration(parsedDuration);
+        setEditableWorkType(mappedWorkType);
+        setEditableWorkDate(today);
         setIsTimeLogPromptOpen(true);
       }
+
 
       resetForm();
     } finally {
