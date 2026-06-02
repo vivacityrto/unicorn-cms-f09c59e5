@@ -549,6 +549,11 @@ export function NoteFormDialog({
         notifyUserIds,
         notifyClient,
         elapsedTimerSeconds: elapsedTime,
+        logTime,
+        timeDuration: duration,
+        timeWorkType,
+        timeDate,
+        timeBillable,
       });
       clearDraft(draftKey);
       setDraftRestored(false);
