@@ -155,14 +155,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isTimeLogPromptOpen, setIsTimeLogPromptOpen] = useState(false);
-  const [pendingTimeLogData, setPendingTimeLogData] = useState<{ duration: number; noteType: string; title: string; noteId: string; workType: string; workDate: string } | null>(null);
-  const [pendingBillable, setPendingBillable] = useState(true);
-  // Editable fields inside the time-log dialog (seeded from pendingTimeLogData)
-  const [editableDuration, setEditableDuration] = useState<number>(0);
-  const [editableWorkType, setEditableWorkType] = useState<string>('general');
-  const [editableWorkDate, setEditableWorkDate] = useState<string>('');
-  const [workTypeOptions, setWorkTypeOptions] = useState<{ code: string; label: string }[]>([]);
+
+
 
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
