@@ -62,6 +62,11 @@ export interface NoteFormData {
   notifyUserIds: string[];
   notifyClient: boolean;
   elapsedTimerSeconds: number;
+  logTime: boolean;
+  timeDuration: string;
+  timeWorkType: string;
+  timeDate: string;
+  timeBillable: boolean;
 }
 
 export interface ActivePackage {
