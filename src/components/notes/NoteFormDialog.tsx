@@ -233,6 +233,24 @@ export function NoteFormDialog({
   const [draftRestoredAt, setDraftRestoredAt] = useState<Date | null>(null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
+  // Inline time-entry state
+  const [logTime, setLogTime] = useState(false);
+  const [timeWorkType, setTimeWorkType] = useState('general');
+  const [timeDate, setTimeDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [timeBillable, setTimeBillable] = useState(true);
+  const [timeWorkTypeOptions, setTimeWorkTypeOptions] = useState<{ code: string; label: string }[]>([]);
+
+  useEffect(() => {
+    supabase.from('dd_work_types' as any).select('code, label').eq('is_active', true).order('sort_order')
+      .then(({ data }) => {
+        if (data) setTimeWorkTypeOptions(
+          (data as any[])
+            .filter((d) => d.code !== 'parent_defined' && d.code !== 'kickstart_tas')
+            .map((d) => ({ code: d.code, label: d.label }))
+        );
+      });
+  }, []);
+
   // ── Fetch dropdown options if not provided ──
   useEffect(() => {
     if (propTypeOptions) return;
