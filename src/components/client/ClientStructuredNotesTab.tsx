@@ -803,11 +803,14 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 .eq('id', createdNoteId);
             }
 
-            // Also update work_sub_type if provided (RPC doesn't have that param)
-            if (data.timeWorkSubType && latestEntry?.id) {
+            // Also update work_sub_type and package_instance_id (RPC doesn't have those params)
+            if (latestEntry?.id) {
+              const packageInstanceId = selectedPkg?.instance_id ?? activePackages[0]?.instance_id ?? null;
+              const extraUpdate: Record<string, any> = { package_instance_id: packageInstanceId };
+              if (data.timeWorkSubType) extraUpdate.work_sub_type = data.timeWorkSubType;
               await supabase
                 .from('time_entries')
-                .update({ work_sub_type: data.timeWorkSubType } as any)
+                .update(extraUpdate as any)
                 .eq('id', latestEntry.id);
             }
 
