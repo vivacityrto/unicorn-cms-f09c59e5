@@ -359,6 +359,9 @@ export function NoteFormDialog({
 
     if (mode === 'create') {
       resetForm();
+      if (activePackages && activePackages.length > 0) {
+        setSelectedPackageInstanceId(String(activePackages[0].instance_id));
+      }
       // Check for saved draft
       const draft = loadDraft(draftKey);
       if (draft) {
