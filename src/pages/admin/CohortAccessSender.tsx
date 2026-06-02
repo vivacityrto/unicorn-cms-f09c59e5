@@ -86,6 +86,10 @@ export default function CohortAccessSender() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [launching, setLaunching] = useState(false);
+  const [selectedPreviewUuids, setSelectedPreviewUuids] = useState<Set<string>>(new Set());
+
+  // Reset confirmation whenever the recipient selection changes
+  useEffect(() => { setConfirmText(""); }, [selectedPreviewUuids]);
 
   // Jobs list
   const [jobs, setJobs] = useState<JobRow[]>([]);
