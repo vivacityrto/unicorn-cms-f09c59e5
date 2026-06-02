@@ -182,7 +182,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const { tags: availableNoteTags, loading: noteTagsLoading } = useNoteTags();
   const [isPinned, setIsPinned] = useState(false);
   const [selectedPackageInstanceId, setSelectedPackageInstanceId] = useState<string>('none');
-  const [activePackages, setActivePackages] = useState<{ instance_id: number; package_id: number; name: string }[]>([]);
+  const [activePackages, setActivePackages] = useState<{ instance_id: number; package_id: number; name: string; start_date: string }[]>([]);
   const speech = useSpeechToText();
   const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
   const [extractingTitle, setExtractingTitle] = useState(false);
