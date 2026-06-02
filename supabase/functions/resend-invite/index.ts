@@ -68,7 +68,7 @@ serve(async (req) => {
     }
 
     // Parse payload
-    let payload: { invitation_id: string };
+    let payload: { invitation_id: string; skip_email?: boolean };
     try {
       payload = await req.json();
     } catch {
