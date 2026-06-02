@@ -313,3 +313,6 @@ verify_jwt = false
 
 [functions.notify-suggestion-submitted]
 verify_jwt = false
+
+[functions.mailgun-webhook]
+verify_jwt = false
