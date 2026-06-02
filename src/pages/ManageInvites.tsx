@@ -33,6 +33,8 @@ type InviteRow = {
   error_message?: string | null;
   invited_by?: string | null;
   expires_at?: string | null;
+  delivery_status?: 'delivered' | 'bounced' | 'failed' | 'complained' | null;
+  delivery_event_at?: string | null;
 };
 
 type UserStatus = {
