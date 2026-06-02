@@ -65,6 +65,7 @@ export interface NoteFormData {
   logTime: boolean;
   timeDuration: string;
   timeWorkType: string;
+  timeWorkSubType: string;
   timeDate: string;
   timeBillable: boolean;
 }
