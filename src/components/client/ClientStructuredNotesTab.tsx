@@ -1092,6 +1092,12 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             </div>
           </div>
         </CardHeader>
+        {timeEntryError && (
+          <div className="mx-4 mb-3 p-3 rounded-md bg-destructive/10 border border-destructive/30 text-sm text-destructive flex items-start justify-between gap-2">
+            <span><strong>Last time entry failed:</strong> {timeEntryError}</span>
+            <button className="shrink-0 text-xs underline" onClick={() => setTimeEntryError(null)}>Dismiss</button>
+          </div>
+        )}
         <CardContent>
           {/* ClickUp Tasks Panel */}
           {parentTypeFilter === 'clickup' ? (
