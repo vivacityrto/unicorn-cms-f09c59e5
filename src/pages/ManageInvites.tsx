@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck, Calendar, Ban } from "lucide-react";
+import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck, Calendar, Ban, Link as LinkIcon, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -66,6 +66,7 @@ export default function ManageInvites() {
   const [revokeTarget, setRevokeTarget] = useState<InviteRow | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
   const [revoking, setRevoking] = useState(false);
+  const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
   const itemsPerPage = 20;
   const { profile } = useAuth();
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';
@@ -93,6 +94,40 @@ export default function ManageInvites() {
       toast({ title: 'Revoke failed', description: e.message, variant: 'destructive' });
     } finally {
       setRevoking(false);
+    }
+  };
+
+  const handleCopyLink = async (invite: InviteRow) => {
+    setCopyingLinkId(invite.id);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const { data, error: fnError } = await supabase.functions.invoke('resend-invite', {
+        body: { invitation_id: invite.id, skip_email: true },
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (fnError || !data?.action_link) {
+        toast({
+          title: 'Could not generate link',
+          description: fnError?.message || 'The resend-invite function did not return a link.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(data.action_link);
+        toast({ title: 'Link copied', description: 'Paste it into Teams, email, or WhatsApp.' });
+      } catch {
+        toast({ title: 'Link ready', description: data.action_link });
+      }
+    } catch (e: any) {
+      toast({
+        title: 'Could not generate link',
+        description: e?.message || 'The resend-invite function did not return a link.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCopyingLinkId(null);
     }
   };
 
@@ -832,19 +867,36 @@ export default function ManageInvites() {
                       {isSuperAdmin && (
                         <TableCell className="py-6 text-center" onClick={(e) => e.stopPropagation()}>
                           {(invite.status === 'pending' || invite.status === 'sent') && !isVerified ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => {
-                                setRevokeTarget(invite);
-                                setRevokeReason("");
-                                setRevokeDialogOpen(true);
-                              }}
-                            >
-                              <Ban className="h-4 w-4 mr-1" />
-                              Revoke
-                            </Button>
+                            <div className="flex items-center gap-2 justify-center">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                disabled={copyingLinkId === invite.id}
+                                onClick={() => {
+                                  setRevokeTarget(invite);
+                                  setRevokeReason("");
+                                  setRevokeDialogOpen(true);
+                                }}
+                              >
+                                <Ban className="h-4 w-4 mr-1" />
+                                Revoke
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-primary hover:text-primary hover:bg-primary/10"
+                                disabled={copyingLinkId === invite.id}
+                                onClick={() => handleCopyLink(invite)}
+                              >
+                                {copyingLinkId === invite.id ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <LinkIcon className="h-4 w-4 mr-1" />
+                                )}
+                                Copy link
+                              </Button>
+                            </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
