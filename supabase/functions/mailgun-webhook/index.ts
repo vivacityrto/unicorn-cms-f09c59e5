@@ -1,0 +1,168 @@
+// Mailgun delivery webhook. Public endpoint — Mailgun POSTs unauthenticated.
+// Always returns HTTP 200 { ok: true } so Mailgun does not retry.
+// Verifies HMAC-SHA256 signature when MAILGUN_WEBHOOK_SIGNING_KEY is set.
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const ok = () =>
+  new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+async function verifySignature(
+  signingKey: string,
+  timestamp: string,
+  token: string,
+  signature: string,
+): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(signingKey),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(String(timestamp) + String(token)),
+  );
+  const hex = Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return hex === signature;
+}
+
+function mapEvent(
+  event: string,
+  severity: string | undefined,
+): "delivered" | "bounced" | "failed" | "complained" | null {
+  if (event === "delivered") return "delivered";
+  if (event === "complained") return "complained";
+  if (event === "failed") {
+    if (severity === "permanent") return "bounced";
+    if (severity === "temporary") return "failed";
+  }
+  return null;
+}
+
+serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    const body = await req.json().catch(() => null) as any;
+    if (!body || typeof body !== "object") {
+      console.log("mailgun-webhook: invalid JSON body");
+      return ok();
+    }
+
+    // Signature verification
+    const signingKey = Deno.env.get("MAILGUN_WEBHOOK_SIGNING_KEY");
+    const sigBlock = body.signature;
+    if (signingKey) {
+      if (
+        !sigBlock?.timestamp || !sigBlock?.token || !sigBlock?.signature ||
+        !(await verifySignature(
+          signingKey,
+          String(sigBlock.timestamp),
+          String(sigBlock.token),
+          String(sigBlock.signature),
+        ))
+      ) {
+        console.log("mailgun-webhook: invalid signature, ignoring");
+        return ok();
+      }
+    } else {
+      console.warn(
+        "mailgun-webhook: MAILGUN_WEBHOOK_SIGNING_KEY not set — skipping signature verification",
+      );
+    }
+
+    const ed = body["event-data"] ?? {};
+    const event: string | undefined = ed.event;
+    const severity: string | undefined = ed.severity;
+    const timestamp: number = typeof ed.timestamp === "number"
+      ? ed.timestamp
+      : Number(ed.timestamp);
+
+    const headers = ed?.message?.headers ?? {};
+    let messageId: string | undefined = headers["message-id"];
+    if (!messageId || !event) {
+      console.log("mailgun-webhook: missing event or message-id", { event });
+      return ok();
+    }
+
+    messageId = String(messageId).trim();
+    if (messageId.startsWith("<") && messageId.endsWith(">")) {
+      messageId = messageId.slice(1, -1);
+    }
+
+    const status = mapEvent(event, severity);
+    if (!status) {
+      console.log("mailgun-webhook: ignored event", { event, severity });
+      return ok();
+    }
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const { data: invite, error: lookupErr } = await supabase
+      .from("user_invitations")
+      .select("id")
+      .eq("mailgun_message_id", messageId)
+      .limit(1)
+      .maybeSingle();
+
+    if (lookupErr) {
+      console.log("mailgun-webhook: lookup error", lookupErr.message);
+      return ok();
+    }
+    if (!invite) {
+      console.log("mailgun-webhook: no invitation for message-id", messageId);
+      return ok();
+    }
+
+    const eventAtIso = Number.isFinite(timestamp)
+      ? new Date(timestamp * 1000).toISOString()
+      : new Date().toISOString();
+
+    const { error: updateErr } = await supabase
+      .from("user_invitations")
+      .update({
+        delivery_status: status,
+        delivery_event_at: eventAtIso,
+      })
+      .eq("id", invite.id);
+
+    if (updateErr) {
+      console.log("mailgun-webhook: update error", updateErr.message);
+      return ok();
+    }
+
+    console.log("mailgun-webhook: updated invitation", {
+      invitation_id: invite.id,
+      delivery_status: status,
+      event,
+      severity,
+    });
+    return ok();
+  } catch (err) {
+    console.log("mailgun-webhook: unexpected error", (err as Error).message);
+    return ok();
+  }
+});
