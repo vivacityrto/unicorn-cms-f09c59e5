@@ -721,15 +721,8 @@ export function NoteFormDialog({
               </div>
             )}
 
-            {/* Duration row */}
-            {showsDuration && (
-              <div className="grid gap-4 grid-cols-1 max-w-xs">
-                <div className="space-y-2">
-                  <Label>Duration (mins)</Label>
-                  <Input type="number" min={0} step={15} value={duration} onChange={e => setDuration(e.target.value)} placeholder="0" />
-                </div>
-              </div>
-            )}
+
+
 
             {/* Title */}
             <div className="space-y-2">
