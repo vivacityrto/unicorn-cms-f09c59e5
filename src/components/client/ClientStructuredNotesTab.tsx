@@ -182,7 +182,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const { tags: availableNoteTags, loading: noteTagsLoading } = useNoteTags();
   const [isPinned, setIsPinned] = useState(false);
   const [selectedPackageInstanceId, setSelectedPackageInstanceId] = useState<string>('none');
-  const [activePackages, setActivePackages] = useState<{ instance_id: number; package_id: number; name: string }[]>([]);
+  const [activePackages, setActivePackages] = useState<{ instance_id: number; package_id: number; name: string; start_date: string }[]>([]);
   const speech = useSpeechToText();
   const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
   const [extractingTitle, setExtractingTitle] = useState(false);
@@ -306,9 +306,11 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     const fetchActivePackages = async () => {
       const { data: instances } = await supabase
         .from('package_instances')
-        .select('id, package_id')
+        .select('id, package_id, start_date')
         .eq('tenant_id', tenantId)
-        .eq('is_complete', false);
+        .eq('is_complete', false)
+        .eq('is_active', true)
+        .order('start_date', { ascending: false });
 
       if (!instances || instances.length === 0) {
         setActivePackages([]);
@@ -329,8 +331,13 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       setActivePackages(
         instances
           .filter(i => i.package_id && pkgMap.has(i.package_id))
-          .map(i => ({ instance_id: i.id, package_id: i.package_id!, name: pkgMap.get(i.package_id!)! }))
-          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(i => ({
+            instance_id: i.id,
+            package_id: i.package_id!,
+            name: pkgMap.get(i.package_id!)!,
+            start_date: i.start_date ?? '',
+          }))
+          .sort((a, b) => b.start_date.localeCompare(a.start_date))
       );
     };
     fetchActivePackages();
@@ -762,7 +769,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             p_client_id: tenantId,
             p_duration_minutes: durationMins,
             p_date: data.timeDate,
-            p_package_id: null,
+            p_package_id: selectedPkg?.package_id ?? activePackages[0]?.package_id ?? null,
             p_stage_id: null,
             p_task_id: null,
             p_work_type: data.timeWorkType,
@@ -796,11 +803,14 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 .eq('id', createdNoteId);
             }
 
-            // Also update work_sub_type if provided (RPC doesn't have that param)
-            if (data.timeWorkSubType && latestEntry?.id) {
+            // Also update work_sub_type and package_instance_id (RPC doesn't have those params)
+            if (latestEntry?.id) {
+              const packageInstanceId = selectedPkg?.instance_id ?? activePackages[0]?.instance_id ?? null;
+              const extraUpdate: Record<string, any> = { package_instance_id: packageInstanceId };
+              if (data.timeWorkSubType) extraUpdate.work_sub_type = data.timeWorkSubType;
               await supabase
                 .from('time_entries')
-                .update({ work_sub_type: data.timeWorkSubType } as any)
+                .update(extraUpdate as any)
                 .eq('id', latestEntry.id);
             }
 
