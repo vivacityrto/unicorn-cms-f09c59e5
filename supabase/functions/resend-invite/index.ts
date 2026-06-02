@@ -150,8 +150,8 @@ serve(async (req) => {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const newTokenHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    // New expiration: 24 hours from now
-    const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    // New expiration: 7 days from now
+    const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     // 8. Update invitation with new token and expiration
     const { error: updateErr } = await supabase
@@ -161,6 +161,8 @@ serve(async (req) => {
         expires_at: newExpiresAt.toISOString(),
         last_sent_at: new Date().toISOString(),
         status: 'pending', // Reset to pending in case it was expired
+        delivery_status: null,
+        delivery_event_at: null,
       })
       .eq("id", payload.invitation_id);
 
