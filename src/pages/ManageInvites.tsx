@@ -97,6 +97,40 @@ export default function ManageInvites() {
     }
   };
 
+  const handleCopyLink = async (invite: InviteRow) => {
+    setCopyingLinkId(invite.id);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const { data, error: fnError } = await supabase.functions.invoke('resend-invite', {
+        body: { invitation_id: invite.id, skip_email: true },
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (fnError || !data?.action_link) {
+        toast({
+          title: 'Could not generate link',
+          description: fnError?.message || 'The resend-invite function did not return a link.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(data.action_link);
+        toast({ title: 'Link copied', description: 'Paste it into Teams, email, or WhatsApp.' });
+      } catch {
+        toast({ title: 'Link ready', description: data.action_link });
+      }
+    } catch (e: any) {
+      toast({
+        title: 'Could not generate link',
+        description: e?.message || 'The resend-invite function did not return a link.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCopyingLinkId(null);
+    }
+  };
+
   const fetchInvites = async () => {
     try {
       const { data, error: fetchError } = await supabase
