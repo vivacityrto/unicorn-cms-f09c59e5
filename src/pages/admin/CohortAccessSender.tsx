@@ -86,6 +86,10 @@ export default function CohortAccessSender() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [launching, setLaunching] = useState(false);
+  const [selectedPreviewUuids, setSelectedPreviewUuids] = useState<Set<string>>(new Set());
+
+  // Reset confirmation whenever the recipient selection changes
+  useEffect(() => { setConfirmText(""); }, [selectedPreviewUuids]);
 
   // Jobs list
   const [jobs, setJobs] = useState<JobRow[]>([]);
@@ -135,11 +139,13 @@ export default function CohortAccessSender() {
   }, [tenants, tenantQuery]);
 
   const runPreview = async () => {
-    setPreviewLoading(true); setPreview(null); setConfirmText("");
+    setPreviewLoading(true); setPreview(null); setConfirmText(""); setSelectedPreviewUuids(new Set());
     try {
       const { data, error } = await supabase.rpc("resolve_cohort", { p_filter: filterJson, p_cap: cap });
       if (error) throw error;
-      setPreview((data || []) as ResolvedRow[]);
+      const rows = (data || []) as ResolvedRow[];
+      setPreview(rows);
+      setSelectedPreviewUuids(new Set(rows.map((r) => r.user_uuid)));
     } catch (e: any) {
       toast({ title: "Preview failed", description: e?.message || String(e), variant: "destructive" });
     } finally {
@@ -151,6 +157,7 @@ export default function CohortAccessSender() {
     if (!preview) return null;
     const counts = { activate: 0, reset: 0, skip_disabled: 0, skip_state_mismatch: 0 };
     for (const r of preview) {
+      if (!selectedPreviewUuids.has(r.user_uuid)) continue;
       if (r.account_state === "disabled") counts.skip_disabled++;
       else if (r.account_state === "ghost") {
         if (action === "activate") counts.activate++; else counts.skip_state_mismatch++;
@@ -161,7 +168,7 @@ export default function CohortAccessSender() {
     const will_send = action === "activate" ? counts.activate : counts.reset;
     const will_skip = counts.skip_disabled + counts.skip_state_mismatch;
     return { ...counts, will_send, will_skip, total: preview.length, truncated: preview[0]?.truncated || false };
-  }, [preview, action]);
+  }, [preview, action, selectedPreviewUuids]);
 
   const expectedConfirm = previewSummary ? `Send to ${previewSummary.will_send} people` : "";
 
@@ -173,6 +180,8 @@ export default function CohortAccessSender() {
     }
     setLaunching(true);
     try {
+      const totalResolved = preview?.length ?? 0;
+      const selectionDiffers = selectedPreviewUuids.size !== totalResolved;
       const { data, error } = await supabase.rpc("launch_cohort_job", {
         p_action: action,
         p_filter: filterJson,
@@ -180,6 +189,7 @@ export default function CohortAccessSender() {
         p_batch_size: batchSize,
         p_throttle_ms: throttle,
         p_notes: notes || null,
+        p_include_uuids: selectionDiffers ? Array.from(selectedPreviewUuids) : null,
       });
       if (error) throw error;
       const jobId = data as string;
@@ -356,6 +366,16 @@ export default function CohortAccessSender() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={preview!.length > 0 && selectedPreviewUuids.size === preview!.length}
+                            onCheckedChange={(checked) => {
+                              if (checked) setSelectedPreviewUuids(new Set(preview!.map((r) => r.user_uuid)));
+                              else setSelectedPreviewUuids(new Set());
+                            }}
+                            aria-label="Select all recipients"
+                          />
+                        </TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Tenant</TableHead>
                         <TableHead>State</TableHead>
@@ -365,6 +385,20 @@ export default function CohortAccessSender() {
                     <TableBody>
                       {preview!.slice(0, 25).map((r) => (
                         <TableRow key={r.user_uuid}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedPreviewUuids.has(r.user_uuid)}
+                              onCheckedChange={(checked) => {
+                                setSelectedPreviewUuids((prev) => {
+                                  const next = new Set(prev);
+                                  if (checked) next.add(r.user_uuid);
+                                  else next.delete(r.user_uuid);
+                                  return next;
+                                });
+                              }}
+                              aria-label={`Select ${r.email}`}
+                            />
+                          </TableCell>
                           <TableCell className="text-xs">{r.email}</TableCell>
                           <TableCell className="text-xs">{r.tenant_name ?? r.tenant_id ?? "—"}</TableCell>
                           <TableCell><Badge variant="outline">{r.account_state}</Badge></TableCell>
@@ -374,14 +408,24 @@ export default function CohortAccessSender() {
                     </TableBody>
                   </Table>
                   {preview!.length > 25 && (
-                    <p className="text-xs text-muted-foreground p-2">Showing first 25 of {preview!.length}.</p>
+                    <p className="text-xs text-muted-foreground p-2">
+                      Showing first 25 of {preview!.length}. Select All applies to all {preview!.length} rows.
+                    </p>
                   )}
                 </div>
 
                 <div className="space-y-2 pt-2">
+                  <p className="text-xs text-muted-foreground">
+                    {selectedPreviewUuids.size} of {preview!.length} recipients selected.
+                  </p>
+                  {selectedPreviewUuids.size === 0 && (
+                    <Alert variant="destructive">
+                      <AlertDescription>No recipients selected.</AlertDescription>
+                    </Alert>
+                  )}
                   <Label className="text-sm">Type to confirm: <code className="font-mono">{expectedConfirm}</code></Label>
                   <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder={expectedConfirm} />
-                  <Button onClick={launch} disabled={launching || confirmText.trim() !== expectedConfirm || previewSummary.will_send === 0}>
+                  <Button onClick={launch} disabled={launching || confirmText.trim() !== expectedConfirm || previewSummary.will_send === 0 || selectedPreviewUuids.size === 0}>
                     {launching ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Launching…</> : <><Send className="h-4 w-4 mr-2" />Launch job</>}
                   </Button>
                 </div>
