@@ -28,8 +28,9 @@ interface ClientPreviewContextValue {
   loading: boolean;
   actingUserId: string | null;
   actingUserOptions: ActingUserOption[];
+  returnPath: string | null;
 
-  startPreview: (tenantId: number, reason?: string, actingUserId?: string | null) => Promise<boolean>;
+  startPreview: (tenantId: number, reason?: string, actingUserId?: string | null, returnPath?: string | null) => Promise<boolean>;
   endPreview: () => Promise<void>;
   setActingUserId: (uuid: string | null) => void;
   fetchActingUserOptions: (tenantId: number) => Promise<ActingUserOption[]>;
