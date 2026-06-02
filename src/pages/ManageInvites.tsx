@@ -19,6 +19,7 @@ import ReInviteDialog from "@/components/admin/ReInviteDialog";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { useRBAC } from "@/hooks/useRBAC";
 import { relationshipRoleLabel, relationshipLabelFromUnicornRole } from "@/lib/roles/relationshipRole";
 
 type InviteRow = {
