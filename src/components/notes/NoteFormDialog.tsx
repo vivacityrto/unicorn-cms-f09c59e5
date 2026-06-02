@@ -854,45 +854,6 @@ export function NoteFormDialog({
               />
             </div>
 
-            {/* Log Time Entry */}
-            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-              <div className="flex items-center gap-2">
-                <Switch id="log-time" checked={logTime} onCheckedChange={setLogTime} />
-                <Label htmlFor="log-time" className="cursor-pointer font-medium text-sm flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" />
-                  Log time entry with this note
-                </Label>
-              </div>
-              {logTime && (
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Duration (minutes)</Label>
-                    <Input type="number" min={0} step={5} value={duration} onChange={e => setDuration(e.target.value)} placeholder="0" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Work Type</Label>
-                    <Select value={timeWorkType} onValueChange={setTimeWorkType}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-background">
-                        {timeWorkTypeOptions.map(opt => (
-                          <SelectItem key={opt.code} value={opt.code}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Date</Label>
-                    <Input type="date" value={timeDate} onChange={e => setTimeDate(e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5 flex items-end">
-                    <div className="flex items-center gap-2 pb-2">
-                      <Switch id="time-billable" checked={timeBillable} onCheckedChange={setTimeBillable} />
-                      <Label htmlFor="time-billable" className="cursor-pointer text-sm">Billable</Label>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
 
 
 
