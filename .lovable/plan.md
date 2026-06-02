@@ -1,60 +1,58 @@
-## Goal
-Route shared-root uploads into a dedicated `- Uploads` subfolder under the tenant's shared root in SharePoint, auto-creating it on first use.
+### 1. Frontend — `src/pages/admin/CohortAccessSender.tsx`
 
-## Changes
+- **State**: `const [selectedPreviewUuids, setSelectedPreviewUuids] = useState<Set<string>>(new Set())`.
+- After `setPreview(data)` in `runPreview`, call `setSelectedPreviewUuids(new Set(data.map(r => r.user_uuid)))` (all opted-in by default). Also clear it in any flow that clears `preview`.
+- **Checkbox column** as first column of preview table:
+  - Header: master checkbox driving Select All / Deselect All across the full resolved array (not just the visible `.slice(0, 25)`), matching the existing tenant picker checkbox pattern. Show indeterminate / checked when `selectedPreviewUuids.size === preview.length`.
+  - Body: per-row `Checkbox` toggling `user_uuid` membership in the set.
+- **previewSummary** counts only rows where `selectedPreviewUuids.has(r.user_uuid)`. Badges and `expectedConfirm` derive from this.
+- **Selection-change side effect**: a `useEffect` on `selectedPreviewUuids` calls `setConfirmText("")` so the user must retype confirmation whenever selection changes.
+- **Launch**:
+  - Pass `p_include_uuids: Array.from(selectedPreviewUuids)` to the `launch_cohort_job` RPC only when the selection differs from the full resolved set (otherwise omit / pass `null`).
+  - Disable Launch button when `selectedPreviewUuids.size === 0` and show inline warning: "No recipients selected."
 
-**File:** `supabase/functions/upload-sharepoint-file/index.ts`
+**Unchanged**: filter UI, `resolve_cohort` call, recent jobs list, job results table, toasts, navigation.
 
-### 1. Add `findOrCreateUploadsFolder` helper
-A new async function near the other Graph helpers:
-- `GET /v1.0/drives/{drive_id}/items/{rootId}/children?$select=id,name,folder&$filter=name eq '- Uploads'`
-- If `value[0]` exists and has a truthy `folder` property, return its `id`.
-- Otherwise `POST /v1.0/drives/{drive_id}/items/{rootId}/children` with:
-  ```json
-  { "name": "- Uploads", "folder": {}, "@microsoft.graph.conflictBehavior": "fail" }
-  ```
-  Return the created item's `id`.
-- Any non-OK Graph response throws; caller maps to 502.
+### 2. Migration — extend `public.launch_cohort_job`
 
-### 2. Wire it in after token acquisition (~line 180)
-After `accessToken = await getAppToken()` succeeds, and before the boundary check:
+Replace the existing function with one extra trailing parameter:
 
-```ts
-let parentFolderId = explicitParent || effectiveRootId;
-
-if (useSharedRoot) {
-  let uploadsTargetId: string;
-  try {
-    uploadsTargetId = await findOrCreateUploadsFolder(
-      accessToken,
-      drive_id,
-      effectiveRootId,
-    );
-  } catch (e) {
-    console.error("[upload-sp] Uploads folder resolve failed:", e);
-    return jsonResponse(502, { error: "Failed to resolve uploads folder" });
-  }
-  parentFolderId = uploadsTargetId; // overrides any explicitParent
-}
+```sql
+CREATE OR REPLACE FUNCTION public.launch_cohort_job(
+  p_action       text,
+  p_filter       jsonb,
+  p_cap          int    DEFAULT 1000,
+  p_batch_size   int    DEFAULT 10,
+  p_throttle_ms  int    DEFAULT 400,
+  p_notes        text   DEFAULT NULL,
+  p_include_uuids uuid[] DEFAULT NULL
+)
 ```
 
-`parentFolderId` (currently `const` at line 164) becomes `let`, or is moved/reassigned in this block.
+Inside the `resolved` CTE add a filter:
 
-### 3. Skip boundary check when `useSharedRoot`
-Update the guard at line 182:
-```ts
-if (!useSharedRoot && explicitParent && explicitParent !== effectiveRootId) {
-  // existing verifyWithinRoot call unchanged
-}
+```sql
+WITH resolved AS (
+  SELECT *
+  FROM public.resolve_cohort(p_filter, LEAST(GREATEST(COALESCE(p_cap,1000),1),1000)) r
+  WHERE p_include_uuids IS NULL OR r.user_uuid = ANY(p_include_uuids)
+)
 ```
-Rationale: the `- Uploads` folder is created as a direct child of `effectiveRootId`, so traversal is unnecessary.
 
-## Out of scope
-- No frontend changes — `ClientFilesPage.tsx` keeps sending `parent_folder_id`; it is now ignored when `useSharedRoot` is true.
-- No DB migrations, no new env vars, no changes to non-shared-root upload flow.
+Everything else in the function body is preserved verbatim (job insert, item insert with routing matrix, totals update, audit row). Behaviour with `p_include_uuids = NULL` is identical to today.
 
-## Verification
-- Upload with `useSharedFolder=true` on a tenant with no existing `- Uploads` folder → folder created, file lands inside it.
-- Upload again → existing folder reused (no duplicate, no error).
-- Upload with `useSharedFolder=false` → behaviour unchanged.
-- Simulated Graph 5xx on find/create → 502 `{ error: "Failed to resolve uploads folder" }`.
+Re-issue grants for the new signature:
+
+```sql
+REVOKE ALL    ON FUNCTION public.launch_cohort_job(text,jsonb,int,int,int,text,uuid[]) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.launch_cohort_job(text,jsonb,int,int,int,text,uuid[]) TO authenticated;
+```
+
+Drop the old 6-arg signature to avoid ambiguity:
+
+```sql
+DROP FUNCTION IF EXISTS public.launch_cohort_job(text,jsonb,int,int,int,text);
+```
+
+### Out of scope
+No changes to `resolve_cohort`, `lease_cohort_job_items`, tables, RLS, or any other RPC. No new env vars or secrets.
