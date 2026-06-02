@@ -439,8 +439,8 @@ export default function ManageInvites() {
       (statusFilter === "sent" && invite.status === "sent") ||
       (statusFilter === "failed" && invite.status === "failed") ||
       (statusFilter === "expired" && (invite.status === "expired" || isExpired)) ||
-      (statusFilter === "verified" && invite.status === "sent" && userStatuses.get(invite.email)?.email_confirmed_at) ||
-      (statusFilter === "pending" && (invite.status === "pending" || (invite.status === "sent" && !userStatuses.get(invite.email)?.email_confirmed_at))) ||
+      (statusFilter === "verified" && userStatuses.get(invite.email)?.is_in_auth === true) ||
+      (statusFilter === "pending" && (invite.status === "pending" || invite.status === "sent") && !isExpired && !userStatuses.get(invite.email)?.is_in_auth) ||
       (statusFilter === "bounced" && invite.delivery_status === 'bounced') ||
       (statusFilter === "delivery-failed" && invite.delivery_status === 'failed') ||
       (statusFilter === "spam" && invite.delivery_status === 'complained');
