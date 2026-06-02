@@ -65,6 +65,7 @@ export interface NoteFormData {
   logTime: boolean;
   timeDuration: string;
   timeWorkType: string;
+  timeWorkSubType: string;
   timeDate: string;
   timeBillable: boolean;
 }
@@ -234,11 +235,13 @@ export function NoteFormDialog({
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   // Inline time-entry state
-  const [logTime, setLogTime] = useState(false);
+  const [logTime, setLogTime] = useState(true);
   const [timeWorkType, setTimeWorkType] = useState('general');
+  const [timeWorkSubType, setTimeWorkSubType] = useState('');
   const [timeDate, setTimeDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [timeBillable, setTimeBillable] = useState(true);
   const [timeWorkTypeOptions, setTimeWorkTypeOptions] = useState<{ code: string; label: string }[]>([]);
+  const [timeWorkSubTypeOptions, setTimeWorkSubTypeOptions] = useState<{ code: string; label: string; category: string }[]>([]);
 
   useEffect(() => {
     supabase.from('dd_work_types' as any).select('code, label').eq('is_active', true).order('sort_order')
@@ -249,7 +252,23 @@ export function NoteFormDialog({
             .map((d) => ({ code: d.code, label: d.label }))
         );
       });
+    supabase.from('dd_work_sub_type' as any).select('code, label, category').eq('is_active', true).order('sort_order')
+      .then(({ data }) => { if (data) setTimeWorkSubTypeOptions(data as any[]); });
   }, []);
+
+  // Reset sub type whenever work type changes
+  useEffect(() => {
+    setTimeWorkSubType('');
+  }, [timeWorkType]);
+
+  const subTypeCategory =
+    timeWorkType === 'consultation' ? 'consultation'
+    : (timeWorkType === 'document_review' || timeWorkType === 'document_development') ? 'document'
+    : timeWorkType === 'meeting' ? 'meeting'
+    : null;
+  const filteredSubTypes = subTypeCategory
+    ? timeWorkSubTypeOptions.filter(o => o.category === subTypeCategory)
+    : [];
 
   // ── Fetch dropdown options if not provided ──
   useEffect(() => {
@@ -327,8 +346,9 @@ export function NoteFormDialog({
     setSelectedPackageInfo(null);
     setDraftRestored(false);
     setDraftRestoredAt(null);
-    setLogTime(false);
+    setLogTime(true);
     setTimeWorkType('general');
+    setTimeWorkSubType('');
     setTimeDate(new Date().toISOString().slice(0, 10));
     setTimeBillable(true);
   }, []);
@@ -339,6 +359,9 @@ export function NoteFormDialog({
 
     if (mode === 'create') {
       resetForm();
+      if (activePackages && activePackages.length > 0) {
+        setSelectedPackageInstanceId(String(activePackages[0].instance_id));
+      }
       // Check for saved draft
       const draft = loadDraft(draftKey);
       if (draft) {
@@ -552,6 +575,7 @@ export function NoteFormDialog({
         logTime,
         timeDuration: duration,
         timeWorkType,
+        timeWorkSubType,
         timeDate,
         timeBillable,
       });
@@ -722,6 +746,59 @@ export function NoteFormDialog({
             )}
 
 
+            {/* Log Time Entry */}
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Switch id="log-time" checked={logTime} onCheckedChange={setLogTime} />
+                <Label htmlFor="log-time" className="cursor-pointer font-medium text-sm flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  Log time entry with this note
+                </Label>
+              </div>
+              {logTime && (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Duration (minutes)</Label>
+                    <Input type="number" min={0} step={5} value={duration} onChange={e => setDuration(e.target.value)} placeholder="0" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Work Type</Label>
+                    <Select value={timeWorkType} onValueChange={setTimeWorkType}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-background">
+                        {timeWorkTypeOptions.map(opt => (
+                          <SelectItem key={opt.code} value={opt.code}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {filteredSubTypes.length > 0 && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Sub Type</Label>
+                      <Select value={timeWorkSubType || '__none__'} onValueChange={(v) => setTimeWorkSubType(v === '__none__' ? '' : v)}>
+                        <SelectTrigger><SelectValue placeholder="Select sub type..." /></SelectTrigger>
+                        <SelectContent className="bg-background">
+                          <SelectItem value="__none__">None</SelectItem>
+                          {filteredSubTypes.map(opt => (
+                            <SelectItem key={opt.code} value={opt.code}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Date</Label>
+                    <Input type="date" value={timeDate} onChange={e => setTimeDate(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5 flex items-end">
+                    <div className="flex items-center gap-2 pb-2">
+                      <Switch id="time-billable" checked={timeBillable} onCheckedChange={setTimeBillable} />
+                      <Label htmlFor="time-billable" className="cursor-pointer text-sm">Billable</Label>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
 
             {/* Title */}
@@ -777,45 +854,6 @@ export function NoteFormDialog({
               />
             </div>
 
-            {/* Log Time Entry */}
-            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-              <div className="flex items-center gap-2">
-                <Switch id="log-time" checked={logTime} onCheckedChange={setLogTime} />
-                <Label htmlFor="log-time" className="cursor-pointer font-medium text-sm flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" />
-                  Log time entry with this note
-                </Label>
-              </div>
-              {logTime && (
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Duration (minutes)</Label>
-                    <Input type="number" min={0} step={5} value={duration} onChange={e => setDuration(e.target.value)} placeholder="0" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Work Type</Label>
-                    <Select value={timeWorkType} onValueChange={setTimeWorkType}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-background">
-                        {timeWorkTypeOptions.map(opt => (
-                          <SelectItem key={opt.code} value={opt.code}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Date</Label>
-                    <Input type="date" value={timeDate} onChange={e => setTimeDate(e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5 flex items-end">
-                    <div className="flex items-center gap-2 pb-2">
-                      <Switch id="time-billable" checked={timeBillable} onCheckedChange={setTimeBillable} />
-                      <Label htmlFor="time-billable" className="cursor-pointer text-sm">Billable</Label>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
 
 
 

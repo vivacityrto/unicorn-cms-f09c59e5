@@ -762,6 +762,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 user_id: userData.user.id,
                 duration_minutes: parseInt(data.timeDuration, 10),
                 work_type: data.timeWorkType,
+                work_sub_type: data.timeWorkSubType || null,
                 notes: data.title || data.content.substring(0, 100),
                 is_billable: data.timeBillable,
                 start_at: `${data.timeDate}T00:00:00`,
