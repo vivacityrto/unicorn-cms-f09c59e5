@@ -710,6 +710,9 @@ export default function ManageInvites() {
                   {statusFilter === "expired" && "Expired"}
                   {statusFilter === "verified" && "Verified"}
                   {statusFilter === "failed" && "Failed"}
+                  {statusFilter === "bounced" && "Bounced"}
+                  {statusFilter === "delivery-failed" && "Delivery failed"}
+                  {statusFilter === "spam" && "Spam report"}
                 </span>
                 <Filter className="h-4 w-4 ml-2 text-muted-foreground/60 shrink-0" />
               </Button>
