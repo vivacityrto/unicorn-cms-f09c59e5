@@ -180,6 +180,8 @@ export default function CohortAccessSender() {
     }
     setLaunching(true);
     try {
+      const totalResolved = preview?.length ?? 0;
+      const selectionDiffers = selectedPreviewUuids.size !== totalResolved;
       const { data, error } = await supabase.rpc("launch_cohort_job", {
         p_action: action,
         p_filter: filterJson,
@@ -187,6 +189,7 @@ export default function CohortAccessSender() {
         p_batch_size: batchSize,
         p_throttle_ms: throttle,
         p_notes: notes || null,
+        p_include_uuids: selectionDiffers ? Array.from(selectedPreviewUuids) : null,
       });
       if (error) throw error;
       const jobId = data as string;
