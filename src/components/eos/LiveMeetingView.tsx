@@ -19,11 +19,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   Play, SkipForward, SkipBack, CheckCircle, Clock, Users, X, Target, 
   TrendingUp, AlertCircle, ListTodo, MessageSquare, Sparkles,
-  ArrowRight, Timer, PlayCircle, Star, LogOut, Eye, Loader2
+  ArrowRight, Timer, PlayCircle, Star, LogOut, Eye, Loader2, Pencil
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
+import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { ClientBadge } from '@/components/eos/ClientBadge';
 import { ScorecardEntryGrid } from '@/components/eos/ScorecardEntryGrid';
 import { IssuesQueue } from '@/components/eos/IssuesQueue';
@@ -50,6 +51,8 @@ export const LiveMeetingView = () => {
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [facilitatorDialogOpen, setFacilitatorDialogOpen] = useState(false);
+  const [editingRock, setEditingRock] = useState<any>(null);
+  const [rockFormOpen, setRockFormOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
   const [cascadingMessages, setCascadingMessages] = useState('');
   const isNavigatingRef = useRef(false);
@@ -523,7 +526,17 @@ export const LiveMeetingView = () => {
                           Due: {rock.due_date ? new Date(rock.due_date).toLocaleDateString() : 'Not set'}
                         </span>
                       </div>
-                      <RockProgressControl rock={rock} compact />
+                      <div className="flex items-center gap-2">
+                        <RockProgressControl rock={rock} compact />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => { setEditingRock(rock); setRockFormOpen(true); }}
+                          aria-label="Edit rock"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -1104,6 +1117,12 @@ export const LiveMeetingView = () => {
         meetingId={meetingId!}
         onStartMeeting={() => startFirstSegment.mutate()}
         isStarting={startFirstSegment.isPending}
+      />
+
+      <RockFormDialog
+        open={rockFormOpen}
+        onOpenChange={(open) => { setRockFormOpen(open); if (!open) setEditingRock(null); }}
+        rock={editingRock}
       />
     </div>
   );
