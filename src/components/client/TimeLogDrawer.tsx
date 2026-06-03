@@ -30,7 +30,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Checkbox } from '@/components/ui/checkbox';
+
 import { 
   MoreHorizontal, 
   Trash2, 
@@ -191,7 +191,8 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-3xl flex flex-col h-full overflow-hidden">
+        <div className="flex-shrink-0 space-y-4 pb-2">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
@@ -299,8 +300,10 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
           </div>
         )}
 
+        </div>
+
         {/* Entries table */}
-        <div className="overflow-x-auto">
+        <div className="flex-1 overflow-auto min-h-0">
           {loading ? (
             <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
@@ -316,15 +319,6 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      checked={selectedIds.size > 0 && selectedIds.size === filteredEntries.length}
-                      onCheckedChange={(checked) => {
-                        if (checked) setSelectedIds(new Set(filteredEntries.map(e => e.id)));
-                        else setSelectedIds(new Set());
-                      }}
-                    />
-                  </TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead>Type</TableHead>
@@ -335,18 +329,20 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
               </TableHeader>
               <TableBody>
                 {filteredEntries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(entry.id)}
-                        onCheckedChange={(checked) => {
-                          const next = new Set(selectedIds);
-                          if (checked) next.add(entry.id);
-                          else next.delete(entry.id);
-                          setSelectedIds(next);
-                        }}
-                      />
-                    </TableCell>
+                  <TableRow
+                    key={entry.id}
+                    onClick={() => {
+                      const next = new Set(selectedIds);
+                      if (next.has(entry.id)) next.delete(entry.id);
+                      else next.add(entry.id);
+                      setSelectedIds(next);
+                    }}
+                    className={`cursor-pointer transition-colors ${
+                      selectedIds.has(entry.id)
+                        ? 'bg-primary/10 hover:bg-primary/15'
+                        : 'hover:bg-muted/50'
+                    }`}
+                  >
                     <TableCell>
                       <div>
                         <p className="font-medium">
@@ -382,7 +378,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {editingEntryId === entry.id ? (
                         <div className="flex items-center gap-1">
                           <Select value={editPackageInstanceId} onValueChange={setEditPackageInstanceId}>
@@ -430,7 +426,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                         <FileEdit className="h-4 w-4 text-muted-foreground" />
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {canEdit(entry) && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
