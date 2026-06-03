@@ -301,7 +301,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
         </div>
 
         {/* Entries table */}
-        <div className="flex-1 min-h-0 overflow-auto">
+        <div className="overflow-auto h-[calc(100vh-280px)]">
           {loading ? (
             <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
