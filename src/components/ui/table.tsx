@@ -10,9 +10,13 @@ import { cn } from "@/lib/utils";
  * Row padding: 12-16px
  * Status chips: semantic mapping only
  */
-const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className="relative w-full overscroll-x-contain">
+interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  wrapperClassName?: string;
+}
+
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, wrapperClassName, ...props }, ref) => (
+    <div className={cn("relative w-full overflow-x-auto overscroll-x-contain", wrapperClassName)}>
       <table 
         ref={ref} 
         className={cn(
