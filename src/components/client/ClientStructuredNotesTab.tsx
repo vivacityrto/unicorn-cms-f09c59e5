@@ -770,74 +770,37 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       // Inline time entry creation when user opted in via the form
       if (!selectedNote && data.logTime && data.timeDuration && parseInt(data.timeDuration, 10) > 0 && createdNoteId) {
         try {
-          const durationMins = parseInt(data.timeDuration, 10);
-
-          // Use RPC (SECURITY DEFINER) to bypass RLS on time_entries
-          const { error: rpcError } = await supabase.rpc('rpc_add_time_entry' as any, {
-            p_tenant_id: tenantId,
-            p_client_id: tenantId,
-            p_duration_minutes: durationMins,
-            p_date: data.timeDate,
-            p_package_id: selectedPkg?.package_id ?? activePackages[0]?.package_id ?? null,
-            p_stage_id: null,
-            p_task_id: null,
-            p_work_type: data.timeWorkType,
-            p_notes: data.title || data.content.substring(0, 100),
-            p_is_billable: data.timeBillable,
-          });
-
-          if (rpcError) {
-            console.error('[NoteTimeEntry] RPC error:', rpcError);
-            setTimeEntryError(rpcError.message);
-            toast({
-              title: 'Note saved — time entry failed',
-              description: rpcError.message,
-              variant: 'destructive',
-              duration: 10000,
-            });
-          } else {
-            // RPC doesn't return the new entry id directly; fetch the most recent entry for this client to get the id for linking
-            const { data: latestEntry } = await supabase
-              .from('time_entries')
-              .select('id')
-              .eq('client_id', tenantId)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-
-            if (latestEntry?.id) {
-              await supabase
-                .from('notes')
-                .update({ timeentry_id: latestEntry.id } as any)
-                .eq('id', createdNoteId);
-            }
-
-            // Also update work_sub_type and package_instance_id (RPC doesn't have those params)
-            if (latestEntry?.id) {
-              const packageInstanceId = selectedPkg?.instance_id ?? activePackages[0]?.instance_id ?? null;
-              const extraUpdate: Record<string, any> = { package_instance_id: packageInstanceId };
-              if (data.timeWorkSubType) extraUpdate.work_sub_type = data.timeWorkSubType;
-              await supabase
-                .from('time_entries')
-                .update(extraUpdate as any)
-                .eq('id', latestEntry.id);
-            }
-
-            toast({
-              title: 'Note and time entry saved',
-              description: `${durationMins} min logged`,
-              duration: 10000,
-            });
+          const { data: userData } = await supabase.auth.getUser();
+          if (!userData.user) throw new Error('Not authenticated');
+          const instanceId = selectedPkg?.instance_id ?? activePackages[0]?.instance_id ?? null;
+          const { data: inserted, error } = await supabase
+            .from('time_entries')
+            .insert({
+              tenant_id: tenantId,
+              client_id: tenantId,
+              user_id: userData.user.id,
+              duration_minutes: parseInt(data.timeDuration, 10),
+              start_at: `${data.timeDate}T00:00:00`,
+              work_type: data.timeWorkType,
+              work_sub_type: data.timeWorkSubType || null,
+              notes: data.title || data.content.substring(0, 100),
+              is_billable: data.timeBillable,
+              scope_tag: scopeTag,
+              source: 'manual',
+              package_id: instanceId,
+              package_instance_id: instanceId,
+            } as any)
+            .select('id')
+            .single();
+          if (error) throw error;
+          if (inserted?.id) {
+            await supabase.from('notes').update({ timeentry_id: inserted.id } as any).eq('id', createdNoteId);
+            toast({ title: 'Note and time entry saved', description: `${parseInt(data.timeDuration, 10)} min logged` });
           }
         } catch (err: any) {
-          console.error('[NoteTimeEntry] RPC error:', err);
+          console.error('[NoteTimeEntry] insert error:', err);
           setTimeEntryError(err?.message || 'Unknown error');
-          toast({
-            title: 'Note saved — time entry failed',
-            description: err?.message || 'Unknown error. Check the browser console.',
-            variant: 'destructive',
-            duration: 10000,
-          });
+          toast({ title: 'Note saved — time entry failed', description: err?.message || 'Check the error banner above the note list.', variant: 'destructive', duration: 10000 });
         }
       }
 
