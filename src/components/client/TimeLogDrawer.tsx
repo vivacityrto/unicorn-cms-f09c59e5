@@ -122,7 +122,8 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
       fetchPackageInstances();
       refresh();
     }
-  }, [open, fetchPackageInstances, refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, fetchPackageInstances]);
 
   const filteredEntries = entries.filter((entry) => {
     if (workTypeFilter !== 'all' && entry.work_type !== workTypeFilter) return false;

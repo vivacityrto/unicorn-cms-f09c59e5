@@ -328,6 +328,11 @@ export function useTimeTracking(clientId: number | null) {
     loadData();
   }, [fetchActiveTimer, fetchEntries, fetchSummary]);
 
+  const refresh = useCallback(
+    () => Promise.all([fetchActiveTimer(), fetchEntries(), fetchSummary()]),
+    [fetchActiveTimer, fetchEntries, fetchSummary]
+  );
+
   return {
     entries,
     activeTimer,
@@ -338,7 +343,7 @@ export function useTimeTracking(clientId: number | null) {
     addTimeEntry,
     updateEntry,
     deleteEntry,
-    refresh: () => Promise.all([fetchActiveTimer(), fetchEntries(), fetchSummary()])
+    refresh,
   };
 }
 

@@ -1,33 +1,24 @@
-## Goal
-Ensure time entries and summary are re-fetched from the database every time the TimeLogDrawer opens, so newly added entries are visible without a page reload.
+## Plan: Stabilise `refresh` callback and prevent effect loop in time tracking
 
-## Change
-In `src/components/client/TimeLogDrawer.tsx`, add a call to `refresh()` inside the existing `useEffect` that fires when the drawer opens.
+### Overview
+The `refresh` callback returned by `useTimeTracking` is currently an inline arrow function, so it gets a new reference on every render. Including it in a `useEffect` dependency array in `TimeLogDrawer` creates a risk of an infinite re-render loop if any upstream state changes.
 
-### Before
-```tsx
-useEffect(() => {
-  if (open) fetchPackageInstances();
-}, [open, fetchPackageInstances]);
-```
+### Changes
 
-### After
-```tsx
-useEffect(() => {
-  if (open) {
-    fetchPackageInstances();
-    refresh();
-  }
-}, [open, fetchPackageInstances, refresh]);
-```
+#### 1. `src/hooks/useTimeTracking.tsx`
+Wrap the `refresh` function in `useCallback` so its reference is stable across renders.
 
-## Why this is safe
-- `refresh` is already destructured from `useTimeTracking(clientId)` on line 80.
-- `fetchPackageInstances` is wrapped in `useCallback`, so the dependency array remains stable.
-- `refresh` from `useTimeTracking` is a stable callback reference (or wrapped appropriately), making the `useEffect` dependency change safe.
-- This only affects the drawer's open behavior and does not alter rendering, deletion, editing, or filtering logic.
+- Before: `refresh` is returned as an inline arrow expression.
+- After: `refresh` is declared as `useCallback(..., [fetchActiveTimer, fetchEntries, fetchSummary])` and returned by name.
 
-## Verification
-1. Open the drawer after adding time via `AddTimeDialog` or `NoteFormDialog`.
-2. Confirm the new entry appears immediately without a full page reload.
-3. Confirm existing entries still load correctly.
+#### 2. `src/components/client/TimeLogDrawer.tsx`
+Remove `refresh` from the `useEffect` dependency array that fires when the drawer opens. The effect still calls `refresh()` on open; omitting it from the array prevents any future loop if the reference ever becomes unstable.
+
+- Add `// eslint-disable-next-line react-hooks/exhaustive-deps` above the array.
+
+### Verification
+- Open the Time Log drawer after adding a time entry via `NoteFormDialog` or `AddTimeDialog`.
+- New entry should appear immediately without a page reload.
+- No console warnings or infinite re-render loops should occur.
+
+No other files or logic will be touched.
