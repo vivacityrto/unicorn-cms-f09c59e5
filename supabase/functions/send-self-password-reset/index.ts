@@ -162,7 +162,7 @@ serve(async (req: Request): Promise<Response> => {
     </div>
     <div class="footer">
       <p>Unicorn CMS by Vivacity</p>
-      <p style="margin: 4px 0;"><a href="${origin}">${origin}</a></p>
+      <p style="margin: 4px 0;"><a href="${APP_BASE_URL}">${APP_BASE_URL}</a></p>
     </div>
   </div>
 </body>
