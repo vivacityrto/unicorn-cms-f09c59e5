@@ -774,7 +774,7 @@ export function NoteFormDialog({
 
 
             {/* Log Time Entry */}
-            {hasPackageSelected && (
+            {!hideLogTime && hasPackageSelected && (
               <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
                 <div className="flex items-center gap-2">
                   <Switch id="log-time" checked={logTime} onCheckedChange={setLogTime} />
