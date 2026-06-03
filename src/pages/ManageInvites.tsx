@@ -420,7 +420,7 @@ export default function ManageInvites() {
     const matchesStatus = statusFilter === "all" || 
       (statusFilter === "sent" && invite.status === "sent") ||
       (statusFilter === "failed" && invite.status === "failed") ||
-      (statusFilter === "expired" && (invite.status === "expired" || isExpired)) ||
+      (statusFilter === "expired" && (invite.status === "expired" || isExpired) && (invite.status as string) !== 'accepted') ||
       (statusFilter === "verified" && (invite.status as string) === 'accepted') ||
       (statusFilter === "pending" && (invite.status === "pending" || invite.status === "sent") && !isExpired && (invite.status as string) !== 'accepted') ||
       (statusFilter === "bounced" && invite.delivery_status === 'bounced') ||
