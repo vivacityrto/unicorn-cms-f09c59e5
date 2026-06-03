@@ -236,6 +236,7 @@ export function NoteFormDialog({
 
   // Inline time-entry state
   const [logTime, setLogTime] = useState(true);
+  const hasPackageSelected = selectedPackageInstanceId !== 'none';
   const [durationError, setDurationError] = useState(false);
   const [timeWorkType, setTimeWorkType] = useState('general');
   const [timeWorkSubType, setTimeWorkSubType] = useState('');
