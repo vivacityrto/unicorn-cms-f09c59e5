@@ -87,6 +87,10 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
   const [editPackageInstanceId, setEditPackageInstanceId] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [packageInstances, setPackageInstances] = useState<PackageInstanceOption[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPackageInstanceId, setBulkPackageInstanceId] = useState<string>('');
+  const [bulkSaving, setBulkSaving] = useState(false);
+
 
   // Fetch all package instances for this client (including completed, for reassignment)
   const fetchPackageInstances = useCallback(async () => {
