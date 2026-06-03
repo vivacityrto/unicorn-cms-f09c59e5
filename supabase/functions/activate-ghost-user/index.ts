@@ -131,11 +131,11 @@ serve(async (req) => {
     }
 
     // 8. Generate recovery link
-    const origin = req.headers.get("origin") || "https://unicorn-cms.au";
+    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au";
     const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
       type: "recovery",
       email: ghostEmail,
-      options: { redirectTo: `${origin}/reset-password` },
+      options: { redirectTo: `${APP_BASE_URL}/reset-password` },
     });
     const actionLink = linkData?.properties?.action_link;
     if (linkErr || !actionLink) {
@@ -185,7 +185,7 @@ serve(async (req) => {
     <p class="muted"><strong>⚡ This link expires in 1 hour.</strong><br/>
     If you didn't expect this email, please contact your Vivacity consultant.</p>
   </div>
-  <div class="footer">Vivacity Unicorn • <a href="${origin}">${origin}</a></div>
+  <div class="footer">Vivacity Unicorn • <a href="${APP_BASE_URL}">${APP_BASE_URL}</a></div>
 </div></body></html>`;
       const text = `Hi ${recipientName},\n\nVivacity has set up your Unicorn account. Set your password here:\n${actionLink}\n\nThis link expires in 1 hour.\n\n— Vivacity Unicorn`;
 

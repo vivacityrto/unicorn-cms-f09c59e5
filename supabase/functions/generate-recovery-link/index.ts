@@ -117,13 +117,13 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const origin = req.headers.get("origin") || "https://vivacity.lovable.app";
+    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au";
 
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email: targetUser.email,
       options: {
-        redirectTo: `${origin}/reset-password`,
+        redirectTo: `${APP_BASE_URL}/reset-password`,
       },
     });
 
