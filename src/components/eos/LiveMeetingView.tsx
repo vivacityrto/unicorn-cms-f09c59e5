@@ -52,7 +52,8 @@ export const LiveMeetingView = () => {
   const [facilitatorDialogOpen, setFacilitatorDialogOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
   const [cascadingMessages, setCascadingMessages] = useState('');
-  const [isNavigating, setIsNavigating] = useState(false);
+  const isNavigatingRef = useRef(false);
+  const [isNavigatingUI, setIsNavigatingUI] = useState(false);
 
   // Fetch meeting details first (needed for tenant_id)
   const { data: meeting, isLoading: meetingLoading } = useQuery({
