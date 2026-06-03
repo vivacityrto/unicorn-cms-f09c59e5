@@ -121,7 +121,7 @@ export function AddTimeDialog({
   showScopeSelector = false,
   onSuccess,
 }: AddTimeDialogProps) {
-  const navigate = useNavigate();
+  
   const { user } = useAuth();
   const { toast } = useToast();
   const { isRecording, isSupported, interimTranscript, startRecording, stopRecording } = useSpeechToText();
