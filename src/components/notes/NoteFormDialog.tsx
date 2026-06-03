@@ -365,6 +365,8 @@ export function NoteFormDialog({
     setTimeWorkSubType('');
     setTimeDate(new Date().toISOString().slice(0, 10));
     setTimeBillable(true);
+    setTimeHours('0');
+    setTimeMinutes('30');
   }, []);
 
   // ── Populate form when opening ──
