@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   Play, SkipForward, SkipBack, CheckCircle, Clock, Users, X, Target, 
   TrendingUp, AlertCircle, ListTodo, MessageSquare, Sparkles,
-  ArrowRight, Timer, PlayCircle, Star, LogOut, Eye
+  ArrowRight, Timer, PlayCircle, Star, LogOut, Eye, Loader2
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
@@ -52,7 +52,8 @@ export const LiveMeetingView = () => {
   const [facilitatorDialogOpen, setFacilitatorDialogOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
   const [cascadingMessages, setCascadingMessages] = useState('');
-  const [isNavigating, setIsNavigating] = useState(false);
+  const isNavigatingRef = useRef(false);
+  const [isNavigatingUI, setIsNavigatingUI] = useState(false);
 
   // Fetch meeting details first (needed for tenant_id)
   const { data: meeting, isLoading: meetingLoading } = useQuery({
@@ -339,25 +340,33 @@ export const LiveMeetingView = () => {
 
   // Throttled segment navigation handlers to prevent double-clicks
   const handleAdvanceSegment = async () => {
-    if (isNavigating || segmentsFetching) return;
-    setIsNavigating(true);
+    if (isNavigatingRef.current || segmentsFetching) return;
+    isNavigatingRef.current = true;
+    setIsNavigatingUI(true);
     try {
       await advanceSegment.mutateAsync();
     } finally {
-      // Keep disabled until the next refetch settles (1s safety window)
-      setTimeout(() => setIsNavigating(false), 1000);
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+        setIsNavigatingUI(false);
+      }, 1000);
     }
   };
 
   const handlePreviousSegment = async () => {
-    if (isNavigating || segmentsFetching) return;
-    setIsNavigating(true);
+    if (isNavigatingRef.current || segmentsFetching) return;
+    isNavigatingRef.current = true;
+    setIsNavigatingUI(true);
     try {
       await goToPreviousSegment.mutateAsync();
     } finally {
-      setTimeout(() => setIsNavigating(false), 1000);
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+        setIsNavigatingUI(false);
+      }, 1000);
     }
   };
+
 
   const handleToggleTodo = async (todo: any) => {
     const newStatus = todo.status === 'Complete' ? 'Open' : 'Complete';
@@ -817,9 +826,13 @@ export const LiveMeetingView = () => {
                 onClick={handlePreviousSegment} 
                 size="sm" 
                 variant="outline"
-                disabled={isNavigating || goToPreviousSegment.isPending || segmentsFetching}
+                disabled={isNavigatingUI || goToPreviousSegment.isPending || segmentsFetching}
               >
-                <SkipBack className="h-4 w-4 mr-2" />
+                {(isNavigatingUI || goToPreviousSegment.isPending) ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <SkipBack className="h-4 w-4 mr-2" />
+                )}
                 Previous
               </Button>
             )}
@@ -829,9 +842,13 @@ export const LiveMeetingView = () => {
                 onClick={handleAdvanceSegment} 
                 size="sm" 
                 variant="outline"
-                disabled={isNavigating || advanceSegment.isPending || segmentsFetching}
+                disabled={isNavigatingUI || advanceSegment.isPending || segmentsFetching}
               >
-                <SkipForward className="h-4 w-4 mr-2" />
+                {(isNavigatingUI || advanceSegment.isPending) ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <SkipForward className="h-4 w-4 mr-2" />
+                )}
                 Next Segment
               </Button>
             )}
