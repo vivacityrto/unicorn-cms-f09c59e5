@@ -248,145 +248,224 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
           </Select>
         </div>
 
-        {/* Entries table */}
-        {loading ? (
-          <div className="space-y-2">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-2 mb-3 p-2 rounded-md border bg-muted/40">
+            <span className="text-sm font-medium">{selectedIds.size} selected</span>
+            <Select value={bulkPackageInstanceId} onValueChange={setBulkPackageInstanceId}>
+              <SelectTrigger className="h-8 w-[220px] text-xs">
+                <SelectValue placeholder="Reassign to..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Unassigned</SelectItem>
+                {packageInstances.map(pi => (
+                  <SelectItem key={pi.id} value={pi.id.toString()}>
+                    <span className={pi.is_complete ? 'text-muted-foreground' : ''}>
+                      {pi.package_name}
+                      {pi.start_date && ` (${format(new Date(pi.start_date), 'MMM yyyy')})`}
+                      {pi.is_complete && ' ✓'}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              disabled={bulkSaving || bulkPackageInstanceId === ''}
+              onClick={async () => {
+                setBulkSaving(true);
+                const newInstanceId = bulkPackageInstanceId === 'none' ? null : Number(bulkPackageInstanceId);
+                const instance = packageInstances.find(pi => pi.id === newInstanceId);
+                const newPackageId = instance ? instance.package_id : null;
+                const { error } = await supabase
+                  .from('time_entries')
+                  .update({
+                    package_instance_id: newInstanceId,
+                    package_id: newPackageId,
+                    updated_at: new Date().toISOString()
+                  })
+                  .in('id', Array.from(selectedIds));
+                setBulkSaving(false);
+                if (error) {
+                  toast({ title: 'Error', description: error.message, variant: 'destructive' });
+                } else {
+                  toast({ title: 'Updated', description: `${selectedIds.size} entries reassigned.` });
+                  setSelectedIds(new Set());
+                  setBulkPackageInstanceId('');
+                  refresh();
+                }
+              }}
+            >
+              {bulkSaving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ArrowRightLeft className="h-3 w-3 mr-1" />}
+              Reassign
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+              Clear
+            </Button>
           </div>
-        ) : filteredEntries.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>No time entries found.</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Package Instance</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredEntries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">
-                        {entry.start_at 
-                          ? format(new Date(entry.start_at), 'MMM d, yyyy')
-                          : format(new Date(entry.created_at), 'MMM d, yyyy')
-                        }
-                      </p>
-                      {entry.notes && (
-                        <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                          {entry.notes}
-                        </p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{formatDuration(entry.duration_minutes)}</span>
-                      {entry.is_billable && (
-                        <DollarSign className="h-3 w-3 text-primary" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Badge variant="outline" className="text-xs">
-                        {WORK_TYPE_LABELS[entry.work_type] || entry.work_type}
-                      </Badge>
-                      {(entry as any).work_sub_type && (
-                        <Badge variant="secondary" className="text-xs">
-                          {getSubTypeLabel((entry as any).work_sub_type)}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {editingEntryId === entry.id ? (
-                      <div className="flex items-center gap-1">
-                        <Select value={editPackageInstanceId} onValueChange={setEditPackageInstanceId}>
-                          <SelectTrigger className="h-7 w-[180px] text-xs">
-                            <SelectValue placeholder="Select instance" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Unassigned</SelectItem>
-                            {packageInstances.map(pi => (
-                              <SelectItem key={pi.id} value={pi.id.toString()}>
-                                <span className={pi.is_complete ? 'text-muted-foreground' : ''}>
-                                  {pi.package_name}
-                                  {pi.start_date && ` (${format(new Date(pi.start_date), 'MMM yyyy')})`}
-                                  {pi.is_complete && ' ✓'}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7" 
-                          onClick={() => savePackageInstance(entry.id)}
-                          disabled={saving}
-                        >
-                          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 text-primary" />}
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEditing}>
-                          <X className="h-3 w-3 text-destructive" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <span 
-                        className={`text-xs ${!entry.package_instance_id ? 'text-muted-foreground italic' : ''}`}
-                      >
-                        {getInstanceLabel(entry.package_instance_id)}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {entry.source === 'timer' ? (
-                      <Timer className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <FileEdit className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {canEdit(entry) && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => startEditing(entry)}>
-                            <ArrowRightLeft className="h-4 w-4 mr-2" />
-                            Reassign Package
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(entry.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
         )}
+
+        {/* Entries table */}
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : filteredEntries.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No time entries found.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={selectedIds.size > 0 && selectedIds.size === filteredEntries.length}
+                      onCheckedChange={(checked) => {
+                        if (checked) setSelectedIds(new Set(filteredEntries.map(e => e.id)));
+                        else setSelectedIds(new Set());
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Package Instance</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredEntries.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(entry.id)}
+                        onCheckedChange={(checked) => {
+                          const next = new Set(selectedIds);
+                          if (checked) next.add(entry.id);
+                          else next.delete(entry.id);
+                          setSelectedIds(next);
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">
+                          {entry.start_at 
+                            ? format(new Date(entry.start_at), 'MMM d, yyyy')
+                            : format(new Date(entry.created_at), 'MMM d, yyyy')
+                          }
+                        </p>
+                        {entry.notes && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            {entry.notes}
+                          </p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{formatDuration(entry.duration_minutes)}</span>
+                        {entry.is_billable && (
+                          <DollarSign className="h-3 w-3 text-primary" />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="text-xs">
+                          {WORK_TYPE_LABELS[entry.work_type] || entry.work_type}
+                        </Badge>
+                        {(entry as any).work_sub_type && (
+                          <Badge variant="secondary" className="text-xs">
+                            {getSubTypeLabel((entry as any).work_sub_type)}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {editingEntryId === entry.id ? (
+                        <div className="flex items-center gap-1">
+                          <Select value={editPackageInstanceId} onValueChange={setEditPackageInstanceId}>
+                            <SelectTrigger className="h-7 w-[180px] text-xs">
+                              <SelectValue placeholder="Select instance" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Unassigned</SelectItem>
+                              {packageInstances.map(pi => (
+                                <SelectItem key={pi.id} value={pi.id.toString()}>
+                                  <span className={pi.is_complete ? 'text-muted-foreground' : ''}>
+                                    {pi.package_name}
+                                    {pi.start_date && ` (${format(new Date(pi.start_date), 'MMM yyyy')})`}
+                                    {pi.is_complete && ' ✓'}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7" 
+                            onClick={() => savePackageInstance(entry.id)}
+                            disabled={saving}
+                          >
+                            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 text-primary" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEditing}>
+                            <X className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span 
+                          className={`text-xs ${!entry.package_instance_id ? 'text-muted-foreground italic' : ''}`}
+                        >
+                          {getInstanceLabel(entry.package_instance_id)}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {entry.source === 'timer' ? (
+                        <Timer className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <FileEdit className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {canEdit(entry) && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => startEditing(entry)}>
+                              <ArrowRightLeft className="h-4 w-4 mr-2" />
+                              Reassign Package
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(entry.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
       </SheetContent>
     </Sheet>
   );
