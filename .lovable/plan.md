@@ -1,10 +1,35 @@
-Plan
+## Two narrow fixes
 
-1. Read `supabase/functions/send-self-password-reset/index.ts` to confirm the exact content at line 165.
-2. Apply the exact change: replace `${origin}` with `${APP_BASE_URL}` on line 165 in the email footer link.
-3. Verify no other occurrences of `origin` remain in the file.
-4. No other files or logic are touched.
+### Fix 1 — Cohort sender confirmation casing
+File: `src/pages/admin/CohortAccessSender.tsx` (~line 173)
 
-Technical detail
-- Line 165: `<p style="margin: 4px 0;"><a href="${origin}">${origin}</a></p>` → `<p style="margin: 4px 0;"><a href="${APP_BASE_URL}">${APP_BASE_URL}</a></p>`
-- The `APP_BASE_URL` variable is already defined earlier in the file from the previous fix.
+Change:
+```ts
+const expectedConfirm = previewSummary ? `Send to ${previewSummary.will_send} people` : "";
+```
+to:
+```ts
+const expectedConfirm = previewSummary ? `SEND TO ${previewSummary.will_send} PEOPLE` : "";
+```
+No other edits to the file.
+
+### Fix 2 — `launch_cohort_job` migration
+Recreate the function via `CREATE OR REPLACE FUNCTION` preserving the exact current body, changing only the final `INSERT INTO public.audit_eos_events` to include `tenant_id` with the hard-coded Vivacity tenant id `6372`:
+
+```sql
+INSERT INTO public.audit_eos_events (
+  tenant_id, user_id, entity, entity_id, action, reason, details
+) VALUES (
+  6372, v_caller, 'cohort_send_job', v_job_id, 'cohort_job_launched',
+  'Cross-tenant cohort access sender launched',
+  jsonb_build_object(
+    'action', p_action,
+    'resolved', v_resolved,
+    'planned', v_planned,
+    'filter', p_filter,
+    'include_uuids_count', COALESCE(array_length(p_include_uuids,1),0)
+  )
+);
+```
+
+All other logic, signature, `SECURITY DEFINER`, and `SET search_path` settings remain identical.
