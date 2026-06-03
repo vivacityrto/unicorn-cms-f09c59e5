@@ -340,25 +340,33 @@ export const LiveMeetingView = () => {
 
   // Throttled segment navigation handlers to prevent double-clicks
   const handleAdvanceSegment = async () => {
-    if (isNavigating || segmentsFetching) return;
-    setIsNavigating(true);
+    if (isNavigatingRef.current || segmentsFetching) return;
+    isNavigatingRef.current = true;
+    setIsNavigatingUI(true);
     try {
       await advanceSegment.mutateAsync();
     } finally {
-      // Keep disabled until the next refetch settles (1s safety window)
-      setTimeout(() => setIsNavigating(false), 1000);
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+        setIsNavigatingUI(false);
+      }, 1000);
     }
   };
 
   const handlePreviousSegment = async () => {
-    if (isNavigating || segmentsFetching) return;
-    setIsNavigating(true);
+    if (isNavigatingRef.current || segmentsFetching) return;
+    isNavigatingRef.current = true;
+    setIsNavigatingUI(true);
     try {
       await goToPreviousSegment.mutateAsync();
     } finally {
-      setTimeout(() => setIsNavigating(false), 1000);
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+        setIsNavigatingUI(false);
+      }, 1000);
     }
   };
+
 
   const handleToggleTodo = async (todo: any) => {
     const newStatus = todo.status === 'Complete' ? 'Open' : 'Complete';
