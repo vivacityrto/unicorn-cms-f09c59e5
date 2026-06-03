@@ -236,6 +236,7 @@ export function NoteFormDialog({
 
   // Inline time-entry state
   const [logTime, setLogTime] = useState(true);
+  const hasPackageSelected = selectedPackageInstanceId !== 'none';
   const [durationError, setDurationError] = useState(false);
   const [timeWorkType, setTimeWorkType] = useState('general');
   const [timeWorkSubType, setTimeWorkSubType] = useState('');
@@ -261,6 +262,11 @@ export function NoteFormDialog({
   useEffect(() => {
     setTimeWorkSubType('');
   }, [timeWorkType]);
+
+  // Reset logTime when package is deselected
+  useEffect(() => {
+    if (selectedPackageInstanceId === 'none') setLogTime(false);
+  }, [selectedPackageInstanceId]);
 
   const subTypeCategory =
     timeWorkType === 'consultation' ? 'consultation'
@@ -362,6 +368,9 @@ export function NoteFormDialog({
       resetForm();
       if (activePackages && activePackages.length > 0) {
         setSelectedPackageInstanceId(String(activePackages[0].instance_id));
+        setLogTime(true);
+      } else {
+        setLogTime(false);
       }
       // Check for saved draft
       const draft = loadDraft(draftKey);
@@ -760,58 +769,60 @@ export function NoteFormDialog({
 
 
             {/* Log Time Entry */}
-            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
-              <div className="flex items-center gap-2">
-                <Switch id="log-time" checked={logTime} onCheckedChange={setLogTime} />
-                <Label htmlFor="log-time" className="cursor-pointer font-medium text-sm flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" />
-                  Log time entry with this note
-                </Label>
-              </div>
-              {logTime && (
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Duration (minutes)</Label>
-                    <Input type="number" min={0} step={5} value={duration} onChange={e => { setDuration(e.target.value); if (durationError) setDurationError(false); }} placeholder="0" className={durationError ? 'border-destructive' : ''} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Work Type</Label>
-                    <Select value={timeWorkType} onValueChange={setTimeWorkType}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-background">
-                        {timeWorkTypeOptions.map(opt => (
-                          <SelectItem key={opt.code} value={opt.code}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {filteredSubTypes.length > 0 && (
+            {hasPackageSelected && (
+              <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <Switch id="log-time" checked={logTime} onCheckedChange={setLogTime} />
+                  <Label htmlFor="log-time" className="cursor-pointer font-medium text-sm flex items-center gap-1.5">
+                    <Clock className="h-4 w-4" />
+                    Log time entry with this note
+                  </Label>
+                </div>
+                {logTime && (
+                  <div className="grid grid-cols-2 gap-3 pt-1">
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Sub Type</Label>
-                      <Select value={timeWorkSubType || '__none__'} onValueChange={(v) => setTimeWorkSubType(v === '__none__' ? '' : v)}>
-                        <SelectTrigger><SelectValue placeholder="Select sub type..." /></SelectTrigger>
+                      <Label className="text-xs">Duration (minutes)</Label>
+                      <Input type="number" min={0} step={5} value={duration} onChange={e => { setDuration(e.target.value); if (durationError) setDurationError(false); }} placeholder="0" className={durationError ? 'border-destructive' : ''} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Work Type</Label>
+                      <Select value={timeWorkType} onValueChange={setTimeWorkType}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-background">
-                          <SelectItem value="__none__">None</SelectItem>
-                          {filteredSubTypes.map(opt => (
+                          {timeWorkTypeOptions.map(opt => (
                             <SelectItem key={opt.code} value={opt.code}>{opt.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                  )}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Date</Label>
-                    <Input type="date" value={timeDate} onChange={e => setTimeDate(e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5 flex items-end">
-                    <div className="flex items-center gap-2 pb-2">
-                      <Switch id="time-billable" checked={timeBillable} onCheckedChange={setTimeBillable} />
-                      <Label htmlFor="time-billable" className="cursor-pointer text-sm">Billable</Label>
+                    {filteredSubTypes.length > 0 && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Sub Type</Label>
+                        <Select value={timeWorkSubType || '__none__'} onValueChange={(v) => setTimeWorkSubType(v === '__none__' ? '' : v)}>
+                          <SelectTrigger><SelectValue placeholder="Select sub type..." /></SelectTrigger>
+                          <SelectContent className="bg-background">
+                            <SelectItem value="__none__">None</SelectItem>
+                            {filteredSubTypes.map(opt => (
+                              <SelectItem key={opt.code} value={opt.code}>{opt.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Date</Label>
+                      <Input type="date" value={timeDate} onChange={e => setTimeDate(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5 flex items-end">
+                      <div className="flex items-center gap-2 pb-2">
+                        <Switch id="time-billable" checked={timeBillable} onCheckedChange={setTimeBillable} />
+                        <Label htmlFor="time-billable" className="cursor-pointer text-sm">Billable</Label>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
 
             {/* Title */}
