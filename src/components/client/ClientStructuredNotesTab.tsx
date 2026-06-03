@@ -124,6 +124,8 @@ const NOTE_TYPE_STYLES: Record<string, { icon: typeof StickyNote; color: string 
 const DEFAULT_NOTE_STYLE = { icon: StickyNote, color: 'bg-slate-100 text-slate-700' };
 
 export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructuredNotesTabProps) {
+  const membership = useTenantMemberships(tenantId);
+  const scopeTag = membership.defaultScope ?? 'rto';
   const { notes, loading, createNote, updateNote, deleteNote, refresh } = useNotes({
     parentType: ['tenant', 'package_instance'],
     parentId: tenantId,
