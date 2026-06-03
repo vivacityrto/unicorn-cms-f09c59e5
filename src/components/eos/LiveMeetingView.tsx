@@ -826,9 +826,13 @@ export const LiveMeetingView = () => {
                 onClick={handlePreviousSegment} 
                 size="sm" 
                 variant="outline"
-                disabled={isNavigating || goToPreviousSegment.isPending || segmentsFetching}
+                disabled={isNavigatingUI || goToPreviousSegment.isPending || segmentsFetching}
               >
-                <SkipBack className="h-4 w-4 mr-2" />
+                {(isNavigatingUI || goToPreviousSegment.isPending) ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <SkipBack className="h-4 w-4 mr-2" />
+                )}
                 Previous
               </Button>
             )}
@@ -838,9 +842,13 @@ export const LiveMeetingView = () => {
                 onClick={handleAdvanceSegment} 
                 size="sm" 
                 variant="outline"
-                disabled={isNavigating || advanceSegment.isPending || segmentsFetching}
+                disabled={isNavigatingUI || advanceSegment.isPending || segmentsFetching}
               >
-                <SkipForward className="h-4 w-4 mr-2" />
+                {(isNavigatingUI || advanceSegment.isPending) ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <SkipForward className="h-4 w-4 mr-2" />
+                )}
                 Next Segment
               </Button>
             )}
