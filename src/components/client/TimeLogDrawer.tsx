@@ -300,8 +300,10 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
           </div>
         )}
 
+        </div>
+
         {/* Entries table */}
-        <div className="overflow-x-auto">
+        <div className="flex-1 overflow-auto min-h-0">
           {loading ? (
             <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
@@ -317,15 +319,6 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[40px]">
-                    <Checkbox
-                      checked={selectedIds.size > 0 && selectedIds.size === filteredEntries.length}
-                      onCheckedChange={(checked) => {
-                        if (checked) setSelectedIds(new Set(filteredEntries.map(e => e.id)));
-                        else setSelectedIds(new Set());
-                      }}
-                    />
-                  </TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead>Type</TableHead>
@@ -336,18 +329,20 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
               </TableHeader>
               <TableBody>
                 {filteredEntries.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.has(entry.id)}
-                        onCheckedChange={(checked) => {
-                          const next = new Set(selectedIds);
-                          if (checked) next.add(entry.id);
-                          else next.delete(entry.id);
-                          setSelectedIds(next);
-                        }}
-                      />
-                    </TableCell>
+                  <TableRow
+                    key={entry.id}
+                    onClick={() => {
+                      const next = new Set(selectedIds);
+                      if (next.has(entry.id)) next.delete(entry.id);
+                      else next.add(entry.id);
+                      setSelectedIds(next);
+                    }}
+                    className={`cursor-pointer transition-colors ${
+                      selectedIds.has(entry.id)
+                        ? 'bg-primary/10 hover:bg-primary/15'
+                        : 'hover:bg-muted/50'
+                    }`}
+                  >
                     <TableCell>
                       <div>
                         <p className="font-medium">
