@@ -35,8 +35,6 @@ import {
   MoreHorizontal, 
   Trash2, 
   Clock, 
-  Timer,
-  FileEdit,
   DollarSign,
   ArrowRightLeft,
   Check,
