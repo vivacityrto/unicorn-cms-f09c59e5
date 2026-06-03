@@ -97,6 +97,9 @@ export interface NoteFormDialogProps {
   activePackages?: ActivePackage[];
   noteTypeOptions?: { code: string; label: string }[];
   noteStatusOptions?: { code: string; label: string }[];
+  // Time-entry integration overrides
+  hideLogTime?: boolean;
+  prelinkedTimeEntryId?: string | null;
   // Callbacks
   onSave: (data: NoteFormData) => Promise<void>;
   onEmailSendNow?: () => void; // called when user picks "Send Now" for email type
@@ -163,6 +166,8 @@ export function NoteFormDialog({
   activePackages = [],
   noteTypeOptions: propTypeOptions,
   noteStatusOptions: propStatusOptions,
+  hideLogTime = false,
+  prelinkedTimeEntryId: _prelinkedTimeEntryId,
   onSave,
   onEmailSendNow,
   saving: externalSaving,
@@ -769,7 +774,7 @@ export function NoteFormDialog({
 
 
             {/* Log Time Entry */}
-            {hasPackageSelected && (
+            {!hideLogTime && hasPackageSelected && (
               <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
                 <div className="flex items-center gap-2">
                   <Switch id="log-time" checked={logTime} onCheckedChange={setLogTime} />

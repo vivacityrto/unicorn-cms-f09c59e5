@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import {
   Dialog,
   DialogContent,
@@ -8,16 +8,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { NoteFormDialog } from '@/components/notes/NoteFormDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -121,7 +112,7 @@ export function AddTimeDialog({
   showScopeSelector = false,
   onSuccess,
 }: AddTimeDialogProps) {
-  const navigate = useNavigate();
+  
   const { user } = useAuth();
   const { toast } = useToast();
   const { isRecording, isSupported, interimTranscript, startRecording, stopRecording } = useSpeechToText();
@@ -141,9 +132,12 @@ export function AddTimeDialog({
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [notifyUserId, setNotifyUserId] = useState<string>('');
   const [notifyClient, setNotifyClient] = useState(false);
-  const [showNotePrompt, setShowNotePrompt] = useState(false);
-  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
-  const [savedTotalMinutes, setSavedTotalMinutes] = useState(0);
+  const [linkNote, setLinkNote] = useState(false);
+  const [linkNoteMode, setLinkNoteMode] = useState<'existing' | 'new'>('existing');
+  const [recentNotes, setRecentNotes] = useState<{ id: string; title: string | null; note_details: string; created_at: string }[]>([]);
+  const [selectedNoteId, setSelectedNoteId] = useState<string>('');
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [pendingTimeEntryId, setPendingTimeEntryId] = useState<string | null>(null);
   const [parentTenant, setParentTenant] = useState<ParentTenantInfo | null>(null);
   const [kickstartUsedMinutes, setKickstartUsedMinutes] = useState(0);
   const [instanceTotalUsedMinutes, setInstanceTotalUsedMinutes] = useState(0);
@@ -283,7 +277,8 @@ export function AddTimeDialog({
         });
 
         setActiveInstances(instances);
-        if (instances.length === 1) {
+        if (instances.length > 0) {
+          // instances is already sorted start_date DESC — pick most recent
           setSelectedInstanceId(instances[0].id);
           if (instances[0].is_kickstart) setIsBillable(false);
         } else {
@@ -337,6 +332,22 @@ export function AddTimeDialog({
     setWorkSubType('');
     setNotes(buildParentDefinedNote(parentTenant));
   }, [isParentDefined, selectedInstance, parentTenant]);
+
+  // Fetch recent unlinked notes when the user toggles "Link a note" on
+  useEffect(() => {
+    if (!linkNote || !tenantId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('notes')
+        .select('id, title, note_details, created_at')
+        .eq('tenant_id', tenantId)
+        .is('timeentry_id', null)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      setRecentNotes((data || []) as any);
+    })();
+  }, [linkNote, tenantId]);
+
 
   // Fetch existing usage (kickstart_tas + total) for the selected package instance
   useEffect(() => {
@@ -467,18 +478,17 @@ export function AddTimeDialog({
         description: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m logged${notifyUserId ? ' — notification sent' : ''}`,
       });
 
-      // Store entry data for note prompt, then show it
-      const entryId = (insertedEntry as any)?.id;
-      if (entryId) {
-        setSavedEntryId(entryId);
-        setSavedTotalMinutes(totalMinutes);
-        onOpenChange(false);
-        setShowNotePrompt(true);
-      } else {
-        resetForm();
-        onOpenChange(false);
-        onSuccess?.();
+      const entryId = (insertedEntry as any)?.id ?? null;
+      if (linkNote && entryId) {
+        const opened = await handleLinkOrCreateNote(entryId);
+        if (opened) {
+          // NoteFormDialog will handle reset/success on close
+          return;
+        }
       }
+      resetForm();
+      onOpenChange(false);
+      onSuccess?.();
     } catch (err: any) {
       toast({ title: 'Failed to add time', description: err.message, variant: 'destructive' });
     } finally {
@@ -498,40 +508,31 @@ export function AddTimeDialog({
     setSelectedInstanceId(null);
     setNotifyUserId('');
     setNotifyClient(false);
-    setSavedEntryId(null);
-    setSavedTotalMinutes(0);
     setKickstartTas(1);
     setKickstartNoteEdited(false);
-
+    setLinkNote(false);
+    setLinkNoteMode('existing');
+    setSelectedNoteId('');
+    setRecentNotes([]);
+    setPendingTimeEntryId(null);
   };
 
-  const handleNotePromptYes = () => {
-    const workLabel = workTypes.find(w => w.code === workType)?.label || workType;
-    const h = Math.floor(savedTotalMinutes / 60);
-    const m = savedTotalMinutes % 60;
-    const notesSnippet = notes ? ` - ${notes.substring(0, 55)}` : '';
-    const title = `TIME: ${workLabel} (${h}:${m.toString().padStart(2, '0')})${notesSnippet}`;
-    const noteBody = notes && notes.length > 55 ? notes.substring(55) : '';
-    const params = new URLSearchParams({
-      initNote: 'true',
-      noteTitle: title,
-      timeEntryId: savedEntryId!,
-      ...(noteBody ? { noteDetails: noteBody } : {}),
-      ...(workType ? { workType } : {}),
-      ...(selectedInstanceId ? { packageId: selectedInstanceId.toString() } : {}),
-      ...(date ? { startedDate: date } : {}),
-    });
-    setShowNotePrompt(false);
-    resetForm();
-    onSuccess?.();
-    navigate(`/tenant/${tenantId}/notes?${params.toString()}`);
+  // Returns true when a follow-up NoteFormDialog has been opened (caller must
+  // not reset/close — the dialog's onOpenChange handles that).
+  const handleLinkOrCreateNote = async (entryId: string): Promise<boolean> => {
+    if (linkNoteMode === 'existing' && selectedNoteId) {
+      await supabase.from('notes').update({ timeentry_id: entryId } as any).eq('id', selectedNoteId);
+      return false;
+    }
+    if (linkNoteMode === 'new') {
+      setPendingTimeEntryId(entryId);
+      setShowNoteDialog(true);
+      onOpenChange(false);
+      return true;
+    }
+    return false;
   };
 
-  const handleNotePromptNo = () => {
-    setShowNotePrompt(false);
-    resetForm();
-    onSuccess?.();
-  };
 
   return (
     <>
@@ -803,6 +804,66 @@ export function AddTimeDialog({
               </SelectContent>
             </Select>
           </div>
+          {/* Link a note to this time entry */}
+          <div className="space-y-2 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="link-note">Link a note</Label>
+              <Switch
+                id="link-note"
+                checked={linkNote}
+                onCheckedChange={(v) => { setLinkNote(v); setSelectedNoteId(''); }}
+              />
+            </div>
+            {linkNote && (
+              <div className="space-y-3 rounded-md border p-3 bg-muted/30">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={linkNoteMode === 'existing' ? 'default' : 'outline'}
+                    onClick={() => setLinkNoteMode('existing')}
+                  >
+                    Link existing
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={linkNoteMode === 'new' ? 'default' : 'outline'}
+                    onClick={() => setLinkNoteMode('new')}
+                  >
+                    + New note
+                  </Button>
+                </div>
+
+                {linkNoteMode === 'existing' && (
+                  <Select value={selectedNoteId} onValueChange={setSelectedNoteId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a note to link..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {recentNotes.length === 0 && (
+                        <div className="px-2 py-3 text-xs text-muted-foreground">
+                          No unlinked notes found
+                        </div>
+                      )}
+                      {recentNotes.map((n) => (
+                        <SelectItem key={n.id} value={n.id}>
+                          {n.title || (n.note_details || '').substring(0, 60)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {linkNoteMode === 'new' && (
+                  <p className="text-xs text-muted-foreground">
+                    After saving the time entry, a note form will open pre-linked to this entry and package.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           <DialogFooter className="sm:justify-between">
             <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} />
             <div className="flex gap-2">
@@ -812,27 +873,65 @@ export function AddTimeDialog({
               <Button type="submit" disabled={saving || (isParentDefined && !parentTenant) || (isKickstart && !kickstartEligible)}>
                 {saving ? 'Saving...' : 'Add Time'}
               </Button>
-
             </div>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
 
-      <AlertDialog open={showNotePrompt} onOpenChange={setShowNotePrompt}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Create a note from this time entry?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A note will be pre-filled with the time entry details so you can add additional context.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleNotePromptNo}>No</AlertDialogCancel>
-            <AlertDialogAction onClick={handleNotePromptYes}>Yes</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {showNoteDialog && pendingTimeEntryId && (
+        <NoteFormDialog
+          open={showNoteDialog}
+          onOpenChange={(v) => {
+            if (!v) {
+              setShowNoteDialog(false);
+              setPendingTimeEntryId(null);
+              resetForm();
+              onSuccess?.();
+            }
+          }}
+          mode="create"
+          tenantId={tenantId}
+          showDuration={true}
+          showPackageSelector={false}
+          hideLogTime={true}
+          prelinkedTimeEntryId={pendingTimeEntryId}
+          activePackages={selectedInstance ? [{
+            instance_id: selectedInstance.id,
+            package_id: selectedInstance.package_id,
+            name: selectedInstance.package_name,
+          }] : []}
+          onSave={async (data) => {
+            // Insert the note here, then link the prelinked time entry
+            const { data: inserted, error } = await supabase
+              .from('notes')
+              .insert({
+                tenant_id: tenantId,
+                client_id: clientId,
+                user_id: user?.id,
+                title: data.title || null,
+                note_details: data.content,
+                note_type: data.noteType,
+                priority: data.priority,
+                status: data.status,
+                is_pinned: data.isPinned,
+                package_instance_id: data.packageInstanceId !== 'none' ? Number(data.packageInstanceId) : (selectedInstance?.id ?? null),
+                timeentry_id: pendingTimeEntryId,
+              } as any)
+              .select('id')
+              .single();
+            if (error) throw error;
+            const noteId = (inserted as any)?.id;
+            if (noteId && pendingTimeEntryId) {
+              await supabase.from('notes').update({ timeentry_id: pendingTimeEntryId } as any).eq('id', noteId);
+            }
+            setShowNoteDialog(false);
+            setPendingTimeEntryId(null);
+            resetForm();
+            onSuccess?.();
+          }}
+        />
+      )}
     </>
   );
 }
