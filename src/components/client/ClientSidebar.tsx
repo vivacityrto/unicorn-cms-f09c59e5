@@ -22,6 +22,7 @@ import {
   ExternalLink,
   Lightbulb,
   ScrollText,
+  Award,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +58,7 @@ const clientMenuItemsAfter: SidebarMenuItem[] = [
   { icon: Users, label: "Users", path: "/client/users", adminOnly: true },
   { icon: GraduationCap, label: "Staff PDPs", path: "/client/staff-pdps", adminOnly: true },
   { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },
+  { icon: Award, label: "My Certificate", path: "/client/certificate" },
 ];
 
 interface ClientSidebarProps {
