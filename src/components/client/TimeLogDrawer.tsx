@@ -315,7 +315,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
               <p>No time entries found.</p>
             </div>
           ) : (
-            <Table>
+            <Table wrapperClassName="overflow-x-visible">
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead>Date</TableHead>
