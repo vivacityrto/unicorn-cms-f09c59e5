@@ -161,15 +161,11 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
     setSaving(true);
     const newInstanceId = editPackageInstanceId === 'none' ? null : Number(editPackageInstanceId);
 
-    // Find the package_id from the instance
-    const instance = packageInstances.find(pi => pi.id === newInstanceId);
-    const newPackageId = instance ? instance.package_id : null;
-
     const { error } = await supabase
       .from('time_entries')
       .update({ 
         package_instance_id: newInstanceId,
-        package_id: newPackageId,
+        package_id: newInstanceId,
         updated_at: new Date().toISOString()
       })
       .eq('id', entryId);
@@ -275,13 +271,11 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
               onClick={async () => {
                 setBulkSaving(true);
                 const newInstanceId = bulkPackageInstanceId === 'none' ? null : Number(bulkPackageInstanceId);
-                const instance = packageInstances.find(pi => pi.id === newInstanceId);
-                const newPackageId = instance ? instance.package_id : null;
                 const { error } = await supabase
                   .from('time_entries')
                   .update({
                     package_instance_id: newInstanceId,
-                    package_id: newPackageId,
+                    package_id: newInstanceId,
                     updated_at: new Date().toISOString()
                   })
                   .in('id', Array.from(selectedIds));
