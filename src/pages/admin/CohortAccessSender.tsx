@@ -170,7 +170,7 @@ export default function CohortAccessSender() {
     return { ...counts, will_send, will_skip, total: preview.length, truncated: preview[0]?.truncated || false };
   }, [preview, action, selectedPreviewUuids]);
 
-  const expectedConfirm = previewSummary ? `Send to ${previewSummary.will_send} people` : "";
+  const expectedConfirm = previewSummary ? `SEND TO ${previewSummary.will_send} PEOPLE` : "";
 
   const launch = async () => {
     if (!previewSummary) return;
