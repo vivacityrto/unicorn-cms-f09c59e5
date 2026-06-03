@@ -169,7 +169,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
       .from('time_entries')
       .update({ 
         package_instance_id: newInstanceId,
-        package_id: newPackageId ?? undefined,
+        package_id: newPackageId,
         updated_at: new Date().toISOString()
       })
       .eq('id', entryId);
