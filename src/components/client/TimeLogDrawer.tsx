@@ -189,7 +189,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-3xl flex flex-col p-0 gap-0 overflow-hidden">
+      <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
         <div className="flex-shrink-0 px-6 pt-6 pb-4 space-y-4 border-b">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
@@ -301,7 +301,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
         </div>
 
         {/* Entries table */}
-        <div className="flex-1 overflow-auto min-h-0 px-6 pb-6">
+        <div className="overflow-auto max-h-[calc(100vh-280px)]">
           {loading ? (
             <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
