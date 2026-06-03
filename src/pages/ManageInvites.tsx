@@ -174,21 +174,6 @@ export default function ManageInvites() {
       
       if (usersError) throw usersError;
 
-      // Fetch last_sign_in_at from auth.users
-      const authUserMap = new Map<string, string | null>();
-      try {
-        const { data: authData } = await supabase.auth.admin.listUsers();
-        if (authData?.users) {
-          authData.users.forEach((authUser: any) => {
-            if (authUser.email) {
-              authUserMap.set(authUser.email, authUser.last_sign_in_at || null);
-            }
-          });
-        }
-      } catch (authError) {
-        console.error("Failed to fetch auth users:", authError);
-      }
-
       const statusMap = new Map<string, UserStatus>();
       usersData?.forEach(user => {
         statusMap.set(user.email, {
@@ -197,8 +182,8 @@ export default function ManageInvites() {
           created_at: user.created_at,
           unicorn_role: user.unicorn_role,
           user_type: user.user_type,
-          last_sign_in_at: authUserMap.get(user.email) || null,
-          is_in_auth: authUserMap.has(user.email)
+          last_sign_in_at: null,
+          is_in_auth: false,
         });
       });
 
