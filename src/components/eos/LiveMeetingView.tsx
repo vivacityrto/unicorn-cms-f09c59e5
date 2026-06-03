@@ -283,17 +283,24 @@ export const LiveMeetingView = () => {
       
       if (error) throw error;
 
-      // Update meeting to in_progress with started_at timestamp
-      const { error: meetingError } = await supabase
+      // Update meeting to in_progress with started_at timestamp.
+      // Use .select() to verify the row was actually updated — RLS can silently
+      // block the write and return { data: null, error: null }.
+      const { data: updatedMeeting, error: meetingError } = await supabase
         .from('eos_meetings')
         .update({ 
           status: 'in_progress',
           started_at: now,
           is_complete: false 
         })
-        .eq('id', meetingId);
+        .eq('id', meetingId)
+        .select('id, status')
+        .maybeSingle();
 
       if (meetingError) throw meetingError;
+      if (!updatedMeeting || updatedMeeting.status !== 'in_progress') {
+        throw new Error('Failed to start meeting — please try again or contact support.');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
