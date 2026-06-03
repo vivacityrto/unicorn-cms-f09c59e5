@@ -1,11 +1,28 @@
-In `src/components/client/TimeLogDrawer.tsx`, make exactly two className changes:
+## Plan: Enable all 5 membership tiers in generate-membership-certificate edge function
 
-1. **SheetContent** (line 192): replace the current className with:
-   `w-full sm:max-w-3xl flex flex-col !overflow-y-hidden p-0`
-   The `!overflow-y-hidden` uses `!important` to override the `overflow-y-auto` baked into the shared `SheetContent` base variant, stopping the outer sheet from scrolling.
+### Goal
+Remove the single-tier restriction and route each of the 5 membership tiers to its own PDF template in storage.
 
-2. **Table wrapper div** (line 304): replace the current className with:
-   `overflow-auto h-[calc(100vh-300px)] px-6 pb-6`
-   The explicit `h-[calc(100vh-300px)]` bounds the container so `overflow-auto` keeps both scrollbars inside the visible box, keeping the horizontal scrollbar always accessible without scrolling the entire sheet.
+### Changes
+File: `supabase/functions/generate-membership-certificate/index.ts`
 
-No other code, logic, or file changes.
+1. **Remove the Phase 1 guard** (lines 142–144)
+   Delete the block that returns `COMING_SOON` for any tier other than `ruby`.
+
+2. **Add tier-to-template mapping and use it** (line 149)
+   - Define `TIER_TEMPLATES` mapping each tier string to its storage path:
+     - `ruby` → `membership/certificate-template-ruby.pdf`
+     - `diamond` → `membership/certificate-template-diamond.pdf`
+     - `sapphire` → `membership/certificate-template-sapphire.pdf`
+     - `gold` → `membership/certificate-template-gold.pdf`
+     - `amethyst` → `membership/certificate-template-amethyst.pdf`
+   - Resolve the path via `templatePath = TIER_TEMPLATES[tier]`
+   - Replace the hardcoded `.download("membership/certificate-template-ruby.pdf")` call with `.download(templatePath)`.
+
+No other code changes — coordinates, fonts, colours, auth, and response format remain identical.
+
+### Deployment
+After editing, deploy the edge function so the change is live.
+
+### Verification
+Call the edge function for each tier (or spot-check a non-ruby tier) to confirm the correct template is fetched and the PDF is returned.

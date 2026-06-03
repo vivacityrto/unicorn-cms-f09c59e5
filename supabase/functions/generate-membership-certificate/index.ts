@@ -139,14 +139,19 @@ serve(async (req) => {
     if (!tier) {
       return jsonResponse(404, { ok: false, code: "NO_CERTIFICATE_FOR_TIER" });
     }
-    if (tier !== "ruby") {
-      return jsonResponse(404, { ok: false, code: "COMING_SOON" });
-    }
 
     // 6. Template
+    const TIER_TEMPLATES: Record<string, string> = {
+      ruby: "membership/certificate-template-ruby.pdf",
+      diamond: "membership/certificate-template-diamond.pdf",
+      sapphire: "membership/certificate-template-sapphire.pdf",
+      gold: "membership/certificate-template-gold.pdf",
+      amethyst: "membership/certificate-template-amethyst.pdf",
+    };
+    const templatePath = TIER_TEMPLATES[tier];
     const { data: tplBlob, error: tplErr } = await supabase.storage
       .from("doc-templates")
-      .download("membership/certificate-template-ruby.pdf");
+      .download(templatePath);
     if (tplErr || !tplBlob) {
       return jsonResponse(500, {
         ok: false,
