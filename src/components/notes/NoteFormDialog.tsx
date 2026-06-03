@@ -602,7 +602,7 @@ export function NoteFormDialog({
         notifyClient,
         elapsedTimerSeconds: elapsedTime,
         logTime,
-        timeDuration: duration,
+        timeDuration: String(totalTimeMinutes),
         timeWorkType,
         timeWorkSubType,
         timeDate,
