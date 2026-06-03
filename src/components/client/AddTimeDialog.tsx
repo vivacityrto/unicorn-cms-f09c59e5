@@ -141,9 +141,12 @@ export function AddTimeDialog({
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [notifyUserId, setNotifyUserId] = useState<string>('');
   const [notifyClient, setNotifyClient] = useState(false);
-  const [showNotePrompt, setShowNotePrompt] = useState(false);
-  const [savedEntryId, setSavedEntryId] = useState<string | null>(null);
-  const [savedTotalMinutes, setSavedTotalMinutes] = useState(0);
+  const [linkNote, setLinkNote] = useState(false);
+  const [linkNoteMode, setLinkNoteMode] = useState<'existing' | 'new'>('existing');
+  const [recentNotes, setRecentNotes] = useState<{ id: string; title: string | null; note_details: string; created_at: string }[]>([]);
+  const [selectedNoteId, setSelectedNoteId] = useState<string>('');
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [pendingTimeEntryId, setPendingTimeEntryId] = useState<string | null>(null);
   const [parentTenant, setParentTenant] = useState<ParentTenantInfo | null>(null);
   const [kickstartUsedMinutes, setKickstartUsedMinutes] = useState(0);
   const [instanceTotalUsedMinutes, setInstanceTotalUsedMinutes] = useState(0);
