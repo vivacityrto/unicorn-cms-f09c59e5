@@ -378,7 +378,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {editingEntryId === entry.id ? (
                         <div className="flex items-center gap-1">
                           <Select value={editPackageInstanceId} onValueChange={setEditPackageInstanceId}>
