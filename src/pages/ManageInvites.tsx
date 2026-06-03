@@ -786,7 +786,7 @@ export default function ManageInvites() {
                   const tenantName = tenantNames.get(invite.tenant_id) || `ID: ${invite.tenant_id}`;
                   const userStatus = userStatuses.get(invite.email);
                   // If user exists in users table, they've successfully signed up - show Verified
-                  const isVerified = !!userStatus && userStatus.is_in_auth === true;
+                  const isVerified = (invite.status as string) === 'accepted';
                   const statusBadge = isVerified 
                     ? { variant: 'default' as const, icon: CheckCircle, label: 'Verified', color: 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]' }
                     : getStatusBadge(invite.status, invite.expires_at);
