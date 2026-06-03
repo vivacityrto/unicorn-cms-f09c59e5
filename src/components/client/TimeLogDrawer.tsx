@@ -426,7 +426,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
                         <FileEdit className="h-4 w-4 text-muted-foreground" />
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {canEdit(entry) && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
