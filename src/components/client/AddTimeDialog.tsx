@@ -333,6 +333,22 @@ export function AddTimeDialog({
     setNotes(buildParentDefinedNote(parentTenant));
   }, [isParentDefined, selectedInstance, parentTenant]);
 
+  // Fetch recent unlinked notes when the user toggles "Link a note" on
+  useEffect(() => {
+    if (!linkNote || !tenantId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('notes')
+        .select('id, title, note_details, created_at')
+        .eq('tenant_id', tenantId)
+        .is('timeentry_id', null)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      setRecentNotes((data || []) as any);
+    })();
+  }, [linkNote, tenantId]);
+
+
   // Fetch existing usage (kickstart_tas + total) for the selected package instance
   useEffect(() => {
     if (!open || !selectedInstanceId) {
