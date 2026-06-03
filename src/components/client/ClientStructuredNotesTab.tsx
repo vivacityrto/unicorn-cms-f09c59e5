@@ -44,6 +44,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { TenantClickUpAISearch } from '@/components/tenant/TenantClickUpAISearch';
+import { useTenantMemberships } from '@/hooks/useTenantMemberships';
 
 /** Detects if content is markdown (vs HTML) and renders accordingly */
 function NoteContentRenderer({ content, className }: { content: string; className?: string }) {
