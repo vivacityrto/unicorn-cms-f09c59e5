@@ -247,6 +247,8 @@ export function NoteFormDialog({
   const [timeWorkSubType, setTimeWorkSubType] = useState('');
   const [timeDate, setTimeDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [timeBillable, setTimeBillable] = useState(true);
+  const [timeHours, setTimeHours] = useState('0');
+  const [timeMinutes, setTimeMinutes] = useState('30');
   const [timeWorkTypeOptions, setTimeWorkTypeOptions] = useState<{ code: string; label: string }[]>([]);
   const [timeWorkSubTypeOptions, setTimeWorkSubTypeOptions] = useState<{ code: string; label: string; category: string }[]>([]);
 
@@ -363,6 +365,8 @@ export function NoteFormDialog({
     setTimeWorkSubType('');
     setTimeDate(new Date().toISOString().slice(0, 10));
     setTimeBillable(true);
+    setTimeHours('0');
+    setTimeMinutes('30');
   }, []);
 
   // ── Populate form when opening ──
@@ -564,17 +568,15 @@ export function NoteFormDialog({
 
   // ── Save ──
   const handleSave = async () => {
-    if (logTime) {
-      const parsedDur = parseInt(duration, 10);
-      if (!duration || isNaN(parsedDur) || parsedDur <= 0) {
-        setDurationError(true);
-        toast({
-          title: 'Duration required',
-          description: 'Enter the number of minutes to log for this time entry, or turn off "Log time entry".',
-          variant: 'destructive',
-        });
-        return;
-      }
+    const totalTimeMinutes = (parseInt(timeHours) || 0) * 60 + (parseInt(timeMinutes) || 0);
+    if (logTime && totalTimeMinutes <= 0) {
+      setDurationError(true);
+      toast({
+        title: 'Duration required',
+        description: 'Enter the number of minutes to log for this time entry, or turn off "Log time entry".',
+        variant: 'destructive',
+      });
+      return;
     }
     if (!content.trim() || saving) return;
     setInternalSaving(true);
@@ -600,7 +602,7 @@ export function NoteFormDialog({
         notifyClient,
         elapsedTimerSeconds: elapsedTime,
         logTime,
-        timeDuration: duration,
+        timeDuration: String(totalTimeMinutes),
         timeWorkType,
         timeWorkSubType,
         timeDate,
