@@ -166,6 +166,8 @@ export function NoteFormDialog({
   activePackages = [],
   noteTypeOptions: propTypeOptions,
   noteStatusOptions: propStatusOptions,
+  hideLogTime = false,
+  prelinkedTimeEntryId: _prelinkedTimeEntryId,
   onSave,
   onEmailSendNow,
   saving: externalSaving,
