@@ -84,7 +84,7 @@ serve(async (req) => {
 
     // Lease a chunk
     const { data: leased, error: leaseErr } = await userClient.rpc("lease_cohort_job_items", {
-      p_job_id: jobId, p_worker_id: workerId, p_limit: batchSize,
+      p_job_id: jobId, p_worker_id: workerId, p_limit: batchSize, p_caller_id: caller.id,
     });
     if (leaseErr) { aborted = `LEASE_FAILED: ${leaseErr.message}`; break; }
     if (!leased || leased.length === 0) break;
@@ -97,7 +97,7 @@ serve(async (req) => {
       // but guard anyway.
       if (item.planned_action !== action) {
         await userClient.rpc("record_cohort_item_outcome", {
-          p_item_id: item.id, p_outcome: "skipped", p_reason: "Action mismatch — re-evaluated",
+          p_item_id: item.id, p_outcome: "skipped", p_reason: "Action mismatch — re-evaluated", p_caller_id: caller.id,
         });
         skipped++; drained++; continue;
       }
@@ -105,7 +105,7 @@ serve(async (req) => {
       // Activate requires a tenant assignment; skip if missing.
       if (action === "activate" && (item.tenant_id === null || item.tenant_id === undefined)) {
         await userClient.rpc("record_cohort_item_outcome", {
-          p_item_id: item.id, p_outcome: "skipped", p_reason: "No tenant assigned — cannot activate",
+          p_item_id: item.id, p_outcome: "skipped", p_reason: "No tenant assigned — cannot activate", p_caller_id: caller.id,
         });
         skipped++; drained++; continue;
       }
@@ -118,6 +118,7 @@ serve(async (req) => {
 
       let outcome: "sent" | "skipped" | "failed" = "failed";
       let reason: string | null = null;
+      let payload: any = undefined;
       try {
         const { data, error } = await admin.functions.invoke(senderName, {
           body: invokeBody,
@@ -125,7 +126,7 @@ serve(async (req) => {
         });
 
         // supabase.functions.invoke surfaces non-2xx via `error.context`; parse if present
-        let payload: any = data;
+        payload = data;
         if (error && (error as any).context) {
           try { payload = await (error as any).context.json(); }
           catch { try { payload = JSON.parse(await (error as any).context.text()); } catch { /* noop */ } }
@@ -157,7 +158,7 @@ serve(async (req) => {
       }
 
       await userClient.rpc("record_cohort_item_outcome", {
-        p_item_id: item.id, p_outcome: outcome, p_reason: reason,
+        p_item_id: item.id, p_outcome: outcome, p_reason: reason, p_caller_id: caller.id,
       });
 
       if (payload?.ok === true && typeof payload?.action_link === "string" && payload.action_link.length > 0) {
@@ -173,7 +174,7 @@ serve(async (req) => {
       else { failed++; consecutiveLocal++; }
 
       if (consecutiveLocal >= MAX_CONSECUTIVE_FAILURES) {
-        await userClient.rpc("set_cohort_job_status", { p_job_id: jobId, p_status: "paused" });
+        await userClient.rpc("set_cohort_job_status", { p_job_id: jobId, p_status: "paused", p_caller_id: caller.id });
         aborted = "TOO_MANY_FAILURES"; break;
       }
     }
@@ -183,7 +184,7 @@ serve(async (req) => {
   // Try to finalise (no-op unless 0 pending remain)
   let finalStatus: string | null = null;
   try {
-    const { data } = await userClient.rpc("finalise_cohort_job", { p_job_id: jobId });
+    const { data } = await userClient.rpc("finalise_cohort_job", { p_job_id: jobId, p_caller_id: caller.id });
     finalStatus = (data as string) ?? null;
   } catch { /* noop */ }
 

@@ -105,8 +105,13 @@ export default function CohortAccessSenderJob() {
           await refresh();
           const remaining = (data as any)?.remaining;
           const status = (data as any)?.status;
+          const aborted = (data as any)?.aborted;
           if (status === "paused" || status === "cancelled" || status === "completed") break;
           if (typeof remaining === "number" && remaining === 0) break;
+          if (aborted) {
+            toast({ title: "Worker aborted", description: aborted, variant: "destructive" });
+            break;
+          }
           // small breather between drains
           await new Promise((r) => setTimeout(r, 750));
         }

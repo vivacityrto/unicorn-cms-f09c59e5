@@ -63885,7 +63885,9 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      finalise_cohort_job: { Args: { p_job_id: string }; Returns: string }
+      finalise_cohort_job:
+        | { Args: { p_job_id: string }; Returns: string }
+        | { Args: { p_caller_id?: string; p_job_id: string }; Returns: string }
       finalise_meeting_minutes: {
         Args: { p_meeting_id: string; p_summary: string }
         Returns: string
@@ -64539,16 +64541,32 @@ export type Database = {
         }
         Returns: string
       }
-      lease_cohort_job_items: {
-        Args: { p_job_id: string; p_limit?: number; p_worker_id: string }
-        Returns: {
-          email: string
-          id: number
-          planned_action: string
-          tenant_id: number
-          user_uuid: string
-        }[]
-      }
+      lease_cohort_job_items:
+        | {
+            Args: { p_job_id: string; p_limit?: number; p_worker_id: string }
+            Returns: {
+              email: string
+              id: number
+              planned_action: string
+              tenant_id: number
+              user_uuid: string
+            }[]
+          }
+        | {
+            Args: {
+              p_caller_id?: string
+              p_job_id: string
+              p_limit?: number
+              p_worker_id: string
+            }
+            Returns: {
+              email: string
+              id: number
+              planned_action: string
+              tenant_id: number
+              user_uuid: string
+            }[]
+          }
       list_acting_user_options: {
         Args: { p_tenant_id: number }
         Returns: {
@@ -64748,10 +64766,20 @@ export type Database = {
             Returns: string
           }
       reclaim_stale_cohort_locks: { Args: never; Returns: number }
-      record_cohort_item_outcome: {
-        Args: { p_item_id: number; p_outcome: string; p_reason?: string }
-        Returns: undefined
-      }
+      record_cohort_item_outcome:
+        | {
+            Args: { p_item_id: number; p_outcome: string; p_reason?: string }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_caller_id?: string
+              p_item_id: number
+              p_outcome: string
+              p_reason?: string
+            }
+            Returns: undefined
+          }
       record_resource_usage: {
         Args: { p_downloaded?: boolean; p_resource_id: string }
         Returns: undefined
@@ -65279,10 +65307,12 @@ export type Database = {
         | { Args: never; Returns: undefined }
         | { Args: { p_tenant_id: number }; Returns: undefined }
       set_active_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
-      set_cohort_job_status: {
-        Args: { p_job_id: string; p_status: string }
-        Returns: undefined
-      }
+      set_cohort_job_status:
+        | { Args: { p_job_id: string; p_status: string }; Returns: undefined }
+        | {
+            Args: { p_caller_id?: string; p_job_id: string; p_status: string }
+            Returns: undefined
+          }
       set_issue_status: {
         Args: { p_issue_id: string; p_solution_text?: string; p_status: string }
         Returns: undefined
