@@ -286,7 +286,8 @@ export function AddTimeDialog({
         });
 
         setActiveInstances(instances);
-        if (instances.length === 1) {
+        if (instances.length > 0) {
+          // instances is already sorted start_date DESC — pick most recent
           setSelectedInstanceId(instances[0].id);
           if (instances[0].is_kickstart) setIsBillable(false);
         } else {
