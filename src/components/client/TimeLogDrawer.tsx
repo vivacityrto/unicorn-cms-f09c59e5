@@ -315,7 +315,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
             </div>
           ) : (
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Duration</TableHead>
