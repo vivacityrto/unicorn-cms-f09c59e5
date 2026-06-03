@@ -1,13 +1,33 @@
-## Plan: Replace single duration input with hours + minutes split in NoteFormDialog.tsx
+## Goal
+Ensure time entries and summary are re-fetched from the database every time the TimeLogDrawer opens, so newly added entries are visible without a page reload.
 
-### What
-Replace the single "Duration (minutes)" input in the Log Time section of `NoteFormDialog.tsx` (lines 790–793) with an hours + minutes split input, using the already-existing `timeHours`/`timeMinutes` state and the same pattern as `AddTimeDialog`.
+## Change
+In `src/components/client/TimeLogDrawer.tsx`, add a call to `refresh()` inside the existing `useEffect` that fires when the drawer opens.
 
-### How
-1. Replace lines 790–793 with the exact hours/minutes JSX block you specified.
-2. No other changes — all dependent state (`timeHours`, `timeMinutes`, `durationError`, `totalTimeMinutes`) is already present.
+### Before
+```tsx
+useEffect(() => {
+  if (open) fetchPackageInstances();
+}, [open, fetchPackageInstances]);
+```
 
-### Scope
-- **File:** `src/components/notes/NoteFormDialog.tsx` only
-- **Lines affected:** 790–793 (the duration input block within the Log Time section)
-- **No changes to:** state declarations, validation logic, `resetForm`, `handleSave`, or any other section of the file
+### After
+```tsx
+useEffect(() => {
+  if (open) {
+    fetchPackageInstances();
+    refresh();
+  }
+}, [open, fetchPackageInstances, refresh]);
+```
+
+## Why this is safe
+- `refresh` is already destructured from `useTimeTracking(clientId)` on line 80.
+- `fetchPackageInstances` is wrapped in `useCallback`, so the dependency array remains stable.
+- `refresh` from `useTimeTracking` is a stable callback reference (or wrapped appropriately), making the `useEffect` dependency change safe.
+- This only affects the drawer's open behavior and does not alter rendering, deletion, editing, or filtering logic.
+
+## Verification
+1. Open the drawer after adding time via `AddTimeDialog` or `NoteFormDialog`.
+2. Confirm the new entry appears immediately without a full page reload.
+3. Confirm existing entries still load correctly.

@@ -118,8 +118,11 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
   }, [clientId]);
 
   useEffect(() => {
-    if (open) fetchPackageInstances();
-  }, [open, fetchPackageInstances]);
+    if (open) {
+      fetchPackageInstances();
+      refresh();
+    }
+  }, [open, fetchPackageInstances, refresh]);
 
   const filteredEntries = entries.filter((entry) => {
     if (workTypeFilter !== 'all' && entry.work_type !== workTypeFilter) return false;
