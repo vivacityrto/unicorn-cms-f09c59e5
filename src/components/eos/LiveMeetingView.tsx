@@ -19,7 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   Play, SkipForward, SkipBack, CheckCircle, Clock, Users, X, Target, 
   TrendingUp, AlertCircle, ListTodo, MessageSquare, Sparkles,
-  ArrowRight, Timer, PlayCircle, Star, LogOut, Eye
+  ArrowRight, Timer, PlayCircle, Star, LogOut, Eye, Loader2
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
