@@ -174,8 +174,8 @@ serve(async (req) => {
         page.drawText(text, { x: CENTER_X - w / 2, y, size, font, color });
       };
 
-      drawCentered(tenantName ?? "", helvB, 28, FUCHSIA, 575);
-      drawCentered(formatAuDate(commencementDate), helvB, 24, FUCHSIA, 435);
+      drawCentered(tenantName ?? "", helvB, 28, FUCHSIA, 465);
+      drawCentered(formatAuDate(commencementDate), helvB, 24, FUCHSIA, 320);
 
       pdfBytes = await pdfDoc.save();
     } catch (e) {
