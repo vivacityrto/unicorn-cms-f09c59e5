@@ -190,7 +190,7 @@ export function TimeLogDrawer({ open, onOpenChange, clientId }: TimeLogDrawerPro
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-3xl p-0">
-        <div className="h-screen flex flex-col overflow-hidden">
+        <div className="h-screen overflow-hidden flex flex-col">
         <div className="flex-shrink-0 px-6 pt-6 pb-4 space-y-4 border-b">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
