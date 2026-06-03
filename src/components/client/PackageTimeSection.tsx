@@ -45,6 +45,7 @@ const WORK_TYPES = [
   { value: 'document_review', label: 'Document Review' },
   { value: 'training', label: 'Training' },
   { value: 'support', label: 'Support' },
+  { value: 'follow_up', label: 'Follow-up' },
 ];
 
 export function PackageTimeSection({ 
