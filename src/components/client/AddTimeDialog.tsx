@@ -788,6 +788,66 @@ export function AddTimeDialog({
               </SelectContent>
             </Select>
           </div>
+          {/* Link a note to this time entry */}
+          <div className="space-y-2 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="link-note">Link a note</Label>
+              <Switch
+                id="link-note"
+                checked={linkNote}
+                onCheckedChange={(v) => { setLinkNote(v); setSelectedNoteId(''); }}
+              />
+            </div>
+            {linkNote && (
+              <div className="space-y-3 rounded-md border p-3 bg-muted/30">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={linkNoteMode === 'existing' ? 'default' : 'outline'}
+                    onClick={() => setLinkNoteMode('existing')}
+                  >
+                    Link existing
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={linkNoteMode === 'new' ? 'default' : 'outline'}
+                    onClick={() => setLinkNoteMode('new')}
+                  >
+                    + New note
+                  </Button>
+                </div>
+
+                {linkNoteMode === 'existing' && (
+                  <Select value={selectedNoteId} onValueChange={setSelectedNoteId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a note to link..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {recentNotes.length === 0 && (
+                        <div className="px-2 py-3 text-xs text-muted-foreground">
+                          No unlinked notes found
+                        </div>
+                      )}
+                      {recentNotes.map((n) => (
+                        <SelectItem key={n.id} value={n.id}>
+                          {n.title || (n.note_details || '').substring(0, 60)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {linkNoteMode === 'new' && (
+                  <p className="text-xs text-muted-foreground">
+                    After saving the time entry, a note form will open pre-linked to this entry and package.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           <DialogFooter className="sm:justify-between">
             <NotifyClientCheckbox checked={notifyClient} onCheckedChange={setNotifyClient} />
             <div className="flex gap-2">
@@ -797,27 +857,65 @@ export function AddTimeDialog({
               <Button type="submit" disabled={saving || (isParentDefined && !parentTenant) || (isKickstart && !kickstartEligible)}>
                 {saving ? 'Saving...' : 'Add Time'}
               </Button>
-
             </div>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
 
-      <AlertDialog open={showNotePrompt} onOpenChange={setShowNotePrompt}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Create a note from this time entry?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A note will be pre-filled with the time entry details so you can add additional context.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleNotePromptNo}>No</AlertDialogCancel>
-            <AlertDialogAction onClick={handleNotePromptYes}>Yes</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {showNoteDialog && pendingTimeEntryId && (
+        <NoteFormDialog
+          open={showNoteDialog}
+          onOpenChange={(v) => {
+            if (!v) {
+              setShowNoteDialog(false);
+              setPendingTimeEntryId(null);
+              resetForm();
+              onSuccess?.();
+            }
+          }}
+          mode="create"
+          tenantId={tenantId}
+          showDuration={true}
+          showPackageSelector={false}
+          hideLogTime={true}
+          prelinkedTimeEntryId={pendingTimeEntryId}
+          activePackages={selectedInstance ? [{
+            instance_id: selectedInstance.id,
+            package_id: selectedInstance.package_id,
+            name: selectedInstance.package_name,
+          }] : []}
+          onSave={async (data) => {
+            // Insert the note here, then link the prelinked time entry
+            const { data: inserted, error } = await supabase
+              .from('notes')
+              .insert({
+                tenant_id: tenantId,
+                client_id: clientId,
+                user_id: user?.id,
+                title: data.title || null,
+                note_details: data.content,
+                note_type: data.noteType,
+                priority: data.priority,
+                status: data.status,
+                is_pinned: data.isPinned,
+                package_instance_id: data.packageInstanceId !== 'none' ? Number(data.packageInstanceId) : (selectedInstance?.id ?? null),
+                timeentry_id: pendingTimeEntryId,
+              } as any)
+              .select('id')
+              .single();
+            if (error) throw error;
+            const noteId = (inserted as any)?.id;
+            if (noteId && pendingTimeEntryId) {
+              await supabase.from('notes').update({ timeentry_id: pendingTimeEntryId } as any).eq('id', noteId);
+            }
+            setShowNoteDialog(false);
+            setPendingTimeEntryId(null);
+            resetForm();
+            onSuccess?.();
+          }}
+        />
+      )}
     </>
   );
 }
