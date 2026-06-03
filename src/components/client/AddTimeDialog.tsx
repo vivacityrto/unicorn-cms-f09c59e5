@@ -471,18 +471,17 @@ export function AddTimeDialog({
         description: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m logged${notifyUserId ? ' — notification sent' : ''}`,
       });
 
-      // Store entry data for note prompt, then show it
-      const entryId = (insertedEntry as any)?.id;
-      if (entryId) {
-        setSavedEntryId(entryId);
-        setSavedTotalMinutes(totalMinutes);
-        onOpenChange(false);
-        setShowNotePrompt(true);
-      } else {
-        resetForm();
-        onOpenChange(false);
-        onSuccess?.();
+      const entryId = (insertedEntry as any)?.id ?? null;
+      if (linkNote && entryId) {
+        const opened = await handleLinkOrCreateNote(entryId);
+        if (opened) {
+          // NoteFormDialog will handle reset/success on close
+          return;
+        }
       }
+      resetForm();
+      onOpenChange(false);
+      onSuccess?.();
     } catch (err: any) {
       toast({ title: 'Failed to add time', description: err.message, variant: 'destructive' });
     } finally {
@@ -502,40 +501,31 @@ export function AddTimeDialog({
     setSelectedInstanceId(null);
     setNotifyUserId('');
     setNotifyClient(false);
-    setSavedEntryId(null);
-    setSavedTotalMinutes(0);
     setKickstartTas(1);
     setKickstartNoteEdited(false);
-
+    setLinkNote(false);
+    setLinkNoteMode('existing');
+    setSelectedNoteId('');
+    setRecentNotes([]);
+    setPendingTimeEntryId(null);
   };
 
-  const handleNotePromptYes = () => {
-    const workLabel = workTypes.find(w => w.code === workType)?.label || workType;
-    const h = Math.floor(savedTotalMinutes / 60);
-    const m = savedTotalMinutes % 60;
-    const notesSnippet = notes ? ` - ${notes.substring(0, 55)}` : '';
-    const title = `TIME: ${workLabel} (${h}:${m.toString().padStart(2, '0')})${notesSnippet}`;
-    const noteBody = notes && notes.length > 55 ? notes.substring(55) : '';
-    const params = new URLSearchParams({
-      initNote: 'true',
-      noteTitle: title,
-      timeEntryId: savedEntryId!,
-      ...(noteBody ? { noteDetails: noteBody } : {}),
-      ...(workType ? { workType } : {}),
-      ...(selectedInstanceId ? { packageId: selectedInstanceId.toString() } : {}),
-      ...(date ? { startedDate: date } : {}),
-    });
-    setShowNotePrompt(false);
-    resetForm();
-    onSuccess?.();
-    navigate(`/tenant/${tenantId}/notes?${params.toString()}`);
+  // Returns true when a follow-up NoteFormDialog has been opened (caller must
+  // not reset/close — the dialog's onOpenChange handles that).
+  const handleLinkOrCreateNote = async (entryId: string): Promise<boolean> => {
+    if (linkNoteMode === 'existing' && selectedNoteId) {
+      await supabase.from('notes').update({ timeentry_id: entryId } as any).eq('id', selectedNoteId);
+      return false;
+    }
+    if (linkNoteMode === 'new') {
+      setPendingTimeEntryId(entryId);
+      setShowNoteDialog(true);
+      onOpenChange(false);
+      return true;
+    }
+    return false;
   };
 
-  const handleNotePromptNo = () => {
-    setShowNotePrompt(false);
-    resetForm();
-    onSuccess?.();
-  };
 
   return (
     <>
