@@ -247,6 +247,8 @@ export function NoteFormDialog({
   const [timeWorkSubType, setTimeWorkSubType] = useState('');
   const [timeDate, setTimeDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [timeBillable, setTimeBillable] = useState(true);
+  const [timeHours, setTimeHours] = useState('0');
+  const [timeMinutes, setTimeMinutes] = useState('30');
   const [timeWorkTypeOptions, setTimeWorkTypeOptions] = useState<{ code: string; label: string }[]>([]);
   const [timeWorkSubTypeOptions, setTimeWorkSubTypeOptions] = useState<{ code: string; label: string; category: string }[]>([]);
 
