@@ -12,8 +12,7 @@ export const useMeetingIssues = (meetingId?: string, tenantId?: number) => {
       const { data, error } = await supabase
         .from('eos_issues')
         .select('*')
-        .eq('tenant_id', tenantId!)
-        .or(`meeting_id.eq.${meetingId},and(meeting_id.is.null,status.eq.Open)`)
+        .or(`meeting_id.eq.${meetingId},and(meeting_id.is.null,status.eq.Open,or(tenant_id.eq.${tenantId},tenant_id.is.null))`)
         .order('priority', { ascending: false })
         .order('created_at', { ascending: true });
       
