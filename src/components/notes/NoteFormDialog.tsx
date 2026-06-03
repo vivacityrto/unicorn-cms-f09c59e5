@@ -263,6 +263,11 @@ export function NoteFormDialog({
     setTimeWorkSubType('');
   }, [timeWorkType]);
 
+  // Reset logTime when package is deselected
+  useEffect(() => {
+    if (selectedPackageInstanceId === 'none') setLogTime(false);
+  }, [selectedPackageInstanceId]);
+
   const subTypeCategory =
     timeWorkType === 'consultation' ? 'consultation'
     : (timeWorkType === 'document_review' || timeWorkType === 'document_development') ? 'document'
