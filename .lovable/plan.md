@@ -1,35 +1,36 @@
-## Two narrow fixes
+# Cohort Access Sender Worker — 4 Fixes
 
-### Fix 1 — Cohort sender confirmation casing
-File: `src/pages/admin/CohortAccessSender.tsx` (~line 173)
+## Fix 1 — auth.uid() NULL in worker RPC context (BLOCKING)
 
-Change:
-```ts
-const expectedConfirm = previewSummary ? `Send to ${previewSummary.will_send} people` : "";
-```
-to:
-```ts
-const expectedConfirm = previewSummary ? `SEND TO ${previewSummary.will_send} PEOPLE` : "";
-```
-No other edits to the file.
+**Migration** — `CREATE OR REPLACE FUNCTION` for all four, preserving existing bodies:
 
-### Fix 2 — `launch_cohort_job` migration
-Recreate the function via `CREATE OR REPLACE FUNCTION` preserving the exact current body, changing only the final `INSERT INTO public.audit_eos_events` to include `tenant_id` with the hard-coded Vivacity tenant id `6372`:
+1. `lease_cohort_job_items` — add `p_caller_id uuid` param; replace `auth.uid()` in staff check with `p_caller_id`.
+2. `record_cohort_item_outcome` — add `p_caller_id uuid` param; same swap.
+3. `finalise_cohort_job` — add `p_caller_id uuid` param; change `v_caller uuid := auth.uid()` → `v_caller uuid := p_caller_id`.
+4. `set_cohort_job_status` — add `p_caller_id uuid DEFAULT NULL`; staff check uses `COALESCE(p_caller_id, auth.uid())` so frontend callers still work.
 
-```sql
-INSERT INTO public.audit_eos_events (
-  tenant_id, user_id, entity, entity_id, action, reason, details
-) VALUES (
-  6372, v_caller, 'cohort_send_job', v_job_id, 'cohort_job_launched',
-  'Cross-tenant cohort access sender launched',
-  jsonb_build_object(
-    'action', p_action,
-    'resolved', v_resolved,
-    'planned', v_planned,
-    'filter', p_filter,
-    'include_uuids_count', COALESCE(array_length(p_include_uuids,1),0)
-  )
-);
-```
+I'll first read the current function bodies via `supabase--read_query` against `pg_proc` so the recreated functions are byte-accurate.
 
-All other logic, signature, `SECURITY DEFINER`, and `SET search_path` settings remain identical.
+**Worker** — `supabase/functions/cohort-access-sender-worker/index.ts`: add `p_caller_id: caller.id` to all four RPC arg objects (including the `set_cohort_job_status` call in the TOO_MANY_FAILURES path).
+
+## Fix 2 — `finalise_cohort_job` audit_eos_events NOT NULL crash
+
+In the same migration, inside `finalise_cohort_job` change the INSERT to include `tenant_id` and select hardcoded `6372` (Vivacity) — matches the prior `launch_cohort_job` fix.
+
+## Fix 3 — `payload` out of scope in worker
+
+In the for-loop, hoist `let payload: any = undefined;` above the `try`, and change the inner `let payload: any = data;` to plain assignment `payload = data;`. No other behavior change.
+
+## Fix 4 — Drain loop runs forever on worker abort
+
+In `src/pages/admin/CohortAccessSenderJob.tsx`, after reading `remaining`/`status`, also read `aborted`. If truthy, show a destructive toast (`title: "Worker aborted", description: aborted`) and `break` the loop.
+
+## Out of scope (do not touch)
+
+`launch_cohort_job`, `resolve_cohort`, Preview recipients flow, `CohortAccessSender.tsx`, other edge functions.
+
+## Order of execution
+
+1. Read current SQL bodies of the four functions.
+2. Submit migration (Fixes 1 + 2).
+3. After migration approval, edit worker (Fixes 1 + 3) and `CohortAccessSenderJob.tsx` (Fix 4).
