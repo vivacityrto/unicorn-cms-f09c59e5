@@ -1,39 +1,54 @@
-## Goal
-Fix the TimeLogDrawer scroll behavior so both horizontal and vertical scrollbars are always visible inside the drawer, by restructuring the SheetContent layout with an explicit viewport-height wrapper.
+## Bug Fix: Re-invite Dialog Calls Wrong Edge Function
 
-## Changes
+### Problem
+The Re-invite User modal (`ReInviteDialog.tsx`) currently calls the `invite-user` edge function with only `{ email, tenant_id, role }`. The `invite-user` function requires a full payload (first_name, unicorn_role, invite_as, etc.) and returns 422 when these fields are missing. The modal only provides email + tenant, so it always fails.
 
-### File: `src/components/client/TimeLogDrawer.tsx`
+The correct function for resending an existing invitation is `resend-invite`, which takes only `{ invitation_id: string }`, refreshes the token and expiry, and re-sends the invitation email automatically.
 
-**Step 1 — Simplify SheetContent className**
-Change the `SheetContent` opening tag from:
-```
-className="w-full sm:max-w-3xl flex flex-col !overflow-y-hidden p-0"
-```
-to:
-```
-className="w-full sm:max-w-3xl p-0"
-```
+### Files to Change
+1. `src/components/admin/ReInviteDialog.tsx`
+2. `src/pages/ManageInvites.tsx` (only the `<ReInviteDialog>` invocation and props)
 
-**Step 2 — Wrap all children in a viewport-height div**
-Immediately inside `<SheetContent>`, wrap all existing children in:
+### Plan
+
+#### 1. Update `ReInviteDialog.tsx` props
+Replace `availableEmails` and `availableTenants` with `selectedInvites: InviteRow[]` — the actual selected invitation rows from the parent page. The `InviteRow` type already exists in `ManageInvites.tsx`.
+
+#### 2. Update `ReInviteDialog.tsx` UI
+Replace the email and tenant dropdowns with a read-only list of the selected invitations (email, tenant name, role). This is simpler and correctly scoped — the dialog is opened via bulk selection in ManageInvites, so the user has already chosen which invitations to re-send.
+
+#### 3. Update `ReInviteDialog.tsx` submit handler
+Iterate over `selectedInvites` and call `resend-invite` for each:
+```typescript
+for (const invite of selectedInvites) {
+  const { data, error } = await supabase.functions.invoke("resend-invite", {
+    body: { invitation_id: invite.id },
+  });
+  if (error) throw error;
+}
+```
+Show a single success toast (e.g. "3 invitation(s) re-sent successfully") when all complete, or an error toast if any fail.
+
+#### 4. Update `ManageInvites.tsx` props passed to `ReInviteDialog`
+Pass the selected invite objects directly instead of `availableEmails` / `availableTenants`:
 ```tsx
-<div className="h-screen flex flex-col overflow-hidden">
-  ...all existing children...
-</div>
+<ReInviteDialog
+  open={reInviteDialogOpen}
+  onOpenChange={setReInviteDialogOpen}
+  selectedInvites={filteredInvites.filter(i => selectedInvites.has(i.id))}
+/>
 ```
 
-**Step 3 — Top section stays unchanged**
-The existing `<div className="flex-shrink-0 px-6 pt-6 pb-4 space-y-4 border-b">` containing `<SheetHeader>`, summary stats, filters, and bulk action bar remains exactly as-is.
+### What Stays Unchanged
+- The separate "Invite User" flow (calls `invite-user` correctly with a full payload)
+- The "Copy Link" action (already correctly calls `resend-invite` with `skip_email: true`)
+- The "Revoke" action
+- The `resend-invite` edge function
+- The `invite-user` edge function
+- Any other UI or logic in ManageInvites (table, filters, pagination, etc.)
 
-**Step 4 — Table wrapper becomes a bounded scroll container**
-Change the table wrapper div from:
-```
-className="overflow-auto h-[calc(100vh-300px)] px-6 pb-6"
-```
-to:
-```
-className="flex-1 min-h-0 overflow-auto px-6 pb-6"
-```
-
-No data, state, or business logic changes.
+### Acceptance Criteria
+- [ ] Clicking "Re-invite" in the bulk action toolbar opens the modal showing the selected invitation(s)
+- [ ] Clicking "Re-send Invitation" calls `resend-invite` for each selected invitation
+- [ ] No 422 errors from `invite-user` occur during re-invite
+- [ ] All other Manage Invites functionality remains identical

@@ -463,10 +463,8 @@ export default function ManageInvites() {
     toggleSelectInvite(inviteId);
   };
 
-  // Get unique visible emails and tenants for re-invite dialog
-  const visibleEmails = [...new Set(filteredInvites.map(i => i.email))];
-  const visibleTenants = [...new Set(filteredInvites.map(i => i.tenant_id))]
-    .map(id => ({ id, name: tenantNames.get(id) || `ID: ${id}` }));
+  // Get the selected invitation rows for the re-invite dialog
+  const selectedInviteRows = filteredInvites.filter((i) => selectedInvites.has(i.id));
 
   if (loading) {
     return (
@@ -997,8 +995,12 @@ export default function ManageInvites() {
       <ReInviteDialog
         open={reInviteDialogOpen}
         onOpenChange={setReInviteDialogOpen}
-        availableEmails={visibleEmails}
-        availableTenants={visibleTenants}
+        selectedInvites={selectedInviteRows}
+        tenantNames={tenantNames}
+        onComplete={() => {
+          setSelectedInvites(new Set());
+          fetchInvites();
+        }}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
