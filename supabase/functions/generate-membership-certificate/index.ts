@@ -93,26 +93,46 @@ serve(async (req) => {
       return jsonResponse(403, { ok: false, code: "FORBIDDEN", detail: "Not authorised for this tenant" });
     }
 
-    // 4. Lookup active membership package instance for this tenant
-    const { data: row, error: rowErr } = await supabase
+    // 4. Lookup active membership package instance for this tenant (flat queries — no PostgREST joins)
+    const { data: piRow, error: piErr } = await supabase
       .from("package_instances")
-      .select("start_date, packages!inner(name, package_type), tenants!inner(name)")
+      .select("start_date, package_id")
       .eq("tenant_id", tenantId)
       .eq("is_active", true)
-      .eq("packages.package_type", "membership")
+      .eq("billing_category", "membership_rto")
       .limit(1)
       .maybeSingle();
 
-    if (rowErr) {
-      return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: rowErr.message });
+    if (piErr) {
+      return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: piErr.message });
     }
-    if (!row) {
+    if (!piRow) {
       return jsonResponse(404, { ok: false, code: "NO_MEMBERSHIP" });
     }
 
-    const packageCode = (row as any).packages?.name as string | undefined;
-    const tenantName = (row as any).tenants?.name as string | undefined;
-    const commencementDate = (row as any).start_date as string | undefined;
+    const { data: pkgRow, error: pkgErr } = await supabase
+      .from("packages")
+      .select("name")
+      .eq("id", (piRow as any).package_id)
+      .maybeSingle();
+
+    if (pkgErr) {
+      return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: pkgErr.message });
+    }
+
+    const { data: tenantRow, error: tenantErr } = await supabase
+      .from("tenants")
+      .select("name")
+      .eq("id", tenantId)
+      .maybeSingle();
+
+    if (tenantErr) {
+      return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: tenantErr.message });
+    }
+
+    const packageCode = (pkgRow as any)?.name as string | undefined;
+    const tenantName = ((tenantRow as any)?.name as string | undefined) ?? "";
+    const commencementDate = (piRow as any).start_date as string | undefined;
 
     // 5. Tier mapping
     const tier = tierFromCode(packageCode);
