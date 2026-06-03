@@ -788,8 +788,32 @@ export function NoteFormDialog({
                 {logTime && (
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div className="space-y-1.5">
-                      <Label className="text-xs">Duration (minutes)</Label>
-                      <Input type="number" min={0} step={5} value={duration} onChange={e => { setDuration(e.target.value); if (durationError) setDurationError(false); }} placeholder="0" className={durationError ? 'border-destructive' : ''} />
+                      <Label className="text-xs">Duration</Label>
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="24"
+                          value={timeHours}
+                          onChange={(e) => { setTimeHours(e.target.value); if (durationError) setDurationError(false); }}
+                          className={`text-center w-16 ${durationError ? 'border-destructive' : ''}`}
+                        />
+                        <span className="text-sm text-muted-foreground shrink-0">hrs</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="45"
+                          step="15"
+                          value={timeMinutes}
+                          onChange={(e) => {
+                            const val = Math.round(parseInt(e.target.value) / 15) * 15;
+                            setTimeMinutes(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
+                            if (durationError) setDurationError(false);
+                          }}
+                          className={`text-center w-16 ${durationError ? 'border-destructive' : ''}`}
+                        />
+                        <span className="text-sm text-muted-foreground shrink-0">min</span>
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Work Type</Label>
