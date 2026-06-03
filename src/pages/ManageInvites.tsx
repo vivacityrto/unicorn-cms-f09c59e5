@@ -174,21 +174,6 @@ export default function ManageInvites() {
       
       if (usersError) throw usersError;
 
-      // Fetch last_sign_in_at from auth.users
-      const authUserMap = new Map<string, string | null>();
-      try {
-        const { data: authData } = await supabase.auth.admin.listUsers();
-        if (authData?.users) {
-          authData.users.forEach((authUser: any) => {
-            if (authUser.email) {
-              authUserMap.set(authUser.email, authUser.last_sign_in_at || null);
-            }
-          });
-        }
-      } catch (authError) {
-        console.error("Failed to fetch auth users:", authError);
-      }
-
       const statusMap = new Map<string, UserStatus>();
       usersData?.forEach(user => {
         statusMap.set(user.email, {
@@ -197,8 +182,8 @@ export default function ManageInvites() {
           created_at: user.created_at,
           unicorn_role: user.unicorn_role,
           user_type: user.user_type,
-          last_sign_in_at: authUserMap.get(user.email) || null,
-          is_in_auth: authUserMap.has(user.email)
+          last_sign_in_at: null,
+          is_in_auth: false,
         });
       });
 
@@ -376,20 +361,17 @@ export default function ManageInvites() {
     total: invites.length,
     pending: invites.filter(i => {
       const isExpired = i.expires_at && new Date(i.expires_at) < new Date();
-      const userStatus = userStatuses.get(i.email);
-      // Pending = not expired AND user hasn't registered yet
-      return !isExpired && (!userStatus || !userStatus.is_in_auth);
+      // Pending = not expired AND not accepted
+      return !isExpired && (i.status as string) !== 'accepted';
     }).length,
     expired: invites.filter(i => {
       const isExpired = i.expires_at && new Date(i.expires_at) < new Date();
-      const userStatus = userStatuses.get(i.email);
-      // Expired = past expiry AND user hasn't registered
-      return isExpired && (!userStatus || !userStatus.is_in_auth);
+      // Expired = past expiry AND not accepted
+      return isExpired && (i.status as string) !== 'accepted';
     }).length,
     verified: invites.filter(i => {
-      // Verified = user exists in auth.users (they've registered)
-      const userStatus = userStatuses.get(i.email);
-      return !!userStatus && userStatus.is_in_auth === true;
+      // Verified = invite has been accepted
+      return (i.status as string) === 'accepted';
     }).length,
   };
 
@@ -438,9 +420,9 @@ export default function ManageInvites() {
     const matchesStatus = statusFilter === "all" || 
       (statusFilter === "sent" && invite.status === "sent") ||
       (statusFilter === "failed" && invite.status === "failed") ||
-      (statusFilter === "expired" && (invite.status === "expired" || isExpired)) ||
-      (statusFilter === "verified" && userStatuses.get(invite.email)?.is_in_auth === true) ||
-      (statusFilter === "pending" && (invite.status === "pending" || invite.status === "sent") && !isExpired && !userStatuses.get(invite.email)?.is_in_auth) ||
+      (statusFilter === "expired" && (invite.status === "expired" || isExpired) && (invite.status as string) !== 'accepted') ||
+      (statusFilter === "verified" && (invite.status as string) === 'accepted') ||
+      (statusFilter === "pending" && (invite.status === "pending" || invite.status === "sent") && !isExpired && (invite.status as string) !== 'accepted') ||
       (statusFilter === "bounced" && invite.delivery_status === 'bounced') ||
       (statusFilter === "delivery-failed" && invite.delivery_status === 'failed') ||
       (statusFilter === "spam" && invite.delivery_status === 'complained');
@@ -804,7 +786,7 @@ export default function ManageInvites() {
                   const tenantName = tenantNames.get(invite.tenant_id) || `ID: ${invite.tenant_id}`;
                   const userStatus = userStatuses.get(invite.email);
                   // If user exists in users table, they've successfully signed up - show Verified
-                  const isVerified = !!userStatus && userStatus.is_in_auth === true;
+                  const isVerified = (invite.status as string) === 'accepted';
                   const statusBadge = isVerified 
                     ? { variant: 'default' as const, icon: CheckCircle, label: 'Verified', color: 'bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]' }
                     : getStatusBadge(invite.status, invite.expires_at);
