@@ -97,6 +97,9 @@ export interface NoteFormDialogProps {
   activePackages?: ActivePackage[];
   noteTypeOptions?: { code: string; label: string }[];
   noteStatusOptions?: { code: string; label: string }[];
+  // Time-entry integration overrides
+  hideLogTime?: boolean;
+  prelinkedTimeEntryId?: string | null;
   // Callbacks
   onSave: (data: NoteFormData) => Promise<void>;
   onEmailSendNow?: () => void; // called when user picks "Send Now" for email type
