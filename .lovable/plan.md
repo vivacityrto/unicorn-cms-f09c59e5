@@ -1,37 +1,24 @@
-## Fix Ambiguous Column Reference in `lease_cohort_job_items`
+## Goal
+Loosen the minutes input in `AddTimeDialog.tsx` and `NoteFormDialog.tsx` from 15-minute increments (step=15, max=45) to free 0–59 entry (step=1, max=59) with plain clamping, matching `EditTimeDialog.tsx`.
 
-### Problem
-`lease_cohort_job_items` returns a table with an `id` column, creating a PL/pgSQL output variable named `id`. Inside the function body, the `EXISTS` check uses unqualified `id`:
+## Files
+1. `src/components/client/AddTimeDialog.tsx` — lines 630-642
+2. `src/components/notes/NoteFormDialog.tsx` — lines 802-814
 
-```sql
-WHERE id = p_job_id AND status = 'running'
-```
+## Changes (same in both files)
+- `max="45"` → `max="59"`
+- `step="15"` → `step="1"`
+- Replace rounding `onChange`:
+  ```
+  const val = Math.round(parseInt(e.target.value) / 15) * 15;
+  setXxx(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
+  ```
+  with plain clamping:
+  ```
+  const val = parseInt(e.target.value);
+  setXxx(String(Math.max(0, Math.min(59, isNaN(val) ? 0 : val))));
+  ```
 
-PostgreSQL resolves this to the output variable (always NULL), so the condition is never true and the function returns zero rows every time, stalling the entire cohort-access-sender-worker.
-
-### Fix
-Qualify the column reference with a table alias in the `EXISTS` check.
-
-**BEFORE:**
-```sql
-IF NOT EXISTS (
-  SELECT 1 FROM public.cohort_send_jobs
-  WHERE id = p_job_id AND status = 'running'
-) THEN
-```
-
-**AFTER:**
-```sql
-IF NOT EXISTS (
-  SELECT 1 FROM public.cohort_send_jobs csj
-  WHERE csj.id = p_job_id AND csj.status = 'running'
-) THEN
-```
-
-### Scope
-- Single migration: `CREATE OR REPLACE FUNCTION public.lease_cohort_job_items(...)` with only the alias change shown above.
-- All other function logic, signature, `SECURITY DEFINER`, and `SET search_path` remain unchanged.
-- No other files or functions are modified.
-
-### Acceptance
-- The worker should begin leasing and processing pending cohort job items instead of returning zero rows on every call.
+## Out of scope
+- No changes to hours input, work type selects, billable toggle, submit logic, or any other field.
+- `EditTimeDialog.tsx` is untouched (it already has the target pattern).
