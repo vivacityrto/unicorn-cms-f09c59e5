@@ -802,12 +802,12 @@ export function NoteFormDialog({
                         <Input
                           type="number"
                           min="0"
-                          max="45"
-                          step="15"
+                          max="59"
+                          step="1"
                           value={timeMinutes}
                           onChange={(e) => {
-                            const val = Math.round(parseInt(e.target.value) / 15) * 15;
-                            setTimeMinutes(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
+                            const val = parseInt(e.target.value);
+                            setTimeMinutes(String(Math.max(0, Math.min(59, isNaN(val) ? 0 : val))));
                             if (durationError) setDurationError(false);
                           }}
                           className={`text-center w-16 ${durationError ? 'border-destructive' : ''}`}
