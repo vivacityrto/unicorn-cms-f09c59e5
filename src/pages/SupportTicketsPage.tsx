@@ -503,7 +503,7 @@ export default function SupportTicketsPage() {
           <div className="px-3 py-2 border-b text-xs font-medium text-muted-foreground">
             {sortedThreads.length} ticket{sortedThreads.length === 1 ? "" : "s"}
           </div>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 [&>[data-radix-scroll-area-viewport]>div]:!block">
             {isLoading ? (
               <div className="p-4 text-sm text-muted-foreground">Loading...</div>
             ) : sortedThreads.length === 0 ? (
