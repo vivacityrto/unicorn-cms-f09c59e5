@@ -107,7 +107,21 @@ serve(async (req) => {
     }
 
     const isGhost = (authUser.user_metadata as any)?.ghost_activation === true;
+
+    // For old activations without the flag, check if the user has ever
+    // signed in. If last_sign_in_at is null they have no known password —
+    // safe to let them set one via the invite token.
+    let neverSignedIn = false;
     if (!isGhost) {
+      const { data: profile } = await admin
+        .from('users')
+        .select('last_sign_in_at')
+        .eq('email', emailLc)
+        .maybeSingle();
+      neverSignedIn = !profile?.last_sign_in_at;
+    }
+
+    if (!isGhost && !neverSignedIn) {
       return json(403, {
         ok: false,
         code: "NOT_GHOST_ACCOUNT",
