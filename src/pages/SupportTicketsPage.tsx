@@ -165,20 +165,6 @@ export default function SupportTicketsPage() {
     };
   }, [selectedId, qc]);
 
-  useEffect(() => {
-    const threadParam = searchParams.get("thread");
-    if (!threadParam || isLoading || threads.length === 0) return;
-    if (selectedId === threadParam) {
-      setSearchParams({}, { replace: true });
-      return;
-    }
-    const match = threads.find((t) => t.id === threadParam);
-    if (match) {
-      handleSelect(match.id);
-      setSearchParams({}, { replace: true });
-    }
-  }, [searchParams, threads, isLoading, selectedId, setSearchParams, handleSelect]);
-
   const handleSelect = (id: string) => {
     setSelectedId(id);
     setReply("");
