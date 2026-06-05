@@ -1,0 +1,152 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
+
+interface Body {
+  token_plaintext: string;
+  email: string;
+  new_password: string;
+}
+
+function json(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  try {
+    let body: Body;
+    try {
+      body = await req.json();
+    } catch {
+      return json(400, { ok: false, code: "BAD_JSON", detail: "Invalid JSON" });
+    }
+
+    const token_plaintext = typeof body?.token_plaintext === "string" ? body.token_plaintext : "";
+    const email = typeof body?.email === "string" ? body.email : "";
+    const new_password = typeof body?.new_password === "string" ? body.new_password : "";
+
+    if (!token_plaintext || !email || !new_password) {
+      return json(400, {
+        ok: false,
+        code: "INVALID_INPUT",
+        detail: "token_plaintext, email, and new_password are required",
+      });
+    }
+    if (new_password.length < 8) {
+      return json(400, {
+        ok: false,
+        code: "INVALID_INPUT",
+        detail: "Password must be at least 8 characters",
+      });
+    }
+
+    const tokenHash = await sha256Hex(token_plaintext);
+
+    const { data: invitation, error: inviteErr } = await admin
+      .from("user_invitations")
+      .select("id, email, tenant_id, status, expires_at")
+      .eq("token_hash", tokenHash)
+      .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (inviteErr) {
+      console.error("invitation lookup failed", inviteErr);
+      return json(500, { ok: false, code: "LOOKUP_FAILED", detail: inviteErr.message });
+    }
+    if (!invitation) {
+      return json(400, { ok: false, code: "INVALID_TOKEN" });
+    }
+
+    const emailLc = email.toLowerCase();
+    if ((invitation.email || "").toLowerCase() !== emailLc) {
+      return json(400, { ok: false, code: "EMAIL_MISMATCH" });
+    }
+
+    // Find auth user by email
+    let authUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null } | null = null;
+    let page = 1;
+    while (page <= 20) {
+      const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+      if (listErr) {
+        console.error("listUsers failed", listErr);
+        return json(500, { ok: false, code: "AUTH_LOOKUP_FAILED", detail: listErr.message });
+      }
+      const found = list?.users?.find((u) => u.email?.toLowerCase() === emailLc);
+      if (found) {
+        authUser = found as any;
+        break;
+      }
+      if (!list?.users?.length || list.users.length < 1000) break;
+      page++;
+    }
+
+    if (!authUser) {
+      return json(404, { ok: false, code: "AUTH_USER_NOT_FOUND" });
+    }
+
+    const isGhost = (authUser.user_metadata as any)?.ghost_activation === true;
+    if (!isGhost) {
+      return json(403, {
+        ok: false,
+        code: "NOT_GHOST_ACCOUNT",
+        detail: "Use your existing password or Forgot Password.",
+      });
+    }
+
+    const { error: updateErr } = await admin.auth.admin.updateUserById(authUser.id, {
+      password: new_password,
+    });
+    if (updateErr) {
+      console.error("updateUserById failed", updateErr);
+      return json(500, {
+        ok: false,
+        code: "PASSWORD_UPDATE_FAILED",
+        detail: updateErr.message,
+      });
+    }
+
+    // Best-effort audit
+    try {
+      await admin.from("audit_eos_events").insert({
+        tenant_id: invitation.tenant_id,
+        user_id: authUser.id,
+        entity: "users",
+        entity_id: authUser.id,
+        action: "ghost_password_set",
+        details: {
+          email: authUser.email,
+          invitation_id: invitation.id,
+        },
+      });
+    } catch (auditErr) {
+      console.error("audit insert failed (non-fatal)", auditErr);
+    }
+
+    return json(200, { ok: true, email: authUser.email });
+  } catch (err: any) {
+    console.error("set-invite-password error", err);
+    return json(500, { ok: false, code: "UNEXPECTED", detail: err?.message || "Unexpected error" });
+  }
+});
