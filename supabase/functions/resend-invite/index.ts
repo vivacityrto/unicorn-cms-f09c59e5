@@ -176,7 +176,10 @@ serve(async (req) => {
     }
 
     // 9. Create invite URL
-    const frontendOrigin = req.headers.get("origin") || req.headers.get("referer")?.split('/').slice(0, 3).join('/');
+    const frontendOrigin =
+      req.headers.get("origin") ||
+      req.headers.get("referer")?.split('/').slice(0, 3).join('/') ||
+      'https://unicorn-cms.au';
     const inviteUrl = `${frontendOrigin}/accept-invitation?token=${newToken}`;
     console.log('Generated resend invite URL:', inviteUrl);
 
