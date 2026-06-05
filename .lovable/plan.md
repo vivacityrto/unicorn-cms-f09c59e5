@@ -1,18 +1,25 @@
-In `src/pages/SupportTicketsPage.tsx`, apply five targeted Tailwind class changes to the left ticket-list panel to prevent text clipping and ensure the date remains fully visible.
+## Problem
 
-1. `<ul>` inside `ScrollArea` (line 512):
-   Change `className="divide-y"` to `className="divide-y w-full"`.
+In `src/pages/SupportTicketsPage.tsx`, the ticket list (left panel) still shows clipped dates ("05/0") and preview text without ellipsis, even after the earlier `min-w-0` / `shrink-0` / `overflow-hidden` changes.
 
-2. Outer `<button>` inside each `<li>` (line 520):
-   Add `min-w-0` to the existing `className`.
+The root cause is the Radix `ScrollArea` component: its internal viewport wrapper (`[data-radix-scroll-area-viewport] > div`) defaults to `display: table`, which forces children to expand to their content's intrinsic width. This breaks `w-full`, `min-w-0`, and `truncate` on everything inside.
 
-3. User-name row `<div>` (line 524):
-   Change `className="flex items-center justify-between gap-2 mb-1"` to `className="flex items-center justify-between gap-2 mb-1 min-w-0 overflow-hidden"`.
+## Fix (one targeted change)
 
-4. Badge + date row `<div>` (line 537):
-   Change `className="flex items-center justify-between mt-1.5"` to `className="flex items-center justify-between mt-1.5 min-w-0 gap-2"`.
+In `src/pages/SupportTicketsPage.tsx`, update the `ScrollArea` on line 506 to override the inner viewport's display so children respect the container width:
 
-5. Date `<span>` (line 544):
-   Add `shrink-0` to the existing `className`.
+```tsx
+<ScrollArea className="flex-1 [&>[data-radix-scroll-area-viewport]>div]:!block">
+```
 
-No other files, logic, or styling will be changed.
+This makes the inner wrapper a block element, so:
+- `<ul className="divide-y w-full overflow-hidden">` actually constrains to the panel width
+- `truncate` on the user name and preview text works
+- `shrink-0` on the date is honored (no more "05/0")
+- The badge + date row stays within bounds
+
+## Scope
+
+- Single line change in `src/pages/SupportTicketsPage.tsx` (line 506).
+- No other files, logic, or styling changes.
+- No DB or hook changes.
