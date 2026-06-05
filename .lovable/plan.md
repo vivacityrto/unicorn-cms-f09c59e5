@@ -1,32 +1,62 @@
-# Plan — `set-invite-password` edge function
+# Fix: Copy Recovery Link burns token before user clicks
 
-New file: `supabase/functions/set-invite-password/index.ts`. No JWT required (the invite token is the credential). Uses service-role client.
+## Problem
+`src/components/client/TenantUsersTab.tsx` → `handleCopyRecoveryLink()` copies the raw Supabase `action_link` (a one-time `/auth/v1/verify?token=...` URL). Link scanners (Outlook Safe Links, AV previewers) follow it on receipt and consume the token, so the recipient sees "invalid/expired".
 
-## Imports & setup
-- `serve` from `std/http/server.ts`, `createClient` from `@supabase/supabase-js@2`, `corsHeaders` from `../_shared/cors.ts`.
-- Same `json(status, body)` helper as other functions in this folder.
-- Env: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+`src/components/profile/AdminActions.tsx` already solves this by rewriting the link to `/activate?token=...&type=recovery&email=...`, which is a static landing page that only consumes the token on user click.
 
-## Handler flow
-1. Handle `OPTIONS` preflight with `corsHeaders`.
-2. Parse JSON body `{ token_plaintext, email, new_password }`.
-3. Validate: all three present (strings), `new_password.length >= 8`. On failure → `400 { ok:false, code:'INVALID_INPUT', detail }`.
-4. Hash `token_plaintext` with SHA-256 → hex `tokenHash` (same pattern used by `activate-ghost-user` / `validate_invitation_token`).
-5. Look up `user_invitations` where `token_hash = tokenHash AND status = 'pending' AND expires_at > now()` (single row). If none → `{ ok:false, code:'INVALID_TOKEN' }` (400).
-6. Compare `invitation.email.toLowerCase() === email.toLowerCase()`. Mismatch → `{ ok:false, code:'EMAIL_MISMATCH' }` (400).
-7. Find auth user via `auth.admin.listUsers()` paginated (perPage 1000, up to 20 pages) — match by lowercased email. Not found → `{ ok:false, code:'AUTH_USER_NOT_FOUND' }` (404).
-8. Gate: require `authUser.user_metadata?.ghost_activation === true`. Otherwise → `{ ok:false, code:'NOT_GHOST_ACCOUNT', detail:'Use your existing password or Forgot Password.' }` (403). This prevents an invite token from overwriting a real user's password.
-9. `auth.admin.updateUserById(authUser.id, { password: new_password })`. On error → `500 { ok:false, code:'PASSWORD_UPDATE_FAILED', detail }`.
-10. Best-effort audit insert into `audit_eos_events`:
-    - `tenant_id: invitation.tenant_id`
-    - `user_id: authUser.id`
-    - `entity: 'users'`, `entity_id: authUser.id`
-    - `action: 'ghost_password_set'`
-    - `details: { email: authUser.email, invitation_id: invitation.id }`
-11. Return `200 { ok:true, email: authUser.email }`.
+## Fix
 
-All responses include `corsHeaders`. Errors are caught and returned as `500 { ok:false, code:'UNEXPECTED', detail }`.
+### 1. New shared helper — `src/lib/recoveryLink.ts`
+Single source of truth for the transform so the two buttons can never drift:
 
-## Out of scope
-- No status flip on `user_invitations` (caller will mark accepted separately, or via existing accept flow). The function only sets the password.
-- No JWT verification; relies on Lovable-managed `verify_jwt = false` default for new functions.
+```ts
+export function buildActivateUrlFromActionLink(actionLink: string, email: string): string {
+  const u = new URL(actionLink); // throws on invalid URL — callers handle
+  const token = u.searchParams.get('token');
+  const type = u.searchParams.get('type') || 'recovery';
+  if (!token) throw new Error('Recovery link missing token');
+  return `${window.location.origin}/activate?token=${token}&type=${encodeURIComponent(type)}&email=${encodeURIComponent(email)}`;
+}
+```
+
+### 2. `src/components/client/TenantUsersTab.tsx` (handleCopyRecoveryLink, ~line 303)
+- Import the helper.
+- Replace `navigator.clipboard.writeText(payload.action_link)` with:
+  ```ts
+  let activateUrl: string;
+  try {
+    activateUrl = buildActivateUrlFromActionLink(payload.action_link, payload.email);
+  } catch {
+    toast.error("Couldn't generate recovery link — please try again");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(activateUrl);
+    toast.success('Recovery link copied');
+  } catch {
+    toast.message('Copy manually', { description: activateUrl });
+  }
+  ```
+- Keep all surrounding logic intact (single edge-function call, AUTH_USER_NOT_FOUND branch, error mapping, fallback toast).
+
+### 3. `src/components/profile/AdminActions.tsx` (handleCopyRecoveryLink, lines 317–320)
+- Import the helper.
+- Replace the inline 4-line transform with `const activateUrl = buildActivateUrlFromActionLink(data.action_link, data.email);`
+- Behaviour, toasts, and copy text remain identical.
+
+## Out of scope (explicitly NOT touched)
+- `generate-recovery-link` edge function — unchanged.
+- `/activate` route / `ActivateAccount` page — already consumes token only on user action; relied on by AdminActions today.
+- `Send Password Reset` button — unchanged.
+- `src/pages/ManageInvites.tsx` and `src/pages/admin/CohortAccessSenderJob.tsx` also copy raw `action_link`s but for **invite** flows (`type=invite`/`signup`), not recovery, and the user scoped the fix to the Users-tab recovery button. Leaving as-is.
+
+## Verification checklist
+- TenantUsersTab "Copy Recovery Link" → clipboard now contains `https://<origin>/activate?token=...&type=recovery&email=...`, identical shape to AdminActions output.
+- Invalid/missing `action_link` → existing error toast fires; nothing broken is copied.
+- `/activate` route in `src/App.tsx:273` resolves to `ActivateAccount`, which already handles `type=recovery` (AdminActions depends on this today — no change).
+- Only one `generate-recovery-link` call per click (unchanged).
+- No DB, RPC, or edge-function changes.
+
+## Risk assessment
+**Low.** Frontend-only string transform extracted into a 6-line helper. The exact transform is already in production via AdminActions, so behaviour parity is guaranteed. Worst case (malformed `action_link`) is caught and surfaces the existing error toast instead of copying a broken value.

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { buildActivateUrlFromActionLink } from '@/lib/recoveryLink';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -314,10 +315,7 @@ export function AdminActions({
       if (error) {
         throw new Error(error.message || 'Failed to generate recovery link');
       }
-      const supabaseUrl = new URL(data.action_link);
-      const token = supabaseUrl.searchParams.get('token');
-      const type = supabaseUrl.searchParams.get('type') || 'recovery';
-      const activateUrl = `${window.location.origin}/activate?token=${token}&type=${type}&email=${encodeURIComponent(data.email)}`;
+      const activateUrl = buildActivateUrlFromActionLink(data.action_link, data.email);
       await navigator.clipboard.writeText(activateUrl);
       toast({
         title: 'Recovery Link Copied',
