@@ -118,11 +118,11 @@ serve(async (req) => {
         first_name: ghost.first_name ?? '',
         last_name: ghost.last_name ?? '',
         full_name: `${ghost.first_name ?? ''} ${ghost.last_name ?? ''}`.trim(),
+        ghost_activation: true,
       },
     });
     if (createErr) {
       console.error("createUser failed", createErr);
-      // Map gotrue duplicate errors to 409
       const msg = createErr.message || "";
       if (/already|duplicate|exists/i.test(msg)) {
         return json(409, { ok: false, code: "ALREADY_ACTIVATED", detail: msg });
@@ -130,105 +130,115 @@ serve(async (req) => {
       return json(500, { ok: false, code: "AUTH_CREATE_FAILED", detail: msg });
     }
 
-    // 8. Generate recovery link
-    const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://www.unicorn-cms.au";
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type: "recovery",
-      email: ghostEmail,
-      options: { redirectTo: `${APP_BASE_URL}/reset-password` },
-    });
-    const actionLink = linkData?.properties?.action_link;
-    if (linkErr || !actionLink) {
-      console.error("generateLink failed", linkErr);
-      return json(500, {
-        ok: false,
-        code: "LINK_GENERATION_FAILED",
-        detail: linkErr?.message || "No action_link returned. Auth account was created — use Resend password reset.",
-      });
+    // 8. Role correction — align tenant_users / tenant_members / users with relationship_role
+    const VIVACITY_TENANT_ID = 6372;
+    const isVivacity = body.tenant_id === VIVACITY_TENANT_ID;
+
+    const { data: existingTU } = await admin
+      .from('tenant_users')
+      .select('relationship_role, primary_contact')
+      .eq('user_id', body.user_uuid)
+      .eq('tenant_id', body.tenant_id)
+      .maybeSingle();
+
+    const relationshipRole: string =
+      (existingTU as any)?.relationship_role ||
+      (ghost.unicorn_role === 'Admin' ? 'primary_contact' : 'user');
+
+    let tuRole: string, tuPrimary: boolean, tuSecondary: boolean, tuScope: string;
+    let uRole: string, uType: string;
+    let tmRole: string, tmStatus: string;
+
+    switch (relationshipRole) {
+      case 'primary_contact':
+        tuRole='parent'; tuPrimary=true;  tuSecondary=false; tuScope='full';
+        uRole='Admin';        uType='Client Parent';
+        tmRole='Admin';       tmStatus='active'; break;
+      case 'secondary_contact':
+        tuRole='parent'; tuPrimary=false; tuSecondary=true;  tuScope='full';
+        uRole='Admin';        uType='Client Parent';
+        tmRole='Admin';       tmStatus='active'; break;
+      case 'academy_user':
+        tuRole='child'; tuPrimary=false; tuSecondary=false; tuScope='academy_only';
+        uRole='Academy User'; uType='Client Child';
+        tmRole='General User'; tmStatus='inactive'; break;
+      default:
+        tuRole='child'; tuPrimary=false; tuSecondary=false; tuScope='full';
+        uRole='User';         uType='Client Child';
+        tmRole='General User'; tmStatus='active';
+    }
+    if (isVivacity) {
+      uType='Vivacity Team'; uRole = ghost.unicorn_role ?? uRole;
+      tmRole='Admin'; tmStatus='active';
     }
 
-    // 9. Send branded welcome email via Mailgun
+    await admin.from('tenant_users').upsert({
+      user_id: body.user_uuid,
+      tenant_id: body.tenant_id,
+      role: tuRole,
+      primary_contact: tuPrimary,
+      secondary_contact: tuSecondary,
+      access_scope: tuScope,
+      relationship_role: relationshipRole,
+    }, { onConflict: 'tenant_id,user_id' });
+
+    await admin.from('tenant_members').upsert({
+      tenant_id: body.tenant_id,
+      user_id: body.user_uuid,
+      role: tmRole,
+      status: tmStatus,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'tenant_id,user_id' });
+
+    await admin.from('users').update({
+      unicorn_role: uRole,
+      user_type: uType,
+      updated_at: new Date().toISOString(),
+    }).eq('user_uuid', body.user_uuid);
+
+    // 9. Create 7-day invite token and send branded invitation email
+    const inviteToken = crypto.randomUUID();
+    const encoder = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(inviteToken));
+    const tokenHash = Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
     let emailSent = false;
     let emailError: string | null = null;
-    let mailgunMessageId: string | null = null;
-    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
-      emailError = "Mailgun not configured";
-      console.warn("Mailgun not configured — skipping welcome email");
-    } else {
-      const recipientName = (ghost.first_name?.trim()) || ghostEmail.split("@")[0];
-      const fromEmail = MAILGUN_FROM_EMAIL || `noreply@${MAILGUN_DOMAIN}`;
-      const html = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Your Unicorn account is ready</title>
-<style>
-  body { margin:0; padding:0; background:#f6f8fb; font-family:Arial,Helvetica,sans-serif; color:#111; }
-  .container { max-width:560px; margin:0 auto; background:#ffffff; }
-  .header { background:#23C0DD; padding:24px; color:#fff; text-align:center; }
-  .content { padding:24px; }
-  .btn { display:inline-block; background:#23C0DD; color:#fff; text-decoration:none; padding:12px 18px; border-radius:6px; font-weight:500; }
-  .muted { color:#666; font-size:14px; margin-top:16px; }
-  .footer { padding:16px; text-align:center; color:#666; font-size:12px; }
-  .link-box { background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; padding:12px; margin:16px 0; word-break:break-all; font-size:14px; }
-  a { color:#23C0DD; }
-</style></head>
-<body><div class="container">
-  <div class="header"><h1 style="margin:0; font-size:28px;">🦄 Unicorn</h1></div>
-  <div class="content">
-    <h2 style="color:#1f2937; margin-top:0;">Your Unicorn account is ready</h2>
-    <p>Hi ${recipientName},</p>
-    <p>Vivacity has set up your Unicorn account. Click below to set your password and log in for the first time.</p>
-    <p style="text-align:center; margin:24px 0;">
-      <a href="${actionLink}" class="btn">Set up my password 🔑</a>
-    </p>
-    <p class="muted">If the button doesn't work, copy this link:</p>
-    <div class="link-box"><a href="${actionLink}">${actionLink}</a></div>
-    <p class="muted"><strong>⚡ This link expires in 1 hour.</strong><br/>
-    If you didn't expect this email, please contact your Vivacity consultant.</p>
-  </div>
-  <div class="footer">Vivacity Unicorn • <a href="${APP_BASE_URL}">${APP_BASE_URL}</a></div>
-</div></body></html>`;
-      const text = `Hi ${recipientName},\n\nVivacity has set up your Unicorn account. Set your password here:\n${actionLink}\n\nThis link expires in 1 hour.\n\n— Vivacity Unicorn`;
+    let invitationId: string | null = null;
 
-      const fd = new FormData();
-      fd.append("from", `${MAILGUN_FROM_NAME} <${fromEmail}>`);
-      fd.append("to", ghost.email);
-      fd.append("subject", "Your Unicorn account is ready");
-      fd.append("html", html);
-      fd.append("text", text);
-
-      const apiBase = MAILGUN_REGION === "eu" ? "https://api.eu.mailgun.net" : "https://api.mailgun.net";
-      const mg = await fetch(`${apiBase}/v3/${MAILGUN_DOMAIN}/messages`, {
-        method: "POST",
-        headers: { Authorization: `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}` },
-        body: fd,
-      });
-      if (mg.ok) {
-        const mgResult = await mg.json();
-        emailSent = true;
-        mailgunMessageId = mgResult?.id ?? null;
-      } else {
-        emailError = await mg.text();
-        console.error("Mailgun send failed", mg.status, emailError);
-      }
-    }
-
-
-    // Best-effort: record in user_invitations for Manage Invites visibility
-    try {
-      await admin.from("user_invitations").insert({
+    const { data: insertedInvite, error: inviteInsertErr } = await admin
+      .from('user_invitations')
+      .insert({
         email: ghost.email,
-        status: "sent",
+        status: 'pending',
         invited_by: caller.id,
         tenant_id: body.tenant_id,
-        unicorn_role: ghost.unicorn_role ?? "User",
-        first_name: ghost.first_name ?? "",
+        unicorn_role: uRole,
+        relationship_role: relationshipRole,
+        token_hash: tokenHash,
+        expires_at: expiresAt.toISOString(),
+        first_name: ghost.first_name ?? '',
         last_name: ghost.last_name ?? null,
-        last_sent_at: new Date().toISOString(),
-        mailgun_message_id: mailgunMessageId,
-      });
+      })
+      .select('id')
+      .single();
 
-    } catch (inviteLogErr) {
-      console.error("user_invitations insert failed (non-fatal)", inviteLogErr);
+    if (inviteInsertErr || !insertedInvite) {
+      emailError = inviteInsertErr?.message || 'invitation insert failed';
+      console.error('user_invitations insert failed', inviteInsertErr);
+    } else {
+      invitationId = insertedInvite.id;
+      const { error: emailErr } = await admin.functions.invoke('send-invitation-email', {
+        body: { invitation_id: insertedInvite.id, token_plaintext: inviteToken },
+      });
+      if (emailErr) {
+        emailError = emailErr.message || 'send-invitation-email failed';
+        console.error('send-invitation-email failed', emailErr);
+      } else {
+        emailSent = true;
+      }
     }
 
     // 10. Audit (best-effort)
@@ -244,6 +254,11 @@ serve(async (req) => {
           activated_by: caller.id,
           email_sent: emailSent,
           email_error: emailError,
+          relationship_role: relationshipRole,
+          tenant_users_role: tuRole,
+          tenant_members_role: tmRole,
+          roles_corrected: true,
+          invitation_id: invitationId,
         },
       });
     } catch (auditErr) {
@@ -253,12 +268,11 @@ serve(async (req) => {
     return json(200, {
       ok: true,
       email: ghost.email,
-      email_sent: emailSent,
+      invite_sent: emailSent,
       email_error: emailError,
-      action_link: emailSent ? null : actionLink,
       detail: emailSent
-        ? "Account activated and welcome email sent"
-        : "Account activated; welcome email could not be sent — resend via password reset",
+        ? "Account activated and invitation email sent (7-day token)"
+        : "Account activated; invitation email could not be sent",
     });
   } catch (err: any) {
     console.error("activate-ghost-user error", err);
