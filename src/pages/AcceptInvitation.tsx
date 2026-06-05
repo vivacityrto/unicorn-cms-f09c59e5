@@ -222,15 +222,69 @@ unicorn_role: invitationData!.unicornRole,
         });
 
         if (signInError) {
-          // Password doesn't match their existing account
-          toast({
-            title: 'Account already exists',
-            description: 'An account with this email already exists. Please log in with your existing password, or use "Forgot Password" to reset it.',
-            variant: 'destructive',
+          // Try set-invite-password for ghost-activated accounts (have auth but no password)
+          const { data: setPwData, error: setPwError } = await supabase.functions.invoke(
+            'set-invite-password',
+            {
+              body: {
+                token_plaintext: token,
+                email: invitationData!.email,
+                new_password: formData.password,
+              },
+            }
+          );
+
+          if (setPwError || !setPwData?.ok) {
+            const code = setPwData?.code;
+            if (code === 'NOT_GHOST_ACCOUNT') {
+              toast({
+                title: 'Account already exists',
+                description: 'Please log in with your existing password, or use Forgot Password to reset it.',
+                variant: 'destructive',
+              });
+              setTimeout(() => navigate('/'), 2000);
+              return;
+            }
+            toast({
+              title: 'Invitation expired',
+              description: 'This invitation link has expired. Please ask your administrator for a new one.',
+              variant: 'destructive',
+            });
+            return;
+          }
+
+          // Password set — now sign in with it
+          const { data: signInRetry, error: retryError } = await supabase.auth.signInWithPassword({
+            email: invitationData!.email,
+            password: formData.password,
           });
-          setTimeout(() => navigate('/'), 2000);
+
+          if (retryError || !signInRetry.user) {
+            toast({
+              title: 'Sign in failed',
+              description: 'Password was set but sign in failed. Please try logging in directly.',
+              variant: 'destructive',
+            });
+            setTimeout(() => navigate('/'), 2000);
+            return;
+          }
+
+          // Finalize invitation
+          const result = await finalizeInvitation(signInRetry.user.id, tokenHash);
+          if (!result.ok && result.code !== 'ALREADY_ACCEPTED') {
+            toast({
+              title: 'Setup incomplete',
+              description: result.message || `Could not finalise your invitation (${result.code}). Contact your administrator.`,
+              variant: 'destructive',
+            });
+            return;
+          }
+
+          toast({ title: 'Account activated!', description: 'Redirecting to your dashboard…' });
+          setTimeout(() => navigate('/post-sign-in', { state: { fresh: true }, replace: true }), 1500);
           return;
         }
+
 
         // Sign in successful - finalize invitation and redirect
         if (signInData.user) {
