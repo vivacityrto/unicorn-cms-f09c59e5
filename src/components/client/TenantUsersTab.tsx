@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { buildActivateUrlFromActionLink } from '@/lib/recoveryLink';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -301,11 +302,18 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         try { payload = JSON.parse(await (error as any).context.text()); } catch { /* ignore */ }
       }
       if (payload?.ok && payload.action_link) {
+        let activateUrl: string;
         try {
-          await navigator.clipboard.writeText(payload.action_link);
+          activateUrl = buildActivateUrlFromActionLink(payload.action_link, payload.email);
+        } catch {
+          toast.error("Couldn't generate recovery link — please try again");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(activateUrl);
           toast.success('Recovery link copied');
         } catch {
-          toast.message('Copy manually', { description: payload.action_link });
+          toast.message('Copy manually', { description: activateUrl });
         }
         return;
       }
