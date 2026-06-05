@@ -61,6 +61,10 @@ export default function SupportTicketsPage() {
   const [sending, setSending] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [metaOpen, setMetaOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
   const { data: threads = [], isLoading } = useQuery({
     queryKey: ["support-tickets"],
