@@ -1,43 +1,32 @@
-# Plan — activate-ghost-user full fix
+# Plan — `set-invite-password` edge function
 
-Single-file change: `supabase/functions/activate-ghost-user/index.ts`. Two changes shipped in the same deployment.
+New file: `supabase/functions/set-invite-password/index.ts`. No JWT required (the invite token is the credential). Uses service-role client.
 
-## Change A — Role correction after auth user creation
+## Imports & setup
+- `serve` from `std/http/server.ts`, `createClient` from `@supabase/supabase-js@2`, `corsHeaders` from `../_shared/cors.ts`.
+- Same `json(status, body)` helper as other functions in this folder.
+- Env: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 
-Inserted directly after the `createErr` block (~line 131). Before generating any link/email:
+## Handler flow
+1. Handle `OPTIONS` preflight with `corsHeaders`.
+2. Parse JSON body `{ token_plaintext, email, new_password }`.
+3. Validate: all three present (strings), `new_password.length >= 8`. On failure → `400 { ok:false, code:'INVALID_INPUT', detail }`.
+4. Hash `token_plaintext` with SHA-256 → hex `tokenHash` (same pattern used by `activate-ghost-user` / `validate_invitation_token`).
+5. Look up `user_invitations` where `token_hash = tokenHash AND status = 'pending' AND expires_at > now()` (single row). If none → `{ ok:false, code:'INVALID_TOKEN' }` (400).
+6. Compare `invitation.email.toLowerCase() === email.toLowerCase()`. Mismatch → `{ ok:false, code:'EMAIL_MISMATCH' }` (400).
+7. Find auth user via `auth.admin.listUsers()` paginated (perPage 1000, up to 20 pages) — match by lowercased email. Not found → `{ ok:false, code:'AUTH_USER_NOT_FOUND' }` (404).
+8. Gate: require `authUser.user_metadata?.ghost_activation === true`. Otherwise → `{ ok:false, code:'NOT_GHOST_ACCOUNT', detail:'Use your existing password or Forgot Password.' }` (403). This prevents an invite token from overwriting a real user's password.
+9. `auth.admin.updateUserById(authUser.id, { password: new_password })`. On error → `500 { ok:false, code:'PASSWORD_UPDATE_FAILED', detail }`.
+10. Best-effort audit insert into `audit_eos_events`:
+    - `tenant_id: invitation.tenant_id`
+    - `user_id: authUser.id`
+    - `entity: 'users'`, `entity_id: authUser.id`
+    - `action: 'ghost_password_set'`
+    - `details: { email: authUser.email, invitation_id: invitation.id }`
+11. Return `200 { ok:true, email: authUser.email }`.
 
-1. Define `VIVACITY_TENANT_ID = 6372` and `isVivacity = body.tenant_id === VIVACITY_TENANT_ID`.
-2. Look up the existing `tenant_users` row (`relationship_role`, `primary_contact`) for `(user_uuid, tenant_id)`.
-3. Resolve `relationshipRole` = existing value, else `'primary_contact'` if `ghost.unicorn_role === 'Admin'`, else `'user'`.
-4. Apply the same `CASE` mapping as `accept_invitation_v2` to derive: `tuRole`, `tuPrimary`, `tuSecondary`, `tuScope`, `uRole`, `uType`, `tmRole`, `tmStatus` (cases: `primary_contact`, `secondary_contact`, `academy_user`, default `user`).
-5. Vivacity override: `uType='Vivacity Team'`, keep `ghost.unicorn_role`, `tmRole='Admin'`, `tmStatus='active'`.
-6. Upsert `tenant_users` (onConflict `tenant_id,user_id`) with role/primary/secondary/access_scope/relationship_role.
-7. Upsert `tenant_members` (onConflict `tenant_id,user_id`) with role/status/updated_at.
-8. Update `public.users` with `unicorn_role`, `user_type`, `updated_at`.
+All responses include `corsHeaders`. Errors are caught and returned as `500 { ok:false, code:'UNEXPECTED', detail }`.
 
-`uRole` and `relationshipRole` produced here are reused by Change B.
-
-## Change B — Replace recovery link with 7-day invite token
-
-Remove (step 8 and step 9 in current file):
-- `auth.admin.generateLink({ type: 'recovery' })` block.
-- The entire inline Mailgun welcome email block (HTML/text/FormData/fetch).
-- The current best-effort `user_invitations` insert at line 217-228 (replaced below).
-
-Add to step 7 `createUser` metadata: `ghost_activation: true`.
-
-Insert new flow:
-
-1. Generate `inviteToken = crypto.randomUUID()`; SHA-256 hash → hex `tokenHash`.
-2. `expiresAt = now + 7 days`.
-3. Insert into `user_invitations` (status `pending`, invited_by caller, tenant_id, `unicorn_role: uRole`, `relationship_role: relationshipRole`, `token_hash`, `expires_at`, first_name, last_name) and `.select('id').single()` to capture `insertedInvite.id`.
-4. Invoke `send-invitation-email` with `{ invitation_id: insertedInvite.id, token_plaintext: inviteToken }`; track `emailSent` / `emailError`.
-
-## Audit + response updates
-
-- Audit details now include: `relationship_role`, `tenant_users_role: tuRole`, `tenant_members_role: tmRole`, `roles_corrected: true`, plus existing `email`, `activated_by`, `email_sent`, `email_error`.
-- Response: drop `action_link`; return `{ ok, email, invite_sent: emailSent, email_error, detail }` with detail reflecting the new "invite email sent (7-day token)" wording.
-
-## Out of scope (unchanged)
-
-Caller auth check, staff RPCs, payload validation, ghost lookup, `getUserById`/`listUsers` collision checks, UUID preservation in `createUser`, error response shapes/codes.
+## Out of scope
+- No status flip on `user_invitations` (caller will mark accepted separately, or via existing accept flow). The function only sets the password.
+- No JWT verification; relies on Lovable-managed `verify_jwt = false` default for new functions.
