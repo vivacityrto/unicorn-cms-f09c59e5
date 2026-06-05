@@ -509,7 +509,7 @@ export default function SupportTicketsPage() {
             ) : sortedThreads.length === 0 ? (
               <div className="p-4 text-sm text-muted-foreground">No support tickets yet.</div>
             ) : (
-              <ul className="divide-y">
+              <ul className="divide-y w-full">
                 {sortedThreads.map((t) => {
                   const isActive = t.id === selectedId;
                   const unanswered = t.status === "open" && !t.has_staff_reply;
@@ -517,11 +517,11 @@ export default function SupportTicketsPage() {
                     <li key={t.id}>
                       <button
                         onClick={() => handleSelect(t.id)}
-                        className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${
+                        className={`w-full text-left p-3 hover:bg-muted/50 transition-colors min-w-0 ${
                           isActive ? "bg-muted" : ""
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="flex items-center justify-between gap-2 mb-1 min-w-0 overflow-hidden">
                           <span className="text-sm font-medium truncate flex-1 flex items-center gap-1">
                             <UserIcon className="w-3 h-3 text-muted-foreground" />
                             {t.user_name}
@@ -534,14 +534,14 @@ export default function SupportTicketsPage() {
                         <p className="text-xs text-foreground/80 truncate mt-0.5">
                           {t.preview || t.subject || "(no preview)"}
                         </p>
-                        <div className="flex items-center justify-between mt-1.5">
+                        <div className="flex items-center justify-between mt-1.5 min-w-0 gap-2">
                           <Badge
                             variant={t.status === "resolved" ? "secondary" : "default"}
                             className="text-[10px] py-0 h-4"
                           >
                             {t.status}
                           </Badge>
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-[10px] text-muted-foreground shrink-0">
                             {format(new Date(t.updated_at), "dd/MM/yyyy")}
                           </span>
                         </div>
