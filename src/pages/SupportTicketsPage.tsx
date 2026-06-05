@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   Collapsible,
   CollapsibleContent,
@@ -22,6 +23,9 @@ import {
   LifeBuoy,
   Clock,
   User as UserIcon,
+  Paperclip,
+  Loader2,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -57,6 +61,10 @@ export default function SupportTicketsPage() {
   const [sending, setSending] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [metaOpen, setMetaOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
   const { data: threads = [], isLoading } = useQuery({
     queryKey: ["support-tickets"],
@@ -158,22 +166,72 @@ export default function SupportTicketsPage() {
   const handleSelect = (id: string) => {
     setSelectedId(id);
     setReply("");
+    setSelectedFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setMetaOpen(false);
     if (window.innerWidth < 768) setMobileOpen(true);
   };
 
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const accepted: File[] = [];
+    for (const f of files) {
+      if (f.size > MAX_FILE_SIZE) {
+        toast.error(`${f.name} exceeds 5 MB limit`);
+        continue;
+      }
+      const isImage = f.type.startsWith("image/");
+      const isPdf = f.type === "application/pdf";
+      if (!isImage && !isPdf) {
+        toast.error(`${f.name}: only images and PDFs allowed`);
+        continue;
+      }
+      accepted.push(f);
+    }
+    if (accepted.length) setSelectedFiles((prev) => [...prev, ...accepted]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeFile = (idx: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSendReply = async () => {
-    if (!selected || !reply.trim()) return;
+    if (!selected) return;
+    const hasContent = reply.trim().length > 0;
+    const hasFiles = selectedFiles.length > 0;
+    if (!hasContent && !hasFiles) return;
     setSending(true);
     try {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) throw new Error("Not authenticated");
+
+      let attachments: { url: string; name: string; type: string }[] = [];
+      if (hasFiles) {
+        setUploading(true);
+        try {
+          for (const file of selectedFiles) {
+            const path = `${selected.tenant_id}/${selected.id}/${crypto.randomUUID()}-${file.name}`;
+            const { error: upErr } = await supabase.storage
+              .from("support-attachments")
+              .upload(path, file, { contentType: file.type });
+            if (upErr) throw upErr;
+            const { data: pub } = supabase.storage
+              .from("support-attachments")
+              .getPublicUrl(path);
+            attachments.push({ url: pub.publicUrl, name: file.name, type: file.type });
+          }
+        } finally {
+          setUploading(false);
+        }
+      }
 
       const { error: msgErr } = await supabase.from("help_messages").insert({
         thread_id: selected.id,
         sender_id: auth.user.id,
         role: "staff",
         content: reply.trim(),
+        metadata: attachments.length ? { attachments } : {},
       });
       if (msgErr) throw msgErr;
 
@@ -183,6 +241,8 @@ export default function SupportTicketsPage() {
         .eq("id", selected.id);
 
       setReply("");
+      setSelectedFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["support-tickets"] });
       qc.invalidateQueries({ queryKey: ["support-tickets", "messages", selected.id] });
       qc.invalidateQueries({ queryKey: ["support-tickets-badge"] });
@@ -267,7 +327,7 @@ export default function SupportTicketsPage() {
         </div>
 
         {/* Messages */}
-        <ScrollArea className="flex-1 p-4">
+        <div className="flex-1 overflow-y-auto p-4 min-h-0">
           <div className="space-y-3">
             {messages.map((m) => {
               const isStaff = m.role === "staff";
@@ -280,11 +340,13 @@ export default function SupportTicketsPage() {
                   <div
                     className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
                       isStaff
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-purple-100 text-purple-900"
                         : "bg-muted text-foreground"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                    {m.content && (
+                      <div className="whitespace-pre-wrap break-words">{m.content}</div>
+                    )}
                     {attachments && attachments.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
                         {attachments.map((a, i) => (
@@ -295,11 +357,18 @@ export default function SupportTicketsPage() {
                             rel="noreferrer"
                             className="block"
                           >
-                            <img
-                              src={a.url}
-                              alt={a.name || "attachment"}
-                              className="max-h-32 rounded border border-border/50"
-                            />
+                            {a.type?.startsWith("image/") ? (
+                              <img
+                                src={a.url}
+                                alt={a.name || "attachment"}
+                                className="max-h-32 rounded border border-border/50"
+                              />
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded border border-border/50 bg-background/50 text-xs underline">
+                                <Paperclip className="w-3 h-3" />
+                                {a.name || "attachment"}
+                              </span>
+                            )}
                           </a>
                         ))}
                       </div>
@@ -316,10 +385,42 @@ export default function SupportTicketsPage() {
               <p className="text-sm text-muted-foreground text-center">No messages yet.</p>
             )}
           </div>
-        </ScrollArea>
+        </div>
+
+        <Separator />
 
         {/* Reply box */}
-        <div className="border-t p-3 space-y-2">
+        <div className="p-3 space-y-2 bg-background">
+          {selectedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {selectedFiles.map((f, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-xs"
+                >
+                  <Paperclip className="w-3 h-3" />
+                  <span className="max-w-[160px] truncate">{f.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    disabled={sending}
+                    className="hover:text-destructive"
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,application/pdf"
+            multiple
+            className="hidden"
+            onChange={handleFilesPicked}
+          />
           <Textarea
             value={reply}
             onChange={(e) => setReply(e.target.value)}
@@ -328,27 +429,43 @@ export default function SupportTicketsPage() {
             disabled={sending}
           />
           <div className="flex items-center justify-between gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleToggleStatus}
-            >
-              {selected.status === "resolved" ? (
-                <>
-                  <RotateCcw className="w-4 h-4 mr-1" /> Reopen
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 mr-1" /> Mark as Resolved
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={sending}
+                aria-label="Attach files"
+                className="h-9 w-9"
+              >
+                <Paperclip className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleStatus}
+              >
+                {selected.status === "resolved" ? (
+                  <>
+                    <RotateCcw className="w-4 h-4 mr-1" /> Reopen
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-1" /> Mark as Resolved
+                  </>
+                )}
+              </Button>
+            </div>
             <Button
               size="sm"
               onClick={handleSendReply}
-              disabled={sending || !reply.trim()}
+              disabled={sending || uploading || (!reply.trim() && selectedFiles.length === 0)}
             >
-              <Send className="w-4 h-4 mr-1" />
+              {sending || uploading ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-1" />
+              )}
               Send Reply
             </Button>
           </div>
