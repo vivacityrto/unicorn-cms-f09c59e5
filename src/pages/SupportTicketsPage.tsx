@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -65,6 +66,7 @@ export default function SupportTicketsPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: threads = [], isLoading } = useQuery({
     queryKey: ["support-tickets"],
@@ -171,6 +173,20 @@ export default function SupportTicketsPage() {
     setMetaOpen(false);
     if (window.innerWidth < 768) setMobileOpen(true);
   };
+
+  useEffect(() => {
+    const threadParam = searchParams.get("thread");
+    if (!threadParam || isLoading || threads.length === 0) return;
+    if (selectedId === threadParam) {
+      setSearchParams({}, { replace: true });
+      return;
+    }
+    const match = threads.find((t) => t.id === threadParam);
+    if (match) {
+      handleSelect(match.id);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, threads, isLoading, selectedId, setSearchParams, handleSelect]);
 
   const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
