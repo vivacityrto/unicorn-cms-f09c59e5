@@ -174,6 +174,20 @@ export default function SupportTicketsPage() {
     if (window.innerWidth < 768) setMobileOpen(true);
   };
 
+  useEffect(() => {
+    const threadParam = searchParams.get("thread");
+    if (!threadParam || isLoading || threads.length === 0) return;
+    if (selectedId === threadParam) {
+      setSearchParams({}, { replace: true });
+      return;
+    }
+    const match = threads.find((t) => t.id === threadParam);
+    if (match) {
+      handleSelect(match.id);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, threads, isLoading, selectedId, setSearchParams, handleSelect]);
+
   const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const accepted: File[] = [];
