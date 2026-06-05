@@ -59,6 +59,12 @@ export const NotificationDropdown = () => {
       const convId = notification.source_id
         ?? new URLSearchParams(notification.link?.split('?')[1] ?? '').get('conversation');
       navigate(convId ? `/communications?thread=${convId}` : '/communications');
+    } else if (notification.type === 'support_ticket') {
+      navigate(
+        notification.source_id
+          ? `/support-tickets?thread=${notification.source_id}`
+          : '/support-tickets'
+      );
     } else if (notification.link) {
       navigate(notification.link);
     }
