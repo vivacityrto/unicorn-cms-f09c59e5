@@ -509,7 +509,7 @@ export default function SupportTicketsPage() {
             ) : sortedThreads.length === 0 ? (
               <div className="p-4 text-sm text-muted-foreground">No support tickets yet.</div>
             ) : (
-              <ul className="divide-y w-full">
+              <ul className="divide-y w-full overflow-hidden">
                 {sortedThreads.map((t) => {
                   const isActive = t.id === selectedId;
                   const unanswered = t.status === "open" && !t.has_staff_reply;
