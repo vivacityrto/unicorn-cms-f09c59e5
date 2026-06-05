@@ -18,6 +18,9 @@ verify_jwt = false
 [functions.activate-ghost-user]
 verify_jwt = false
 
+[functions.set-invite-password]
+verify_jwt = false
+
 [functions.generate-document]
 verify_jwt = false
 
