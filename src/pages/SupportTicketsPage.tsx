@@ -166,22 +166,72 @@ export default function SupportTicketsPage() {
   const handleSelect = (id: string) => {
     setSelectedId(id);
     setReply("");
+    setSelectedFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setMetaOpen(false);
     if (window.innerWidth < 768) setMobileOpen(true);
   };
 
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const accepted: File[] = [];
+    for (const f of files) {
+      if (f.size > MAX_FILE_SIZE) {
+        toast.error(`${f.name} exceeds 5 MB limit`);
+        continue;
+      }
+      const isImage = f.type.startsWith("image/");
+      const isPdf = f.type === "application/pdf";
+      if (!isImage && !isPdf) {
+        toast.error(`${f.name}: only images and PDFs allowed`);
+        continue;
+      }
+      accepted.push(f);
+    }
+    if (accepted.length) setSelectedFiles((prev) => [...prev, ...accepted]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeFile = (idx: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSendReply = async () => {
-    if (!selected || !reply.trim()) return;
+    if (!selected) return;
+    const hasContent = reply.trim().length > 0;
+    const hasFiles = selectedFiles.length > 0;
+    if (!hasContent && !hasFiles) return;
     setSending(true);
     try {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) throw new Error("Not authenticated");
+
+      let attachments: { url: string; name: string; type: string }[] = [];
+      if (hasFiles) {
+        setUploading(true);
+        try {
+          for (const file of selectedFiles) {
+            const path = `${selected.tenant_id}/${selected.id}/${crypto.randomUUID()}-${file.name}`;
+            const { error: upErr } = await supabase.storage
+              .from("support-attachments")
+              .upload(path, file, { contentType: file.type });
+            if (upErr) throw upErr;
+            const { data: pub } = supabase.storage
+              .from("support-attachments")
+              .getPublicUrl(path);
+            attachments.push({ url: pub.publicUrl, name: file.name, type: file.type });
+          }
+        } finally {
+          setUploading(false);
+        }
+      }
 
       const { error: msgErr } = await supabase.from("help_messages").insert({
         thread_id: selected.id,
         sender_id: auth.user.id,
         role: "staff",
         content: reply.trim(),
+        metadata: attachments.length ? { attachments } : {},
       });
       if (msgErr) throw msgErr;
 
@@ -191,6 +241,8 @@ export default function SupportTicketsPage() {
         .eq("id", selected.id);
 
       setReply("");
+      setSelectedFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["support-tickets"] });
       qc.invalidateQueries({ queryKey: ["support-tickets", "messages", selected.id] });
       qc.invalidateQueries({ queryKey: ["support-tickets-badge"] });
