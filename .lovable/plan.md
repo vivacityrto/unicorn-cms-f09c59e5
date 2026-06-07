@@ -1,25 +1,47 @@
-## Problem
+## Fix scanner-burn in password reset emails
 
-In `src/pages/SupportTicketsPage.tsx`, the ticket list (left panel) still shows clipped dates ("05/0") and preview text without ellipsis, even after the earlier `min-w-0` / `shrink-0` / `overflow-hidden` changes.
+GoTrue's `action_link` (the raw `…/auth/v1/verify?token=…` URL) is one-time-use. Corporate mail scanners (Outlook Safe Links, AV) fetch it on delivery and burn the token before the recipient clicks. Both reset functions currently embed that raw link directly, so users see "Invalid or expired link". Fix: extract the token server-side and email a scanner-safe `/activate?token=…&type=recovery&email=…` URL pointing at our own landing page, which already handles the recovery exchange.
 
-The root cause is the Radix `ScrollArea` component: its internal viewport wrapper (`[data-radix-scroll-area-viewport] > div`) defaults to `display: table`, which forces children to expand to their content's intrinsic width. This breaks `w-full`, `min-w-0`, and `truncate` on everything inside.
+### Files changed (exactly two)
 
-## Fix (one targeted change)
+**`supabase/functions/send-password-reset/index.ts`**
 
-In `src/pages/SupportTicketsPage.tsx`, update the `ScrollArea` on line 506 to override the inner viewport's display so children respect the container width:
+1. After the existing `resetLink` null-guard (line 166), insert the transform:
 
-```tsx
-<ScrollArea className="flex-1 [&>[data-radix-scroll-area-viewport]>div]:!block">
-```
+   ```ts
+   // Transform raw GoTrue link into scanner-safe /activate URL
+   const actionUrl = new URL(resetLink);
+   const rawToken = actionUrl.searchParams.get('token');
+   if (!rawToken) {
+     console.error("Could not extract token from action_link");
+     return new Response(
+       JSON.stringify({ ok: false, code: "TOKEN_EXTRACT_FAILED" }),
+       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+     );
+   }
+   const safeResetLink = `${APP_BASE_URL}/activate?token=${encodeURIComponent(rawToken)}&type=recovery&email=${encodeURIComponent(targetUser.email)}`;
+   ```
 
-This makes the inner wrapper a block element, so:
-- `<ul className="divide-y w-full overflow-hidden">` actually constrains to the panel width
-- `truncate` on the user name and preview text works
-- `shrink-0` on the date is honored (no more "05/0")
-- The badge + date row stays within bounds
+2. In the email HTML, replace the three `${resetLink}` occurrences (button href, fallback `<a href>`, fallback link text) with `${safeResetLink}`.
+3. Change `<strong>⚡ This link expires in 1 hour.</strong>` to `<strong>This link expires in 24 hours.</strong>`.
 
-## Scope
+**`supabase/functions/send-self-password-reset/index.ts`**
 
-- Single line change in `src/pages/SupportTicketsPage.tsx` (line 506).
-- No other files, logic, or styling changes.
-- No DB or hook changes.
+Identical changes:
+1. Same transform block inserted after the `resetLink` null-guard (line 110).
+2. Same three `resetLink` → `safeResetLink` swaps in the email HTML.
+3. Same expiry copy fix (`⚡ … 1 hour` → `This link expires in 24 hours`).
+
+### What is NOT touched
+
+- Auth checks, role checks, cross-tenant guard, Mailgun config/send, audit logging, CORS, error handling — all preserved verbatim.
+- `ActivateAccount.tsx`, `ResetPassword.tsx`, `recoveryLink.ts`, `resend-invite/index.ts`, any other function/page/component.
+- No DB/RLS/trigger changes.
+
+### Correctness notes
+
+- `linkData.properties.action_link` from `auth.admin.generateLink({ type: 'recovery' })` is of the form `https://<project>.supabase.co/auth/v1/verify?token=<hashed>&type=recovery&redirect_to=<APP_BASE_URL>/reset-password`. `searchParams.get('token')` is the right extraction; `type=recovery` is appended explicitly so `/activate` doesn't depend on GoTrue's query order.
+- `safeResetLink` lives on our own domain, so scanners that prefetch it hit React routing, not the GoTrue verify endpoint — the token survives until the user actually clicks.
+- Null-token guard returns `TOKEN_EXTRACT_FAILED` (500) instead of silently sending a broken email.
+- `targetUser.email` is already loaded in both functions before this block, so no extra query.
+- Backward compatible: the GoTrue token is unchanged; only the URL that wraps it differs. Existing `/activate` handler already supports `token` + `type=recovery`.
