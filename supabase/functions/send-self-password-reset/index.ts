@@ -109,6 +109,18 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
+    // Transform raw GoTrue link into scanner-safe /activate URL
+    const actionUrl = new URL(resetLink);
+    const rawToken = actionUrl.searchParams.get('token');
+    if (!rawToken) {
+      console.error("Could not extract token from action_link");
+      return new Response(
+        JSON.stringify({ ok: false, code: "TOKEN_EXTRACT_FAILED" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const safeResetLink = `${APP_BASE_URL}/activate?token=${encodeURIComponent(rawToken)}&type=recovery&email=${encodeURIComponent(targetUser.email)}`;
+
     console.log(`Password reset link generated successfully for ${targetUser.email}`);
 
     // Build the email HTML
@@ -147,16 +159,16 @@ serve(async (req: Request): Promise<Response> => {
       <p>You requested to reset your password for your Unicorn CMS account. Click the button below to create a new password:</p>
       
       <p style="text-align: center; margin: 28px 0;">
-        <a href="${resetLink}" class="btn">Reset My Password</a>
+        <a href="${safeResetLink}" class="btn">Reset My Password</a>
       </p>
       
       <p class="muted">If the button doesn't work, copy and paste this link into your browser:</p>
       <div class="link-box">
-        <a href="${resetLink}">${resetLink}</a>
+        <a href="${safeResetLink}">${safeResetLink}</a>
       </div>
       
       <p class="muted">
-        <strong>⚡ This link expires in 1 hour.</strong><br><br>
+        <strong>This link expires in 24 hours.</strong><br><br>
         If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.
       </p>
     </div>

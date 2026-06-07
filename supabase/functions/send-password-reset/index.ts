@@ -165,6 +165,18 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
+    // Transform raw GoTrue link into scanner-safe /activate URL
+    const actionUrl = new URL(resetLink);
+    const rawToken = actionUrl.searchParams.get('token');
+    if (!rawToken) {
+      console.error("Could not extract token from action_link");
+      return new Response(
+        JSON.stringify({ ok: false, code: "TOKEN_EXTRACT_FAILED" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const safeResetLink = `${APP_BASE_URL}/activate?token=${encodeURIComponent(rawToken)}&type=recovery&email=${encodeURIComponent(targetUser.email)}`;
+
     console.log(`Password reset link generated successfully`);
 
     // Build the email HTML from template
@@ -202,16 +214,16 @@ serve(async (req: Request): Promise<Response> => {
       <p>A Vivacity administrator has requested a password reset for your account.</p>
       
       <p style="text-align: center; margin: 24px 0;">
-        <a href="${resetLink}" class="btn">Create New Password 🔑</a>
+        <a href="${safeResetLink}" class="btn">Create New Password 🔑</a>
       </p>
       
       <p class="muted">If the button doesn't work, copy this link:</p>
       <div class="link-box">
-        <a href="${resetLink}">${resetLink}</a>
+        <a href="${safeResetLink}">${safeResetLink}</a>
       </div>
       
       <p class="muted">
-        <strong>⚡ This link expires in 1 hour.</strong><br>
+        <strong>This link expires in 24 hours.</strong><br>
         If you didn't expect this email, please contact your administrator.
       </p>
     </div>
