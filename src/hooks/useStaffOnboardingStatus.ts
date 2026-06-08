@@ -30,12 +30,14 @@ export function useStaffOnboardingStatus() {
     const key = `staff_first_login_called_${userUuid}`;
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, "1");
-    supabase
-      .rpc("handle_staff_first_login", { p_user_uuid: userUuid })
-      .then(() => qc.invalidateQueries({ queryKey: KEY }))
-      .catch(() => {
+    (async () => {
+      try {
+        await supabase.rpc("handle_staff_first_login", { p_user_uuid: userUuid });
+        qc.invalidateQueries({ queryKey: KEY });
+      } catch {
         /* non-fatal */
-      });
+      }
+    })();
   }, [userUuid, isInternal, qc]);
 
   const query = useQuery({
