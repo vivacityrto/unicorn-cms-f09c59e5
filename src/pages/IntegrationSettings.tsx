@@ -165,6 +165,53 @@ function IntegrationSettingsContent() {
           </CardContent>
         </Card>
 
+        {/* Staff Onboarding URLs (internal-only) */}
+        <Card>
+          <CardHeader>
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="h-5 w-5" />
+                Staff Onboarding URLs
+                <Badge variant="outline" className="ml-2 text-xs">Internal only</Badge>
+              </CardTitle>
+              <CardDescription>
+                URLs used in the New Team Member Onboarding Hub. Not exposed to client tenants.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="induction-video-url">Staff Induction Video URL (Vivacity Academy)</Label>
+              <Input
+                id="induction-video-url"
+                placeholder="https://academy.vivacity.com.au/..."
+                value={inductionVideoUrl}
+                onChange={(e) => setInductionVideoUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Embedded in the Onboarding Hub. Vimeo / YouTube / direct embed URL supported.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="workbook-url">Staff Onboarding Workbook URL (SharePoint)</Label>
+              <Input
+                id="workbook-url"
+                placeholder="https://vivacity.sharepoint.com/.../Onboarding%20Workbook.pdf"
+                value={workbookUrl}
+                onChange={(e) => setWorkbookUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Direct link to the latest Vivacity Team Onboarding Workbook.
+              </p>
+            </div>
+            <Button onClick={handleSaveOnboardingUrls} disabled={savingOnboarding}>
+              {savingOnboarding ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save onboarding URLs
+            </Button>
+          </CardContent>
+        </Card>
+
+
         {/* Slack Integration */}
         <Card>
           <CardHeader>
