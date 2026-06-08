@@ -2,8 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-const BUCKET = "internal-onboarding";
-const SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
 export function useWorkbookSignedUrl(filePath: string | null) {
@@ -13,11 +11,14 @@ export function useWorkbookSignedUrl(filePath: string | null) {
     staleTime: 50 * 60 * 1000,
     queryFn: async () => {
       if (!filePath) return null;
-      const { data, error } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(filePath, SIGNED_URL_TTL_SECONDS);
+      const runId = filePath.match(/^workbooks\/run-(\d+)-/)?.[1];
+      if (!runId) throw new Error("Invalid workbook path");
+      const { data, error } = await supabase.functions.invoke("staff-onboarding-workbook", {
+        body: { action: "signed-url", runId: Number(runId), path: filePath },
+      });
       if (error) throw error;
-      return data.signedUrl;
+      if (!data?.ok) throw new Error(data?.detail ?? "Could not prepare workbook link");
+      return data.signedUrl as string;
     },
   });
 }
@@ -28,7 +29,6 @@ export function useWorkbookUpload(runId: number | null) {
   const upload = useMutation({
     mutationFn: async ({
       file,
-      previousPath,
     }: {
       file: File;
       previousPath: string | null;
@@ -40,25 +40,17 @@ export function useWorkbookUpload(runId: number | null) {
       if (file.size > MAX_BYTES) {
         throw new Error("Workbook PDF must be 25 MB or smaller");
       }
-      const path = `workbooks/run-${runId}-${Date.now()}.pdf`;
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(path, file, {
-          contentType: "application/pdf",
-          upsert: false,
-        });
-      if (upErr) throw upErr;
+      const form = new FormData();
+      form.append("action", "upload");
+      form.append("runId", String(runId));
+      form.append("file", file);
 
-      const { error: updErr } = await supabase
-        .from("staff_provisioning_runs")
-        .update({ workbook_file_path: path } as any)
-        .eq("id", runId);
-      if (updErr) throw updErr;
-
-      if (previousPath && previousPath !== path) {
-        await supabase.storage.from(BUCKET).remove([previousPath]);
-      }
-      return path;
+      const { data, error } = await supabase.functions.invoke("staff-onboarding-workbook", {
+        body: form,
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.detail ?? "Workbook upload failed");
+      return data.path as string;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["onboarding-hub", "run", runId] });
@@ -73,12 +65,11 @@ export function useWorkbookUpload(runId: number | null) {
   const remove = useMutation({
     mutationFn: async (path: string) => {
       if (!runId) throw new Error("Missing run id");
-      await supabase.storage.from(BUCKET).remove([path]);
-      const { error } = await supabase
-        .from("staff_provisioning_runs")
-        .update({ workbook_file_path: null } as any)
-        .eq("id", runId);
+      const { data, error } = await supabase.functions.invoke("staff-onboarding-workbook", {
+        body: { action: "remove", runId, path },
+      });
       if (error) throw error;
+      if (!data?.ok) throw new Error(data?.detail ?? "Workbook remove failed");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["onboarding-hub", "run", runId] });
