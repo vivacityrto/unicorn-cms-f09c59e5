@@ -413,46 +413,63 @@ export function ClientGovernanceDocumentsPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {row.file_path ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleView(row)}
-                          >
-                            <Eye className="mr-1.5 h-3.5 w-3.5" />
-                            View
-                          </Button>
-                        ) : (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span tabIndex={0}>
-                                <Button size="sm" variant="outline" disabled>
-                                  <Eye className="mr-1.5 h-3.5 w-3.5" />
-                                  View
-                                </Button>
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>File not available</TooltipContent>
-                          </Tooltip>
-                        )}
-                        {row.file_path && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenSharePointFolder(row)}
-                            disabled={openingSharePointId === row.id}
-                          >
-                            {openingSharePointId === row.id ? (
-                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      {(() => {
+                        const fileName = extractFileName(row.file_path);
+                        const spWebUrl =
+                          fileName && sharePointMap ? sharePointMap[fileName] ?? null : null;
+                        const mapPending = sharePointLoading && !sharePointError;
+                        return (
+                          <div className="flex justify-end gap-2">
+                            {spWebUrl ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  window.open(spWebUrl, "_blank", "noopener,noreferrer")
+                                }
+                              >
+                                <Eye className="mr-1.5 h-3.5 w-3.5" />
+                                View
+                              </Button>
                             ) : (
-                              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span tabIndex={0}>
+                                    <Button size="sm" variant="outline" disabled>
+                                      {mapPending ? (
+                                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Eye className="mr-1.5 h-3.5 w-3.5" />
+                                      )}
+                                      View
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {mapPending
+                                    ? "Loading SharePoint files…"
+                                    : "File not yet available in SharePoint"}
+                                </TooltipContent>
+                              </Tooltip>
                             )}
-                            SharePoint
-                          </Button>
-                        )}
-
-                      </div>
+                            {spWebUrl && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenSharePointFolder(row.id, spWebUrl)}
+                                disabled={openingSharePointId === row.id}
+                              >
+                                {openingSharePointId === row.id ? (
+                                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                                )}
+                                SharePoint
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))
