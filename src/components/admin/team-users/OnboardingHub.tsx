@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useOnboardingHub } from "@/hooks/useOnboardingHub";
 import { WorkbookUploader } from "@/components/admin/team-users/WorkbookUploader";
+import { toast } from "@/hooks/use-toast";
 
 interface Props {
   runId: number;
