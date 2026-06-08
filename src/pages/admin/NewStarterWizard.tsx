@@ -15,10 +15,11 @@ import { generatePowerShellScript } from "@/lib/m365/scriptGenerator";
 import { StaffProvisioningPreview } from "@/components/admin/team-users/StaffProvisioningPreview";
 import { TeamLeaderEmailDialog } from "@/components/admin/team-users/TeamLeaderEmailDialog";
 import { PostSaveSetupLinks } from "@/components/admin/team-users/PostSaveSetupLinks";
+import { OnboardingHub } from "@/components/admin/team-users/OnboardingHub";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 interface FormState {
   firstName: string;
@@ -316,14 +317,14 @@ export default function NewStarterWizard() {
               </Button>
             )}
             <Badge variant="outline" className="text-sm">
-              Step {step} of 5
+              Step {step} of 6
             </Badge>
           </div>
         </div>
 
         {/* Stepper */}
         <div className="flex items-center gap-2">
-          {[1, 2, 3, 4, 5].map((n) => (
+          {[1, 2, 3, 4, 5, 6].map((n) => (
             <div
               key={n}
               className={`flex-1 h-2 rounded-full transition-all ${
@@ -585,11 +586,11 @@ export default function NewStarterWizard() {
                     ))}
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={() => setEmailDialogOpen(true)} className="flex-1">
+                    <Button onClick={() => setEmailDialogOpen(true)} variant="outline" className="flex-1">
                       Send team-leader email
                     </Button>
-                    <Button variant="outline" onClick={() => navigate("/admin/team-users")}>
-                      Done
+                    <Button onClick={() => setStep(6)} className="flex-1">
+                      Next: Onboarding Hub <ArrowRight className="h-4 w-4 ml-1" />
                     </Button>
                   </div>
                 </div>
@@ -611,6 +612,40 @@ export default function NewStarterWizard() {
             psScript={psScript}
             onResendEmail={() => setEmailDialogOpen(true)}
           />
+        )}
+
+        {/* STEP 6: Onboarding Hub */}
+        {step === 6 && runId && (
+          <>
+            <OnboardingHub runId={runId} />
+            <div className="flex justify-between gap-2">
+              <Button variant="outline" onClick={() => setStep(5)}>
+                <ArrowLeft className="h-4 w-4 mr-1" /> Back
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => navigate("/admin/team-users")}>
+                  Save &amp; Close
+                </Button>
+                {form.upn && (
+                  <Button onClick={() => navigate(`/admin/team-users?focus=${encodeURIComponent(form.upn)}`)}>
+                    Save &amp; View Team Member
+                  </Button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+        {step === 6 && !runId && (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              Complete provisioning in Step 5 before opening the Onboarding Hub.
+              <div className="mt-3">
+                <Button variant="outline" onClick={() => setStep(5)}>
+                  <ArrowLeft className="h-4 w-4 mr-1" /> Back to Step 5
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Footer nav */}
