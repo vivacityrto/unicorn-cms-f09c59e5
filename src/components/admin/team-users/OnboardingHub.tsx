@@ -288,14 +288,18 @@ function InductionVideoCard({
 }
 
 function WorkbookCard({
-  workbookUrl,
+  runId,
+  workbookFilePath,
+  fallbackUrl,
   sentAt,
   returnedAt,
   onMarkSent,
   onMarkReturned,
   saving,
 }: {
-  workbookUrl: string | null;
+  runId: number;
+  workbookFilePath: string | null;
+  fallbackUrl: string | null;
   sentAt: string | null;
   returnedAt: string | null;
   onMarkSent: (when: string) => void;
@@ -315,16 +319,11 @@ function WorkbookCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {workbookUrl ? (
-          <Button asChild variant="outline" className="w-full">
-            <a href={workbookUrl} target="_blank" rel="noopener noreferrer">
-              <Download className="h-4 w-4 mr-2" /> Download Onboarding Workbook
-              <ExternalLink className="h-3 w-3 ml-2" />
-            </a>
-          </Button>
-        ) : (
-          <ConfigPlaceholder what="Onboarding workbook" />
-        )}
+        <WorkbookUploader
+          runId={runId}
+          filePath={workbookFilePath}
+          fallbackUrl={fallbackUrl}
+        />
         <div className="flex gap-2">
           <Button
             size="sm"
