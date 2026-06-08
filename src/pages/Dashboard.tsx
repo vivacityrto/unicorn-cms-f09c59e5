@@ -15,6 +15,7 @@ import { RiskClusterSnapshot } from "@/components/dashboard/RiskClusterSnapshot"
 import { ExpandablePortfolioSection } from "@/components/dashboard/ExpandablePortfolioSection";
 import { OverloadBanner } from "@/components/dashboard/OverloadBanner";
 import { TenantDrawer } from "@/components/portfolio/TenantDrawer";
+import { StaffOnboardingBanner } from "@/components/staff/StaffOnboardingBanner";
 
 const Dashboard = () => {
   const { profile } = useAuth();
