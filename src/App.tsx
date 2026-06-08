@@ -118,6 +118,7 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
   const TeamUsers = lazy(() => import("./pages/TeamUsers"));
 const NewStarterWizard = lazy(() => import("./pages/admin/NewStarterWizard"));
 const OnboardingHubPage = lazy(() => import("./pages/admin/OnboardingHubPage"));
+const ProvisioningRunDetailPage = lazy(() => import("./pages/admin/ProvisioningRunDetailPage"));
 const BulkInvite = lazy(() => import("./pages/admin/BulkInvite"));
 const CohortAccessSender = lazy(() => import("./pages/admin/CohortAccessSender"));
 const CohortAccessSenderJob = lazy(() => import("./pages/admin/CohortAccessSenderJob"));
