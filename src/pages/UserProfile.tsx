@@ -247,7 +247,7 @@ export default function UserProfile() {
                   .limit(1)
                   .maybeSingle();
                 if (data?.id) {
-                  navigate(`/admin/team-users/runs/${data.id}/onboarding`);
+                  navigate(`/admin/team-users/runs/${data.id}?tab=onboarding`);
                 } else {
                   toast({ title: 'No onboarding run', description: 'This team member has no provisioning run yet.' });
                 }
