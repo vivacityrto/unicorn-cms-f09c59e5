@@ -32,16 +32,21 @@ function IntegrationSettingsContent() {
   const [sharepointSiteUrl, setSharepointSiteUrl] = useState('');
   const [savingSharepoint, setSavingSharepoint] = useState(false);
 
+  // Staff onboarding URLs (internal-only)
+  const [inductionVideoUrl, setInductionVideoUrl] = useState('');
+  const [workbookUrl, setWorkbookUrl] = useState('');
+  const [savingOnboarding, setSavingOnboarding] = useState(false);
+
   useEffect(() => {
     supabase
       .from('app_settings')
-      .select('sharepoint_site_url')
+      .select('sharepoint_site_url, staff_induction_video_url, staff_onboarding_workbook_url')
       .limit(1)
       .single()
       .then(({ data }) => {
-        if (data?.sharepoint_site_url) {
-          setSharepointSiteUrl(data.sharepoint_site_url);
-        }
+        if (data?.sharepoint_site_url) setSharepointSiteUrl(data.sharepoint_site_url);
+        if ((data as any)?.staff_induction_video_url) setInductionVideoUrl((data as any).staff_induction_video_url);
+        if ((data as any)?.staff_onboarding_workbook_url) setWorkbookUrl((data as any).staff_onboarding_workbook_url);
       });
   }, []);
 
@@ -58,6 +63,25 @@ function IntegrationSettingsContent() {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to save', variant: 'destructive' });
     } finally {
       setSavingSharepoint(false);
+    }
+  };
+
+  const handleSaveOnboardingUrls = async () => {
+    setSavingOnboarding(true);
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .update({
+          staff_induction_video_url: inductionVideoUrl.trim() || null,
+          staff_onboarding_workbook_url: workbookUrl.trim() || null,
+        } as any)
+        .eq('id', 1);
+      if (error) throw error;
+      toast({ title: 'Staff onboarding URLs saved' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to save', variant: 'destructive' });
+    } finally {
+      setSavingOnboarding(false);
     }
   };
 
@@ -140,6 +164,53 @@ function IntegrationSettingsContent() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Staff Onboarding URLs (internal-only) */}
+        <Card>
+          <CardHeader>
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <FolderOpen className="h-5 w-5" />
+                Staff Onboarding URLs
+                <Badge variant="outline" className="ml-2 text-xs">Internal only</Badge>
+              </CardTitle>
+              <CardDescription>
+                URLs used in the New Team Member Onboarding Hub. Not exposed to client tenants.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="induction-video-url">Staff Induction Video URL (Vivacity Academy)</Label>
+              <Input
+                id="induction-video-url"
+                placeholder="https://academy.vivacity.com.au/..."
+                value={inductionVideoUrl}
+                onChange={(e) => setInductionVideoUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Embedded in the Onboarding Hub. Vimeo / YouTube / direct embed URL supported.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="workbook-url">Staff Onboarding Workbook URL (SharePoint)</Label>
+              <Input
+                id="workbook-url"
+                placeholder="https://vivacity.sharepoint.com/.../Onboarding%20Workbook.pdf"
+                value={workbookUrl}
+                onChange={(e) => setWorkbookUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Direct link to the latest Vivacity Team Onboarding Workbook.
+              </p>
+            </div>
+            <Button onClick={handleSaveOnboardingUrls} disabled={savingOnboarding}>
+              {savingOnboarding ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save onboarding URLs
+            </Button>
+          </CardContent>
+        </Card>
+
 
         {/* Slack Integration */}
         <Card>

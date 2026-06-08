@@ -3848,6 +3848,8 @@ export type Database = {
           sharepoint_client_folders_template: string | null
           sharepoint_defaultshare: string | null
           sharepoint_site_url: string | null
+          staff_induction_video_url: string | null
+          staff_onboarding_workbook_url: string | null
           updated_at: string
         }
         Insert: {
@@ -3879,6 +3881,8 @@ export type Database = {
           sharepoint_client_folders_template?: string | null
           sharepoint_defaultshare?: string | null
           sharepoint_site_url?: string | null
+          staff_induction_video_url?: string | null
+          staff_onboarding_workbook_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -3910,6 +3914,8 @@ export type Database = {
           sharepoint_client_folders_template?: string | null
           sharepoint_defaultshare?: string | null
           sharepoint_site_url?: string | null
+          staff_induction_video_url?: string | null
+          staff_onboarding_workbook_url?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -41341,11 +41347,17 @@ export type Database = {
           first_name: string
           graph_transcript: Json | null
           id: number
+          induction_video_sent_at: string | null
+          induction_video_sent_by: string | null
+          induction_video_watched_at: string | null
           job_title: string | null
           last_name: string
           location_code: string
           mail_nickname: string | null
           ms_user_id: string | null
+          onboarding_workbook_returned_at: string | null
+          onboarding_workbook_sent_at: string | null
+          onboarding_workbook_sent_by: string | null
           personal_email: string | null
           phone: string | null
           preferred_name: string | null
@@ -41357,6 +41369,9 @@ export type Database = {
           team_leader_id: string | null
           updated_at: string
           upn: string | null
+          welcome_email_notes: string | null
+          welcome_email_sent_at: string | null
+          welcome_email_sent_by: string | null
         }
         Insert: {
           created_at?: string
@@ -41366,11 +41381,17 @@ export type Database = {
           first_name: string
           graph_transcript?: Json | null
           id?: number
+          induction_video_sent_at?: string | null
+          induction_video_sent_by?: string | null
+          induction_video_watched_at?: string | null
           job_title?: string | null
           last_name: string
           location_code: string
           mail_nickname?: string | null
           ms_user_id?: string | null
+          onboarding_workbook_returned_at?: string | null
+          onboarding_workbook_sent_at?: string | null
+          onboarding_workbook_sent_by?: string | null
           personal_email?: string | null
           phone?: string | null
           preferred_name?: string | null
@@ -41382,6 +41403,9 @@ export type Database = {
           team_leader_id?: string | null
           updated_at?: string
           upn?: string | null
+          welcome_email_notes?: string | null
+          welcome_email_sent_at?: string | null
+          welcome_email_sent_by?: string | null
         }
         Update: {
           created_at?: string
@@ -41391,11 +41415,17 @@ export type Database = {
           first_name?: string
           graph_transcript?: Json | null
           id?: number
+          induction_video_sent_at?: string | null
+          induction_video_sent_by?: string | null
+          induction_video_watched_at?: string | null
           job_title?: string | null
           last_name?: string
           location_code?: string
           mail_nickname?: string | null
           ms_user_id?: string | null
+          onboarding_workbook_returned_at?: string | null
+          onboarding_workbook_sent_at?: string | null
+          onboarding_workbook_sent_by?: string | null
           personal_email?: string | null
           phone?: string | null
           preferred_name?: string | null
@@ -41407,6 +41437,9 @@ export type Database = {
           team_leader_id?: string | null
           updated_at?: string
           upn?: string | null
+          welcome_email_notes?: string | null
+          welcome_email_sent_at?: string | null
+          welcome_email_sent_by?: string | null
         }
         Relationships: [
           {

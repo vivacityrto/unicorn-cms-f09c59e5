@@ -117,6 +117,7 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const AdminUserAudit = lazy(() => import("./pages/AdminUserAudit"));
   const TeamUsers = lazy(() => import("./pages/TeamUsers"));
 const NewStarterWizard = lazy(() => import("./pages/admin/NewStarterWizard"));
+const OnboardingHubPage = lazy(() => import("./pages/admin/OnboardingHubPage"));
 const BulkInvite = lazy(() => import("./pages/admin/BulkInvite"));
 const CohortAccessSender = lazy(() => import("./pages/admin/CohortAccessSender"));
 const CohortAccessSenderJob = lazy(() => import("./pages/admin/CohortAccessSenderJob"));
@@ -1034,6 +1035,7 @@ const App = () => (
             {/* Team & Tenant Users */}
             <Route path="/admin/team-users" element={<ProtectedRoute><TeamUsers /></ProtectedRoute>} />
             <Route path="/admin/team-users/new-starter" element={<ProtectedRoute requireSuperAdmin><NewStarterWizard /></ProtectedRoute>} />
+            <Route path="/admin/team-users/runs/:runId/onboarding" element={<ProtectedRoute requireSuperAdmin><OnboardingHubPage /></ProtectedRoute>} />
             <Route path="/admin/bulk-invite" element={<ProtectedRoute requireSuperAdmin><BulkInvite /></ProtectedRoute>} />
             <Route path="/admin/cohort-sender" element={<ProtectedRoute requireSuperAdmin><CohortAccessSender /></ProtectedRoute>} />
             <Route path="/admin/cohort-sender/jobs/:jobId" element={<ProtectedRoute requireSuperAdmin><CohortAccessSenderJob /></ProtectedRoute>} />
