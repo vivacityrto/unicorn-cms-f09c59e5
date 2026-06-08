@@ -488,6 +488,28 @@ function BulkSelectModal<P extends { id: number }, S extends { id: number }>({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
+                <div className="flex items-center justify-between px-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm">
+                    <Checkbox
+                      checked={
+                        filteredSecondary.length > 0 &&
+                        filteredSecondary.every((s) => secondaryIds.has(s.id))
+                      }
+                      onCheckedChange={(checked) => {
+                        setSecondaryIds((prev) => {
+                          const n = new Set(prev);
+                          if (checked) filteredSecondary.forEach((s) => n.add(s.id));
+                          else filteredSecondary.forEach((s) => n.delete(s.id));
+                          return n;
+                        });
+                      }}
+                    />
+                    Select all{search ? " (filtered)" : ""}
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    {secondaryIds.size} selected
+                  </span>
+                </div>
                 <div className="border rounded-md max-h-72 overflow-y-auto divide-y">
                   {filteredSecondary.map((s) => (
                     <label
@@ -509,6 +531,7 @@ function BulkSelectModal<P extends { id: number }, S extends { id: number }>({
                     </label>
                   ))}
                 </div>
+
                 <div className="flex gap-4 items-center text-sm">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
