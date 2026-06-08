@@ -41344,6 +41344,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           error_message: string | null
+          first_login_detected_at: string | null
           first_name: string
           graph_transcript: Json | null
           id: number
@@ -41355,6 +41356,7 @@ export type Database = {
           location_code: string
           mail_nickname: string | null
           ms_user_id: string | null
+          onboarding_complete_at: string | null
           onboarding_workbook_returned_at: string | null
           onboarding_workbook_sent_at: string | null
           onboarding_workbook_sent_by: string | null
@@ -41379,6 +41381,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           error_message?: string | null
+          first_login_detected_at?: string | null
           first_name: string
           graph_transcript?: Json | null
           id?: number
@@ -41390,6 +41393,7 @@ export type Database = {
           location_code: string
           mail_nickname?: string | null
           ms_user_id?: string | null
+          onboarding_complete_at?: string | null
           onboarding_workbook_returned_at?: string | null
           onboarding_workbook_sent_at?: string | null
           onboarding_workbook_sent_by?: string | null
@@ -41414,6 +41418,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           error_message?: string | null
+          first_login_detected_at?: string | null
           first_name?: string
           graph_transcript?: Json | null
           id?: number
@@ -41425,6 +41430,7 @@ export type Database = {
           location_code?: string
           mail_nickname?: string | null
           ms_user_id?: string | null
+          onboarding_complete_at?: string | null
           onboarding_workbook_returned_at?: string | null
           onboarding_workbook_sent_at?: string | null
           onboarding_workbook_sent_by?: string | null
@@ -64471,6 +64477,10 @@ export type Database = {
       go_to_previous_segment: {
         Args: { p_meeting_id: string }
         Returns: string
+      }
+      handle_staff_first_login: {
+        Args: { p_user_uuid: string }
+        Returns: undefined
       }
       has_any_eos_role: {
         Args: { _tenant_id: number; _user_id: string }
