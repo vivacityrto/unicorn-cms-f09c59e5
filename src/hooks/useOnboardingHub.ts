@@ -23,6 +23,7 @@ export interface OnboardingHubRun {
   welcome_email_sent_at: string | null;
   welcome_email_sent_by: string | null;
   welcome_email_notes: string | null;
+  workbook_file_path: string | null;
 }
 
 export interface OnboardingChecklistInstance {
