@@ -141,6 +141,16 @@ serve(async (req) => {
       });
     }
 
+    // Best-effort: clear ghost_activation flag now that the password is set.
+    // Failure here must not abort the successful password change.
+    try {
+      await admin.auth.admin.updateUserById(authUser.id, {
+        user_metadata: { ghost_activation: false },
+      });
+    } catch (clearErr) {
+      console.warn("Failed to clear ghost_activation flag (non-fatal)", clearErr);
+    }
+
     // Best-effort audit
     try {
       await admin.from("audit_eos_events").insert({

@@ -268,7 +268,7 @@ serve(async (req) => {
     return json(200, {
       ok: true,
       email: ghost.email,
-      invite_sent: emailSent,
+      email_sent: emailSent,
       email_error: emailError,
       detail: emailSent
         ? "Account activated and invitation email sent (7-day token)"
