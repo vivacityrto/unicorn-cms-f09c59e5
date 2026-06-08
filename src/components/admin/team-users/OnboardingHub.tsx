@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useOnboardingHub } from "@/hooks/useOnboardingHub";
 import { WorkbookUploader } from "@/components/admin/team-users/WorkbookUploader";
+import { toast } from "@/hooks/use-toast";
 
 interface Props {
   runId: number;
@@ -86,12 +87,29 @@ export function OnboardingHub({ runId }: Props) {
                 {[run.role_code, run.start_date, run.location_code].filter(Boolean).join(" · ")}
               </CardDescription>
             </div>
-            <div className="min-w-[220px]">
+            <div className="flex flex-col items-end gap-3 min-w-[220px]">
               <Progress
                 value={(completedCount / total) * 100}
                 label={`${completedCount} of ${total} onboarding tasks complete`}
                 showValue
               />
+              <Button
+                size="sm"
+                disabled={updateRun.isPending}
+                onClick={() => {
+                  if (run.welcome_email_sent_at) return;
+                  updateRun.mutate(
+                    { welcome_email_sent_at: new Date().toISOString() },
+                    {
+                      onSuccess: () =>
+                        toast({ title: "Welcome pack marked as sent." }),
+                    }
+                  );
+                }}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {run.welcome_email_sent_at ? "Welcome Pack Sent" : "Send Welcome Pack Now"}
+              </Button>
             </div>
           </div>
         </CardHeader>

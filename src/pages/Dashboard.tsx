@@ -15,6 +15,7 @@ import { RiskClusterSnapshot } from "@/components/dashboard/RiskClusterSnapshot"
 import { ExpandablePortfolioSection } from "@/components/dashboard/ExpandablePortfolioSection";
 import { OverloadBanner } from "@/components/dashboard/OverloadBanner";
 import { TenantDrawer } from "@/components/portfolio/TenantDrawer";
+import { StaffOnboardingBanner } from "@/components/staff/StaffOnboardingBanner";
 
 const Dashboard = () => {
   const { profile } = useAuth();
@@ -66,6 +67,7 @@ const Dashboard = () => {
     <DashboardLayout>
       <div className="w-full min-w-0 min-h-full bg-background flex flex-col">
         <OverloadBanner show={isOverloaded} />
+        <StaffOnboardingBanner />
 
         {/* Compact header */}
         <div className="border-b bg-card/50 backdrop-blur-sm px-4 md:px-6 py-3">
