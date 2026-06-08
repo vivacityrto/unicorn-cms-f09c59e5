@@ -234,15 +234,38 @@ export default function UserProfile() {
           Back
         </Button>
         {isSuperAdmin && (user.user_type === 'Vivacity' || user.user_type === 'Vivacity Team') && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/admin/team-users/new-starter?prefill=${user.user_uuid}`)}
-            className="gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Redo Setup
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                const { data } = await supabase
+                  .from('staff_provisioning_runs')
+                  .select('id')
+                  .eq('target_user_id', user.user_uuid)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                if (data?.id) {
+                  navigate(`/admin/team-users/runs/${data.id}/onboarding`);
+                } else {
+                  toast({ title: 'No onboarding run', description: 'This team member has no provisioning run yet.' });
+                }
+              }}
+              className="gap-2"
+            >
+              View Onboarding Hub
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/admin/team-users/new-starter?prefill=${user.user_uuid}`)}
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Redo Setup
+            </Button>
+          </div>
         )}
       </div>
 
