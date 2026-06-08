@@ -41372,6 +41372,7 @@ export type Database = {
           welcome_email_notes: string | null
           welcome_email_sent_at: string | null
           welcome_email_sent_by: string | null
+          workbook_file_path: string | null
         }
         Insert: {
           created_at?: string
@@ -41406,6 +41407,7 @@ export type Database = {
           welcome_email_notes?: string | null
           welcome_email_sent_at?: string | null
           welcome_email_sent_by?: string | null
+          workbook_file_path?: string | null
         }
         Update: {
           created_at?: string
@@ -41440,6 +41442,7 @@ export type Database = {
           welcome_email_notes?: string | null
           welcome_email_sent_at?: string | null
           welcome_email_sent_by?: string | null
+          workbook_file_path?: string | null
         }
         Relationships: [
           {
