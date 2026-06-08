@@ -112,7 +112,9 @@ export function OnboardingHub({ runId }: Props) {
           saving={updateRun.isPending}
         />
         <WorkbookCard
-          workbookUrl={settings.staff_onboarding_workbook_url}
+          runId={runId}
+          workbookFilePath={run.workbook_file_path}
+          fallbackUrl={settings.staff_onboarding_workbook_url}
           sentAt={run.onboarding_workbook_sent_at}
           returnedAt={run.onboarding_workbook_returned_at}
           onMarkSent={(when) =>
