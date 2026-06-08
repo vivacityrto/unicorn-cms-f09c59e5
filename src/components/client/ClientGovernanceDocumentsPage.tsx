@@ -182,18 +182,90 @@ export function ClientGovernanceDocumentsPage() {
     setFrameworkFilter("all");
   };
 
-  const handleView = (row: GovernanceDocRow) => {
-    if (!row.file_path) return;
-    const viewUrl = row.file_path.replace("action=default", "action=view");
-    window.open(viewUrl, "_blank", "noopener,noreferrer");
+  // Build a lowercase {fileName: webUrl} map by browsing tenant SharePoint
+  // -> shared folder -> "- Governance" subtree.
+  const {
+    data: sharePointMap,
+    isLoading: sharePointLoading,
+    isError: sharePointError,
+  } = useQuery({
+    queryKey: ["client-governance-sp-map", activeTenantId],
+    enabled: !!activeTenantId && canAccess,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async (): Promise<Record<string, string>> => {
+      const map: Record<string, string> = {};
+
+      const listChildren = async (folderId?: string) => {
+        const { data, error } = await supabase.functions.invoke(
+          "browse-sharepoint-folder",
+          {
+            body: {
+              action: "list",
+              tenant_id: activeTenantId,
+              use_shared_folder: true,
+              ...(folderId ? { folder_id: folderId } : {}),
+            },
+          }
+        );
+        if (error) throw error;
+        return (data?.items ?? []) as Array<{
+          id: string;
+          name: string;
+          is_folder: boolean;
+          web_url: string;
+        }>;
+      };
+
+      const topLevel = await listChildren();
+      const governance = topLevel.find(
+        (i) => i.is_folder && i.name.trim().toLowerCase() === "- governance"
+      );
+      if (!governance) return map;
+
+      const walk = async (folderId: string, depth: number): Promise<void> => {
+        if (depth > 5) return;
+        const items = await listChildren(folderId);
+        const folderTasks: Promise<void>[] = [];
+        for (const item of items) {
+          if (item.is_folder) {
+            folderTasks.push(walk(item.id, depth + 1));
+          } else if (item.web_url && item.name) {
+            map[item.name.toLowerCase()] = item.web_url;
+          }
+        }
+        await Promise.all(folderTasks);
+      };
+
+      await walk(governance.id, 0);
+      return map;
+    },
+  });
+
+  useEffect(() => {
+    if (sharePointError) {
+      toast({
+        title: "Could not load SharePoint files",
+        description: "Files may not yet be available.",
+        variant: "destructive",
+      });
+    }
+  }, [sharePointError, toast]);
+
+  const extractFileName = (url: string | null): string | null => {
+    if (!url) return null;
+    try {
+      const name = new URL(url).searchParams.get("file");
+      return name ? name.toLowerCase() : null;
+    } catch {
+      return null;
+    }
   };
 
-  const handleOpenSharePointFolder = async (row: GovernanceDocRow) => {
-    if (!row.file_path) return;
-    setOpeningSharePointId(row.id);
+  const handleOpenSharePointFolder = async (rowId: string, spWebUrl: string) => {
+    setOpeningSharePointId(rowId);
     try {
       const { data, error } = await supabase.functions.invoke("get-sharepoint-parent-folder", {
-        body: { file_url: row.file_path, tenant_id: activeTenantId },
+        body: { file_url: spWebUrl, tenant_id: activeTenantId },
       });
       if (error || !data?.folder_url) {
         throw new Error(error?.message ?? "No folder URL returned");
@@ -341,46 +413,63 @@ export function ClientGovernanceDocumentsPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {row.file_path ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleView(row)}
-                          >
-                            <Eye className="mr-1.5 h-3.5 w-3.5" />
-                            View
-                          </Button>
-                        ) : (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span tabIndex={0}>
-                                <Button size="sm" variant="outline" disabled>
-                                  <Eye className="mr-1.5 h-3.5 w-3.5" />
-                                  View
-                                </Button>
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>File not available</TooltipContent>
-                          </Tooltip>
-                        )}
-                        {row.file_path && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenSharePointFolder(row)}
-                            disabled={openingSharePointId === row.id}
-                          >
-                            {openingSharePointId === row.id ? (
-                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      {(() => {
+                        const fileName = extractFileName(row.file_path);
+                        const spWebUrl =
+                          fileName && sharePointMap ? sharePointMap[fileName] ?? null : null;
+                        const mapPending = sharePointLoading && !sharePointError;
+                        return (
+                          <div className="flex justify-end gap-2">
+                            {spWebUrl ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  window.open(spWebUrl, "_blank", "noopener,noreferrer")
+                                }
+                              >
+                                <Eye className="mr-1.5 h-3.5 w-3.5" />
+                                View
+                              </Button>
                             ) : (
-                              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span tabIndex={0}>
+                                    <Button size="sm" variant="outline" disabled>
+                                      {mapPending ? (
+                                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                      ) : (
+                                        <Eye className="mr-1.5 h-3.5 w-3.5" />
+                                      )}
+                                      View
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {mapPending
+                                    ? "Loading SharePoint files…"
+                                    : "File not yet available in SharePoint"}
+                                </TooltipContent>
+                              </Tooltip>
                             )}
-                            SharePoint
-                          </Button>
-                        )}
-
-                      </div>
+                            {spWebUrl && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleOpenSharePointFolder(row.id, spWebUrl)}
+                                disabled={openingSharePointId === row.id}
+                              >
+                                {openingSharePointId === row.id ? (
+                                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                                )}
+                                SharePoint
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))
