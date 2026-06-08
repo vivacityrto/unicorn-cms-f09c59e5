@@ -964,31 +964,9 @@ serve(async (req) => {
     // ── Resolve SharePoint folder ──────────────────────────────────────────
     const { data: spSettings } = await supabase
       .from("tenant_sharepoint_settings")
-      .select("governance_drive_id, governance_folder_item_id, drive_id, shared_folder_item_id")
+      .select("drive_id, shared_folder_item_id")
       .eq("tenant_id", tenant_id)
       .maybeSingle();
-
-    if (!spSettings?.governance_drive_id || !spSettings?.governance_folder_item_id) {
-      const errorMsg = "No governance folder configured for this tenant. Please verify the governance folder from the SharePoint Folder Mapping page (Admin → SharePoint Folder Mapping) before generating documents.";
-      await supabase.from("governance_document_deliveries").insert({
-        tenant_id,
-        document_id: doc.id,
-        document_version_id,
-        snapshot_id: snapshotId,
-        status: "failed",
-        delivered_file_name: deliveredFileName,
-        delivered_by: userId,
-        error_message: errorMsg,
-        tailoring_completeness_pct: completeness,
-        missing_merge_fields: missingTags,
-        invalid_merge_fields: invalidTags,
-        tailoring_risk_level: riskLevel,
-      });
-      return new Response(
-        JSON.stringify({ error: errorMsg, error_code: "GOVERNANCE_FOLDER_MISSING" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
 
     if (!spSettings?.drive_id || !spSettings?.shared_folder_item_id) {
       const errorMsg = "No shared folder configured for this tenant. Please configure the Shared Folder in Admin → Integrations → SharePoint before generating documents.";
@@ -1013,27 +991,36 @@ serve(async (req) => {
     }
 
 
-    const driveId = spSettings.governance_drive_id;
-    let parentItemId = spSettings.governance_folder_item_id;
+    const driveId = spSettings.drive_id as string;
+    const sharedRootId = spSettings.shared_folder_item_id as string;
     let categorySubfolder: string | null = null;
+
+    // ── Resolve shared folder root path ────────────────────────────────────
+    const sharedRootInfo = await graphGet<DriveItem>(
+      `/drives/${driveId}/items/${sharedRootId}`,
+    );
+    if (!sharedRootInfo.ok) {
+      throw new Error(`Could not resolve shared folder root (${sharedRootId})`);
+    }
+    const sharedParentRef = sharedRootInfo.data.parentReference as { path?: string } | undefined;
+    const sharedFullPath = sharedParentRef?.path
+      ? `${sharedParentRef.path.replace(/^\/drives\/[^/]+\/root:/, '')}/${sharedRootInfo.data.name}`
+      : sharedRootInfo.data.name;
+    let cleanPath = sharedFullPath.replace(/^\//, '');
+
+    // ── Navigate into "- Governance" ───────────────────────────────────────
+    const govSub = await ensureFolder(driveId, cleanPath, "- Governance");
+    let parentItemId = govSub.itemId;
+    cleanPath = `${cleanPath}/- Governance`;
 
     // ── Framework subfolder (e.g. "RTO", "CRICOS", "GTO") ──────────────────
     const frameworkType = doc.framework_type as string | null;
     if (frameworkType) {
       const frameworkFolderName = frameworkType.toUpperCase();
       try {
-        const parentInfo = await graphGet<DriveItem>(
-          `/drives/${driveId}/items/${parentItemId}`,
-        );
-        if (parentInfo.ok) {
-          const parentRef = parentInfo.data.parentReference as { path?: string } | undefined;
-          const fullPath = parentRef?.path
-            ? `${parentRef.path.replace(/^\/drives\/[^/]+\/root:/, '')}/${parentInfo.data.name}`
-            : parentInfo.data.name;
-          const cleanPath = fullPath.replace(/^\//, '');
-          const sub = await ensureFolder(driveId, cleanPath, frameworkFolderName);
-          parentItemId = sub.itemId;
-        }
+        const sub = await ensureFolder(driveId, cleanPath, frameworkFolderName);
+        parentItemId = sub.itemId;
+        cleanPath = `${cleanPath}/${frameworkFolderName}`;
       } catch (e) {
         console.warn(`[deliver] Could not resolve framework subfolder: ${e}`);
       }
@@ -1050,19 +1037,10 @@ serve(async (req) => {
 
       if (folderName) {
         try {
-          const parentInfo = await graphGet<DriveItem>(
-            `/drives/${driveId}/items/${parentItemId}`,
-          );
-          if (parentInfo.ok) {
-            const parentRef = parentInfo.data.parentReference as { path?: string } | undefined;
-            const fullPath = parentRef?.path
-              ? `${parentRef.path.replace(/^\/drives\/[^/]+\/root:/, '')}/${parentInfo.data.name}`
-              : parentInfo.data.name;
-            const cleanPath = fullPath.replace(/^\//, '');
-            const sub = await ensureFolder(driveId, cleanPath, folderName);
-            parentItemId = sub.itemId;
-            categorySubfolder = folderName;
-          }
+          const sub = await ensureFolder(driveId, cleanPath, folderName);
+          parentItemId = sub.itemId;
+          cleanPath = `${cleanPath}/${folderName}`;
+          categorySubfolder = folderName;
         } catch (e) {
           console.warn(`[deliver] Could not resolve category subfolder: ${e}`);
         }
