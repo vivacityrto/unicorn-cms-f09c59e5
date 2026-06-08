@@ -1036,6 +1036,7 @@ const App = () => (
             {/* Team & Tenant Users */}
             <Route path="/admin/team-users" element={<ProtectedRoute><TeamUsers /></ProtectedRoute>} />
             <Route path="/admin/team-users/new-starter" element={<ProtectedRoute requireSuperAdmin><NewStarterWizard /></ProtectedRoute>} />
+            <Route path="/admin/team-users/runs/:runId" element={<ProtectedRoute requireSuperAdmin><ProvisioningRunDetailPage /></ProtectedRoute>} />
             <Route path="/admin/team-users/runs/:runId/onboarding" element={<ProtectedRoute requireSuperAdmin><OnboardingHubPage /></ProtectedRoute>} />
             <Route path="/admin/bulk-invite" element={<ProtectedRoute requireSuperAdmin><BulkInvite /></ProtectedRoute>} />
             <Route path="/admin/cohort-sender" element={<ProtectedRoute requireSuperAdmin><CohortAccessSender /></ProtectedRoute>} />
