@@ -1173,7 +1173,6 @@ serve(async (req) => {
           unreplaced_fields: unreplacedTags,
           invalid_fields: invalidTags,
           missing_fields: missingTags,
-          shared_folder_error: sharedFolderError,
         },
 
       }),
