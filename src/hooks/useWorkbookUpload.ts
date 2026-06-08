@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-const SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
 export function useWorkbookSignedUrl(filePath: string | null) {
@@ -30,7 +29,6 @@ export function useWorkbookUpload(runId: number | null) {
   const upload = useMutation({
     mutationFn: async ({
       file,
-      previousPath,
     }: {
       file: File;
       previousPath: string | null;
