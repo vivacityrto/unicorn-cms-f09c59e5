@@ -23,6 +23,7 @@ export interface OnboardingHubRun {
   welcome_email_sent_at: string | null;
   welcome_email_sent_by: string | null;
   welcome_email_notes: string | null;
+  workbook_file_path: string | null;
 }
 
 export interface OnboardingChecklistInstance {
@@ -44,7 +45,7 @@ export interface OnboardingHubSettings {
 }
 
 const RUN_COLS =
-  "id, first_name, last_name, display_name, job_title, start_date, location_code, role_code, target_user_id, requested_by, status, induction_video_sent_at, induction_video_sent_by, induction_video_watched_at, onboarding_workbook_sent_at, onboarding_workbook_sent_by, onboarding_workbook_returned_at, welcome_email_sent_at, welcome_email_sent_by, welcome_email_notes";
+  "id, first_name, last_name, display_name, job_title, start_date, location_code, role_code, target_user_id, requested_by, status, induction_video_sent_at, induction_video_sent_by, induction_video_watched_at, onboarding_workbook_sent_at, onboarding_workbook_sent_by, onboarding_workbook_returned_at, welcome_email_sent_at, welcome_email_sent_by, welcome_email_notes, workbook_file_path";
 
 export function useOnboardingHub(runId: number | null) {
   const qc = useQueryClient();

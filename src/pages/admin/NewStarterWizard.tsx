@@ -626,9 +626,9 @@ export default function NewStarterWizard() {
                 <Button variant="outline" onClick={() => navigate("/admin/team-users")}>
                   Save &amp; Close
                 </Button>
-                {form.upn && (
-                  <Button onClick={() => navigate(`/admin/team-users?focus=${encodeURIComponent(form.upn)}`)}>
-                    Save &amp; View Team Member
+                {runId && (
+                  <Button onClick={() => navigate(`/admin/team-users/runs/${runId}?tab=onboarding`)}>
+                    Open Onboarding Hub
                   </Button>
                 )}
               </div>
