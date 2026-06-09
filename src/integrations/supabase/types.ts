@@ -35433,6 +35433,128 @@ export type Database = {
           },
         ]
       }
+      permission_change_log: {
+        Row: {
+          action: string
+          actor_uuid: string | null
+          after: Json | null
+          before: Json | null
+          created_at: string
+          entity: string
+          entity_id: string
+          id: number
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_uuid?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity: string
+          entity_id: string
+          id?: never
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_uuid?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity?: string
+          entity_id?: string
+          id?: never
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_change_log_actor_uuid_fkey"
+            columns: ["actor_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "permission_change_log_actor_uuid_fkey"
+            columns: ["actor_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "permission_change_log_actor_uuid_fkey"
+            columns: ["actor_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "permission_change_log_actor_uuid_fkey"
+            columns: ["actor_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "permission_change_log_actor_uuid_fkey"
+            columns: ["actor_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "permission_change_log_actor_uuid_fkey"
+            columns: ["actor_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "permission_change_log_actor_uuid_fkey"
+            columns: ["actor_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
+      permission_features: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          feature_key: string
+          is_active: boolean
+          label: string
+          module: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          feature_key: string
+          is_active?: boolean
+          label: string
+          module: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          feature_key?: string
+          is_active?: boolean
+          label?: string
+          module?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       phase_instances: {
         Row: {
           closed_by: string | null
@@ -39006,6 +39128,48 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_membership_usage"
             referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          feature_key: string
+          id: number
+          level: Database["public"]["Enums"]["permission_level"]
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          feature_key: string
+          id?: never
+          level: Database["public"]["Enums"]["permission_level"]
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          feature_key?: string
+          id?: never
+          level?: Database["public"]["Enums"]["permission_level"]
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_feature_key_fkey"
+            columns: ["feature_key"]
+            isOneToOne: false
+            referencedRelation: "permission_features"
+            referencedColumns: ["feature_key"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_fkey"
+            columns: ["role"]
+            isOneToOne: false
+            referencedRelation: "dd_unicorn_roles"
+            referencedColumns: ["value"]
           },
         ]
       }
@@ -53382,6 +53546,145 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          granted_at: string
+          granted_by: string | null
+          id: number
+          role: string
+          updated_at: string
+          user_uuid: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: never
+          role: string
+          updated_at?: string
+          user_uuid: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
+          id?: never
+          role?: string
+          updated_at?: string
+          user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "user_roles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_role_fkey"
+            columns: ["role"]
+            isOneToOne: false
+            referencedRelation: "dd_unicorn_roles"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "user_roles_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_roles_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       user_time_capture_settings: {
         Row: {
           auto_create_meeting_drafts: boolean
@@ -65694,6 +65997,7 @@ export type Database = {
       feature_flag: "eos_qc"
       invite_status: "INVITED" | "ACCEPTED" | "REVOKED" | "EXPIRED"
       meeting_type: "level_10" | "quarterly" | "annual"
+      permission_level: "full" | "limited" | "owner_only" | "none"
       rock_type: "company" | "team" | "individual"
       sch_booking_status: "pending" | "confirmed" | "rescheduled" | "cancelled"
       segment_type:
@@ -65911,6 +66215,7 @@ export const Constants = {
       feature_flag: ["eos_qc"],
       invite_status: ["INVITED", "ACCEPTED", "REVOKED", "EXPIRED"],
       meeting_type: ["level_10", "quarterly", "annual"],
+      permission_level: ["full", "limited", "owner_only", "none"],
       rock_type: ["company", "team", "individual"],
       sch_booking_status: ["pending", "confirmed", "rescheduled", "cancelled"],
       segment_type: [
