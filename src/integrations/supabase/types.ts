@@ -63864,6 +63864,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_permission: {
+        Args: { p_feature_key: string; p_min_level?: string; p_user_id: string }
+        Returns: boolean
+      }
       check_rate_limit: {
         Args: { p_action_type: string; p_tenant_id: number }
         Returns: boolean
@@ -64825,6 +64829,7 @@ export type Database = {
         Returns: string
       }
       is_admin_or_team_leader: { Args: never; Returns: boolean }
+      is_any_team_member: { Args: { p_user_id: string }; Returns: boolean }
       is_client_user: { Args: never; Returns: boolean }
       is_conversation_participant_safe: {
         Args: { p_conversation_id: string; p_user_id: string }
@@ -64836,6 +64841,7 @@ export type Database = {
         Returns: boolean
       }
       is_ghost_user: { Args: { p_user_uuid: string }; Returns: boolean }
+      is_integrator_or_above: { Args: { p_user_id: string }; Returns: boolean }
       is_meeting_participant: {
         Args: { _meeting_id: string; _user_id: string }
         Returns: boolean
@@ -64853,6 +64859,7 @@ export type Database = {
       is_super_admin_safe: { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin_user: { Args: { p_user_id: string }; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
+      is_team_leader_or_above: { Args: { p_user_id: string }; Returns: boolean }
       is_tenant_admin: { Args: { p_tenant_id: number }; Returns: boolean }
       is_tenant_admin_uuid: { Args: { p_tenant_id: string }; Returns: boolean }
       is_tenant_member: { Args: { p_tenant_id: number }; Returns: boolean }
