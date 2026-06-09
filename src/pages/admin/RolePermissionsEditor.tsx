@@ -273,8 +273,9 @@ export default function RolePermissionsEditor() {
   const error = featuresQ.error || matrixQ.error || rolesQ.error;
 
   return (
-    <TooltipProvider>
-      <div className="p-4 md:p-6 space-y-4">
+    <DashboardLayout>
+      <TooltipProvider>
+        <div className="p-4 md:p-6 space-y-4">
         <PageHeader
           title="Role Permission Editor"
           description="Control which roles can access each feature. Changes take effect immediately and are logged."
