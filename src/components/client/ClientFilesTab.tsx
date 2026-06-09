@@ -99,7 +99,7 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
   const [manualEditing, setManualEditing] = useState(false);
   const [manualUrlInput, setManualUrlInput] = useState('');
 
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member', 'Integrator', 'BGT', 'CSC', 'CET'].includes(
     profile?.unicorn_role || ''
   );
 

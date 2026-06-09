@@ -185,7 +185,7 @@ export const DashboardLayout = ({
 
   // Determine user role
   const userRole = profile?.unicorn_role || "User";
-  const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member"].includes(userRole);
+  const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member", "Integrator", "BGT", "CSC", "CET"].includes(userRole);
   const isTeamLeader = userRole === "Team Leader";
   const isTeamMember = userRole === "Team Member";
   const isIntegrator = userRole === "Integrator";
