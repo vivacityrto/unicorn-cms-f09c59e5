@@ -94,6 +94,45 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'rocks:edit_own',
     'risks:create',
   ],
+  'Integrator': [
+    'advanced_features:access',
+    'eos:access',
+    'ask_viv:access',
+    'vto:edit',
+    'eos_meetings:schedule',
+    'eos_meetings:edit',
+    'qc:schedule',
+    'rocks:create',
+    'rocks:edit_own',
+    'rocks:edit_others',
+    'risks:create',
+    'risks:escalate',
+    'agenda_templates:manage',
+  ],
+  'BGT': [
+    'advanced_features:access',
+    'eos:access',
+    'ask_viv:access',
+    'rocks:create',
+    'rocks:edit_own',
+    'risks:create',
+  ],
+  'CSC': [
+    'advanced_features:access',
+    'eos:access',
+    'ask_viv:access',
+    'rocks:create',
+    'rocks:edit_own',
+    'risks:create',
+    'risks:escalate',
+  ],
+  'CET': [
+    'eos:access',
+    'ask_viv:access',
+    'rocks:create',
+    'rocks:edit_own',
+    'risks:create',
+  ],
   // Admin - Client tenant admin, NO EOS or Ask Viv access (clients don't use these)
   'Admin': [
     // NO eos:access - EOS is Vivacity-only
@@ -172,10 +211,11 @@ export const useRBAC = () => {
   // Computed flags for role detection
   const is_super_admin = isSuperAdmin() || profile?.unicorn_role === 'Super Admin';
   
-  // Vivacity Team = internal staff (Super Admin, Team Leader, Team Member)
-  const is_vivacity_team = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  // Vivacity Team = internal staff (Super Admin, Team Leader, Team Member, Integrator, BGT, CSC, CET)
+  const is_vivacity_team = [
+    'Super Admin', 'Team Leader', 'Team Member',
+    'Integrator', 'BGT', 'CSC', 'CET'
+  ].includes(profile?.unicorn_role || '');
 
   // Debug logging (dev only)
   if (process.env.NODE_ENV === 'development' && profile) {
@@ -194,12 +234,8 @@ export const useRBAC = () => {
     // SuperAdmin always has all permissions
     if (is_super_admin) return true;
 
-    // Use unicorn_role for permission lookup (handles Team Leader, Team Member)
-    // Assistant level mirrors Team Leader access exactly
-    let userRole = profile?.unicorn_role || 'General User';
-    if (profile?.superadmin_level === 'Assistant') {
-      userRole = 'Team Leader';
-    }
+    // Use unicorn_role for permission lookup
+    const userRole = profile?.unicorn_role || 'General User';
     const permissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS['General User'];
     
     return permissions.includes(permission);
