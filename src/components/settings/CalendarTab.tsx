@@ -13,6 +13,7 @@ import { useCalendarShares } from '@/hooks/useCalendarShares';
 import { useOutlookConnectionStatus } from '@/hooks/useOutlookConnectionStatus';
 import { useAddinFeatureFlags } from '@/hooks/useAddinFeatureFlags';
 import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { Link } from 'react-router-dom';
 
 export function CalendarTab() {

@@ -19,6 +19,7 @@ import {
   AppModalFooter,
 } from "@/components/ui/modals";
 import { TenantCombobox } from "@/components/clickup/TenantCombobox";
+import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 
 interface TenantRelationshipsProps {
   tenantId: number;

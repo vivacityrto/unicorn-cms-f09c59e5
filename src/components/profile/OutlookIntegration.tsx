@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useOutlookConnectionStatus } from '@/hooks/useOutlookConnectionStatus';
 import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 /**
  * OutlookIntegration component for Profile Settings.

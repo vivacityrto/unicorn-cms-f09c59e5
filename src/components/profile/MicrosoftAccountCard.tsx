@@ -33,6 +33,7 @@ import {
 import { useOutlookConnectionStatus } from '@/hooks/useOutlookConnectionStatus';
 import { useAddinFeatureFlags } from '@/hooks/useAddinFeatureFlags';
 import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 // Microsoft logo SVG as inline component
 function MicrosoftLogo({ className }: { className?: string }) {

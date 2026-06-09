@@ -31,6 +31,7 @@ import {
   DIRECTION_PREVIEW,
 } from '@/types/scorecard';
 import type { ScorecardMetric, MetricDirection, MetricSource, MetricCategory } from '@/types/scorecard';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 interface MetricEditorDialogV2Props {
   open: boolean;
