@@ -23,6 +23,8 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRBAC } from "@/hooks/useRBAC";
+import { useAuth } from "@/hooks/useAuth";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -48,6 +50,13 @@ export default function AcademyBuilderLibrary() {
   const [backfillConfirmOpen, setBackfillConfirmOpen] = useState(false);
   const [backfillRunning, setBackfillRunning] = useState(false);
   const qc = useQueryClient();
+
+  // ── RBAC gates ──
+  const { isSuperAdmin } = useRBAC();
+  const { profile } = useAuth();
+  const role = profile?.unicorn_role;
+  const canCreateCourse = isSuperAdmin || role === 'Team Leader' || role === 'BGT';
+  const canBackfill = isSuperAdmin || role === 'Team Leader';
 
   const { data: courses = [], isLoading } = useAdminAcademyCourses({
     status: statusFilter,
@@ -133,21 +142,25 @@ export default function AcademyBuilderLibrary() {
           <p className="text-sm text-muted-foreground mt-1">Create and manage training courses for Vivacity Academy</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setBackfillConfirmOpen(true)}
-            disabled={backfillRunning}
-          >
-            {backfillRunning ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Backfill Video Durations
-          </Button>
-          <Button onClick={() => setNewCourseOpen(true)} className="text-white hover:opacity-90" style={{ backgroundColor: "#23c0dd" }}>
-            <Plus className="h-4 w-4 mr-2" /> New Course
-          </Button>
+          {canBackfill && (
+            <Button
+              variant="outline"
+              onClick={() => setBackfillConfirmOpen(true)}
+              disabled={backfillRunning}
+            >
+              {backfillRunning ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Backfill Video Durations
+            </Button>
+          )}
+          {canCreateCourse && (
+            <Button onClick={() => setNewCourseOpen(true)} className="text-white hover:opacity-90" style={{ backgroundColor: "#23c0dd" }}>
+              <Plus className="h-4 w-4 mr-2" /> New Course
+            </Button>
+          )}
         </div>
       </div>
 

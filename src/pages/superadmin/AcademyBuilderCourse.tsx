@@ -24,6 +24,8 @@ import PackageRulesTab from "@/components/academy/builder/PackageRulesTab";
 import PathwayMultiSelect from "@/components/academy/PathwayMultiSelect";
 import TagChipInput from "@/components/academy/TagChipInput";
 import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
+import { useRBAC } from "@/hooks/useRBAC";
+import { useAuth } from "@/hooks/useAuth";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -48,6 +50,13 @@ export default function AcademyBuilderCourse() {
   const courseId = courseIdParam ? parseInt(courseIdParam, 10) : null;
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  // ── RBAC gates ──
+  const { isSuperAdmin } = useRBAC();
+  const { profile } = useAuth();
+  const role = profile?.unicorn_role;
+  const canEdit = isSuperAdmin || role === 'Team Leader' || role === 'BGT';
+  const canPublishOrDelete = isSuperAdmin || role === 'Team Leader';
 
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
   const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
@@ -329,19 +338,21 @@ export default function AcademyBuilderCourse() {
                   {isDirty && (
                     <span className="text-[11px] text-amber-600">Unsaved</span>
                   )}
-                  <Button
-                    size="sm"
-                    onClick={handleSaveSettings}
-                    disabled={!isDirty || saveCourseSettings.isPending}
-                    className="gap-1"
-                  >
-                    {saveCourseSettings.isPending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Save className="h-3.5 w-3.5" />
-                    )}
-                    Save Changes
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      size="sm"
+                      onClick={handleSaveSettings}
+                      disabled={!isDirty || saveCourseSettings.isPending}
+                      className="gap-1"
+                    >
+                      {saveCourseSettings.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Save className="h-3.5 w-3.5" />
+                      )}
+                      Save Changes
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -472,16 +483,16 @@ export default function AcademyBuilderCourse() {
               <div className="flex items-center gap-3 p-4 rounded-lg border" style={{ borderColor: "hsl(var(--border))" }}>
                 <Badge className={`${statusColors[course.status ?? "draft"]} text-xs`}>{course.status}</Badge>
                 <div className="flex-1" />
-                {course.status === "draft" && (
+                {course.status === "draft" && canPublishOrDelete && (
                   <Button size="sm" onClick={handlePublish} className="text-white hover:opacity-90" style={{ backgroundColor: "#22c55e" }}>Publish Course</Button>
                 )}
-                {course.status === "published" && (
+                {course.status === "published" && canPublishOrDelete && (
                   <>
                     <Button size="sm" variant="outline" onClick={handleBackToDraft}>Back to Draft</Button>
                     <Button size="sm" variant="outline" onClick={() => courseId && archiveCourse.mutate(courseId)} className="text-amber-600 border-amber-300 hover:bg-amber-50">Archive</Button>
                   </>
                 )}
-                {course.status === "archived" && (
+                {course.status === "archived" && canPublishOrDelete && (
                   <Button size="sm" variant="outline" onClick={handleBackToDraft}>Restore to Draft</Button>
                 )}
               </div>
@@ -530,19 +541,25 @@ export default function AcademyBuilderCourse() {
                           <span className="text-xs text-muted-foreground">{mod.lessons.length} lessons</span>
 
                           <div className="flex items-center gap-1">
-                            <Switch
-                              checked={mod.is_published !== false}
-                              onCheckedChange={(v) => updateModule.mutate({ id: mod.id, courseId: courseId!, data: { is_published: v } })}
-                            />
-                            <button onClick={() => { setEditingModuleId(mod.id); setEditModuleTitle(mod.title); }} className="p-1 hover:bg-muted rounded">
-                              <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget({ type: "module", id: mod.id, name: mod.title, hasChildren: mod.lessons.length > 0 })}
-                              className="p-1 hover:bg-destructive/10 rounded"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                            </button>
+                            {canPublishOrDelete && (
+                              <Switch
+                                checked={mod.is_published !== false}
+                                onCheckedChange={(v) => updateModule.mutate({ id: mod.id, courseId: courseId!, data: { is_published: v } })}
+                              />
+                            )}
+                            {canEdit && (
+                              <>
+                                <button onClick={() => { setEditingModuleId(mod.id); setEditModuleTitle(mod.title); }} className="p-1 hover:bg-muted rounded">
+                                  <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                </button>
+                                <button
+                                  onClick={() => setDeleteTarget({ type: "module", id: mod.id, name: mod.title, hasChildren: mod.lessons.length > 0 })}
+                                  className="p-1 hover:bg-destructive/10 rounded"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -566,50 +583,60 @@ export default function AcademyBuilderCourse() {
                                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">Preview</Badge>
                                 )}
 
-                                <Switch
-                                  checked={lesson.is_published !== false}
-                                  onCheckedChange={(v) => updateLessonMut.mutate({ id: lesson.id, courseId: courseId!, data: { is_published: v } })}
-                                />
+                                {canPublishOrDelete && (
+                                  <Switch
+                                    checked={lesson.is_published !== false}
+                                    onCheckedChange={(v) => updateLessonMut.mutate({ id: lesson.id, courseId: courseId!, data: { is_published: v } })}
+                                  />
+                                )}
 
-                                <button onClick={() => openLessonEditor(mod.id, lesson)} className="p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
-                                </button>
-                                <button
-                                  onClick={() => setDeleteTarget({ type: "lesson", id: lesson.id, name: lesson.title })}
-                                  className="p-1 hover:bg-destructive/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                </button>
+                                {canEdit && (
+                                  <>
+                                    <button onClick={() => openLessonEditor(mod.id, lesson)} className="p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </button>
+                                    <button
+                                      onClick={() => setDeleteTarget({ type: "lesson", id: lesson.id, name: lesson.title })}
+                                      className="p-1 hover:bg-destructive/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             ))}
 
-                            <div className="flex gap-1 mt-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openLessonEditor(mod.id)}
-                                className="flex-1 text-muted-foreground hover:text-foreground"
-                              >
-                                <Plus className="h-3.5 w-3.5 mr-1" /> Add Lesson
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setImportVideosModuleId(mod.id)}
-                                className="flex-1 text-muted-foreground hover:text-foreground"
-                              >
-                                <Upload className="h-3.5 w-3.5 mr-1" /> Import Videos
-                              </Button>
-                            </div>
+                            {canEdit && (
+                              <div className="flex gap-1 mt-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openLessonEditor(mod.id)}
+                                  className="flex-1 text-muted-foreground hover:text-foreground"
+                                >
+                                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Lesson
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setImportVideosModuleId(mod.id)}
+                                  className="flex-1 text-muted-foreground hover:text-foreground"
+                                >
+                                  <Upload className="h-3.5 w-3.5 mr-1" /> Import Videos
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     );
                   })}
 
-                  <Button variant="outline" onClick={handleAddModule} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" /> Add Module
-                  </Button>
+                  {canEdit && (
+                    <Button variant="outline" onClick={handleAddModule} className="w-full">
+                      <Plus className="h-4 w-4 mr-2" /> Add Module
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
