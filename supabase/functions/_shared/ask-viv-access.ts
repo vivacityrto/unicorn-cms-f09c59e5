@@ -11,7 +11,10 @@ import { UserProfile } from "./auth-helpers.ts";
 /**
  * Vivacity internal roles that can access Ask Viv
  */
-const VIVACITY_INTERNAL_ROLES = ["Super Admin", "Team Leader", "Team Member"];
+const VIVACITY_INTERNAL_ROLES = [
+  "Super Admin", "Team Leader", "Team Member",
+  "Integrator", "BGT", "CSC", "CET",
+];
 
 /**
  * Check if a user profile is Vivacity internal staff

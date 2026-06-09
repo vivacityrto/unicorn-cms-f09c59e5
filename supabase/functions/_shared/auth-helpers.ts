@@ -48,7 +48,16 @@ export interface AuthResult {
 /**
  * Vivacity Team roles that have elevated permissions.
  */
-const VIVACITY_ROLES = ["Super Admin", "Team Leader", "Team Member"];
+const VIVACITY_ROLES = [
+  "Super Admin", "Team Leader", "Team Member",
+  "Integrator", "BGT", "CSC", "CET",
+];
+
+/**
+ * Vivacity internal staff roles.
+ * Other functions should import this instead of maintaining their own lists.
+ */
+export const VIVACITY_STAFF_ROLES = VIVACITY_ROLES;
 
 /**
  * Super Admin role constant.
