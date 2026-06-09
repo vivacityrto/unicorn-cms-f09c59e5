@@ -397,7 +397,7 @@
                        <Button size="sm" variant="ghost" onClick={() => openEdit(process)}>
                          <Edit className="h-4 w-4" />
                        </Button>
-                       {process.approval_status === 'draft' && (
+                       {process.approval_status === 'draft' && canPublishProcesses && (
                          <Button size="sm" variant="default" onClick={() => handleApprove(process)}>
                            <CheckCircle className="h-4 w-4 mr-1" />
                            Approve
