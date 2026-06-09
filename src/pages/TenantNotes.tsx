@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { VIVACITY_STAFF_ROLES } from "@/lib/roles/vivacityRoles";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, StickyNote, Calendar as CalendarComponent, X, Upload, Flag, Play, Square, Timer, CheckCircle2, Clock, Building2, Search, ArrowUpDown, Loader2, ExternalLink, MessageSquare, ListTodo } from "lucide-react";
@@ -216,7 +217,7 @@ export default function TenantNotes() {
     try {
       const { data, error } = await supabase.from("users")
         .select("user_uuid, first_name, last_name, avatar_url")
-        .in("unicorn_role", ["Super Admin", "Team Leader", "Team Member"])
+        .in("unicorn_role", [...VIVACITY_STAFF_ROLES])
         .eq("disabled", false)
         .eq("archived", false)
         .order("first_name");
