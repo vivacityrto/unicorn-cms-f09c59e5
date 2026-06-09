@@ -51,7 +51,7 @@ const AUDIENCE_OPTIONS = [
 
 type ShowMode = "all" | "mapped" | "unmapped";
 
-export default function RulesMatrixTab() {
+export default function RulesMatrixTab({ readOnly = false }: { readOnly?: boolean } = {}) {
   const { data: packages = [], isLoading: loadingP } = usePackagesActive();
   const { data: courses = [], isLoading: loadingC } = usePublishedCourses();
   const { data: rules = [], isLoading: loadingR } = useAllPackageCourseRules();
