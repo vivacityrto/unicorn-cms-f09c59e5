@@ -322,7 +322,9 @@ export default function AcademyCertificatesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm font-medium">{c.user_name}</div>
-                      <div className="text-xs text-muted-foreground">{c.user_email}</div>
+                      {c.user_email && c.user_email !== c.user_name && (
+                        <div className="text-xs text-muted-foreground">{c.user_email}</div>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">{c.tenant_name}</TableCell>
                     <TableCell className="text-sm max-w-[200px] truncate">{c.course_title}</TableCell>
