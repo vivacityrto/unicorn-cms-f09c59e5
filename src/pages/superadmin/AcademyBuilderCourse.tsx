@@ -24,6 +24,8 @@ import PackageRulesTab from "@/components/academy/builder/PackageRulesTab";
 import PathwayMultiSelect from "@/components/academy/PathwayMultiSelect";
 import TagChipInput from "@/components/academy/TagChipInput";
 import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
+import { useRBAC } from "@/hooks/useRBAC";
+import { useAuth } from "@/hooks/useAuth";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
