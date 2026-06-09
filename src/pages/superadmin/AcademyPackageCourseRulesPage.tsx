@@ -1,28 +1,54 @@
 import { useState } from "react";
-import { Activity, GraduationCap, Layers, Plus, Sparkles, Unlink } from "lucide-react";
+import { Navigate } from "react-router-dom";
+import { Activity, Eye, GraduationCap, Layers, Plus, Sparkles, Unlink } from "lucide-react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import AcademyStatCard from "@/components/academy/admin/AcademyStatCard";
 import RulesMatrixTab from "@/components/academy/admin/rules/RulesMatrixTab";
 import RulesListTab from "@/components/academy/admin/rules/RulesListTab";
 import CreateRuleModal from "@/components/academy/admin/rules/CreateRuleModal";
 import { useRuleStats, useRulesRealtime } from "@/hooks/academy/useAcademyPackageRules";
+import { useRBAC } from "@/hooks/useRBAC";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AcademyPackageCourseRulesPage() {
   useRulesRealtime();
   const { data: stats, isLoading } = useRuleStats();
   const [createOpen, setCreateOpen] = useState(false);
 
+  // ── RBAC gates ──
+  const { isSuperAdmin } = useRBAC();
+  const { profile } = useAuth();
+  const role = profile?.unicorn_role;
+  const isTeamLeader = role === "Team Leader";
+  const isIntegrator = role === "Integrator";
+  const hasAccess = isSuperAdmin || isTeamLeader || isIntegrator;
+  const canManage = isSuperAdmin || isTeamLeader;
+  const readOnly = !canManage;
+
+  if (!hasAccess) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <DashboardLayout>
       <div className="p-4 md:p-6 space-y-6 relative pb-24">
-        <PageHeader
-          title="Package → Course Mapping"
-          description="Control which Academy courses are auto-enrolled when a client has a given package. Changes take effect on the next package instance created. Use Backfill to apply to existing clients."
-          icon={GraduationCap}
-        />
+        <div className="flex items-start justify-between gap-4">
+          <PageHeader
+            title="Package → Course Mapping"
+            description="Control which Academy courses are auto-enrolled when a client has a given package. Changes take effect on the next package instance created. Use Backfill to apply to existing clients."
+            icon={GraduationCap}
+          />
+          {readOnly && (
+            <Badge variant="outline" className="shrink-0 gap-1 border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+              <Eye className="h-3 w-3" />
+              View only
+            </Badge>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <AcademyStatCard
@@ -57,23 +83,27 @@ export default function AcademyPackageCourseRulesPage() {
             <TabsTrigger value="list">Rules list</TabsTrigger>
           </TabsList>
           <TabsContent value="matrix" className="mt-4">
-            <RulesMatrixTab />
+            <RulesMatrixTab readOnly={readOnly} />
           </TabsContent>
           <TabsContent value="list" className="mt-4">
             <RulesListTab />
           </TabsContent>
         </Tabs>
 
-        <Button
-          onClick={() => setCreateOpen(true)}
-          size="lg"
-          className="fixed bottom-6 right-6 shadow-lg z-40 rounded-full"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          New rule
-        </Button>
+        {canManage && (
+          <>
+            <Button
+              onClick={() => setCreateOpen(true)}
+              size="lg"
+              className="fixed bottom-6 right-6 shadow-lg z-40 rounded-full"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              New rule
+            </Button>
 
-        <CreateRuleModal open={createOpen} onOpenChange={setCreateOpen} />
+            <CreateRuleModal open={createOpen} onOpenChange={setCreateOpen} />
+          </>
+        )}
       </div>
     </DashboardLayout>
   );
