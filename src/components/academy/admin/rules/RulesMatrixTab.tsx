@@ -51,7 +51,7 @@ const AUDIENCE_OPTIONS = [
 
 type ShowMode = "all" | "mapped" | "unmapped";
 
-export default function RulesMatrixTab() {
+export default function RulesMatrixTab({ readOnly = false }: { readOnly?: boolean } = {}) {
   const { data: packages = [], isLoading: loadingP } = usePackagesActive();
   const { data: courses = [], isLoading: loadingC } = usePublishedCourses();
   const { data: rules = [], isLoading: loadingR } = useAllPackageCourseRules();
@@ -215,18 +215,20 @@ export default function RulesMatrixTab() {
         </div>
 
         {/* Bulk actions */}
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setBulkRowOpen(true)}>
-            Select row…
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setBulkColOpen(true)}>
-            Select column…
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setCopyOpen(true)}>
-            <Copy className="h-3.5 w-3.5 mr-1.5" />
-            Copy mappings…
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setBulkRowOpen(true)}>
+              Select row…
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setBulkColOpen(true)}>
+              Select column…
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setCopyOpen(true)}>
+              <Copy className="h-3.5 w-3.5 mr-1.5" />
+              Copy mappings…
+            </Button>
+          </div>
+        )}
       </div>
 
       {hasNoRules && (
@@ -313,12 +315,13 @@ export default function RulesMatrixTab() {
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                onClick={() => handleCellClick(p, course)}
-                                className="w-full h-full min-h-[40px] flex items-center justify-center hover:bg-primary/10 transition-colors"
+                                onClick={readOnly ? undefined : () => handleCellClick(p, course)}
+                                disabled={readOnly}
+                                className={`w-full h-full min-h-[40px] flex items-center justify-center transition-colors ${readOnly ? "cursor-default" : "hover:bg-primary/10"}`}
                                 aria-label={
                                   active
-                                    ? `Disable: ${course.title} for ${p.name}`
-                                    : `Enable: ${course.title} for ${p.name}`
+                                    ? `${readOnly ? "Mapped" : "Disable"}: ${course.title} for ${p.name}`
+                                    : `${readOnly ? "Not mapped" : "Enable"}: ${course.title} for ${p.name}`
                                 }
                               >
                                 {active ? (
