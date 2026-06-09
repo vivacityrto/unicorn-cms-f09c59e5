@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermission } from "@/hooks/usePermission";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -95,6 +96,7 @@ export default function ManagePackages() {
     profile
   } = useAuth();
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
+  const canCreatePackage = usePermission('packages.create');
   useEffect(() => {
     fetchPackages();
   }, []);
@@ -719,14 +721,14 @@ export default function ManagePackages() {
           <Tooltip>
             <TooltipTrigger asChild>
               <span>
-                <Button onClick={() => setShowAddDialog(true)} className={isTeamLeader ? "bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"} disabled={isTeamLeader}>
+                <Button onClick={() => setShowAddDialog(true)} className={!canCreatePackage ? "bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"} disabled={!canCreatePackage}>
                   <Plus className="h-4 w-4 mr-2" />
                   Setup Client
                 </Button>
               </span>
             </TooltipTrigger>
-            {isTeamLeader && <TooltipContent>
-                <p>Please contact Super Admins.</p>
+            {!canCreatePackage && <TooltipContent>
+                <p>You don't have permission to start packages.</p>
               </TooltipContent>}
           </Tooltip>
         </TooltipProvider>

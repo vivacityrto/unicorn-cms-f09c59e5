@@ -32,6 +32,7 @@ import {
 import type { ClientAudit } from '@/types/clientAudits';
 import type { AuditFinding, AuditAction } from '@/types/auditWorkspace';
 import { useAuditProgress } from '@/hooks/useAuditCompletion';
+import { usePermission } from '@/hooks/usePermission';
 import { toast } from 'sonner';
 
 // Levenshtein-style edit distance percent (0-100). Cheap implementation —
@@ -73,6 +74,7 @@ interface ReportTabProps {
 export function ReportTab({ audit, findings, actions }: ReportTabProps) {
   const [releaseNotes, setReleaseNotes] = useState('');
   const [preliminaryOpen, setPreliminaryOpen] = useState(false);
+  const canReport = usePermission('audits.report');
   const [softGuardOpen, setSoftGuardOpen] = useState(false);
   const releaseReport = useReleaseReport(audit.id);
   const revokeReport = useRevokeReport(audit.id);
@@ -291,7 +293,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
               <Clock className="h-4 w-4" /> No report generated yet
             </div>
           )}
-          <Button onClick={handleGenerateClick} disabled={generateReport.isPending}>
+          <Button onClick={handleGenerateClick} disabled={generateReport.isPending || !canReport}>
             {generateReport.isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -601,7 +603,7 @@ export function ReportTab({ audit, findings, actions }: ReportTabProps) {
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => releaseReport.mutate({ releaseNotes: releaseNotes.trim() || undefined })}
-                      disabled={releaseReport.isPending}
+                      disabled={releaseReport.isPending || !canReport}
                     >
                       Release Report
                     </AlertDialogAction>

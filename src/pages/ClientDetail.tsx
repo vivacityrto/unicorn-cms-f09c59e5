@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermission } from '@/hooks/usePermission';
 
 import { ClientTimelineTab } from '@/components/client/ClientTimelineTab';
 import { ClientLoginHistoryTab } from '@/components/client/ClientLoginHistoryTab';
@@ -122,7 +123,7 @@ export default function ClientDetail() {
   const { isSuperAdmin: checkSuperAdmin, hasTenantAdmin } = useAuth();
   const isSuperAdminUser = checkSuperAdmin();
   const isTeamLeader = authProfile?.unicorn_role === 'Team Leader';
-  const canEdit = isSuperAdminUser || isTeamLeader;
+  const canEdit = usePermission('clients.details.edit', 'limited');
   const canVerifyTga = isSuperAdminUser || hasTenantAdmin(tenantIdNum || 0);
 
   // Handle profile form state changes
