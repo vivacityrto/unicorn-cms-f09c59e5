@@ -121,6 +121,14 @@ export default function AcademyEnrolmentsPage() {
   const reactivateMutation = useReactivateEnrollment();
   const extendMutation = useExtendEnrollment();
 
+  // ── RBAC gates ──
+  const { isSuperAdmin } = useRBAC();
+  const { profile } = useAuth();
+  const role = profile?.unicorn_role;
+  const canCreateEnrolment = isSuperAdmin || role === 'Team Leader' || role === 'BGT' || role === 'CSC';
+  const canExportCSV = isSuperAdmin || role === 'Team Leader';
+  const canManageEnrolments = isSuperAdmin || role === 'Team Leader';
+
   // Compute "expired" client-side (status='active' AND expires_at <= now())
   const isExpired = (e: any) =>
     e.status === "active" && e.expires_at && new Date(e.expires_at).getTime() <= Date.now();
