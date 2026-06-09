@@ -102,7 +102,7 @@ export function useAccountabilityChart() {
         supabase
           .from('users')
           .select('user_uuid, first_name, last_name, email, avatar_url')
-          .in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
+          .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
           .eq('archived', false),
         // Fetch linked data from the view
         supabase

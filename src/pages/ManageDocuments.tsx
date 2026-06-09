@@ -382,10 +382,8 @@ export default function ManageDocuments() {
     try {
       setLoading(true);
 
-      // Check if user is Super Admin or Team Leader
-      const isSuperAdmin = currentUserRole === "Super Admin" || currentUserRole === "SuperAdmin";
-      const isTeamLeader = currentUserRole === "Team Leader";
-      if (isSuperAdmin || isTeamLeader) {
+      // Check if user is internal Vivacity staff
+      if (isVivacityStaffRole(currentUserRole)) {
         // Super Admins and Team Leaders see master documents from documents table
         const {
           data: documentsData,
