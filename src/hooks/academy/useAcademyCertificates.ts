@@ -52,13 +52,17 @@ export function useAdminCertificates() {
       const tenantMap = new Map((tenantsList ?? []).map((t: any) => [t.id, t.name]));
 
       return certData.map((c: any) => {
-        const user = userMap.get(c.user_id);
+        const user: any = userMap.get(c.user_id);
+        const email = user?.email ?? "";
+        const fullName = user
+          ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
+          : "";
         return {
           id: c.id,
           certificate_number: c.certificate_number,
           user_id: c.user_id,
-          user_name: user ? `${user.first_name} ${user.last_name}` : "Unknown",
-          user_email: user?.email ?? "",
+          user_name: fullName || email || "Unknown",
+          user_email: email,
           tenant_id: c.tenant_id,
           tenant_name: c.tenant_id ? (tenantMap.get(c.tenant_id) ?? `Tenant ${c.tenant_id}`) : "—",
           course_id: c.course_id,
