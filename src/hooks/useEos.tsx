@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { toast } from '@/hooks/use-toast';
 import type { 
   EosRock, 
@@ -25,9 +26,7 @@ export const useEosRocks = () => {
   const isSuper = isSuperAdmin();
   
   // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   const { data: rocks, isLoading } = useQuery({
     queryKey: ['eos-rocks', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
@@ -128,9 +127,7 @@ export const useEosIssues = () => {
   const isSuper = isSuperAdmin();
   
   // Check if user is Vivacity Team member
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   const { data: issues, isLoading } = useQuery({
     queryKey: ['eos-issues', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
@@ -227,9 +224,7 @@ export const useEosTodos = () => {
   const isSuper = isSuperAdmin();
   
   // Check if user is Vivacity Team member
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   const { data: todos, isLoading } = useQuery({
     queryKey: ['eos-todos', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],

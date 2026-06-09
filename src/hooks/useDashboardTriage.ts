@@ -125,7 +125,7 @@ export function useDashboardTriage() {
 
   const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
   const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
-  const isExec = isSuperAdmin || profile?.unicorn_role === 'Team Leader';
+  const isExec = isVivacityStaffRole(profile?.unicorn_role);
   const canSeeAll = isSuperAdmin;
 
   const [savedView, setSavedView] = useState<SavedView>('my_tenants');

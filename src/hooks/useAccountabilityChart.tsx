@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import { useRBAC } from './useRBAC';
 import { toast } from '@/hooks/use-toast';
 import { VIVACITY_TENANT_ID } from './useVivacityTeamUsers';
+import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
 import type {
   AccountabilityChart,
   ChartVersion,
@@ -102,7 +103,7 @@ export function useAccountabilityChart() {
         supabase
           .from('users')
           .select('user_uuid, first_name, last_name, email, avatar_url')
-          .in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
+          .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
           .eq('archived', false),
         // Fetch linked data from the view
         supabase
