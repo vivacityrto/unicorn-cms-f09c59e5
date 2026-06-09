@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import {
   Card,
   CardContent,
@@ -163,9 +164,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   });
 
   // Only Vivacity team can manage
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member', 'Integrator', 'BGT', 'CSC', 'CET'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   const fetchSettings = useCallback(async () => {
     const { data, error } = await supabase

@@ -18,6 +18,7 @@ import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupRemi
 import { cn } from "@/lib/utils";
 import { useTeamUnreadCount } from "@/hooks/useTeamUnreadCount";
 import { useSupportTicketsBadge } from "@/hooks/useSupportTicketsBadge";
+import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 
 // ============================================================
 // VIVACITY TEAM SIDEBAR - FINAL AUTHORITY MODEL
@@ -185,7 +186,7 @@ export const DashboardLayout = ({
 
   // Determine user role
   const userRole = profile?.unicorn_role || "User";
-  const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member", "Integrator", "BGT", "CSC", "CET"].includes(userRole);
+  const isVivacityTeam = isVivacityStaffRole(userRole);
   const isTeamLeader = userRole === "Team Leader";
   const isTeamMember = userRole === "Team Member";
   const isIntegrator = userRole === "Integrator";

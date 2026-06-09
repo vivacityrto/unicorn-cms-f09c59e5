@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import {
   Card,
   CardContent,
@@ -99,9 +100,7 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
   const [manualEditing, setManualEditing] = useState(false);
   const [manualUrlInput, setManualUrlInput] = useState('');
 
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member', 'Integrator', 'BGT', 'CSC', 'CET'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   const fetchAll = useCallback(async () => {
     const [settingsRes, linksRes, seedRes] = await Promise.all([

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -259,7 +260,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
                 tenantId={tenantId}
                 packageId={packageId}
                 debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
-                isVivacityStaff={['Super Admin', 'Team Leader', 'Team Member', 'Integrator', 'BGT', 'CSC', 'CET'].includes(profile?.unicorn_role || '')}
+                isVivacityStaff={isVivacityStaffRole(profile?.unicorn_role)}
               />
             </TabsContent>
           </Tabs>

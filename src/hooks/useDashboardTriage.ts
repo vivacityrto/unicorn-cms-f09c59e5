@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -122,7 +123,7 @@ export function useDashboardTriage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const isVivacityStaff = ['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '');
+  const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
   const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
   const isExec = isSuperAdmin || profile?.unicorn_role === 'Team Leader';
   const canSeeAll = isSuperAdmin;

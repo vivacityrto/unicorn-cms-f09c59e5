@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { VIVACITY_STAFF_ROLES } from "@/lib/roles/vivacityRoles";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, StickyNote, Calendar as CalendarComponent, X, Upload, Flag, Play, Square, CheckCircle2, Clock, Search, ArrowUpDown, Loader2, Timer, Filter } from "lucide-react";
@@ -175,7 +176,7 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
     try {
       const { data, error } = await supabase.from("users")
         .select("user_uuid, first_name, last_name, avatar_url")
-        .in("unicorn_role", ["Super Admin", "Team Leader", "Team Member"])
+        .in("unicorn_role", [...VIVACITY_STAFF_ROLES])
         .order("first_name");
       if (error) throw error;
       setVivacityTeam(data || []);

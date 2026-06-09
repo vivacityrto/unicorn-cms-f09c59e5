@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useClientActionItems, ActionItem } from '@/hooks/useClientManagementData';
 import { supabase } from '@/integrations/supabase/client';
+import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -106,7 +107,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     const { data } = await supabase
       .from('users')
       .select('user_uuid, first_name, last_name, avatar_url')
-      .in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
+      .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
       .order('first_name');
     
     setTeamMembers(data || []);

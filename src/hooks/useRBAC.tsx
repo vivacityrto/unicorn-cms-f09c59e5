@@ -1,4 +1,5 @@
 import { useAuth } from './useAuth';
+import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
 
 // RBAC Permissions Configuration
 export type Permission = 

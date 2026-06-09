@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClientTimeline, TimelineEvent, PinnedNote } from '@/hooks/useClientManagementData';
 import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -77,9 +78,7 @@ interface ClientTimelineTabProps {
 export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTimelineTabProps) {
   const navigate = useNavigate();
   const { isSuperAdmin, profile } = useAuth();
-  const isVivacityTeam = isSuperAdmin() ||
-    profile?.unicorn_role === 'Team Leader' ||
-    profile?.unicorn_role === 'Team Member';
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   const {
     events,
