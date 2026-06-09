@@ -1,10 +1,14 @@
+import { Navigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TenantGWCSummary, GWCTrendsTable } from '@/components/eos/gwc';
 import { RoleInfoPanel } from '@/components/eos/RoleInfoPanel';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function EosGWCTrends() {
+  const canView = usePermission('eos.gwc_trends.view');
+  if (!canView) return <Navigate to="/eos/overview" replace />;
 
   return (
     <DashboardLayout>

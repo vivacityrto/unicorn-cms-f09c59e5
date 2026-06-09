@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { usePermission } from '@/hooks/usePermission';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,8 +28,10 @@ import { getCurrentQuarter, formatQuarter, parseQuarter } from '@/types/rockAnal
 
 export default function EosRockAnalysis() {
   const navigate = useNavigate();
+  const canView = usePermission('eos.rock_analysis.view');
   const [activeTab, setActiveTab] = useState<'overview' | 'seats' | 'detail'>('overview');
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
+  if (!canView) return <Navigate to="/eos/overview" replace />;
   
   const { data: availableQuarters, isLoading: quartersLoading } = useAvailableQuarters();
   const { data: summaries, isLoading: summariesLoading } = useQuarterlySummary();
