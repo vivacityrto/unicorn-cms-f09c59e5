@@ -281,12 +281,16 @@ export default function AcademyEnrolmentsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => handleExport(filtered)} disabled={!filtered.length}>
-              <Download className="h-4 w-4 mr-1" /> Export CSV
-            </Button>
-            <Button onClick={() => setNewOpen(true)} className="bg-primary text-primary-foreground">
-              <Plus className="h-4 w-4 mr-1" /> New Enrolment
-            </Button>
+            {canExportCSV && (
+              <Button variant="outline" onClick={() => handleExport(filtered)} disabled={!filtered.length}>
+                <Download className="h-4 w-4 mr-1" /> Export CSV
+              </Button>
+            )}
+            {canCreateEnrolment && (
+              <Button onClick={() => setNewOpen(true)} className="bg-primary text-primary-foreground">
+                <Plus className="h-4 w-4 mr-1" /> New Enrolment
+              </Button>
+            )}
           </div>
         </div>
 
