@@ -211,11 +211,10 @@ export const useRBAC = () => {
   // Computed flags for role detection
   const is_super_admin = isSuperAdmin() || profile?.unicorn_role === 'Super Admin';
   
-  // Vivacity Team = internal staff (Super Admin, Team Leader, Team Member, Integrator, BGT, CSC, CET)
-  const is_vivacity_team = [
-    'Super Admin', 'Team Leader', 'Team Member',
-    'Integrator', 'BGT', 'CSC', 'CET'
-  ].includes(profile?.unicorn_role || '');
+  // Vivacity Team = internal staff (single source of truth in @/lib/roles/vivacityRoles)
+  const is_vivacity_team = VIVACITY_STAFF_ROLES.includes(
+    (profile?.unicorn_role ?? '') as any
+  );
 
   // Debug logging (dev only)
   if (process.env.NODE_ENV === 'development' && profile) {
