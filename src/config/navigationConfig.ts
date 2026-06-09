@@ -16,7 +16,6 @@ import {
   ExternalLink,
   Database,
   ClipboardList,
-  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -51,7 +50,6 @@ export const complianceMenuSections: MenuSection[] = [
       { icon: FileText, label: "Documents", path: "/manage-documents" },
       { icon: Library, label: "Resource Hub", path: "/resource-hub" },
       { icon: Database, label: "Code Tables", path: "/admin/code-tables" },
-      { icon: ShieldCheck, label: "Role Permissions", path: "/administration/role-permissions" },
     ],
   },
   {
