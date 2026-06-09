@@ -504,12 +504,17 @@ export const DashboardLayout = ({
                   "administration"
                 )}
 
-              {/* 6. ACADEMY BUILDER Section - Super Admin Only */}
+              {/* 6. ACADEMY BUILDER Section - Super Admin Only. Tenant Access item restricted to SA + TL */}
               {isSuperAdmin &&
                 renderSection(
                   "academyBuilder",
                   "Academy",
-                  academyBuilderMenuItems,
+                  academyBuilderMenuItems.filter(
+                    (item) =>
+                      item.path !== "/superadmin/academy/tenant-access" ||
+                      isSuperAdmin ||
+                      isTeamLeader
+                  ),
                   "academyBuilder"
                 )}
 
