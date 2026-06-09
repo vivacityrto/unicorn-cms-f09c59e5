@@ -51,6 +51,13 @@ export default function AcademyBuilderLibrary() {
   const [backfillRunning, setBackfillRunning] = useState(false);
   const qc = useQueryClient();
 
+  // ── RBAC gates ──
+  const { isSuperAdmin } = useRBAC();
+  const { profile } = useAuth();
+  const role = profile?.unicorn_role;
+  const canCreateCourse = isSuperAdmin || role === 'Team Leader' || role === 'BGT';
+  const canBackfill = isSuperAdmin || role === 'Team Leader';
+
   const { data: courses = [], isLoading } = useAdminAcademyCourses({
     status: statusFilter,
     search: search || undefined,
