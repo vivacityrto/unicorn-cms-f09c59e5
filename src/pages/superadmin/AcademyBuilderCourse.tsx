@@ -51,6 +51,13 @@ export default function AcademyBuilderCourse() {
   const navigate = useNavigate();
   const qc = useQueryClient();
 
+  // ── RBAC gates ──
+  const { isSuperAdmin } = useRBAC();
+  const { profile } = useAuth();
+  const role = profile?.unicorn_role;
+  const canEdit = isSuperAdmin || role === 'Team Leader' || role === 'BGT';
+  const canPublishOrDelete = isSuperAdmin || role === 'Team Leader';
+
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
   const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
   const [editModuleTitle, setEditModuleTitle] = useState("");
