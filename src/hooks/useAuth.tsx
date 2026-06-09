@@ -8,7 +8,9 @@ interface UserProfile {
   email: string;
   first_name: string | null;
   last_name: string | null;
-  unicorn_role: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User' | 'Academy User';
+  unicorn_role: 'Super Admin' | 'Team Leader' | 'Team Member'
+    | 'Integrator' | 'BGT' | 'CSC' | 'CET'
+    | 'Admin' | 'User' | 'Academy User';
   global_role: 'SuperAdmin' | null;
   superadmin_level: 'Administrator' | 'Team Leader' | 'General' | 'Assistant' | null;
   tenant_id: number | null;
