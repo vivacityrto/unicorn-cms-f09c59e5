@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { usePermission } from "@/hooks/usePermission";
 import { useTenantsBasic } from "@/hooks/useTenantsBasic";
 import { useTenantPackages } from "@/hooks/useTenantPackages";
 import { useTenantContacts } from "@/hooks/useTenantContacts";
