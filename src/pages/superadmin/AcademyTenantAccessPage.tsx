@@ -36,10 +36,16 @@ import {
   useRuleFormOptions,
   type TenantRow,
 } from "@/hooks/academy/useTenantAcademyAccess";
+import { useRBAC } from "@/hooks/useRBAC";
+import { useAuth } from "@/hooks/useAuth";
 
 type StatusTab = "all" | "enabled" | "disabled" | "expiring";
 
 export default function AcademyTenantAccessPage() {
+  const { isSuperAdmin } = useRBAC();
+  const { profile } = useAuth();
+  const canManage = isSuperAdmin || profile?.unicorn_role === 'Team Leader';
+
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("all");
   const [drawerTenant, setDrawerTenant] = useState<TenantRow | null>(null);
@@ -255,7 +261,11 @@ export default function AcademyTenantAccessPage() {
                       <div className="flex items-center gap-3">
                         <Switch
                           checked={t.academy_access_enabled}
-                          onCheckedChange={(checked) => toggleMutation.mutate({ id: t.id, enabled: checked })}
+                          disabled={!canManage}
+                          onCheckedChange={(checked) => {
+                            if (!canManage) return;
+                            toggleMutation.mutate({ id: t.id, enabled: checked });
+                          }}
                         />
                         {getAccessBadge(t)}
                       </div>
@@ -269,14 +279,18 @@ export default function AcademyTenantAccessPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openDrawer(t)}>
-                          <Settings className="h-4 w-4 mr-1" /> Edit
-                        </Button>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/superadmin/academy/enrollments?tenant=${t.id}`}>
-                            <Eye className="h-4 w-4 mr-1" /> Enrolments
-                          </Link>
-                        </Button>
+                        {canManage && (
+                          <Button variant="ghost" size="sm" onClick={() => openDrawer(t)}>
+                            <Settings className="h-4 w-4 mr-1" /> Edit
+                          </Button>
+                        )}
+                        {canManage && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/superadmin/academy/enrollments?tenant=${t.id}`}>
+                              <Eye className="h-4 w-4 mr-1" /> Enrolments
+                            </Link>
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
