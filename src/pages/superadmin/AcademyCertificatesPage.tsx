@@ -37,6 +37,8 @@ import AcademyStatCard from "@/components/academy/admin/AcademyStatCard";
 import {
   useAdminCertificates, useIssueCertificate, useRevokeCertificate, type CertRow,
 } from "@/hooks/academy/useAcademyCertificates";
+import { useRBAC } from "@/hooks/useRBAC";
+import { useAuth } from "@/hooks/useAuth";
 
 type StatusFilter = "all" | "active" | "revoked" | "expired";
 
@@ -65,6 +67,11 @@ export default function AcademyCertificatesPage() {
   const { data: certs = [], isLoading } = useAdminCertificates();
   const issueMutation = useIssueCertificate();
   const revokeMutation = useRevokeCertificate();
+
+  // ── RBAC ──
+  const { isSuperAdmin } = useRBAC();
+  const { profile } = useAuth();
+  const canManageCertificates = isSuperAdmin || profile?.unicorn_role === 'Team Leader';
 
   // ── Unique courses & tenants for filters ──
   const uniqueCourses = useMemo(() => {
@@ -198,9 +205,11 @@ export default function AcademyCertificatesPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Certificates</h1>
           </div>
-          <Button variant="outline" onClick={() => setIssueOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Issue Certificate Manually
-          </Button>
+          {canManageCertificates && (
+            <Button variant="outline" onClick={() => setIssueOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" /> Issue Certificate Manually
+            </Button>
+          )}
         </div>
 
         {/* Stats */}
@@ -336,41 +345,43 @@ export default function AcademyCertificatesPage() {
                     </TableCell>
                     <TableCell>{statusBadge(c)}</TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {(c.storage_path || c.public_url) && (
-                            <DropdownMenuItem onClick={() => window.open(c.public_url || c.storage_path || "", "_blank")}>
-                              <Download className="h-4 w-4 mr-2" /> Download PDF
+                      {canManageCertificates && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {(c.storage_path || c.public_url) && (
+                              <DropdownMenuItem onClick={() => window.open(c.public_url || c.storage_path || "", "_blank")}>
+                                <Download className="h-4 w-4 mr-2" /> Download PDF
+                              </DropdownMenuItem>
+                            )}
+                            {c.public_url && (
+                              <DropdownMenuItem onClick={() => {
+                                navigator.clipboard.writeText(c.public_url!);
+                                toast.success("Share link copied");
+                              }}>
+                                <Copy className="h-4 w-4 mr-2" /> Copy Share Link
+                              </DropdownMenuItem>
+                            )}
+                            {!c.revoked_at && (
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setRevokeTarget(c)}
+                              >
+                                <Ban className="h-4 w-4 mr-2" /> Revoke
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem asChild>
+                              <a href={`/superadmin/academy/enrollments?search=${encodeURIComponent(c.user_name)}`}>
+                                <Eye className="h-4 w-4 mr-2" /> View Enrolment
+                              </a>
                             </DropdownMenuItem>
-                          )}
-                          {c.public_url && (
-                            <DropdownMenuItem onClick={() => {
-                              navigator.clipboard.writeText(c.public_url!);
-                              toast.success("Share link copied");
-                            }}>
-                              <Copy className="h-4 w-4 mr-2" /> Copy Share Link
-                            </DropdownMenuItem>
-                          )}
-                          {!c.revoked_at && (
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => setRevokeTarget(c)}
-                            >
-                              <Ban className="h-4 w-4 mr-2" /> Revoke
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem asChild>
-                            <a href={`/superadmin/academy/enrollments?search=${encodeURIComponent(c.user_name)}`}>
-                              <Eye className="h-4 w-4 mr-2" /> View Enrolment
-                            </a>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
