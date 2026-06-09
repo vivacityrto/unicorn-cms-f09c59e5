@@ -483,16 +483,16 @@ export default function AcademyBuilderCourse() {
               <div className="flex items-center gap-3 p-4 rounded-lg border" style={{ borderColor: "hsl(var(--border))" }}>
                 <Badge className={`${statusColors[course.status ?? "draft"]} text-xs`}>{course.status}</Badge>
                 <div className="flex-1" />
-                {course.status === "draft" && (
+                {course.status === "draft" && canPublishOrDelete && (
                   <Button size="sm" onClick={handlePublish} className="text-white hover:opacity-90" style={{ backgroundColor: "#22c55e" }}>Publish Course</Button>
                 )}
-                {course.status === "published" && (
+                {course.status === "published" && canPublishOrDelete && (
                   <>
                     <Button size="sm" variant="outline" onClick={handleBackToDraft}>Back to Draft</Button>
                     <Button size="sm" variant="outline" onClick={() => courseId && archiveCourse.mutate(courseId)} className="text-amber-600 border-amber-300 hover:bg-amber-50">Archive</Button>
                   </>
                 )}
-                {course.status === "archived" && (
+                {course.status === "archived" && canPublishOrDelete && (
                   <Button size="sm" variant="outline" onClick={handleBackToDraft}>Restore to Draft</Button>
                 )}
               </div>
