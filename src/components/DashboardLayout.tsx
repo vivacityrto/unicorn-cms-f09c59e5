@@ -188,6 +188,7 @@ export const DashboardLayout = ({
   const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member"].includes(userRole);
   const isTeamLeader = userRole === "Team Leader";
   const isTeamMember = userRole === "Team Member";
+  const isIntegrator = userRole === "Integrator";
 
   // Scroll active menu item into view immediately on route changes
   useLayoutEffect(() => {
