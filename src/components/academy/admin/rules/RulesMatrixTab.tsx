@@ -315,12 +315,13 @@ export default function RulesMatrixTab({ readOnly = false }: { readOnly?: boolea
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                onClick={() => handleCellClick(p, course)}
-                                className="w-full h-full min-h-[40px] flex items-center justify-center hover:bg-primary/10 transition-colors"
+                                onClick={readOnly ? undefined : () => handleCellClick(p, course)}
+                                disabled={readOnly}
+                                className={`w-full h-full min-h-[40px] flex items-center justify-center transition-colors ${readOnly ? "cursor-default" : "hover:bg-primary/10"}`}
                                 aria-label={
                                   active
-                                    ? `Disable: ${course.title} for ${p.name}`
-                                    : `Enable: ${course.title} for ${p.name}`
+                                    ? `${readOnly ? "Mapped" : "Disable"}: ${course.title} for ${p.name}`
+                                    : `${readOnly ? "Not mapped" : "Enable"}: ${course.title} for ${p.name}`
                                 }
                               >
                                 {active ? (
