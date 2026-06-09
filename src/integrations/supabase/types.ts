@@ -19171,6 +19171,7 @@ export type Database = {
           description: string | null
           id: number
           is_active: boolean
+          is_internal: boolean
           label: string
           sort_order: number
           updated_at: string
@@ -19181,6 +19182,7 @@ export type Database = {
           description?: string | null
           id?: number
           is_active?: boolean
+          is_internal?: boolean
           label: string
           sort_order?: number
           updated_at?: string
@@ -19191,6 +19193,7 @@ export type Database = {
           description?: string | null
           id?: number
           is_active?: boolean
+          is_internal?: boolean
           label?: string
           sort_order?: number
           updated_at?: string
