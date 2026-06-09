@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { VIVACITY_STAFF_ROLES } from "@/lib/roles/vivacityRoles";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -86,7 +87,7 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
 
   const fetchVivacityTeam = async () => {
     try {
-      const { data, error } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("unicorn_role", ["Super Admin", "Team Leader", "Team Member"]).order("first_name");
+      const { data, error } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("unicorn_role", [...VIVACITY_STAFF_ROLES]).order("first_name");
       if (error) throw error;
       setVivacityTeam(data || []);
     } catch (error: any) {

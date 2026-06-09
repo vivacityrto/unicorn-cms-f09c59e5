@@ -5,6 +5,7 @@ import { AcademyLayout } from "@/components/layout/AcademyLayout";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
 import { useDevOverflowWarning } from "@/hooks/useDevOverflowWarning";
 import { Loader2 } from "lucide-react";
+import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
@@ -36,9 +37,7 @@ export const AuthenticatedLayout = ({ children }: AuthenticatedLayoutProps) => {
   }
 
   // Check if user is Vivacity Team
-  const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member"].includes(
-    profile?.unicorn_role || ""
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   // Vivacity Team always uses DashboardLayout
   if (isVivacityTeam) {
