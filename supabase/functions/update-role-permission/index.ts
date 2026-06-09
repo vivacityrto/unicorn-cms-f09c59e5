@@ -127,27 +127,26 @@ Deno.serve(async (req) => {
       return err(404, "FEATURE_NOT_FOUND", `Feature '${feature_key}' not found or inactive`);
     }
 
-    // 7. Read current permission
+    // 7. Read current level
     const { data: existing, error: existingErr } = await supabase
       .from("role_permissions")
-      .select("permission")
+      .select("level")
       .eq("feature_key", feature_key!)
       .eq("role", role!)
       .maybeSingle();
     if (existingErr) {
       return err(500, "READ_CURRENT_FAILED", existingErr.message);
     }
-    const old_permission: Permission | null = (existing?.permission as Permission) ?? null;
+    const old_permission: Permission | null = (existing?.level as Permission) ?? null;
 
-    // 8. Upsert role_permissions
+    // 8. Upsert role_permissions (DB column is `level`)
     const { error: upsertErr } = await supabase
       .from("role_permissions")
       .upsert(
         {
           feature_key,
           role,
-          permission: new_permission,
-          updated_by: callerId,
+          level: new_permission,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "feature_key,role" },
@@ -156,15 +155,17 @@ Deno.serve(async (req) => {
       return err(500, "UPSERT_FAILED", upsertErr.message);
     }
 
-    // 9. Audit log (log-and-continue on failure)
+    // 9. Audit log to permission_change_log (generic audit schema:
+    //    entity / entity_id / action / before / after / actor_uuid / reason)
     const { error: logErr } = await supabase
       .from("permission_change_log")
       .insert({
-        feature_key,
-        role,
-        old_permission,
-        new_permission,
-        changed_by: callerId,
+        entity: "role_permissions",
+        entity_id: `${feature_key}::${role}`,
+        action: old_permission === null ? "insert" : "update",
+        before: old_permission === null ? null : { feature_key, role, level: old_permission },
+        after: { feature_key, role, level: new_permission },
+        actor_uuid: callerId,
         reason: reason ?? null,
       });
     if (logErr) {
