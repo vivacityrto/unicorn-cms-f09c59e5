@@ -33,6 +33,7 @@ import {
 import { useOutlookConnectionStatus } from '@/hooks/useOutlookConnectionStatus';
 import { useAddinFeatureFlags } from '@/hooks/useAddinFeatureFlags';
 import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 // Microsoft logo SVG as inline component
 function MicrosoftLogo({ className }: { className?: string }) {
@@ -77,9 +78,7 @@ export function MicrosoftAccountCard() {
   const [authUrl, setAuthUrl] = useState<string | null>(null);
 
   // Only show for Vivacity Team users
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   if (!isVivacityTeam) {
     return null;

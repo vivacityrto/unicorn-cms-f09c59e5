@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 // ── Types ──────────────────────────────────────────────────────
 export interface PortfolioTenant {
@@ -68,7 +69,7 @@ export function usePortfolioCockpit() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const isVivacityStaff = ['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '');
+  const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
   const isExec = ['Super Admin'].includes(profile?.unicorn_role || '');
   const canSeeAll = isExec; // SuperAdmin / Integrator / CEO
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';

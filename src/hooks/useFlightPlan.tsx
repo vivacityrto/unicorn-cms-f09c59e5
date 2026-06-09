@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { FlightPlan, MonthFocus } from '@/types/flightPlan';
 import { getQuarterDueDate } from '@/types/flightPlan';
 
@@ -12,10 +13,7 @@ export function useFlightPlan(quarter: number, year: number) {
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
   
-  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   const { data: flightPlan, isLoading } = useQuery({
     queryKey: ['flight-plan', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id, quarter, year],
@@ -104,10 +102,7 @@ export function useQuarterlyRocks(quarter: number, year: number) {
   const { profile, isSuperAdmin } = useAuth();
   const isSuper = isSuperAdmin();
   
-  // Check if user is Vivacity Team member
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   return useQuery({
     queryKey: ['quarterly-rocks', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id, quarter, year],

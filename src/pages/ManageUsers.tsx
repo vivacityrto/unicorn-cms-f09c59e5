@@ -46,6 +46,7 @@ import { InviteUserDialog } from '@/components/InviteUserDialog';
 import { AdminInviteUserDialog } from '@/components/AdminInviteUserDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { ResponsiveTableShell, ResponsiveListCard, ResponsiveListCards, columnVisibility } from '@/components/ui/responsive-table';
 import {
   DropdownMenu,
@@ -271,8 +272,7 @@ export default function ManageUsers() {
     if (!roleChangeDialog) return;
 
     try {
-      const isVivacityRole = ['Super Admin', 'Team Leader', 'Team Member']
-        .includes(roleChangeDialog.newRole);
+      const isVivacityRole = isVivacityStaffRole(roleChangeDialog.newRole);
       
       // For Vivacity Team roles, verify auth account exists
       if (isVivacityRole) {

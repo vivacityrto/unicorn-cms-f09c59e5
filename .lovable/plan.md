@@ -1,19 +1,57 @@
-Replace hardcoded Vivacity staff role arrays in 4 files with `isVivacityStaffRole` / `VIVACITY_STAFF_ROLES` from `@/lib/roles/vivacityRoles`.
+# Global Vivacity Staff Role Cleanup
 
-**1. src/hooks/useEos.tsx**
-- Add import: `import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';`
-- Replace the 3 `isVivacityTeam` declarations (lines ~28-30, ~131-133, ~230-232) from `['Super Admin', 'Team Leader', 'Team Member'].includes(...)` to `isVivacityStaffRole(profile?.unicorn_role)`.
+Replace every remaining hardcoded `['Super Admin', 'Team Leader', 'Team Member']` literal across `src/` with the canonical helpers from `@/lib/roles/vivacityRoles`.
 
-**2. src/hooks/useDashboardTriage.ts**
-- Import already present.
-- Replace line ~128 `const isExec = isSuperAdmin || profile?.unicorn_role === 'Team Leader';` with `const isExec = isVivacityStaffRole(profile?.unicorn_role);`.
+## Pattern A — Predicate checks
+Replace:
+```ts
+['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '')
+```
+With:
+```ts
+isVivacityStaffRole(profile?.unicorn_role)
+```
+Add import `{ isVivacityStaffRole }` from `@/lib/roles/vivacityRoles` where missing.
 
-**3. src/hooks/useAccountabilityChart.tsx**
-- Add import: `import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';`
-- Replace line ~105 `.in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])` with `.in('unicorn_role', [...VIVACITY_STAFF_ROLES])`.
+**Files (Pattern A):**
+- `src/hooks/useEos.tsx` (lines ~329, ~463)
+- `src/hooks/useMeetingSeries.tsx` (~46)
+- `src/hooks/useFlightPlan.tsx` (~16, ~108)
+- `src/hooks/useQuarterlyConversations.tsx` (~11)
+- `src/hooks/useRisksOpportunities.tsx` (~35)
+- `src/hooks/useScorecardMetrics.tsx` (~58)
+- `src/hooks/useEosScorecardEntries.tsx` (~13)
+- `src/hooks/usePortfolioCockpit.ts` (~71)
+- `src/hooks/useProfileSetupReminder.tsx`
+- `src/hooks/usePeopleAnalyzer.tsx`
+- `src/components/eos/scorecard2/MetricEditorDialogV2.tsx` (~77)
+- `src/components/profile/MicrosoftAccountCard.tsx` (~80)
+- `src/components/profile/OutlookIntegration.tsx` (~58)
+- `src/components/settings/CalendarTab.tsx` (~24)
+- `src/components/tenant/TenantLogoUpload.tsx`
+- `src/components/tenant/TenantRelationships.tsx`
 
-**4. src/pages/ManageDocuments.tsx**
-- Add import: `import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';`
-- Replace lines ~386-388 (the `isSuperAdmin || isTeamLeader` block) with `if (isVivacityStaffRole(currentUserRole))`.
+## Pattern B — Supabase `.in()` queries
+Replace:
+```ts
+.in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
+```
+With:
+```ts
+.in('unicorn_role', [...VIVACITY_STAFF_ROLES])
+```
+Add import `{ VIVACITY_STAFF_ROLES }` from `@/lib/roles/vivacityRoles` where missing.
 
-No other logic changes. These are drop-in replacements that unblock CSC, BGT, Integrator, and CET internal roles from loading data.
+**Files (Pattern B):**
+- `src/hooks/useCalendarShares.tsx` (~72)
+- `src/hooks/useSeatSuccession.tsx` (~87)
+- `src/hooks/useTenantTeamUsers.tsx` (~46)
+- `src/components/workboard/ClientWorkboardTab.tsx` (~76)
+
+## Verification
+After edits, run `rg "\['Super Admin', 'Team Leader', 'Team Member'\]" src/` — only allowed survivors are `src/lib/roles/vivacityRoles.ts` and test files under `src/test/`. Fix any others found.
+
+## Out of scope
+- No logic changes beyond the role-list substitution.
+- No changes to `vivacityRoles.ts` itself or test fixtures.
+- No changes to `useEosFacilitatorEligible.ts` or `useTenantTeamUsers.tsx`'s Admin/User branch (different role sets).

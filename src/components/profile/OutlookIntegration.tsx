@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useOutlookConnectionStatus } from '@/hooks/useOutlookConnectionStatus';
 import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 /**
  * OutlookIntegration component for Profile Settings.
@@ -54,8 +55,8 @@ export function OutlookIntegration() {
   const [popupBlocked, setPopupBlocked] = useState(false);
   const [authUrl, setAuthUrl] = useState<string | null>(null);
 
-  // Only show for Vivacity Team users (Super Admin, Team Leader, Team Member)
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '');
+  // Only show for Vivacity Team users
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   if (!isVivacityTeam) {
     return null;

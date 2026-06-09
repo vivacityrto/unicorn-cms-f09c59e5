@@ -2,13 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { QuarterlyConversation, QCTemplate, QCAnswer, QCFit, QCFormData, QCLinkCreate } from '@/types/qc';
 
 export const useQuarterlyConversations = () => {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '');
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   // Fetch all QCs user has access to
   const { data: conversations, isLoading } = useQuery({

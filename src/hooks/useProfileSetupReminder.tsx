@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 interface ProfileSetupPromptPrefs {
   user_uuid: string;
@@ -15,7 +16,7 @@ interface MissingField {
   tab: 'profile' | 'team';
 }
 
-const VIVACITY_ROLES = ['Super Admin', 'Team Leader', 'Team Member'];
+
 
 /**
  * Hook to manage profile setup reminder for Vivacity Team users
@@ -27,7 +28,7 @@ export function useProfileSetupReminder() {
   const [loading, setLoading] = useState(true);
 
   // Check if user is Vivacity Team
-  const isVivacityTeam = profile?.unicorn_role && VIVACITY_ROLES.includes(profile.unicorn_role);
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   // Compute missing required fields
   const computeMissingFields = useCallback((): MissingField[] => {

@@ -325,10 +325,7 @@ export const useEosMeetings = () => {
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
   
-  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   // Only run the query once auth/profile has resolved. Once resolved, always
   // run it — the queryFn will short-circuit for users who shouldn't see data
@@ -459,10 +456,7 @@ export const useEosScorecardMetrics = (showArchived = false) => {
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
   
-  // Check if user is Vivacity Team member
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['eos-scorecard-metrics', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id, showArchived],

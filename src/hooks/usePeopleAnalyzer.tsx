@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type {
   PeopleAnalyzerEntry,
   PeopleAnalyzerTrend,
@@ -22,7 +23,7 @@ const VIVACITY_TENANT_ID = 1;
 export function usePeopleAnalyzer() {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
-  const isStaff = isSuperAdmin() || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member';
+  const isStaff = isVivacityStaffRole(profile?.unicorn_role);
 
   // Fetch entries for a user
   const useUserEntries = (userId: string | undefined) => {

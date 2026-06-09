@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
 import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 /**
@@ -43,7 +44,7 @@ export function useTenantTeamUsers() {
         const { data, error } = await supabase
           .from('users')
           .select('user_uuid, first_name, last_name, email, avatar_url, unicorn_role, job_title')
-          .in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
+          .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
           .eq('archived', false)
           .eq('disabled', false)
           .order('first_name', { ascending: true });

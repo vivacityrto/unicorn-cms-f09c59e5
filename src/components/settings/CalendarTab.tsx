@@ -13,6 +13,7 @@ import { useCalendarShares } from '@/hooks/useCalendarShares';
 import { useOutlookConnectionStatus } from '@/hooks/useOutlookConnectionStatus';
 import { useAddinFeatureFlags } from '@/hooks/useAddinFeatureFlags';
 import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { Link } from 'react-router-dom';
 
 export function CalendarTab() {
@@ -20,10 +21,7 @@ export function CalendarTab() {
   const { isConnected } = useOutlookConnectionStatus();
   const { flags } = useAddinFeatureFlags();
   
-  // Check if user is Vivacity Team member
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
   const {
     myShares,
     availableTeamMembers,

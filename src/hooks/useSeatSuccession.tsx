@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
 import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 const VIVACITY_TENANT_ID = 6372;
@@ -84,7 +85,7 @@ export function useSeatSuccession() {
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name, leave_from, leave_until')
-        .in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
+        .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
         .eq('archived', false);
 
       if (usersError) throw usersError;

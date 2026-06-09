@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
 import { calculateStatus } from '@/types/scorecard';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { ScorecardMetric, ScorecardEntry, MetricStatus } from '@/types/scorecard';
 
 const STALE_MS = 30_000;
@@ -55,9 +56,7 @@ export function useScorecardMetrics(showArchived = false) {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || '',
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   const { data: metrics = [], isLoading } = useQuery({
     queryKey: ['scorecard-metrics-v2', profile?.tenant_id, showArchived],

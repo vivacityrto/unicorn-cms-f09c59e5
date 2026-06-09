@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Trash2, Building2, Upload } from 'lucide-react';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 interface TenantLogoUploadProps {
   tenantId: number;
@@ -20,7 +21,7 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isStaff = profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader';
+  const isStaff = isVivacityStaffRole(profile?.unicorn_role);
 
   const getPublicUrl = (path: string) => {
     const { data } = supabase.storage.from('client-logos').getPublicUrl(path);

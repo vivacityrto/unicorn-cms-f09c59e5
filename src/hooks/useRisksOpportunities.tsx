@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { useEosStatusTransitions, isValidStatusTransition, getAllowedStatusTransitions } from '@/hooks/useEosOptions';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { RiskOpportunity, RiskOpportunityStatus, RiskOpportunityCategory, RiskOpportunityImpact } from '@/types/risksOpportunities';
 
 // Valid status enum values - must match eos_issue_status exactly
@@ -31,10 +32,7 @@ export const useRisksOpportunities = () => {
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
   
-  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
   
   // Load status transitions for validation
   const { data: statusTransitions } = useEosStatusTransitions();
