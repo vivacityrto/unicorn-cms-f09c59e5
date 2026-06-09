@@ -338,19 +338,21 @@ export default function AcademyBuilderCourse() {
                   {isDirty && (
                     <span className="text-[11px] text-amber-600">Unsaved</span>
                   )}
-                  <Button
-                    size="sm"
-                    onClick={handleSaveSettings}
-                    disabled={!isDirty || saveCourseSettings.isPending}
-                    className="gap-1"
-                  >
-                    {saveCourseSettings.isPending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Save className="h-3.5 w-3.5" />
-                    )}
-                    Save Changes
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      size="sm"
+                      onClick={handleSaveSettings}
+                      disabled={!isDirty || saveCourseSettings.isPending}
+                      className="gap-1"
+                    >
+                      {saveCourseSettings.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Save className="h-3.5 w-3.5" />
+                      )}
+                      Save Changes
+                    </Button>
+                  )}
                 </div>
               </div>
 
