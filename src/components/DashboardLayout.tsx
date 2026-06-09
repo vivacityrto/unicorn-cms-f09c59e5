@@ -119,6 +119,7 @@ const systemConfigMenuItems = [
   { icon: Puzzle, label: "Add-in Settings", path: "/admin/addin-settings" },
   { icon: MapPin, label: "ClickUp Mapping", path: "/admin/clickup-mapping" },
   { icon: Database, label: "Code Tables", path: "/admin/code-tables" },
+  { icon: ShieldCheck, label: "Role Permissions", path: "/administration/role-permissions" },
   { icon: ClipboardList, label: "Lifecycle Checklists", path: "/admin/lifecycle-checklists" },
   { icon: Tags, label: "Merge Field Tags", path: "/admin/merge-field-tags" },
   { icon: FileCheck, label: "Governance Documents", path: "/admin/governance-documents" },

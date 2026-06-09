@@ -157,7 +157,9 @@ export const ADMIN_ROUTES = [
   '/manage-invites',
   '/audits',
   '/admin/',
+  '/administration/',
 ];
+
 
 // Routes explicitly accessible to client-role users (unicorn_role = 'Admin' or 'User').
 // Everything NOT in this list requires isVivacityTeam. Add new client-facing routes here.
