@@ -45,6 +45,8 @@ import {
   useExtendEnrollment,
   useEnrollmentRealtime,
 } from "@/hooks/academy/useAcademyEnrollments";
+import { useRBAC } from "@/hooks/useRBAC";
+import { useAuth } from "@/hooks/useAuth";
 
 type StatusFilter = "all" | "active" | "completed" | "expired" | "revoked";
 const SOURCE_VALUES = ["manual", "auto_package", "auto_package_backfill"] as const;
@@ -118,6 +120,14 @@ export default function AcademyEnrolmentsPage() {
   const revokeMutation = useRevokeEnrollment();
   const reactivateMutation = useReactivateEnrollment();
   const extendMutation = useExtendEnrollment();
+
+  // ── RBAC gates ──
+  const { isSuperAdmin } = useRBAC();
+  const { profile } = useAuth();
+  const role = profile?.unicorn_role;
+  const canCreateEnrolment = isSuperAdmin || role === 'Team Leader' || role === 'BGT' || role === 'CSC';
+  const canExportCSV = isSuperAdmin || role === 'Team Leader';
+  const canManageEnrolments = isSuperAdmin || role === 'Team Leader';
 
   // Compute "expired" client-side (status='active' AND expires_at <= now())
   const isExpired = (e: any) =>
@@ -271,12 +281,16 @@ export default function AcademyEnrolmentsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => handleExport(filtered)} disabled={!filtered.length}>
-              <Download className="h-4 w-4 mr-1" /> Export CSV
-            </Button>
-            <Button onClick={() => setNewOpen(true)} className="bg-primary text-primary-foreground">
-              <Plus className="h-4 w-4 mr-1" /> New Enrolment
-            </Button>
+            {canExportCSV && (
+              <Button variant="outline" onClick={() => handleExport(filtered)} disabled={!filtered.length}>
+                <Download className="h-4 w-4 mr-1" /> Export CSV
+              </Button>
+            )}
+            {canCreateEnrolment && (
+              <Button onClick={() => setNewOpen(true)} className="bg-primary text-primary-foreground">
+                <Plus className="h-4 w-4 mr-1" /> New Enrolment
+              </Button>
+            )}
           </div>
         </div>
 
@@ -574,17 +588,21 @@ export default function AcademyEnrolmentsPage() {
                               <DropdownMenuItem onClick={() => setDrawerEnrolmentId(e.id)}>
                                 <Eye className="h-4 w-4 mr-2" /> View progress detail
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => { setExtendTarget(e.id); setExtendDate(e.expires_at ? new Date(e.expires_at) : undefined); }}>
-                                <CalendarIcon className="h-4 w-4 mr-2" /> Extend expiry
-                              </DropdownMenuItem>
-                              {revoked ? (
-                                <DropdownMenuItem onClick={() => reactivateMutation.mutate(e.id)}>
-                                  <RefreshCw className="h-4 w-4 mr-2" /> Reactivate
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem className="text-destructive" onClick={() => setRevokeTarget(e.id)}>
-                                  <XCircle className="h-4 w-4 mr-2" /> Revoke
-                                </DropdownMenuItem>
+                              {canManageEnrolments && (
+                                <>
+                                  <DropdownMenuItem onClick={() => { setExtendTarget(e.id); setExtendDate(e.expires_at ? new Date(e.expires_at) : undefined); }}>
+                                    <CalendarIcon className="h-4 w-4 mr-2" /> Extend expiry
+                                  </DropdownMenuItem>
+                                  {revoked ? (
+                                    <DropdownMenuItem onClick={() => reactivateMutation.mutate(e.id)}>
+                                      <RefreshCw className="h-4 w-4 mr-2" /> Reactivate
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem className="text-destructive" onClick={() => setRevokeTarget(e.id)}>
+                                      <XCircle className="h-4 w-4 mr-2" /> Revoke
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
