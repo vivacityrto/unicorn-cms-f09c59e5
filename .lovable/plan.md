@@ -1,57 +1,28 @@
-# Global Vivacity Staff Role Cleanup
+# Plan: Replace hardcoded role checks with `isVivacityStaffRole`
 
-Replace every remaining hardcoded `['Super Admin', 'Team Leader', 'Team Member']` literal across `src/` with the canonical helpers from `@/lib/roles/vivacityRoles`.
+Apply drop-in role-check replacements across 12 files so internal staff with new roles (Integrator, BGT, CSC, CET) gain the same access as Super Admin / Team Leader / Team Member.
 
-## Pattern A — Predicate checks
-Replace:
-```ts
-['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '')
-```
-With:
-```ts
-isVivacityStaffRole(profile?.unicorn_role)
-```
-Add import `{ isVivacityStaffRole }` from `@/lib/roles/vivacityRoles` where missing.
+## Files & edits
 
-**Files (Pattern A):**
-- `src/hooks/useEos.tsx` (lines ~329, ~463)
-- `src/hooks/useMeetingSeries.tsx` (~46)
-- `src/hooks/useFlightPlan.tsx` (~16, ~108)
-- `src/hooks/useQuarterlyConversations.tsx` (~11)
-- `src/hooks/useRisksOpportunities.tsx` (~35)
-- `src/hooks/useScorecardMetrics.tsx` (~58)
-- `src/hooks/useEosScorecardEntries.tsx` (~13)
-- `src/hooks/usePortfolioCockpit.ts` (~71)
-- `src/hooks/useProfileSetupReminder.tsx`
-- `src/hooks/usePeopleAnalyzer.tsx`
-- `src/components/eos/scorecard2/MetricEditorDialogV2.tsx` (~77)
-- `src/components/profile/MicrosoftAccountCard.tsx` (~80)
-- `src/components/profile/OutlookIntegration.tsx` (~58)
-- `src/components/settings/CalendarTab.tsx` (~24)
-- `src/components/tenant/TenantLogoUpload.tsx`
-- `src/components/tenant/TenantRelationships.tsx`
+1. **src/hooks/useLeadershipDashboard.tsx** (L748) — `enabled: isVivacityStaffRole(profile?.unicorn_role)`.
+2. **src/pages/EosPeopleAnalyzer.tsx** (L32) — `const canView = isVivacityStaffRole(profile?.unicorn_role)`.
+3. **src/pages/DocumentDetail.tsx** (L172–173, 624–625, 869, 1109) — replace every `isSuperAdmin || isTeamLeader` gate with `isVivacityStaffRole(profile?.unicorn_role)`.
+4. **src/pages/ManageDocuments.tsx** (L155) — redefine `isTeamLeader` via `isVivacityStaffRole`.
+5. **src/pages/ManagePackages.tsx** (L98) — same.
+6. **src/pages/ManageInvites.tsx** (L76–77) — collapse `isTeamLeader` + `isSuperAdmin` into `canManageInvites = isVivacityStaffRole(profile?.unicorn_role)`; update downstream conditionals to use it.
+7. **src/pages/ClientDetail.tsx** (L125) — redefine `isTeamLeader` via `isVivacityStaffRole(authProfile?.unicorn_role)`.
+8. **src/hooks/useSeatScorecard.tsx** (L353) — replace TL check with `isVivacityStaffRole(profile.unicorn_role)`.
+9. **src/contexts/ClientPreviewContext.tsx** (L111) — redefine `isTeamLeader` via `isVivacityStaffRole`.
+10. **src/hooks/useEosFacilitatorEligible.ts** (L15) — return `isVivacityStaffRole(role)`.
+11. **src/pages/ManageUsers.tsx** — expand `unicorn_role` type unions (L66, 113, 222, 263, 895) to include `Integrator | BGT | CSC | CET`, and ensure the role-change dropdown renders all internal roles.
+12. **src/components/InviteUserDialog.tsx** (L29) — extend `UnicornRole` type with the new roles.
 
-## Pattern B — Supabase `.in()` queries
-Replace:
-```ts
-.in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
-```
-With:
-```ts
-.in('unicorn_role', [...VIVACITY_STAFF_ROLES])
-```
-Add import `{ VIVACITY_STAFF_ROLES }` from `@/lib/roles/vivacityRoles` where missing.
+Add `import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';` to any file that doesn't already have it.
 
-**Files (Pattern B):**
-- `src/hooks/useCalendarShares.tsx` (~72)
-- `src/hooks/useSeatSuccession.tsx` (~87)
-- `src/hooks/useTenantTeamUsers.tsx` (~46)
-- `src/components/workboard/ClientWorkboardTab.tsx` (~76)
+## Out of scope (explicitly untouched)
+QCScheduler.tsx, RecommendationsPanel.tsx, useRBAC.tsx, ProfileHeader.tsx, TeamMemberRow.tsx, TeamMembersSection.tsx, AdminActions.tsx — per spec.
 
 ## Verification
-After edits, run `rg "\['Super Admin', 'Team Leader', 'Team Member'\]" src/` — only allowed survivors are `src/lib/roles/vivacityRoles.ts` and test files under `src/test/`. Fix any others found.
-
-## Out of scope
-- No logic changes beyond the role-list substitution.
-- No changes to `vivacityRoles.ts` itself or test fixtures.
-- No changes to `useEosFacilitatorEligible.ts` or `useTenantTeamUsers.tsx`'s Admin/User branch (different role sets).
+- Read each touched line post-edit to confirm.
+- `rg "=== 'Team Leader'" src` and `rg "'Super Admin', 'Team Leader'" src` should return only intentional survivors (the "do not change" files and `vivacityRoles.ts`).
+- No logic changes beyond role-list substitution and type widening.
