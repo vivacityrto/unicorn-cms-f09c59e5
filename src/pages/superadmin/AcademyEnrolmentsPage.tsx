@@ -588,17 +588,21 @@ export default function AcademyEnrolmentsPage() {
                               <DropdownMenuItem onClick={() => setDrawerEnrolmentId(e.id)}>
                                 <Eye className="h-4 w-4 mr-2" /> View progress detail
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => { setExtendTarget(e.id); setExtendDate(e.expires_at ? new Date(e.expires_at) : undefined); }}>
-                                <CalendarIcon className="h-4 w-4 mr-2" /> Extend expiry
-                              </DropdownMenuItem>
-                              {revoked ? (
-                                <DropdownMenuItem onClick={() => reactivateMutation.mutate(e.id)}>
-                                  <RefreshCw className="h-4 w-4 mr-2" /> Reactivate
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem className="text-destructive" onClick={() => setRevokeTarget(e.id)}>
-                                  <XCircle className="h-4 w-4 mr-2" /> Revoke
-                                </DropdownMenuItem>
+                              {canManageEnrolments && (
+                                <>
+                                  <DropdownMenuItem onClick={() => { setExtendTarget(e.id); setExtendDate(e.expires_at ? new Date(e.expires_at) : undefined); }}>
+                                    <CalendarIcon className="h-4 w-4 mr-2" /> Extend expiry
+                                  </DropdownMenuItem>
+                                  {revoked ? (
+                                    <DropdownMenuItem onClick={() => reactivateMutation.mutate(e.id)}>
+                                      <RefreshCw className="h-4 w-4 mr-2" /> Reactivate
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem className="text-destructive" onClick={() => setRevokeTarget(e.id)}>
+                                      <XCircle className="h-4 w-4 mr-2" /> Revoke
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
