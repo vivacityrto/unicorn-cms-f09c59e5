@@ -45,8 +45,7 @@ import {
   useExtendEnrollment,
   useEnrollmentRealtime,
 } from "@/hooks/academy/useAcademyEnrollments";
-import { useRBAC } from "@/hooks/useRBAC";
-import { useAuth } from "@/hooks/useAuth";
+import { usePermission } from "@/hooks/usePermission";
 
 type StatusFilter = "all" | "active" | "completed" | "expired" | "revoked";
 const SOURCE_VALUES = ["manual", "auto_package", "auto_package_backfill"] as const;
@@ -122,12 +121,9 @@ export default function AcademyEnrolmentsPage() {
   const extendMutation = useExtendEnrollment();
 
   // ── RBAC gates ──
-  const { isSuperAdmin } = useRBAC();
-  const { profile } = useAuth();
-  const role = profile?.unicorn_role;
-  const canCreateEnrolment = isSuperAdmin || role === 'Team Leader' || role === 'BGT' || role === 'CSC';
-  const canExportCSV = isSuperAdmin || role === 'Team Leader';
-  const canManageEnrolments = isSuperAdmin || role === 'Team Leader';
+  const canCreateEnrolment = usePermission('academy.enrolments.create');
+  const canExportCSV = usePermission('academy.enrolments.revoke', 'full');
+  const canManageEnrolments = usePermission('academy.enrolments.revoke');
 
   // Compute "expired" client-side (status='active' AND expires_at <= now())
   const isExpired = (e: any) =>

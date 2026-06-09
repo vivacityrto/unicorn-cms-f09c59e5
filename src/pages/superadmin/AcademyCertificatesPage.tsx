@@ -37,8 +37,7 @@ import AcademyStatCard from "@/components/academy/admin/AcademyStatCard";
 import {
   useAdminCertificates, useIssueCertificate, useRevokeCertificate, type CertRow,
 } from "@/hooks/academy/useAcademyCertificates";
-import { useRBAC } from "@/hooks/useRBAC";
-import { useAuth } from "@/hooks/useAuth";
+import { usePermission } from "@/hooks/usePermission";
 
 type StatusFilter = "all" | "active" | "revoked" | "expired";
 
@@ -69,9 +68,7 @@ export default function AcademyCertificatesPage() {
   const revokeMutation = useRevokeCertificate();
 
   // ── RBAC ──
-  const { isSuperAdmin } = useRBAC();
-  const { profile } = useAuth();
-  const canManageCertificates = isSuperAdmin || profile?.unicorn_role === 'Team Leader';
+  const canManageCertificates = usePermission('academy.certificates.issue');
 
   // ── Unique courses & tenants for filters ──
   const uniqueCourses = useMemo(() => {
