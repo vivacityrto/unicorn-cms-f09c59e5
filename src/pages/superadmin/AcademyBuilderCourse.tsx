@@ -541,19 +541,25 @@ export default function AcademyBuilderCourse() {
                           <span className="text-xs text-muted-foreground">{mod.lessons.length} lessons</span>
 
                           <div className="flex items-center gap-1">
-                            <Switch
-                              checked={mod.is_published !== false}
-                              onCheckedChange={(v) => updateModule.mutate({ id: mod.id, courseId: courseId!, data: { is_published: v } })}
-                            />
-                            <button onClick={() => { setEditingModuleId(mod.id); setEditModuleTitle(mod.title); }} className="p-1 hover:bg-muted rounded">
-                              <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteTarget({ type: "module", id: mod.id, name: mod.title, hasChildren: mod.lessons.length > 0 })}
-                              className="p-1 hover:bg-destructive/10 rounded"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                            </button>
+                            {canPublishOrDelete && (
+                              <Switch
+                                checked={mod.is_published !== false}
+                                onCheckedChange={(v) => updateModule.mutate({ id: mod.id, courseId: courseId!, data: { is_published: v } })}
+                              />
+                            )}
+                            {canEdit && (
+                              <>
+                                <button onClick={() => { setEditingModuleId(mod.id); setEditModuleTitle(mod.title); }} className="p-1 hover:bg-muted rounded">
+                                  <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                </button>
+                                <button
+                                  onClick={() => setDeleteTarget({ type: "module", id: mod.id, name: mod.title, hasChildren: mod.lessons.length > 0 })}
+                                  className="p-1 hover:bg-destructive/10 rounded"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
