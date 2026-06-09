@@ -215,18 +215,20 @@ export default function RulesMatrixTab({ readOnly = false }: { readOnly?: boolea
         </div>
 
         {/* Bulk actions */}
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setBulkRowOpen(true)}>
-            Select row…
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setBulkColOpen(true)}>
-            Select column…
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setCopyOpen(true)}>
-            <Copy className="h-3.5 w-3.5 mr-1.5" />
-            Copy mappings…
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setBulkRowOpen(true)}>
+              Select row…
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setBulkColOpen(true)}>
+              Select column…
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setCopyOpen(true)}>
+              <Copy className="h-3.5 w-3.5 mr-1.5" />
+              Copy mappings…
+            </Button>
+          </div>
+        )}
       </div>
 
       {hasNoRules && (
