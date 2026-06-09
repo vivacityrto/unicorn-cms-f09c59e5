@@ -24,8 +24,7 @@ import PackageRulesTab from "@/components/academy/builder/PackageRulesTab";
 import PathwayMultiSelect from "@/components/academy/PathwayMultiSelect";
 import TagChipInput from "@/components/academy/TagChipInput";
 import { fetchDistinctAcademyTags } from "@/lib/academy/queries";
-import { useRBAC } from "@/hooks/useRBAC";
-import { useAuth } from "@/hooks/useAuth";
+import { usePermission } from "@/hooks/usePermission";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -52,11 +51,8 @@ export default function AcademyBuilderCourse() {
   const qc = useQueryClient();
 
   // ── RBAC gates ──
-  const { isSuperAdmin } = useRBAC();
-  const { profile } = useAuth();
-  const role = profile?.unicorn_role;
-  const canEdit = isSuperAdmin || role === 'Team Leader' || role === 'BGT';
-  const canPublishOrDelete = isSuperAdmin || role === 'Team Leader';
+  const canEdit = usePermission('academy.builder.edit');
+  const canPublishOrDelete = usePermission('academy.builder.publish');
 
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
   const [editingModuleId, setEditingModuleId] = useState<number | null>(null);

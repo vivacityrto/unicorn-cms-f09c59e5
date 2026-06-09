@@ -23,8 +23,7 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRBAC } from "@/hooks/useRBAC";
-import { useAuth } from "@/hooks/useAuth";
+import { usePermission } from "@/hooks/usePermission";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -52,11 +51,8 @@ export default function AcademyBuilderLibrary() {
   const qc = useQueryClient();
 
   // ── RBAC gates ──
-  const { isSuperAdmin } = useRBAC();
-  const { profile } = useAuth();
-  const role = profile?.unicorn_role;
-  const canCreateCourse = isSuperAdmin || role === 'Team Leader' || role === 'BGT';
-  const canBackfill = isSuperAdmin || role === 'Team Leader';
+  const canCreateCourse = usePermission('academy.builder.edit');
+  const canBackfill = usePermission('academy.builder.publish');
 
   const { data: courses = [], isLoading } = useAdminAcademyCourses({
     status: statusFilter,

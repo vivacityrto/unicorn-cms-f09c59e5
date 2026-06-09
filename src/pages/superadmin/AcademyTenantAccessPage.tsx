@@ -36,15 +36,12 @@ import {
   useRuleFormOptions,
   type TenantRow,
 } from "@/hooks/academy/useTenantAcademyAccess";
-import { useRBAC } from "@/hooks/useRBAC";
-import { useAuth } from "@/hooks/useAuth";
+import { usePermission } from "@/hooks/usePermission";
 
 type StatusTab = "all" | "enabled" | "disabled" | "expiring";
 
 export default function AcademyTenantAccessPage() {
-  const { isSuperAdmin } = useRBAC();
-  const { profile } = useAuth();
-  const canManage = isSuperAdmin || profile?.unicorn_role === 'Team Leader';
+  const canManage = usePermission('academy.tenant_access.manage');
 
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<StatusTab>("all");

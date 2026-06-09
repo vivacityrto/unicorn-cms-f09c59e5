@@ -11,8 +11,7 @@ import RulesMatrixTab from "@/components/academy/admin/rules/RulesMatrixTab";
 import RulesListTab from "@/components/academy/admin/rules/RulesListTab";
 import CreateRuleModal from "@/components/academy/admin/rules/CreateRuleModal";
 import { useRuleStats, useRulesRealtime } from "@/hooks/academy/useAcademyPackageRules";
-import { useRBAC } from "@/hooks/useRBAC";
-import { useAuth } from "@/hooks/useAuth";
+import { usePermission } from "@/hooks/usePermission";
 
 export default function AcademyPackageCourseRulesPage() {
   useRulesRealtime();
@@ -20,13 +19,8 @@ export default function AcademyPackageCourseRulesPage() {
   const [createOpen, setCreateOpen] = useState(false);
 
   // ── RBAC gates ──
-  const { isSuperAdmin } = useRBAC();
-  const { profile } = useAuth();
-  const role = profile?.unicorn_role;
-  const isTeamLeader = role === "Team Leader";
-  const isIntegrator = role === "Integrator";
-  const hasAccess = isSuperAdmin || isTeamLeader || isIntegrator;
-  const canManage = isSuperAdmin || isTeamLeader;
+  const hasAccess = usePermission('academy.mapping.view', 'full');
+  const canManage = usePermission('academy.mapping.edit');
   const readOnly = !canManage;
 
   if (!hasAccess) {
