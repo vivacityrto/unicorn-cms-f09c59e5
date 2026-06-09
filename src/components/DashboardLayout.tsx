@@ -505,17 +505,23 @@ export const DashboardLayout = ({
                   "administration"
                 )}
 
-              {/* 6. ACADEMY BUILDER Section - Super Admin Only. Tenant Access item restricted to SA + TL */}
-              {isSuperAdmin &&
+              {/* 6. ACADEMY BUILDER Section - SA + TL always; Integrator only sees Package → Course Rules */}
+              {(isSuperAdmin || isTeamLeader || isIntegrator) &&
                 renderSection(
                   "academyBuilder",
                   "Academy",
-                  academyBuilderMenuItems.filter(
-                    (item) =>
-                      item.path !== "/superadmin/academy/tenant-access" ||
-                      isSuperAdmin ||
-                      isTeamLeader
-                  ),
+                  academyBuilderMenuItems.filter((item) => {
+                    // Tenant Access: SA + TL only
+                    if (item.path === "/superadmin/academy/tenant-access") {
+                      return isSuperAdmin || isTeamLeader;
+                    }
+                    // Package → Course Rules: SA + TL + Integrator
+                    if (item.path === "/superadmin/academy/package-course-rules") {
+                      return isSuperAdmin || isTeamLeader || isIntegrator;
+                    }
+                    // All other academy items: SA + TL (hide from Integrator)
+                    return isSuperAdmin || isTeamLeader;
+                  }),
                   "academyBuilder"
                 )}
 
