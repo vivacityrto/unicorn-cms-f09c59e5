@@ -583,20 +583,26 @@ export default function AcademyBuilderCourse() {
                                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">Preview</Badge>
                                 )}
 
-                                <Switch
-                                  checked={lesson.is_published !== false}
-                                  onCheckedChange={(v) => updateLessonMut.mutate({ id: lesson.id, courseId: courseId!, data: { is_published: v } })}
-                                />
+                                {canPublishOrDelete && (
+                                  <Switch
+                                    checked={lesson.is_published !== false}
+                                    onCheckedChange={(v) => updateLessonMut.mutate({ id: lesson.id, courseId: courseId!, data: { is_published: v } })}
+                                  />
+                                )}
 
-                                <button onClick={() => openLessonEditor(mod.id, lesson)} className="p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
-                                </button>
-                                <button
-                                  onClick={() => setDeleteTarget({ type: "lesson", id: lesson.id, name: lesson.title })}
-                                  className="p-1 hover:bg-destructive/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                </button>
+                                {canEdit && (
+                                  <>
+                                    <button onClick={() => openLessonEditor(mod.id, lesson)} className="p-1 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                    </button>
+                                    <button
+                                      onClick={() => setDeleteTarget({ type: "lesson", id: lesson.id, name: lesson.title })}
+                                      className="p-1 hover:bg-destructive/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             ))}
 
