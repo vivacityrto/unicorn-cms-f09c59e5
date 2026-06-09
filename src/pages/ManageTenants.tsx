@@ -99,6 +99,7 @@ export default function ManageTenants() {
   const queryClient = useQueryClient();
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
+  const canCreateClient = usePermission('clients.create');
 
   const [lifecycleStatuses, setLifecycleStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
   const [accessStatuses, setAccessStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
@@ -489,19 +490,19 @@ export default function ManageTenants() {
           <h1 className="text-[28px] font-bold">Manage Clients</h1>
           <p className="text-muted-foreground">View and manage all client organisations</p>
         </div>
-        {(isSuperAdmin || isTeamLeader) && (
+        {(canCreateClient || isSuperAdmin) && (
           <div className="flex gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span>
-                    <Button onClick={() => setAddTenantDialog(true)} className={isTeamLeader ? "bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"} disabled={isTeamLeader}>
+                    <Button onClick={() => setAddTenantDialog(true)} className={!canCreateClient ? "bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"} disabled={!canCreateClient}>
                       <Building2 className="h-4 w-4 mr-2" />
                       Add Client
                     </Button>
                   </span>
                 </TooltipTrigger>
-                {isTeamLeader && <TooltipContent><p>Please contact Super Admins.</p></TooltipContent>}
+                {!canCreateClient && <TooltipContent><p>You don't have permission to create clients.</p></TooltipContent>}
               </Tooltip>
             </TooltipProvider>
             {isSuperAdmin && (

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { usePermission } from '@/hooks/usePermission';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,9 +17,9 @@ interface TenantLifecycleActionsProps {
 }
 
 export function TenantLifecycleActions({ tenantId, tenantName, lifecycleStatus, onSuccess }: TenantLifecycleActionsProps) {
-  const { profile } = useAuth();
   const { toast } = useToast();
-  const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
+  const canDeactivate = usePermission('clients.deactivate');
+  const canActivate = usePermission('clients.activate');
 
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
   const [actionReason, setActionReason] = useState('');
@@ -65,10 +65,10 @@ export function TenantLifecycleActions({ tenantId, tenantName, lifecycleStatus, 
     }
   };
 
-  const canSuspend = lifecycleStatus === 'active';
-  const canClose = lifecycleStatus === 'active';
-  const canArchive = lifecycleStatus === 'closed' && isSuperAdmin;
-  const canReactivate = (lifecycleStatus === 'suspended') || (lifecycleStatus === 'archived' && isSuperAdmin);
+  const canSuspend = lifecycleStatus === 'active' && canDeactivate;
+  const canClose = lifecycleStatus === 'active' && canDeactivate;
+  const canArchive = lifecycleStatus === 'closed' && canDeactivate;
+  const canReactivate = ((lifecycleStatus === 'suspended') || (lifecycleStatus === 'archived')) && canActivate;
 
   const hasAnyAction = canSuspend || canClose || canArchive || canReactivate;
   if (!hasAnyAction) return null;

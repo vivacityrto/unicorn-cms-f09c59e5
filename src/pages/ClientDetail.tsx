@@ -122,7 +122,7 @@ export default function ClientDetail() {
   const { isSuperAdmin: checkSuperAdmin, hasTenantAdmin } = useAuth();
   const isSuperAdminUser = checkSuperAdmin();
   const isTeamLeader = authProfile?.unicorn_role === 'Team Leader';
-  const canEdit = isSuperAdminUser || isTeamLeader;
+  const canEdit = usePermission('clients.details.edit', 'limited');
   const canVerifyTga = isSuperAdminUser || hasTenantAdmin(tenantIdNum || 0);
 
   // Handle profile form state changes
