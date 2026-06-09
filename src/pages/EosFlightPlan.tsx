@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Rocket } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useFlightPlan, useQuarterlyRocks } from '@/hooks/useFlightPlan';
-import { useRBAC } from '@/hooks/useRBAC';
+import { usePermission } from '@/hooks/usePermission';
 import { QuarterSelector } from '@/components/eos/flight-plan/QuarterSelector';
 import { QuarterlyGoalSection } from '@/components/eos/flight-plan/QuarterlyGoalSection';
 import { ScoreboardSection } from '@/components/eos/flight-plan/ScoreboardSection';
@@ -30,9 +30,7 @@ function FlightPlanContent() {
 
   const { flightPlan, isLoading, upsertFlightPlan } = useFlightPlan(quarter, year);
   const { data: rocks, isLoading: rocksLoading } = useQuarterlyRocks(quarter, year);
-  const { canEditVTO } = useRBAC(); // Reuse VTO permissions for flight plan
-
-  const canEdit = canEditVTO();
+  const canEdit = usePermission('eos.flight_plan.edit');
   const dueDate = getQuarterDueDate(quarter, year);
 
   const handleSave = (updates: Partial<FlightPlan>) => {

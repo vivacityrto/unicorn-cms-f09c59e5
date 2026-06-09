@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw, Trash2, Zap, Target, LayoutTemplate, ChevronDown, History, Lock, CheckCircle, PlayCircle, Loader2 } from 'lucide-react';
 import { useEosMeetings } from '@/hooks/useEos';
 import { useMeetingSeries } from '@/hooks/useMeetingSeries';
-import { useRBAC } from '@/hooks/useRBAC';
+import { usePermission } from '@/hooks/usePermission';
 import { format, isPast, isToday } from 'date-fns';
 import { MeetingScheduler } from '@/components/eos/MeetingScheduler';
 import { AgendaTemplateLibrary } from '@/components/eos/AgendaTemplateLibrary';
@@ -33,7 +33,8 @@ function MeetingsContent() {
   const navigate = useNavigate();
   const { meetings, isLoading, error, refetch, deleteMeeting } = useEosMeetings();
   const { upcomingMeetings, pastMeetings, isLoadingUpcoming, isLoadingPast } = useMeetingSeries();
-  const { canScheduleMeetings } = useRBAC();
+  const canScheduleMeetingsPerm = usePermission('eos.meetings.l10.create');
+  const canScheduleMeetings = () => canScheduleMeetingsPerm;
   const [schedulerOpen, setSchedulerOpen] = useState(false);
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
   const [timelineTab, setTimelineTab] = useState<'upcoming' | 'in_progress' | 'completed'>('upcoming');

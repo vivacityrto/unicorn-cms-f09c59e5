@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { useQCUserProfiles } from '@/hooks/useQCUserProfiles';
 import { useAuth } from '@/hooks/useAuth';
-import { useRBAC } from '@/hooks/useRBAC';
+import { usePermission } from '@/hooks/usePermission';
 import { useNavigate } from 'react-router-dom';
 import { QCScheduler } from '@/components/eos/qc/QCScheduler';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
@@ -90,7 +90,10 @@ function ScheduleEditPopover({ qc, onSave }: { qc: QuarterlyConversation; onSave
 const QCContent = () => {
   const { conversations, isLoading, updateSchedule } = useQuarterlyConversations();
   const { profile } = useAuth();
-  const { canScheduleQC, canViewAllQC } = useRBAC();
+  const canScheduleQCPerm = usePermission('eos.qc.create');
+  const canViewAllQCPerm = usePermission('eos.qc.all');
+  const canScheduleQC = () => canScheduleQCPerm;
+  const canViewAllQC = () => canViewAllQCPerm;
   const navigate = useNavigate();
   const [schedulerOpen, setSchedulerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(canViewAllQC() ? 'all' : 'my-reviews');

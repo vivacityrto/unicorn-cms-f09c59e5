@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
-import { useRBAC } from '@/hooks/useRBAC';
+import { usePermission } from '@/hooks/usePermission';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,7 +23,8 @@ export default function EosVto() {
 
 function VtoContent() {
   const { profile } = useAuth();
-  const { canEditVTO } = useRBAC();
+  const canEditMission = usePermission('eos.mission_control.edit');
+  const canEditVTO = () => canEditMission;
   const [isEditing, setIsEditing] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
 
