@@ -259,7 +259,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
                 tenantId={tenantId}
                 packageId={packageId}
                 debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
-                isVivacityStaff={profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member'}
+                isVivacityStaff={['Super Admin', 'Team Leader', 'Team Member', 'Integrator', 'BGT', 'CSC', 'CET'].includes(profile?.unicorn_role || '')}
               />
             </TabsContent>
           </Tabs>

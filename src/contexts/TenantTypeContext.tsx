@@ -39,7 +39,7 @@ export const TenantTypeProvider = ({
 
   const fetchTenantType = async () => {
     // For Vivacity Team members, they don't have a tenant type restriction
-    const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member"].includes(
+    const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member", "Integrator", "BGT", "CSC", "CET"].includes(
       profile?.unicorn_role || ""
     );
 

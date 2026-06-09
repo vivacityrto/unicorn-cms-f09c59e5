@@ -163,7 +163,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   });
 
   // Only Vivacity team can manage
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member', 'Integrator', 'BGT', 'CSC', 'CET'].includes(
     profile?.unicorn_role || ''
   );
 
