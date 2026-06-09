@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, FileText, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { AuditSectionNav } from '@/components/audit/AuditSectionNav';
 import { AuditQuestionCard } from '@/components/audit/AuditQuestionCard';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function AuditWorkspace() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,8 @@ export default function AuditWorkspace() {
   const { auditReport, isLoading } = useAuditDetails(auditId);
   const { addResponse, updateAuditStatus, generateFindings } = useAudits();
   const [selectedSection, setSelectedSection] = useState<number>(0);
+  const canOperate = usePermission('audits.operate');
+  const canReport = usePermission('audits.report');
 
   const currentSection = auditReport?.sections?.[selectedSection];
 
@@ -74,7 +77,7 @@ export default function AuditWorkspace() {
             <Badge variant={auditReport.audit.status === 'complete' ? 'default' : 'secondary'}>
               {auditReport.audit.status.replace('_', ' ')}
             </Badge>
-            {auditReport.audit.status === 'draft' && (
+            {auditReport.audit.status === 'draft' && canOperate && (
               <Button onClick={handleStartAudit}>Start Audit</Button>
             )}
             {auditReport.audit.status === 'in_progress' && (
@@ -85,10 +88,12 @@ export default function AuditWorkspace() {
                     View Findings
                   </Button>
                 </Link>
-                <Button onClick={handleCompleteAudit}>Complete Audit</Button>
+                {canOperate && (
+                  <Button onClick={handleCompleteAudit}>Complete Audit</Button>
+                )}
               </>
             )}
-            {auditReport.audit.status === 'complete' && (
+            {auditReport.audit.status === 'complete' && canReport && (
               <Link to={`/audits/${auditId}/report`}>
                 <Button>
                   <FileText className="h-4 w-4 mr-2" />

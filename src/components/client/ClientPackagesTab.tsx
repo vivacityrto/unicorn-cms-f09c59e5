@@ -63,6 +63,7 @@ import { RenewalConfirmDialog } from './RenewalConfirmDialog';
 import { PackageDataManager } from './PackageDataManager';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermission } from '@/hooks/usePermission';
 import { useNotes } from '@/hooks/useNotes';
 import { supabase } from '@/integrations/supabase/client';
 import { useMembershipStateOptions } from '@/hooks/useMembershipStateOptions';
@@ -103,6 +104,8 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const { data: membershipStateOptions } = useMembershipStateOptions();
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
+  const canCreatePackage = usePermission('packages.create');
+  const canClosePackage = usePermission('packages.close');
   const [expandedPackages, setExpandedPackages] = useState<Set<number>>(new Set());
   const [startPackageOpen, setStartPackageOpen] = useState(false);
   const [dataManagerOpen, setDataManagerOpen] = useState(false);
@@ -391,7 +394,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
             <p className="text-sm text-muted-foreground mb-4">
               This client doesn't have any packages yet.
             </p>
-            {isSuperAdmin() && (
+            {canCreatePackage && (
               <Button onClick={() => setStartPackageOpen(true)}>
                 <Rocket className="h-4 w-4 mr-2" />
                 Start Package
@@ -439,7 +442,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           )}
         </div>
         <div className="flex items-center gap-2">
-          {isSuperAdmin() && viewMode === 'active' && (
+          {canCreatePackage && viewMode === 'active' && (
             <Button onClick={() => setStartPackageOpen(true)}>
               <Rocket className="h-4 w-4 mr-2" />
               Start Package
@@ -689,7 +692,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                                 Resume Package
                               </DropdownMenuItem>
                             )}
-                            {!pkg.is_complete && (
+                            {!pkg.is_complete && canClosePackage && (
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={(e) => {

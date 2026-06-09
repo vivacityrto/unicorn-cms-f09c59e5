@@ -23,9 +23,11 @@ import type { AuditType, AuditStatus, AuditDashboardRow } from '@/types/clientAu
 import { cn } from '@/lib/utils';
 import { ReferenceLibrarySection } from '@/components/audit/references/ReferenceLibrarySection';
 import { useAuditTypeOptions } from '@/hooks/useAuditTypeOptions';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function AuditsAssessments() {
   const navigate = useNavigate();
+  const canSetupAudit = usePermission('audits.setup');
   const { data: audits = [], isLoading } = useAuditsDashboard();
   const { data: overdueCount = 0 } = useOverdueActionCount();
   const [modalOpen, setModalOpen] = useState(false);
@@ -86,10 +88,12 @@ export default function AuditsAssessments() {
         description="Compliance health checks, mock audits and due diligence across all clients"
         icon={ClipboardCheck}
         actions={
-          <Button onClick={() => setModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Audit
-          </Button>
+          canSetupAudit ? (
+            <Button onClick={() => setModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Audit
+            </Button>
+          ) : null
         }
       />
 
