@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useClientWorkboard, ItemStatus, WorkboardItem, WorkboardFilters, STATUS_CONFIG } from '@/hooks/useClientWorkboard';
 import { supabase } from '@/integrations/supabase/client';
+import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
 import { WorkboardListView } from './WorkboardListView';
 import { WorkboardBoardView } from './WorkboardBoardView';
 import { WorkboardItemDrawer } from './WorkboardItemDrawer';
@@ -73,7 +74,7 @@ export function ClientWorkboardTab({ tenantId, clientId }: ClientWorkboardTabPro
     const { data: users } = await supabase
       .from('users')
       .select('user_uuid, first_name, last_name, avatar_url')
-      .in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
+      .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
       .order('first_name');
     setTeamMembers(users || []);
 
