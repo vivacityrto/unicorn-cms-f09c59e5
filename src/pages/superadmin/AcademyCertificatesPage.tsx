@@ -37,6 +37,8 @@ import AcademyStatCard from "@/components/academy/admin/AcademyStatCard";
 import {
   useAdminCertificates, useIssueCertificate, useRevokeCertificate, type CertRow,
 } from "@/hooks/academy/useAcademyCertificates";
+import { useRBAC } from "@/hooks/useRBAC";
+import { useAuth } from "@/hooks/useAuth";
 
 type StatusFilter = "all" | "active" | "revoked" | "expired";
 
