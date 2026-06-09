@@ -395,15 +395,16 @@ export default function RolePermissionsEditor() {
             </Table>
           </div>
         )}
-      </div>
+        </div>
 
-      <ChangeLogDrawer
-        open={logOpen}
-        onOpenChange={setLogOpen}
-        features={features}
-        roles={roles}
-      />
-    </TooltipProvider>
+        <ChangeLogDrawer
+          open={logOpen}
+          onOpenChange={setLogOpen}
+          features={features}
+          roles={roles}
+        />
+      </TooltipProvider>
+    </DashboardLayout>
   );
 }
 
