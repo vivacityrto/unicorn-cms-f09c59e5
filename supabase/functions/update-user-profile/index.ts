@@ -53,38 +53,33 @@ Deno.serve(async (req) => {
     // Check if user is editing themselves or if they're an admin
     const isSelf = currentUser.id === user_uuid;
     
+    // Vivacity staff permission via central RPC (used for admin path + protected fields)
+    const { data: vivacityAllowed } = await supabase.rpc('check_permission', {
+      p_user_id: currentUser.id,
+      p_feature_key: 'admin.team_users.manage',
+      p_min_level: 'full',
+    });
+    const isSuperAdmin = !!vivacityAllowed;
+
     if (!isSelf) {
-      // Get current user's role and tenant
-      const { data: currentUserData, error: currentUserError } = await supabase
-        .from("users")
-        .select("unicorn_role, user_type, tenant_id")
-        .eq("user_uuid", currentUser.id)
-        .single();
-
-      console.log("Current user data:", currentUserData);
-      console.log("Current user error:", currentUserError);
-
-      const isSuperAdmin = currentUserData?.unicorn_role === "Super Admin" && 
-        (currentUserData?.user_type === "Vivacity Team" || currentUserData?.user_type === "Vivacity");
-
-      console.log("Is super admin:", isSuperAdmin);
-
       if (!isSuperAdmin) {
+        // Get current user's role/tenant (needed for client-admin path)
+        const { data: currentUserData } = await supabase
+          .from("users")
+          .select("unicorn_role, user_type, tenant_id")
+          .eq("user_uuid", currentUser.id)
+          .single();
+
         // Get target user's tenant to check if same as current user's tenant
-        const { data: targetUserData, error: targetUserError } = await supabase
+        const { data: targetUserData } = await supabase
           .from("users")
           .select("tenant_id")
           .eq("user_uuid", user_uuid)
           .single();
 
-        console.log("Target user data:", targetUserData);
-        console.log("Target user error:", targetUserError);
-
         const isClientAdmin = currentUserData?.unicorn_role === "Admin" &&
           (currentUserData?.user_type === "Client Parent" || currentUserData?.user_type === "Client") &&
           targetUserData?.tenant_id === currentUserData?.tenant_id;
-
-        console.log("Is client admin:", isClientAdmin);
 
         if (!isClientAdmin) {
           return jsonErr(403, "FORBIDDEN", "You don't have permission to edit this user");
@@ -98,17 +93,7 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
-    // Only allow Super Admins to change user_type and unicorn_role
-    const { data: currentUserData2 } = await supabase
-      .from("users")
-      .select("unicorn_role, user_type")
-      .eq("user_uuid", currentUser.id)
-      .single();
-
-    const isSuperAdminForRoleChange = currentUserData2?.unicorn_role === "Super Admin" && 
-      (currentUserData2?.user_type === "Vivacity Team" || currentUserData2?.user_type === "Vivacity");
-
-    if (isSuperAdminForRoleChange) {
+    if (isSuperAdmin) {
       if (user_type) updatePayload.user_type = user_type;
       if (unicorn_role) updatePayload.unicorn_role = unicorn_role;
       if (archived !== undefined) updatePayload.archived = archived;

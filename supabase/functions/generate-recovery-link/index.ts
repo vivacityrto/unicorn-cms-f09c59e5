@@ -42,24 +42,19 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const { data: callerData, error: callerError } = await supabaseAdmin
+    const { data: callerData } = await supabaseAdmin
       .from("users")
-      .select("unicorn_role, user_type, tenant_id")
+      .select("tenant_id")
       .eq("user_uuid", caller.id)
-      .single();
+      .maybeSingle();
 
-    if (callerError || !callerData) {
-      console.error("Caller lookup error:", callerError);
-      return new Response(
-        JSON.stringify({ ok: false, code: "CALLER_NOT_FOUND" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const { data: allowed } = await supabaseAdmin.rpc('check_permission', {
+      p_user_id: caller.id,
+      p_feature_key: 'admin.team_users.manage',
+      p_min_level: 'full',
+    });
 
-    const isSuperAdmin = callerData.unicorn_role === "Super Admin" &&
-      (callerData.user_type === "Vivacity" || callerData.user_type === "Vivacity Team");
-
-    if (!isSuperAdmin) {
+    if (!allowed) {
       return new Response(
         JSON.stringify({ ok: false, code: "INSUFFICIENT_PERMISSIONS" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }

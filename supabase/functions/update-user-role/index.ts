@@ -7,7 +7,9 @@ const corsHeaders = {
 
 interface UpdateUserRoleRequest {
   user_uuid: string;
-  unicorn_role?: 'Super Admin' | 'Team Member' | 'Admin' | 'User';
+  unicorn_role?: 'Super Admin' | 'Team Leader' | 'Team Member'
+    | 'Integrator' | 'BGT' | 'CSC' | 'CET'
+    | 'Admin' | 'User' | 'Academy User';
   user_type?: 'Vivacity' | 'Vivacity Team' | 'Client' | 'Client Parent' | 'Client Child' | 'Member';
   tenant_id?: number | null;
   staff_team?: 'none' | 'business_growth' | 'client_success' | 'client_experience' | 'software_development' | 'leadership' | null;
@@ -44,17 +46,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify caller is Super Admin
-    const { data: callerData, error: callerError } = await supabase
-      .from('users')
-      .select('unicorn_role, user_type')
-      .eq('user_uuid', user.id)
-      .single();
+    // Verify caller permission via central RPC
+    const { data: allowed } = await supabase.rpc('check_permission', {
+      p_user_id: user.id,
+      p_feature_key: 'admin.team_users.manage',
+      p_min_level: 'full',
+    });
 
-    if (callerError || !callerData || callerData.unicorn_role !== 'Super Admin' || !['Vivacity', 'Vivacity Team'].includes(callerData.user_type)) {
-      console.error('Access denied:', { callerError, callerData });
+    if (!allowed) {
       return new Response(
-        JSON.stringify({ ok: false, code: 'FORBIDDEN', detail: 'Only Super Admins can update user roles' }),
+        JSON.stringify({ ok: false, code: 'FORBIDDEN', detail: 'You do not have permission to update user roles' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -111,17 +112,14 @@ Deno.serve(async (req) => {
     if (staff_team !== undefined) updates.staff_team = staff_team;
     if (staff_teams !== undefined) updates.staff_teams = staff_teams;
 
-    // Set superadmin_level: use explicit value if provided, otherwise derive from role/type
+    // Set superadmin_level: use explicit value if provided, otherwise derive from role
     if (superadmin_level !== undefined) {
       updates.superadmin_level = superadmin_level;
-    } else if (unicorn_role !== undefined || user_type !== undefined) {
-      // Auto-derive only when role/type is being changed and no explicit level given
-      if (unicorn_role === 'Super Admin' && user_type === 'Vivacity') {
+    } else if (unicorn_role !== undefined) {
+      if (unicorn_role === 'Super Admin') {
         updates.superadmin_level = 'Administrator';
-      } else if (unicorn_role === 'Super Admin' && user_type === 'Vivacity Team') {
+      } else if (unicorn_role === 'Team Leader') {
         updates.superadmin_level = 'Team Leader';
-      } else if (unicorn_role === 'Team Member' && ['Vivacity', 'Vivacity Team'].includes(user_type || '')) {
-        updates.superadmin_level = 'General';
       } else {
         updates.superadmin_level = null;
       }

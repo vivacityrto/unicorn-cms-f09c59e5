@@ -27,8 +27,13 @@ const ROLE_LABELS: Record<string, string> = {
   "Super Admin": "Super Admin",
   "Team Leader": "Team Leader",
   "Team Member": "Team Member",
+  "Integrator": "Integrator",
+  "BGT": "Business Growth Team",
+  "CSC": "Client Success Champion",
+  "CET": "Client Experience Team",
   Admin: "Organisation Admin",
   User: "General User",
+  "Academy User": "Academy User",
 };
 
 function formatExpiry(expiresAt: string): string {

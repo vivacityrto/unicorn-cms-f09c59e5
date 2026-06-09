@@ -50,9 +50,12 @@ serve(async (req: Request) => {
       return jsonResponse(403, { ok: false, detail: "Caller profile not found" });
     }
 
-    const isSuperAdmin = 
-      callerProfile.global_role === "SuperAdmin" || 
-      callerProfile.unicorn_role === "Super Admin";
+    const { data: staffAllowed } = await supabase.rpc('check_permission', {
+      p_user_id: user.id,
+      p_feature_key: 'admin.invites.manage',
+      p_min_level: 'full',
+    });
+    const isSuperAdmin = !!staffAllowed;
 
     // Parse request body
     const { invitation_id, reason } = await req.json();

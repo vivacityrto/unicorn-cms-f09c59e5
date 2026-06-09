@@ -110,8 +110,13 @@ serve(async (req) => {
       });
     }
 
-    // 5. Check permissions: SuperAdmin OR a tenant Admin who is a member of the invitation's tenant.
-    const isSuperAdmin = callerProfile.global_role === 'SuperAdmin' || callerProfile.unicorn_role === 'Super Admin';
+    // 5. Check permissions: Vivacity staff via central RPC OR a tenant Admin who is a member of the invitation's tenant.
+    const { data: staffAllowed } = await supabase.rpc('check_permission', {
+      p_user_id: callerUser.user.id,
+      p_feature_key: 'admin.invites.manage',
+      p_min_level: 'full',
+    });
+    const isSuperAdmin = !!staffAllowed;
     let isTenantAdmin = false;
     if (!isSuperAdmin && callerProfile.unicorn_role === 'Admin') {
       const { data: membership } = await supabase

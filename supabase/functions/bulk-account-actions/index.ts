@@ -57,17 +57,18 @@ serve(async (req) => {
   }
   const caller = callerData.user;
 
-  // 2. Staff gate (mirrors activate-ghost-user)
+  // 2. Permission gate via central RPC (service-role client)
   const userClient = createClient(SUPABASE_URL, ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const [{ data: isStaff }, { data: isSA }] = await Promise.all([
-    userClient.rpc("is_vivacity_team_safe", { p_user_id: caller.id }),
-    userClient.rpc("is_super_admin_safe", { p_user_id: caller.id }),
-  ]);
-  if (!isStaff && !isSA) {
-    return json(403, { ok: false, code: "FORBIDDEN", detail: "Vivacity staff only" });
+  const { data: allowed } = await admin.rpc("check_permission", {
+    p_user_id: caller.id,
+    p_feature_key: "admin.team_users.manage",
+    p_min_level: "full",
+  });
+  if (!allowed) {
+    return json(403, { ok: false, code: "FORBIDDEN", detail: "You do not have permission to perform this action" });
   }
 
   // 3. Parse body

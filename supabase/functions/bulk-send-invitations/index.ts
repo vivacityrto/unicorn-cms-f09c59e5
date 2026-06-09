@@ -62,21 +62,17 @@ serve(async (req: Request) => {
     });
   }
 
-  const { data: callerProfile } = await supabase
-    .from("users")
-    .select("unicorn_role, global_role")
-    .eq("user_uuid", callerUser.user.id)
-    .maybeSingle();
+  const { data: allowed } = await supabase.rpc('check_permission', {
+    p_user_id: callerUser.user.id,
+    p_feature_key: 'admin.invites.manage',
+    p_min_level: 'full',
+  });
 
-  const isSuperAdmin =
-    callerProfile?.unicorn_role === "Super Admin" ||
-    callerProfile?.global_role === "SuperAdmin";
-
-  if (!isSuperAdmin) {
+  if (!allowed) {
     return jsonResponse(403, {
       ok: false,
       code: "FORBIDDEN",
-      detail: "Only SuperAdmins can run bulk invitations",
+      detail: "You do not have permission to run bulk invitations",
     });
   }
 

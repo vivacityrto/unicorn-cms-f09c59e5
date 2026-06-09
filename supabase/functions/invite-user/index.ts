@@ -2,12 +2,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-type UnicornRole = 
-  | "Super Admin"
-  | "Team Leader"
-  | "Team Member"
-  | "Admin"
-  | "User";
+type UnicornRole =
+  | "Super Admin" | "Team Leader" | "Team Member"
+  | "Integrator" | "BGT" | "CSC" | "CET"
+  | "Admin" | "User" | "Academy User";
 
 type RelationshipRole = 'primary_contact' | 'secondary_contact' | 'user' | 'academy_user';
 
@@ -26,9 +24,8 @@ type Payload = {
 
 const VIVACITY_TENANT_ID = 6372;
 const VIVACITY_ROLES: UnicornRole[] = [
-  "Super Admin",
-  "Team Leader",
-  "Team Member",
+  "Super Admin", "Team Leader", "Team Member",
+  "Integrator", "BGT", "CSC", "CET",
 ];
 const CLIENT_ROLES: UnicornRole[] = ["Admin", "User"];
 
@@ -119,9 +116,14 @@ serve(async (req) => {
       });
     }
 
-    // Check permissions: Vivacity staff can invite anyone, Tenant Admins can invite to their own tenant
-    const isVivacityStaff = VIVACITY_ROLES.includes(callerProfile.unicorn_role as UnicornRole);
-    const isSuperAdmin = callerProfile.unicorn_role === 'Super Admin';
+    // Check permissions: Vivacity staff go through central RPC; Tenant Admins keep current logic.
+    const { data: vivacityAllowed } = await supabase.rpc('check_permission', {
+      p_user_id: callerUser.user.id,
+      p_feature_key: 'admin.team_users.manage',
+      p_min_level: 'full',
+    });
+    const isVivacityStaff = !!vivacityAllowed;
+    const isSuperAdmin = isVivacityStaff;
     const isTenantAdmin = !isVivacityStaff && callerProfile.unicorn_role === 'Admin';
 
     if (!isVivacityStaff && !isTenantAdmin) {
