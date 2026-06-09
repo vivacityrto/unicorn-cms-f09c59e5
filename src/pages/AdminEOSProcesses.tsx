@@ -1,7 +1,7 @@
  import { useState, useEffect } from 'react';
  import { DashboardLayout } from '@/components/DashboardLayout';
  import { useAuth } from '@/hooks/useAuth';
- import { useRBAC } from '@/hooks/useRBAC';
+ import { usePermission } from '@/hooks/usePermission';
  import { supabase } from '@/integrations/supabase/client';
  import { Button } from '@/components/ui/button';
  import { Card, CardContent } from '@/components/ui/card';
@@ -67,7 +67,9 @@
  
  export default function AdminEOSProcesses() {
    const { user } = useAuth();
-   const { isSuperAdmin } = useRBAC();
+   const canCreateProcesses = usePermission('eos.processes.create');
+   const canPublishProcesses = usePermission('eos.processes.publish');
+   const isSuperAdmin = canCreateProcesses;
    
    const [processes, setProcesses] = useState<EOSProcess[]>([]);
    const [isLoading, setIsLoading] = useState(true);
@@ -395,7 +397,7 @@
                        <Button size="sm" variant="ghost" onClick={() => openEdit(process)}>
                          <Edit className="h-4 w-4" />
                        </Button>
-                       {process.approval_status === 'draft' && (
+                       {process.approval_status === 'draft' && canPublishProcesses && (
                          <Button size="sm" variant="default" onClick={() => handleApprove(process)}>
                            <CheckCircle className="h-4 w-4 mr-1" />
                            Approve

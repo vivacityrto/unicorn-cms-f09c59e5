@@ -6,12 +6,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { useClientImpactReport, usePublishImpactReport } from '@/hooks/useClientImpact';
 import { ImpactReportView } from '@/components/client-impact/ImpactReportView';
-import { useRBAC } from '@/hooks/useRBAC';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function EosClientImpactDetail() {
   const { reportId } = useParams<{ reportId: string }>();
   const navigate = useNavigate();
-  const { isVivacityTeam } = useRBAC();
+  const isVivacityTeam = usePermission('eos.client_impact.view');
   
   const { data, isLoading } = useClientImpactReport(reportId || '');
   const publishReport = usePublishImpactReport();

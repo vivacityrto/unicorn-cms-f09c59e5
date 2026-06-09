@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
-import { useRBAC } from '@/hooks/useRBAC';
+import { usePermission } from '@/hooks/usePermission';
 import { useAuth } from '@/hooks/useAuth';
 import { RockCard } from '@/components/eos/rocks/RockCard';
 import { RockCascadeView } from '@/components/eos/rocks/RockCascadeView';
@@ -80,7 +80,8 @@ function RocksHierarchyContent() {
   } = useEosRocksHierarchy({ quarterYear, quarterNumber });
   
   const { data: vivacityUsers } = useVivacityTeamUsers();
-  const { canCreateRocks } = useRBAC();
+  const canCreateCompanyRock = usePermission('eos.rocks.company.create');
+  const canCreateRocks = () => canCreateCompanyRock;
 
   // Default user filter to logged-in user once profile and users are available
   const effectiveUserFilter = userFilter === null ? (profile?.user_uuid || 'all') : userFilter;

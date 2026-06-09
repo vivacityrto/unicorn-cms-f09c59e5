@@ -16,7 +16,7 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useScorecardMetrics } from '@/hooks/useScorecardMetrics';
-import { useRBAC } from '@/hooks/useRBAC';
+import { usePermission } from '@/hooks/usePermission';
 import { NeedsAttention } from '@/components/eos/scorecard2/NeedsAttention';
 import { CompanyScorecardTable } from '@/components/eos/scorecard2/CompanyScorecardTable';
 import { MissingDataPanel } from '@/components/eos/scorecard2/MissingDataPanel';
@@ -69,7 +69,8 @@ function ScorecardDashboard() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { canEditVTO } = useRBAC();
+  const canManageScorecard = usePermission('eos.scorecard.manage');
+  const canEditVTO = () => canManageScorecard;
   const {
     metrics,
     isLoading,
