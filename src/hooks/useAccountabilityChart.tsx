@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 import { useRBAC } from './useRBAC';
 import { toast } from '@/hooks/use-toast';
 import { VIVACITY_TENANT_ID } from './useVivacityTeamUsers';
+import { VIVACITY_STAFF_ROLES } from '@/lib/roles/vivacityRoles';
 import type {
   AccountabilityChart,
   ChartVersion,
