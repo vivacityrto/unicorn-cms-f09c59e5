@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { MeetingType, EosMeeting } from '@/types/eos';
 
 export interface MeetingSeries {
@@ -42,10 +43,7 @@ export const useMeetingSeries = () => {
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
   
-  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   // Wait for auth/profile, then always run — queryFn returns [] if user
   // has no EOS access, so the UI never spins forever on a disabled query.

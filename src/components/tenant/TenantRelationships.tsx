@@ -49,9 +49,7 @@ export function TenantRelationships({ tenantId }: TenantRelationshipsProps) {
   const [notes, setNotes] = useState("");
   const [billsToParent, setBillsToParent] = useState(false);
 
-  const isVivacityStaff = profile?.unicorn_role === "Super Admin" ||
-    profile?.unicorn_role === "Team Leader" ||
-    profile?.unicorn_role === "Team Member";
+  const isVivacityStaff = isVivacityStaffRole(profile?.unicorn_role);
 
   // Fetch relationships involving this tenant
   const { data: relationships = [], isLoading } = useQuery({

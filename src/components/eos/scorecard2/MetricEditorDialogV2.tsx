@@ -74,9 +74,7 @@ export function MetricEditorDialogV2({
   const isEditing = !!metric;
 
   // Determine which user list to show
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || '',
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
   const { data: vivacityUsers = [] } = useVivacityTeamUsers();
   const { users: tenantUsersRaw } = useTenantUsers();
   const tenantUsers = tenantUsersRaw || [];

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import type { EosScorecardEntry } from '@/types/eos';
 
 export const useEosScorecardEntries = (metricId?: string) => {
@@ -9,10 +10,7 @@ export const useEosScorecardEntries = (metricId?: string) => {
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
   
-  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   const { data: entries, isLoading } = useQuery({
     queryKey: ['eos-scorecard-entries', metricId, isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],

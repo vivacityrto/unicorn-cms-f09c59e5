@@ -77,9 +77,7 @@ export function MicrosoftAccountCard() {
   const [authUrl, setAuthUrl] = useState<string | null>(null);
 
   // Only show for Vivacity Team users
-  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
-    profile?.unicorn_role || ''
-  );
+  const isVivacityTeam = isVivacityStaffRole(profile?.unicorn_role);
 
   if (!isVivacityTeam) {
     return null;

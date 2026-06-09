@@ -271,8 +271,7 @@ export default function ManageUsers() {
     if (!roleChangeDialog) return;
 
     try {
-      const isVivacityRole = ['Super Admin', 'Team Leader', 'Team Member']
-        .includes(roleChangeDialog.newRole);
+      const isVivacityRole = isVivacityStaffRole(roleChangeDialog.newRole);
       
       // For Vivacity Team roles, verify auth account exists
       if (isVivacityRole) {
