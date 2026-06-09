@@ -105,6 +105,12 @@ const routeTitles: Record<string, string> = {
   "/academy/events": "Events",
   "/academy/community": "Community",
   "/academy/team": "Team Members",
+  // SuperAdmin Academy routes
+  "/superadmin/academy/certificates": "Certificates",
+  "/superadmin/academy/enrolments": "Enrolments",
+  "/superadmin/academy/tenant-access": "Tenant Access",
+  "/superadmin/academy/builder": "Academy Builder",
+  "/superadmin/academy/package-course": "Package → Course Mapping",
 };
 
 // Breadcrumb generation based on route
