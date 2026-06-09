@@ -45,6 +45,8 @@ import {
   useExtendEnrollment,
   useEnrollmentRealtime,
 } from "@/hooks/academy/useAcademyEnrollments";
+import { useRBAC } from "@/hooks/useRBAC";
+import { useAuth } from "@/hooks/useAuth";
 
 type StatusFilter = "all" | "active" | "completed" | "expired" | "revoked";
 const SOURCE_VALUES = ["manual", "auto_package", "auto_package_backfill"] as const;
