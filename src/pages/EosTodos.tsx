@@ -7,6 +7,7 @@ import { Plus, ListTodo, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useEosTodos } from '@/hooks/useEos';
 import { format } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { usePermission } from '@/hooks/usePermission';
 
 export default function EosTodos() {
   return (
@@ -18,6 +19,7 @@ export default function EosTodos() {
 
 function TodosContent() {
   const { todos, isLoading, updateTodo } = useEosTodos();
+  const canAssignOthers = usePermission('eos.todos.others');
   const [filter, setFilter] = useState<'all' | string>('all');
 
   const handleToggleComplete = (id: string, currentStatus: string) => {
@@ -85,10 +87,12 @@ function TodosContent() {
             Track action items and deliverables from meetings and issues
           </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Add To-Do
-        </Button>
+        {canAssignOthers && (
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Add To-Do
+          </Button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -230,10 +234,12 @@ function TodosContent() {
               <p className="text-muted-foreground mb-4">
                 Create action items to track deliverables and commitments
               </p>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Your First To-Do
-              </Button>
+              {canAssignOthers && (
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First To-Do
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { usePermission } from '@/hooks/usePermission';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +13,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EosClientImpact() {
   const navigate = useNavigate();
+  const canView = usePermission('eos.client_impact.view');
   const [activeTab, setActiveTab] = useState<'all' | 'published' | 'draft'>('all');
+  if (!canView) return <Navigate to="/eos/overview" replace />;
   
   const { data: reports, isLoading } = useClientImpactReports();
   const generateReport = useGenerateImpactReport();
