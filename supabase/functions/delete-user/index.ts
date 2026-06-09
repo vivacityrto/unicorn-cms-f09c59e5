@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       return jsonErr(401, "UNAUTHORIZED", "Invalid token");
     }
 
-    // Get current user's role
+    // Get current user's role (still needed for client-admin path)
     const { data: currentUserData, error: currentUserError } = await supabase
       .from("users")
       .select("unicorn_role, user_type, tenant_id")
@@ -46,8 +46,13 @@ Deno.serve(async (req) => {
     console.log("Current user data:", currentUserData);
     console.log("Current user error:", currentUserError);
 
-    const isSuperAdmin = currentUserData?.unicorn_role === "Super Admin" && 
-                        currentUserData?.user_type === "Vivacity Team";
+    // Vivacity staff permission check via central RPC
+    const { data: vivacityAllowed } = await supabase.rpc('check_permission', {
+      p_user_id: currentUser.id,
+      p_feature_key: 'admin.team_users.manage',
+      p_min_level: 'full',
+    });
+    const isSuperAdmin = !!vivacityAllowed;
 
     console.log("Is super admin:", isSuperAdmin);
 

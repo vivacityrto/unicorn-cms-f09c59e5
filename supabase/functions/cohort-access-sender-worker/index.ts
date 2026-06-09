@@ -41,16 +41,18 @@ serve(async (req) => {
   if (callerErr || !callerData?.user) return json(401, { ok: false, code: "AUTH_FAILED", detail: callerErr?.message });
   const caller = callerData.user;
 
-  // Staff gate (JWT-bound client so SECURITY DEFINER rpcs see auth.uid())
+  // Permission gate via central RPC (service-role).
+  // JWT-bound client is still needed below for SECURITY DEFINER rpcs that read auth.uid().
   const userClient = createClient(SUPABASE_URL, ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const [{ data: isStaff }, { data: isSA }] = await Promise.all([
-    userClient.rpc("is_vivacity_team_safe", { p_user_id: caller.id }),
-    userClient.rpc("is_super_admin_safe", { p_user_id: caller.id }),
-  ]);
-  if (!isStaff && !isSA) return json(403, { ok: false, code: "FORBIDDEN" });
+  const { data: allowed } = await admin.rpc("check_permission", {
+    p_user_id: caller.id,
+    p_feature_key: "admin.cohort.send",
+    p_min_level: "full",
+  });
+  if (!allowed) return json(403, { ok: false, code: "FORBIDDEN" });
 
   let body: Body;
   try { body = await req.json(); } catch { return json(400, { ok: false, code: "BAD_JSON" }); }

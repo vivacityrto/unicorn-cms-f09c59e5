@@ -72,10 +72,15 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const isSuperAdmin = callerData.unicorn_role === "Super Admin" && 
-      (callerData.user_type === "Vivacity" || callerData.user_type === "Vivacity Team");
-    
-    const isTenantAdmin = callerData.unicorn_role === "Admin" && 
+    // Vivacity staff permission via central RPC
+    const { data: vivacityAllowed } = await supabaseAdmin.rpc('check_permission', {
+      p_user_id: caller.id,
+      p_feature_key: 'admin.team_users.manage',
+      p_min_level: 'full',
+    });
+    const isSuperAdmin = !!vivacityAllowed;
+
+    const isTenantAdmin = callerData.unicorn_role === "Admin" &&
       (callerData.user_type === "Client" || callerData.user_type === "Client Parent");
 
     if (!isSuperAdmin && !isTenantAdmin) {

@@ -46,17 +46,14 @@ serve(async (req) => {
     }
     const caller = callerData.user;
 
-    // 2. Staff check via JWT-bound client (so SECURITY DEFINER RPCs see auth.uid())
-    const userClient = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-      auth: { persistSession: false, autoRefreshToken: false },
+    // 2. Permission gate via central RPC (service-role)
+    const { data: allowed } = await admin.rpc("check_permission", {
+      p_user_id: caller.id,
+      p_feature_key: "admin.team_users.manage",
+      p_min_level: "full",
     });
-    const [{ data: isStaff }, { data: isSA }] = await Promise.all([
-      userClient.rpc("is_vivacity_team_safe", { p_user_id: caller.id }),
-      userClient.rpc("is_super_admin_safe", { p_user_id: caller.id }),
-    ]);
-    if (!isStaff && !isSA) {
-      return json(403, { ok: false, code: "FORBIDDEN", detail: "Vivacity staff only" });
+    if (!allowed) {
+      return json(403, { ok: false, code: "FORBIDDEN", detail: "You do not have permission to activate users" });
     }
 
     // 3. Payload

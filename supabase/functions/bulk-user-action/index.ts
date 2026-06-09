@@ -51,19 +51,15 @@ Deno.serve(async (req) => {
       return jsonErr(401, "UNAUTHORIZED", "Invalid token");
     }
 
-    // Verify SuperAdmin status
-    const { data: callerProfile } = await supabase
-      .from("users")
-      .select("global_role, unicorn_role, user_type")
-      .eq("user_uuid", currentUser.id)
-      .single();
+    // Verify permission via central RPC
+    const { data: allowed } = await supabase.rpc('check_permission', {
+      p_user_id: currentUser.id,
+      p_feature_key: 'admin.team_users.manage',
+      p_min_level: 'full',
+    });
 
-    const isSuperAdmin = callerProfile?.global_role === 'SuperAdmin' ||
-      (callerProfile?.unicorn_role === 'Super Admin' && 
-       ['Vivacity', 'Vivacity Team'].includes(callerProfile?.user_type || ''));
-
-    if (!isSuperAdmin) {
-      return jsonErr(403, "FORBIDDEN", "Only SuperAdmins can perform bulk actions");
+    if (!allowed) {
+      return jsonErr(403, "FORBIDDEN", "You do not have permission to perform bulk user actions");
     }
 
     // Get tenant_id for audit logging (use first user's tenant)
