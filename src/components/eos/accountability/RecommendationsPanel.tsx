@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -65,8 +66,8 @@ export function RecommendationsPanel({
   // Check if user can dismiss - Super Admin or Team Leader role
   const canDismiss = isSuperAdmin() || profile?.unicorn_role === 'Team Leader';
   
-  // Check if user can view (hide from Team Member)
-  const canView = isSuperAdmin() || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member';
+  // Check if user can view — all Vivacity internal staff
+  const canView = isVivacityStaffRole(profile?.unicorn_role);
   
   if (!canView) return null;
   

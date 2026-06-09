@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTimeTracking, formatDuration, TimeEntry } from '@/hooks/useTimeTracking';
 import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1065,9 +1066,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
 
   const isAdminOrStaff =
     profile?.global_role === 'SuperAdmin' ||
-    profile?.unicorn_role === 'Super Admin' ||
-    profile?.unicorn_role === 'Team Leader' ||
-    profile?.unicorn_role === 'Team Member' ||
+    isVivacityStaffRole(profile?.unicorn_role) ||
     profile?.unicorn_role === 'Admin';
 
   // Fetch active packages for filter dropdown

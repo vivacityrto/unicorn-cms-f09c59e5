@@ -1,29 +1,40 @@
-Scope: Update 5 hardcoded role checks so all 7 internal Vivacity roles are recognized as staff.
+## Vivacity Staff Roles — Single Source of Truth Refactor
 
-No other changes. Build only; no data model or backend work.
+### Step 1: Create `src/lib/roles/vivacityRoles.ts`
 
-Changes per file:
+New file exporting:
+- `VIVACITY_STAFF_ROLES` — readonly tuple of the 7 canonical roles (Super Admin, Team Leader, Team Member, Integrator, BGT, CSC, CET)
+- `VivacityStaffRole` type
+- `isVivacityStaffRole(role)` predicate — safe outside React
 
-1. src/contexts/TenantTypeContext.tsx (line ~42)
-   - Change: `const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member"].includes(profile?.unicorn_role || "");`
-   - To: `const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member", "Integrator", "BGT", "CSC", "CET"].includes(profile?.unicorn_role || "");`
+### Step 2: Update `src/hooks/useRBAC.tsx`
 
-2. src/components/DashboardLayout.tsx (line ~188)
-   - Change: `const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member"].includes(userRole);`
-   - To: `const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member", "Integrator", "BGT", "CSC", "CET"].includes(userRole);`
+Replace the inline `is_vivacity_team` array with `VIVACITY_STAFF_ROLES.includes(...)` using the new import.
 
-3. src/components/client/ClientFilesTab.tsx (line ~102)
-   - Change: `const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '');`
-   - To: `const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member', 'Integrator', 'BGT', 'CSC', 'CET'].includes(profile?.unicorn_role || '');`
+### Step 3: Refactor all hardcoded role lists
 
-4. src/components/client/SharePointFolderConfig.tsx (line ~166)
-   - Change: `const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '');`
-   - To: `const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member', 'Integrator', 'BGT', 'CSC', 'CET'].includes(profile?.unicorn_role || '');`
+For each file below, add the import and replace the local hardcoded array with either `isVivacityStaffRole(profile?.unicorn_role)` (predicate pattern) or `[...VIVACITY_STAFF_ROLES]` (Supabase `.in()` pattern).
 
-5. src/components/client/PackageStagesManager.tsx (line ~262)
-   - The current inline check uses `===` ORs for Super Admin, Team Leader, Team Member.
-   - Replace the entire `isVivacityStaff` prop expression with an `.includes()` array containing all 7 roles.
-   - From: `isVivacityStaff={profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member'}`
-   - To: `isVivacityStaff={['Super Admin', 'Team Leader', 'Team Member', 'Integrator', 'BGT', 'CSC', 'CET'].includes(profile?.unicorn_role || '')}`
+**Predicate pattern (`isVivacityStaffRole`):**
+1. `src/hooks/useDashboardTriage.ts` (~L125) — critical, fixes infinite spinner
+2. `src/contexts/TenantTypeContext.tsx` (~L42)
+3. `src/components/DashboardLayout.tsx` (~L188)
+4. `src/components/client/ClientFilesTab.tsx` (~L102)
+5. `src/components/client/SharePointFolderConfig.tsx` (~L166)
+6. `src/components/client/PackageStagesManager.tsx` (~L262) — inline `isVivacityStaff` prop
+7. `src/components/client/ClientTimelineTab.tsx` (~L80-82)
+8. `src/components/client/ClientTimeTab.tsx` (~L1069-1070)
+9. `src/components/client/MembershipWeightsPanel.tsx` (~L35-36)
+10. `src/components/eos/accountability/RecommendationsPanel.tsx` (~L66-69)
 
-Verification: TypeScript compilation should pass with exit code 0 after edits.
+**Supabase `.in()` pattern (`[...VIVACITY_STAFF_ROLES]`):**
+11. `src/components/client/ClientNotesTab.tsx` (~L178)
+12. `src/components/client/ClientActionItemsTab.tsx` (~L109)
+
+### Out of scope (per instructions)
+- `src/hooks/useAuth.tsx` — UserProfile union type kept explicit
+- ask-viv components — already use `useRBAC`
+- `supabase/functions/` — has its own `_shared/auth-helpers.ts`
+
+### Verification
+TypeScript build runs automatically; will confirm zero errors after edits. No behavior changes — same 7 roles, just centralized.

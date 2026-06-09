@@ -11,6 +11,7 @@ import { useMembershipWeights, useTenantMemberships } from '@/hooks/useTenantMem
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 interface MembershipWeightsPanelProps {
   tenantId: number;
@@ -31,9 +32,7 @@ export function MembershipWeightsPanel({ tenantId }: MembershipWeightsPanelProps
   // Only show for dual-membership tenants, admin/staff only
   const isAdminOrStaff =
     profile?.global_role === 'SuperAdmin' ||
-    profile?.unicorn_role === 'Super Admin' ||
-    profile?.unicorn_role === 'Team Leader' ||
-    profile?.unicorn_role === 'Team Member' ||
+    isVivacityStaffRole(profile?.unicorn_role) ||
     profile?.unicorn_role === 'Admin';
 
   useEffect(() => {
