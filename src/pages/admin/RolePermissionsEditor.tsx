@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -272,8 +273,9 @@ export default function RolePermissionsEditor() {
   const error = featuresQ.error || matrixQ.error || rolesQ.error;
 
   return (
-    <TooltipProvider>
-      <div className="p-4 md:p-6 space-y-4">
+    <DashboardLayout>
+      <TooltipProvider>
+        <div className="p-4 md:p-6 space-y-4">
         <PageHeader
           title="Role Permission Editor"
           description="Control which roles can access each feature. Changes take effect immediately and are logged."
@@ -393,15 +395,16 @@ export default function RolePermissionsEditor() {
             </Table>
           </div>
         )}
-      </div>
+        </div>
 
-      <ChangeLogDrawer
-        open={logOpen}
-        onOpenChange={setLogOpen}
-        features={features}
-        roles={roles}
-      />
-    </TooltipProvider>
+        <ChangeLogDrawer
+          open={logOpen}
+          onOpenChange={setLogOpen}
+          features={features}
+          roles={roles}
+        />
+      </TooltipProvider>
+    </DashboardLayout>
   );
 }
 
