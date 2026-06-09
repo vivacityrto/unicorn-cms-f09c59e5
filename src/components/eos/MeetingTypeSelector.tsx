@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, CalendarDays, CalendarRange } from 'lucide-react';
 import type { MeetingType } from '@/types/eos';
+import { usePermission } from '@/hooks/usePermission';
 
 interface MeetingTypeSelectorProps {
   selectedType: MeetingType;
@@ -8,13 +9,18 @@ interface MeetingTypeSelectorProps {
 }
 
 export const MeetingTypeSelector = ({ selectedType, onSelect }: MeetingTypeSelectorProps) => {
-  const types = [
+  const canL10 = usePermission('eos.meetings.l10.create');
+  const canSamePage = usePermission('eos.meetings.samepage');
+  const canQuarterly = usePermission('eos.meetings.quarterly');
+
+  const allTypes = [
     {
       value: 'L10' as MeetingType,
       label: 'Level 10',
       description: 'Weekly tactical meeting (90 minutes)',
       icon: Calendar,
       duration: 90,
+      allowed: canL10,
     },
     {
       value: 'Same_Page' as MeetingType,
@@ -22,6 +28,7 @@ export const MeetingTypeSelector = ({ selectedType, onSelect }: MeetingTypeSelec
       description: 'Visionary & Integrator alignment (120 minutes)',
       icon: CalendarDays,
       duration: 120,
+      allowed: canSamePage,
     },
     {
       value: 'Quarterly' as MeetingType,
@@ -29,6 +36,7 @@ export const MeetingTypeSelector = ({ selectedType, onSelect }: MeetingTypeSelec
       description: 'Full-day strategic planning',
       icon: CalendarDays,
       duration: 405,
+      allowed: canQuarterly,
     },
     {
       value: 'Annual' as MeetingType,
@@ -36,8 +44,10 @@ export const MeetingTypeSelector = ({ selectedType, onSelect }: MeetingTypeSelec
       description: 'Two-day strategic planning',
       icon: CalendarRange,
       duration: 810,
+      allowed: canQuarterly,
     },
   ];
+  const types = allTypes.filter((t) => t.allowed);
 
   return (
     <div className="grid md:grid-cols-3 gap-4">
