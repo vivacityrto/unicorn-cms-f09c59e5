@@ -23,6 +23,8 @@ import {
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRBAC } from "@/hooks/useRBAC";
+import { useAuth } from "@/contexts/AuthContext";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
