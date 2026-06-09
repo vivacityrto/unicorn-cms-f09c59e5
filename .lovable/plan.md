@@ -1,53 +1,28 @@
-## Scope
+## Fix: Add user_type check to two edge functions
 
-Only `src/components/client/ClientGovernanceDocumentsPage.tsx` changes. No edge function, schema, or other component changes.
+### Problem
+Both `generate-release-documents` and `export-compliance-pack` check `unicorn_role` for `['Super Admin', 'Admin']` but do not verify `user_type`. This allows a Client Admin (`unicorn_role = 'Admin'`, `user_type = 'Client Parent'`) to invoke them.
 
-## Behaviour change
+### Changes
 
-The existing governance documents query (metadata) stays untouched. `generated_file_url` stops being used as a link target — it is parsed only to extract the SharePoint file name via its `?file=` query parameter.
+#### 1. `supabase/functions/generate-release-documents/index.ts`
+- Expand the `.select("unicorn_role")` on line 149 to `.select("unicorn_role, user_type")`.
+- Immediately after the existing role check (line 153), add:
+  ```typescript
+  if (!['Vivacity', 'Vivacity Team'].includes(userData.user_type)) {
+    return new Response(
+      JSON.stringify({ ok: false, code: 'FORBIDDEN', detail: 'Vivacity staff only' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+  ```
 
-Real file URLs come from live-browsing the tenant's SharePoint `- Governance` subtree using the existing `browse-sharepoint-folder` edge function.
+#### 2. `supabase/functions/export-compliance-pack/index.ts`
+- Expand the `.select("unicorn_role, first_name, last_name")` on line 57 to `.select("unicorn_role, user_type, first_name, last_name")`.
+- Immediately after the existing role check (line 61), add the same `user_type` block as above.
 
-## Implementation steps
+### No other changes
+All existing logic, error handling, audit logging, ZIP generation, and DOCX/XLSX processing remains untouched.
 
-1. **Add a second query** (`useQuery`, keyed by `activeTenantId`, enabled when tenant is set) that returns `Record<lowercaseFileName, webUrl>`:
-
-   a. Read `drive_id` and `shared_folder_item_id` from `tenant_sharepoint_settings` for `activeTenantId` (single row).
-   b. Call `supabase.functions.invoke("browse-sharepoint-folder", { body: { action: "list", tenant_id, folder_id: shared_folder_item_id } })` to list the shared folder's children.
-   c. Find the child whose `name.trim().toLowerCase() === "- governance"`. If absent, return `{}`.
-   d. Recursively walk `- Governance`:
-      - For each child returned by `list`: if `is_folder`, recurse with that child's `id` as `folder_id`; if file, add `{ [name.toLowerCase()]: web_url }` to the flat map.
-      - Walk depth-first; sibling folder listings run in parallel via `Promise.all`; safety depth cap of 5.
-   e. Return the flat map.
-
-2. **Extract file name from `generated_file_url`** with a small helper:
-   - Parse the URL, read the `file` query param (`new URL(url).searchParams.get("file")`).
-   - Lowercase the result before lookup; fall back to `null` if parsing fails or the param is missing.
-   - Computed in a `useMemo` from the existing query results — the metadata query function itself is unchanged.
-
-3. **Lookup + button rewiring**:
-   - For each row compute `spWebUrl = sharePointMap[extractedFileName.toLowerCase()] ?? null`.
-   - **View button**:
-     - If `spWebUrl`: enabled, `onClick` opens `spWebUrl` in a new tab (drop the existing `action=default → action=view` rewrite).
-     - Else: render disabled with tooltip text `"File not yet available in SharePoint"`.
-   - **SharePoint button**:
-     - Only render if `spWebUrl` exists.
-     - `onClick` calls `get-sharepoint-parent-folder` with `{ file_url: spWebUrl, tenant_id: activeTenantId }`.
-
-4. **Loading + error UX**:
-   - While the SharePoint map query is loading, render the View button disabled with a small `Loader2`; SharePoint button hidden until the map resolves.
-   - If the SharePoint map query errors, treat it as "no matches" (View disabled with the "not yet available" tooltip, SharePoint hidden) and toast once.
-
-5. **Keep**: search/filter/sort logic, the metadata query, table layout, framework/category dropdowns, permission gating — all unchanged.
-
-## Technical notes
-
-- Flat map keys and lookup keys are both `.toLowerCase()` to guard against any case inconsistency between DB-stored file names and SharePoint's canonical `name`.
-- Recursive browse uses only the existing `action: "list"` contract; the function returns `{ items: [{ id, name, is_folder, web_url, ... }] }`.
-- Query key for the SharePoint map: `["client-governance-sp-map", activeTenantId]`; `staleTime` ~5 min to avoid re-walking on every render.
-
-## Out of scope
-
-- Edge function changes.
-- DB schema or RLS changes.
-- Other governance/admin pages.
+### Deployment
+Both edge functions will be deployed automatically after the edits.

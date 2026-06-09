@@ -146,7 +146,7 @@ serve(async (req) => {
     // Check admin role
     const { data: userData } = await supabase
       .from("users")
-      .select("unicorn_role")
+      .select("unicorn_role, user_type")
       .eq("user_uuid", user.id)
       .single();
 
@@ -154,6 +154,13 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Permission denied" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!['Vivacity', 'Vivacity Team'].includes(userData.user_type)) {
+      return new Response(
+        JSON.stringify({ ok: false, code: 'FORBIDDEN', detail: 'Vivacity staff only' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
