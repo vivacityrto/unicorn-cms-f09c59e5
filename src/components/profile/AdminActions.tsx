@@ -67,7 +67,7 @@ const STAFF_TEAM_OPTIONS = [
   { value: 'leadership', label: 'Leadership Team' },
 ] as const;
 
-// The 5 canonical role types
+// The 5 canonical client role types
 const ROLE_TYPES = [
   { value: 'superadmin_administrator', label: 'SuperAdmin - Administrator', category: 'superadmin' },
   { value: 'superadmin_team_leader', label: 'SuperAdmin - Team Leader', category: 'superadmin' },
@@ -75,6 +75,19 @@ const ROLE_TYPES = [
   { value: 'tenant_parent', label: 'Tenant - Parent', category: 'tenant' },
   { value: 'tenant_child', label: 'Tenant - Child', category: 'tenant' },
 ] as const;
+
+// Internal staff unicorn_role options for the Role Type selector
+const INTERNAL_ROLES = [
+  'Super Admin',
+  'Team Leader',
+  'Integrator',
+  'BGT',
+  'CSC',
+  'CET',
+] as const;
+
+const INTERNAL_USER_TYPES = ['Vivacity', 'Vivacity Team'];
+const CLIENT_USER_TYPES = ['Client Parent', 'Client Child', 'Client', 'Member'];
 
 type RoleType = typeof ROLE_TYPES[number]['value'];
 
