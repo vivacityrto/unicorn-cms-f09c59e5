@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -47,6 +47,7 @@ const clientsMenuItems = [
   { icon: Lightbulb, label: "RTO Tips", path: "/rto-tips" },
   { icon: FileCheck, label: "Compliance Auditor", path: "/compliance-audits" },
   { icon: ClipboardCheck, label: "Audits", path: "/audits" },
+  { icon: Download, label: "Bulk Cert Download", path: "/admin/bulk-membership-certificates", cscOrSuperAdminOnly: true },
 ];
 
 // 3. EOS Section - Role-Aware Visibility
@@ -476,13 +477,20 @@ export const DashboardLayout = ({
               {renderSection(
                 "clients",
                 "Clients",
-                clientsMenuItems.map(item => {
-                  if (item.path === "/communications")
-                    return { ...item, badge: teamUnreadCount || undefined };
-                  if (item.path === "/support-tickets")
-                    return { ...item, badge: supportTicketsCount || undefined };
-                  return item;
-                }),
+                clientsMenuItems
+                  .map(item => {
+                    if (item.path === "/communications")
+                      return { ...item, badge: teamUnreadCount || undefined };
+                    if (item.path === "/support-tickets")
+                      return { ...item, badge: supportTicketsCount || undefined };
+                    return item;
+                  })
+                  .filter(item => {
+                    if ((item as any).cscOrSuperAdminOnly) {
+                      return isSuperAdmin || userRole === 'CSC';
+                    }
+                    return true;
+                  }),
                 "clients"
               )}
 

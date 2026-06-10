@@ -124,6 +124,7 @@ const BulkInvite = lazy(() => import("./pages/admin/BulkInvite"));
 const CohortAccessSender = lazy(() => import("./pages/admin/CohortAccessSender"));
 const CohortAccessSenderJob = lazy(() => import("./pages/admin/CohortAccessSenderJob"));
 const AdminZeroProgressPackagesPage = lazy(() => import("./pages/admin/AdminZeroProgressPackagesPage"));
+const BulkMembershipCertificatesPage = lazy(() => import("./pages/admin/BulkMembershipCertificatesPage"));
  const TenantUsers = lazy(() => import("./pages/TenantUsers"));
  const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
  const AdminManageStagesWrapper = lazy(() => import("./pages/AdminManageStagesWrapper"));
@@ -1043,6 +1044,7 @@ const App = () => (
             <Route path="/admin/integrations/tga" element={<ProtectedRoute><AdminTgaIntegrationWrapper /></ProtectedRoute>} />
             {/* Admin User Audit */}
             <Route path="/admin/user-audit" element={<ProtectedRoute><AdminUserAudit /></ProtectedRoute>} />
+            <Route path="/admin/bulk-membership-certificates" element={<ProtectedRoute><BulkMembershipCertificatesPage /></ProtectedRoute>} />
             {/* Team & Tenant Users */}
             <Route path="/admin/team-users" element={<ProtectedRoute><TeamUsers /></ProtectedRoute>} />
             <Route path="/admin/team-users/new-starter" element={<ProtectedRoute requireSuperAdmin><NewStarterWizard /></ProtectedRoute>} />
