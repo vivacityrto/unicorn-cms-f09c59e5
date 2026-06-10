@@ -250,13 +250,13 @@ serve(async (req) => {
       // Check user permissions
       const { data: userProfile } = await supabase
         .from('users')
-        .select('global_role')
+        .select('unicorn_role, is_vivacity_internal')
         .eq('user_uuid', user.id)
         .single();
 
-      const isSuperAdmin = userProfile?.global_role === 'SuperAdmin';
+      const isVivacityStaff = userProfile?.is_vivacity_internal === true;
 
-      if (!isSuperAdmin) {
+      if (!isVivacityStaff) {
         const { data: membership } = await supabase
           .from('tenant_members')
           .select('role')
@@ -266,12 +266,13 @@ serve(async (req) => {
           .single();
 
         if (!membership || membership.role !== 'Admin') {
-          return new Response(JSON.stringify({ error: 'Admin access required' }), {
+          return new Response(JSON.stringify({ error: 'Access required: Vivacity staff or Tenant Admin' }), {
             status: 403,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
       }
+
 
       // Perform probe - no DB writes
       console.log(`[TGA] Probe mode for code: ${probeCode}`);
@@ -312,13 +313,13 @@ serve(async (req) => {
       // Check user permissions
       const { data: userProfile } = await supabase
         .from('users')
-        .select('global_role')
+        .select('unicorn_role, is_vivacity_internal')
         .eq('user_uuid', user.id)
         .single();
 
-      const isSuperAdmin = userProfile?.global_role === 'SuperAdmin';
+      const isVivacityStaff = userProfile?.is_vivacity_internal === true;
 
-      if (!isSuperAdmin) {
+      if (!isVivacityStaff) {
         const { data: membership } = await supabase
           .from('tenant_members')
           .select('role')
@@ -328,12 +329,13 @@ serve(async (req) => {
           .single();
 
         if (!membership || membership.role !== 'Admin') {
-          return new Response(JSON.stringify({ error: 'Admin access required' }), {
+          return new Response(JSON.stringify({ error: 'Access required: Vivacity staff or Tenant Admin' }), {
             status: 403,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
       }
+
 
       console.log(`[TGA] Sync mode for ${codes.length} codes, tenant: ${tenant_id}`);
 
