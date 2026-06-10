@@ -516,103 +516,124 @@ export function AdminActions({
             </h3>
 
             <div className="space-y-4 p-4 rounded-lg bg-background border">
-              <div className="space-y-2">
-                <Label htmlFor="role-type">User Role</Label>
-                <Select value={roleType} onValueChange={(v) => setRoleType(v as RoleType)}>
-                  <SelectTrigger id="role-type">
-                    <SelectValue placeholder="Select role type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">SuperAdmin Roles</div>
-                    {ROLE_TYPES.filter(r => r.category === 'superadmin').map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Tenant Roles</div>
-                    {ROLE_TYPES.filter(r => r.category === 'tenant').map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Teams - only for SuperAdmin roles - multi-select */}
-              {isSuperAdminRole && (
-                <div className="space-y-3">
-                  <Label className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Teams (select all that apply)
-                  </Label>
-                  <div className="grid grid-cols-1 gap-2 p-3 border rounded-lg bg-muted/30">
-                    {STAFF_TEAM_OPTIONS.map((team) => (
-                      <div key={team.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`team-${team.value}`}
-                          checked={selectedStaffTeams.includes(team.value)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedStaffTeams([...selectedStaffTeams, team.value]);
-                            } else {
-                              setSelectedStaffTeams(selectedStaffTeams.filter(t => t !== team.value));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor={`team-${team.value}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {team.label}
-                        </label>
-                      </div>
-                    ))}
+              {isInternalUser ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="unicorn-role">User Role</Label>
+                    <Select value={unicornRole} onValueChange={setUnicornRole}>
+                      <SelectTrigger id="unicorn-role">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {INTERNAL_ROLES.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {needsRole && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          A role is required
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Select multiple teams if the user works across different areas
-                  </p>
-                </div>
-              )}
 
-              {/* Tenant Assignment - only for tenant roles */}
-              {isTenantRole && (
-                <div className="space-y-2">
-                  <Label htmlFor="tenant" className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Tenant Assignment
-                  </Label>
-                  <Select value={selectedTenantId} onValueChange={setSelectedTenantId}>
-                    <SelectTrigger id="tenant">
-                      <SelectValue placeholder="Select tenant" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tenants.map((tenant) => (
-                        <SelectItem key={tenant.id} value={tenant.id.toString()}>
-                          {tenant.name}
-                        </SelectItem>
+                  {/* Teams - internal staff multi-select */}
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Teams (select all that apply)
+                    </Label>
+                    <div className="grid grid-cols-1 gap-2 p-3 border rounded-lg bg-muted/30">
+                      {STAFF_TEAM_OPTIONS.map((team) => (
+                        <div key={team.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`team-${team.value}`}
+                            checked={selectedStaffTeams.includes(team.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStaffTeams([...selectedStaffTeams, team.value]);
+                              } else {
+                                setSelectedStaffTeams(selectedStaffTeams.filter(t => t !== team.value));
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor={`team-${team.value}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {team.label}
+                          </label>
+                        </div>
                       ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  {needsTenant && (
-                    <Alert variant="destructive" className="mt-2">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Tenant roles require a tenant assignment
-                      </AlertDescription>
-                    </Alert>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Select multiple teams if the user works across different areas
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="role-type">User Role</Label>
+                    <Select value={roleType} onValueChange={(v) => setRoleType(v as RoleType)}>
+                      <SelectTrigger id="role-type">
+                        <SelectValue placeholder="Select role type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLE_TYPES.filter(r => r.category === 'tenant').map((role) => (
+                          <SelectItem key={role.value} value={role.value}>
+                            {role.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Tenant Assignment */}
+                  {isTenantRole && (
+                    <div className="space-y-2">
+                      <Label htmlFor="tenant" className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        Tenant Assignment
+                      </Label>
+                      <Select value={selectedTenantId} onValueChange={setSelectedTenantId}>
+                        <SelectTrigger id="tenant">
+                          <SelectValue placeholder="Select tenant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tenants.map((tenant) => (
+                            <SelectItem key={tenant.id} value={tenant.id.toString()}>
+                              {tenant.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {needsTenant && (
+                        <Alert variant="destructive" className="mt-2">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            Tenant roles require a tenant assignment
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
                   )}
-                </div>
+                </>
               )}
             </div>
 
             {/* Save Button */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button 
+                <Button
                   className="w-full"
-                  disabled={!hasChanges || needsTenant || loading}
+                  disabled={!hasChanges || needsTenant || needsRole || loading}
                 >
                   <Save className="mr-2 h-4 w-4" />
                   Save Changes
@@ -624,21 +645,34 @@ export function AdminActions({
                   <AlertDialogDescription asChild>
                     <div className="space-y-2">
                       <p>You are about to change the following for {user.first_name} {user.last_name}:</p>
-                      {roleType !== originalRoleType && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <strong>Role:</strong> 
-                          <span className="text-muted-foreground">{getRoleLabel(originalRoleType)}</span>
-                          →
-                          <span className="font-semibold">{getRoleLabel(roleType)}</span>
-                        </div>
-                      )}
-                      {selectedTenantId !== (user.tenant_id?.toString() || '') && isTenantRole && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <strong>Tenant:</strong> 
-                          <span className="text-muted-foreground">{user.tenant_name || 'None'}</span>
-                          →
-                          <span className="font-semibold">{getTenantName(selectedTenantId)}</span>
-                        </div>
+                      {isInternalUser ? (
+                        unicornRole !== originalUnicornRole && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <strong>Role:</strong>
+                            <span className="text-muted-foreground">{originalUnicornRole || 'None'}</span>
+                            →
+                            <span className="font-semibold">{unicornRole}</span>
+                          </div>
+                        )
+                      ) : (
+                        <>
+                          {roleType !== originalRoleType && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <strong>Role:</strong>
+                              <span className="text-muted-foreground">{getRoleLabel(originalRoleType)}</span>
+                              →
+                              <span className="font-semibold">{getRoleLabel(roleType)}</span>
+                            </div>
+                          )}
+                          {selectedTenantId !== (user.tenant_id?.toString() || '') && isTenantRole && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <strong>Tenant:</strong>
+                              <span className="text-muted-foreground">{user.tenant_name || 'None'}</span>
+                              →
+                              <span className="font-semibold">{getTenantName(selectedTenantId)}</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </AlertDialogDescription>
