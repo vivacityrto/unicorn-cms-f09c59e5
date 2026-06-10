@@ -67,7 +67,7 @@ const STAFF_TEAM_OPTIONS = [
   { value: 'leadership', label: 'Leadership Team' },
 ] as const;
 
-// The 5 canonical role types
+// The 5 canonical client role types
 const ROLE_TYPES = [
   { value: 'superadmin_administrator', label: 'SuperAdmin - Administrator', category: 'superadmin' },
   { value: 'superadmin_team_leader', label: 'SuperAdmin - Team Leader', category: 'superadmin' },
@@ -75,6 +75,19 @@ const ROLE_TYPES = [
   { value: 'tenant_parent', label: 'Tenant - Parent', category: 'tenant' },
   { value: 'tenant_child', label: 'Tenant - Child', category: 'tenant' },
 ] as const;
+
+// Internal staff unicorn_role options for the Role Type selector
+const INTERNAL_ROLES = [
+  'Super Admin',
+  'Team Leader',
+  'Integrator',
+  'BGT',
+  'CSC',
+  'CET',
+] as const;
+
+const INTERNAL_USER_TYPES = ['Vivacity', 'Vivacity Team'];
+const CLIENT_USER_TYPES = ['Client Parent', 'Client Child', 'Client', 'Member'];
 
 type RoleType = typeof ROLE_TYPES[number]['value'];
 
@@ -136,43 +149,54 @@ export function AdminActions({
   const [copyingLink, setCopyingLink] = useState(false);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   
-  // Simplified state
-  const [roleType, setRoleType] = useState<RoleType>(() => 
+  const isInternalUser = INTERNAL_USER_TYPES.includes(user.user_type);
+  const isClientUser = CLIENT_USER_TYPES.includes(user.user_type);
+
+  // Client-branch state
+  const [roleType, setRoleType] = useState<RoleType>(() =>
     deriveRoleType(user.unicorn_role, user.user_type)
   );
-  // Use staff_teams array if available, otherwise fall back to staff_team for backwards compatibility
-  const initialTeams = user.staff_teams && user.staff_teams.length > 0 
-    ? user.staff_teams 
-    : (user.staff_team && user.staff_team !== 'none' ? [user.staff_team] : []);
-  const [selectedStaffTeams, setSelectedStaffTeams] = useState<string[]>(initialTeams);
   const [selectedTenantId, setSelectedTenantId] = useState<string>(
     user.tenant_id?.toString() || ''
   );
 
-  const isSuperAdmin = currentUserRole === 'Super Admin' && 
+  // Internal-branch state
+  const [unicornRole, setUnicornRole] = useState<string>(user.unicorn_role || '');
+
+  // Teams (internal only)
+  const initialTeams = user.staff_teams && user.staff_teams.length > 0
+    ? user.staff_teams
+    : (user.staff_team && user.staff_team !== 'none' ? [user.staff_team] : []);
+  const [selectedStaffTeams, setSelectedStaffTeams] = useState<string[]>(initialTeams);
+
+  const isSuperAdmin = currentUserRole === 'Super Admin' &&
     (currentUserType === 'Vivacity' || currentUserType === 'Vivacity Team');
-  
-  const isClientAdmin = currentUserRole === 'Admin' && 
+
+  const isClientAdmin = currentUserRole === 'Admin' &&
     (currentUserType === 'Client' || currentUserType === 'Client Parent') &&
     currentUserTenantId === user.tenant_id;
 
   const canManage = isSuperAdmin || isClientAdmin;
   const isTenantRole = roleType.startsWith('tenant_');
-  const isSuperAdminRole = roleType.startsWith('superadmin_');
 
-  // Derive original role type for comparison
+  // Original values for change detection
   const originalRoleType = deriveRoleType(user.unicorn_role, user.user_type);
-  const originalTeams = user.staff_teams && user.staff_teams.length > 0 
-    ? user.staff_teams 
+  const originalTeams = user.staff_teams && user.staff_teams.length > 0
+    ? user.staff_teams
     : (user.staff_team && user.staff_team !== 'none' ? [user.staff_team] : []);
-  
-  const hasChanges = 
-    roleType !== originalRoleType || 
-    selectedTenantId !== (user.tenant_id?.toString() || '') ||
-    JSON.stringify(selectedStaffTeams.sort()) !== JSON.stringify(originalTeams.sort());
+  const originalUnicornRole = user.unicorn_role || '';
+
+  const teamsChanged =
+    JSON.stringify([...selectedStaffTeams].sort()) !== JSON.stringify([...originalTeams].sort());
+
+  const hasChanges = isInternalUser
+    ? (unicornRole !== originalUnicornRole || teamsChanged)
+    : (roleType !== originalRoleType ||
+       selectedTenantId !== (user.tenant_id?.toString() || ''));
 
   // Validation
-  const needsTenant = isTenantRole && !selectedTenantId;
+  const needsTenant = !isInternalUser && isTenantRole && !selectedTenantId;
+  const needsRole = isInternalUser && !unicornRole;
 
   useEffect(() => {
     if (isSuperAdmin) {
@@ -233,20 +257,29 @@ export function AdminActions({
     try {
       setLoading(true);
 
-      const dbFields = roleTypeToDbFields(roleType);
-      
-      // Include both staff_team (for backwards compatibility) and staff_teams (new array)
       const primaryTeam = selectedStaffTeams.length > 0 ? selectedStaffTeams[0] : null;
-      const { data, error } = await supabase.functions.invoke('update-user-role', {
-        body: {
-          user_uuid: user.user_uuid,
-          unicorn_role: dbFields.unicorn_role,
-          user_type: dbFields.user_type,
-          tenant_id: isTenantRole ? (selectedTenantId ? parseInt(selectedTenantId) : null) : null,
-          staff_team: isSuperAdminRole ? primaryTeam : null,
-          staff_teams: isSuperAdminRole ? selectedStaffTeams : [],
-        },
-      });
+
+      const body: Record<string, any> = isInternalUser
+        ? {
+            user_uuid: user.user_uuid,
+            unicorn_role: unicornRole,
+            user_type: user.user_type,
+            staff_team: primaryTeam,
+            staff_teams: selectedStaffTeams,
+          }
+        : (() => {
+            const dbFields = roleTypeToDbFields(roleType);
+            return {
+              user_uuid: user.user_uuid,
+              unicorn_role: dbFields.unicorn_role,
+              user_type: dbFields.user_type,
+              tenant_id: isTenantRole ? (selectedTenantId ? parseInt(selectedTenantId) : null) : null,
+              staff_team: null,
+              staff_teams: [],
+            };
+          })();
+
+      const { data, error } = await supabase.functions.invoke('update-user-role', { body });
 
       if (error) throw error;
 
@@ -483,103 +516,124 @@ export function AdminActions({
             </h3>
 
             <div className="space-y-4 p-4 rounded-lg bg-background border">
-              <div className="space-y-2">
-                <Label htmlFor="role-type">User Role</Label>
-                <Select value={roleType} onValueChange={(v) => setRoleType(v as RoleType)}>
-                  <SelectTrigger id="role-type">
-                    <SelectValue placeholder="Select role type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">SuperAdmin Roles</div>
-                    {ROLE_TYPES.filter(r => r.category === 'superadmin').map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">Tenant Roles</div>
-                    {ROLE_TYPES.filter(r => r.category === 'tenant').map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Teams - only for SuperAdmin roles - multi-select */}
-              {isSuperAdminRole && (
-                <div className="space-y-3">
-                  <Label className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Teams (select all that apply)
-                  </Label>
-                  <div className="grid grid-cols-1 gap-2 p-3 border rounded-lg bg-muted/30">
-                    {STAFF_TEAM_OPTIONS.map((team) => (
-                      <div key={team.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`team-${team.value}`}
-                          checked={selectedStaffTeams.includes(team.value)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedStaffTeams([...selectedStaffTeams, team.value]);
-                            } else {
-                              setSelectedStaffTeams(selectedStaffTeams.filter(t => t !== team.value));
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor={`team-${team.value}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {team.label}
-                        </label>
-                      </div>
-                    ))}
+              {isInternalUser ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="unicorn-role">User Role</Label>
+                    <Select value={unicornRole} onValueChange={setUnicornRole}>
+                      <SelectTrigger id="unicorn-role">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {INTERNAL_ROLES.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {needsRole && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          A role is required
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Select multiple teams if the user works across different areas
-                  </p>
-                </div>
-              )}
 
-              {/* Tenant Assignment - only for tenant roles */}
-              {isTenantRole && (
-                <div className="space-y-2">
-                  <Label htmlFor="tenant" className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Tenant Assignment
-                  </Label>
-                  <Select value={selectedTenantId} onValueChange={setSelectedTenantId}>
-                    <SelectTrigger id="tenant">
-                      <SelectValue placeholder="Select tenant" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tenants.map((tenant) => (
-                        <SelectItem key={tenant.id} value={tenant.id.toString()}>
-                          {tenant.name}
-                        </SelectItem>
+                  {/* Teams - internal staff multi-select */}
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Teams (select all that apply)
+                    </Label>
+                    <div className="grid grid-cols-1 gap-2 p-3 border rounded-lg bg-muted/30">
+                      {STAFF_TEAM_OPTIONS.map((team) => (
+                        <div key={team.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`team-${team.value}`}
+                            checked={selectedStaffTeams.includes(team.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStaffTeams([...selectedStaffTeams, team.value]);
+                              } else {
+                                setSelectedStaffTeams(selectedStaffTeams.filter(t => t !== team.value));
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor={`team-${team.value}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {team.label}
+                          </label>
+                        </div>
                       ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  {needsTenant && (
-                    <Alert variant="destructive" className="mt-2">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Tenant roles require a tenant assignment
-                      </AlertDescription>
-                    </Alert>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Select multiple teams if the user works across different areas
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="role-type">User Role</Label>
+                    <Select value={roleType} onValueChange={(v) => setRoleType(v as RoleType)}>
+                      <SelectTrigger id="role-type">
+                        <SelectValue placeholder="Select role type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLE_TYPES.filter(r => r.category === 'tenant').map((role) => (
+                          <SelectItem key={role.value} value={role.value}>
+                            {role.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Tenant Assignment */}
+                  {isTenantRole && (
+                    <div className="space-y-2">
+                      <Label htmlFor="tenant" className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        Tenant Assignment
+                      </Label>
+                      <Select value={selectedTenantId} onValueChange={setSelectedTenantId}>
+                        <SelectTrigger id="tenant">
+                          <SelectValue placeholder="Select tenant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tenants.map((tenant) => (
+                            <SelectItem key={tenant.id} value={tenant.id.toString()}>
+                              {tenant.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {needsTenant && (
+                        <Alert variant="destructive" className="mt-2">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            Tenant roles require a tenant assignment
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
                   )}
-                </div>
+                </>
               )}
             </div>
 
             {/* Save Button */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button 
+                <Button
                   className="w-full"
-                  disabled={!hasChanges || needsTenant || loading}
+                  disabled={!hasChanges || needsTenant || needsRole || loading}
                 >
                   <Save className="mr-2 h-4 w-4" />
                   Save Changes
@@ -591,21 +645,34 @@ export function AdminActions({
                   <AlertDialogDescription asChild>
                     <div className="space-y-2">
                       <p>You are about to change the following for {user.first_name} {user.last_name}:</p>
-                      {roleType !== originalRoleType && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <strong>Role:</strong> 
-                          <span className="text-muted-foreground">{getRoleLabel(originalRoleType)}</span>
-                          →
-                          <span className="font-semibold">{getRoleLabel(roleType)}</span>
-                        </div>
-                      )}
-                      {selectedTenantId !== (user.tenant_id?.toString() || '') && isTenantRole && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <strong>Tenant:</strong> 
-                          <span className="text-muted-foreground">{user.tenant_name || 'None'}</span>
-                          →
-                          <span className="font-semibold">{getTenantName(selectedTenantId)}</span>
-                        </div>
+                      {isInternalUser ? (
+                        unicornRole !== originalUnicornRole && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <strong>Role:</strong>
+                            <span className="text-muted-foreground">{originalUnicornRole || 'None'}</span>
+                            →
+                            <span className="font-semibold">{unicornRole}</span>
+                          </div>
+                        )
+                      ) : (
+                        <>
+                          {roleType !== originalRoleType && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <strong>Role:</strong>
+                              <span className="text-muted-foreground">{getRoleLabel(originalRoleType)}</span>
+                              →
+                              <span className="font-semibold">{getRoleLabel(roleType)}</span>
+                            </div>
+                          )}
+                          {selectedTenantId !== (user.tenant_id?.toString() || '') && isTenantRole && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <strong>Tenant:</strong>
+                              <span className="text-muted-foreground">{user.tenant_name || 'None'}</span>
+                              →
+                              <span className="font-semibold">{getTenantName(selectedTenantId)}</span>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </AlertDialogDescription>
