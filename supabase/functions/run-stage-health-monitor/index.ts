@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       .from("stage_instances")
       .select("id, packageinstance_id, status, created_at, updated_at")
       .in("status", ["in_progress", "not_started", "pending"])
-      .limit(10000);
+      .range(0, 9999);
     if (stagesErr) throw stagesErr;
 
     if (!stages || stages.length === 0) {
