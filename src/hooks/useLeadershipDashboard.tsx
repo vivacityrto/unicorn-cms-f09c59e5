@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { startOfWeek, subWeeks, subDays } from 'date-fns';
 import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 // Vivacity tenant ID
 const VIVACITY_TENANT_ID = 6372;
@@ -745,7 +746,7 @@ export function useLeadershipDashboard(quarterFilter?: { year: number; quarter: 
         currentYear,
       };
     },
-    enabled: isSuper || profile?.unicorn_role === 'Team Leader',
+    enabled: isVivacityStaffRole(profile?.unicorn_role),
     staleTime: QUERY_STALE_TIMES.LIST,
     refetchOnWindowFocus: true,
   });

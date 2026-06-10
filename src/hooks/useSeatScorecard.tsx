@@ -16,6 +16,7 @@ import type {
   ScorecardStatus,
   getLastNWeeks,
 } from '@/types/seatScorecard';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 /**
  * Hook to manage a seat's scorecard.
@@ -350,7 +351,7 @@ export function useSeatScorecard(seatId?: string) {
   // Check if user can edit scorecard structure
   const canEdit = profile && tenantId && (
     isSuper ||
-    profile.unicorn_role === 'Team Leader' ||
+    isVivacityStaffRole(profile.unicorn_role) ||
     profile.unicorn_role === 'Admin'
   );
 

@@ -152,7 +152,7 @@ export default function ManageDocuments() {
   const {
     profile
   } = useAuth();
-  const isTeamLeader = profile?.unicorn_role === 'Team Leader';
+  const isTeamLeader = isVivacityStaffRole(profile?.unicorn_role);
   const queryClient = useQueryClient();
 
   // Governance features state

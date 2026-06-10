@@ -19,6 +19,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 interface PackageWithUsers {
   id: number;
   name: string;
@@ -95,7 +96,7 @@ export default function ManagePackages() {
   const {
     profile
   } = useAuth();
-  const isTeamLeader = profile?.unicorn_role === "Team Leader";
+  const isTeamLeader = isVivacityStaffRole(profile?.unicorn_role);
   const canCreatePackage = usePermission('packages.create');
   useEffect(() => {
     fetchPackages();

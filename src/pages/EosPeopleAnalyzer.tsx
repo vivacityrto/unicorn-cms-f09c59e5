@@ -19,6 +19,7 @@ import {
   PeopleAnalyzerAlerts,
 } from '@/components/eos/people-analyzer';
 import type { PeopleAnalyzerTrend, PersonTrendSummary as PersonSummary } from '@/types/peopleAnalyzer';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 const VIVACITY_TENANT_ID = 1;
 
@@ -29,7 +30,7 @@ export default function EosPeopleAnalyzer() {
   const [activeTab, setActiveTab] = useState('people');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const canView = isSuperAdmin() || profile?.unicorn_role === 'Team Leader';
+  const canView = isVivacityStaffRole(profile?.unicorn_role);
 
   // Fetch all trends
   const { data: allTrends, isLoading: trendsLoading, refetch } = useQuery({

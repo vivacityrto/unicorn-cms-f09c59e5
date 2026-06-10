@@ -29,6 +29,7 @@ import { MergeFieldsEditor } from '@/components/document/MergeFieldsEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Database, FileText as FileTextIcon, GitBranch, Table, FileSpreadsheet } from 'lucide-react';
 import { DocumentScanStatus } from '@/components/document/DocumentScanStatus';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 interface Document {
   id: number;
@@ -168,11 +169,8 @@ export default function DocumentDetail() {
     try {
       setLoading(true);
       
-      // Check if user is Super Admin or Team Leader
-      const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
-      const isTeamLeader = profile?.unicorn_role === 'Team Leader';
-      
-      if (isSuperAdmin || isTeamLeader) {
+      // Internal Vivacity staff fetch master documents
+      if (isVivacityStaffRole(profile?.unicorn_role)) {
         // Super Admins and Team Leaders fetch from documents table
         const { data, error } = await supabase
           .from('documents')
@@ -621,10 +619,7 @@ export default function DocumentDetail() {
         }
       }
 
-      const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
-      const isTeamLeader = profile?.unicorn_role === 'Team Leader';
-
-      if (isSuperAdmin || isTeamLeader) {
+      if (isVivacityStaffRole(profile?.unicorn_role)) {
         // Super Admin and Team Leader: Update master document
         const { error } = await supabase
           .from('documents')
@@ -866,7 +861,7 @@ export default function DocumentDetail() {
         
         {/* Action Buttons */}
         <div className="flex gap-2">
-          {(profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader') ? (
+          {isVivacityStaffRole(profile?.unicorn_role) ? (
             <>
               <Button 
                 variant="outline" 
@@ -1105,8 +1100,8 @@ export default function DocumentDetail() {
         </div>
       </div>
 
-      {/* Version History & Stage Usage - Only for Super Admin / Team Leader */}
-      {(profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader') && (
+      {/* Version History & Stage Usage - Only for internal Vivacity staff */}
+      {isVivacityStaffRole(profile?.unicorn_role) && (
         <div className="space-y-6">
           {/* Document Scan Status */}
           <Card>

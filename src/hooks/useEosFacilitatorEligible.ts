@@ -1,4 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 /**
  * Returns true if the current user is eligible to see EOS facilitator
@@ -7,10 +8,9 @@ import { useAuth } from '@/hooks/useAuth';
  * Replaces the old global Facilitator Mode toggle — guidance now renders
  * automatically for eligible internal staff on EOS pages.
  *
- * Eligible roles: Super Admin, Team Leader.
+ * Eligible: any Vivacity internal staff role.
  */
 export function useEosFacilitatorEligible(): boolean {
   const { profile } = useAuth();
-  const role = profile?.unicorn_role || '';
-  return role === 'Super Admin' || role === 'Team Leader';
+  return isVivacityStaffRole(profile?.unicorn_role);
 }
