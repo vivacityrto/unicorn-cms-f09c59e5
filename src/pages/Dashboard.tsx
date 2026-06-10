@@ -18,7 +18,7 @@ import { TenantDrawer } from "@/components/portfolio/TenantDrawer";
 import { StaffOnboardingBanner } from "@/components/staff/StaffOnboardingBanner";
 
 const Dashboard = () => {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
 
@@ -52,6 +52,16 @@ const Dashboard = () => {
   useEffect(() => {
     if (isVivacityStaff) logDashboardEvent('dashboard_viewed');
   }, [isVivacityStaff]);
+
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!isVivacityStaff) {
     return (
