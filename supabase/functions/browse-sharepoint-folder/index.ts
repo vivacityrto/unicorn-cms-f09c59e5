@@ -449,7 +449,7 @@ serve(async (req) => {
 
     // ===================== LIST DRIVES (temporary diagnostic — SuperAdmin only) =====================
     if (action === "list_drives") {
-      const isSuperAdmin = userData.global_role === "SuperAdmin" || userData.unicorn_role === "Super Admin";
+      const isSuperAdmin = isVivacityStaffRole(userData.unicorn_role) || userData.global_role === "SuperAdmin";
       if (!isSuperAdmin) {
         return new Response(
           JSON.stringify({ error: "SuperAdmin access required" }),
