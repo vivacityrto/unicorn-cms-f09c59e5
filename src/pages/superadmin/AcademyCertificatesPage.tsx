@@ -60,6 +60,8 @@ export default function AcademyCertificatesPage() {
   const [revokeTarget, setRevokeTarget] = useState<CertRow | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
 
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+
   const now = new Date();
 
   // ── Data hooks ──
@@ -192,6 +194,24 @@ export default function AcademyCertificatesPage() {
         },
       }
     );
+  };
+
+  const handleDownload = async (cert: CertRow) => {
+    setDownloadingId(cert.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-certificate-pdf", {
+        body: { certificate_id: cert.id },
+      });
+      if (error || !data?.ok || !data?.data?.public_url) {
+        toast.error("Could not generate certificate PDF. Please try again.");
+        return;
+      }
+      window.open(data.data.public_url, "_blank", "noopener,noreferrer");
+    } catch {
+      toast.error("Could not generate certificate PDF. Please try again.");
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -351,8 +371,12 @@ export default function AcademyCertificatesPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {(c.storage_path || c.public_url) && (
-                              <DropdownMenuItem onClick={() => window.open(c.public_url || c.storage_path || "", "_blank")}>
-                                <Download className="h-4 w-4 mr-2" /> Download PDF
+                              <DropdownMenuItem
+                                onClick={() => handleDownload(c)}
+                                disabled={downloadingId === c.id}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                {downloadingId === c.id ? "Generating…" : "Download PDF"}
                               </DropdownMenuItem>
                             )}
                             {c.public_url && (
