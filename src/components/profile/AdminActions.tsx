@@ -257,20 +257,29 @@ export function AdminActions({
     try {
       setLoading(true);
 
-      const dbFields = roleTypeToDbFields(roleType);
-      
-      // Include both staff_team (for backwards compatibility) and staff_teams (new array)
       const primaryTeam = selectedStaffTeams.length > 0 ? selectedStaffTeams[0] : null;
-      const { data, error } = await supabase.functions.invoke('update-user-role', {
-        body: {
-          user_uuid: user.user_uuid,
-          unicorn_role: dbFields.unicorn_role,
-          user_type: dbFields.user_type,
-          tenant_id: isTenantRole ? (selectedTenantId ? parseInt(selectedTenantId) : null) : null,
-          staff_team: isSuperAdminRole ? primaryTeam : null,
-          staff_teams: isSuperAdminRole ? selectedStaffTeams : [],
-        },
-      });
+
+      const body: Record<string, any> = isInternalUser
+        ? {
+            user_uuid: user.user_uuid,
+            unicorn_role: unicornRole,
+            user_type: user.user_type,
+            staff_team: primaryTeam,
+            staff_teams: selectedStaffTeams,
+          }
+        : (() => {
+            const dbFields = roleTypeToDbFields(roleType);
+            return {
+              user_uuid: user.user_uuid,
+              unicorn_role: dbFields.unicorn_role,
+              user_type: dbFields.user_type,
+              tenant_id: isTenantRole ? (selectedTenantId ? parseInt(selectedTenantId) : null) : null,
+              staff_team: null,
+              staff_teams: [],
+            };
+          })();
+
+      const { data, error } = await supabase.functions.invoke('update-user-role', { body });
 
       if (error) throw error;
 
