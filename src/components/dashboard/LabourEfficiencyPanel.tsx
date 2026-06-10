@@ -22,7 +22,8 @@ export function LabourEfficiencyPanel({ metrics, currentUserId }: Props) {
   const totalClients = metrics.reduce((s, m) => s + Number(m.client_count), 0);
   const totalOverdue = metrics.reduce((s, m) => s + Number(m.total_overdue_tasks), 0);
   const totalOpen = metrics.reduce((s, m) => s + Number(m.total_open_tasks), 0);
-  const avgClients = metrics.length > 0 ? Math.round(totalClients / metrics.length) : 0;
+  const activeCscs = metrics.filter(m => Number(m.client_count) > 0).length;
+  const avgClients = activeCscs > 0 ? Math.round(totalClients / activeCscs) : 0;
   const overdueRatio = totalOpen > 0 ? Math.round((totalOverdue / totalOpen) * 100) : 0;
   const intensiveTotal = metrics.reduce((s, m) => s + Number(m.intensive_clients), 0);
   const lowTouchTotal = metrics.reduce((s, m) => s + Number(m.low_touch_clients), 0);
