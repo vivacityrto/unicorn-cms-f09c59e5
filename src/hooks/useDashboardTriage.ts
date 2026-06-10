@@ -229,7 +229,9 @@ export function useDashboardTriage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('v_dashboard_attention_ranked' as any)
-        .select('*');
+        .select('*')
+        .order('attention_score', { ascending: false })
+        .limit(isSuperAdmin ? 500 : 100);
       if (error) throw error;
       return (data || []) as unknown as AttentionTenant[];
     },
