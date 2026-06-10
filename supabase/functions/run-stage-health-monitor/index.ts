@@ -31,12 +31,20 @@ Deno.serve(async (req) => {
     if (rulesErr) throw rulesErr;
 
     // 2. Fetch all active stage instances
-    const { data: stages, error: stagesErr } = await sb
-      .from("stage_instances")
-      .select("id, packageinstance_id, status, created_at, updated_at")
-      .in("status", ["in_progress", "not_started", "pending"])
-      .range(0, 9999);
-    if (stagesErr) throw stagesErr;
+    const stages: any[] = [];
+    let page = 0;
+    while (true) {
+      const { data, error } = await sb
+        .from("stage_instances")
+        .select("id, packageinstance_id, status, created_at, updated_at")
+        .in("status", ["in_progress", "not_started", "pending"])
+        .range(page * 1000, page * 1000 + 999);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      stages.push(...data);
+      if (data.length < 1000) break;
+      page++;
+    }
 
     if (!stages || stages.length === 0) {
       return new Response(
