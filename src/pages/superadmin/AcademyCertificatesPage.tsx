@@ -196,6 +196,24 @@ export default function AcademyCertificatesPage() {
     );
   };
 
+  const handleDownload = async (cert: CertRow) => {
+    setDownloadingId(cert.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-certificate-pdf", {
+        body: { certificate_id: cert.id },
+      });
+      if (error || !data?.ok || !data?.data?.public_url) {
+        toast.error("Could not generate certificate PDF. Please try again.");
+        return;
+      }
+      window.open(data.data.public_url, "_blank", "noopener,noreferrer");
+    } catch {
+      toast.error("Could not generate certificate PDF. Please try again.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
