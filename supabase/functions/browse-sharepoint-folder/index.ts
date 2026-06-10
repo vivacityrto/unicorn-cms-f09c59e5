@@ -12,6 +12,13 @@ const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+const VIVACITY_STAFF_ROLES = [
+  "Super Admin", "Team Leader", "Team Member",
+  "Integrator", "BGT", "CSC", "CET",
+];
+const isVivacityStaffRole = (role?: string | null) =>
+  !!role && VIVACITY_STAFF_ROLES.includes(role);
+
 async function refreshToken(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
