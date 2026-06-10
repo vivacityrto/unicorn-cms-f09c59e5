@@ -18,7 +18,7 @@ import { TenantDrawer } from "@/components/portfolio/TenantDrawer";
 import { StaffOnboardingBanner } from "@/components/staff/StaffOnboardingBanner";
 
 const Dashboard = () => {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
 
