@@ -48,13 +48,6 @@ interface TeamUser {
   inviteTenantId?: number;
 }
 
-const SUPERADMIN_LEVELS = [
-  { value: 'all', label: 'All Levels' },
-  { value: 'Administrator', label: 'Administrator' },
-  { value: 'Team Leader', label: 'Team Leader' },
-  { value: 'Assistant', label: 'Assistant' },
-  { value: 'General', label: 'General' },
-];
 
 export default function TeamUsers() {
   const { toast } = useToast();
@@ -64,7 +57,7 @@ export default function TeamUsers() {
   const [filteredUsers, setFilteredUsers] = useState<TeamUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [levelFilter, setLevelFilter] = useState('all');
+  
   const [statusFilter, setStatusFilter] = useState('all');
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [resendingInvite, setResendingInvite] = useState<string | null>(null);
@@ -76,7 +69,7 @@ export default function TeamUsers() {
 
   useEffect(() => {
     applyFilters();
-  }, [users, searchQuery, levelFilter, statusFilter]);
+  }, [users, searchQuery, statusFilter]);
 
   const fetchTeamUsers = async () => {
     try {
@@ -192,10 +185,6 @@ export default function TeamUsers() {
       );
     }
 
-    // Level filter
-    if (levelFilter !== 'all') {
-      filtered = filtered.filter(user => user.superadmin_level === levelFilter);
-    }
 
     // Status filter
     if (statusFilter === 'active') {
@@ -314,20 +303,6 @@ export default function TeamUsers() {
     });
   };
 
-  const getLevelBadge = (level: string | null) => {
-    switch (level) {
-      case 'Administrator':
-        return <Badge className="bg-purple-600 hover:bg-purple-700 text-white">Administrator</Badge>;
-      case 'Team Leader':
-        return <Badge className="bg-cyan-500 hover:bg-cyan-600 text-white">Team Leader</Badge>;
-      case 'Assistant':
-        return <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Assistant</Badge>;
-      case 'General':
-        return <Badge variant="outline" className="border-muted-foreground/50">General</Badge>;
-      default:
-        return <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground">Not Set</Badge>;
-    }
-  };
 
   const stats = {
     total: users.length,
@@ -433,18 +408,6 @@ export default function TeamUsers() {
                   className="pl-10"
                 />
               </div>
-              <Select value={levelFilter} onValueChange={setLevelFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by level" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPERADMIN_LEVELS.map((level) => (
-                    <SelectItem key={level.value} value={level.value}>
-                      {level.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Status" />
@@ -470,7 +433,7 @@ export default function TeamUsers() {
                   <TableHead>Email</TableHead>
                   <TableHead>Team</TableHead>
                   <TableHead>CSC</TableHead>
-                  <TableHead>Level</TableHead>
+                  
                   <TableHead>Status</TableHead>
                   <TableHead>Last Login</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
@@ -479,7 +442,7 @@ export default function TeamUsers() {
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No team users found
                     </TableCell>
                   </TableRow>
@@ -543,7 +506,7 @@ export default function TeamUsers() {
                           />
                         )}
                       </TableCell>
-                      <TableCell>{getLevelBadge(user.superadmin_level)}</TableCell>
+                      
                       <TableCell>
                         {user.isPending ? (
                           <Badge variant="outline" className="border-amber-500 text-amber-600">
