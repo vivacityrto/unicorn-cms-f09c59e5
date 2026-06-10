@@ -1044,7 +1044,7 @@ const App = () => (
             <Route path="/admin/integrations/tga" element={<ProtectedRoute><AdminTgaIntegrationWrapper /></ProtectedRoute>} />
             {/* Admin User Audit */}
             <Route path="/admin/user-audit" element={<ProtectedRoute><AdminUserAudit /></ProtectedRoute>} />
-            <Route path="/admin/bulk-membership-certificates" element={<ProtectedRoute><BulkMembershipCertificatesPage /></ProtectedRoute>} />
+            <Route path="/clients/bulk-membership-certificates" element={<ProtectedRoute><BulkMembershipCertificatesPage /></ProtectedRoute>} />
             {/* Team & Tenant Users */}
             <Route path="/admin/team-users" element={<ProtectedRoute><TeamUsers /></ProtectedRoute>} />
             <Route path="/admin/team-users/new-starter" element={<ProtectedRoute requireSuperAdmin><NewStarterWizard /></ProtectedRoute>} />
