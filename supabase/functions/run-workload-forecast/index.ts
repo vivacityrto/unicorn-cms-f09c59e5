@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
       // Consult hours last 30 days
       const { data: consultLogs } = await sb
-        .from("consult_log")
+        .from("consult_logs")
         .select("duration_minutes")
         .eq("consultant_id", userId)
         .gte("session_date", thirtyDaysAgo.split("T")[0]);
@@ -126,6 +126,7 @@ Deno.serve(async (req) => {
 
       workloadSnapshots.push({
         user_id: userId,
+        snapshot_date: today,
         snapshot_date: today,
         open_tasks_count: openTasks || 0,
         overdue_tasks_count: overdueTasks || 0,
@@ -163,7 +164,7 @@ Deno.serve(async (req) => {
       // Get monthly usage over last 3 months
       const threeMonthsAgo = new Date(Date.now() - 90 * 86400000).toISOString().split("T")[0];
       const { data: recentLogs } = await sb
-        .from("consult_log")
+        .from("consult_logs")
         .select("duration_minutes")
         .eq("tenant_id", pkg.tenant_id)
         .gte("session_date", threeMonthsAgo);
