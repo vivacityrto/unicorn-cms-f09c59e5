@@ -25,7 +25,7 @@ interface TenantWithMembership {
 
 export default function BulkMembershipCertificatesPage() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const { isSuperAdmin } = useRBAC();
   const userRole = profile?.unicorn_role || "";
   const isCsc = userRole === "CSC";
@@ -38,10 +38,10 @@ export default function BulkMembershipCertificatesPage() {
   const [progressLabel, setProgressLabel] = useState("");
 
   useEffect(() => {
-    if (!loading && !isSuperAdmin && !isCsc) {
+    if (!authLoading && !isSuperAdmin && !isCsc) {
       navigate("/");
     }
-  }, [isSuperAdmin, isCsc, loading, navigate]);
+  }, [isSuperAdmin, isCsc, authLoading, navigate]);
 
   useEffect(() => {
     async function fetchTenants() {
