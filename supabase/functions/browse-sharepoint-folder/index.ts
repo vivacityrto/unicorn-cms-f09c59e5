@@ -12,6 +12,13 @@ const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+const VIVACITY_STAFF_ROLES = [
+  "Super Admin", "Team Leader", "Team Member",
+  "Integrator", "BGT", "CSC", "CET",
+];
+const isVivacityStaffRole = (role?: string | null) =>
+  !!role && VIVACITY_STAFF_ROLES.includes(role);
+
 async function refreshToken(
   supabaseAdmin: ReturnType<typeof createClient>,
   userId: string,
@@ -136,7 +143,7 @@ serve(async (req) => {
       .single();
 
     const isSuperAdmin =
-      userData?.global_role === "SuperAdmin" || userData?.unicorn_role === "Super Admin";
+      isVivacityStaffRole(userData?.unicorn_role) || userData?.global_role === "SuperAdmin";
     const requestedTenantId = body.tenant_id as number | undefined;
     const sitePurposeEarly = body.site_purpose as string | undefined;
 
@@ -442,7 +449,7 @@ serve(async (req) => {
 
     // ===================== LIST DRIVES (temporary diagnostic — SuperAdmin only) =====================
     if (action === "list_drives") {
-      const isSuperAdmin = userData.global_role === "SuperAdmin" || userData.unicorn_role === "Super Admin";
+      const isSuperAdmin = isVivacityStaffRole(userData.unicorn_role) || userData.global_role === "SuperAdmin";
       if (!isSuperAdmin) {
         return new Response(
           JSON.stringify({ error: "SuperAdmin access required" }),
