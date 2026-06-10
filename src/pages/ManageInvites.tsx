@@ -515,16 +515,16 @@ export default function ManageInvites() {
                       <span>
                         <Button 
                           onClick={() => setDeleteDialogOpen(true)}
-                          className={isTeamLeader ? "gap-2 bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"}
-                          variant={isTeamLeader ? "default" : "destructive"}
-                          disabled={isTeamLeader}
+                          className={isRestrictedStaff ? "gap-2 bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"}
+                          variant={isRestrictedStaff ? "default" : "destructive"}
+                          disabled={isRestrictedStaff}
                         >
                           <Trash2 className="h-4 w-4" />
                           Delete ({selectedInvites.size})
                         </Button>
                       </span>
                     </TooltipTrigger>
-                    {isTeamLeader && (
+                    {isRestrictedStaff && (
                       <TooltipContent>
                         <p>Please contact Super Admins.</p>
                       </TooltipContent>
@@ -538,9 +538,9 @@ export default function ManageInvites() {
                       <span>
                         <Button 
                           onClick={() => setReInviteDialogOpen(true)}
-                          className={isTeamLeader ? "gap-2 bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "gap-2"}
+                          className={isRestrictedStaff ? "gap-2 bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "gap-2"}
                           variant="default"
-                          disabled={isTeamLeader}
+                          disabled={isRestrictedStaff}
                           style={{ display: selectedInvites.size > 0 ? 'inline-flex' : 'none' }}
                         >
                           <RefreshCw className="h-4 w-4" />
@@ -548,7 +548,7 @@ export default function ManageInvites() {
                         </Button>
                       </span>
                     </TooltipTrigger>
-                    {isTeamLeader && (
+                    {isRestrictedStaff && (
                       <TooltipContent>
                         <p>Please contact Super Admins.</p>
                       </TooltipContent>
