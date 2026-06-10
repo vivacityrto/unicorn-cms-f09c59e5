@@ -207,9 +207,11 @@ Deno.serve(async (req) => {
     }
 
     // 6. Refresh materialized view
-    await sb.rpc("refresh_stage_health_trends" as any).catch(() => {
+    try {
+      await sb.rpc("refresh_stage_health_trends" as any);
+    } catch {
       console.log("Materialized view refresh via RPC not available, skipping");
-    });
+    }
 
     return new Response(
       JSON.stringify({
