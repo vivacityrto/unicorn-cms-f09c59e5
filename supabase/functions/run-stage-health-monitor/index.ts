@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     // 2. Fetch all active stage instances
     const { data: stages, error: stagesErr } = await sb
       .from("stage_instances")
-      .select("id, package_instance_id, status, started_at, updated_at")
+      .select("id, packageinstance_id, status, started_at, updated_at")
       .in("status", ["in_progress", "not_started", "pending"]);
     if (stagesErr) throw stagesErr;
 
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
 
     // 3. Get package_instance -> tenant mapping
     const packageInstanceIds = [
-      ...new Set(stages.map((s: any) => s.package_instance_id).filter(Boolean)),
+      ...new Set(stages.map((s: any) => s.packageinstance_id).filter(Boolean)),
     ];
 
     const { data: pkgInstances } = await sb
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     const today = new Date().toISOString().split("T")[0];
 
     for (const stage of stages) {
-      const tenantId = tenantMap.get(stage.package_instance_id);
+      const tenantId = tenantMap.get(stage.packageinstance_id);
       if (!tenantId) continue;
 
       const stageId = stage.id;
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
 
       // Fetch consult hours logged
       const { data: consultLogs } = await sb
-        .from("consult_log")
+        .from("consult_logs")
         .select("duration_minutes")
         .eq("tenant_id", tenantId);
 
