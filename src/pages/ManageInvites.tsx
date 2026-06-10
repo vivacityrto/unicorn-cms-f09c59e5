@@ -21,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/hooks/useAuth";
 import { useRBAC } from "@/hooks/useRBAC";
 import { relationshipRoleLabel, relationshipLabelFromUnicornRole } from "@/lib/roles/relationshipRole";
+import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 
 type InviteRow = {
   id: string;
@@ -72,10 +73,11 @@ export default function ManageInvites() {
   const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
   const itemsPerPage = 20;
   const { profile } = useAuth();
-  const { isVivacityTeam } = useRBAC();
-  const isTeamLeader = profile?.unicorn_role === 'Team Leader';
-  const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
-  const canSeeActions = isSuperAdmin || isVivacityTeam;
+  const { isSuperAdmin, isVivacityTeam } = useRBAC();
+  const canManageInvites = isVivacityStaffRole(profile?.unicorn_role);
+  // Non-SA staff get a restricted view (bulk delete/re-invite disabled).
+  const isRestrictedStaff = canManageInvites && !isSuperAdmin;
+  const canSeeActions = canManageInvites;
 
   const handleRevoke = async () => {
     if (!revokeTarget || !revokeReason.trim()) return;
@@ -513,16 +515,16 @@ export default function ManageInvites() {
                       <span>
                         <Button 
                           onClick={() => setDeleteDialogOpen(true)}
-                          className={isTeamLeader ? "gap-2 bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"}
-                          variant={isTeamLeader ? "default" : "destructive"}
-                          disabled={isTeamLeader}
+                          className={isRestrictedStaff ? "gap-2 bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"}
+                          variant={isRestrictedStaff ? "default" : "destructive"}
+                          disabled={isRestrictedStaff}
                         >
                           <Trash2 className="h-4 w-4" />
                           Delete ({selectedInvites.size})
                         </Button>
                       </span>
                     </TooltipTrigger>
-                    {isTeamLeader && (
+                    {isRestrictedStaff && (
                       <TooltipContent>
                         <p>Please contact Super Admins.</p>
                       </TooltipContent>
@@ -536,9 +538,9 @@ export default function ManageInvites() {
                       <span>
                         <Button 
                           onClick={() => setReInviteDialogOpen(true)}
-                          className={isTeamLeader ? "gap-2 bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "gap-2"}
+                          className={isRestrictedStaff ? "gap-2 bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "gap-2"}
                           variant="default"
-                          disabled={isTeamLeader}
+                          disabled={isRestrictedStaff}
                           style={{ display: selectedInvites.size > 0 ? 'inline-flex' : 'none' }}
                         >
                           <RefreshCw className="h-4 w-4" />
@@ -546,7 +548,7 @@ export default function ManageInvites() {
                         </Button>
                       </span>
                     </TooltipTrigger>
-                    {isTeamLeader && (
+                    {isRestrictedStaff && (
                       <TooltipContent>
                         <p>Please contact Super Admins.</p>
                       </TooltipContent>

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRBAC } from "@/hooks/useRBAC";
 import type { TenantType } from "@/contexts/TenantTypeContext";
+import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 
 interface PreviewTenant {
   id: number;
@@ -108,7 +109,7 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
   const [actingUserOptions, setActingUserOptions] = useState<ActingUserOption[]>([]);
   const [returnPath, setReturnPath] = useState<string | null>(null);
 
-  const isTeamLeader = profile?.unicorn_role === "Team Leader";
+  const isTeamLeader = isVivacityStaffRole(profile?.unicorn_role);
   const canUsePreview = isSuperAdmin || isTeamLeader;
   const authUserId = session?.user?.id ?? null;
 

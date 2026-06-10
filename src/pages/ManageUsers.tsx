@@ -63,7 +63,7 @@ interface User {
   email: string;
   mobile_phone: string | null;
   user_type: 'Vivacity Team' | 'Client Parent' | 'Client Child' | 'Client' | 'Member';
-  unicorn_role: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User';
+  unicorn_role: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Integrator' | 'BGT' | 'CSC' | 'CET' | 'Admin' | 'User';
   tenant_id: string | null;
   disabled: boolean;
   archived: boolean;
@@ -110,7 +110,7 @@ export default function ManageUsers() {
   const [roleChangeDialog, setRoleChangeDialog] = useState<{
     open: boolean;
     userId: string;
-    newRole: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User';
+    newRole: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Integrator' | 'BGT' | 'CSC' | 'CET' | 'Admin' | 'User';
   } | null>(null);
   const { profile } = useAuth();
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';
@@ -219,7 +219,7 @@ export default function ManageUsers() {
         email: user.email,
         mobile_phone: user.mobile_phone,
         user_type: (user.user_type || 'Member') as 'Vivacity Team' | 'Client Parent' | 'Client Child' | 'Client' | 'Member',
-        unicorn_role: (user.unicorn_role || 'User') as 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User',
+        unicorn_role: (user.unicorn_role || 'User') as 'Super Admin' | 'Team Leader' | 'Team Member' | 'Integrator' | 'BGT' | 'CSC' | 'CET' | 'Admin' | 'User',
         tenant_id: user.tenant_id,
         disabled: user.disabled || false,
         archived: user.archived || false,
@@ -260,7 +260,7 @@ export default function ManageUsers() {
     }
   };
 
-  const handleRoleChange = (userId: string, newRole: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User') => {
+  const handleRoleChange = (userId: string, newRole: 'Super Admin' | 'Team Leader' | 'Team Member' | 'Integrator' | 'BGT' | 'CSC' | 'CET' | 'Admin' | 'User') => {
     setRoleChangeDialog({
       open: true,
       userId,
@@ -888,11 +888,15 @@ export default function ManageUsers() {
                           { value: 'Super Admin', label: 'Super Admin' },
                           { value: 'Team Leader', label: 'Team Leader' },
                           { value: 'Team Member', label: 'Team Member' },
+                          { value: 'Integrator', label: 'Integrator' },
+                          { value: 'BGT', label: 'BGT' },
+                          { value: 'CSC', label: 'CSC' },
+                          { value: 'CET', label: 'CET' },
                           { value: 'Admin', label: 'Admin' },
                           { value: 'User', label: 'User' }
                         ]}
                         value={user.unicorn_role}
-                        onValueChange={(newRole) => handleRoleChange(user.user_uuid, newRole as 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User')}
+                        onValueChange={(newRole) => handleRoleChange(user.user_uuid, newRole as 'Super Admin' | 'Team Leader' | 'Team Member' | 'Integrator' | 'BGT' | 'CSC' | 'CET' | 'Admin' | 'User')}
                         placeholder="Select role..."
                         searchPlaceholder="Search roles..."
                         emptyText="No roles found."
