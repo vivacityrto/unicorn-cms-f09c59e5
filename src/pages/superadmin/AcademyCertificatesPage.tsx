@@ -371,8 +371,12 @@ export default function AcademyCertificatesPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {(c.storage_path || c.public_url) && (
-                              <DropdownMenuItem onClick={() => window.open(c.public_url || c.storage_path || "", "_blank")}>
-                                <Download className="h-4 w-4 mr-2" /> Download PDF
+                              <DropdownMenuItem
+                                onClick={() => handleDownload(c)}
+                                disabled={downloadingId === c.id}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                {downloadingId === c.id ? "Generating…" : "Download PDF"}
                               </DropdownMenuItem>
                             )}
                             {c.public_url && (
