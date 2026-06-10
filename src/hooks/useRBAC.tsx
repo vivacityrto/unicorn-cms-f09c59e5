@@ -155,7 +155,6 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
 export const ADMIN_ROUTES = [
   '/manage-users',
   '/manage-invites',
-  '/audits',
   '/admin/',
   '/administration/',
 ];
