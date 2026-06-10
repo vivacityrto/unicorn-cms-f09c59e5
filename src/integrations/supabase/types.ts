@@ -64797,14 +64797,19 @@ export type Database = {
         Returns: boolean
       }
       has_auth_account: { Args: { p_user_uuid: string }; Returns: boolean }
-      has_eos_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["eos_role"]
-          _tenant_id: number
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      has_eos_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["eos_role"]
+              _tenant_id: number
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: { _role: string; _tenant_id: number; _user_id: string }
+            Returns: boolean
+          }
       has_meeting_role: {
         Args: { _meeting_id: string; _roles: string[]; _user_id: string }
         Returns: boolean
