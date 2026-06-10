@@ -122,13 +122,17 @@ serve(async (req) => {
 
     const { data: tenantRow, error: tenantErr } = await supabase
       .from("tenants")
-      .select("name")
+      .select("name, rto_name")
       .eq("id", tenantId)
       .maybeSingle();
 
     if (tenantErr) {
       return jsonResponse(500, { ok: false, code: "LOOKUP_FAILED", detail: tenantErr.message });
     }
+
+    const safeRtoName = ((tenantRow as any)?.rto_name || (tenantRow as any)?.name || "Vivacity")
+      .replace(/[/\\?%*:|"<>]/g, "").trim();
+    const downloadFilename = `${safeRtoName}-SuperHero-Membership-Certificate.pdf`;
 
     const packageCode = (pkgRow as any)?.name as string | undefined;
     const tenantName = ((tenantRow as any)?.name as string | undefined) ?? "";
@@ -195,7 +199,7 @@ serve(async (req) => {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="vivacity-membership-certificate.pdf"`,
+        "Content-Disposition": `attachment; filename="${downloadFilename}"`,
         ...corsHeaders,
       },
     });

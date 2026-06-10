@@ -1,19 +1,17 @@
-Revert three files to their pre-certificate-filename state. No other files touched.
+## Scope
+Edit exactly two files — no DB or edge-function config changes.
 
-## File 1: supabase/functions/generate-certificate-pdf/index.ts
-- Remove the tenant RTO-name lookup block (lines 77-88) including `safeRtoName` and `downloadFilename`.
-- In the fast-path `createSignedUrl` call (line 110), remove `{ download: downloadFilename }` so only `.createSignedUrl(cert.storage_path, SIGNED_URL_TTL)` remains.
-- In the generation-path `createSignedUrl` call (line 203), same change: remove `{ download: downloadFilename }`.
+### 1. `supabase/functions/generate-membership-certificate/index.ts`
+- Update the tenants query (line 125) from `.select("name")` to `.select("name, rto_name")`.
+- After the tenant lookup (after line 131), compute the download filename:
+  - Use `rto_name`, falling back to `name`, then `"Vivacity"`.
+  - Sanitise by stripping `[/\\?%*:|"<>]`.
+  - Result: `<SafeName>-SuperHero-Membership-Certificate.pdf`.
+- Replace the hardcoded `Content-Disposition` header (line 198) with the dynamic filename.
 
-## File 2: src/pages/academy/AcademyCertificatesPage.tsx
-- Restore the short-circuit check at the top of `handleDownload` so `cert.public_url` opens directly in a new tab before falling through to the edge-function generation path.
+### 2. `src/pages/client/MembershipCertificatePage.tsx`
+- In `handleDownload`, inside the `res.ok && contentType.includes("application/pdf")` branch, extract the filename from the response `Content-Disposition` header.
+- Parse `filename="…"` with a regex; fall back to `"SuperHero-Membership-Certificate.pdf"`.
+- Replace the hardcoded `a.download = "vivacity-membership-certificate.pdf"` with the parsed filename.
 
-## File 3: src/pages/superadmin/AcademyCertificatesPage.tsx
-- Remove the `downloadingId` state declaration.
-- Remove the `handleDownload` async function entirely.
-- Restore the original Download PDF dropdown item as a simple `window.open(c.public_url || c.storage_path || "", "_blank")` with no loading state or edge-function invocation.
-
-## Technical notes
-- No database changes.
-- No edge-function changes other than removing the tenant lookup and download-filename parameter.
-- All changes are UI/behaviour reverts.
+No other files or logic are changed.

@@ -42,9 +42,12 @@ export function MembershipCertificatePage() {
       if (res.ok && contentType.includes("application/pdf")) {
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
+        const disposition = res.headers.get("content-disposition") ?? "";
+        const match = disposition.match(/filename="([^"]+)"/);
+        const filename = match?.[1] ?? "SuperHero-Membership-Certificate.pdf";
         const a = document.createElement("a");
         a.href = url;
-        a.download = "vivacity-membership-certificate.pdf";
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         a.remove();
