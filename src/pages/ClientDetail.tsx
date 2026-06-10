@@ -125,7 +125,7 @@ export default function ClientDetail() {
   const isSuperAdminUser = checkSuperAdmin();
   const isTeamLeader = isVivacityStaffRole(authProfile?.unicorn_role);
   const canEdit = usePermission('clients.details.edit', 'limited');
-  const canVerifyTga = isSuperAdminUser || hasTenantAdmin(tenantIdNum || 0);
+  const canVerifyTga = isVivacityStaffRole(authProfile?.unicorn_role) || hasTenantAdmin(tenantIdNum || 0);
 
   // Handle profile form state changes
   const handleProfileStateChange = (hasChanges: boolean, saving: boolean, save: () => void) => {
