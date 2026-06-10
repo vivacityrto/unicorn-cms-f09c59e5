@@ -53,6 +53,16 @@ const Dashboard = () => {
     if (isVivacityStaff) logDashboardEvent('dashboard_viewed');
   }, [isVivacityStaff]);
 
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   if (!isVivacityStaff) {
     return (
       <DashboardLayout>
