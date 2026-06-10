@@ -74,6 +74,20 @@ serve(async (req) => {
       return jsonResponse(404, { ok: false, code: "NOT_FOUND", detail: "Certificate not found" });
     }
 
+    // Fetch tenant RTO name for the download filename
+    let rtoName = "Vivacity";
+    const { data: tenantRow } = await supabase
+      .from("tenants")
+      .select("rto_name, name")
+      .eq("id", cert.tenant_id)
+      .maybeSingle();
+    if (tenantRow) {
+      rtoName = (tenantRow as any).rto_name || (tenantRow as any).name || "Vivacity";
+    }
+    const safeRtoName = rtoName.replace(/[/\\?%*:|"<>]/g, "").trim();
+    const downloadFilename = `${safeRtoName}-SuperHero-Membership-Certificate.pdf`;
+
+
     // 4. Authorise
     const isOwner = cert.user_id === callerUser.user.id;
     let isInternal = false;
