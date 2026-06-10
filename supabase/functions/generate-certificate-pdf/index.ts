@@ -200,7 +200,7 @@ serve(async (req) => {
     // 6f. Sign
     const { data: signed, error: signErr } = await supabase.storage
       .from("academy-certificates")
-      .createSignedUrl(storagePath, SIGNED_URL_TTL);
+      .createSignedUrl(storagePath, SIGNED_URL_TTL, { download: downloadFilename });
     if (signErr || !signed?.signedUrl) {
       return jsonResponse(500, { ok: false, code: "UPLOAD_FAILED", detail: signErr?.message ?? "Sign failed" });
     }
