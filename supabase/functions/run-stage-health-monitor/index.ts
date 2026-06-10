@@ -44,116 +44,134 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Get package_instance -> tenant mapping
+    // 3. Get all unique IDs needed
     const packageInstanceIds = [
       ...new Set(stages.map((s: any) => s.packageinstance_id).filter(Boolean)),
     ];
+    const stageIds = stages.map((s: any) => s.id);
 
+    // 4. Bulk fetch package_instances → tenant mapping
     const { data: pkgInstances } = await sb
       .from("package_instances")
       .select("id, tenant_id")
       .in("id", packageInstanceIds);
 
-    const tenantMap = new Map<number, number>();
-    (pkgInstances || []).forEach((p: any) => tenantMap.set(p.id, p.tenant_id));
+    const tenantByPkg = new Map<number, number>();
+    (pkgInstances || []).forEach((p: any) => tenantByPkg.set(p.id, p.tenant_id));
 
-    // 4. For each stage, calculate metrics and apply rules
+    const tenantIds = [...new Set(Array.from(tenantByPkg.values()))];
+
+    // 5. Bulk fetch ALL tasks for ALL stage instances in one query
+    const { data: allTasks } = await sb
+      .from("staff_task_instances")
+      .select("id, stageinstance_id, status_id, due_date")
+      .in("stageinstance_id", stageIds);
+
+    const tasksByStage = new Map<string, any[]>();
+    (allTasks || []).forEach((t: any) => {
+      const key = t.stageinstance_id;
+      if (!tasksByStage.has(key)) tasksByStage.set(key, []);
+      tasksByStage.get(key)!.push(t);
+    });
+
+    // 6. Bulk fetch high-risk counts per tenant
+    const { data: riskEvents } = await sb
+      .from("risk_events")
+      .select("tenant_id")
+      .in("tenant_id", tenantIds)
+      .eq("severity", "high")
+      .in("status", ["open", "monitoring"]);
+
+    const riskCountByTenant = new Map<number, number>();
+    (riskEvents || []).forEach((r: any) => {
+      riskCountByTenant.set(r.tenant_id, (riskCountByTenant.get(r.tenant_id) || 0) + 1);
+    });
+
+    // 7. Bulk fetch latest evidence gap checks per stage
+    const { data: allGapChecks } = await sb
+      .from("evidence_gap_checks")
+      .select("stage_instance_id, missing_categories_json, generated_at")
+      .in("stage_instance_id", stageIds)
+      .order("generated_at", { ascending: false });
+
+    const latestGapByStage = new Map<string, any>();
+    (allGapChecks || []).forEach((g: any) => {
+      if (!latestGapByStage.has(g.stage_instance_id)) {
+        latestGapByStage.set(g.stage_instance_id, g);
+      }
+    });
+
+    // 8. Bulk fetch consult hours per tenant (from time_entries, last 90 days)
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000).toISOString();
+    const { data: timeEntries } = await sb
+      .from("time_entries")
+      .select("tenant_id, duration_minutes")
+      .in("tenant_id", tenantIds)
+      .gte("start_at", ninetyDaysAgo);
+
+    const consultHoursByTenant = new Map<number, number>();
+    (timeEntries || []).forEach((te: any) => {
+      const hours = (te.duration_minutes || 0) / 60;
+      consultHoursByTenant.set(te.tenant_id, (consultHoursByTenant.get(te.tenant_id) || 0) + hours);
+    });
+
+    // 9. Process all stages in memory — zero DB calls in this loop
     const snapshots: any[] = [];
     const today = new Date().toISOString().split("T")[0];
 
     for (const stage of stages) {
-      const tenantId = tenantMap.get(stage.packageinstance_id);
+      const tenantId = tenantByPkg.get(stage.packageinstance_id);
       if (!tenantId) continue;
 
       const stageId = stage.id;
-
-      // Fetch task metrics
-      const { data: tasks } = await sb
-        .from("staff_task_instances")
-        .select("id, status_id, due_date")
-        .eq("stageinstance_id", stageId);
-
-      const totalTasks = tasks?.length || 0;
-      const completedTasks = tasks?.filter((t: any) => t.status_id === 2).length || 0;
+      const tasks = tasksByStage.get(stageId) || [];
+      const totalTasks = tasks.length;
+      const completedTasks = tasks.filter((t: any) => t.status_id === 2).length;
       const openTasks = totalTasks - completedTasks;
-      const overdueTasks = tasks?.filter((t: any) => {
-        if (!t.due_date || t.status_id === 2 || t.status_id === 3) return false;
-        return t.due_date < today;
-      }).length || 0;
-
+      const overdueTasks = tasks.filter((t: any) =>
+        t.due_date && t.status_id !== 2 && t.status_id !== 3 && t.due_date < today
+      ).length;
       const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-      // Fetch risk count (open high risks for this tenant)
-      const { count: highRiskCount } = await sb
-        .from("risk_events")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", tenantId)
-        .eq("severity", "high")
-        .in("status", ["open", "monitoring"]);
+      const highRiskCount = riskCountByTenant.get(tenantId) || 0;
 
-      // Fetch evidence gap mandatory count
-      const { data: gapChecks } = await sb
-        .from("evidence_gap_checks")
-        .select("missing_categories_json")
-        .eq("stage_instance_id", stageId)
-        .order("generated_at", { ascending: false })
-        .limit(1);
-
+      const gapCheck = latestGapByStage.get(stageId);
       let mandatoryGapCount = 0;
-      if (gapChecks && gapChecks.length > 0 && gapChecks[0].missing_categories_json) {
-        const missing = gapChecks[0].missing_categories_json as any[];
-        mandatoryGapCount = missing.filter((m: any) => m.mandatory === true).length;
+      if (gapCheck?.missing_categories_json) {
+        mandatoryGapCount = (gapCheck.missing_categories_json as any[])
+          .filter((m: any) => m.mandatory === true).length;
       }
 
-      // Calculate days since last activity
       const lastUpdated = stage.updated_at || stage.created_at;
       const daysSinceActivity = lastUpdated
-        ? Math.floor((Date.now() - new Date(lastUpdated).getTime()) / (1000 * 60 * 60 * 24))
+        ? Math.floor((Date.now() - new Date(lastUpdated).getTime()) / 86400000)
         : 999;
 
-      // Fetch consult hours logged
-      const { data: consultLogs } = await sb
-        .from("consult_logs")
-        .select("duration_minutes")
-        .eq("tenant_id", tenantId);
+      const consultHoursLogged = consultHoursByTenant.get(tenantId) || 0;
 
-      const consultHoursLogged = (consultLogs || []).reduce(
-        (sum: number, c: any) => sum + (c.duration_minutes || 0) / 60,
-        0
-      );
-
-      // Apply rules engine
       const metrics: Record<string, number> = {
         tasks_overdue_count: overdueTasks,
-        high_risk_count: highRiskCount || 0,
+        high_risk_count: highRiskCount,
         evidence_gap_mandatory_count: mandatoryGapCount,
         days_since_last_activity: daysSinceActivity,
         progress_percentage: progressPct,
         tasks_open_count: openTasks,
       };
 
-      const severityOrder: Record<string, number> = {
-        healthy: 0,
-        monitoring: 1,
-        at_risk: 2,
-        critical: 3,
-      };
-
+      const severityOrder: Record<string, number> = { healthy: 0, monitoring: 1, at_risk: 2, critical: 3 };
       let healthStatus = "healthy";
 
       for (const rule of rules || []) {
         const metricVal = metrics[rule.metric_key];
         if (metricVal === undefined) continue;
-
         let triggered = false;
         switch (rule.comparison_operator) {
-          case ">": triggered = metricVal > rule.threshold_value; break;
+          case ">":  triggered = metricVal > rule.threshold_value; break;
           case ">=": triggered = metricVal >= rule.threshold_value; break;
-          case "<": triggered = metricVal < rule.threshold_value; break;
+          case "<":  triggered = metricVal < rule.threshold_value; break;
           case "<=": triggered = metricVal <= rule.threshold_value; break;
-          case "=": triggered = metricVal === rule.threshold_value; break;
+          case "=":  triggered = metricVal === rule.threshold_value; break;
         }
-
         if (triggered && severityOrder[rule.severity_impact] > severityOrder[healthStatus]) {
           healthStatus = rule.severity_impact;
         }
@@ -166,7 +184,7 @@ Deno.serve(async (req) => {
         progress_percentage: progressPct,
         tasks_open_count: openTasks,
         tasks_overdue_count: overdueTasks,
-        high_risk_count: highRiskCount || 0,
+        high_risk_count: highRiskCount,
         evidence_gap_mandatory_count: mandatoryGapCount,
         days_since_last_activity: daysSinceActivity,
         consult_hours_logged: Math.round(consultHoursLogged * 100) / 100,

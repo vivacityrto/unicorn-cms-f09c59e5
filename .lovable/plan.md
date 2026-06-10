@@ -1,23 +1,31 @@
 ## Scope
-Fix two existing Supabase Edge Functions that reference incorrect database schema names and missing required fields.
+Refactor `supabase/functions/run-stage-health-monitor/index.ts` to eliminate N+1 queries. Replace per-stage loop (4 DB calls × N stages) with 6 bulk upfront queries + an in-memory loop.
 
 ## Changes
 
-### File 1: `supabase/functions/run-stage-health-monitor/index.ts`
-- **Line 36**: In the `.select()` call on `stage_instances`, change `package_instance_id` to `packageinstance_id`.
-- **Line 49**: In the `packageInstanceIds` array mapping, change `s.package_instance_id` to `s.packageinstance_id`.
-- **Line 65**: In the `tenantMap.get()` call, change `stage.package_instance_id` to `stage.packageinstance_id`.
-- **Line 116**: In the `.from()` call, change `consult_log` (singular) to `consult_logs` (plural).
+### File: `supabase/functions/run-stage-health-monitor/index.ts`
 
-### File 2: `supabase/functions/run-workload-forecast/index.ts`
-- **Line 95**: In the `.from()` call for consult hours, change `consult_log` (singular) to `consult_logs` (plural).
-- **Line 166**: In the `.from()` call for recent logs, change `consult_log` (singular) to `consult_logs` (plural).
-- **Lines 127-138**: The `workloadSnapshots.push({...})` object is missing `user_id` and `snapshot_date`. Add them:
-  - `user_id: userId`
-  - `snapshot_date: today`
+Replace lines 47–175 (current steps 3–4) with the batch approach provided in the user spec:
+
+1. **Step 3** — Collect unique `packageInstanceIds` and `stageIds` from `stages`.
+2. **Step 4** — One bulk fetch of `package_instances` → build `tenantByPkg` Map; derive unique `tenantIds`.
+3. **Step 5** — One bulk fetch of `staff_task_instances` filtered by `stageinstance_id IN (stageIds)`; group into `tasksByStage` Map.
+4. **Step 6** — One bulk fetch of `risk_events` filtered by tenant + severity=high + status IN (open, monitoring); count per tenant into `riskCountByTenant` Map.
+5. **Step 7** — One bulk fetch of `evidence_gap_checks` for all `stageIds` ordered by `generated_at` desc; keep first per stage into `latestGapByStage` Map.
+6. **Step 8** — One bulk fetch of `time_entries` (last 90 days) for all `tenantIds`; sum `duration_minutes/60` into `consultHoursByTenant` Map.
+   - Note: changes consult-hour source from `consult_logs` (all-time) to `time_entries` (last 90 days). This matches the user-supplied code.
+7. **Step 9** — In-memory loop over `stages` that does zero DB calls; pushes the same snapshot shape into `snapshots[]` and applies the rules engine identically.
+
+Leave unchanged:
+- Steps 1–2 (rules + active stage fetch)
+- Step 5 batch insert (now renumbered, but code identical)
+- Step 6 materialized view refresh
+- Response shape
 
 ## Verification
-After deployment, both functions should run without schema-related errors. The `workload_snapshots` insert should succeed because `user_id` and `snapshot_date` are now included.
+- Function completes in <5s regardless of stage count.
+- `stage_health_snapshots` row count post-run equals number of active stages with a resolvable tenant.
+- Health-status distribution is consistent with prior runs (within expected variance from the consult-hours source change).
 
 ## Risk
-Very low — only correcting mismatched names and adding missing non-nullable fields that the table requires. No logic changes.
+Low. Logic is preserved; only access pattern changes. The one semantic shift is consult hours now sourced from `time_entries` (last 90d) instead of `consult_logs` (all-time) — per the provided spec.
