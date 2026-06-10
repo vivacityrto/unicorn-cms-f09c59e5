@@ -149,43 +149,54 @@ export function AdminActions({
   const [copyingLink, setCopyingLink] = useState(false);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   
-  // Simplified state
-  const [roleType, setRoleType] = useState<RoleType>(() => 
+  const isInternalUser = INTERNAL_USER_TYPES.includes(user.user_type);
+  const isClientUser = CLIENT_USER_TYPES.includes(user.user_type);
+
+  // Client-branch state
+  const [roleType, setRoleType] = useState<RoleType>(() =>
     deriveRoleType(user.unicorn_role, user.user_type)
   );
-  // Use staff_teams array if available, otherwise fall back to staff_team for backwards compatibility
-  const initialTeams = user.staff_teams && user.staff_teams.length > 0 
-    ? user.staff_teams 
-    : (user.staff_team && user.staff_team !== 'none' ? [user.staff_team] : []);
-  const [selectedStaffTeams, setSelectedStaffTeams] = useState<string[]>(initialTeams);
   const [selectedTenantId, setSelectedTenantId] = useState<string>(
     user.tenant_id?.toString() || ''
   );
 
-  const isSuperAdmin = currentUserRole === 'Super Admin' && 
+  // Internal-branch state
+  const [unicornRole, setUnicornRole] = useState<string>(user.unicorn_role || '');
+
+  // Teams (internal only)
+  const initialTeams = user.staff_teams && user.staff_teams.length > 0
+    ? user.staff_teams
+    : (user.staff_team && user.staff_team !== 'none' ? [user.staff_team] : []);
+  const [selectedStaffTeams, setSelectedStaffTeams] = useState<string[]>(initialTeams);
+
+  const isSuperAdmin = currentUserRole === 'Super Admin' &&
     (currentUserType === 'Vivacity' || currentUserType === 'Vivacity Team');
-  
-  const isClientAdmin = currentUserRole === 'Admin' && 
+
+  const isClientAdmin = currentUserRole === 'Admin' &&
     (currentUserType === 'Client' || currentUserType === 'Client Parent') &&
     currentUserTenantId === user.tenant_id;
 
   const canManage = isSuperAdmin || isClientAdmin;
   const isTenantRole = roleType.startsWith('tenant_');
-  const isSuperAdminRole = roleType.startsWith('superadmin_');
 
-  // Derive original role type for comparison
+  // Original values for change detection
   const originalRoleType = deriveRoleType(user.unicorn_role, user.user_type);
-  const originalTeams = user.staff_teams && user.staff_teams.length > 0 
-    ? user.staff_teams 
+  const originalTeams = user.staff_teams && user.staff_teams.length > 0
+    ? user.staff_teams
     : (user.staff_team && user.staff_team !== 'none' ? [user.staff_team] : []);
-  
-  const hasChanges = 
-    roleType !== originalRoleType || 
-    selectedTenantId !== (user.tenant_id?.toString() || '') ||
-    JSON.stringify(selectedStaffTeams.sort()) !== JSON.stringify(originalTeams.sort());
+  const originalUnicornRole = user.unicorn_role || '';
+
+  const teamsChanged =
+    JSON.stringify([...selectedStaffTeams].sort()) !== JSON.stringify([...originalTeams].sort());
+
+  const hasChanges = isInternalUser
+    ? (unicornRole !== originalUnicornRole || teamsChanged)
+    : (roleType !== originalRoleType ||
+       selectedTenantId !== (user.tenant_id?.toString() || ''));
 
   // Validation
-  const needsTenant = isTenantRole && !selectedTenantId;
+  const needsTenant = !isInternalUser && isTenantRole && !selectedTenantId;
+  const needsRole = isInternalUser && !unicornRole;
 
   useEffect(() => {
     if (isSuperAdmin) {
