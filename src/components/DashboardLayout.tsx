@@ -47,7 +47,7 @@ const clientsMenuItems = [
   { icon: Lightbulb, label: "RTO Tips", path: "/rto-tips" },
   { icon: FileCheck, label: "Compliance Auditor", path: "/compliance-audits" },
   { icon: ClipboardCheck, label: "Audits", path: "/audits" },
-  { icon: Download, label: "Bulk Cert Download", path: "/admin/bulk-membership-certificates", cscOrSuperAdminOnly: true },
+  { icon: Download, label: "Bulk Cert Download", path: "/clients/bulk-membership-certificates", cscOrSuperAdminOnly: true },
 ];
 
 // 3. EOS Section - Role-Aware Visibility

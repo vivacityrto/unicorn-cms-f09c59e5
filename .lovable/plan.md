@@ -1,12 +1,11 @@
-**Scope:** `src/pages/admin/BulkMembershipCertificatesPage.tsx` only.
+Move the bulk membership certificate download route from `/admin/bulk-membership-certificates` to `/clients/bulk-membership-certificates` so CSC users are no longer blocked by the ProtectedRoute admin gate.
 
-**Problem:** The redirect guard fires before the auth profile has finished loading, causing CSC users to be incorrectly redirected.
+Changes (2 files):
 
-**Root cause:** The `useEffect` guard uses `loading` (tenant data fetch state) instead of the auth loading state.
+1. `src/App.tsx`
+   - Change `<Route path="/admin/bulk-membership-certificates" ...>` to `<Route path="/clients/bulk-membership-certificates" ...>`.
 
-**Fix:**
-1. Destructure `loading: authLoading` from `useAuth()`.
-2. Swap `!loading` for `!authLoading` in the redirect `useEffect` condition and dependency array.
-3. Leave the tenant-fetch `loading` variable unchanged.
+2. `src/components/DashboardLayout.tsx`
+   - In `clientsMenuItems`, change the Bulk Cert Download entry's `path` from `"/admin/bulk-membership-certificates"` to `"/clients/bulk-membership-certificates"`.
 
-No other files touched.
+No other files are modified.
