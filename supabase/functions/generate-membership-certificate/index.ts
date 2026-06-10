@@ -200,6 +200,7 @@ serve(async (req) => {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${downloadFilename}"`,
+        "Access-Control-Expose-Headers": "Content-Disposition",
         ...corsHeaders,
       },
     });

@@ -1,17 +1,18 @@
-## Scope
-Edit exactly two files — no DB or edge-function config changes.
+## Plan: Add Access-Control-Expose-Headers to Membership Certificate Edge Function
 
-### 1. `supabase/functions/generate-membership-certificate/index.ts`
-- Update the tenants query (line 125) from `.select("name")` to `.select("name, rto_name")`.
-- After the tenant lookup (after line 131), compute the download filename:
-  - Use `rto_name`, falling back to `name`, then `"Vivacity"`.
-  - Sanitise by stripping `[/\\?%*:|"<>]`.
-  - Result: `<SafeName>-SuperHero-Membership-Certificate.pdf`.
-- Replace the hardcoded `Content-Disposition` header (line 198) with the dynamic filename.
+### Change
+In `supabase/functions/generate-membership-certificate/index.ts`, add `"Access-Control-Expose-Headers": "Content-Disposition"` to the response headers in the final `return new Response(pdfBytes, ...)` block. This allows the browser's JavaScript to read the `Content-Disposition` header so the client-side download can use the dynamic filename returned by the edge function.
 
-### 2. `src/pages/client/MembershipCertificatePage.tsx`
-- In `handleDownload`, inside the `res.ok && contentType.includes("application/pdf")` branch, extract the filename from the response `Content-Disposition` header.
-- Parse `filename="…"` with a regex; fall back to `"SuperHero-Membership-Certificate.pdf"`.
-- Replace the hardcoded `a.download = "vivacity-membership-certificate.pdf"` with the parsed filename.
+The headers object becomes:
+```ts
+headers: {
+  "Content-Type": "application/pdf",
+  "Content-Disposition": `attachment; filename="${downloadFilename}"`,
+  "Access-Control-Expose-Headers": "Content-Disposition",
+  ...corsHeaders,
+},
+```
 
-No other files or logic are changed.
+### Scope
+- Single file only: `supabase/functions/generate-membership-certificate/index.ts`
+- No other files or logic modified.
