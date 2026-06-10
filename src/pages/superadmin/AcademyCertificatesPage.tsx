@@ -60,6 +60,8 @@ export default function AcademyCertificatesPage() {
   const [revokeTarget, setRevokeTarget] = useState<CertRow | null>(null);
   const [revokeReason, setRevokeReason] = useState("");
 
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
+
   const now = new Date();
 
   // ── Data hooks ──
