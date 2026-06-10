@@ -143,7 +143,7 @@ serve(async (req) => {
       .single();
 
     const isSuperAdmin =
-      userData?.global_role === "SuperAdmin" || userData?.unicorn_role === "Super Admin";
+      isVivacityStaffRole(userData?.unicorn_role) || userData?.global_role === "SuperAdmin";
     const requestedTenantId = body.tenant_id as number | undefined;
     const sitePurposeEarly = body.site_purpose as string | undefined;
 
