@@ -21,6 +21,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/hooks/useAuth";
 import { useRBAC } from "@/hooks/useRBAC";
 import { relationshipRoleLabel, relationshipLabelFromUnicornRole } from "@/lib/roles/relationshipRole";
+import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 
 type InviteRow = {
   id: string;
@@ -72,10 +73,11 @@ export default function ManageInvites() {
   const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
   const itemsPerPage = 20;
   const { profile } = useAuth();
-  const { isVivacityTeam } = useRBAC();
-  const isTeamLeader = profile?.unicorn_role === 'Team Leader';
-  const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
-  const canSeeActions = isSuperAdmin || isVivacityTeam;
+  const { isSuperAdmin, isVivacityTeam } = useRBAC();
+  const canManageInvites = isVivacityStaffRole(profile?.unicorn_role);
+  // Non-SA staff get a restricted view (bulk delete/re-invite disabled).
+  const isRestrictedStaff = canManageInvites && !isSuperAdmin;
+  const canSeeActions = canManageInvites;
 
   const handleRevoke = async () => {
     if (!revokeTarget || !revokeReason.trim()) return;
