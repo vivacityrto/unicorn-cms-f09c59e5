@@ -34,7 +34,8 @@ Deno.serve(async (req) => {
     const { data: stages, error: stagesErr } = await sb
       .from("stage_instances")
       .select("id, packageinstance_id, status, created_at, updated_at")
-      .in("status", ["in_progress", "not_started", "pending"]);
+      .in("status", ["in_progress", "not_started", "pending"])
+      .limit(10000);
     if (stagesErr) throw stagesErr;
 
     if (!stages || stages.length === 0) {
@@ -199,7 +200,7 @@ Deno.serve(async (req) => {
         const batch = snapshots.slice(i, i + batchSize);
         const { error: insertErr } = await sb
           .from("stage_health_snapshots")
-          .insert(batch);
+          .upsert(batch, { onConflict: "stage_instance_id,snapshot_date" });
         if (insertErr) {
           console.error("Insert error batch", i, insertErr);
         }
