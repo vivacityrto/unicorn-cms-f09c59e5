@@ -225,13 +225,22 @@ export function useDashboardTriage() {
 
   // ── Attention-ranked tenants ──
   const { data: rawTenants = [], isLoading: tenantsLoading } = useQuery({
-    queryKey: ['triage-attention-ranked'],
+    queryKey: ['triage-attention-ranked', isSuperAdmin, savedView, profile?.user_uuid],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_dashboard_attention_ranked' as any)
+      let query = (supabase as any)
+        .from('v_dashboard_attention_ranked')
         .select('*')
-        .order('attention_score', { ascending: false })
-        .limit(isSuperAdmin ? 500 : 100);
+        .order('attention_score', { ascending: false });
+
+      if (isSuperAdmin) {
+        query = query.limit(500);
+      } else if (savedView === 'my_tenants' && profile?.user_uuid) {
+        query = query.eq('assigned_csc_user_id', profile.user_uuid).limit(200);
+      } else {
+        query = query.limit(100);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data || []) as unknown as AttentionTenant[];
     },
