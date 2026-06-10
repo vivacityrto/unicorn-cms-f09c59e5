@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     // 2. Fetch all active stage instances
     const { data: stages, error: stagesErr } = await sb
       .from("stage_instances")
-      .select("id, packageinstance_id, status, started_at, updated_at")
+      .select("id, packageinstance_id, status, created_at, updated_at")
       .in("status", ["in_progress", "not_started", "pending"]);
     if (stagesErr) throw stagesErr;
 
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       }
 
       // Calculate days since last activity
-      const lastUpdated = stage.updated_at || stage.started_at;
+      const lastUpdated = stage.updated_at || stage.created_at;
       const daysSinceActivity = lastUpdated
         ? Math.floor((Date.now() - new Date(lastUpdated).getTime()) / (1000 * 60 * 60 * 24))
         : 999;
