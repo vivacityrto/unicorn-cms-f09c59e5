@@ -86,6 +86,10 @@ export default function AcademyCertificatesPage() {
   const [generatingId, setGeneratingId] = useState<number | null>(null);
 
   const handleDownload = async (cert: MyCertificate) => {
+    if (cert.public_url) {
+      window.open(cert.public_url, "_blank", "noopener,noreferrer");
+      return;
+    }
     setGeneratingId(cert.id);
     try {
       const { data, error } = await supabase.functions.invoke("generate-certificate-pdf", {

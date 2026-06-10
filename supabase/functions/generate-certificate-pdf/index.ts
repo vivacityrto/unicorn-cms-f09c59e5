@@ -74,18 +74,6 @@ serve(async (req) => {
       return jsonResponse(404, { ok: false, code: "NOT_FOUND", detail: "Certificate not found" });
     }
 
-    // Fetch tenant RTO name for the download filename
-    let rtoName = "Vivacity";
-    const { data: tenantRow } = await supabase
-      .from("tenants")
-      .select("rto_name, name")
-      .eq("id", cert.tenant_id)
-      .maybeSingle();
-    if (tenantRow) {
-      rtoName = (tenantRow as any).rto_name || (tenantRow as any).name || "Vivacity";
-    }
-    const safeRtoName = rtoName.replace(/[/\\?%*:|"<>]/g, "").trim();
-    const downloadFilename = `${safeRtoName}-SuperHero-Membership-Certificate.pdf`;
 
 
     // 4. Authorise
@@ -107,7 +95,7 @@ serve(async (req) => {
     if (cert.storage_path) {
       const { data: signed, error: signErr } = await supabase.storage
         .from("academy-certificates")
-        .createSignedUrl(cert.storage_path, SIGNED_URL_TTL, { download: downloadFilename });
+        .createSignedUrl(cert.storage_path, SIGNED_URL_TTL);
       if (signErr || !signed?.signedUrl) {
         return jsonResponse(500, { ok: false, code: "UPLOAD_FAILED", detail: signErr?.message ?? "Sign failed" });
       }
@@ -200,7 +188,7 @@ serve(async (req) => {
     // 6f. Sign
     const { data: signed, error: signErr } = await supabase.storage
       .from("academy-certificates")
-      .createSignedUrl(storagePath, SIGNED_URL_TTL, { download: downloadFilename });
+      .createSignedUrl(storagePath, SIGNED_URL_TTL);
     if (signErr || !signed?.signedUrl) {
       return jsonResponse(500, { ok: false, code: "UPLOAD_FAILED", detail: signErr?.message ?? "Sign failed" });
     }

@@ -1,12 +1,19 @@
-Scope: src/pages/superadmin/AcademyCertificatesPage.tsx only. No other files.
+Revert three files to their pre-certificate-filename state. No other files touched.
 
-Current behaviour: the Download PDF dropdown item opens `c.public_url` directly, bypassing the edge function. This yields a stale signed URL without an embedded download filename.
+## File 1: supabase/functions/generate-certificate-pdf/index.ts
+- Remove the tenant RTO-name lookup block (lines 77-88) including `safeRtoName` and `downloadFilename`.
+- In the fast-path `createSignedUrl` call (line 110), remove `{ download: downloadFilename }` so only `.createSignedUrl(cert.storage_path, SIGNED_URL_TTL)` remains.
+- In the generation-path `createSignedUrl` call (line 203), same change: remove `{ download: downloadFilename }`.
 
-New behaviour: always call the `generate-certificate-pdf` edge function on every download click. The edge function re-signs the URL with the correct filename; no PDF is regenerated if one already exists.
+## File 2: src/pages/academy/AcademyCertificatesPage.tsx
+- Restore the short-circuit check at the top of `handleDownload` so `cert.public_url` opens directly in a new tab before falling through to the edge-function generation path.
 
-Changes:
-1. Add `const [downloadingId, setDownloadingId] = useState<number | null>(null);` near the other `useState` declarations.
-2. Add a `handleDownload` async function before the `return` statement. It invokes the edge function with `{ certificate_id: cert.id }`, opens the returned `public_url` in a new tab, and manages `downloadingId` state with loading / error toasts.
-3. Replace the Download PDF `<DropdownMenuItem>` block (currently lines 353–356) with one that calls `handleDownload(c)`, disables while generating, and shows "Generating…" or "Download PDF".
+## File 3: src/pages/superadmin/AcademyCertificatesPage.tsx
+- Remove the `downloadingId` state declaration.
+- Remove the `handleDownload` async function entirely.
+- Restore the original Download PDF dropdown item as a simple `window.open(c.public_url || c.storage_path || "", "_blank")` with no loading state or edge-function invocation.
 
-No database or edge-function changes required.
+## Technical notes
+- No database changes.
+- No edge-function changes other than removing the tenant lookup and download-filename parameter.
+- All changes are UI/behaviour reverts.
