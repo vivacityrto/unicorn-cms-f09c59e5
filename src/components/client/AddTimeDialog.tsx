@@ -398,7 +398,7 @@ export function AddTimeDialog({
     const totalMinutes = isKickstart
       ? kickstartTas * KICKSTART_TAS_MINUTES
       : (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
-    if (totalMinutes <= 0) return;
+    if (totalMinutes < 0) return;
 
     if (activeInstances.length > 1 && !selectedInstanceId) {
       toast({ title: 'Package required', description: 'Please select a package before adding time.', variant: 'destructive' });
