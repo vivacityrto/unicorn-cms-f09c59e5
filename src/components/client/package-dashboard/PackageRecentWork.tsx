@@ -8,6 +8,7 @@ import {
   Clock,
   type LucideIcon,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -119,6 +120,11 @@ export function PackageRecentWork({
                   {formatWorkType(e.work_type)}
                   {e.work_sub_type && (
                     <span className="text-muted-foreground"> · {formatWorkType(e.work_sub_type)}</span>
+                  )}
+                  {e.is_billable === false && (
+                    <Badge variant="secondary" className="ml-2 text-[10px]">
+                      Included
+                    </Badge>
                   )}
                 </div>
                 {cleanedNote && (
