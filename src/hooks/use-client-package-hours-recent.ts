@@ -4,7 +4,9 @@ import { useClientTenant } from '@/contexts/ClientTenantContext';
 
 /**
  * One row of v_client_package_hours_recent — most recent up-to-10 time entries
- * per package_instance. Client-facing fields only: no user_id, no is_billable.
+ * per package_instance. Client-facing fields only: no user_id.
+ * `is_billable` is exposed so the UI can badge non-billable ("Included")
+ * entries; non-billable time is excluded from all package-hour aggregates.
  * Powers the "Recent work" panel inside PackageCard.
  */
 export interface ClientPackageHoursRecentRow {
@@ -18,6 +20,7 @@ export interface ClientPackageHoursRecentRow {
   work_sub_type: string | null;
   notes: string | null;
   rank_in_package: number;   // 1 = most recent
+  is_billable: boolean;
 }
 
 const VIEW = 'v_client_package_hours_recent';

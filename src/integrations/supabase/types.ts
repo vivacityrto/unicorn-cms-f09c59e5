@@ -58859,6 +58859,7 @@ export type Database = {
           duration_minutes: number | null
           entry_id: string | null
           hours: number | null
+          is_billable: boolean | null
           notes: string | null
           occurred_at: string | null
           package_instance_id: number | null
