@@ -252,7 +252,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
 
 
     const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
-    if (totalMinutes <= 0) return;
+    if (totalMinutes < 0) return;
 
     if (activeInstances.length > 1 && !selectedInstanceId) {
       toast({ title: 'Package required', description: 'Please select a package.', variant: 'destructive' });
