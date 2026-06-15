@@ -1,16 +1,19 @@
-## Change
+Problem
+In src/hooks/useStageCounts.ts, the client task instances count query uses:
 
-In `src/components/eos/LiveMeetingView.tsx`, inside the `startFirstSegment` mutation (around lines 292–306), after the `eos_meetings` status update to `'in_progress'` succeeds and is verified, fire (without awaiting) a call to the RPC for L10 meetings:
-
-```ts
-if (meeting?.meeting_type === 'L10') {
-  // Fire-and-forget: do not block navigation/UI on participant sync
-  void supabase.rpc('sync_l10_meeting_participants', { p_meeting_id: meetingId });
-}
+```typescript
+.eq('is_archived', false)
 ```
 
-- Placed immediately after the `if (!updatedMeeting || updatedMeeting.status !== 'in_progress')` guard, before the mutation resolves.
-- Uses `void` (not `await`) so the mutation `onSuccess` and any downstream navigation proceed immediately.
-- Gated on `meeting.meeting_type === 'L10'` (already in scope via the component's `meeting` query).
+When combined with `head: true`, the Supabase/PostgREST query builder silently drops a boolean `false` value passed to `.eq()`, causing the filter to be omitted. The count then includes archived tasks (or returns 0 depending on data), producing an incorrect count.
 
-No other files touched. No DB migration. No changes to `onSuccess`, navigation, or other flows.
+Fix
+Replace the `.eq('is_archived', false)` call on line 41 with `.is('is_archived', false)`. The `.is()` operator uses the PostgREST IS operator and correctly handles boolean `false` without being dropped.
+
+No other code changes are needed.
+
+Migration / deployment impact
+None. This is a frontend-only one-line change.
+
+Rollback
+Revert the single line back to `.eq('is_archived', false)`.
