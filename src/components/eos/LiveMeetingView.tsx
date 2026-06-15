@@ -304,6 +304,12 @@ export const LiveMeetingView = () => {
       if (!updatedMeeting || updatedMeeting.status !== 'in_progress') {
         throw new Error('Failed to start meeting — please try again or contact support.');
       }
+
+      // Fire-and-forget: ensure all current Vivacity internal staff are
+      // participants on L10 meetings. Do not block UI/navigation on this.
+      if (meeting?.meeting_type === 'L10') {
+        void supabase.rpc('sync_l10_meeting_participants', { p_meeting_id: meetingId });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
