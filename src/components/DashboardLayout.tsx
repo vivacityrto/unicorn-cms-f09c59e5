@@ -64,7 +64,7 @@ const eosMenuItems = [
   { icon: ListTodo, label: "To-Dos", path: "/eos/todos" },
   { icon: Calendar, label: "Meetings", path: "/eos/meetings" },
   { icon: Users, label: "Quarterly Conversations", path: "/eos/qc" },
-  { icon: Briefcase, label: "Accountability Chart", path: "/eos/accountability", leadershipOnly: true },
+  { icon: Briefcase, label: "Accountability Chart", path: "/eos/accountability" },
   { icon: TrendingUp, label: "GWC Trends", path: "/eos/gwc-trends" },
   { icon: Target, label: "Rock Analysis", path: "/eos/rock-analysis" },
   { icon: BarChart3, label: "Client Impact", path: "/eos/client-impact" },
