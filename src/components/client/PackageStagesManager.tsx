@@ -194,6 +194,21 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
 
           <div className="flex items-center gap-3 shrink-0">
             {stage.comment && <MessageSquare className="h-4 w-4 text-muted-foreground" />}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary"
+              disabled={publishing}
+              onClick={handlePublishToPortal}
+              aria-label={publishedCount > 0 ? 'Republish tasks to client portal' : 'Publish tasks to client portal'}
+            >
+              {publishing ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Send className="h-3 w-3" />
+              )}
+              {publishedCount > 0 ? 'Republish tasks' : 'Publish tasks to portal'}
+            </Button>
             {stage.released_client_tasks ? (
               <div className="flex items-center gap-1">
                 <TooltipProvider>
