@@ -627,6 +627,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       updating={updating}
       onStatusChange={updateStageStatus}
       onRecurringClick={(s) => setRecurringConfirm(s)}
+      onReleaseClick={(s) => setReleaseConfirm(s)}
       tenantId={tenantId}
       packageId={packageId}
       packageInstanceId={packageInstanceId ?? undefined}
