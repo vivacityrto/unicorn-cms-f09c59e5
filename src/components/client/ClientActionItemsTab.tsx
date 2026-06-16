@@ -90,6 +90,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const [ownerUserId, setOwnerUserId] = useState<string | undefined>();
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
   const [notifyClient, setNotifyClient] = useState(false);
+  const [itemType, setItemType] = useState<'client' | 'internal'>('client');
   
   
   // Team members for assignment
