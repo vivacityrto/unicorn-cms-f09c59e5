@@ -65,6 +65,7 @@ interface StageInstance {
   comment: string | null;
   paid: boolean;
   released_client_tasks: boolean;
+  released_client_tasks_date: string | null;
   is_recurring: boolean;
   event_conducted_date: string | null;
   linked_audit_id: string | null;
