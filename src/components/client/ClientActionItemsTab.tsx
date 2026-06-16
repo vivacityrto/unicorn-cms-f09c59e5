@@ -17,11 +17,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Switch } from '@/components/ui/switch';
 import { 
   Plus, CheckSquare, MoreHorizontal, Edit, Trash2, 
   Calendar as CalendarIcon, User, Clock, Filter, Loader2,
   CheckCircle2, Circle, AlertCircle, XCircle, PauseCircle,
-  Mic, MicOff, Mail, ExternalLink
+  Mic, MicOff, Mail, ExternalLink, Eye, EyeOff
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast, isToday } from 'date-fns';
@@ -89,6 +90,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const [ownerUserId, setOwnerUserId] = useState<string | undefined>();
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
   const [notifyClient, setNotifyClient] = useState(false);
+  const [itemType, setItemType] = useState<'client' | 'internal'>('client');
   
   
   // Team members for assignment
@@ -123,6 +125,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setSelectedItem(null);
     setNotifyUserIds([]);
     setNotifyClient(false);
+    setItemType('client');
   };
 
   const handleOpenAdd = () => {
@@ -138,6 +141,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setActionStatus(item.status || 'open');
     setDueDate(item.due_date ? new Date(item.due_date) : undefined);
     setOwnerUserId(item.owner_user_id || undefined);
+    setItemType((item.item_type as 'client' | 'internal') || 'internal');
     setIsAddDialogOpen(true);
   };
 
@@ -153,16 +157,28 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
           priority: priority as ActionItem['priority'],
           status: actionStatus as ActionItem['status'],
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
-          owner_user_id: ownerUserId || null
+          owner_user_id: ownerUserId || null,
+          item_type: itemType,
         });
       } else {
-        await createItem({
+        const newId = await createItem({
           title,
           description: description || undefined,
           priority,
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
           owner_user_id: ownerUserId
         });
+
+        // Apply chosen visibility (RPC does not accept item_type yet — default is 'internal')
+        if (newId && itemType === 'client') {
+          const { error: visErr } = await supabase
+            .from('client_action_items')
+            .update({ item_type: 'client' })
+            .eq('id', newId);
+          if (visErr) console.error('Failed to set item_type:', visErr);
+          else refresh();
+        }
+
 
         // Send notifications to selected "Notify" users — relocated to
         // service-role edge function (frontend can no longer insert
@@ -226,6 +242,20 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const handleQuickComplete = async (item: ActionItem) => {
     await setStatus(item.id, 'done');
   };
+
+  const handleToggleVisibility = async (item: ActionItem) => {
+    const next: 'client' | 'internal' = item.item_type === 'client' ? 'internal' : 'client';
+    // Optimistic update via refresh after success; revert via refresh on error
+    const { error } = await supabase
+      .from('client_action_items')
+      .update({ item_type: next })
+      .eq('id', item.id);
+    if (error) {
+      console.error('Failed to toggle visibility:', error);
+    }
+    refresh();
+  };
+
 
   // Filter items
   const filteredItems = items.filter(item => {
@@ -358,6 +388,22 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                              <Badge variant="outline" className={`text-xs ${priorityColor}`}>
                                {priorityLabel}
                              </Badge>
+                             <button
+                               type="button"
+                               onClick={() => handleToggleVisibility(item)}
+                               title={item.item_type === 'client' ? 'Visible in client portal — click to make internal' : 'Internal only — click to make visible in portal'}
+                             >
+                               {item.item_type === 'client' ? (
+                                 <Badge variant="outline" className="text-xs bg-cyan-50 text-cyan-700 border-cyan-200 gap-1 hover:bg-cyan-100">
+                                   <Eye className="h-3 w-3" /> Portal
+                                 </Badge>
+                               ) : (
+                                 <Badge variant="outline" className="text-xs bg-muted text-muted-foreground gap-1 hover:bg-muted/70">
+                                   <EyeOff className="h-3 w-3" /> Internal
+                                 </Badge>
+                               )}
+                             </button>
+
                           </div>
                           
                           {item.description && (
@@ -607,6 +653,26 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Visibility */}
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div className="space-y-0.5">
+                <Label className="flex items-center gap-1.5">
+                  {itemType === 'client' ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  Visible in client portal
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {itemType === 'client'
+                    ? 'Client portal users will see this action item.'
+                    : 'Internal only — hidden from the client portal.'}
+                </p>
+              </div>
+              <Switch
+                checked={itemType === 'client'}
+                onCheckedChange={(checked) => setItemType(checked ? 'client' : 'internal')}
+              />
+            </div>
+
 
             {/* Notify team members */}
             <div className="space-y-1.5 rounded-md border p-2.5 bg-muted/30">
