@@ -13344,6 +13344,7 @@ export type Database = {
           due_date: string | null
           id: number
           is_archived: boolean
+          published_action_item_id: string | null
           stageinstance_id: number
           status: number
           u1_id: number | null
@@ -13357,6 +13358,7 @@ export type Database = {
           due_date?: string | null
           id?: number
           is_archived?: boolean
+          published_action_item_id?: string | null
           stageinstance_id: number
           status?: number
           u1_id?: number | null
@@ -13370,6 +13372,7 @@ export type Database = {
           due_date?: string | null
           id?: number
           is_archived?: boolean
+          published_action_item_id?: string | null
           stageinstance_id?: number
           status?: number
           u1_id?: number | null
@@ -13381,6 +13384,13 @@ export type Database = {
             columns: ["clienttask_id"]
             isOneToOne: false
             referencedRelation: "client_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_task_instances_published_action_item_id_fkey"
+            columns: ["published_action_item_id"]
+            isOneToOne: false
+            referencedRelation: "client_action_items"
             referencedColumns: ["id"]
           },
           {
