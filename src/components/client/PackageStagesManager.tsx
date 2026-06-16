@@ -700,6 +700,42 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!releaseConfirm} onOpenChange={(open) => !open && setReleaseConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {releaseConfirm?.released_client_tasks
+                ? 'Recall tasks from client portal?'
+                : 'Release tasks to client portal?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {releaseConfirm?.released_client_tasks ? (
+                <>
+                  Recall tasks for <strong>{releaseConfirm?.stage_name}</strong> from the client portal?
+                  Clients will no longer see these tasks.
+                </>
+              ) : (
+                <>
+                  Release all tasks for <strong>{releaseConfirm?.stage_name}</strong> to the client portal?
+                  They will become visible to client users immediately.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => releaseConfirm && toggleReleaseClientTasks(releaseConfirm)}
+              className={releaseConfirm?.released_client_tasks
+                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                : undefined}
+            >
+              {releaseConfirm?.released_client_tasks ? 'Recall' : 'Release'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
