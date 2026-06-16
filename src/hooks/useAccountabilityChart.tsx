@@ -50,7 +50,7 @@ export function useAccountabilityChart() {
   
   // Only Vivacity Team can view, only SuperAdmin can edit
   const canView = canAccessEOS();
-  const canEdit = isSuper;
+  const canEdit = isSuper || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Integrator';
 
   // Fetch the chart with all related data
   const { data: chart, isLoading, refetch } = useQuery({
