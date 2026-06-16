@@ -138,6 +138,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   
   // Filter state
   const [parentTypeFilter, setParentTypeFilter] = useState<string>('all');
+  const [noteTypeFilter, setNoteTypeFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [packageFilter, setPackageFilter] = useState<string>('all');
   const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
