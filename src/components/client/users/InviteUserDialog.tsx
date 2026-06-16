@@ -19,6 +19,9 @@ import {
   useInviteMutations,
   type InviteAccessLevel,
 } from "./useInviteMutations";
+import { useClientTenant } from "@/contexts/ClientTenantContext";
+import { useUserCapacity } from "@/hooks/useUserCapacity";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Props {
   open: boolean;

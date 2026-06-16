@@ -43,10 +43,12 @@ import {
   type TenantUserRelationshipRole,
 } from "@/hooks/use-client-tenant-users";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
+import { useUserCapacity } from "@/hooks/useUserCapacity";
 
 import InviteUserDialog from "./users/InviteUserDialog";
 import RevokeInviteAlert from "./users/RevokeInviteAlert";
 import { useInviteMutations } from "./users/useInviteMutations";
+import { CapacityPill } from "./users/CapacityPill";
 
 function getInitials(name: string): string {
   return (
@@ -230,8 +232,10 @@ function LoadingSkeleton() {
 
 export default function ClientUsersPage() {
   const { data, isLoading, isError } = useClientTenantUsers();
-  const { canManagePortalUsers } = useClientTenant();
+  const { canManagePortalUsers, activeTenantId } = useClientTenant();
   const { resend } = useInviteMutations();
+  const capacity = useUserCapacity(activeTenantId);
+  const atLimit = !!capacity.data?.atLimit;
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string | null } | null>(null);
@@ -241,13 +245,17 @@ export default function ClientUsersPage() {
   const invitedCount = rows.filter((r) => r.row_type === "invited").length;
 
   const inviteButton = (
-    <Button
-      disabled={!canManagePortalUsers}
-      onClick={() => setInviteOpen(true)}
-    >
-      <UserPlus className="mr-2 h-4 w-4" />
-      Invite user
-    </Button>
+    <div className="flex items-center gap-3">
+      <CapacityPill capacity={capacity.data} />
+      <Button
+        disabled={!canManagePortalUsers || atLimit}
+        onClick={() => setInviteOpen(true)}
+        title={atLimit ? "User limit reached — contact Vivacity to add more users." : undefined}
+      >
+        <UserPlus className="mr-2 h-4 w-4" />
+        Invite user
+      </Button>
+    </div>
   );
 
   return (
