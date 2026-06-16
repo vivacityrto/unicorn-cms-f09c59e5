@@ -869,6 +869,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   // Filter notes by parent type, tags, and date range
   const filteredNotes = notes
     .filter(note => parentTypeFilter === 'all' || note.parent_type === parentTypeFilter)
+    .filter(note => noteTypeFilter === 'all' || note.note_type === noteTypeFilter)
+    .filter(note => priorityFilter === 'all' || note.priority === priorityFilter)
+    .filter(note => packageFilter === 'all' || String(note.parent_id) === packageFilter)
     .filter(note => selectedTagFilter.length === 0 || note.tags.some(t => selectedTagFilter.includes(t)))
     .filter(note => {
       if (!dateFrom && !dateTo) return true;
