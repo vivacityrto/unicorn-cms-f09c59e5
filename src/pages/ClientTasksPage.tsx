@@ -1,24 +1,55 @@
-import { useState } from "react";
-import { useClientAllTasks, type ClientAllTask } from "@/hooks/useClientAllTasks";
+import { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useClientAllTasks, type UnifiedTask } from "@/hooks/useClientAllTasks";
 import { useTaskStatusOptions, getStatusLabel } from "@/hooks/useTaskStatusOptions";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Clock, CheckCircle2, ListFilter, Paperclip } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AlertTriangle, Clock, CheckCircle2, ListFilter, Paperclip, User } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 type FilterType = "all" | "overdue" | "due_soon" | "completed";
+type ViewType = "all" | "mine";
+
+const ACTION_ITEM_STATUSES: { value: string; label: string }[] = [
+  { value: "todo", label: "To Do" },
+  { value: "in_progress", label: "In Progress" },
+  { value: "blocked", label: "Blocked" },
+  { value: "waiting_client", label: "Waiting on Client" },
+  { value: "done", label: "Done" },
+  { value: "cancelled", label: "Cancelled" },
+];
 
 function priorityLabel(p: number | null | undefined) {
   switch (p) {
-    case 1: return <Badge variant="destructive" className="text-xs">High</Badge>;
-    case 2: return <Badge className="bg-amber-500/15 text-amber-700 border-amber-200 text-xs">Medium</Badge>;
-    default: return <Badge variant="secondary" className="text-xs">Normal</Badge>;
+    case 1:
+      return <Badge variant="destructive" className="text-xs">Urgent</Badge>;
+    case 2:
+      return <Badge variant="destructive" className="text-xs">High</Badge>;
+    case 3:
+      return <Badge className="bg-amber-500/15 text-amber-700 border-amber-200 text-xs">Medium</Badge>;
+    default:
+      return <Badge variant="secondary" className="text-xs">Low</Badge>;
   }
+}
+
+function isTaskCompleted(t: UnifiedTask) {
+  if (t.source === "stage_task") return t.status === 2;
+  return t.actionItemStatus === "done";
 }
 
 export default function ClientTasksPage() {
@@ -26,31 +57,66 @@ export default function ClientTasksPage() {
   const { data: tasks = [], isLoading } = useClientAllTasks(showArchived);
   const { statuses } = useTaskStatusOptions();
   const { canManagePortalUsers } = useClientTenant();
-  const [filter, setFilter] = useState<FilterType>("all");
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const { profile } = useAuth();
+  const currentUserId = profile?.user_uuid ?? null;
+  const queryClient = useQueryClient();
 
-  const filtered = tasks.filter((t) => {
+  const [view, setView] = useState<ViewType>("all");
+  const [filter, setFilter] = useState<FilterType>("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // Optimistic local overrides for action-item status changes.
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
+
+  const effectiveTasks = useMemo(
+    () =>
+      tasks.map((t) =>
+        t.actionItemId && statusOverrides[t.actionItemId]
+          ? {
+              ...t,
+              status: statusOverrides[t.actionItemId],
+              actionItemStatus: statusOverrides[t.actionItemId],
+            }
+          : t,
+      ),
+    [tasks, statusOverrides],
+  );
+
+  const viewScoped = useMemo(() => {
+    if (view === "mine") {
+      return effectiveTasks.filter(
+        (t) => t.source === "action_item" && t.assigneeUserId === currentUserId,
+      );
+    }
+    return effectiveTasks;
+  }, [effectiveTasks, view, currentUserId]);
+
+  const filtered = viewScoped.filter((t) => {
     if (filter === "overdue") return t.isOverdue;
     if (filter === "due_soon") return t.isDueSoon;
-    if (filter === "completed") return t.status === 2;
+    if (filter === "completed") return isTaskCompleted(t);
     return true;
   });
 
-  const overdueCount = tasks.filter((t) => t.isOverdue).length;
-  const dueSoonCount = tasks.filter((t) => t.isDueSoon).length;
-  const completedCount = tasks.filter((t) => t.status === 2).length;
+  const overdueCount = viewScoped.filter((t) => t.isOverdue).length;
+  const dueSoonCount = viewScoped.filter((t) => t.isDueSoon).length;
+  const completedCount = viewScoped.filter((t) => isTaskCompleted(t)).length;
+  const myCount = effectiveTasks.filter(
+    (t) => t.source === "action_item" && t.assigneeUserId === currentUserId,
+  ).length;
 
   const filters: { key: FilterType; label: string; count: number }[] = [
-    { key: "all", label: "All", count: tasks.length },
+    { key: "all", label: "All", count: viewScoped.length },
     { key: "overdue", label: "Overdue", count: overdueCount },
     { key: "due_soon", label: "Due Soon", count: dueSoonCount },
     { key: "completed", label: "Completed", count: completedCount },
   ];
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (uid: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(uid)) next.delete(uid);
+      else next.add(uid);
       return next;
     });
   };
@@ -59,9 +125,51 @@ export default function ClientTasksPage() {
     if (selected.size === filtered.length) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(filtered.map((t) => t.id)));
+      setSelected(new Set(filtered.map((t) => t.uid)));
     }
   };
+
+  const handleActionItemStatusChange = async (
+    actionItemId: string,
+    previousStatus: string | null,
+    newStatus: string,
+  ) => {
+    setStatusOverrides((prev) => ({ ...prev, [actionItemId]: newStatus }));
+    const { error } = await supabase
+      .from("client_action_items")
+      .update({
+        status: newStatus,
+        completed_at: newStatus === "done" ? new Date().toISOString() : null,
+        completed_by: newStatus === "done" ? currentUserId : null,
+      })
+      .eq("id", actionItemId);
+
+    if (error) {
+      // Revert optimistic state
+      setStatusOverrides((prev) => {
+        const next = { ...prev };
+        if (previousStatus) next[actionItemId] = previousStatus;
+        else delete next[actionItemId];
+        return next;
+      });
+      toast.error(`Could not update status: ${error.message}`);
+      return;
+    }
+
+    toast.success("Status updated");
+    await queryClient.invalidateQueries({ queryKey: ["client-all-tasks"] });
+    // Clear override once refetched data lands.
+    setStatusOverrides((prev) => {
+      const next = { ...prev };
+      delete next[actionItemId];
+      return next;
+    });
+  };
+
+  const views: { key: ViewType; label: string; count: number }[] = [
+    { key: "all", label: "All Tasks", count: effectiveTasks.length },
+    { key: "mine", label: "My Tasks", count: myCount },
+  ];
 
   return (
     <div className="space-y-6">
@@ -70,6 +178,28 @@ export default function ClientTasksPage() {
         <p className="text-sm text-muted-foreground mt-1">
           All your tasks across every package and stage.
         </p>
+      </div>
+
+      {/* View tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-border pb-3">
+        {views.map((v) => (
+          <Button
+            key={v.key}
+            variant={view === v.key ? "default" : "ghost"}
+            size="sm"
+            onClick={() => {
+              setView(v.key);
+              setSelected(new Set());
+            }}
+            className="gap-1.5"
+          >
+            {v.key === "mine" && <User className="h-3.5 w-3.5" />}
+            {v.label}
+            <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">
+              {v.count}
+            </Badge>
+          </Button>
+        ))}
       </div>
 
       {/* Show archived toggle */}
@@ -118,7 +248,6 @@ export default function ClientTasksPage() {
           <Button size="sm" variant="outline" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
-          {/* Future: Mark complete / Upload evidence bulk actions */}
         </div>
       )}
 
@@ -150,6 +279,7 @@ export default function ClientTasksPage() {
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Task</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Package</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Stage</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Assignee</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Priority</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Due Date</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
@@ -158,12 +288,13 @@ export default function ClientTasksPage() {
               <tbody>
                 {filtered.map((task) => (
                   <TaskRow
-                    key={task.id}
+                    key={task.uid}
                     task={task}
                     statuses={statuses}
-                    isSelected={selected.has(task.id)}
-                    onToggle={() => toggleSelect(task.id)}
+                    isSelected={selected.has(task.uid)}
+                    onToggle={() => toggleSelect(task.uid)}
                     showCheckbox={canManagePortalUsers}
+                    onActionItemStatusChange={handleActionItemStatusChange}
                   />
                 ))}
               </tbody>
@@ -181,15 +312,27 @@ function TaskRow({
   isSelected,
   onToggle,
   showCheckbox = true,
+  onActionItemStatusChange,
 }: {
-  task: ClientAllTask;
+  task: UnifiedTask;
   statuses: any[];
   isSelected: boolean;
   onToggle: () => void;
   showCheckbox?: boolean;
+  onActionItemStatusChange: (
+    actionItemId: string,
+    previousStatus: string | null,
+    newStatus: string,
+  ) => void | Promise<void>;
 }) {
+  const isActionItem = task.source === "action_item";
+
   return (
-    <tr className={`border-b last:border-0 hover:bg-muted/30 transition-colors border-border ${task.isArchived ? "opacity-60" : ""}`}>
+    <tr
+      className={`border-b last:border-0 hover:bg-muted/30 transition-colors border-border ${
+        task.isArchived ? "opacity-60" : ""
+      }`}
+    >
       {showCheckbox && (
         <td className="px-4 py-3">
           <Checkbox checked={isSelected} onCheckedChange={onToggle} />
@@ -203,18 +346,46 @@ function TaskRow({
           {task.attachmentRequired && (
             <Paperclip className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
           )}
-          <span className={`font-medium text-foreground ${task.isArchived ? "line-through" : ""}`}>{task.taskName}</span>
+          <span
+            className={`font-medium text-foreground ${
+              task.isArchived ? "line-through" : ""
+            }`}
+          >
+            {task.taskName}
+          </span>
+          {isActionItem && (
+            <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Action
+            </Badge>
+          )}
         </div>
         <div className="md:hidden text-xs text-muted-foreground mt-0.5">
-          {task.packageName} · {task.stageName}
+          {task.packageName}
+          {task.stageName ? ` · ${task.stageName}` : ""}
+          {task.assigneeName ? ` · ${task.assigneeName}` : ""}
         </div>
       </td>
-      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{task.packageName}</td>
-      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{task.stageName}</td>
+      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+        {task.packageName}
+      </td>
+      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+        {task.stageName ?? "—"}
+      </td>
+      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+        {task.assigneeName ?? "—"}
+      </td>
       <td className="px-4 py-3 hidden lg:table-cell">{priorityLabel(task.priority)}</td>
       <td className="px-4 py-3">
         {task.dueDate ? (
-          <span className={task.isOverdue ? "text-destructive font-medium" : task.isDueSoon ? "text-amber-600 font-medium" : "text-muted-foreground"}>
+          <span
+            className={
+              task.isOverdue
+                ? "text-destructive font-medium"
+                : task.isDueSoon
+                ? "text-amber-600 font-medium"
+                : "text-muted-foreground"
+            }
+          >
             {format(new Date(task.dueDate), "dd MMM yyyy")}
           </span>
         ) : (
@@ -223,12 +394,38 @@ function TaskRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <Badge
-            variant={task.status === 2 ? "default" : task.isOverdue ? "destructive" : "secondary"}
-            className="text-xs"
-          >
-            {getStatusLabel(task.status, statuses)}
-          </Badge>
+          {isActionItem ? (
+            <Select
+              value={(task.actionItemStatus ?? "todo") as string}
+              onValueChange={(v) =>
+                onActionItemStatusChange(task.actionItemId!, task.actionItemStatus, v)
+              }
+            >
+              <SelectTrigger className="h-7 w-[160px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ACTION_ITEM_STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value} className="text-xs">
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge
+              variant={
+                task.status === 2
+                  ? "default"
+                  : task.isOverdue
+                  ? "destructive"
+                  : "secondary"
+              }
+              className="text-xs"
+            >
+              {getStatusLabel(task.status as number, statuses)}
+            </Badge>
+          )}
           {task.isArchived && (
             <Badge variant="outline" className="text-xs">
               Archived
