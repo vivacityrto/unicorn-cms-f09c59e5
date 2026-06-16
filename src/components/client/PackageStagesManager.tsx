@@ -47,7 +47,9 @@ import {
   FileText,
   Mail,
   Search,
-  Plus
+  Plus,
+  Send,
+  Undo2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
