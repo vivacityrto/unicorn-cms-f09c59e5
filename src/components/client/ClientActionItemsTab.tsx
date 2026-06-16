@@ -157,16 +157,28 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
           priority: priority as ActionItem['priority'],
           status: actionStatus as ActionItem['status'],
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
-          owner_user_id: ownerUserId || null
+          owner_user_id: ownerUserId || null,
+          item_type: itemType,
         });
       } else {
-        await createItem({
+        const newId = await createItem({
           title,
           description: description || undefined,
           priority,
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
           owner_user_id: ownerUserId
         });
+
+        // Apply chosen visibility (RPC does not accept item_type yet — default is 'internal')
+        if (newId && itemType === 'client') {
+          const { error: visErr } = await supabase
+            .from('client_action_items')
+            .update({ item_type: 'client' })
+            .eq('id', newId);
+          if (visErr) console.error('Failed to set item_type:', visErr);
+          else refresh();
+        }
+
 
         // Send notifications to selected "Notify" users — relocated to
         // service-role edge function (frontend can no longer insert
