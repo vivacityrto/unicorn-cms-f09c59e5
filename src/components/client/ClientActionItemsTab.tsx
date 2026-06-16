@@ -388,6 +388,22 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                              <Badge variant="outline" className={`text-xs ${priorityColor}`}>
                                {priorityLabel}
                              </Badge>
+                             <button
+                               type="button"
+                               onClick={() => handleToggleVisibility(item)}
+                               title={item.item_type === 'client' ? 'Visible in client portal — click to make internal' : 'Internal only — click to make visible in portal'}
+                             >
+                               {item.item_type === 'client' ? (
+                                 <Badge variant="outline" className="text-xs bg-cyan-50 text-cyan-700 border-cyan-200 gap-1 hover:bg-cyan-100">
+                                   <Eye className="h-3 w-3" /> Portal
+                                 </Badge>
+                               ) : (
+                                 <Badge variant="outline" className="text-xs bg-muted text-muted-foreground gap-1 hover:bg-muted/70">
+                                   <EyeOff className="h-3 w-3" /> Internal
+                                 </Badge>
+                               )}
+                             </button>
+
                           </div>
                           
                           {item.description && (
