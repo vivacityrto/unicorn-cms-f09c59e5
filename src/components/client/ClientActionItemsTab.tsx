@@ -141,6 +141,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setActionStatus(item.status || 'open');
     setDueDate(item.due_date ? new Date(item.due_date) : undefined);
     setOwnerUserId(item.owner_user_id || undefined);
+    setItemType((item.item_type as 'client' | 'internal') || 'internal');
     setIsAddDialogOpen(true);
   };
 
