@@ -34552,6 +34552,7 @@ export type Database = {
           slug: string | null
           status: string
           total_hours: number | null
+          user_limit: number | null
         }
         Insert: {
           created_at?: string | null
@@ -34567,6 +34568,7 @@ export type Database = {
           slug?: string | null
           status?: string
           total_hours?: number | null
+          user_limit?: number | null
         }
         Update: {
           created_at?: string | null
@@ -34582,6 +34584,7 @@ export type Database = {
           slug?: string | null
           status?: string
           total_hours?: number | null
+          user_limit?: number | null
         }
         Relationships: []
       }
@@ -64837,6 +64840,14 @@ export type Database = {
       get_tenant_scope_sync_status: {
         Args: { p_tenant_id: number }
         Returns: Json
+      }
+      get_tenant_user_capacity: {
+        Args: { p_tenant_id: number }
+        Returns: {
+          is_unlimited: boolean
+          limit: number
+          used: number
+        }[]
       }
       get_timezones: {
         Args: never
