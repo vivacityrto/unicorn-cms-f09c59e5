@@ -33749,6 +33749,7 @@ export type Database = {
           included_minutes: number
           is_active: boolean
           is_complete: boolean
+          is_unlimited_override: boolean
           last_document_update_email: string | null
           last_renewed_date: string | null
           manager_id: string | null
@@ -33778,6 +33779,7 @@ export type Database = {
           included_minutes?: number
           is_active?: boolean
           is_complete?: boolean
+          is_unlimited_override?: boolean
           last_document_update_email?: string | null
           last_renewed_date?: string | null
           manager_id?: string | null
@@ -33807,6 +33809,7 @@ export type Database = {
           included_minutes?: number
           is_active?: boolean
           is_complete?: boolean
+          is_unlimited_override?: boolean
           last_document_update_email?: string | null
           last_renewed_date?: string | null
           manager_id?: string | null
