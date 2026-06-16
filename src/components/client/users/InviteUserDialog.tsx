@@ -257,7 +257,9 @@ export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
             </Button>
           </DialogFooter>
         </form>
+        )}
       </DialogContent>
+
     </Dialog>
   );
 }
