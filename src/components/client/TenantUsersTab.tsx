@@ -83,6 +83,9 @@ import {
 import { toast } from 'sonner';
 import { TenantInviteDialog } from './TenantInviteDialog';
 import { useRBAC } from '@/hooks/useRBAC';
+import { useUserCapacity, useInvalidateUserCapacity } from '@/hooks/useUserCapacity';
+import { CapacityPill } from './users/CapacityPill';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   type RelationshipRole,
   RELATIONSHIP_ROLE_OPTIONS,
@@ -150,6 +153,9 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const canChangeRoles = isSuperAdmin() || hasTenantAdmin(tenantId) || isVivacityTeam;
   // Only Vivacity staff can activate ghost accounts — never expose in client portal.
   const canActivateGhosts = isSuperAdmin() || isVivacityTeam;
+
+  const capacity = useUserCapacity(tenantId);
+  const invalidateCapacity = useInvalidateUserCapacity();
 
   // Edit drawer state
   const [editingMember, setEditingMember] = useState<TenantMemberInfo | null>(null);
