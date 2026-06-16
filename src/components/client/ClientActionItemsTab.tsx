@@ -654,6 +654,26 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
               </Select>
             </div>
 
+            {/* Visibility */}
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div className="space-y-0.5">
+                <Label className="flex items-center gap-1.5">
+                  {itemType === 'client' ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                  Visible in client portal
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {itemType === 'client'
+                    ? 'Client portal users will see this action item.'
+                    : 'Internal only — hidden from the client portal.'}
+                </p>
+              </div>
+              <Switch
+                checked={itemType === 'client'}
+                onCheckedChange={(checked) => setItemType(checked ? 'client' : 'internal')}
+              />
+            </div>
+
+
             {/* Notify team members */}
             <div className="space-y-1.5 rounded-md border p-2.5 bg-muted/30">
               <div className="flex items-center justify-between">
