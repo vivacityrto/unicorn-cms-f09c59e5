@@ -335,6 +335,49 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
   const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set());
   
   const [recurringConfirm, setRecurringConfirm] = useState<StageInstance | null>(null);
+  const [releaseConfirm, setReleaseConfirm] = useState<StageInstance | null>(null);
+
+  const toggleReleaseClientTasks = async (stage: StageInstance) => {
+    const newValue = !stage.released_client_tasks;
+    const newDate = newValue ? new Date().toISOString() : null;
+    try {
+      const { error: updateError } = await supabase
+        .from('stage_instances')
+        .update({ released_client_tasks: newValue, released_client_tasks_date: newDate })
+        .eq('id', stage.id);
+
+      if (updateError) throw updateError;
+
+      await supabase.from('client_audit_log').insert({
+        tenant_id: tenantId,
+        actor_user_id: profile?.user_uuid,
+        action: newValue ? 'stage_client_tasks_released' : 'stage_client_tasks_recalled',
+        entity_type: 'stage_instances',
+        entity_id: stage.id.toString(),
+        before_data: {
+          released_client_tasks: stage.released_client_tasks,
+          released_client_tasks_date: stage.released_client_tasks_date,
+        },
+        after_data: {
+          released_client_tasks: newValue,
+          released_client_tasks_date: newDate,
+        },
+        details: { stage_name: stage.stage_name, package_id: packageId },
+      });
+
+      toast({
+        title: newValue ? 'Tasks Released' : 'Tasks Recalled',
+        description: newValue
+          ? `${stage.stage_name} tasks are now visible in the client portal.`
+          : `${stage.stage_name} tasks are no longer visible to the client.`,
+      });
+      fetchStages();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setReleaseConfirm(null);
+    }
+  };
 
   const { enabled: phasesEnabled } = useCheckpointPhasesEnabled();
   const { phases: phaseProgress } = usePhaseProgress(packageInstanceId);
