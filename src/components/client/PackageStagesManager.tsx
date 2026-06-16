@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { StageStaffTasks } from './StageStaffTasks';
 import { StageClientTasks } from './StageClientTasks';
 import { StageDetailSection } from './StageDetailSection';
