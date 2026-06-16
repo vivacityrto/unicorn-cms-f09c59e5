@@ -468,6 +468,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
           comment: row.comment || null,
           paid: row.paid ?? false,
           released_client_tasks: row.released_client_tasks ?? false,
+          released_client_tasks_date: row.released_client_tasks_date || null,
           is_recurring: row.is_recurring ?? false,
           event_conducted_date: row.event_conducted_date || null,
           linked_audit_id: row.linked_audit_id || null,
