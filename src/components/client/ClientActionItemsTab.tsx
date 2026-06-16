@@ -150,7 +150,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const handleOpenEdit = (item: ActionItem) => {
     setSelectedItem(item);
     setTitle(item.title);
-    setDescription(item.description || '');
+    setDescription(item.description ? stripHtml(item.description) : '');
     setPriority(item.priority);
     setActionStatus(item.status || 'open');
     setDueDate(item.due_date ? new Date(item.due_date) : undefined);
