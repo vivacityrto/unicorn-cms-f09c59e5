@@ -88,6 +88,7 @@ interface StageRowProps {
   updating: number | null;
   onStatusChange: (stageId: number, newStatus: number) => void;
   onRecurringClick: (stage: StageInstance) => void;
+  onReleaseClick: (stage: StageInstance) => void;
   tenantId: number;
   packageId: number;
   packageInstanceId?: number;
