@@ -99,12 +99,64 @@ interface StageRowProps {
 
 function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, onReleaseClick, tenantId, packageId, packageInstanceId, onUpdate, profile }: StageRowProps) {
   const { statuses } = useTaskStatusOptions();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const statusCode = typeof stage.status === 'number' ? stage.status : 0;
   const StatusIcon = getStatusIcon(statusCode);
   const statusColor = getStatusColor(statusCode);
   const statusLabel = statuses.find(s => s.code === statusCode)?.label || `Status ${statusCode}`;
   const { staffTasks, clientTasks, documents, emails, loading: countsLoading } = useStageCounts(stage.id);
+
+  // Count of CTIs already converted to client_action_items — drives the
+  // "Publish" vs "Republish" label on the new portal-publish button.
+  const { data: publishedCount = 0 } = useQuery({
+    queryKey: ['stage-published-count', stage.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('client_task_instances')
+        .select('id', { count: 'exact', head: true })
+        .eq('stageinstance_id', stage.id)
+        .not('published_action_item_id', 'is', null);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!stage.id,
+  });
+
+  const handlePublishToPortal = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPublishing(true);
+    try {
+      const { data, error } = await supabase.rpc('rpc_publish_stage_tasks', {
+        p_stage_instance_id: stage.id,
+      });
+      if (error) throw error;
+      const result = (data ?? {}) as { published_count?: number; skipped_count?: number };
+      const published = result.published_count ?? 0;
+      const skipped = result.skipped_count ?? 0;
+      if (published > 0) {
+        toast({ title: `${published} task${published === 1 ? '' : 's'} published to client portal` });
+      } else if (skipped > 0) {
+        toast({ title: 'All tasks already published' });
+      } else {
+        toast({ title: 'No tasks to publish' });
+      }
+      queryClient.invalidateQueries({ queryKey: ['stage-published-count', stage.id] });
+      queryClient.invalidateQueries({ queryKey: ['client_package_stages'] });
+      queryClient.invalidateQueries({ queryKey: ['client-all-tasks'] });
+      onUpdate();
+    } catch (err: any) {
+      toast({
+        title: 'Failed to publish tasks',
+        description: err?.message ?? 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   // Check if this is an audit-type stage that should show prompt
   const isAuditStage = AUDIT_STAGE_IDS.includes(stage.stage_id);
