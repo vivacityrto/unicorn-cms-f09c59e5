@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { StageStaffTasks } from './StageStaffTasks';
 import { StageClientTasks } from './StageClientTasks';
 import { StageDetailSection } from './StageDetailSection';
@@ -46,7 +47,9 @@ import {
   FileText,
   Mail,
   Search,
-  Plus
+  Plus,
+  Send,
+  Undo2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -62,6 +65,7 @@ interface StageInstance {
   comment: string | null;
   paid: boolean;
   released_client_tasks: boolean;
+  released_client_tasks_date: string | null;
   is_recurring: boolean;
   event_conducted_date: string | null;
   linked_audit_id: string | null;
@@ -84,6 +88,7 @@ interface StageRowProps {
   updating: number | null;
   onStatusChange: (stageId: number, newStatus: number) => void;
   onRecurringClick: (stage: StageInstance) => void;
+  onReleaseClick: (stage: StageInstance) => void;
   tenantId: number;
   packageId: number;
   packageInstanceId?: number;
@@ -91,7 +96,7 @@ interface StageRowProps {
   profile: any;
 }
 
-function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, packageInstanceId, onUpdate, profile }: StageRowProps) {
+function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, onReleaseClick, tenantId, packageId, packageInstanceId, onUpdate, profile }: StageRowProps) {
   const { statuses } = useTaskStatusOptions();
   const [auditModalOpen, setAuditModalOpen] = useState(false);
   const statusCode = typeof stage.status === 'number' ? stage.status : 0;
@@ -136,7 +141,46 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
 
           <div className="flex items-center gap-3 shrink-0">
             {stage.comment && <MessageSquare className="h-4 w-4 text-muted-foreground" />}
-            {stage.released_client_tasks && <Badge variant="outline" className="text-xs">Tasks Released</Badge>}
+            {stage.released_client_tasks ? (
+              <div className="flex items-center gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant="outline"
+                        className="text-xs gap-1 text-emerald-700 border-emerald-500/40 bg-emerald-500/10"
+                      >
+                        <Send className="h-3 w-3" />
+                        Tasks Released
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {stage.released_client_tasks_date
+                        ? `Released ${format(new Date(stage.released_client_tasks_date), 'd MMM yyyy HH:mm')}`
+                        : 'Released (date unknown)'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                  aria-label="Recall tasks"
+                  onClick={(e) => { e.stopPropagation(); onReleaseClick(stage); }}
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Badge
+                variant="outline"
+                className="text-xs gap-1 cursor-pointer hover:bg-accent transition-colors text-muted-foreground border-border"
+                onClick={(e) => { e.stopPropagation(); onReleaseClick(stage); }}
+              >
+                <Send className="h-3 w-3" />
+                Release tasks
+              </Badge>
+            )}
             <Badge
               variant="outline"
               className={cn(
@@ -291,6 +335,49 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
   const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set());
   
   const [recurringConfirm, setRecurringConfirm] = useState<StageInstance | null>(null);
+  const [releaseConfirm, setReleaseConfirm] = useState<StageInstance | null>(null);
+
+  const toggleReleaseClientTasks = async (stage: StageInstance) => {
+    const newValue = !stage.released_client_tasks;
+    const newDate = newValue ? new Date().toISOString() : null;
+    try {
+      const { error: updateError } = await supabase
+        .from('stage_instances')
+        .update({ released_client_tasks: newValue, released_client_tasks_date: newDate })
+        .eq('id', stage.id);
+
+      if (updateError) throw updateError;
+
+      await supabase.from('client_audit_log').insert({
+        tenant_id: tenantId,
+        actor_user_id: profile?.user_uuid,
+        action: newValue ? 'stage_client_tasks_released' : 'stage_client_tasks_recalled',
+        entity_type: 'stage_instances',
+        entity_id: stage.id.toString(),
+        before_data: {
+          released_client_tasks: stage.released_client_tasks,
+          released_client_tasks_date: stage.released_client_tasks_date,
+        },
+        after_data: {
+          released_client_tasks: newValue,
+          released_client_tasks_date: newDate,
+        },
+        details: { stage_name: stage.stage_name, package_id: packageId },
+      });
+
+      toast({
+        title: newValue ? 'Tasks Released' : 'Tasks Recalled',
+        description: newValue
+          ? `${stage.stage_name} tasks are now visible in the client portal.`
+          : `${stage.stage_name} tasks are no longer visible to the client.`,
+      });
+      fetchStages();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setReleaseConfirm(null);
+    }
+  };
 
   const { enabled: phasesEnabled } = useCheckpointPhasesEnabled();
   const { phases: phaseProgress } = usePhaseProgress(packageInstanceId);
@@ -379,7 +466,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       // Fetch stage_instances for this package_instance
       const stageResult = await (supabase
         .from('stage_instances' as any)
-        .select('id, stage_id, status, status_date, completion_date, comment, paid, released_client_tasks, is_recurring, event_conducted_date, linked_audit_id')
+        .select('id, stage_id, status, status_date, completion_date, comment, paid, released_client_tasks, released_client_tasks_date, is_recurring, event_conducted_date, linked_audit_id')
         .eq('packageinstance_id', resolvedInstanceId)
         .order('stage_sortorder')) as { data: Array<{ id: number; stage_id: number; status: string | null; completion_date: string | null; paid: boolean | null; released_client_tasks: boolean | null; linked_audit_id: string | null }> | null; error: any };
       
@@ -424,6 +511,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
           comment: row.comment || null,
           paid: row.paid ?? false,
           released_client_tasks: row.released_client_tasks ?? false,
+          released_client_tasks_date: row.released_client_tasks_date || null,
           is_recurring: row.is_recurring ?? false,
           event_conducted_date: row.event_conducted_date || null,
           linked_audit_id: row.linked_audit_id || null,
@@ -539,6 +627,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       updating={updating}
       onStatusChange={updateStageStatus}
       onRecurringClick={(s) => setRecurringConfirm(s)}
+      onReleaseClick={(s) => setReleaseConfirm(s)}
       tenantId={tenantId}
       packageId={packageId}
       packageInstanceId={packageInstanceId ?? undefined}
@@ -607,6 +696,42 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => recurringConfirm && toggleRecurring(recurringConfirm)}>
               Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!releaseConfirm} onOpenChange={(open) => !open && setReleaseConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {releaseConfirm?.released_client_tasks
+                ? 'Recall tasks from client portal?'
+                : 'Release tasks to client portal?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {releaseConfirm?.released_client_tasks ? (
+                <>
+                  Recall tasks for <strong>{releaseConfirm?.stage_name}</strong> from the client portal?
+                  Clients will no longer see these tasks.
+                </>
+              ) : (
+                <>
+                  Release all tasks for <strong>{releaseConfirm?.stage_name}</strong> to the client portal?
+                  They will become visible to client users immediately.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => releaseConfirm && toggleReleaseClientTasks(releaseConfirm)}
+              className={releaseConfirm?.released_client_tasks
+                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                : undefined}
+            >
+              {releaseConfirm?.released_client_tasks ? 'Recall' : 'Release'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
