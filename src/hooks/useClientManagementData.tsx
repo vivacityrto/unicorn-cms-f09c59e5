@@ -64,6 +64,7 @@ export interface ActionItem {
   status: 'open' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
   priority: 'low' | 'normal' | 'high' | 'urgent';
   source: 'manual' | 'note' | 'stage_rule' | 'system';
+  item_type: 'client' | 'internal';
   source_note_id: string | null;
   related_entity_type: string | null;
   related_entity_id: string | null;
