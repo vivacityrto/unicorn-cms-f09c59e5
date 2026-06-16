@@ -9666,6 +9666,7 @@ export type Database = {
           item_type: string
           owner_user_id: string | null
           package_id: number | null
+          package_instance_id: number | null
           priority: string
           recurrence_rule: string | null
           related_entity_id: string | null
@@ -9692,6 +9693,7 @@ export type Database = {
           item_type?: string
           owner_user_id?: string | null
           package_id?: number | null
+          package_instance_id?: number | null
           priority?: string
           recurrence_rule?: string | null
           related_entity_id?: string | null
@@ -9718,6 +9720,7 @@ export type Database = {
           item_type?: string
           owner_user_id?: string | null
           package_id?: number | null
+          package_instance_id?: number | null
           priority?: string
           recurrence_rule?: string | null
           related_entity_id?: string | null
@@ -9732,6 +9735,139 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_zero_progress_packages"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_dashboard_progress"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_dashboard"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_stages"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_usage_summary"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "client_action_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_stage_instances"
+            referencedColumns: ["package_instance_id"]
+          },
           {
             foreignKeyName: "client_action_items_source_note_id_fkey"
             columns: ["source_note_id"]
@@ -65264,6 +65400,7 @@ export type Database = {
         Args: { p_tenant_id: number }
         Returns: Json
       }
+      rpc_backfill_released_stage_tasks: { Args: never; Returns: Json }
       rpc_bulk_discard_time_drafts: {
         Args: { p_draft_ids: string[] }
         Returns: Json
@@ -65290,6 +65427,7 @@ export type Database = {
           p_description?: string
           p_due_date?: string
           p_owner_user_id?: string
+          p_package_instance_id?: number
           p_priority?: string
           p_recurrence_rule?: string
           p_related_entity_id?: string
