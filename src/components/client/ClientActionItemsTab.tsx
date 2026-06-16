@@ -125,6 +125,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setSelectedItem(null);
     setNotifyUserIds([]);
     setNotifyClient(false);
+    setItemType('client');
   };
 
   const handleOpenAdd = () => {
