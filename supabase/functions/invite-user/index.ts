@@ -141,6 +141,15 @@ serve(async (req) => {
       });
     }
 
+    // VIVACITY invitations require admin.team_users.manage (SA only)
+    if (payload.invite_as === 'VIVACITY' && !canManageVivacityUsers) {
+      return jsonResponse(403, {
+        ok: false,
+        code: "FORBIDDEN",
+        detail: "Only Super Admin can invite Vivacity team members",
+      });
+    }
+
     // For tenant admins, verify they belong to the target tenant
     if (isTenantAdmin) {
       const { data: memberCheck } = await supabase
