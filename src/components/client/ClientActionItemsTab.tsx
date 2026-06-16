@@ -75,7 +75,21 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const { priorities: priorityOptions } = useActionPriorityOptions();
   const { statuses: actionStatusOptions } = useActionStatusOptions();
   
-  const [filter, setFilter] = useState('open');
+  const [filter, setFilter] = useState('all');
+
+  const stripHtml = (html: string) =>
+    html
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ActionItem | null>(null);
@@ -136,7 +150,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const handleOpenEdit = (item: ActionItem) => {
     setSelectedItem(item);
     setTitle(item.title);
-    setDescription(item.description || '');
+    setDescription(item.description ? stripHtml(item.description) : '');
     setPriority(item.priority);
     setActionStatus(item.status || 'open');
     setDueDate(item.due_date ? new Date(item.due_date) : undefined);
@@ -406,9 +420,9 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
 
                           </div>
                           
-                          {item.description && (
+                          {item.description && stripHtml(item.description) && (
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
-                              {item.description}
+                              {stripHtml(item.description)}
                             </p>
                           )}
                           
