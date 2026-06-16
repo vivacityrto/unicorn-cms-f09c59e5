@@ -651,6 +651,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           created_at,
           primary_contact,
           secondary_contact,
+          relationship_role,
           users!tenant_users_user_id_fkey (
             user_uuid,
             email,
