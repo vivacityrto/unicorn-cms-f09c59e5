@@ -206,14 +206,14 @@ serve(async (req) => {
       }
     }
 
-    // Tenant admins can only invite Academy users or a Secondary contact via the client portal
+    // Tenant admins can only invite Academy users, a Secondary contact, or a Full access user via the client portal
     if (isTenantAdmin && payload.invite_as === 'CLIENT') {
-      const allowed = ['academy_user', 'secondary_contact'];
+      const allowed = ['academy_user', 'secondary_contact', 'user'];
       if (!payload.relationship_role || !allowed.includes(payload.relationship_role)) {
         return jsonResponse(403, {
           ok: false,
           code: "RELATIONSHIP_ROLE_NOT_ALLOWED",
-          detail: "Primary/secondary contacts can only invite Academy users or a Secondary contact.",
+          detail: "Primary/secondary contacts can only invite Academy users, a Secondary contact, or a Full access user.",
         });
       }
     }

@@ -4,7 +4,7 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useToast } from "@/hooks/use-toast";
 import { userCapacityKeys } from "@/hooks/useUserCapacity";
 
-export type InviteAccessLevel = "academy" | "secondary";
+export type InviteAccessLevel = "academy" | "secondary" | "user";
 
 export interface InviteInput {
   email: string;
@@ -15,10 +15,11 @@ export interface InviteInput {
 
 const ROLE_MAP: Record<
   InviteAccessLevel,
-  { unicorn_role: "Admin" | "User"; relationship_role: "academy_user" | "secondary_contact" }
+  { unicorn_role: "Admin" | "User"; relationship_role: "academy_user" | "secondary_contact" | "user" }
 > = {
   academy: { unicorn_role: "User", relationship_role: "academy_user" },
   secondary: { unicorn_role: "Admin", relationship_role: "secondary_contact" },
+  user: { unicorn_role: "User", relationship_role: "user" },
 };
 
 interface EdgeError {

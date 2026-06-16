@@ -42,6 +42,11 @@ const ALL_ACCESS_OPTIONS: { value: InviteAccessLevel; label: string; description
     label: "Secondary contact",
     description: "Backup admin: full access plus the ability to manage users.",
   },
+  {
+    value: "user",
+    label: "Full access",
+    description: "Full access to the compliance portal. Cannot manage users.",
+  },
 ];
 
 export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
