@@ -46,6 +46,10 @@ const ALL_ACCESS_OPTIONS: { value: InviteAccessLevel; label: string; description
 
 export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
   const { invite } = useInviteMutations();
+  const { activeTenantId } = useClientTenant();
+  const capacity = useUserCapacity(activeTenantId);
+  const atLimit = !!capacity.data?.atLimit;
+
 
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
