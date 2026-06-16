@@ -243,6 +243,20 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     await setStatus(item.id, 'done');
   };
 
+  const handleToggleVisibility = async (item: ActionItem) => {
+    const next: 'client' | 'internal' = item.item_type === 'client' ? 'internal' : 'client';
+    // Optimistic update via refresh after success; revert via refresh on error
+    const { error } = await supabase
+      .from('client_action_items')
+      .update({ item_type: next })
+      .eq('id', item.id);
+    if (error) {
+      console.error('Failed to toggle visibility:', error);
+    }
+    refresh();
+  };
+
+
   // Filter items
   const filteredItems = items.filter(item => {
     if (filter === 'all') return true;
