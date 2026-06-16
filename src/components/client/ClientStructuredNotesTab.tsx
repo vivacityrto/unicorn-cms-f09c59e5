@@ -138,6 +138,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   
   // Filter state
   const [parentTypeFilter, setParentTypeFilter] = useState<string>('all');
+  const [noteTypeFilter, setNoteTypeFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [packageFilter, setPackageFilter] = useState<string>('all');
   const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
@@ -866,6 +869,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   // Filter notes by parent type, tags, and date range
   const filteredNotes = notes
     .filter(note => parentTypeFilter === 'all' || note.parent_type === parentTypeFilter)
+    .filter(note => noteTypeFilter === 'all' || note.note_type === noteTypeFilter)
+    .filter(note => priorityFilter === 'all' || note.priority === priorityFilter)
+    .filter(note => packageFilter === 'all' || String(note.parent_id) === packageFilter)
     .filter(note => selectedTagFilter.length === 0 || note.tags.some(t => selectedTagFilter.includes(t)))
     .filter(note => {
       if (!dateFrom && !dateTo) return true;
@@ -984,6 +990,65 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   </SelectItem>
                 </SelectContent>
               </Select>
+              {parentTypeFilter !== 'clickup' && noteTypeOptions.length > 0 && (
+                <Select value={noteTypeFilter} onValueChange={setNoteTypeFilter}>
+                  <SelectTrigger className="w-[160px] h-9">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="all">All Types</SelectItem>
+                    {noteTypeOptions.map(opt => (
+                      <SelectItem key={opt.code} value={opt.code}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {parentTypeFilter !== 'clickup' && (
+                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                  <SelectTrigger className="w-[150px] h-9">
+                    <SelectValue placeholder="All Priorities" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="urgent">
+                      <span className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-red-500" />
+                        Urgent
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="high">
+                      <span className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-amber-500" />
+                        High
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              {parentTypeFilter !== 'clickup' && parentTypeFilter !== 'tenant' && Object.keys(packageNameMap).length > 0 && (
+                <Select value={packageFilter} onValueChange={setPackageFilter}>
+                  <SelectTrigger className="w-[180px] h-9">
+                    <SelectValue placeholder="All Packages" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="all">All Packages</SelectItem>
+                    {Object.entries(packageNameMap).map(([id, name]) => (
+                      <SelectItem key={id} value={String(id)}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {(noteTypeFilter !== 'all' || priorityFilter !== 'all' || packageFilter !== 'all') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => { setNoteTypeFilter('all'); setPriorityFilter('all'); setPackageFilter('all'); }}
+                >
+                  Clear filters
+                </Button>
+              )}
               {parentTypeFilter !== 'clickup' && (
                 <Popover>
                   <PopoverTrigger asChild>
