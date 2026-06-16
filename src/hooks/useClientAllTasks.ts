@@ -4,8 +4,9 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 
 export interface UnifiedTask {
   uid: string;
+  // `stage_task` is reserved for back-compat with consumers; only `action_item` is produced
+  // after Phase 5. Narrow this union in Phase 6 alongside the consumer cleanup.
   source: "stage_task" | "action_item";
-  // Legacy numeric id retained for stage tasks (null for action items).
   id: number | null;
   taskName: string;
   packageName: string;
@@ -53,59 +54,7 @@ export function useClientAllTasks(includeArchived: boolean = false) {
       const now = new Date();
       const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-      // ===== Stage tasks pipeline =====
-      const { data: pkgInstances, error: pkgErr } = await supabase
-        .from("package_instances")
-        .select("id, package_id")
-        .eq("tenant_id", activeTenantId)
-        .eq("is_active", true);
-      if (pkgErr) throw pkgErr;
-
-      const pkgInstanceIds = (pkgInstances || []).map((p) => p.id);
-      const packageIdSet = new Set<number>(
-        (pkgInstances || [])
-          .map((p) => p.package_id)
-          .filter((v): v is number => v != null),
-      );
-
-      let stageInstances: any[] = [];
-      let taskRows: any[] = [];
-      let clientTaskIds: number[] = [];
-      const stageIdSet = new Set<number>();
-
-      if (pkgInstanceIds.length > 0) {
-        const { data: si, error: stgErr } = await supabase
-          .from("stage_instances")
-          .select("id, packageinstance_id, stage_id, released_client_tasks")
-          .in("packageinstance_id", pkgInstanceIds)
-          .eq("released_client_tasks", true);
-        if (stgErr) throw stgErr;
-        stageInstances = si || [];
-        for (const s of stageInstances) {
-          if (s.stage_id != null) stageIdSet.add(s.stage_id);
-        }
-
-        const stageInstanceIds = stageInstances.map((s) => s.id);
-        if (stageInstanceIds.length > 0) {
-          let tq = supabase
-            .from("client_task_instances" as any)
-            .select(
-              "id, clienttask_id, stageinstance_id, status, due_date, completion_date, is_archived, archived_at",
-            )
-            .in("stageinstance_id", stageInstanceIds);
-          if (!includeArchived) tq = tq.eq("is_archived", false);
-          const tRes = await tq;
-          if (tRes.error) throw tRes.error;
-          taskRows = (tRes.data as any[]) || [];
-          clientTaskIds = [
-            ...new Set(
-              taskRows.map((t) => t.clienttask_id).filter((v): v is number => v != null),
-            ),
-          ];
-        }
-      }
-
-      // ===== Action items pipeline =====
+      // ===== Action items pipeline (Phase 5: single source of truth) =====
       let aiQuery = supabase
         .from("client_action_items")
         .select(
@@ -121,6 +70,8 @@ export function useClientAllTasks(includeArchived: boolean = false) {
       if (aiRes.error) throw aiRes.error;
       const actionItems = (aiRes.data as any[]) || [];
 
+      const packageIdSet = new Set<number>();
+      const stageIdSet = new Set<number>();
       for (const ai of actionItems) {
         if (ai.package_id != null) packageIdSet.add(ai.package_id);
         if (ai.stage_id != null) stageIdSet.add(ai.stage_id);
@@ -134,17 +85,10 @@ export function useClientAllTasks(includeArchived: boolean = false) {
         ),
       ];
 
-      // ===== Parallel lookups =====
       const packageIds = [...packageIdSet];
       const stageIds = [...stageIdSet];
 
-      const [clientTaskRes, packageRes, stageRes, usersRes] = await Promise.all([
-        clientTaskIds.length > 0
-          ? supabase
-              .from("client_tasks")
-              .select("id, name, priority, attachment_required")
-              .in("id", clientTaskIds)
-          : Promise.resolve({ data: [], error: null } as any),
+      const [packageRes, stageRes, usersRes] = await Promise.all([
         packageIds.length > 0
           ? supabase.from("packages").select("id, name").in("id", packageIds)
           : Promise.resolve({ data: [], error: null } as any),
@@ -159,16 +103,6 @@ export function useClientAllTasks(includeArchived: boolean = false) {
           : Promise.resolve({ data: [], error: null } as any),
       ]);
 
-      const taskMetaMap = new Map(
-        ((clientTaskRes.data || []) as any[]).map((t: any) => [
-          t.id,
-          {
-            name: t.name,
-            priority: t.priority,
-            attachmentRequired: !!t.attachment_required,
-          },
-        ]),
-      );
       const packageMap = new Map(
         ((packageRes.data || []) as any[]).map((p: any) => [p.id, p.name]),
       );
@@ -184,51 +118,6 @@ export function useClientAllTasks(includeArchived: boolean = false) {
           null;
         if (name) userMap.set(u.user_uuid, name);
       }
-
-      // Map stage_instance -> { packageName, stageName }
-      const stageInstanceMap = new Map<
-        number,
-        { packageName: string; stageName: string }
-      >();
-      for (const si of stageInstances) {
-        const pkg = (pkgInstances || []).find((p) => p.id === si.packageinstance_id);
-        stageInstanceMap.set(si.id, {
-          packageName: pkg
-            ? packageMap.get(pkg.package_id) || "Unknown Package"
-            : "Unknown Package",
-          stageName: stageMap.get(si.stage_id) || "Unknown Stage",
-        });
-      }
-
-      // ===== Build unified list =====
-      const stageTaskItems: UnifiedTask[] = taskRows.map((row) => {
-        const context = stageInstanceMap.get(row.stageinstance_id);
-        const meta = taskMetaMap.get(row.clienttask_id);
-        const dueDate = row.due_date ? new Date(row.due_date) : null;
-        const isCompleted = row.status === 2;
-        return {
-          uid: `cti-${row.id}`,
-          source: "stage_task",
-          id: row.id,
-          taskName: meta?.name || `Task ${row.id}`,
-          packageName: context?.packageName || "Unknown",
-          stageName: context?.stageName || "Unknown",
-          dueDate: row.due_date,
-          completionDate: row.completion_date,
-          status: row.status ?? 0,
-          priority: normalisePriority(meta?.priority ?? 3),
-          attachmentRequired: meta?.attachmentRequired ?? false,
-          isOverdue: !isCompleted && !!dueDate && dueDate < now,
-          isDueSoon:
-            !isCompleted && !!dueDate && dueDate >= now && dueDate <= sevenDaysFromNow,
-          isArchived: !!row.is_archived,
-          archivedAt: row.archived_at ?? null,
-          assigneeUserId: null,
-          assigneeName: null,
-          actionItemId: null,
-          actionItemStatus: null,
-        };
-      });
 
       const actionItemTasks: UnifiedTask[] = actionItems.map((ai) => {
         const dueDate = ai.due_date ? new Date(ai.due_date) : null;
@@ -260,7 +149,7 @@ export function useClientAllTasks(includeArchived: boolean = false) {
         };
       });
 
-      return [...stageTaskItems, ...actionItemTasks].sort((a, b) => {
+      return actionItemTasks.sort((a, b) => {
         if (a.isOverdue && !b.isOverdue) return -1;
         if (!a.isOverdue && b.isOverdue) return 1;
         if (a.isDueSoon && !b.isDueSoon) return -1;
