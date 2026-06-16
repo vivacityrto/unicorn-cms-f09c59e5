@@ -116,14 +116,21 @@ serve(async (req) => {
       });
     }
 
-    // Check permissions: Vivacity staff go through central RPC; Tenant Admins keep current logic.
+    // Check 1: Is caller a Vivacity internal team member?
+    // Allows ALL internal staff (SA, TL, INT, BGT, CSC, CET) to invite CLIENT users.
+    const { data: isVivacityTeamCheck } = await supabase.rpc('is_vivacity_team_safe', {
+      p_user_id: callerUser.user.id,
+    });
+    const isVivacityStaff = !!isVivacityTeamCheck;
+
+    // Check 2: Can caller manage Vivacity team users? (SA only)
     const { data: vivacityAllowed } = await supabase.rpc('check_permission', {
       p_user_id: callerUser.user.id,
       p_feature_key: 'admin.team_users.manage',
       p_min_level: 'full',
     });
-    const isVivacityStaff = !!vivacityAllowed;
-    const isSuperAdmin = isVivacityStaff;
+    const canManageVivacityUsers = !!vivacityAllowed;
+    const isSuperAdmin = canManageVivacityUsers;
     const isTenantAdmin = !isVivacityStaff && callerProfile.unicorn_role === 'Admin';
 
     if (!isVivacityStaff && !isTenantAdmin) {
