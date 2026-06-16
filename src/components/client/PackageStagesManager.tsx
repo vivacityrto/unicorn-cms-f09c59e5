@@ -141,7 +141,46 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
 
           <div className="flex items-center gap-3 shrink-0">
             {stage.comment && <MessageSquare className="h-4 w-4 text-muted-foreground" />}
-            {stage.released_client_tasks && <Badge variant="outline" className="text-xs">Tasks Released</Badge>}
+            {stage.released_client_tasks ? (
+              <div className="flex items-center gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant="outline"
+                        className="text-xs gap-1 text-emerald-700 border-emerald-500/40 bg-emerald-500/10"
+                      >
+                        <Send className="h-3 w-3" />
+                        Tasks Released
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {stage.released_client_tasks_date
+                        ? `Released ${format(new Date(stage.released_client_tasks_date), 'd MMM yyyy HH:mm')}`
+                        : 'Released (date unknown)'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                  aria-label="Recall tasks"
+                  onClick={(e) => { e.stopPropagation(); onReleaseClick(stage); }}
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Badge
+                variant="outline"
+                className="text-xs gap-1 cursor-pointer hover:bg-accent transition-colors text-muted-foreground border-border"
+                onClick={(e) => { e.stopPropagation(); onReleaseClick(stage); }}
+              >
+                <Send className="h-3 w-3" />
+                Release tasks
+              </Badge>
+            )}
             <Badge
               variant="outline"
               className={cn(
