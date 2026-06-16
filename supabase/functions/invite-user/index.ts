@@ -150,6 +150,44 @@ serve(async (req) => {
       });
     }
 
+    // ── Per-membership user cap ─────────────────────────────────────────────
+    // Vivacity staff bypass entirely.
+    async function assertCapacity(): Promise<Response | null> {
+      if (isVivacityStaff || isSuperAdmin) return null;
+      const { data: capRows, error: capErr } = await supabase.rpc(
+        'get_tenant_user_capacity',
+        { p_tenant_id: payload.tenant_id },
+      );
+      if (capErr) {
+        console.error('[capacity] rpc error:', capErr);
+        return jsonResponse(500, {
+          ok: false,
+          code: 'CAPACITY_CHECK_FAILED',
+          detail: 'Unable to verify user capacity',
+        });
+      }
+      const cap = Array.isArray(capRows) ? capRows[0] : capRows;
+      if (cap && !cap.is_unlimited && cap.limit !== null && cap.used >= cap.limit) {
+        try {
+          await supabase.from('audit_invites').insert({
+            tenant_id: payload.tenant_id,
+            email: payload.email.toLowerCase(),
+            actor_user_id: callerUser.user.id,
+            role: payload.unicorn_role ?? null,
+            outcome: 'rejected_user_limit',
+            code: 'USER_LIMIT_REACHED',
+            detail: `cap ${cap.used}/${cap.limit}`,
+          });
+        } catch (_) { /* swallow audit failure */ }
+        return jsonResponse(403, {
+          ok: false,
+          code: 'USER_LIMIT_REACHED',
+          detail: 'User limit reached for this membership. Contact Vivacity to add more users.',
+        });
+      }
+      return null;
+    }
+
     // For tenant admins, verify they belong to the target tenant
     if (isTenantAdmin) {
       const { data: memberCheck } = await supabase
@@ -374,6 +412,8 @@ serve(async (req) => {
 
     // --- SKIP EMAIL PATH: create users + tenant_users + tenant_members directly ---
     if (payload.skip_email) {
+      const capReject = await assertCapacity();
+      if (capReject) return capReject;
       console.log(`[skip_email] Adding ${payload.email} directly without invitation`);
 
       // Resolve final relationship_role. relationship_role is the source of truth;
@@ -561,6 +601,9 @@ serve(async (req) => {
     }
 
     // --- STANDARD INVITATION PATH ---
+    const capReject = await assertCapacity();
+    if (capReject) return capReject;
+
     // 6b. Check for existing pending invitation for this email/tenant
     const { data: existingInvite } = await supabase
       .from('user_invitations')

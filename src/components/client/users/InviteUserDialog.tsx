@@ -19,6 +19,9 @@ import {
   useInviteMutations,
   type InviteAccessLevel,
 } from "./useInviteMutations";
+import { useClientTenant } from "@/contexts/ClientTenantContext";
+import { useUserCapacity } from "@/hooks/useUserCapacity";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Props {
   open: boolean;
@@ -43,6 +46,10 @@ const ALL_ACCESS_OPTIONS: { value: InviteAccessLevel; label: string; description
 
 export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
   const { invite } = useInviteMutations();
+  const { activeTenantId } = useClientTenant();
+  const capacity = useUserCapacity(activeTenantId);
+  const atLimit = !!capacity.data?.atLimit;
+
 
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -139,6 +146,25 @@ export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
+        {atLimit ? (
+          <div className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>User limit reached</DialogTitle>
+            </DialogHeader>
+            <Alert variant="destructive">
+              <AlertTitle>User limit reached</AlertTitle>
+              <AlertDescription>
+                This membership is at its user cap ({capacity.data!.used} of {capacity.data!.limit}).
+                Contact Vivacity to upgrade or add more users.
+              </AlertDescription>
+            </Alert>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Invite a user</DialogTitle>
@@ -146,6 +172,7 @@ export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
               They'll get an email with a link to set up their account.
             </DialogDescription>
           </DialogHeader>
+
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -230,7 +257,9 @@ export default function InviteUserDialog({ open, onOpenChange, rows }: Props) {
             </Button>
           </DialogFooter>
         </form>
+        )}
       </DialogContent>
+
     </Dialog>
   );
 }

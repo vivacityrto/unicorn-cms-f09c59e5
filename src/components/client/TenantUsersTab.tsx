@@ -83,6 +83,9 @@ import {
 import { toast } from 'sonner';
 import { TenantInviteDialog } from './TenantInviteDialog';
 import { useRBAC } from '@/hooks/useRBAC';
+import { useUserCapacity, useInvalidateUserCapacity } from '@/hooks/useUserCapacity';
+import { CapacityPill } from './users/CapacityPill';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   type RelationshipRole,
   RELATIONSHIP_ROLE_OPTIONS,
@@ -150,6 +153,9 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const canChangeRoles = isSuperAdmin() || hasTenantAdmin(tenantId) || isVivacityTeam;
   // Only Vivacity staff can activate ghost accounts — never expose in client portal.
   const canActivateGhosts = isSuperAdmin() || isVivacityTeam;
+
+  const capacity = useUserCapacity(tenantId);
+  const invalidateCapacity = useInvalidateUserCapacity();
 
   // Edit drawer state
   const [editingMember, setEditingMember] = useState<TenantMemberInfo | null>(null);
@@ -769,6 +775,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       if (data && data.ok === false) throw new Error(data.detail || 'Failed to cancel invitation');
       
       setPendingInvites(prev => prev.filter(i => i.id !== inviteId));
+      invalidateCapacity(tenantId);
       toast.success('Invitation cancelled');
     } catch (error) {
       console.error('Error cancelling invite:', error);
@@ -815,10 +822,29 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           </p>
         </div>
         {canManageUsers && (
-          <Button onClick={() => setInviteDialogOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Invite User
-          </Button>
+          <div className="flex items-center gap-3">
+            <CapacityPill capacity={capacity.data} />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      onClick={() => setInviteDialogOpen(true)}
+                      disabled={!!capacity.data?.atLimit && !isVivacityTeam}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Invite User
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {capacity.data?.atLimit && !isVivacityTeam && (
+                  <TooltipContent>
+                    User limit reached — contact Vivacity to add more users.
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         )}
       </div>
 
@@ -1311,6 +1337,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         onSuccess={() => {
           fetchMembers();
           fetchPendingInvites();
+          invalidateCapacity(tenantId);
         }}
       />
 

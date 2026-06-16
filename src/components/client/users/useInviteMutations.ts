@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useToast } from "@/hooks/use-toast";
+import { userCapacityKeys } from "@/hooks/useUserCapacity";
 
 export type InviteAccessLevel = "academy" | "secondary";
 
@@ -40,6 +41,7 @@ export function useInviteMutations() {
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["client_tenant_users", activeTenantId] });
+    void queryClient.invalidateQueries({ queryKey: userCapacityKeys.tenant(activeTenantId ?? null) });
   };
 
   const invite = useMutation({
