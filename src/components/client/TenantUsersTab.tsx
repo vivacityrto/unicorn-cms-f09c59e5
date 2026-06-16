@@ -146,8 +146,8 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const [activatingUserId, setActivatingUserId] = useState<string | null>(null);
 
   // RBAC: Check permissions using helper functions
-  const canManageUsers = isSuperAdmin() || hasTenantAdmin(tenantId);
-  const canChangeRoles = isSuperAdmin() || hasTenantAdmin(tenantId);
+  const canManageUsers = isSuperAdmin() || hasTenantAdmin(tenantId) || isVivacityTeam;
+  const canChangeRoles = isSuperAdmin() || hasTenantAdmin(tenantId) || isVivacityTeam;
   // Only Vivacity staff can activate ghost accounts — never expose in client portal.
   const canActivateGhosts = isSuperAdmin() || isVivacityTeam;
 
