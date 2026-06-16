@@ -96,7 +96,7 @@ interface StageRowProps {
   profile: any;
 }
 
-function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, tenantId, packageId, packageInstanceId, onUpdate, profile }: StageRowProps) {
+function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange, onRecurringClick, onReleaseClick, tenantId, packageId, packageInstanceId, onUpdate, profile }: StageRowProps) {
   const { statuses } = useTaskStatusOptions();
   const [auditModalOpen, setAuditModalOpen] = useState(false);
   const statusCode = typeof stage.status === 'number' ? stage.status : 0;
