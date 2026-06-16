@@ -17,11 +17,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Switch } from '@/components/ui/switch';
 import { 
   Plus, CheckSquare, MoreHorizontal, Edit, Trash2, 
   Calendar as CalendarIcon, User, Clock, Filter, Loader2,
   CheckCircle2, Circle, AlertCircle, XCircle, PauseCircle,
-  Mic, MicOff, Mail, ExternalLink
+  Mic, MicOff, Mail, ExternalLink, Eye, EyeOff
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { format, formatDistanceToNow, isPast, isToday } from 'date-fns';
