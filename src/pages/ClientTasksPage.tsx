@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useClientAllTasks, type UnifiedTask } from "@/hooks/useClientAllTasks";
-import { useTaskStatusOptions, getStatusLabel } from "@/hooks/useTaskStatusOptions";
+
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
