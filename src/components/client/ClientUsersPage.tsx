@@ -60,6 +60,8 @@ import InviteUserDialog from "./users/InviteUserDialog";
 import RevokeInviteAlert from "./users/RevokeInviteAlert";
 import { useInviteMutations } from "./users/useInviteMutations";
 import { CapacityPill } from "./users/CapacityPill";
+import { supabase } from "@/integrations/supabase/client";
+
 
 function getInitials(name: string): string {
   return (
