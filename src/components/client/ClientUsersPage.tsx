@@ -309,7 +309,7 @@ function LoadingSkeleton() {
 
 export default function ClientUsersPage() {
   const { data, isLoading, isError } = useClientTenantUsers();
-  const { canManagePortalUsers, activeTenantId } = useClientTenant();
+  const { canManagePortalUsers, activeTenantId, isReadOnly } = useClientTenant();
   const { resend } = useInviteMutations();
   const capacity = useUserCapacity(activeTenantId);
   const atLimit = !!capacity.data?.atLimit;
