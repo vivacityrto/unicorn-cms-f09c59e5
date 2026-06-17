@@ -397,7 +397,6 @@ export default function ClientTasksPage() {
                   <TaskRow
                     key={task.uid}
                     task={task}
-                    statuses={statuses}
                     isSelected={selected.has(task.uid)}
                     onToggle={() => toggleSelect(task.uid)}
                     showCheckbox={canManagePortalUsers}
