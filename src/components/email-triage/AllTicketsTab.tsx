@@ -18,24 +18,17 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { AlertTriangle } from "lucide-react";
-import { useAllTickets } from "@/hooks/useEmailTickets";
+import { useAllTickets, type EmailTicket } from "@/hooks/useEmailTickets";
 import {
   useEmailTicketCategories,
   useEmailTicketStatuses,
 } from "@/hooks/useEmailTicketCategories";
 import { useTriageStaffOptions } from "@/hooks/useTriageStaffOptions";
 import { CategoryBadge, StatusBadge, UrgentIcon } from "./TicketBadges";
+import { rowBorderClass } from "./slaBorder";
+import { TicketDetailPanel } from "./TicketDetailPanel";
 
 const ALL = "__all__";
-
-function rowBorderClass(responseDueAt: string | null, slaBreached: boolean) {
-  if (slaBreached) return "border-l-4 border-destructive";
-  if (!responseDueAt) return "";
-  const ms = new Date(responseDueAt).getTime() - Date.now();
-  if (ms > 0 && ms <= 60 * 60 * 1000)
-    return "border-l-4 border-amber-500";
-  return "";
-}
 
 export function AllTicketsTab() {
   const { data: tickets = [], isLoading } = useAllTickets();
