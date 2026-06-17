@@ -61,7 +61,6 @@ function numericToPriorityString(p: number | null | undefined): "urgent" | "high
 }
 
 function isTaskCompleted(t: UnifiedTask) {
-  if (t.source === "stage_task") return t.status === 2;
   return t.actionItemStatus === "done";
 }
 
