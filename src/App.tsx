@@ -235,6 +235,7 @@ const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackage
 const ClientInboxWrapperNew = lazy(() => import("./pages/client/ClientInboxWrapper"));
 const StaffPdpsWrapperNew = lazy(() => import("./pages/client/StaffPdpsWrapper"));
 const TeamInboxWrapper = lazy(() => import("./pages/TeamInboxWrapper"));
+const EmailTriageWrapper = lazy(() => import("./pages/EmailTriageWrapper"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
