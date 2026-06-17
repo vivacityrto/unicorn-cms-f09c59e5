@@ -396,8 +396,22 @@ export default function ClientUsersPage() {
                         <UserCell row={row} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <RolePill row={row} />
+                        {canManagePortalUsers &&
+                        row.row_type === "active" &&
+                        row.user_id &&
+                        (row.relationship_role === "academy_user" ||
+                          row.relationship_role === "user") ? (
+                          <RoleSwitcher
+                            row={row}
+                            tenantId={activeTenantId}
+                            pendingUserId={pendingUserId}
+                            setPendingUserId={setPendingUserId}
+                          />
+                        ) : (
+                          <RolePill row={row} />
+                        )}
                       </TableCell>
+
                       <TableCell className="hidden md:table-cell">
                         <StatusDot row={row} />
                       </TableCell>
