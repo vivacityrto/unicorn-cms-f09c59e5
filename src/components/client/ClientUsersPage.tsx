@@ -111,6 +111,7 @@ function RoleSwitcher({
   row: ClientTenantUserRow;
   tenantId: number | null;
   pendingUserId: string | null;
+  isReadOnly: boolean;
   setPendingUserId: (v: string | null) => void;
 }) {
   const queryClient = useQueryClient();
