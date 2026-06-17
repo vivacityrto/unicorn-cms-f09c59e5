@@ -79,7 +79,7 @@ function userDisplayName(u: PortalUser): string {
 export default function ClientTasksPage() {
   const [showArchived, setShowArchived] = useState(false);
   const { data: tasks = [], isLoading } = useClientAllTasks(showArchived);
-  const { statuses } = useTaskStatusOptions();
+  
   const { canManagePortalUsers, activeTenantId } = useClientTenant();
   const { profile } = useAuth();
   const currentUserId = profile?.user_uuid ?? null;
