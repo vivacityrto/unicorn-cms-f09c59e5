@@ -187,7 +187,7 @@ export default function AdminZeroProgressPackagesPage() {
   const copyTSV = async () => {
     const headers = [
       'Tenant', 'Tenant legal', 'Package', 'Package type', 'Started', 'Days',
-      'Stages complete', 'Stages total', 'Stages released',
+      'Stages complete', 'Stages total',
       'Action items done', 'Legacy tasks done', 'Hours', 'Last activity', 'Triage',
     ];
     const lines = [headers.join('\t')];
