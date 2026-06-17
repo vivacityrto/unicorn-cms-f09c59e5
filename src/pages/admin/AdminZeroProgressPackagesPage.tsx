@@ -90,7 +90,6 @@ type SortKey =
   | 'start_date'
   | 'days_since_start'
   | 'stages_total'
-  | 'stages_released'
   | 'tasks_done'
   | 'hours_logged'
   | 'last_activity_at'
@@ -161,7 +160,6 @@ export default function AdminZeroProgressPackagesPage() {
         case 'start_date': av = a.start_date ?? ''; bv = b.start_date ?? ''; break;
         case 'days_since_start': av = a.days_since_start; bv = b.days_since_start; break;
         case 'stages_total': av = a.stages_total; bv = b.stages_total; break;
-        case 'stages_released': av = a.stages_released; bv = b.stages_released; break;
         case 'tasks_done': av = tasksDoneA; bv = tasksDoneB; break;
         case 'hours_logged': av = a.hours_logged; bv = b.hours_logged; break;
         case 'last_activity_at': av = a.last_activity_at ?? ''; bv = b.last_activity_at ?? ''; break;
@@ -189,7 +187,7 @@ export default function AdminZeroProgressPackagesPage() {
   const copyTSV = async () => {
     const headers = [
       'Tenant', 'Tenant legal', 'Package', 'Package type', 'Started', 'Days',
-      'Stages complete', 'Stages total', 'Stages released',
+      'Stages complete', 'Stages total',
       'Action items done', 'Legacy tasks done', 'Hours', 'Last activity', 'Triage',
     ];
     const lines = [headers.join('\t')];
@@ -203,7 +201,6 @@ export default function AdminZeroProgressPackagesPage() {
         String(r.days_since_start ?? ''),
         String(r.stages_complete),
         String(r.stages_total),
-        String(r.stages_released),
         String(r.action_items_completed),
         String(r.legacy_tasks_completed),
         formatHours(Number(r.hours_logged ?? 0)),
@@ -249,9 +246,6 @@ export default function AdminZeroProgressPackagesPage() {
         <TableCell className="text-right font-mono tabular-nums">{r.days_since_start}</TableCell>
         <TableCell className="font-mono tabular-nums">
           {r.stages_complete}/{r.stages_total}
-        </TableCell>
-        <TableCell className={r.stages_released > 0 ? 'font-bold' : 'text-muted-foreground'}>
-          {r.stages_released}
         </TableCell>
         <TableCell className={tasksDone > 0 ? 'font-bold' : 'text-muted-foreground'}>
           {tasksDone}
@@ -373,7 +367,6 @@ export default function AdminZeroProgressPackagesPage() {
                   <TableHead onClick={() => handleSort('start_date')} className="cursor-pointer select-none">Started{sortIndicator('start_date')}</TableHead>
                   <TableHead onClick={() => handleSort('days_since_start')} className="cursor-pointer select-none text-right">Days{sortIndicator('days_since_start')}</TableHead>
                   <TableHead onClick={() => handleSort('stages_total')} className="cursor-pointer select-none">Stages{sortIndicator('stages_total')}</TableHead>
-                  <TableHead onClick={() => handleSort('stages_released')} className="cursor-pointer select-none">Released{sortIndicator('stages_released')}</TableHead>
                   <TableHead onClick={() => handleSort('tasks_done')} className="cursor-pointer select-none">Tasks done{sortIndicator('tasks_done')}</TableHead>
                   <TableHead onClick={() => handleSort('hours_logged')} className="cursor-pointer select-none">Hours{sortIndicator('hours_logged')}</TableHead>
                   <TableHead onClick={() => handleSort('last_activity_at')} className="cursor-pointer select-none">Last activity{sortIndicator('last_activity_at')}</TableHead>
@@ -384,14 +377,14 @@ export default function AdminZeroProgressPackagesPage() {
                 {isLoading ? (
                   Array.from({ length: 8 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 10 }).map((__, j) => (
+                      {Array.from({ length: 9 }).map((__, j) => (
                         <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : sorted.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                       No zero-progress packages match the current filters.
                     </TableCell>
                   </TableRow>

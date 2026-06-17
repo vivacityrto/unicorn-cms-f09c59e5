@@ -17,8 +17,6 @@ export interface ClientPackageStageRow {
   is_audit_workspace: boolean;
   completion_date: string | null;
   raw_status: string | null;
-  released_client_tasks: boolean;
-  released_client_tasks_date: string | null;
   event_conducted_date: string | null;
   updated_at: string;
   node_state: StageNodeState;
