@@ -105,6 +105,7 @@ function RoleSwitcher({
   row,
   tenantId,
   pendingUserId,
+  isReadOnly,
   setPendingUserId,
 }: {
   row: ClientTenantUserRow;
