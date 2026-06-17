@@ -160,7 +160,6 @@ export default function AdminZeroProgressPackagesPage() {
         case 'start_date': av = a.start_date ?? ''; bv = b.start_date ?? ''; break;
         case 'days_since_start': av = a.days_since_start; bv = b.days_since_start; break;
         case 'stages_total': av = a.stages_total; bv = b.stages_total; break;
-        case 'stages_released': av = a.stages_released; bv = b.stages_released; break;
         case 'tasks_done': av = tasksDoneA; bv = tasksDoneB; break;
         case 'hours_logged': av = a.hours_logged; bv = b.hours_logged; break;
         case 'last_activity_at': av = a.last_activity_at ?? ''; bv = b.last_activity_at ?? ''; break;
