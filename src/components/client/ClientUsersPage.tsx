@@ -148,7 +148,7 @@ function RoleSwitcher({
   return (
     <Select
       value={row.relationship_role}
-      disabled={isPending}
+      disabled={isPending || isReadOnly}
       onValueChange={(v) => {
         if (v === row.relationship_role) return;
         if (v !== "academy_user" && v !== "user") return;
