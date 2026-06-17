@@ -138,7 +138,14 @@ export function AllTicketsTab() {
                 return (
                   <TableRow
                     key={t.id}
-                    className={cn(rowBorderClass(t.response_due_at, t.sla_breached))}
+                    className={cn(
+                      "cursor-pointer hover:bg-muted/50",
+                      rowBorderClass(t.response_due_at, t.sla_breached)
+                    )}
+                    onClick={() => {
+                      setSelected(t);
+                      setPanelOpen(true);
+                    }}
                   >
                     <TableCell className="font-mono text-xs">
                       {t.ticket_number}
