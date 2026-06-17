@@ -101,6 +101,70 @@ function RolePill({ row }: { row: ClientTenantUserRow }) {
   return <Badge variant="secondary">{label}</Badge>;
 }
 
+function RoleSwitcher({
+  row,
+  tenantId,
+  pendingUserId,
+  setPendingUserId,
+}: {
+  row: ClientTenantUserRow;
+  tenantId: number | null;
+  pendingUserId: string | null;
+  setPendingUserId: (v: string | null) => void;
+}) {
+  const queryClient = useQueryClient();
+  const userId = row.user_id;
+  const isPending = pendingUserId === userId;
+
+  const mutation = useMutation({
+    mutationFn: async (newRole: "academy_user" | "user") => {
+      if (!tenantId || !userId) throw new Error("Missing tenant or user");
+      const { error } = await supabase.rpc("set_relationship_role", {
+        p_tenant_id: tenantId,
+        p_user_id: userId,
+        p_relationship_role: newRole,
+        p_reason: null,
+      });
+      if (error) throw error;
+    },
+    onMutate: () => {
+      if (userId) setPendingUserId(userId);
+    },
+    onSuccess: () => {
+      toast.success("Role updated");
+      queryClient.invalidateQueries({ queryKey: ["client_tenant_users", tenantId] });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "Failed to update role";
+      toast.error(message);
+    },
+    onSettled: () => {
+      setPendingUserId(null);
+    },
+  });
+
+  return (
+    <Select
+      value={row.relationship_role}
+      disabled={isPending}
+      onValueChange={(v) => {
+        if (v === row.relationship_role) return;
+        if (v !== "academy_user" && v !== "user") return;
+        mutation.mutate(v);
+      }}
+    >
+      <SelectTrigger className="h-8 w-[150px]">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="academy_user">Academy only</SelectItem>
+        <SelectItem value="user">Full access</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
+
 function StatusDot({ row }: { row: ClientTenantUserRow }) {
   if (row.row_type === "invited") {
     return (
