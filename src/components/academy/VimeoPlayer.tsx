@@ -23,13 +23,38 @@ export interface VimeoPlayerProps {
   progressThrottleMs?: number;
 }
 
-/** Convert a vimeo.com/<id>?h=<hash> URL into a player.vimeo.com embed URL. */
+/**
+ * Convert a Vimeo URL into a player.vimeo.com embed URL.
+ * Supports privacy hashes provided either in the path
+ * (`vimeo.com/<id>/<hash>`) or as a query parameter
+ * (`vimeo.com/<id>?h=<hash>`).
+ */
 export function buildVimeoEmbedUrl(rawUrl: string | null | undefined): string | null {
   if (!rawUrl) return null;
-  return (
-    rawUrl.replace("vimeo.com/", "player.vimeo.com/video/").split("?")[0] +
-    "?autoplay=0&title=0&byline=0&portrait=0&texttrack=en"
-  );
+
+  let id: string | undefined;
+  let hash: string | undefined;
+
+  try {
+    const parsed = new URL(rawUrl);
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    id = segments[0];
+    hash = segments[1] ?? parsed.searchParams.get("h") ?? undefined;
+  } catch {
+    return null;
+  }
+
+  if (!id) return null;
+
+  const params = new URLSearchParams();
+  if (hash) params.set("h", hash);
+  params.set("autoplay", "0");
+  params.set("title", "0");
+  params.set("byline", "0");
+  params.set("portrait", "0");
+  params.set("texttrack", "en");
+
+  return `https://player.vimeo.com/video/${id}?${params.toString()}`;
 }
 
 /**
