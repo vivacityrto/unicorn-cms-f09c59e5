@@ -247,9 +247,6 @@ export default function AdminZeroProgressPackagesPage() {
         <TableCell className="font-mono tabular-nums">
           {r.stages_complete}/{r.stages_total}
         </TableCell>
-        <TableCell className={r.stages_released > 0 ? 'font-bold' : 'text-muted-foreground'}>
-          {r.stages_released}
-        </TableCell>
         <TableCell className={tasksDone > 0 ? 'font-bold' : 'text-muted-foreground'}>
           {tasksDone}
         </TableCell>
