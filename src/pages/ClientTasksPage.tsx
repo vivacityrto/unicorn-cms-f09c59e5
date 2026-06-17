@@ -559,38 +559,23 @@ function TaskRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5 flex-wrap">
-          {isActionItem ? (
-            <Select
-              value={(task.actionItemStatus ?? "todo") as string}
-              onValueChange={(v) =>
-                onActionItemStatusChange(task.actionItemId!, task.actionItemStatus, v)
-              }
-            >
-              <SelectTrigger className="h-7 w-[160px] text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ACTION_ITEM_STATUSES.map((s) => (
-                  <SelectItem key={s.value} value={s.value} className="text-xs">
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Badge
-              variant={
-                task.status === 2
-                  ? "default"
-                  : task.isOverdue
-                  ? "destructive"
-                  : "secondary"
-              }
-              className="text-xs"
-            >
-              {getStatusLabel(task.status as number, statuses)}
-            </Badge>
-          )}
+          <Select
+            value={(task.actionItemStatus ?? "todo") as string}
+            onValueChange={(v) =>
+              onActionItemStatusChange(task.actionItemId!, task.actionItemStatus, v)
+            }
+          >
+            <SelectTrigger className="h-7 w-[160px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ACTION_ITEM_STATUSES.map((s) => (
+                <SelectItem key={s.value} value={s.value} className="text-xs">
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {task.isArchived && (
             <Badge variant="outline" className="text-xs">
               Archived
