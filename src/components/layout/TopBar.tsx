@@ -42,6 +42,7 @@ const routeTitles: Record<string, string> = {
   "/my-work": "My Work",
   "/tasks": "Tasks",
   "/time-inbox": "Time Inbox",
+  "/email-triage": "Email Triage",
   "/calendar": "Event Calendar",
   "/manage-tenants": "Clients",
   "/manage-packages": "Packages",
