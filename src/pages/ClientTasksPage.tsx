@@ -490,34 +490,30 @@ function TaskRow({
         {task.packageName}
       </td>
       <td className="px-4 py-3 hidden md:table-cell">
-        {isActionItem ? (
-          <Select
-            value={task.assigneeUserId ?? UNASSIGNED}
-            onValueChange={(v) =>
-              onAssigneeChange(
-                task.actionItemId!,
-                task.assigneeUserId ?? null,
-                v === UNASSIGNED ? null : v,
-              )
-            }
-          >
-            <SelectTrigger className="h-7 w-[180px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={UNASSIGNED} className="text-xs">
-                Unassigned
+        <Select
+          value={task.assigneeUserId ?? UNASSIGNED}
+          onValueChange={(v) =>
+            onAssigneeChange(
+              task.actionItemId!,
+              task.assigneeUserId ?? null,
+              v === UNASSIGNED ? null : v,
+            )
+          }
+        >
+          <SelectTrigger className="h-7 w-[180px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={UNASSIGNED} className="text-xs">
+              Unassigned
+            </SelectItem>
+            {portalUsers.map((u) => (
+              <SelectItem key={u.user_uuid} value={u.user_uuid} className="text-xs">
+                {userDisplayName(u)}
               </SelectItem>
-              {portalUsers.map((u) => (
-                <SelectItem key={u.user_uuid} value={u.user_uuid} className="text-xs">
-                  {userDisplayName(u)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <span className="text-muted-foreground">{task.assigneeName ?? "—"}</span>
-        )}
+            ))}
+          </SelectContent>
+        </Select>
       </td>
       <td className="px-4 py-3 hidden lg:table-cell">
         {isActionItem ? (
