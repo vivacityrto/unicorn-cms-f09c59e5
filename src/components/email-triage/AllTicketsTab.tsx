@@ -18,24 +18,17 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { AlertTriangle } from "lucide-react";
-import { useAllTickets } from "@/hooks/useEmailTickets";
+import { useAllTickets, type EmailTicket } from "@/hooks/useEmailTickets";
 import {
   useEmailTicketCategories,
   useEmailTicketStatuses,
 } from "@/hooks/useEmailTicketCategories";
 import { useTriageStaffOptions } from "@/hooks/useTriageStaffOptions";
 import { CategoryBadge, StatusBadge, UrgentIcon } from "./TicketBadges";
+import { rowBorderClass } from "./slaBorder";
+import { TicketDetailPanel } from "./TicketDetailPanel";
 
 const ALL = "__all__";
-
-function rowBorderClass(responseDueAt: string | null, slaBreached: boolean) {
-  if (slaBreached) return "border-l-4 border-destructive";
-  if (!responseDueAt) return "";
-  const ms = new Date(responseDueAt).getTime() - Date.now();
-  if (ms > 0 && ms <= 60 * 60 * 1000)
-    return "border-l-4 border-amber-500";
-  return "";
-}
 
 export function AllTicketsTab() {
   const { data: tickets = [], isLoading } = useAllTickets();
@@ -46,6 +39,8 @@ export function AllTicketsTab() {
   const [categoryFilter, setCategoryFilter] = useState<string>(ALL);
   const [statusFilter, setStatusFilter] = useState<string>(ALL);
   const [assigneeFilter, setAssigneeFilter] = useState<string>(ALL);
+  const [selected, setSelected] = useState<EmailTicket | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const staffByUuid = useMemo(
     () => Object.fromEntries(staff.map((s) => [s.user_uuid, s])),
@@ -143,7 +138,14 @@ export function AllTicketsTab() {
                 return (
                   <TableRow
                     key={t.id}
-                    className={cn(rowBorderClass(t.response_due_at, t.sla_breached))}
+                    className={cn(
+                      "cursor-pointer hover:bg-muted/50",
+                      rowBorderClass(t.response_due_at, t.sla_breached)
+                    )}
+                    onClick={() => {
+                      setSelected(t);
+                      setPanelOpen(true);
+                    }}
                   >
                     <TableCell className="font-mono text-xs">
                       {t.ticket_number}
@@ -215,6 +217,16 @@ export function AllTicketsTab() {
           </Table>
         </div>
       )}
+
+      <TicketDetailPanel
+        ticket={
+          selected
+            ? tickets.find((x) => x.id === selected.id) ?? selected
+            : null
+        }
+        open={panelOpen}
+        onOpenChange={setPanelOpen}
+      />
     </div>
   );
 }
