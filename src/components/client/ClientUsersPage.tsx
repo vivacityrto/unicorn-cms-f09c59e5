@@ -105,11 +105,13 @@ function RoleSwitcher({
   row,
   tenantId,
   pendingUserId,
+  isReadOnly,
   setPendingUserId,
 }: {
   row: ClientTenantUserRow;
   tenantId: number | null;
   pendingUserId: string | null;
+  isReadOnly: boolean;
   setPendingUserId: (v: string | null) => void;
 }) {
   const queryClient = useQueryClient();
@@ -146,7 +148,7 @@ function RoleSwitcher({
   return (
     <Select
       value={row.relationship_role}
-      disabled={isPending}
+      disabled={isPending || isReadOnly}
       onValueChange={(v) => {
         if (v === row.relationship_role) return;
         if (v !== "academy_user" && v !== "user") return;
@@ -309,7 +311,7 @@ function LoadingSkeleton() {
 
 export default function ClientUsersPage() {
   const { data, isLoading, isError } = useClientTenantUsers();
-  const { canManagePortalUsers, activeTenantId } = useClientTenant();
+  const { canManagePortalUsers, activeTenantId, isReadOnly } = useClientTenant();
   const { resend } = useInviteMutations();
   const capacity = useUserCapacity(activeTenantId);
   const atLimit = !!capacity.data?.atLimit;
@@ -327,7 +329,7 @@ export default function ClientUsersPage() {
     <div className="flex items-center gap-3">
       <CapacityPill capacity={capacity.data} />
       <Button
-        disabled={!canManagePortalUsers || atLimit}
+        disabled={!canManagePortalUsers || atLimit || isReadOnly}
         onClick={() => setInviteOpen(true)}
         title={atLimit ? "User limit reached — contact Vivacity to add more users." : undefined}
       >
@@ -406,6 +408,7 @@ export default function ClientUsersPage() {
                             tenantId={activeTenantId}
                             pendingUserId={pendingUserId}
                             setPendingUserId={setPendingUserId}
+                            isReadOnly={isReadOnly}
                           />
                         ) : (
                           <RolePill row={row} />
