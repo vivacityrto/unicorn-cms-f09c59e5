@@ -1,66 +1,49 @@
-## Phase 6 cleanup
+Implement Phase 7 cleanup exactly as designed in the prior plan. No changes to scope.
 
-Single migration file (two changes) + TypeScript cleanup in two files. No other files touched.
+### Migration file (single file, Steps 1–8 in order, one implicit transaction)
+`supabase/migrations/<timestamp>_drop_released_client_tasks.sql`
 
-### 1. Migration — `supabase/migrations/<new>_phase6_cleanup.sql`
+Top-of-file SQL comment block: pre-deploy verification query (unpublished CTIs on released stages must be 0) and a reference manifest of objects rewritten.
 
-**Pre-deploy verification (run + confirm 0; included as SQL comment in the migration header):**
-```sql
--- Pre-deploy check (must return 0 rows):
--- SELECT cai.id, cai.package_id
---   FROM public.client_action_items cai
---   WHERE cai.package_id IS NOT NULL
---     AND NOT EXISTS (SELECT 1 FROM public.packages p WHERE p.id = cai.package_id);
-```
-Already verified now: 0 orphan rows.
+1. **`CREATE OR REPLACE VIEW public.v_client_package_dashboard`** — verbatim `pg_get_viewdef`, with `task_instances_agg` CTE deleted and `tasks_agg` collapsed to project directly from `action_items_agg`.
+2. **`CREATE OR REPLACE VIEW public.v_client_package_whats_next`** — verbatim, with the CTI branch of `combined` deleted.
+3. **`CREATE OR REPLACE FUNCTION public.get_client_package_dashboard(bigint, bigint DEFAULT NULL)`** — verbatim `pg_get_functiondef`, with `task_instances_agg` CTE deleted and `tasks_agg` collapsed. Preserves: signature, RETURNS TABLE column list, `LANGUAGE sql`, `STABLE`, `SECURITY DEFINER`, `SET search_path = ''`, `SET row_security = 'off'`. `CREATE OR REPLACE FUNCTION` preserves existing EXECUTE grants to anon/authenticated/service_role.
+4. **`CREATE OR REPLACE VIEW public.v_client_package_stages`** — verbatim, with output columns `released_client_tasks` and `released_client_tasks_date` deleted.
+5. **`CREATE OR REPLACE VIEW public.v_client_home_feed`** — verbatim `pg_get_viewdef` with three CTEs (`cti_due_upcoming`, `cti_overdue`, `stages_released_recent`) and their three matching `UNION ALL` legs deleted. The outer `all_events(feed_section, event_type, tenant_id, package_instance_id, event_at, title, subtitle, event_uid, source_table, href, package_name)` table-alias column list is preserved exactly — order is load-bearing.
+6. **`CREATE OR REPLACE VIEW public.v_admin_zero_progress_packages`** (Option A) — verbatim, with `stages_released` aggregate removed from `stage_counts`, `stages_released` output column removed from final SELECT, and the `stages_released = 0` predicate removed from the `pre_release` branch of `triage_category`.
+7. **`DROP FUNCTION public.rpc_backfill_released_stage_tasks();`** — runs before column drop so no remaining function body references the columns.
+8. **`ALTER TABLE public.stage_instances DROP COLUMN released_client_tasks;`** then **`ALTER TABLE public.stage_instances DROP COLUMN released_client_tasks_date;`** — metadata-only AccessExclusive, sub-second on ~6k rows.
 
-**Change A — recreate `public.rpc_publish_stage_tasks`** with `CREATE OR REPLACE FUNCTION`, keeping the existing signature, `SECURITY DEFINER`, `SET search_path = ''`, and all other logic. Diff vs current definition:
-- Remove `v_package_id bigint;` from the DECLARE block.
-- Change the `SELECT … INTO` to: `SELECT si.stage_id, si.packageinstance_id, pi.tenant_id INTO v_stage_id, v_pkg_inst_id, v_tenant_id FROM public.stage_instances si JOIN public.package_instances pi ON pi.id = si.packageinstance_id WHERE si.id = p_stage_instance_id;` (drop `pi.package_id` and `v_package_id`).
-- In the `INSERT INTO public.client_action_items (...)` column list, remove `package_id`; in `VALUES (...)`, remove `v_package_id`. `package_instance_id` (Phase 5 canonical field) remains.
-- Audit log block, return jsonb, status/priority defaults, and `client_task_instances` update all unchanged.
-- No GRANT changes needed (function already granted; `CREATE OR REPLACE` preserves them).
+Bottom-of-file SQL comment block: post-deploy verification queries (no view/function references `released_client_tasks`; both columns absent from `information_schema.columns`; smoke-test `SELECT … FROM public.get_client_package_dashboard(<tenant_id>)`).
 
-**Change B — add validated FK on `client_action_items.package_id`:**
-```sql
-ALTER TABLE public.client_action_items
-  ADD CONSTRAINT fk_client_action_items_package_template
-  FOREIGN KEY (package_id) REFERENCES public.packages(id) ON DELETE SET NULL
-  NOT VALID;
+All view bodies are pulled fresh from `pg_get_viewdef` and `pg_get_functiondef` immediately before writing — no reconstruction. Only the specified removals are applied.
 
-ALTER TABLE public.client_action_items
-  VALIDATE CONSTRAINT fk_client_action_items_package_template;
-```
+### Step 9 — Frontend changes (same change set, after migration approval)
 
-**Post-deploy verification (included as SQL comment at end of migration):**
-```sql
--- Post-deploy checks:
--- 1) FK is valid:
--- SELECT conname, convalidated FROM pg_constraint WHERE conname = 'fk_client_action_items_package_template';
--- 2) Function no longer writes package_id:
--- SELECT pg_get_functiondef('public.rpc_publish_stage_tasks'::regproc) NOT LIKE '%v_package_id%' AS clean;
-```
+- **`src/hooks/use-client-package-stages.ts`** — remove `released_client_tasks` and `released_client_tasks_date` from `StageInstance` and from the `.select(...)` string.
+- **`src/hooks/use-admin-zero-progress-packages.ts`** — remove `stages_released: number;` from the row type.
+- **`src/pages/admin/AdminZeroProgressPackagesPage.tsx`** — remove `'stages_released'` from the `SortKey` union, the `case 'stages_released'` sort branch, the matching `<TableHead>` (with its onClick), the `<TableCell>` rendering `r.stages_released`, and the CSV header label + `String(r.stages_released)` cell.
+- **`src/integrations/supabase/types.ts`** — regenerates automatically post-migration; not hand-edited.
 
-### 2. TypeScript cleanup
+### Verification after apply
 
-**`src/hooks/useClientAllTasks.ts`** (lines 5–27):
-- Change `source: "stage_task" | "action_item"` → `source: "action_item"`.
-- Remove the two back-compat comment lines above it.
+- Run the post-deploy SQL comments from the migration.
+- Confirm `AdminZeroProgressPackagesPage` renders without the removed column.
+- Confirm Client Packages stage stepper still renders (no field removed from JSX, only from the row type and select string).
+- Confirm `useClientHomeFeed` still returns rows (action-item legs already cover `coming_up` + `needs_attention`).
 
-**`src/pages/ClientTasksPage.tsx`:**
-- Lines 63–66: simplify `isTaskCompleted` to `return t.actionItemStatus === "done";` (drop the `stage_task` branch).
-- Line 453: remove `const isActionItem = task.source === "action_item";`.
-- Lines 494–522 (assignee cell): drop the `isActionItem ?` guard, keep only the `<Select>` branch; remove the `: (<span>{task.assigneeName ?? "—"}</span>)` fallback.
-- Lines 524–553 (priority cell): same — keep the `<Select>` branch, remove the `<Badge>` fallback.
-- Lines 572–612 (status cell): keep the action-item `<Select>` branch, remove the `<Badge variant=… >{getStatusLabel(...)}</Badge>` legacy fallback. `getStatusLabel`/`statuses` may then become unused — remove them and their imports/props if so (verify with a search after the edit).
+### Risk assessment (carried from prior plan)
 
-### Risks & compatibility
-- **Function change:** signature and return shape unchanged; callers (publish flow) unaffected. `client_action_items.package_id` will simply be NULL for newly published stage tasks — this matches Phase 5 intent (`package_instance_id` is canonical).
-- **FK:** added `NOT VALID` then `VALIDATE` separately to minimise lock duration; `ON DELETE SET NULL` matches existing nullable column semantics. 0 orphans confirmed pre-deploy.
-- **TS narrowing:** `UnifiedTask.source` is now a single literal; any external consumer still typing `"stage_task"` will get a compile error — acceptable per request (dead code). Runtime data already only emits `"action_item"`.
-- **Audit trail:** publish_stage_tasks still logs to `client_audit_log` with full payload — unchanged.
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| AccessExclusive lock during DROP COLUMN | very low | low | metadata-only; sub-second |
+| Missed reference fails migration | very low | low | exhaustive audit; single transaction rolls back atomically |
+| `v_client_home_feed` column-order regression | low | medium | verbatim pg_get_viewdef; `all_events(...)` alias preserved |
+| `triage_category` semantics shift | low | low | SuperAdmin-only; new criterion is the real signal |
+| Frontend cached query shape mismatch | low | low | hooks updated same change set; React Query refetches |
 
-### Benefits
-- Removes the last writer of the deprecated `package_id` column on new rows.
-- Enforces referential integrity on legacy `package_id` going forward.
-- Deletes dead UI branches, shrinking `ClientTasksPage.tsx` and clarifying that all rows are action items.
+### Rollback
+
+Recreate columns as `boolean DEFAULT false` + `timestamptz` (values cannot be reconstructed but no live code path needs them); re-run captured `CREATE OR REPLACE` bodies for views/function and re-create the backfill helper from this plan's audit dump.
+
+Ready to implement on approval.
