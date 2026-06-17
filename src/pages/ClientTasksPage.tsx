@@ -516,35 +516,29 @@ function TaskRow({
         </Select>
       </td>
       <td className="px-4 py-3 hidden lg:table-cell">
-        {isActionItem ? (
-          <Select
-            value={currentPriority}
-            onValueChange={(v) =>
-              onPriorityChange(
-                task.actionItemId!,
-                currentPriority,
-                v as "urgent" | "high" | "medium" | "low",
-              )
-            }
+        <Select
+          value={currentPriority}
+          onValueChange={(v) =>
+            onPriorityChange(
+              task.actionItemId!,
+              currentPriority,
+              v as "urgent" | "high" | "medium" | "low",
+            )
+          }
+        >
+          <SelectTrigger
+            className={`h-6 w-[110px] text-xs rounded-full border px-2.5 font-medium ${priorityOption.triggerClass}`}
           >
-            <SelectTrigger
-              className={`h-6 w-[110px] text-xs rounded-full border px-2.5 font-medium ${priorityOption.triggerClass}`}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PRIORITY_OPTIONS.map((p) => (
-                <SelectItem key={p.value} value={p.value} className="text-xs">
-                  {p.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <Badge variant="secondary" className="text-xs">
-            {priorityOption.label}
-          </Badge>
-        )}
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PRIORITY_OPTIONS.map((p) => (
+              <SelectItem key={p.value} value={p.value} className="text-xs">
+                {p.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </td>
       <td className="px-4 py-3">
         {task.dueDate ? (
