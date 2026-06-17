@@ -417,7 +417,6 @@ export default function ClientTasksPage() {
 
 function TaskRow({
   task,
-  statuses,
   isSelected,
   onToggle,
   showCheckbox = true,
@@ -427,7 +426,6 @@ function TaskRow({
   onPriorityChange,
 }: {
   task: UnifiedTask;
-  statuses: any[];
   isSelected: boolean;
   onToggle: () => void;
   showCheckbox?: boolean;
