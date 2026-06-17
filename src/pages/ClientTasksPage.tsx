@@ -449,7 +449,6 @@ function TaskRow({
     newPriority: "urgent" | "high" | "medium" | "low",
   ) => void | Promise<void>;
 }) {
-  const isActionItem = task.source === "action_item";
   const currentPriority = numericToPriorityString(task.priority);
   const priorityOption =
     PRIORITY_OPTIONS.find((p) => p.value === currentPriority) ?? PRIORITY_OPTIONS[2];
