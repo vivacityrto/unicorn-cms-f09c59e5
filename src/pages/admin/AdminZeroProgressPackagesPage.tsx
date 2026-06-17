@@ -201,7 +201,6 @@ export default function AdminZeroProgressPackagesPage() {
         String(r.days_since_start ?? ''),
         String(r.stages_complete),
         String(r.stages_total),
-        String(r.stages_released),
         String(r.action_items_completed),
         String(r.legacy_tasks_completed),
         formatHours(Number(r.hours_logged ?? 0)),
