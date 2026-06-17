@@ -29,6 +29,7 @@ const workMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: BarChart3, label: "Executive Dashboard", path: "/executive", leadershipOnly: true },
   { icon: Inbox, label: "Inbox", path: "/inbox" },
+  { icon: Mail, label: "Email Triage", path: "/email-triage", emailTriageStaffOnly: true },
   { icon: Briefcase, label: "My Work", path: "/my-work" },
   { icon: ListTodo, label: "Tasks", path: "/tasks" },
   { icon: Inbox, label: "Time Inbox", path: "/time-inbox" },
@@ -36,6 +37,8 @@ const workMenuItems = [
   { icon: Video, label: "Meetings", path: "/work/meetings" },
   { icon: Calendar, label: "Event Calendar", path: "/calendar" },
 ];
+
+const EMAIL_TRIAGE_ROLES = new Set(["Super Admin", "Team Member", "CSC", "Integrator", "BGT"]);
 
 // 2. CLIENTS Section - All Vivacity Team Roles
 const clientsMenuItems = [
