@@ -1,59 +1,25 @@
-## Phase 5 — Ticket Detail Panel (approved + My Tickets SLA highlighting)
+## Problem
+`buildVimeoEmbedUrl` in `src/components/academy/VimeoPlayer.tsx` (lines 27–33) uses a simple string replace that breaks when a Vimeo URL contains a privacy hash in the path segment, e.g.
+`https://vimeo.com/444755523/77626ac772`
+The current code produces `player.vimeo.com/video/444755523/77626ac772` which Vimeo rejects.
 
-Adds a read+update side panel for tickets in **All Tickets** and **My Tickets** tabs. Triage Queue is untouched. Also adds SLA breach highlighting to My Tickets rows.
+## Solution
+Replace the simple `replace().split("?")` logic with `new URL()` parsing:
+- Extract the video ID from the first path segment.
+- Extract the hash from either the second path segment **or** the `?h=` query parameter.
+- Rebuild the embed URL as `https://player.vimeo.com/video/{id}?h={hash}&autoplay=0&title=0&byline=0&portrait=0&texttrack=en`.
+- If no hash is present, omit the `h` parameter.
 
-### 1. Extend `EmailTicket` and `SELECT_COLS`
+## File Changes
+- `src/components/academy/VimeoPlayer.tsx` — rewrite `buildVimeoEmbedUrl` (lines 27–33 only).
 
-File: `src/hooks/useEmailTickets.ts`
+## No other changes
+- No new dependencies.
+- No changes to other files or components.
 
-- Add to interface: `resolution_notes: string | null`, `closed_at: string | null`, `closed_by: string | null`.
-- Append the three columns to `SELECT_COLS`.
-
-### 2. New `TicketDetailPanel.tsx`
-
-File: `src/components/email-triage/TicketDetailPanel.tsx`. Props: `{ ticket, open, onOpenChange }`.
-
-- shadcn `Sheet`, `side="right"`, `sm:max-w-xl`, `flex flex-col`.
-- Header: ticket number as `SheetTitle`; subject in `SheetDescription`.
-- Closed banner (when `status === 'closed'`): "Closed {dd/MM/yyyy HH:mm} by {name}" — `closed_by` resolved via `useTriageStaffOptions`.
-- Read-only metadata: Category (`CategoryBadge` + `UrgentIcon`), From (name + email), Received (`dd/MM/yyyy HH:mm`), Assigned to (staff lookup with role), Triaged by + Triaged at.
-- Body block: `body_preview` in bordered muted container, `whitespace-pre-wrap`, `max-h-[30vh] overflow-y-auto`.
-- Update form (hidden when closed):
-  - Status `<Select>` from `useEmailTicketStatuses()`, seeded from `ticket.status`.
-  - Resolution notes `<Textarea>`, placeholder "Add resolution notes…", seeded from `ticket.resolution_notes ?? ""`.
-- Footer (hidden when closed):
-  - **Cancel** — close panel.
-  - **Save** — enabled when status or notes differ. `useUpdateEmailTicket().mutateAsync({ id, patch: { status, resolution_notes: notes || null } })`. Toast "Ticket updated"; panel stays open.
-  - **Close Ticket** — destructive. `AlertDialog` confirm ("Close this ticket? This cannot be undone."). On confirm: mutate `{ status: 'closed', resolution_notes: notes || null }` (DB trigger fills `closed_at`/`closed_by`). Toast "Ticket closed"; close panel.
-- Seeding pattern (mirrors `TriageSidePanel`):
-  ```ts
-  useEffect(() => {
-    if (ticket) { setStatus(ticket.status ?? ""); setNotes(ticket.resolution_notes ?? ""); }
-  }, [ticket?.id, ticket?.status, ticket?.resolution_notes]);
-  ```
-
-### 3. Wire into `AllTicketsTab.tsx`
-
-- Add `selected`/`open` state; row `onClick` opens panel; add `cursor-pointer hover:bg-muted/50` (preserve existing `rowBorderClass`).
-- After mutation, look up live row: `const live = selected ? tickets.find(t => t.id === selected.id) ?? selected : null;` and pass `live` to the panel.
-
-### 4. Wire into `MyTicketsTab.tsx` + add SLA highlighting
-
-- Same panel wiring pattern as step 3.
-- **Add SLA highlighting**: import the same `rowBorderClass(response_due_at, sla_breached)` helper used in `AllTicketsTab.tsx` (move it to a shared spot — `src/components/email-triage/slaBorder.ts` — and import in both tabs). Apply to each `<TableRow>` via `cn(rowBorderClass(t.response_due_at, t.sla_breached))`.
-
-### 5. No changes to
-
-- `useUpdateEmailTicket` (trigger handles `closed_at`/`closed_by`).
-- `TicketBadges.tsx` (exports reused as-is).
-- `TriageQueueTab.tsx` / `TriageSidePanel.tsx`.
-- DB / migrations.
-
-### Acceptance
-
-- Row click in All Tickets or My Tickets opens detail panel populated correctly.
-- Save updates status/notes, toasts, panel stays open with refreshed values.
-- Close Ticket confirms, mutates, toasts, panel closes; row disappears from My Tickets.
-- Closed tickets show read-only banner; Save/Close buttons hidden.
-- My Tickets rows now show red border when `sla_breached`, amber when due within 60 min.
-- Triage Queue unchanged.
+## Verification
+Test the function with:
+1. `https://vimeo.com/444755523/77626ac772` → hash moved to `?h=`
+2. `https://vimeo.com/444755523?h=77626ac772` → same result
+3. `https://vimeo.com/456437357` → no hash parameter
+4. `null` / `undefined` → returns `null`
