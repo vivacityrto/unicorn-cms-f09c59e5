@@ -39,6 +39,8 @@ export function AllTicketsTab() {
   const [categoryFilter, setCategoryFilter] = useState<string>(ALL);
   const [statusFilter, setStatusFilter] = useState<string>(ALL);
   const [assigneeFilter, setAssigneeFilter] = useState<string>(ALL);
+  const [selected, setSelected] = useState<EmailTicket | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const staffByUuid = useMemo(
     () => Object.fromEntries(staff.map((s) => [s.user_uuid, s])),
