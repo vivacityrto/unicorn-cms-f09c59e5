@@ -2,7 +2,7 @@ export interface InboxItem {
   inbox_id: string;
   tenant_id: number;
   user_id: string | null;
-  item_type: 'message' | 'task' | 'announcement' | 'rock' | 'notification';
+  item_type: 'message' | 'task' | 'announcement' | 'rock' | 'notification' | 'ticket';
   item_source: string;
   source_id: string;
   title: string;
@@ -18,4 +18,4 @@ export interface InboxItem {
   updated_at: string;
 }
 
-export type InboxFilterType = 'all' | 'message' | 'task' | 'announcement' | 'rock';
+export type InboxFilterType = 'all' | 'message' | 'task' | 'announcement' | 'rock' | 'ticket';

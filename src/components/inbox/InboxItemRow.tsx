@@ -1,4 +1,4 @@
-import { MessageSquare, CheckSquare, Megaphone, Target, Bell } from "lucide-react";
+import { MessageSquare, CheckSquare, Megaphone, Target, Bell, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { InboxItem } from "@/types/inbox";
@@ -10,6 +10,7 @@ const TYPE_CONFIG = {
   announcement: { icon: Megaphone, label: "Announcement", className: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
   rock: { icon: Target, label: "Rock", className: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
   notification: { icon: Bell, label: "Notification", className: "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200" },
+  ticket: { icon: Mail, label: "Ticket", className: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" },
 } as const;
 
 interface InboxItemRowProps {

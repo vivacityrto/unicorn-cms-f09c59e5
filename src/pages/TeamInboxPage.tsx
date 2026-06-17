@@ -26,6 +26,8 @@ export default function TeamInboxPage() {
       } else {
         navigate(`/tenant/${item.tenant_id}?tab=tasks`);
       }
+    } else if (item.item_type === "ticket") {
+      navigate(`/email-triage?ticket=${item.source_id}`);
     }
   };
 
@@ -41,7 +43,7 @@ export default function TeamInboxPage() {
             <Switch id="action-only" checked={actionOnly} onCheckedChange={setActionOnly} />
             <Label htmlFor="action-only" className="text-xs">Action required</Label>
           </div>
-          <InboxFilters activeFilter={filter} onFilterChange={setFilter} showRock />
+          <InboxFilters activeFilter={filter} onFilterChange={setFilter} showRock showTickets />
         </div>
       </div>
 
