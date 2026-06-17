@@ -316,6 +316,8 @@ export default function ClientUsersPage() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string | null } | null>(null);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+
 
   const rows = useMemo<ClientTenantUserRow[]>(() => data ?? [], [data]);
   const activeCount = rows.filter((r) => r.row_type === "active").length;
