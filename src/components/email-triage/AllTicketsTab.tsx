@@ -217,6 +217,16 @@ export function AllTicketsTab() {
           </Table>
         </div>
       )}
+
+      <TicketDetailPanel
+        ticket={
+          selected
+            ? tickets.find((x) => x.id === selected.id) ?? selected
+            : null
+        }
+        open={panelOpen}
+        onOpenChange={setPanelOpen}
+      />
     </div>
   );
 }
