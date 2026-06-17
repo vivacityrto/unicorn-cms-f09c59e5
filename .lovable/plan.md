@@ -1,260 +1,140 @@
+# Phase 3 — Email Triage UI
 
-# Phase 2 — `handle-email-intake` (Code for Review)
+Builds the staff-facing UI on top of the Phase 1 schema (`email_tickets`, `dd_email_ticket_*`) and the Phase 2 `handle-email-intake` Edge Function. No schema or backend changes in this phase.
 
-Three artifacts: (1) seed migration, (2) `supabase/config.toml` addition, (3) edge function. Nothing is written until you approve.
+## 1. Route & navigation
 
----
+**`src/App.tsx`**
+- Add a lazy import: `const EmailTriageWrapper = lazy(() => import("./pages/EmailTriageWrapper"))`.
+- Register route `/email-triage` inside the existing `ProtectedRoute` + `Suspense` block, mirroring how `/team-inbox` is wired.
 
-## 1. Migration — seed `email_ticket.untriaged` event
+**`src/components/DashboardLayout.tsx` — WORK section**
+- Add to `workMenuItems` (after `Inbox`):
+  ```ts
+  { icon: Mail, label: "Email Triage", path: "/email-triage", emailTriageStaffOnly: true }
+  ```
+- In `filteredWorkItems` (lines 231–238), extend the filter to handle the new flag. The gate uses the existing role helper rather than a new one — all five required roles (`Super Admin`, `Team Member`, `CSC`, `Integrator`, `BGT`) are already members of `VIVACITY_STAFF_ROLES`, plus `Team Leader` and `CET`. Per spec we must exclude `Team Leader` and `CET`, so we add a small local predicate:
+  ```ts
+  const EMAIL_TRIAGE_ROLES = new Set(['Super Admin','Team Member','CSC','Integrator','BGT']);
+  const isEmailTriageStaff = EMAIL_TRIAGE_ROLES.has(userRole);
+  ```
+  and in the filter: `if ((item as any).emailTriageStaffOnly) return isEmailTriageStaff;`
 
-`supabase/migrations/<timestamp>_seed_email_ticket_untriaged_event.sql`
+This matches the existing `leadershipOnly` / `superAdminOnly` gating pattern exactly.
 
-```sql
--- Phase 2 step 0: register notification event used by handle-email-intake
-INSERT INTO public.dd_notification_event (value, label, is_active)
-VALUES ('email_ticket.untriaged', 'Email Ticket Untriaged', true)
-ON CONFLICT (value) DO NOTHING;
-```
+## 2. Page structure
 
----
+**`src/pages/EmailTriageWrapper.tsx`** — mirrors `TeamInboxWrapper.tsx`: `DashboardLayout` shell + `<EmailTriagePage />`.
 
-## 2. `supabase/config.toml` — append
+**`src/pages/EmailTriagePage.tsx`** — three `Tabs` (`triage` | `all` | `mine`) using the same shadcn `Tabs/TabsList/TabsTrigger/TabsContent` import pattern. Hosts the realtime subscription (see §5). Each tab renders its own table component:
 
-```toml
-[functions.handle-email-intake]
-verify_jwt = false
-```
+- `src/components/email-triage/TriageQueueTab.tsx`
+- `src/components/email-triage/AllTicketsTab.tsx`
+- `src/components/email-triage/MyTicketsTab.tsx`
+- `src/components/email-triage/TriageSidePanel.tsx`
+- `src/components/email-triage/TicketBadges.tsx` (shared `CategoryBadge`, `StatusBadge`, `UrgentIcon`)
 
----
+## 3. Tabs
 
-## 3. `supabase/functions/handle-email-intake/index.ts` (new)
+**Tab 1 — Triage Queue**
+- Query: `triage_status = 'untriaged'`, order `received_at desc`.
+- Columns: received (relative + tooltip), sender (name + email), subject, urgent (red `AlertTriangle` from lucide if `urgent`).
+- Row click → opens `TriageSidePanel` with the selected row.
+- Empty state: "No items waiting for triage".
 
-```ts
-// Phase 2: Email Triage intake endpoint.
-// Called server-to-server by Power Automate when a new email arrives in the
-// shared Outlook mailbox. No JWT (verify_jwt=false in config.toml); auth is
-// performed via constant-time compare of the x-intake-secret header against
-// the EMAIL_INTAKE_SECRET env var. See Phase 1 schema for email_tickets.
+**Tab 2 — All Tickets**
+- Query: all rows, order `received_at desc`, `limit 500` for v1.
+- Columns: ticket #, category badge, sender name, subject, assignee (avatar initials + name resolved from the staff directory cache), status badge, response due (relative), SLA breach indicator.
+- Row border: `border-l-4 border-destructive` if `sla_breached`; else `border-l-4 border-warning` if `response_due_at` is within 60 min and not breached; otherwise no left border. Colour classes come from the existing semantic tokens — no hex.
+- Filter bar above the table: category / status / assignee `Select`s. Filtering runs client-side on the React Query result.
+- Empty state: "No tickets".
 
-import { createClient } from "npm:@supabase/supabase-js@2";
-import { z } from "npm:zod@3";
+**Tab 3 — My Tickets**
+- Query: `assigned_to_user_id = auth.uid()` AND `status != 'closed'`, order `received_at desc`.
+- Columns: ticket #, subject, category badge, status badge, response due.
+- Empty state: "No tickets assigned to you".
 
-const MAX_BODY_BYTES = 256 * 1024; // 256 KB
-const NOTIFY_ROLES = ["Super Admin", "Team Member", "CSC"] as const;
+## 4. Triage side panel
 
-const IntakeSchema = z.object({
-  sender_name:       z.string().min(1).max(200),
-  sender_email:      z.string().email().max(320),
-  subject:           z.string().min(1).max(500),
-  body_preview:      z.string().max(200_000).optional(),
-  original_email_id: z.string().min(1).max(500),
-  received_at:       z.string().datetime().optional(),
-});
+Uses the existing shadcn `Sheet` (`Sheet`, `SheetContent side="right"`, `SheetHeader`, `SheetTitle`) — same pattern other side panels in this codebase use. Width `sm:max-w-xl`.
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
+Read-only header block: sender name, sender email, subject, received timestamp.
+Scrollable body block (`max-h-[40vh] overflow-y-auto`): full `body_preview`.
 
-function constantTimeEqual(a: string, b: string): boolean {
-  const enc = new TextEncoder();
-  const ab = enc.encode(a);
-  const bb = enc.encode(b);
-  // Always run the compare against equal-length buffers to keep timing bounded.
-  // Mismatched length is a guaranteed reject but we still do the work.
-  const len = Math.max(ab.length, bb.length, 1);
-  const pa = new Uint8Array(len);
-  const pb = new Uint8Array(len);
-  pa.set(ab);
-  pb.set(bb);
-  let diff = ab.length ^ bb.length;
-  for (let i = 0; i < len; i++) diff |= pa[i] ^ pb[i];
-  return diff === 0;
-}
+Form fields:
+- **Category** — `Select` populated from `dd_email_ticket_category` (live fetched via a tiny `useEmailTicketCategories` hook; value = `value`, label = `label`).
+- **Urgent** — shadcn `Switch`.
+- **Assign to** — `Select` populated from `useTriageStaffOptions()` (see §6).
 
-function sanitiseBodyPreview(raw: string | undefined): string | null {
-  if (!raw) return null;
-  let s = raw.replace(/<[^>]*>/g, " ");
-  s = s
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'");
-  s = s.replace(/\s+/g, " ").trim();
-  if (s.length > 2000) s = s.slice(0, 2000);
-  return s.length > 0 ? s : null;
-}
-
-Deno.serve(async (req) => {
-  const reqId = crypto.randomUUID();
-
-  try {
-    // 1. Method gate
-    if (req.method !== "POST") {
-      return json(405, { error: "method_not_allowed" });
-    }
-
-    // 2. Secret check (constant-time, never logged)
-    const expected = Deno.env.get("EMAIL_INTAKE_SECRET");
-    const provided = req.headers.get("x-intake-secret") ?? "";
-    if (!expected) {
-      console.error(`[${reqId}] EMAIL_INTAKE_SECRET not configured`);
-      return json(500, { error: "internal_error" });
-    }
-    if (!constantTimeEqual(provided, expected)) {
-      console.warn(`[${reqId}] intake auth rejected`);
-      return json(401, { error: "unauthorized" });
-    }
-
-    // 3. Size gate
-    const cl = req.headers.get("content-length");
-    const clNum = cl ? Number(cl) : NaN;
-    if (!Number.isFinite(clNum) || clNum <= 0 || clNum > MAX_BODY_BYTES) {
-      return json(413, { error: "payload_too_large" });
-    }
-
-    // 4. Parse + validate
-    let rawBody: unknown;
-    try {
-      rawBody = await req.json();
-    } catch {
-      return json(400, { error: "invalid_json" });
-    }
-    const parsed = IntakeSchema.safeParse(rawBody);
-    if (!parsed.success) {
-      return json(400, {
-        error: "invalid_body",
-        issues: parsed.error.flatten().fieldErrors,
-      });
-    }
-    const input = parsed.data;
-
-    // 5. Sanitise body_preview
-    const bodyPreview = sanitiseBodyPreview(input.body_preview);
-
-    // Service-role client (DB writes + RPC)
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
-
-    // 6. Resolve tenant by sender domain
-    let tenantId: number | null = null;
-    {
-      const { data, error } = await supabase.rpc(
-        "resolve_tenant_by_email_domain",
-        { _email: input.sender_email },
-      );
-      if (error) {
-        console.error(`[${reqId}] resolve_tenant_by_email_domain failed: ${error.message}`);
-        return json(500, { error: "internal_error" });
-      }
-      tenantId = (data as number | null) ?? null;
-    }
-
-    // 7. Insert ticket (idempotent on original_email_id)
-    const { data: inserted, error: insertError } = await supabase
-      .from("email_tickets")
-      .upsert(
-        {
-          original_email_id: input.original_email_id,
-          sender_name:       input.sender_name,
-          sender_email:      input.sender_email,
-          subject:           input.subject,
-          body_preview:      bodyPreview,
-          tenant_id:         tenantId,
-          received_at:       input.received_at ?? new Date().toISOString(),
-        },
-        { onConflict: "original_email_id", ignoreDuplicates: true },
-      )
-      .select("id, ticket_number")
-      .maybeSingle();
-
-    if (insertError) {
-      console.error(`[${reqId}] email_tickets insert failed: ${insertError.message}`);
-      return json(500, { error: "internal_error" });
-    }
-
-    if (!inserted) {
-      // Duplicate original_email_id — no notifications, no audit churn
-      return json(200, { status: "duplicate" });
-    }
-
-    // 8. Fan out notifications to triage staff (Super Admin / Team Member / CSC)
-    //    Active = NOT disabled AND NOT archived. Integrator and BGT excluded
-    //    per Phase 2 scope (they retain RLS read access only).
-    const { data: recipients, error: recipientsError } = await supabase
-      .from("users")
-      .select("user_uuid")
-      .in("unicorn_role", NOTIFY_ROLES as unknown as string[])
-      .eq("disabled", false)
-      .eq("archived", false);
-
-    if (recipientsError) {
-      console.error(`[${reqId}] recipients query failed: ${recipientsError.message}`);
-      // Ticket already exists — don't fail the whole request
-    } else if (recipients && recipients.length > 0) {
-      const payload = {
-        ticket_number: inserted.ticket_number,
-        sender_name:   input.sender_name,
-        subject:       input.subject,
-      };
-      const results = await Promise.allSettled(
-        recipients
-          .filter((r) => r.user_uuid)
-          .map((r) =>
-            supabase.rpc("emit_notification", {
-              p_event_type:          "email_ticket.untriaged",
-              p_recipient_user_uuid: r.user_uuid,
-              p_record_type:         "email_ticket",
-              p_record_id:           inserted.id,
-              p_payload:             payload,
-              p_tenant_id:           tenantId,
-              p_client_id:           null,
-            }),
-          ),
-      );
-      const failed = results.filter((x) => x.status === "rejected").length;
-      if (failed > 0) {
-        console.error(`[${reqId}] emit_notification failures: ${failed}/${results.length}`);
-      }
-    }
-
-    // 9. Created
-    return json(201, {
-      status:        "created",
-      ticket_number: inserted.ticket_number,
-      id:            inserted.id,
-    });
-  } catch (err) {
-    console.error(`[${reqId}] unhandled: ${(err as Error)?.message ?? "unknown"}`);
-    return json(500, { error: "internal_error" });
+Footer:
+- **Cancel** button (closes sheet).
+- **Mark Triaged** primary button — disabled until category + assignee chosen. On click runs the `useUpdateEmailTicket` mutation with payload:
+  ```ts
+  {
+    triage_status: 'triaged',
+    triaged_by: user.id,
+    triaged_at: new Date().toISOString(),
+    category,
+    urgent,
+    assigned_to_user_id,
+    assigned_at: new Date().toISOString(),
   }
-});
+  ```
+- On success: `sonner` toast "Ticket triaged", close the sheet, invalidate the three tab query keys (realtime will also fire, but explicit invalidation keeps the UX snappy).
+
+## 5. Realtime
+
+Inside `EmailTriagePage`, a single `useEffect`:
+```ts
+const channel = supabase
+  .channel('email_tickets_triage')
+  .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'email_tickets' },
+      () => {
+        queryClient.invalidateQueries({ queryKey: ['email-tickets'] });
+      })
+  .subscribe();
+return () => { supabase.removeChannel(channel); };
 ```
+All three tab hooks share the `['email-tickets', ...]` root key so one invalidation refreshes everything. Matches the codebase realtime convention (`useEffect` + `removeChannel` cleanup).
 
----
+**Flag to verify before coding:** confirm `public.email_tickets` is in the `supabase_realtime` publication. If not, Phase 1 needs a one-line migration `ALTER PUBLICATION supabase_realtime ADD TABLE public.email_tickets;` — I will check and, if missing, add it as a tiny Phase 3 migration.
 
-## Pre-flight checks I'll run on approval
+## 6. Hooks (`src/hooks/`)
 
-Already verified against the live DB while planning:
-- `public.resolve_tenant_by_email_domain(_email text) RETURNS bigint` — parameter name is `_email`, used above.
-- `public.users` has `user_uuid`, `unicorn_role`, `disabled`, `archived` (no `is_active` column — use `disabled=false AND archived=false`).
-- `public.dd_notification_event` accepts `email_ticket.untriaged` only after the step 0 migration runs.
-- `public.emit_notification` signature: `(p_event_type text, p_recipient_user_uuid uuid, p_record_type text, p_record_id uuid, p_payload jsonb, p_tenant_id integer DEFAULT NULL, p_client_id integer DEFAULT NULL)` — matches the call above.
+- **`useEmailTickets.ts`** — exports `useTriageQueue()`, `useAllTickets()`, `useMyTickets()`. Each calls `supabase.from('email_tickets').select(...)` with its own filter and a distinct query key under the `['email-tickets', <tab>]` namespace so they cache independently while still sharing the root for bulk invalidation.
+- **`useTriageStaffOptions.ts`** — React Query, queryKey `['triage-staff']`. Fetches from `public.users` selecting `user_uuid, first_name, last_name, avatar_url, unicorn_role` where `unicorn_role IN ('Super Admin','Team Member','CSC','Integrator','BGT')` AND `disabled = false` AND `archived = false`. Display name = `[first_name, last_name].filter(Boolean).join(' ')` falling back to email. (Confirmed `public.users` exposes `first_name` / `last_name` / `avatar_url` — same fields `useVivacityTeamUsers` uses.)
+- **`useEmailTicketCategories.ts`** — fetches active rows from `dd_email_ticket_category`, cached with `QUERY_STALE_TIMES.STATIC`.
+- **`useUpdateEmailTicket.ts`** — `useMutation` performing a single `update().eq('id', id)` on `email_tickets`; on success invalidates `['email-tickets']`.
 
-On approval, in build mode, I will additionally:
-1. `fetch_secrets` to confirm `EMAIL_INTAKE_SECRET` exists; if absent, request it via `add_secret` before deploy.
-2. Apply the seed migration first, then write the function file and config.toml line, then deploy.
+All hooks use the singleton client from `@/integrations/supabase/client` and follow the existing `useQuery` / `QUERY_STALE_TIMES` conventions.
 
-## Risks
-- **Recipient list size.** Sequential per-user RPCs scale linearly; with ~10–30 active staff this is fine. If the org grows past ~100 active staff in the 3 roles, consider a server-side fan-out helper.
-- **`EMAIL_INTAKE_SECRET` rotation.** Rotation requires updating Power Automate at the same time; no in-app warning is wired up.
-- **`received_at` trust.** Power Automate supplies it; if absent we fall back to `now()`. No skew validation — acceptable for v1.
+## 7. Styling & badges
 
-Reply "approve" to proceed.
+`TicketBadges.tsx` exposes:
+- `CategoryBadge` — `Badge variant="secondary"` with class maps keyed off the `value` from `dd_email_ticket_category`. Suggested mapping using existing semantic tokens (no hex):
+  - `lead` → `bg-blue-500/10 text-blue-700 dark:text-blue-300`
+  - `client` → `bg-green-500/10 text-green-700 dark:text-green-300`
+  - `tech` → `bg-purple-500/10 text-purple-700 dark:text-purple-300`
+  - `billing` → `bg-amber-500/10 text-amber-700 dark:text-amber-300`
+  - `general` → `bg-muted text-muted-foreground`
+- `StatusBadge` — similar map for `dd_email_ticket_status` values.
+- `UrgentIcon` — `AlertTriangle` in `text-destructive`, rendered inline next to subject when `urgent = true`.
+
+No hardcoded brand hexes; relies on Tailwind palette steps + semantic tokens already in use across the app.
+
+## 8. Acceptance checks (before declaring done)
+
+1. Nav item appears for the 5 specified roles and is hidden for everyone else (including Team Leader, CET, Admin, General User, clients).
+2. `/email-triage` renders three tabs; each tab shows correct empty state when no rows match.
+3. Triage Queue row click opens side panel; Mark Triaged updates the row, removes it from the queue, and the same change appears in All Tickets without a manual refresh (realtime).
+4. SLA borders render at the right times (manual check with a fixture row at +30 min and a `sla_breached=true` row).
+5. Unauthenticated access to `/email-triage` redirects via `ProtectedRoute`.
+
+## Items I will verify in code before writing
+
+- `public.email_tickets` is in `supabase_realtime` publication (add migration if missing — single `ALTER PUBLICATION`).
+- Exact column name on `public.users` for archived flag (`archived` vs `is_archived`) and that `disabled` exists — adjust the staff hook filter accordingly.
+- Whether `dd_email_ticket_category.value` keys match the lead/client/tech/billing/general assumption above; if seed values differ, the badge map will be keyed off the actual seeded values rather than added speculatively.
+
+No other behaviour will change. Once you approve, I'll implement in this order: hooks → side panel → tabs → page/wrapper → route + nav entry → realtime verification.
