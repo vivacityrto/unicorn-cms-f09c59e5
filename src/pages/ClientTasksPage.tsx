@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useClientAllTasks, type UnifiedTask } from "@/hooks/useClientAllTasks";
-import { useTaskStatusOptions, getStatusLabel } from "@/hooks/useTaskStatusOptions";
+
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,7 +61,6 @@ function numericToPriorityString(p: number | null | undefined): "urgent" | "high
 }
 
 function isTaskCompleted(t: UnifiedTask) {
-  if (t.source === "stage_task") return t.status === 2;
   return t.actionItemStatus === "done";
 }
 
@@ -80,7 +79,7 @@ function userDisplayName(u: PortalUser): string {
 export default function ClientTasksPage() {
   const [showArchived, setShowArchived] = useState(false);
   const { data: tasks = [], isLoading } = useClientAllTasks(showArchived);
-  const { statuses } = useTaskStatusOptions();
+  
   const { canManagePortalUsers, activeTenantId } = useClientTenant();
   const { profile } = useAuth();
   const currentUserId = profile?.user_uuid ?? null;
@@ -398,7 +397,6 @@ export default function ClientTasksPage() {
                   <TaskRow
                     key={task.uid}
                     task={task}
-                    statuses={statuses}
                     isSelected={selected.has(task.uid)}
                     onToggle={() => toggleSelect(task.uid)}
                     showCheckbox={canManagePortalUsers}
@@ -419,7 +417,6 @@ export default function ClientTasksPage() {
 
 function TaskRow({
   task,
-  statuses,
   isSelected,
   onToggle,
   showCheckbox = true,
@@ -429,7 +426,6 @@ function TaskRow({
   onPriorityChange,
 }: {
   task: UnifiedTask;
-  statuses: any[];
   isSelected: boolean;
   onToggle: () => void;
   showCheckbox?: boolean;
@@ -450,7 +446,6 @@ function TaskRow({
     newPriority: "urgent" | "high" | "medium" | "low",
   ) => void | Promise<void>;
 }) {
-  const isActionItem = task.source === "action_item";
   const currentPriority = numericToPriorityString(task.priority);
   const priorityOption =
     PRIORITY_OPTIONS.find((p) => p.value === currentPriority) ?? PRIORITY_OPTIONS[2];
@@ -492,65 +487,55 @@ function TaskRow({
         {task.packageName}
       </td>
       <td className="px-4 py-3 hidden md:table-cell">
-        {isActionItem ? (
-          <Select
-            value={task.assigneeUserId ?? UNASSIGNED}
-            onValueChange={(v) =>
-              onAssigneeChange(
-                task.actionItemId!,
-                task.assigneeUserId ?? null,
-                v === UNASSIGNED ? null : v,
-              )
-            }
-          >
-            <SelectTrigger className="h-7 w-[180px] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={UNASSIGNED} className="text-xs">
-                Unassigned
+        <Select
+          value={task.assigneeUserId ?? UNASSIGNED}
+          onValueChange={(v) =>
+            onAssigneeChange(
+              task.actionItemId!,
+              task.assigneeUserId ?? null,
+              v === UNASSIGNED ? null : v,
+            )
+          }
+        >
+          <SelectTrigger className="h-7 w-[180px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={UNASSIGNED} className="text-xs">
+              Unassigned
+            </SelectItem>
+            {portalUsers.map((u) => (
+              <SelectItem key={u.user_uuid} value={u.user_uuid} className="text-xs">
+                {userDisplayName(u)}
               </SelectItem>
-              {portalUsers.map((u) => (
-                <SelectItem key={u.user_uuid} value={u.user_uuid} className="text-xs">
-                  {userDisplayName(u)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <span className="text-muted-foreground">{task.assigneeName ?? "—"}</span>
-        )}
+            ))}
+          </SelectContent>
+        </Select>
       </td>
       <td className="px-4 py-3 hidden lg:table-cell">
-        {isActionItem ? (
-          <Select
-            value={currentPriority}
-            onValueChange={(v) =>
-              onPriorityChange(
-                task.actionItemId!,
-                currentPriority,
-                v as "urgent" | "high" | "medium" | "low",
-              )
-            }
+        <Select
+          value={currentPriority}
+          onValueChange={(v) =>
+            onPriorityChange(
+              task.actionItemId!,
+              currentPriority,
+              v as "urgent" | "high" | "medium" | "low",
+            )
+          }
+        >
+          <SelectTrigger
+            className={`h-6 w-[110px] text-xs rounded-full border px-2.5 font-medium ${priorityOption.triggerClass}`}
           >
-            <SelectTrigger
-              className={`h-6 w-[110px] text-xs rounded-full border px-2.5 font-medium ${priorityOption.triggerClass}`}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PRIORITY_OPTIONS.map((p) => (
-                <SelectItem key={p.value} value={p.value} className="text-xs">
-                  {p.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <Badge variant="secondary" className="text-xs">
-            {priorityOption.label}
-          </Badge>
-        )}
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PRIORITY_OPTIONS.map((p) => (
+              <SelectItem key={p.value} value={p.value} className="text-xs">
+                {p.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </td>
       <td className="px-4 py-3">
         {task.dueDate ? (
@@ -571,38 +556,23 @@ function TaskRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-1.5 flex-wrap">
-          {isActionItem ? (
-            <Select
-              value={(task.actionItemStatus ?? "todo") as string}
-              onValueChange={(v) =>
-                onActionItemStatusChange(task.actionItemId!, task.actionItemStatus, v)
-              }
-            >
-              <SelectTrigger className="h-7 w-[160px] text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ACTION_ITEM_STATUSES.map((s) => (
-                  <SelectItem key={s.value} value={s.value} className="text-xs">
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Badge
-              variant={
-                task.status === 2
-                  ? "default"
-                  : task.isOverdue
-                  ? "destructive"
-                  : "secondary"
-              }
-              className="text-xs"
-            >
-              {getStatusLabel(task.status as number, statuses)}
-            </Badge>
-          )}
+          <Select
+            value={(task.actionItemStatus ?? "todo") as string}
+            onValueChange={(v) =>
+              onActionItemStatusChange(task.actionItemId!, task.actionItemStatus, v)
+            }
+          >
+            <SelectTrigger className="h-7 w-[160px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ACTION_ITEM_STATUSES.map((s) => (
+                <SelectItem key={s.value} value={s.value} className="text-xs">
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {task.isArchived && (
             <Badge variant="outline" className="text-xs">
               Archived

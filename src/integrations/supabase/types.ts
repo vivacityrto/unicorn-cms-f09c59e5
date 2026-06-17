@@ -9876,6 +9876,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fk_client_action_items_package_template"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_client_action_items_stage"
             columns: ["stage_id"]
             isOneToOne: false

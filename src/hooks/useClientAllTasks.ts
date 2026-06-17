@@ -4,9 +4,7 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 
 export interface UnifiedTask {
   uid: string;
-  // `stage_task` is reserved for back-compat with consumers; only `action_item` is produced
-  // after Phase 5. Narrow this union in Phase 6 alongside the consumer cleanup.
-  source: "stage_task" | "action_item";
+  source: "action_item";
   id: number | null;
   taskName: string;
   packageName: string;
