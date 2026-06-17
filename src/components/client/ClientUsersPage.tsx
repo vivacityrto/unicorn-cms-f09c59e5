@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 import { differenceInDays, formatDistanceToNow, parseISO } from "date-fns";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
 import {
   UserPlus,
   AlertCircle,
@@ -22,8 +25,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
 import {
   Tooltip,
   TooltipContent,
@@ -49,6 +60,8 @@ import InviteUserDialog from "./users/InviteUserDialog";
 import RevokeInviteAlert from "./users/RevokeInviteAlert";
 import { useInviteMutations } from "./users/useInviteMutations";
 import { CapacityPill } from "./users/CapacityPill";
+import { supabase } from "@/integrations/supabase/client";
+
 
 function getInitials(name: string): string {
   return (
@@ -87,6 +100,70 @@ function RolePill({ row }: { row: ClientTenantUserRow }) {
   }
   return <Badge variant="secondary">{label}</Badge>;
 }
+
+function RoleSwitcher({
+  row,
+  tenantId,
+  pendingUserId,
+  setPendingUserId,
+}: {
+  row: ClientTenantUserRow;
+  tenantId: number | null;
+  pendingUserId: string | null;
+  setPendingUserId: (v: string | null) => void;
+}) {
+  const queryClient = useQueryClient();
+  const userId = row.user_id;
+  const isPending = pendingUserId === userId;
+
+  const mutation = useMutation({
+    mutationFn: async (newRole: "academy_user" | "user") => {
+      if (!tenantId || !userId) throw new Error("Missing tenant or user");
+      const { error } = await supabase.rpc("set_relationship_role", {
+        p_tenant_id: tenantId,
+        p_user_id: userId,
+        p_relationship_role: newRole,
+        p_reason: null,
+      });
+      if (error) throw error;
+    },
+    onMutate: () => {
+      if (userId) setPendingUserId(userId);
+    },
+    onSuccess: () => {
+      toast.success("Role updated");
+      queryClient.invalidateQueries({ queryKey: ["client_tenant_users", tenantId] });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : "Failed to update role";
+      toast.error(message);
+    },
+    onSettled: () => {
+      setPendingUserId(null);
+    },
+  });
+
+  return (
+    <Select
+      value={row.relationship_role}
+      disabled={isPending}
+      onValueChange={(v) => {
+        if (v === row.relationship_role) return;
+        if (v !== "academy_user" && v !== "user") return;
+        mutation.mutate(v);
+      }}
+    >
+      <SelectTrigger className="h-8 w-[150px]">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="academy_user">Academy only</SelectItem>
+        <SelectItem value="user">Full access</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
+
 
 function StatusDot({ row }: { row: ClientTenantUserRow }) {
   if (row.row_type === "invited") {
@@ -239,6 +316,8 @@ export default function ClientUsersPage() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string | null } | null>(null);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+
 
   const rows = useMemo<ClientTenantUserRow[]>(() => data ?? [], [data]);
   const activeCount = rows.filter((r) => r.row_type === "active").length;
@@ -317,8 +396,22 @@ export default function ClientUsersPage() {
                         <UserCell row={row} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <RolePill row={row} />
+                        {canManagePortalUsers &&
+                        row.row_type === "active" &&
+                        row.user_id &&
+                        (row.relationship_role === "academy_user" ||
+                          row.relationship_role === "user") ? (
+                          <RoleSwitcher
+                            row={row}
+                            tenantId={activeTenantId}
+                            pendingUserId={pendingUserId}
+                            setPendingUserId={setPendingUserId}
+                          />
+                        ) : (
+                          <RolePill row={row} />
+                        )}
                       </TableCell>
+
                       <TableCell className="hidden md:table-cell">
                         <StatusDot row={row} />
                       </TableCell>
