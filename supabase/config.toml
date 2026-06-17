@@ -1,5 +1,8 @@
 project_id = "yxkgdalkbrriasiyyrwk"
 
+[functions.handle-email-intake]
+verify_jwt = false
+
 [functions.assistant-answer]
 verify_jwt = false
 
