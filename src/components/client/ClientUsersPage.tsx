@@ -408,6 +408,7 @@ export default function ClientUsersPage() {
                             tenantId={activeTenantId}
                             pendingUserId={pendingUserId}
                             setPendingUserId={setPendingUserId}
+                            isReadOnly={isReadOnly}
                           />
                         ) : (
                           <RolePill row={row} />
