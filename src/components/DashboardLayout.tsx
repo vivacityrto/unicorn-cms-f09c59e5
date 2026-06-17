@@ -232,13 +232,17 @@ export const DashboardLayout = ({
 
   // Filter Work items based on role
   const filteredWorkItems = useMemo(() => {
+    const isEmailTriageStaff = EMAIL_TRIAGE_ROLES.has(userRole);
     return workMenuItems.filter(item => {
       if ((item as any).leadershipOnly) {
         return isSuperAdmin || isTeamLeader;
       }
+      if ((item as any).emailTriageStaffOnly) {
+        return isEmailTriageStaff;
+      }
       return true;
     });
-  }, [isSuperAdmin, isTeamLeader]);
+  }, [isSuperAdmin, isTeamLeader, userRole]);
 
   // Filter Administration items based on role
   const filteredAdminItems = useMemo(() => {
