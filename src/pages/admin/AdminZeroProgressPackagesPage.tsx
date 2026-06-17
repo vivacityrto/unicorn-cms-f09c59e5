@@ -90,7 +90,6 @@ type SortKey =
   | 'start_date'
   | 'days_since_start'
   | 'stages_total'
-  | 'stages_released'
   | 'tasks_done'
   | 'hours_logged'
   | 'last_activity_at'
