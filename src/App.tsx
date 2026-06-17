@@ -564,6 +564,7 @@ const App = () => (
               } 
             />
             <Route path="/inbox" element={<ProtectedRoute><TeamInboxWrapper /></ProtectedRoute>} />
+            <Route path="/email-triage" element={<ProtectedRoute><EmailTriageWrapper /></ProtectedRoute>} />
             <Route 
               path="/my-work" 
               element={
