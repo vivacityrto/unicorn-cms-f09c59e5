@@ -201,7 +201,22 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
     };
   }, [profile?.user_uuid, activeTenantId]);
 
+  const previewActingRole = isPreview
+    ? actingUserOptions.find(o => o.user_uuid === actingUserId)?.relationship_role ?? null
+    : null;
+
   const { canAccessClientPortal, canManagePortalUsers, isAcademyOnly } = useMemo(() => {
+    if (isPreview) {
+      const isContact =
+        previewActingRole === 'primary_contact' ||
+        previewActingRole === 'secondary_contact';
+      const fullScope = previewActingRole !== 'academy_user';
+      return {
+        canAccessClientPortal: fullScope && (isContact || previewActingRole === 'user'),
+        canManagePortalUsers: fullScope && isContact,
+        isAcademyOnly: !fullScope,
+      };
+    }
     if (!tenantUser) {
       return { canAccessClientPortal: false, canManagePortalUsers: false, isAcademyOnly: false };
     }
@@ -216,7 +231,7 @@ export function ClientTenantProvider({ children }: { children: ReactNode }) {
       canManagePortalUsers: fullScope && isContact,
       isAcademyOnly: tenantUser.access_scope === "academy_only",
     };
-  }, [tenantUser]);
+  }, [tenantUser, isPreview, previewActingRole]);
 
   return (
     <ClientTenantContext.Provider
