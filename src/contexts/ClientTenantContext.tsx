@@ -46,7 +46,7 @@ const ClientTenantContext = createContext<ClientTenantContextValue>({
 
 export function ClientTenantProvider({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
-  const { isPreviewMode, previewTenant } = useClientPreview();
+  const { isPreviewMode, previewTenant, actingUserId, actingUserOptions } = useClientPreview();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [academyAccessEnabled, setAcademyAccessEnabled] = useState(false);
   const [academyAccessLoading, setAcademyAccessLoading] = useState(true);
