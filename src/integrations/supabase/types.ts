@@ -17800,6 +17800,107 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_email_ticket_category: {
+        Row: {
+          active: boolean
+          id: number
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          active?: boolean
+          id?: never
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          active?: boolean
+          id?: never
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_email_ticket_sla: {
+        Row: {
+          active: boolean
+          category: string
+          due_minutes: number
+          urgent: boolean
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          due_minutes: number
+          urgent: boolean
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          due_minutes?: number
+          urgent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dd_email_ticket_sla_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "dd_email_ticket_category"
+            referencedColumns: ["value"]
+          },
+        ]
+      }
+      dd_email_ticket_status: {
+        Row: {
+          active: boolean
+          id: number
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          active?: boolean
+          id?: never
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          active?: boolean
+          id?: never
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_email_ticket_triage_status: {
+        Row: {
+          active: boolean
+          id: number
+          label: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          active?: boolean
+          id?: never
+          label: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          active?: boolean
+          id?: never
+          label?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_eos_function_type: {
         Row: {
           created_at: string
@@ -22444,6 +22545,407 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      email_ticket_counters: {
+        Row: {
+          last_no: number
+          year: number
+        }
+        Insert: {
+          last_no?: number
+          year: number
+        }
+        Update: {
+          last_no?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      email_tickets: {
+        Row: {
+          ack_sent_at: string | null
+          assigned_at: string | null
+          assigned_to_user_id: string | null
+          body_preview: string | null
+          category: string
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          id: string
+          original_email_id: string | null
+          received_at: string
+          resolution_notes: string | null
+          response_due_at: string | null
+          sender_email: string
+          sender_name: string
+          sla_breached: boolean
+          status: string
+          subject: string
+          tenant_id: number | null
+          ticket_number: string
+          triage_status: string
+          triaged_at: string | null
+          triaged_by: string | null
+          updated_at: string
+          urgent: boolean
+        }
+        Insert: {
+          ack_sent_at?: string | null
+          assigned_at?: string | null
+          assigned_to_user_id?: string | null
+          body_preview?: string | null
+          category?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          original_email_id?: string | null
+          received_at?: string
+          resolution_notes?: string | null
+          response_due_at?: string | null
+          sender_email: string
+          sender_name: string
+          sla_breached?: boolean
+          status?: string
+          subject: string
+          tenant_id?: number | null
+          ticket_number: string
+          triage_status?: string
+          triaged_at?: string | null
+          triaged_by?: string | null
+          updated_at?: string
+          urgent?: boolean
+        }
+        Update: {
+          ack_sent_at?: string | null
+          assigned_at?: string | null
+          assigned_to_user_id?: string | null
+          body_preview?: string | null
+          category?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          original_email_id?: string | null
+          received_at?: string
+          resolution_notes?: string | null
+          response_due_at?: string | null
+          sender_email?: string
+          sender_name?: string
+          sla_breached?: boolean
+          status?: string
+          subject?: string
+          tenant_id?: number | null
+          ticket_number?: string
+          triage_status?: string
+          triaged_at?: string | null
+          triaged_by?: string | null
+          updated_at?: string
+          urgent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_tickets_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "dd_email_ticket_category"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "email_tickets_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_status_fkey"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "dd_email_ticket_status"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_triage_status_fkey"
+            columns: ["triage_status"]
+            isOneToOne: false
+            referencedRelation: "dd_email_ticket_triage_status"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "email_tickets_triaged_by_fkey"
+            columns: ["triaged_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_triaged_by_fkey"
+            columns: ["triaged_by"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_triaged_by_fkey"
+            columns: ["triaged_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "email_tickets_triaged_by_fkey"
+            columns: ["triaged_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_triaged_by_fkey"
+            columns: ["triaged_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_triaged_by_fkey"
+            columns: ["triaged_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_tickets_triaged_by_fkey"
+            columns: ["triaged_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       emails: {
         Row: {
@@ -64640,6 +65142,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_email_tickets_flag_sla_breaches: { Args: never; Returns: undefined }
       fn_instantiate_phases_for_package_instance: {
         Args: { p_package_instance_id: number }
         Returns: undefined
@@ -65134,6 +65637,7 @@ export type Database = {
         Returns: boolean
       }
       is_current_user_super_admin: { Args: never; Returns: boolean }
+      is_email_triage_staff: { Args: { _uid: string }; Returns: boolean }
       is_eos_admin: {
         Args: { _tenant_id: number; _user_id: string }
         Returns: boolean
@@ -65486,6 +65990,10 @@ export type Database = {
           unicorn_role: string
           user_uuid: string
         }[]
+      }
+      resolve_tenant_by_email_domain: {
+        Args: { _email: string }
+        Returns: number
       }
       resolve_tenant_for_task: { Args: { p_task_id: string }; Returns: number }
       resolve_tenant_merge_fields: {
