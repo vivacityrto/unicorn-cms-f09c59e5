@@ -18,7 +18,7 @@ export interface ZeroProgressPackageRow {
   is_complete: boolean | null;
   stages_total: number;
   stages_complete: number;
-  stages_released: number;
+  
   action_items_total: number;
   action_items_completed: number;
   legacy_tasks_total: number;
