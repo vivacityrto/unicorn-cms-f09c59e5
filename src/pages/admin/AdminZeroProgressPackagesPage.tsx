@@ -367,7 +367,6 @@ export default function AdminZeroProgressPackagesPage() {
                   <TableHead onClick={() => handleSort('start_date')} className="cursor-pointer select-none">Started{sortIndicator('start_date')}</TableHead>
                   <TableHead onClick={() => handleSort('days_since_start')} className="cursor-pointer select-none text-right">Days{sortIndicator('days_since_start')}</TableHead>
                   <TableHead onClick={() => handleSort('stages_total')} className="cursor-pointer select-none">Stages{sortIndicator('stages_total')}</TableHead>
-                  <TableHead onClick={() => handleSort('stages_released')} className="cursor-pointer select-none">Released{sortIndicator('stages_released')}</TableHead>
                   <TableHead onClick={() => handleSort('tasks_done')} className="cursor-pointer select-none">Tasks done{sortIndicator('tasks_done')}</TableHead>
                   <TableHead onClick={() => handleSort('hours_logged')} className="cursor-pointer select-none">Hours{sortIndicator('hours_logged')}</TableHead>
                   <TableHead onClick={() => handleSort('last_activity_at')} className="cursor-pointer select-none">Last activity{sortIndicator('last_activity_at')}</TableHead>
