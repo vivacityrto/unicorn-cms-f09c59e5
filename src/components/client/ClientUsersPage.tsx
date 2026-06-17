@@ -327,7 +327,7 @@ export default function ClientUsersPage() {
     <div className="flex items-center gap-3">
       <CapacityPill capacity={capacity.data} />
       <Button
-        disabled={!canManagePortalUsers || atLimit}
+        disabled={!canManagePortalUsers || atLimit || isReadOnly}
         onClick={() => setInviteOpen(true)}
         title={atLimit ? "User limit reached — contact Vivacity to add more users." : undefined}
       >
