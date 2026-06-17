@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useClientAllTasks, type UnifiedTask } from "@/hooks/useClientAllTasks";
 import { useTaskStatusOptions, getStatusLabel } from "@/hooks/useTaskStatusOptions";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
@@ -34,16 +34,29 @@ const ACTION_ITEM_STATUSES: { value: string; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-function priorityLabel(p: number | null | undefined) {
+const PRIORITY_OPTIONS: {
+  value: "urgent" | "high" | "medium" | "low";
+  label: string;
+  triggerClass: string;
+}[] = [
+  { value: "urgent", label: "Urgent", triggerClass: "bg-destructive/15 text-destructive border-destructive/30" },
+  { value: "high", label: "High", triggerClass: "bg-destructive/10 text-destructive border-destructive/30" },
+  { value: "medium", label: "Medium", triggerClass: "bg-amber-500/15 text-amber-700 border-amber-200" },
+  { value: "low", label: "Low", triggerClass: "bg-muted text-muted-foreground border-border" },
+];
+
+const UNASSIGNED = "__unassigned__";
+
+function numericToPriorityString(p: number | null | undefined): "urgent" | "high" | "medium" | "low" {
   switch (p) {
     case 1:
-      return <Badge variant="destructive" className="text-xs">Urgent</Badge>;
+      return "urgent";
     case 2:
-      return <Badge variant="destructive" className="text-xs">High</Badge>;
-    case 3:
-      return <Badge className="bg-amber-500/15 text-amber-700 border-amber-200 text-xs">Medium</Badge>;
+      return "high";
+    case 4:
+      return "low";
     default:
-      return <Badge variant="secondary" className="text-xs">Low</Badge>;
+      return "medium";
   }
 }
 
@@ -52,11 +65,23 @@ function isTaskCompleted(t: UnifiedTask) {
   return t.actionItemStatus === "done";
 }
 
+type PortalUser = {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+};
+
+function userDisplayName(u: PortalUser): string {
+  const full = `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim();
+  return full || u.email || "Unknown user";
+}
+
 export default function ClientTasksPage() {
   const [showArchived, setShowArchived] = useState(false);
   const { data: tasks = [], isLoading } = useClientAllTasks(showArchived);
   const { statuses } = useTaskStatusOptions();
-  const { canManagePortalUsers } = useClientTenant();
+  const { canManagePortalUsers, activeTenantId } = useClientTenant();
   const { profile } = useAuth();
   const currentUserId = profile?.user_uuid ?? null;
   const queryClient = useQueryClient();
@@ -65,21 +90,55 @@ export default function ClientTasksPage() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  // Optimistic local overrides for action-item status changes.
+  // Optimistic local overrides for action-item edits.
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
+  const [assigneeOverrides, setAssigneeOverrides] = useState<Record<string, string | null>>({});
+  const [priorityOverrides, setPriorityOverrides] = useState<
+    Record<string, "urgent" | "high" | "medium" | "low">
+  >({});
+
+  const { data: portalUsers = [] } = useQuery<PortalUser[]>({
+    queryKey: ["client-tenant-portal-users", activeTenantId],
+    enabled: !!activeTenantId,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, first_name, last_name, email")
+        .eq("tenant_id", activeTenantId as number)
+        .eq("is_vivacity_internal", false)
+        .order("first_name", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as PortalUser[];
+    },
+  });
 
   const effectiveTasks = useMemo(
     () =>
-      tasks.map((t) =>
-        t.actionItemId && statusOverrides[t.actionItemId]
-          ? {
-              ...t,
-              status: statusOverrides[t.actionItemId],
-              actionItemStatus: statusOverrides[t.actionItemId],
-            }
-          : t,
-      ),
-    [tasks, statusOverrides],
+      tasks.map((t) => {
+        if (!t.actionItemId) return t;
+        let next = t;
+        const statusOv = statusOverrides[t.actionItemId];
+        if (statusOv) {
+          next = { ...next, status: statusOv, actionItemStatus: statusOv };
+        }
+        if (t.actionItemId in assigneeOverrides) {
+          const newAssignee = assigneeOverrides[t.actionItemId];
+          const u = newAssignee ? portalUsers.find((p) => p.user_uuid === newAssignee) : null;
+          next = {
+            ...next,
+            assigneeUserId: newAssignee,
+            assigneeName: u ? userDisplayName(u) : null,
+          };
+        }
+        const priorityOv = priorityOverrides[t.actionItemId];
+        if (priorityOv) {
+          const numeric = { urgent: 1, high: 2, medium: 3, low: 4 }[priorityOv];
+          next = { ...next, priority: numeric };
+        }
+        return next;
+      }),
+    [tasks, statusOverrides, assigneeOverrides, priorityOverrides, portalUsers],
   );
 
   const viewScoped = useMemo(() => {
@@ -145,7 +204,6 @@ export default function ClientTasksPage() {
       .eq("id", actionItemId);
 
     if (error) {
-      // Revert optimistic state
       setStatusOverrides((prev) => {
         const next = { ...prev };
         if (previousStatus) next[actionItemId] = previousStatus;
@@ -158,8 +216,59 @@ export default function ClientTasksPage() {
 
     toast.success("Status updated");
     await queryClient.invalidateQueries({ queryKey: ["client-all-tasks"] });
-    // Clear override once refetched data lands.
     setStatusOverrides((prev) => {
+      const next = { ...prev };
+      delete next[actionItemId];
+      return next;
+    });
+  };
+
+  const handleAssigneeChange = async (
+    actionItemId: string,
+    previousAssignee: string | null,
+    newAssignee: string | null,
+  ) => {
+    setAssigneeOverrides((prev) => ({ ...prev, [actionItemId]: newAssignee }));
+    const { error } = await supabase
+      .from("client_action_items")
+      .update({ assignee_user_id: newAssignee })
+      .eq("id", actionItemId);
+
+    if (error) {
+      setAssigneeOverrides((prev) => ({ ...prev, [actionItemId]: previousAssignee }));
+      toast.error(`Could not update assignee: ${error.message}`);
+      return;
+    }
+
+    toast.success("Assignee updated");
+    await queryClient.invalidateQueries({ queryKey: ["client-all-tasks"] });
+    setAssigneeOverrides((prev) => {
+      const next = { ...prev };
+      delete next[actionItemId];
+      return next;
+    });
+  };
+
+  const handlePriorityChange = async (
+    actionItemId: string,
+    previousPriority: "urgent" | "high" | "medium" | "low",
+    newPriority: "urgent" | "high" | "medium" | "low",
+  ) => {
+    setPriorityOverrides((prev) => ({ ...prev, [actionItemId]: newPriority }));
+    const { error } = await supabase
+      .from("client_action_items")
+      .update({ priority: newPriority })
+      .eq("id", actionItemId);
+
+    if (error) {
+      setPriorityOverrides((prev) => ({ ...prev, [actionItemId]: previousPriority }));
+      toast.error(`Could not update priority: ${error.message}`);
+      return;
+    }
+
+    toast.success("Priority updated");
+    await queryClient.invalidateQueries({ queryKey: ["client-all-tasks"] });
+    setPriorityOverrides((prev) => {
       const next = { ...prev };
       delete next[actionItemId];
       return next;
@@ -278,7 +387,6 @@ export default function ClientTasksPage() {
                   )}
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Task</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Package</th>
-                  <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Stage</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Assignee</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Priority</th>
                   <th className="text-left px-4 py-3 font-medium text-muted-foreground">Due Date</th>
@@ -294,7 +402,10 @@ export default function ClientTasksPage() {
                     isSelected={selected.has(task.uid)}
                     onToggle={() => toggleSelect(task.uid)}
                     showCheckbox={canManagePortalUsers}
+                    portalUsers={portalUsers}
                     onActionItemStatusChange={handleActionItemStatusChange}
+                    onAssigneeChange={handleAssigneeChange}
+                    onPriorityChange={handlePriorityChange}
                   />
                 ))}
               </tbody>
@@ -312,20 +423,37 @@ function TaskRow({
   isSelected,
   onToggle,
   showCheckbox = true,
+  portalUsers,
   onActionItemStatusChange,
+  onAssigneeChange,
+  onPriorityChange,
 }: {
   task: UnifiedTask;
   statuses: any[];
   isSelected: boolean;
   onToggle: () => void;
   showCheckbox?: boolean;
+  portalUsers: PortalUser[];
   onActionItemStatusChange: (
     actionItemId: string,
     previousStatus: string | null,
     newStatus: string,
   ) => void | Promise<void>;
+  onAssigneeChange: (
+    actionItemId: string,
+    previousAssignee: string | null,
+    newAssignee: string | null,
+  ) => void | Promise<void>;
+  onPriorityChange: (
+    actionItemId: string,
+    previousPriority: "urgent" | "high" | "medium" | "low",
+    newPriority: "urgent" | "high" | "medium" | "low",
+  ) => void | Promise<void>;
 }) {
   const isActionItem = task.source === "action_item";
+  const currentPriority = numericToPriorityString(task.priority);
+  const priorityOption =
+    PRIORITY_OPTIONS.find((p) => p.value === currentPriority) ?? PRIORITY_OPTIONS[2];
 
   return (
     <tr
@@ -353,11 +481,6 @@ function TaskRow({
           >
             {task.taskName}
           </span>
-          {isActionItem && (
-            <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Action
-            </Badge>
-          )}
         </div>
         <div className="md:hidden text-xs text-muted-foreground mt-0.5">
           {task.packageName}
@@ -368,13 +491,67 @@ function TaskRow({
       <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
         {task.packageName}
       </td>
-      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-        {task.stageName ?? "—"}
+      <td className="px-4 py-3 hidden md:table-cell">
+        {isActionItem ? (
+          <Select
+            value={task.assigneeUserId ?? UNASSIGNED}
+            onValueChange={(v) =>
+              onAssigneeChange(
+                task.actionItemId!,
+                task.assigneeUserId ?? null,
+                v === UNASSIGNED ? null : v,
+              )
+            }
+          >
+            <SelectTrigger className="h-7 w-[180px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={UNASSIGNED} className="text-xs">
+                Unassigned
+              </SelectItem>
+              {portalUsers.map((u) => (
+                <SelectItem key={u.user_uuid} value={u.user_uuid} className="text-xs">
+                  {userDisplayName(u)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-muted-foreground">{task.assigneeName ?? "—"}</span>
+        )}
       </td>
-      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-        {task.assigneeName ?? "—"}
+      <td className="px-4 py-3 hidden lg:table-cell">
+        {isActionItem ? (
+          <Select
+            value={currentPriority}
+            onValueChange={(v) =>
+              onPriorityChange(
+                task.actionItemId!,
+                currentPriority,
+                v as "urgent" | "high" | "medium" | "low",
+              )
+            }
+          >
+            <SelectTrigger
+              className={`h-6 w-[110px] text-xs rounded-full border px-2.5 font-medium ${priorityOption.triggerClass}`}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PRIORITY_OPTIONS.map((p) => (
+                <SelectItem key={p.value} value={p.value} className="text-xs">
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Badge variant="secondary" className="text-xs">
+            {priorityOption.label}
+          </Badge>
+        )}
       </td>
-      <td className="px-4 py-3 hidden lg:table-cell">{priorityLabel(task.priority)}</td>
       <td className="px-4 py-3">
         {task.dueDate ? (
           <span
