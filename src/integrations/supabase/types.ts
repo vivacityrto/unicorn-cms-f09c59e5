@@ -66141,6 +66141,35 @@ export type Database = {
         Args: { p_consultant_uuid: string }
         Returns: Json
       }
+      rpc_get_inbox_items: {
+        Args: {
+          p_action_required?: boolean
+          p_item_type?: string
+          p_limit?: number
+          p_offset?: number
+          p_tenant_id?: number
+          p_user_id: string
+        }
+        Returns: {
+          action_required: boolean
+          created_at: string
+          due_at: string
+          inbox_id: string
+          item_source: string
+          item_type: string
+          preview: string
+          priority: number
+          related_entity: string
+          related_entity_id: string
+          source_id: string
+          status: string
+          tenant_id: number
+          title: string
+          unread: boolean
+          updated_at: string
+          user_id: string
+        }[]
+      }
       rpc_get_membership_usage: { Args: { p_tenant_id: number }; Returns: Json }
       rpc_get_my_action_items: {
         Args: {

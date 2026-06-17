@@ -12,10 +12,13 @@ interface InboxFiltersProps {
   activeFilter: InboxFilterType;
   onFilterChange: (filter: InboxFilterType) => void;
   showRock?: boolean;
+  showTickets?: boolean;
 }
 
-export function InboxFilters({ activeFilter, onFilterChange, showRock }: InboxFiltersProps) {
-  const items = showRock ? [...filters, { value: "rock" as InboxFilterType, label: "Rocks" }] : filters;
+export function InboxFilters({ activeFilter, onFilterChange, showRock, showTickets }: InboxFiltersProps) {
+  let items = filters;
+  if (showRock) items = [...items, { value: "rock" as InboxFilterType, label: "Rocks" }];
+  if (showTickets) items = [...items, { value: "ticket" as InboxFilterType, label: "Tickets" }];
 
   return (
     <div className="flex gap-1.5 flex-wrap">
