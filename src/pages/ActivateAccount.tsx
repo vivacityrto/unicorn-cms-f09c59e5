@@ -58,7 +58,7 @@ const ActivateAccount = () => {
               </Button>
 
               <p className="text-xs text-muted-foreground text-center mt-4">
-                This link can only be used once and expires in 1 hour.
+                This link can only be used once and expires in 24 hours.
               </p>
             </>
           )}

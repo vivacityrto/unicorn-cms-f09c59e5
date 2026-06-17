@@ -352,7 +352,7 @@ export function AdminActions({
       await navigator.clipboard.writeText(activateUrl);
       toast({
         title: 'Recovery Link Copied',
-        description: `Link for ${data.email} copied to clipboard. Send it directly via Teams or SMS — it opens a landing page before consuming the token. Expires in 1 hour.`,
+        description: `Link for ${data.email} copied to clipboard. Send it directly via Teams or SMS — it opens a landing page before consuming the token. Expires in 24 hours.`,
       });
     } catch (error: any) {
       toast({
@@ -469,7 +469,7 @@ export function AdminActions({
                   <AlertDialogTitle>Send Password Reset?</AlertDialogTitle>
                   <AlertDialogDescription>
                     This will send a password reset email to <strong>{user.email}</strong>. 
-                    The link will expire in 1 hour.
+                    The link will expire in 24 hours.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
