@@ -281,8 +281,12 @@ export function ViewAsClientButton({
                     <SelectContent>
                       {actingOptions.map((opt) => (
                         <SelectItem key={opt.user_uuid} value={opt.user_uuid}>
-                          {opt.full_name}
-                          {opt.is_default ? " (Primary contact)" : ""}
+                          <div className="flex flex-col leading-tight">
+                            <span>{opt.full_name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatRoleLabel(opt.relationship_role)}
+                            </span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
