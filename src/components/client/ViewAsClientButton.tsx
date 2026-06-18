@@ -64,6 +64,8 @@ export function ViewAsClientButton({
     { label: "Audit prep", value: "Audit preparation" },
   ];
 
+  const PORTAL_ELIGIBLE_ROLES = ["primary_contact", "secondary_contact", "user"];
+
   function formatRoleLabel(role: string): string {
     switch (role) {
       case "primary_contact": return "Primary contact";
@@ -112,7 +114,11 @@ export function ViewAsClientButton({
     try {
       const opts = await fetchActingUserOptions(tenantId);
       setActingOptions(opts);
-      const def = opts.find((o) => o.is_default) ?? opts[0] ?? null;
+      const isPortalMode = mode === "portal" && !isAcademyOnly;
+      const filtered = isPortalMode
+        ? opts.filter((o) => PORTAL_ELIGIBLE_ROLES.includes(o.relationship_role))
+        : opts;
+      const def = filtered.find((o) => o.is_default) ?? filtered[0] ?? null;
       setSelectedActingId(def?.user_uuid ?? null);
     } finally {
       setOptionsLoading(false);
@@ -152,7 +158,10 @@ export function ViewAsClientButton({
   };
 
   const isAcademyMode = selectedMode === "academy" || isAcademyOnly;
-  const noUsersAvailable = !optionsLoading && actingOptions.length === 0;
+  const displayOptions = isAcademyMode
+    ? actingOptions
+    : actingOptions.filter((o) => PORTAL_ELIGIBLE_ROLES.includes(o.relationship_role));
+  const noUsersAvailable = !optionsLoading && displayOptions.length === 0;
   const confirmDisabled =
     isStarting || optionsLoading || (isAcademyMode && (noUsersAvailable || !selectedActingId));
 
@@ -267,7 +276,7 @@ export function ViewAsClientButton({
                   </p>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No users on this tenant yet. You'll preview without a specific user.
+                    No portal-access users on this tenant yet. Academy-only users cannot access the portal.
                   </p>
                 )
               ) : (
@@ -279,7 +288,7 @@ export function ViewAsClientButton({
                       <SelectValue placeholder="Select user" />
                     </SelectTrigger>
                     <SelectContent>
-                      {actingOptions.map((opt) => (
+                      {displayOptions.map((opt) => (
                         <SelectItem key={opt.user_uuid} value={opt.user_uuid}>
                           <div className="flex flex-col leading-tight">
                             <span>{opt.full_name}</span>
