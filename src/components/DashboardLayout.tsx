@@ -128,6 +128,7 @@ const systemConfigMenuItems = [
   { icon: Tags, label: "Merge Field Tags", path: "/admin/merge-field-tags" },
   { icon: FileCheck, label: "Governance Documents", path: "/admin/governance-documents" },
   { icon: Globe, label: "SharePoint Sites", path: "/admin/sharepoint-sites" },
+  { icon: BellRing, label: "Reporting Obligations", path: "/admin/settings/reporting-obligations" },
 ];
 
 // Client-facing menu items (for Admin/User roles and "View as Client" mode)
