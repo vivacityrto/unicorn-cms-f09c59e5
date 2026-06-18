@@ -177,11 +177,19 @@ export function ViewAsClientButton({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
-              View as Client
+              {isAcademyMode
+                ? `View Vivacity Academy — ${tenantName}`
+                : `View Client Portal — ${tenantName}`}
             </DialogTitle>
             <DialogDescription>
-              You're about to preview the client experience for <strong>{tenantName}</strong>.
-              This action will be logged for audit purposes.
+              {isAcademyMode ? (
+                <>
+                  You're about to preview the client experience for <strong>{tenantName}</strong>.
+                  This action will be logged for audit purposes.
+                </>
+              ) : (
+                "You're about to preview the compliance portal as a specific user on this tenant. This action will be logged for audit purposes."
+              )}
             </DialogDescription>
           </DialogHeader>
 
@@ -200,19 +208,24 @@ export function ViewAsClientButton({
               </p>
             </div>
 
-            {showAcademyPicker && (
-              <div className="space-y-2">
-                <Label htmlFor="acting-as">Acting as</Label>
-                {optionsLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading users…
-                  </div>
-                ) : noUsersAvailable ? (
+            <div className="space-y-2">
+              <Label htmlFor="acting-as">Acting as</Label>
+              {optionsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading users…
+                </div>
+              ) : noUsersAvailable ? (
+                isAcademyMode ? (
                   <p className="text-sm text-destructive">
                     No users on this tenant yet — invite one before previewing Academy.
                   </p>
                 ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No users on this tenant yet. You'll preview without a specific user.
+                  </p>
+                )
+              ) : (
                   <Select
                     value={selectedActingId ?? undefined}
                     onValueChange={(v) => setSelectedActingId(v)}
