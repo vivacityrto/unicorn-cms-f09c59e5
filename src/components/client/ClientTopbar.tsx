@@ -46,6 +46,33 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const { unreadCount, unreadByType, notifications, markAllAsRead, markAsRead } = useClientNotifications();
   const { activeTenantId, logoUrl } = useClientTenant();
   const { actingUser, isLoading: actingUserLoading } = useClientActingUser();
+  const { actingUserId, actingUserOptions, setActingUserId } = useClientPreview();
+
+  const [elapsedMin, setElapsedMin] = useState(0);
+
+  useEffect(() => {
+    if (!isPreview) return;
+    const compute = () => {
+      try {
+        const raw = sessionStorage.getItem("client_preview_session");
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed?.startedAt) return;
+        const min = Math.floor((Date.now() - Date.parse(parsed.startedAt)) / 60000);
+        setElapsedMin(min < 0 ? 0 : min);
+      } catch {
+        /* noop */
+      }
+    };
+    compute();
+    const id = window.setInterval(compute, 60000);
+    return () => window.clearInterval(id);
+  }, [isPreview]);
+
+  const activeOption = actingUserOptions.find((o) => o.user_uuid === actingUserId);
+  const activeUserName = activeOption?.full_name ?? actingUser?.first_name ?? "Client";
+  const elapsedLabel =
+    elapsedMin < 1 ? "< 1 min" : elapsedMin < 60 ? `${elapsedMin} min` : `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`;
 
   const filteredClientNotifications = notifFilter
     ? notifications.filter((n) => n.type === notifFilter)
