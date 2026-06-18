@@ -1103,6 +1103,7 @@ const App = () => (
             <Route path="/suggestions/new" element={<ProtectedRoute><NewSuggestionForm /></ProtectedRoute>} />
             <Route path="/suggestions/:id" element={<ProtectedRoute><SuggestionDetail /></ProtectedRoute>} />
             <Route path="/admin/merge-field-tags" element={<ProtectedRoute requireSuperAdmin><MergeFieldTagsAdmin /></ProtectedRoute>} />
+            <Route path="/admin/settings/reporting-obligations" element={<ProtectedRoute requireSuperAdmin><ReportingObligationsAdmin /></ProtectedRoute>} />
             {/* SuperAdmin Academy Management */}
             <Route path="/superadmin/academy/enrollments" element={<ProtectedRoute requireSuperAdmin><AcademyEnrolmentsPage /></ProtectedRoute>} />
             <Route path="/superadmin/workforce-pdp" element={<ProtectedRoute requireSuperAdmin><SuperAdminWorkforcePdp /></ProtectedRoute>} />
