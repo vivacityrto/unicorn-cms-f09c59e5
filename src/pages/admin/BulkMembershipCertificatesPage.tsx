@@ -88,6 +88,8 @@ export default function BulkMembershipCertificatesPage() {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
   const [activeOwner, setActiveOwner] = useState<string | null>(null);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [activeStatus, setActiveStatus] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusLabelMap, setStatusLabelMap] = useState<Map<string, string>>(new Map());
 
