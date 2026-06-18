@@ -64,6 +64,8 @@ export function ViewAsClientButton({
     { label: "Audit prep", value: "Audit preparation" },
   ];
 
+  const PORTAL_ELIGIBLE_ROLES = ["primary_contact", "secondary_contact", "user"];
+
   function formatRoleLabel(role: string): string {
     switch (role) {
       case "primary_contact": return "Primary contact";
