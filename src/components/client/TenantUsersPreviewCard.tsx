@@ -144,7 +144,7 @@ export function TenantUsersPreviewCard({ tenantId, onViewAll }: TenantUsersPrevi
                   {u.phone}
                 </a>
               )}
-              {getRoleBadge(u.role)}
+              {getRoleBadge(u.relationship_role)}
             </div>
           ))
         )}
