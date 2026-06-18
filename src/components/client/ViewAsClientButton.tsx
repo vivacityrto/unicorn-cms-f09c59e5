@@ -158,9 +158,10 @@ export function ViewAsClientButton({
   };
 
   const isAcademyMode = selectedMode === "academy" || isAcademyOnly;
-  const noUsersAvailable = !optionsLoading && actingOptions.length === 0;
-  const confirmDisabled =
-    isStarting || optionsLoading || (isAcademyMode && (noUsersAvailable || !selectedActingId));
+  const displayOptions = isAcademyMode
+    ? actingOptions
+    : actingOptions.filter((o) => PORTAL_ELIGIBLE_ROLES.includes(o.relationship_role));
+  const noUsersAvailable = !optionsLoading && displayOptions.length === 0;
 
   return (
     <>
