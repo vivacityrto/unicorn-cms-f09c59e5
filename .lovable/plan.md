@@ -1,69 +1,55 @@
-## Scope
-Two targeted UX improvements to `src/components/client/ViewAsClientButton.tsx`. No other files touched.
+Add a visible preview-mode banner pill to the center of `ClientTopbar` when `isPreview === true`, replacing the empty flex spacer. The banner shows an eye icon, "Viewing as" label, a compact user switcher (if multiple acting users are available) or a plain name, and an elapsed session timer.
 
-## Change 1 — Relationship role badge in user picker
+## What to build
 
-Replace the `SelectItem` rendering (lines 237-242) with a two-line layout:
-- First line: `opt.full_name`
-- Second line: a small muted badge showing the mapped role label
-- Remove the `" (Primary contact)"` string suffix entirely
+### 1. New hook usage
+Import `useClientPreview` from `@/contexts/ClientPreviewContext` inside `ClientTopbar`. Pull out `actingUserId`, `actingUserOptions`, and `setActingUserId`.
 
-Add a small helper inside the component (before the return):
+### 2. Session timer
+Add an `elapsedMin` state (number, default 0). In a `useEffect` gated on `isPreview`, read `sessionStorage.getItem("client_preview_session")`, parse the JSON, and compute elapsed minutes from `startedAt`.
 
-```
-function formatRoleLabel(role: string): string {
-  switch (role) {
-    case "primary_contact": return "Primary contact";
-    case "secondary_contact": return "Secondary contact";
-    case "academy_user": return "Academy user";
-    case "user": return "User";
-    default:
-      return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-}
-```
+- Run the calculation once immediately on mount.
+- Start a `setInterval` every 60 000 ms to recalculate.
+- Clear the interval on cleanup.
+- Format display as:
+  - `< 1 min` when under 1 minute
+  - `X min` when 1–59 minutes
+  - `Xh Ym` when 60 minutes or more
 
-In the `SelectItem`, render:
-```
-<div className="flex flex-col leading-tight">
-  <span>{opt.full_name}</span>
-  <span className="text-xs text-muted-foreground">
-    {formatRoleLabel(opt.relationship_role)}
-  </span>
-</div>
-```
+### 3. Acting user display name
+Resolve the active user’s name from `actingUserOptions`:
+- `activeOption` = the option whose `user_uuid` matches `actingUserId`
+- `activeUserName` = `activeOption?.full_name` ?? `actingUser?.first_name` ?? `"Client"`
 
-Keep `key`, `value`, `onValueChange` unchanged.
+### 4. Preview banner JSX
+Replace the current center spacer (`<div className="flex-1" />`) with a conditional block:
 
-## Change 2 — Common reasons quick-select chips
+- When `isPreview === true`, render a centered pill/banner containing:
+  - An `Eye` icon from lucide-react
+  - The text "Viewing as"
+  - Either a compact `DropdownMenu` switcher (when `actingUserOptions.length > 1`) or plain bold text showing `activeUserName`
+  - A bullet separator `·`
+  - The formatted elapsed timer string
+- When `isPreview === false`, render the existing empty spacer unchanged.
 
-Add a new local state: `const [selectedPreset, setSelectedPreset] = useState<string | null>(null);`
+**Dropdown switcher behavior:**
+- Trigger shows `activeUserName` plus a `ChevronDown` icon.
+- Content includes a "Switch viewing as" label and a separator.
+- Items list all `actingUserOptions`. Each item shows the user’s `full_name`.
+- The currently selected user gets a `Check` (or similar current indicator).
+- Clicking an item calls `setActingUserId(opt.user_uuid)`.
 
-Above the existing `<Textarea>` (inside the "Reason for preview" block), insert a row of small chip buttons with these labels:
-- "Support ticket"
-- "Onboarding"
-- "Team training"
-- "Audit prep"
+### 5. Icon imports
+Add `Eye` and `ChevronDown` to the existing lucide-react import block. `DropdownMenu` primitives are already imported; no changes needed there.
 
-Each chip maps to a fill value:
-- "Support ticket" → "Investigating support ticket"
-- "Onboarding" → "Client onboarding assistance"
-- "Team training" → "Training new team member"
-- "Audit prep" → "Audit preparation"
+## What NOT to change
+- Existing profile dropdown, notification popover, and help button logic.
+- `ClientPreviewContext.tsx` — `startedAt` is read directly from `sessionStorage` as specified.
+- Any other file.
 
-Chip behaviour:
-- Unselected: `variant="outline"`
-- Selected: `variant="secondary"`
-- Click unselected chip: set `selectedPreset` to that label, set `reason` to its fill value
-- Click selected chip again: clear `selectedPreset` (null), clear `reason` ("")
-- Typing in the `<Textarea>` manually: clear `selectedPreset` (null) so chips deselect and free-text mode is active
-
-Keep `<Textarea>` always visible with existing `rows={3}`, `placeholder`, and help text.
-
-## Preserved verbatim
-- `handleViewClient` logic
-- `handleStartPreview` logic
-- `confirmDisabled` logic
-- Dialog title/description logic
-- `ActingUserOption` type (assumed unchanged)
-- `ClientPreviewContext` and all other files untouched
+## Acceptance criteria
+- Preview banner appears only when `isPreview` is true.
+- Timer updates every minute and formats correctly across the three ranges.
+- Single acting user renders plain text; multiple users render a working dropdown switcher.
+- Switching users via the dropdown immediately updates `actingUserId` in context and persists via the existing `setActingUserId` callback.
+- No visual regressions in non-preview mode.

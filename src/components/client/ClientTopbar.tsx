@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   HelpCircle,
   Settings,
   LogOut,
   Bell,
+  Eye,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -26,6 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useClientNotifications } from "@/hooks/useClientNotifications";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
+import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { useHelpCenter } from "@/components/help-center";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
@@ -42,6 +46,33 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const { unreadCount, unreadByType, notifications, markAllAsRead, markAsRead } = useClientNotifications();
   const { activeTenantId, logoUrl } = useClientTenant();
   const { actingUser, isLoading: actingUserLoading } = useClientActingUser();
+  const { actingUserId, actingUserOptions, setActingUserId } = useClientPreview();
+
+  const [elapsedMin, setElapsedMin] = useState(0);
+
+  useEffect(() => {
+    if (!isPreview) return;
+    const compute = () => {
+      try {
+        const raw = sessionStorage.getItem("client_preview_session");
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed?.startedAt) return;
+        const min = Math.floor((Date.now() - Date.parse(parsed.startedAt)) / 60000);
+        setElapsedMin(min < 0 ? 0 : min);
+      } catch {
+        /* noop */
+      }
+    };
+    compute();
+    const id = window.setInterval(compute, 60000);
+    return () => window.clearInterval(id);
+  }, [isPreview]);
+
+  const activeOption = actingUserOptions.find((o) => o.user_uuid === actingUserId);
+  const activeUserName = activeOption?.full_name ?? actingUser?.first_name ?? "Client";
+  const elapsedLabel =
+    elapsedMin < 1 ? "< 1 min" : elapsedMin < 60 ? `${elapsedMin} min` : `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`;
 
   const filteredClientNotifications = notifFilter
     ? notifications.filter((n) => n.type === notifFilter)
@@ -86,8 +117,57 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
           loading="eager"
         />
       </div>
-      {/* Center: spacer */}
-      <div className="flex-1" />
+      {/* Center: preview banner or spacer */}
+      {isPreview ? (
+        <div className="flex-1 flex items-center justify-center min-w-0 px-4">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs border max-w-full"
+            style={{
+              backgroundColor: "hsl(270 60% 97%)",
+              borderColor: "hsl(270 30% 80%)",
+              color: "hsl(270 55% 41%)",
+            }}
+          >
+            <Eye className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="text-muted-foreground">Viewing as</span>
+            {actingUserOptions.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 font-semibold hover:underline focus:outline-none"
+                  >
+                    <span className="truncate max-w-[180px]">{activeUserName}</span>
+                    <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-64">
+                  <DropdownMenuLabel>Switch viewing as</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {actingUserOptions.map((opt) => (
+                    <DropdownMenuItem
+                      key={opt.user_uuid}
+                      onClick={() => setActingUserId(opt.user_uuid)}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <span className="truncate">{opt.full_name}</span>
+                      {opt.user_uuid === actingUserId && (
+                        <Check className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <span className="font-semibold truncate max-w-[180px]">{activeUserName}</span>
+            )}
+            <span className="text-muted-foreground">·</span>
+            <span className="text-muted-foreground whitespace-nowrap">{elapsedLabel}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1" />
+      )}
 
 
       {/* Right: Notifications + Help + Profile */}
