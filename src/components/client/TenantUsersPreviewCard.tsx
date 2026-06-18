@@ -45,7 +45,7 @@ export function TenantUsersPreviewCard({ tenantId, onViewAll }: TenantUsersPrevi
 
       const users: PreviewUser[] = (members || []).map((m: any) => ({
         user_id: m.user_id,
-        role: m.role || 'child',
+        relationship_role: m.relationship_role || 'user',
         first_name: m.users?.first_name ?? null,
         last_name: m.users?.last_name ?? null,
         email: m.users?.email ?? '',
