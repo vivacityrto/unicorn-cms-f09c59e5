@@ -168,6 +168,7 @@ const SuggestionRegister = lazy(() => import("./pages/SuggestionRegister"));
 const NewSuggestionForm = lazy(() => import("./pages/NewSuggestionForm"));
 const SuggestionDetail = lazy(() => import("./pages/SuggestionDetail"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
+const ReportingObligationsAdmin = lazy(() => import("./pages/admin/settings/ReportingObligations"));
 const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
 const SupportTicketsWrapper = lazy(() => import("./pages/SupportTicketsWrapper"));
 const AcademyDashboardWrapperNew = lazy(() => import("./pages/client/AcademyDashboardWrapper"));
