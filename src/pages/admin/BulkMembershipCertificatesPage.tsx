@@ -18,6 +18,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   Download,
@@ -81,6 +88,8 @@ export default function BulkMembershipCertificatesPage() {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
   const [activeOwner, setActiveOwner] = useState<string | null>(null);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [activeStatus, setActiveStatus] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusLabelMap, setStatusLabelMap] = useState<Map<string, string>>(new Map());
 
@@ -182,7 +191,7 @@ export default function BulkMembershipCertificatesPage() {
             name: t.name,
             rto_name: t.rto_name,
             package_name: pkg?.name ?? "",
-            package_slug: (pkg?.slug ?? "").toUpperCase(),
+            package_slug: (pkg?.slug ?? "").replace(/^\/package-/i, "").toUpperCase(),
             status: t.status ?? "",
             csc_user_id: cscUserId,
             csc_name: cscUserId ? cscUserMap.get(cscUserId) ?? null : null,
@@ -218,9 +227,21 @@ export default function BulkMembershipCertificatesPage() {
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [tenants]);
 
+  const uniqueGroups = useMemo(
+    () => [...new Set(tenants.map(t => t.package_slug).filter(Boolean))].sort(),
+    [tenants]
+  );
+
+  const uniqueStatuses = useMemo(
+    () => [...new Set(tenants.map(t => t.status).filter(Boolean))].sort(),
+    [tenants]
+  );
+
   const visibleTenants = useMemo(() => {
     let rows = tenants;
     if (activeOwner) rows = rows.filter(t => t.csc_name === activeOwner);
+    if (activeGroup) rows = rows.filter(t => t.package_slug === activeGroup);
+    if (activeStatus) rows = rows.filter(t => t.status === activeStatus);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       rows = rows.filter(
@@ -231,7 +252,7 @@ export default function BulkMembershipCertificatesPage() {
       );
     }
     return rows;
-  }, [tenants, activeOwner, searchQuery]);
+  }, [tenants, activeOwner, activeGroup, activeStatus, searchQuery]);
 
   const allVisibleSelected =
     visibleTenants.length > 0 && visibleTenants.every(t => selected.has(t.id));
@@ -349,6 +370,23 @@ export default function BulkMembershipCertificatesPage() {
     setProgressLabel("");
   };
 
+  const CSC_COLORS = [
+    "bg-purple-100 text-purple-800",
+    "bg-blue-100 text-blue-800",
+    "bg-green-100 text-green-800",
+    "bg-amber-100 text-amber-800",
+    "bg-rose-100 text-rose-800",
+    "bg-cyan-100 text-cyan-800",
+    "bg-orange-100 text-orange-800",
+    "bg-teal-100 text-teal-800",
+  ];
+
+  function getCscColor(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return CSC_COLORS[Math.abs(hash) % CSC_COLORS.length];
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -405,42 +443,59 @@ export default function BulkMembershipCertificatesPage() {
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveOwner(null)}
-                className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                  activeOwner === null
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background hover:bg-muted"
-                }`}
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                value={activeOwner ?? "__all__"}
+                onValueChange={v => setActiveOwner(v === "__all__" ? null : v)}
               >
-                All Owners
-                <Badge variant="secondary" className="ml-2">
-                  {tenants.length}
-                </Badge>
-              </button>
-              {ownerTabs.map(([name, count]) => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => setActiveOwner(name)}
-                  className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                    activeOwner === name
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background hover:bg-muted"
-                  }`}
-                >
-                  {name}
-                  <Badge variant="secondary" className="ml-2">
-                    {count}
-                  </Badge>
-                </button>
-              ))}
-            </div>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="All CSCs" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All CSCs</SelectItem>
+                  {ownerTabs.map(([name]) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <div className="flex justify-end">
-              <div className="relative w-full sm:w-80">
+              <Select
+                value={activeGroup ?? "__all__"}
+                onValueChange={v => setActiveGroup(v === "__all__" ? null : v)}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Groups" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Groups</SelectItem>
+                  {uniqueGroups.map(g => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={activeStatus ?? "__all__"}
+                onValueChange={v => setActiveStatus(v === "__all__" ? null : v)}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Statuses</SelectItem>
+                  {uniqueStatuses.map(s => (
+                    <SelectItem key={s} value={s}>
+                      {statusLabelMap.get(s) ?? s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative w-full sm:w-80 ml-auto">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search name, contact, email…"
@@ -450,6 +505,7 @@ export default function BulkMembershipCertificatesPage() {
                 />
               </div>
             </div>
+
 
             <div className="border rounded-lg overflow-hidden">
               <Table>
@@ -463,6 +519,7 @@ export default function BulkMembershipCertificatesPage() {
                       />
                     </TableHead>
                     <TableHead>Group</TableHead>
+                    <TableHead>CSC</TableHead>
                     <TableHead>Code / Client</TableHead>
                     <TableHead>Contact Name</TableHead>
                     <TableHead>Email</TableHead>
@@ -472,7 +529,7 @@ export default function BulkMembershipCertificatesPage() {
                 <TableBody>
                   {visibleTenants.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">
+                      <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
                         No tenants with active memberships found.
                       </TableCell>
                     </TableRow>
@@ -491,8 +548,13 @@ export default function BulkMembershipCertificatesPage() {
                           />
                         </TableCell>
                         <TableCell>
-                          {tenant.package_slug ? (
-                            <Badge variant="secondary">{tenant.package_slug}</Badge>
+                          <span className="font-semibold">{tenant.package_slug || "—"}</span>
+                        </TableCell>
+                        <TableCell>
+                          {tenant.csc_name ? (
+                            <Badge variant="secondary" className={getCscColor(tenant.csc_name)}>
+                              {tenant.csc_name}
+                            </Badge>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
