@@ -14815,7 +14815,6 @@ export type Database = {
         Row: {
           annual_day: number | null
           annual_month: number | null
-          audience: string
           audience_id: number
           code: string
           created_at: string
@@ -14827,7 +14826,6 @@ export type Database = {
           is_active: boolean
           lead_times: number[]
           notification_message: string | null
-          recurrence: string
           recurrence_id: number
           sort_order: number
           title: string
@@ -14838,7 +14836,6 @@ export type Database = {
         Insert: {
           annual_day?: number | null
           annual_month?: number | null
-          audience: string
           audience_id: number
           code: string
           created_at?: string
@@ -14850,7 +14847,6 @@ export type Database = {
           is_active?: boolean
           lead_times?: number[]
           notification_message?: string | null
-          recurrence: string
           recurrence_id: number
           sort_order?: number
           title: string
@@ -14861,7 +14857,6 @@ export type Database = {
         Update: {
           annual_day?: number | null
           annual_month?: number | null
-          audience?: string
           audience_id?: number
           code?: string
           created_at?: string
@@ -14873,7 +14868,6 @@ export type Database = {
           is_active?: boolean
           lead_times?: number[]
           notification_message?: string | null
-          recurrence?: string
           recurrence_id?: number
           sort_order?: number
           title?: string
