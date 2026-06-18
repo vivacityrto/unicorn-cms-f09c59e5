@@ -189,7 +189,7 @@ export default function BulkMembershipCertificatesPage() {
             name: t.name,
             rto_name: t.rto_name,
             package_name: pkg?.name ?? "",
-            package_slug: (pkg?.slug ?? "").toUpperCase(),
+            package_slug: (pkg?.slug ?? "").replace(/^\/package-/i, "").toUpperCase(),
             status: t.status ?? "",
             csc_user_id: cscUserId,
             csc_name: cscUserId ? cscUserMap.get(cscUserId) ?? null : null,
