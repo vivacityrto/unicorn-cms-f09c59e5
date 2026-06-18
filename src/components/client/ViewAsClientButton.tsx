@@ -55,6 +55,35 @@ export function ViewAsClientButton({
   const [actingOptions, setActingOptions] = useState<ActingUserOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [selectedActingId, setSelectedActingId] = useState<string | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+
+  const REASON_PRESETS: { label: string; value: string }[] = [
+    { label: "Support ticket", value: "Investigating support ticket" },
+    { label: "Onboarding", value: "Client onboarding assistance" },
+    { label: "Team training", value: "Training new team member" },
+    { label: "Audit prep", value: "Audit preparation" },
+  ];
+
+  function formatRoleLabel(role: string): string {
+    switch (role) {
+      case "primary_contact": return "Primary contact";
+      case "secondary_contact": return "Secondary contact";
+      case "academy_user": return "Academy user";
+      case "user": return "User";
+      default:
+        return (role ?? "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+  }
+
+  const handlePresetClick = (label: string, value: string) => {
+    if (selectedPreset === label) {
+      setSelectedPreset(null);
+      setReason("");
+    } else {
+      setSelectedPreset(label);
+      setReason(value);
+    }
+  };
 
   const hasAcademyAccess = tenantType.startsWith("academy_") || tenantType === "compliance_system";
   const isAcademyOnly = tenantType.startsWith("academy_");

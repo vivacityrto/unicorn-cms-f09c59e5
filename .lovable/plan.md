@@ -1,38 +1,69 @@
-## Phase 1: Portal user picker + reason dialog
+## Scope
+Two targeted UX improvements to `src/components/client/ViewAsClientButton.tsx`. No other files touched.
 
-Single-file change to `src/components/client/ViewAsClientButton.tsx`. No other files touched.
+## Change 1 — Relationship role badge in user picker
 
-### Changes
+Replace the `SelectItem` rendering (lines 237-242) with a two-line layout:
+- First line: `opt.full_name`
+- Second line: a small muted badge showing the mapped role label
+- Remove the `" (Primary contact)"` string suffix entirely
 
-1. **`handleViewClient` — unify both modes through the dialog**
-   - Keep the `is_vivacity_internal` guard ONLY inside the `mode === "academy" || isAcademyOnly` branch.
-   - After the guard (or immediately for portal mode), run the same flow for both modes:
-     - `setOptionsLoading(true)`
-     - `setReasonDialogOpen(true)`
-     - `await fetchActingUserOptions(tenantId)` → set `actingOptions`, default `selectedActingId` to `opts.find(o => o.is_default) ?? opts[0] ?? null`
-     - `finally { setOptionsLoading(false) }`
-   - Remove the entire `else` branch that called `startPreview` immediately.
+Add a small helper inside the component (before the return):
 
-2. **Picker visibility — show for both modes**
-   - Replace `const showAcademyPicker = selectedMode === "academy" || isAcademyOnly;` with a single always-true gate (rename to `showUserPicker = true`, or simply render the picker block unconditionally).
+```
+function formatRoleLabel(role: string): string {
+  switch (role) {
+    case "primary_contact": return "Primary contact";
+    case "secondary_contact": return "Secondary contact";
+    case "academy_user": return "Academy user";
+    case "user": return "User";
+    default:
+      return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+}
+```
 
-3. **`handleStartPreview` — always pass selected acting user**
-   - Change `const acting = selectedMode === "academy" || isAcademyOnly ? selectedActingId : null;` to `const acting = selectedActingId;`.
+In the `SelectItem`, render:
+```
+<div className="flex flex-col leading-tight">
+  <span>{opt.full_name}</span>
+  <span className="text-xs text-muted-foreground">
+    {formatRoleLabel(opt.relationship_role)}
+  </span>
+</div>
+```
 
-4. **Mode-aware "no users" handling**
-   - Compute `isAcademyMode = selectedMode === "academy" || isAcademyOnly`.
-   - `noUsersAvailable = !optionsLoading && actingOptions.length === 0`.
-   - Academy mode: show existing destructive message "No users on this tenant yet — invite one before previewing Academy." and include `noUsersAvailable` in `confirmDisabled`.
-   - Portal mode: show muted note "No users on this tenant yet. You'll preview without a specific user." and do NOT disable confirm.
-   - `confirmDisabled = isStarting || optionsLoading || (isAcademyMode && (noUsersAvailable || !selectedActingId));`
+Keep `key`, `value`, `onValueChange` unchanged.
 
-5. **Mode-aware dialog title/description**
-   - Title:
-     - Academy: `View Vivacity Academy — {tenantName}`
-     - Portal: `View Client Portal — {tenantName}`
-   - Description:
-     - Academy: keep existing copy.
-     - Portal: "You're about to preview the compliance portal as a specific user on this tenant. This action will be logged for audit purposes."
+## Change 2 — Common reasons quick-select chips
 
-### Out of scope
-- `ClientPreviewContext`, `useClientActingUser`, `ClientTopbar`, and all other files remain untouched.
+Add a new local state: `const [selectedPreset, setSelectedPreset] = useState<string | null>(null);`
+
+Above the existing `<Textarea>` (inside the "Reason for preview" block), insert a row of small chip buttons with these labels:
+- "Support ticket"
+- "Onboarding"
+- "Team training"
+- "Audit prep"
+
+Each chip maps to a fill value:
+- "Support ticket" → "Investigating support ticket"
+- "Onboarding" → "Client onboarding assistance"
+- "Team training" → "Training new team member"
+- "Audit prep" → "Audit preparation"
+
+Chip behaviour:
+- Unselected: `variant="outline"`
+- Selected: `variant="secondary"`
+- Click unselected chip: set `selectedPreset` to that label, set `reason` to its fill value
+- Click selected chip again: clear `selectedPreset` (null), clear `reason` ("")
+- Typing in the `<Textarea>` manually: clear `selectedPreset` (null) so chips deselect and free-text mode is active
+
+Keep `<Textarea>` always visible with existing `rows={3}`, `placeholder`, and help text.
+
+## Preserved verbatim
+- `handleViewClient` logic
+- `handleStartPreview` logic
+- `confirmDisabled` logic
+- Dialog title/description logic
+- `ActingUserOption` type (assumed unchanged)
+- `ClientPreviewContext` and all other files untouched
