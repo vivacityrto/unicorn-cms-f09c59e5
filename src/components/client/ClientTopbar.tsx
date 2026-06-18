@@ -29,6 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useClientNotifications } from "@/hooks/useClientNotifications";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
+import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { useHelpCenter } from "@/components/help-center";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
