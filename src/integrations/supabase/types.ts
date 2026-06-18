@@ -14816,14 +14816,19 @@ export type Database = {
           annual_day: number | null
           annual_month: number | null
           audience: string
+          audience_id: number | null
           code: string
           created_at: string
           cta_label: string
           cta_url: string
           description: string
+          due_date: string | null
           id: number
           is_active: boolean
+          lead_times: number[]
+          notification_message: string | null
           recurrence: string
+          recurrence_id: number | null
           sort_order: number
           title: string
           updated_at: string
@@ -14834,14 +14839,19 @@ export type Database = {
           annual_day?: number | null
           annual_month?: number | null
           audience: string
+          audience_id?: number | null
           code: string
           created_at?: string
           cta_label: string
           cta_url: string
           description: string
+          due_date?: string | null
           id?: number
           is_active?: boolean
+          lead_times?: number[]
+          notification_message?: string | null
           recurrence: string
+          recurrence_id?: number | null
           sort_order?: number
           title: string
           updated_at?: string
@@ -14852,21 +14862,41 @@ export type Database = {
           annual_day?: number | null
           annual_month?: number | null
           audience?: string
+          audience_id?: number | null
           code?: string
           created_at?: string
           cta_label?: string
           cta_url?: string
           description?: string
+          due_date?: string | null
           id?: number
           is_active?: boolean
+          lead_times?: number[]
+          notification_message?: string | null
           recurrence?: string
+          recurrence_id?: number | null
           sort_order?: number
           title?: string
           updated_at?: string
           window_opens_day?: number | null
           window_opens_month?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "compliance_obligations_audience_id_fkey"
+            columns: ["audience_id"]
+            isOneToOne: false
+            referencedRelation: "dd_obligation_audience"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_obligations_recurrence_id_fkey"
+            columns: ["recurrence_id"]
+            isOneToOne: false
+            referencedRelation: "dd_obligation_recurrence"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       compliance_pack_exports: {
         Row: {
