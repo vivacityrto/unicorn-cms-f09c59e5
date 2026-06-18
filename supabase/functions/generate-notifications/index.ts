@@ -388,15 +388,8 @@ interface ReportingObligationMeta {
   lead_times: number[] | null;
 }
 
-async function getTodayAest(
-  supabase: ReturnType<typeof createServiceClient>
-): Promise<string> {
-  const { data, error } = await supabase.rpc("exec_sql_select_today_aest" as any);
-  if (!error && data) {
-    // unlikely path - kept for safety; fall through to client-side fallback
-  }
-  // Inline SQL via from() is not available for ad-hoc; use a tiny view-less query through `rpc` if present.
-  // Fallback: compute in JS using Intl with the Australia/Sydney zone.
+function getTodayAest(): string {
+  // Compute today's date in Australia/Sydney without a DB round trip.
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Australia/Sydney",
     year: "numeric",
