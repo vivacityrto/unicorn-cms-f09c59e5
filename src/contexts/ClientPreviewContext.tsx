@@ -285,12 +285,26 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
           return false;
         }
 
+        let opts: ActingUserOption[] = [];
+        try {
+          opts = await loadActingUserOptions(tenantId);
+        } catch (optsError) {
+          console.error("Error loading acting user options:", optsError);
+          opts = [];
+        }
+        const resolvedActingId =
+          initialActingUserId ??
+          opts.find((o) => o.is_default)?.user_uuid ??
+          opts[0]?.user_uuid ??
+          null;
+
         const { data: auditData, error: auditError } = await supabase
           .from("audit_client_impersonation")
           .insert({
             actor_user_id: session.user.id,
             tenant_id: tenantId,
             reason: reason || null,
+            acting_user_id: resolvedActingId,
           })
           .select("id")
           .single();
@@ -300,12 +314,6 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
           return false;
         }
 
-        const opts = await loadActingUserOptions(tenantId);
-        const resolvedActingId =
-          initialActingUserId ??
-          opts.find((o) => o.is_default)?.user_uuid ??
-          opts[0]?.user_uuid ??
-          null;
 
         const previewState: StoredPreviewSession = {
           sessionId: auditData.id,
