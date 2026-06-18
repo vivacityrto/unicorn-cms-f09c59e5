@@ -36,7 +36,7 @@ export function TenantUsersPreviewCard({ tenantId, onViewAll }: TenantUsersPrevi
       // Get first 6 users with details
       const { data: members, error } = await (supabase as any)
         .from('tenant_users')
-        .select('user_id, role, users:user_id(first_name, last_name, email, avatar_url, job_title, phone)')
+        .select('user_id, relationship_role, users:user_id(first_name, last_name, email, avatar_url, job_title, phone)')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: true })
         .limit(6);
