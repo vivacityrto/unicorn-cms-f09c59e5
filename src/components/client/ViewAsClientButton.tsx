@@ -276,7 +276,7 @@ export function ViewAsClientButton({
                   </p>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No users on this tenant yet. You'll preview without a specific user.
+                    No portal-access users on this tenant yet. Academy-only users cannot access the portal.
                   </p>
                 )
               ) : (
@@ -288,7 +288,7 @@ export function ViewAsClientButton({
                       <SelectValue placeholder="Select user" />
                     </SelectTrigger>
                     <SelectContent>
-                      {actingOptions.map((opt) => (
+                      {displayOptions.map((opt) => (
                         <SelectItem key={opt.user_uuid} value={opt.user_uuid}>
                           <div className="flex flex-col leading-tight">
                             <span>{opt.full_name}</span>
