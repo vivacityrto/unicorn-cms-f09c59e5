@@ -67,7 +67,7 @@ export function ViewAsClientButton({
     setSelectedMode(mode);
 
     if (mode === "academy" || isAcademyOnly) {
-      // Guardrail: staff predicate check
+      // Guardrail: staff predicate check (Academy is write-capable)
       if (profile && profile.is_vivacity_internal === false) {
         toast.error("Academy impersonation unavailable", {
           description:
@@ -75,44 +75,25 @@ export function ViewAsClientButton({
         });
         return;
       }
-      // Pre-fetch acting user options before opening dialog
-      setOptionsLoading(true);
-      setReasonDialogOpen(true);
-      try {
-        const opts = await fetchActingUserOptions(tenantId);
-        setActingOptions(opts);
-        const def = opts.find((o) => o.is_default) ?? opts[0] ?? null;
-        setSelectedActingId(def?.user_uuid ?? null);
-      } finally {
-        setOptionsLoading(false);
-      }
-    } else {
-      setIsStarting(true);
-      try {
-        const success = await startPreview(tenantId, undefined, null, location.pathname);
-        if (success) {
-          toast.success(`Now viewing as ${tenantName}`, {
-            description: "You're in preview mode",
-          });
-          navigate("/client-preview");
-        } else {
-          toast.error("Failed to start preview", {
-            description: "Could not initiate client preview mode",
-          });
-        }
-      } catch (error) {
-        console.error("Error starting preview:", error);
-        toast.error("Failed to start preview");
-      } finally {
-        setIsStarting(false);
-      }
+    }
+
+    // Pre-fetch acting user options before opening dialog (both modes)
+    setOptionsLoading(true);
+    setReasonDialogOpen(true);
+    try {
+      const opts = await fetchActingUserOptions(tenantId);
+      setActingOptions(opts);
+      const def = opts.find((o) => o.is_default) ?? opts[0] ?? null;
+      setSelectedActingId(def?.user_uuid ?? null);
+    } finally {
+      setOptionsLoading(false);
     }
   };
 
   const handleStartPreview = async () => {
     setIsStarting(true);
     try {
-      const acting = selectedMode === "academy" || isAcademyOnly ? selectedActingId : null;
+      const acting = selectedActingId;
       const success = await startPreview(tenantId, reason || undefined, acting, location.pathname);
 
       if (success) {
@@ -141,10 +122,10 @@ export function ViewAsClientButton({
     }
   };
 
-  const showAcademyPicker = selectedMode === "academy" || isAcademyOnly;
-  const noUsersAvailable = showAcademyPicker && !optionsLoading && actingOptions.length === 0;
+  const isAcademyMode = selectedMode === "academy" || isAcademyOnly;
+  const noUsersAvailable = !optionsLoading && actingOptions.length === 0;
   const confirmDisabled =
-    isStarting || (showAcademyPicker && (optionsLoading || noUsersAvailable || !selectedActingId));
+    isStarting || optionsLoading || (isAcademyMode && (noUsersAvailable || !selectedActingId));
 
   return (
     <>
