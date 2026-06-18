@@ -242,10 +242,10 @@ export function ViewAsClientButton({
                       ))}
                     </SelectContent>
                   </Select>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
+
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setReasonDialogOpen(false)}>
