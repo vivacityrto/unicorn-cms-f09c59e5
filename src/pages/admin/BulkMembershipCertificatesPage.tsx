@@ -548,8 +548,13 @@ export default function BulkMembershipCertificatesPage() {
                           />
                         </TableCell>
                         <TableCell>
-                          {tenant.package_slug ? (
-                            <Badge variant="secondary">{tenant.package_slug}</Badge>
+                          <span className="font-semibold">{tenant.package_slug || "—"}</span>
+                        </TableCell>
+                        <TableCell>
+                          {tenant.csc_name ? (
+                            <Badge variant="secondary" className={getCscColor(tenant.csc_name)}>
+                              {tenant.csc_name}
+                            </Badge>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
