@@ -14816,7 +14816,7 @@ export type Database = {
           annual_day: number | null
           annual_month: number | null
           audience: string
-          audience_id: number | null
+          audience_id: number
           code: string
           created_at: string
           cta_label: string
@@ -14828,7 +14828,7 @@ export type Database = {
           lead_times: number[]
           notification_message: string | null
           recurrence: string
-          recurrence_id: number | null
+          recurrence_id: number
           sort_order: number
           title: string
           updated_at: string
@@ -14839,7 +14839,7 @@ export type Database = {
           annual_day?: number | null
           annual_month?: number | null
           audience: string
-          audience_id?: number | null
+          audience_id: number
           code: string
           created_at?: string
           cta_label: string
@@ -14851,7 +14851,7 @@ export type Database = {
           lead_times?: number[]
           notification_message?: string | null
           recurrence: string
-          recurrence_id?: number | null
+          recurrence_id: number
           sort_order?: number
           title: string
           updated_at?: string
@@ -14862,7 +14862,7 @@ export type Database = {
           annual_day?: number | null
           annual_month?: number | null
           audience?: string
-          audience_id?: number | null
+          audience_id?: number
           code?: string
           created_at?: string
           cta_label?: string
@@ -14874,7 +14874,7 @@ export type Database = {
           lead_times?: number[]
           notification_message?: string | null
           recurrence?: string
-          recurrence_id?: number | null
+          recurrence_id?: number
           sort_order?: number
           title?: string
           updated_at?: string
