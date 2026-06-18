@@ -14,7 +14,7 @@ interface TenantUsersPreviewCardProps {
 
 interface PreviewUser {
   user_id: string;
-  role: string;
+  relationship_role: string;
   first_name: string | null;
   last_name: string | null;
   email: string;
