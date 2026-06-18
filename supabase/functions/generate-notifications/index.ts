@@ -358,6 +358,333 @@ async function generateObligationNotifications(supabase: ReturnType<typeof creat
   return result?.length ?? 0;
 }
 
+// ── reporting_obligations scope ────────────────────────────────────
+
+type ReportingMode = "scheduled" | "preview" | "broadcast";
+
+interface ReportingReminderRow {
+  tenant_id: number;
+  obligation_id: number;
+  code: string | null;
+  title: string | null;
+  description: string | null;
+  audience: string | null;
+  recurrence: string | null;
+  next_date: string | null;
+  window_opens_at: string | null;
+  cta_label: string | null;
+  cta_url: string | null;
+  sort_order: number | null;
+  days_until: number | null;
+  status: string | null;
+}
+
+interface ReportingObligationMeta {
+  id: number;
+  title: string | null;
+  description: string | null;
+  notification_message: string | null;
+  cta_url: string | null;
+  lead_times: number[] | null;
+}
+
+async function getTodayAest(
+  supabase: ReturnType<typeof createServiceClient>
+): Promise<string> {
+  const { data, error } = await supabase.rpc("exec_sql_select_today_aest" as any);
+  if (!error && data) {
+    // unlikely path - kept for safety; fall through to client-side fallback
+  }
+  // Inline SQL via from() is not available for ad-hoc; use a tiny view-less query through `rpc` if present.
+  // Fallback: compute in JS using Intl with the Australia/Sydney zone.
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Australia/Sydney",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return fmt.format(new Date()); // YYYY-MM-DD
+}
+
+function recomputeDaysUntilAest(nextDate: string | null, todayAest: string): number | null {
+  if (!nextDate) return null;
+  const a = new Date(nextDate + "T00:00:00Z").getTime();
+  const b = new Date(todayAest + "T00:00:00Z").getTime();
+  return Math.round((a - b) / 86_400_000);
+}
+
+async function fetchTestTenantIdSet(
+  supabase: ReturnType<typeof createServiceClient>,
+  tenantIds: number[]
+): Promise<Set<number>> {
+  const exclude = new Set<number>();
+  if (!tenantIds.length) return exclude;
+  const unique = [...new Set(tenantIds)];
+  const { data, error } = await supabase
+    .from("tenants")
+    .select("id, name")
+    .in("id", unique)
+    .ilike("name", "test%");
+  if (error) {
+    console.error("test-tenant fetch error:", error.message);
+    return exclude;
+  }
+  for (const t of data || []) exclude.add(Number(t.id));
+  return exclude;
+}
+
+async function fetchReportingObligationsMeta(
+  supabase: ReturnType<typeof createServiceClient>,
+  obligationIds: number[]
+): Promise<Map<number, ReportingObligationMeta>> {
+  const map = new Map<number, ReportingObligationMeta>();
+  if (!obligationIds.length) return map;
+  const unique = [...new Set(obligationIds)];
+  const { data, error } = await supabase
+    .from("compliance_obligations")
+    .select("id, title, description, notification_message, cta_url, lead_times")
+    .in("id", unique);
+  if (error) {
+    console.error("obligation meta fetch error:", error.message);
+    return map;
+  }
+  for (const row of data || []) {
+    map.set(Number(row.id), {
+      id: Number(row.id),
+      title: row.title,
+      description: row.description,
+      notification_message: row.notification_message,
+      cta_url: row.cta_url,
+      lead_times: row.lead_times as number[] | null,
+    });
+  }
+  return map;
+}
+
+async function fetchRecipientsByTenant(
+  supabase: ReturnType<typeof createServiceClient>,
+  tenantIds: number[]
+): Promise<Map<number, string[]>> {
+  const byTenant = new Map<number, string[]>();
+  if (!tenantIds.length) return byTenant;
+  const unique = [...new Set(tenantIds)];
+
+  const { data, error } = await supabase
+    .from("tenant_users")
+    .select("tenant_id, user_id, relationship_role, access_scope")
+    .in("tenant_id", unique)
+    .in("relationship_role", ["primary_contact", "secondary_contact", "user"]);
+
+  if (error) {
+    console.error("tenant_users fetch error:", error.message);
+    return byTenant;
+  }
+  for (const row of data || []) {
+    if (!row.user_id) continue;
+    if (row.access_scope && row.access_scope === "academy_only") continue;
+    const tid = Number(row.tenant_id);
+    const arr = byTenant.get(tid) || [];
+    if (!arr.includes(row.user_id)) arr.push(row.user_id);
+    byTenant.set(tid, arr);
+  }
+  return byTenant;
+}
+
+function buildReportingMessage(meta: ReportingObligationMeta): string {
+  const nm = (meta.notification_message || "").trim();
+  if (nm.length > 0) return nm;
+  const desc = (meta.description || "").trim();
+  return desc.length > 1000 ? desc.slice(0, 1000) : desc;
+}
+
+function leadWindowToken(daysUntil: number, leadTimes: number[]): string | null {
+  if (daysUntil === -1) return "overdue";
+  if (daysUntil === 0) return "due_today";
+  if (leadTimes.includes(daysUntil)) return `${daysUntil}`;
+  return null;
+}
+
+async function upsertNotificationsChunked(
+  supabase: ReturnType<typeof createServiceClient>,
+  rows: NotificationRow[]
+): Promise<number> {
+  if (!rows.length) return 0;
+  let inserted = 0;
+  const chunkSize = 500;
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    const { data, error } = await supabase
+      .from("user_notifications")
+      .upsert(chunk as any, { onConflict: "dedupe_key", ignoreDuplicates: true })
+      .select("id");
+    if (error) {
+      console.error("reporting upsert error:", error.message);
+      continue;
+    }
+    inserted += data?.length ?? 0;
+  }
+  return inserted;
+}
+
+async function runReportingObligations(
+  supabase: ReturnType<typeof createServiceClient>,
+  opts: { mode: ReportingMode; obligationId?: number; actorUserId?: string }
+): Promise<Record<string, unknown>> {
+  const { mode, obligationId } = opts;
+  const todayAest = await getTodayAest(supabase);
+
+  // 1. Fetch view rows
+  let query = supabase.from("v_client_reporting_reminders").select("*");
+  if (mode !== "scheduled" && obligationId != null) {
+    query = query.eq("obligation_id", obligationId);
+  }
+  const { data: viewRows, error: viewErr } = await query;
+  if (viewErr) {
+    console.error("view fetch error:", viewErr.message);
+    return mode === "preview"
+      ? { tenant_count: 0, user_count: 0, sample_tenants: [] }
+      : { inserted: 0 };
+  }
+  let rows = (viewRows || []) as ReportingReminderRow[];
+
+  // 2. Exclude test tenants
+  const allTenantIds = rows.map((r) => Number(r.tenant_id));
+  const excludeTenants = await fetchTestTenantIdSet(supabase, allTenantIds);
+  if (excludeTenants.size) {
+    rows = rows.filter((r) => !excludeTenants.has(Number(r.tenant_id)));
+  }
+
+  // 3. Obligation meta (for lead_times + message + link)
+  const obligationIds = [...new Set(rows.map((r) => Number(r.obligation_id)))];
+  const metaMap = await fetchReportingObligationsMeta(supabase, obligationIds);
+
+  // 4. Lead-time filter (scheduled only)
+  if (mode === "scheduled") {
+    rows = rows.filter((r) => {
+      if (r.recurrence === "always_open" || r.recurrence === "rolling_per_tenant") return false;
+      const meta = metaMap.get(Number(r.obligation_id));
+      if (!meta) return false;
+      const dUntil = recomputeDaysUntilAest(r.next_date, todayAest);
+      if (dUntil == null) return false;
+      const lt = meta.lead_times || [];
+      return dUntil === 0 || dUntil === -1 || lt.includes(dUntil);
+    });
+  }
+
+  // 5. Recipients per tenant
+  const tenantIds = [...new Set(rows.map((r) => Number(r.tenant_id)))];
+  const recipientsByTenant = await fetchRecipientsByTenant(supabase, tenantIds);
+
+  // honour user prefs (obligations category)
+  const allUserIds = new Set<string>();
+  for (const list of recipientsByTenant.values()) for (const u of list) allUserIds.add(u);
+  const prefsMap = await fetchUserPrefs(supabase, [...allUserIds]);
+
+  // PREVIEW MODE
+  if (mode === "preview") {
+    const tenantSet = new Set<number>();
+    const userSet = new Set<string>();
+    for (const r of rows) {
+      const tid = Number(r.tenant_id);
+      const recips = recipientsByTenant.get(tid) || [];
+      const allowed = recips.filter((uid) => {
+        const p = prefsMap.get(uid);
+        return !p || p.obligations !== false;
+      });
+      if (allowed.length === 0) continue;
+      tenantSet.add(tid);
+      for (const u of allowed) userSet.add(u);
+    }
+    // sample tenant names
+    const sampleIds = [...tenantSet].slice(0, 10);
+    let sampleTenants: string[] = [];
+    if (sampleIds.length) {
+      const { data: tdata } = await supabase
+        .from("tenants")
+        .select("id, name")
+        .in("id", sampleIds);
+      sampleTenants = (tdata || []).map((t: any) => t.name).filter(Boolean);
+    }
+    return {
+      tenant_count: tenantSet.size,
+      user_count: userSet.size,
+      sample_tenants: sampleTenants,
+    };
+  }
+
+  // 6. Build notification rows
+  const broadcastMinute = new Date().toISOString().slice(0, 16);
+  const notifRows: NotificationRow[] = [];
+  const tenantSet = new Set<number>();
+  const userSet = new Set<string>();
+
+  for (const r of rows) {
+    const meta = metaMap.get(Number(r.obligation_id));
+    if (!meta) continue;
+    const tid = Number(r.tenant_id);
+    const recips = recipientsByTenant.get(tid) || [];
+    if (!recips.length) continue;
+
+    const title = meta.title || r.title || "Reporting obligation";
+    const message = buildReportingMessage(meta);
+    const link = meta.cta_url || r.cta_url || "";
+
+    let leadToken: string | null = null;
+    let cycleYear = "none";
+    if (mode === "scheduled") {
+      const dUntil = recomputeDaysUntilAest(r.next_date, todayAest);
+      if (dUntil == null) continue;
+      leadToken = leadWindowToken(dUntil, meta.lead_times || []);
+      if (!leadToken) continue;
+      cycleYear = r.next_date ? String(new Date(r.next_date + "T00:00:00Z").getUTCFullYear()) : "none";
+    }
+
+    for (const uid of recips) {
+      const p = prefsMap.get(uid);
+      if (p && p.obligations === false) continue;
+
+      const dedupeKey =
+        mode === "scheduled"
+          ? `reporting_obligation:${meta.id}:${tid}:${uid}:${cycleYear}:lt${leadToken}`
+          : `reporting_obligation:${meta.id}:${tid}:${uid}:broadcast:${broadcastMinute}`;
+
+      notifRows.push({
+        tenant_id: tid,
+        user_id: uid,
+        type: "reporting_obligation_due",
+        title,
+        message,
+        link,
+        is_read: false,
+        dedupe_key: dedupeKey,
+      });
+      tenantSet.add(tid);
+      userSet.add(uid);
+    }
+  }
+
+  // 7. Upsert
+  const inserted = await upsertNotificationsChunked(supabase, notifRows);
+
+  // 8. Broadcast audit row
+  if (mode === "broadcast" && obligationId != null) {
+    const { error: auditErr } = await supabase.from("audit_events").insert({
+      entity: "reporting_obligation",
+      action: "broadcast",
+      user_id: opts.actorUserId ?? null,
+      details: {
+        obligation_id: obligationId,
+        tenant_count: tenantSet.size,
+        user_count: userSet.size,
+        notifications_inserted: inserted,
+      },
+    } as any);
+    if (auditErr) console.error("audit_events insert error:", auditErr.message);
+  }
+
+  return { inserted };
+}
+
 // ── main handler ───────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
