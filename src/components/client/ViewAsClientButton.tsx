@@ -225,11 +225,27 @@ export function ViewAsClientButton({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="reason">Reason for preview (optional)</Label>
+              <div className="flex flex-wrap gap-2">
+                {REASON_PRESETS.map((p) => (
+                  <Button
+                    key={p.label}
+                    type="button"
+                    size="sm"
+                    variant={selectedPreset === p.label ? "secondary" : "outline"}
+                    onClick={() => handlePresetClick(p.label, p.value)}
+                  >
+                    {p.label}
+                  </Button>
+                ))}
+              </div>
               <Textarea
                 id="reason"
                 placeholder="e.g., Investigating support ticket #123, training new team member..."
                 value={reason}
-                onChange={(e) => setReason(e.target.value)}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  if (selectedPreset !== null) setSelectedPreset(null);
+                }}
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
