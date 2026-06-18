@@ -81,8 +81,16 @@ export function TenantUsersPreviewCard({ tenantId, onViewAll }: TenantUsersPrevi
   const totalCount = data?.totalCount ?? 0;
 
   const getRoleBadge = (role: string) => {
-    if (role === 'parent') return <Badge variant="default" className="text-[10px] px-1.5 py-0">Primary</Badge>;
-    return <Badge variant="outline" className="text-[10px] px-1.5 py-0">User</Badge>;
+    switch (role) {
+      case 'primary_contact':
+        return <Badge variant="default" className="text-[10px] px-1.5 py-0">Primary</Badge>;
+      case 'secondary_contact':
+        return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Secondary</Badge>;
+      case 'academy_user':
+        return <Badge variant="outline" className="text-[10px] px-1.5 py-0">Academy</Badge>;
+      default:
+        return <Badge variant="outline" className="text-[10px] px-1.5 py-0">User</Badge>;
+    }
   };
 
   const getInitials = (u: PreviewUser) => {
