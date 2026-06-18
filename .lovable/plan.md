@@ -1,41 +1,38 @@
-## Plan: Refine Client Contact Register (BulkMembershipCertificatesPage)
+## Phase 1: Portal user picker + reason dialog
 
-File: `src/pages/admin/BulkMembershipCertificatesPage.tsx` — three targeted changes only. Everything else preserved verbatim.
+Single-file change to `src/components/client/ViewAsClientButton.tsx`. No other files touched.
 
-### Change 1 — Fix the Group column
-- In `fetchTenants` merge, update `package_slug`:
-  `package_slug: (pkg?.slug ?? "").replace(/^\/package-/i, "").toUpperCase()`
-- In the Group table cell, replace the `<Badge>` with plain bold text:
-  `<span className="font-semibold">{tenant.package_slug || "—"}</span>`
+### Changes
 
-### Change 2 — Add CSC column with per-CSC colours
-- Add `CSC_COLORS` array and `getCscColor(name)` helper inside the component (above `return`).
-- Insert a new "CSC" `<TableHead>` between Group and Code / Client.
-- Insert a matching `<TableCell>` in each row (between Group and Code/Client cells):
-  - If `tenant.csc_name` exists, render a `<Badge>` using `getCscColor(tenant.csc_name)`.
-  - Otherwise render "—".
-- Update empty-state `colSpan` from `6` to `7`.
+1. **`handleViewClient` — unify both modes through the dialog**
+   - Keep the `is_vivacity_internal` guard ONLY inside the `mode === "academy" || isAcademyOnly` branch.
+   - After the guard (or immediately for portal mode), run the same flow for both modes:
+     - `setOptionsLoading(true)`
+     - `setReasonDialogOpen(true)`
+     - `await fetchActingUserOptions(tenantId)` → set `actingOptions`, default `selectedActingId` to `opts.find(o => o.is_default) ?? opts[0] ?? null`
+     - `finally { setOptionsLoading(false) }`
+   - Remove the entire `else` branch that called `startPreview` immediately.
 
-### Change 3 — Replace owner tabs with a filter bar
-- Remove the entire owner-tabs `<div>` block (pills for "All Owners" + per-CSC buttons).
-- Add state:
-  - `const [activeGroup, setActiveGroup] = useState<string | null>(null);`
-  - `const [activeStatus, setActiveStatus] = useState<string | null>(null);`
-- Add `useMemo` derived values:
-  - `uniqueGroups`: distinct non-empty `package_slug` values, sorted.
-  - `uniqueStatuses`: distinct non-empty `status` values, sorted.
-- Update `visibleTenants` `useMemo` to also filter by `activeGroup` and `activeStatus` (in addition to existing `activeOwner` and `searchQuery` logic).
-- Replace the removed tabs block with a single `<div className="flex flex-wrap items-center gap-3">` containing:
-  1. **CSC Select** — bound to `activeOwner`; "All CSCs" resets to `null`; options from `ownerTabs.map(([name]) => name)`.
-  2. **Group Select** — bound to `activeGroup`; "All Groups" resets to `null`; options from `uniqueGroups`.
-  3. **Status Select** — bound to `activeStatus`; "All Statuses" resets to `null`; options from `uniqueStatuses`, label via `statusLabelMap.get(value) ?? value`.
-  4. **Search input** — moved here with `className="ml-auto"`; same behaviour as before.
-- Add import for `Select`, `SelectContent`, `SelectItem`, `SelectTrigger`, `SelectValue` from `@/components/ui/select`.
+2. **Picker visibility — show for both modes**
+   - Replace `const showAcademyPicker = selectedMode === "academy" || isAcademyOnly;` with a single always-true gate (rename to `showUserPicker = true`, or simply render the picker block unconditionally).
 
-### Preserved verbatim
-- `handleDownload` function
-- `SUPABASE_URL` / `SUPABASE_ANON_KEY`
-- RBAC navigation guard
-- All fetch queries, maps, and merge logic (except the one `package_slug` line above)
-- `DashboardLayout`, page header, bulk download card, progress block
-- JSZip import and usage, toast messages
+3. **`handleStartPreview` — always pass selected acting user**
+   - Change `const acting = selectedMode === "academy" || isAcademyOnly ? selectedActingId : null;` to `const acting = selectedActingId;`.
+
+4. **Mode-aware "no users" handling**
+   - Compute `isAcademyMode = selectedMode === "academy" || isAcademyOnly`.
+   - `noUsersAvailable = !optionsLoading && actingOptions.length === 0`.
+   - Academy mode: show existing destructive message "No users on this tenant yet — invite one before previewing Academy." and include `noUsersAvailable` in `confirmDisabled`.
+   - Portal mode: show muted note "No users on this tenant yet. You'll preview without a specific user." and do NOT disable confirm.
+   - `confirmDisabled = isStarting || optionsLoading || (isAcademyMode && (noUsersAvailable || !selectedActingId));`
+
+5. **Mode-aware dialog title/description**
+   - Title:
+     - Academy: `View Vivacity Academy — {tenantName}`
+     - Portal: `View Client Portal — {tenantName}`
+   - Description:
+     - Academy: keep existing copy.
+     - Portal: "You're about to preview the compliance portal as a specific user on this tenant. This action will be logged for audit purposes."
+
+### Out of scope
+- `ClientPreviewContext`, `useClientActingUser`, `ClientTopbar`, and all other files remain untouched.

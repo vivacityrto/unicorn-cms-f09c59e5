@@ -67,7 +67,7 @@ export function ViewAsClientButton({
     setSelectedMode(mode);
 
     if (mode === "academy" || isAcademyOnly) {
-      // Guardrail: staff predicate check
+      // Guardrail: staff predicate check (Academy is write-capable)
       if (profile && profile.is_vivacity_internal === false) {
         toast.error("Academy impersonation unavailable", {
           description:
@@ -75,44 +75,25 @@ export function ViewAsClientButton({
         });
         return;
       }
-      // Pre-fetch acting user options before opening dialog
-      setOptionsLoading(true);
-      setReasonDialogOpen(true);
-      try {
-        const opts = await fetchActingUserOptions(tenantId);
-        setActingOptions(opts);
-        const def = opts.find((o) => o.is_default) ?? opts[0] ?? null;
-        setSelectedActingId(def?.user_uuid ?? null);
-      } finally {
-        setOptionsLoading(false);
-      }
-    } else {
-      setIsStarting(true);
-      try {
-        const success = await startPreview(tenantId, undefined, null, location.pathname);
-        if (success) {
-          toast.success(`Now viewing as ${tenantName}`, {
-            description: "You're in preview mode",
-          });
-          navigate("/client-preview");
-        } else {
-          toast.error("Failed to start preview", {
-            description: "Could not initiate client preview mode",
-          });
-        }
-      } catch (error) {
-        console.error("Error starting preview:", error);
-        toast.error("Failed to start preview");
-      } finally {
-        setIsStarting(false);
-      }
+    }
+
+    // Pre-fetch acting user options before opening dialog (both modes)
+    setOptionsLoading(true);
+    setReasonDialogOpen(true);
+    try {
+      const opts = await fetchActingUserOptions(tenantId);
+      setActingOptions(opts);
+      const def = opts.find((o) => o.is_default) ?? opts[0] ?? null;
+      setSelectedActingId(def?.user_uuid ?? null);
+    } finally {
+      setOptionsLoading(false);
     }
   };
 
   const handleStartPreview = async () => {
     setIsStarting(true);
     try {
-      const acting = selectedMode === "academy" || isAcademyOnly ? selectedActingId : null;
+      const acting = selectedActingId;
       const success = await startPreview(tenantId, reason || undefined, acting, location.pathname);
 
       if (success) {
@@ -141,10 +122,10 @@ export function ViewAsClientButton({
     }
   };
 
-  const showAcademyPicker = selectedMode === "academy" || isAcademyOnly;
-  const noUsersAvailable = showAcademyPicker && !optionsLoading && actingOptions.length === 0;
+  const isAcademyMode = selectedMode === "academy" || isAcademyOnly;
+  const noUsersAvailable = !optionsLoading && actingOptions.length === 0;
   const confirmDisabled =
-    isStarting || (showAcademyPicker && (optionsLoading || noUsersAvailable || !selectedActingId));
+    isStarting || optionsLoading || (isAcademyMode && (noUsersAvailable || !selectedActingId));
 
   return (
     <>
@@ -196,11 +177,19 @@ export function ViewAsClientButton({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
-              View as Client
+              {isAcademyMode
+                ? `View Vivacity Academy — ${tenantName}`
+                : `View Client Portal — ${tenantName}`}
             </DialogTitle>
             <DialogDescription>
-              You're about to preview the client experience for <strong>{tenantName}</strong>.
-              This action will be logged for audit purposes.
+              {isAcademyMode ? (
+                <>
+                  You're about to preview the client experience for <strong>{tenantName}</strong>.
+                  This action will be logged for audit purposes.
+                </>
+              ) : (
+                "You're about to preview the compliance portal as a specific user on this tenant. This action will be logged for audit purposes."
+              )}
             </DialogDescription>
           </DialogHeader>
 
@@ -219,19 +208,24 @@ export function ViewAsClientButton({
               </p>
             </div>
 
-            {showAcademyPicker && (
-              <div className="space-y-2">
-                <Label htmlFor="acting-as">Acting as</Label>
-                {optionsLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading users…
-                  </div>
-                ) : noUsersAvailable ? (
+            <div className="space-y-2">
+              <Label htmlFor="acting-as">Acting as</Label>
+              {optionsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading users…
+                </div>
+              ) : noUsersAvailable ? (
+                isAcademyMode ? (
                   <p className="text-sm text-destructive">
                     No users on this tenant yet — invite one before previewing Academy.
                   </p>
                 ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No users on this tenant yet. You'll preview without a specific user.
+                  </p>
+                )
+              ) : (
                   <Select
                     value={selectedActingId ?? undefined}
                     onValueChange={(v) => setSelectedActingId(v)}
@@ -248,10 +242,10 @@ export function ViewAsClientButton({
                       ))}
                     </SelectContent>
                   </Select>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
+
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setReasonDialogOpen(false)}>
