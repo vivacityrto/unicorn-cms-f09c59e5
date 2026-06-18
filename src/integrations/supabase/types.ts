@@ -4496,6 +4496,7 @@ export type Database = {
       }
       audit_client_impersonation: {
         Row: {
+          acting_user_id: string | null
           actor_user_id: string
           created_at: string
           ended_at: string | null
@@ -4505,6 +4506,7 @@ export type Database = {
           tenant_id: number
         }
         Insert: {
+          acting_user_id?: string | null
           actor_user_id: string
           created_at?: string
           ended_at?: string | null
@@ -4514,6 +4516,7 @@ export type Database = {
           tenant_id: number
         }
         Update: {
+          acting_user_id?: string | null
           actor_user_id?: string
           created_at?: string
           ended_at?: string | null
