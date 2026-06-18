@@ -1,65 +1,41 @@
-## Phase 6 — Super Admin CRUD for Reporting Obligations
+## Objective
+Improve the file upload handler in `src/pages/client/ClientFilesPage.tsx` with client-side file type validation, better error messages, and a matching `accept` attribute on the hidden file input.
 
-Build the management UI at `/admin/settings/reporting-obligations`, fully behind the existing `ProtectedRoute requireSuperAdmin` guard. No DB, edge function, or cron changes.
+## Scope
+Only `src/pages/client/ClientFilesPage.tsx` is modified. No other files touched.
 
-### Files to add
-- `src/pages/admin/settings/ReportingObligations.tsx` — wraps `DashboardLayout`, page shell, header, "+ New Obligation" CTA, table.
-- `src/components/admin/reporting-obligations/ObligationsTable.tsx` — table sorted by `sort_order, title`; columns: code, title, audience label, recurrence label, inline `is_active` Switch (optimistic), actions menu (Edit, Preview Recipients, Delete).
-- `src/components/admin/reporting-obligations/ObligationFormDialog.tsx` — shared create/edit dialog.
-- `src/components/admin/reporting-obligations/ObligationDeleteDialog.tsx` — confirmation modal (reuses `ConfirmDialog` from `@/components/ui/modals`).
-- `src/components/admin/reporting-obligations/BroadcastPreviewDialog.tsx` — two-step preview + broadcast.
-- `src/hooks/admin/use-reporting-obligations.ts` — React Query CRUD against `public.compliance_obligations` joined to `dd_obligation_audience` and `dd_obligation_recurrence`; plus dropdown hooks for the two lookup tables.
-- `src/hooks/admin/use-broadcast-obligation.ts` — wraps `supabase.functions.invoke('generate-notifications', …)` for preview and broadcast modes.
+## Changes
 
-### Wiring
-- Register lazy import + route in `src/App.tsx`:
-  ```tsx
-  <Route path="/admin/settings/reporting-obligations"
-    element={<ProtectedRoute requireSuperAdmin><ReportingObligations /></ProtectedRoute>} />
-  ```
-- Add a nav entry to `systemConfigMenuItems` in `src/components/DashboardLayout.tsx`:
-  ```ts
-  { icon: BellRing, label: "Reporting Obligations", path: "/admin/settings/reporting-obligations" }
-  ```
-  (the existing "SYSTEM CONFIG" section is the Configuration group; no new section created).
+### 1. File type validation
+Before `setUploading(true)`, validate the selected file against an allowlist.
 
-### Form fields (ObligationFormDialog)
-| Field | Control | Notes |
-|---|---|---|
-| `code` | Input | required, unique (DB enforces) |
-| `title` | Input | required |
-| `description` | Textarea | required |
-| `audience_id` | Select from `dd_obligation_audience` | required; `__none__` sentinel mapped to `undefined` |
-| `recurrence_id` | Select from `dd_obligation_recurrence` | required; sentinel as above |
-| `annual_month`, `annual_day` | Number inputs | visible only when selected recurrence `value === 'annual_fixed'` |
-| `window_opens_month`, `window_opens_day` | Number inputs | visible only when selected recurrence `value === 'annual_window'` |
-| `due_date` | Shadcn date picker | optional one-off override |
-| `cta_label` | Input | required |
-| `cta_url` | Input | required |
-| `sort_order` | Number | default 100 |
-| `is_active` | Switch | default true |
-| `notification_message` | Textarea | optional; description used at send time if blank |
-| `lead_times` | Comma-separated input parsed to `integer[]` | default `[30,14,7,1]`; positive ints only |
+**Allowed types:**
+- PDF: `application/pdf`, `.pdf`
+- Word: `application/msword`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `.doc`, `.docx`
+- Excel: `application/vnd.ms-excel`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `.xls`, `.xlsx`
+- PowerPoint: `application/vnd.ms-powerpoint`, `application/vnd.openxmlformats-officedocument.presentationml.presentation`, `.ppt`, `.pptx`
+- Images: `image/jpeg`, `image/png`, `.jpg`, `.jpeg`, `.png`
+- CSV: `text/csv`, `.csv`
 
-Conditional month/day blocks read the selected recurrence's `value` from the dropdown rows; recurrence rows are fetched alongside obligations.
+**Logic:** extract the extension from `file.name`, check it against the allowed extension list, and check `file.type` against the allowed MIME list. If either matches, allow the upload. If neither matches, call `toast.error('File type not supported. Allowed types: PDF, Word, Excel, PowerPoint, images (JPG/PNG), CSV.')`, clear `e.target.value`, and return early.
 
-### Broadcast flow
-- Row action "Preview Recipients" → opens `BroadcastPreviewDialog`, fires `preview: true` immediately. Displays `tenant_count`, `user_count`, `sample_tenants` (≤10).
-- Inside the dialog: "Send Broadcast" button is **disabled** until the preview response arrives in the current dialog session; clicking it fires `broadcast: true`, shows a success toast with `inserted` count, closes the dialog.
-- Both calls use `supabase.functions.invoke('generate-notifications', { body: { scope:'reporting_obligations', obligation_id, preview|broadcast: true } })`, which automatically attaches the caller JWT (edge function enforces the super-admin gate already shipped in Phase 4).
+### 2. Improved error handling
+Replace the current catch block's generic `toast.error(...)` with conditional logic based on `err.message`:
 
-### Conventions followed
-- `DashboardLayout` shell, `Card`/`Tabs`/`Dialog`/`Switch` from `@/components/ui/*`, `toast` from `@/hooks/use-toast`, `ConfirmDialog` from `@/components/ui/modals` (matches `LifecycleChecklistsAdmin`).
-- React Query for data + mutations with cache invalidation on success.
-- Radix Select empty value via `__none__` sentinel.
-- No new npm dependencies. No changes outside the new files, App.tsx route registration, and the single nav entry in `DashboardLayout.tsx`.
+- If message contains `"404"`: `'Upload destination not found in SharePoint. Please contact your Vivacity consultant.'`
+- If message contains `"403"`: `'Permission denied uploading to SharePoint. Please contact your Vivacity consultant.'`
+- If message contains `"502"` or `"Failed to resolve uploads folder"`: `'SharePoint folder could not be reached. Please try again or contact your Vivacity consultant.'`
+- If message contains `"413"` or `"too large"`: `'File is too large. Maximum size is 50 MB.'`
+- Otherwise: `` `Upload failed: ${err.message}` ``
 
-### Verification (manual after build)
-1. `/admin/settings/reporting-obligations` loads only for Super Admin.
-2. Create → edit → toggle active → delete an obligation succeeds; list refreshes.
-3. Preview returns counts without inserting notifications.
-4. Broadcast inserts notifications and they appear in a client's in-app inbox.
-5. No regression in existing sidebar entries or Settings tabs.
+### 3. Update `accept` attribute
+Change the hidden `<input type="file">` `accept` attribute to:
+```
+accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.csv"
+```
 
-### Out of scope
-Client portal, Home page card, audit-log surfacing UI, scheduling toggles, bulk import/export.
+## Verification
+- Build passes with no errors.
+- Uploading an unsupported file type triggers the toast and stops before uploading.
+- Uploading a supported file proceeds normally.
+- Simulated error responses (e.g. 404, 403) produce the correct human-friendly toast messages.

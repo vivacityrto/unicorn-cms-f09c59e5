@@ -154,9 +154,36 @@ export default function ClientFilesPage() {
                       ref={fileInputRef}
                       type="file"
                       className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.csv"
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file || !tenantId) return;
+
+                        const allowedMimes = [
+                          'application/pdf',
+                          'application/msword',
+                          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                          'application/vnd.ms-excel',
+                          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                          'application/vnd.ms-powerpoint',
+                          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                          'image/jpeg',
+                          'image/png',
+                          'text/csv',
+                        ];
+                        const allowedExts = [
+                          'pdf', 'doc', 'docx', 'xls', 'xlsx',
+                          'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'csv',
+                        ];
+                        const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+                        const mimeOk = allowedMimes.includes(file.type);
+                        const extOk = allowedExts.includes(ext);
+                        if (!mimeOk && !extOk) {
+                          toast.error('File type not supported. Allowed types: PDF, Word, Excel, PowerPoint, images (JPG/PNG), CSV.');
+                          e.target.value = '';
+                          return;
+                        }
+
                         if (file.size > 52_428_800) {
                           toast.error('File too large. Maximum 50 MB.');
                           e.target.value = '';
@@ -185,15 +212,25 @@ export default function ClientFilesPage() {
                           toast.success(`"${file.name}" uploaded successfully.`);
                           browser.refetch();
                         } catch (err: unknown) {
-                          toast.error(
-                            err instanceof Error ? err.message : 'Upload failed. Please try again.',
-                          );
+                          const msg = err instanceof Error ? err.message : 'Upload failed. Please try again.';
+                          if (msg.includes('404')) {
+                            toast.error('Upload destination not found in SharePoint. Please contact your Vivacity consultant.');
+                          } else if (msg.includes('403')) {
+                            toast.error('Permission denied uploading to SharePoint. Please contact your Vivacity consultant.');
+                          } else if (msg.includes('502') || msg.includes('Failed to resolve uploads folder')) {
+                            toast.error('SharePoint folder could not be reached. Please try again or contact your Vivacity consultant.');
+                          } else if (msg.includes('413') || msg.includes('too large')) {
+                            toast.error('File is too large. Maximum size is 50 MB.');
+                          } else {
+                            toast.error(`Upload failed: ${msg}`);
+                          }
                         } finally {
                           setUploading(false);
                           e.target.value = '';
                         }
                       }}
                     />
+
                   </div>
                 </div>
 
