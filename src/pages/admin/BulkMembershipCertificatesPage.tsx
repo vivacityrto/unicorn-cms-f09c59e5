@@ -443,42 +443,59 @@ export default function BulkMembershipCertificatesPage() {
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveOwner(null)}
-                className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                  activeOwner === null
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background hover:bg-muted"
-                }`}
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                value={activeOwner ?? "__all__"}
+                onValueChange={v => setActiveOwner(v === "__all__" ? null : v)}
               >
-                All Owners
-                <Badge variant="secondary" className="ml-2">
-                  {tenants.length}
-                </Badge>
-              </button>
-              {ownerTabs.map(([name, count]) => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => setActiveOwner(name)}
-                  className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                    activeOwner === name
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background hover:bg-muted"
-                  }`}
-                >
-                  {name}
-                  <Badge variant="secondary" className="ml-2">
-                    {count}
-                  </Badge>
-                </button>
-              ))}
-            </div>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="All CSCs" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All CSCs</SelectItem>
+                  {ownerTabs.map(([name]) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <div className="flex justify-end">
-              <div className="relative w-full sm:w-80">
+              <Select
+                value={activeGroup ?? "__all__"}
+                onValueChange={v => setActiveGroup(v === "__all__" ? null : v)}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Groups" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Groups</SelectItem>
+                  {uniqueGroups.map(g => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={activeStatus ?? "__all__"}
+                onValueChange={v => setActiveStatus(v === "__all__" ? null : v)}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Statuses</SelectItem>
+                  {uniqueStatuses.map(s => (
+                    <SelectItem key={s} value={s}>
+                      {statusLabelMap.get(s) ?? s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="relative w-full sm:w-80 ml-auto">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search name, contact, email…"
@@ -488,6 +505,7 @@ export default function BulkMembershipCertificatesPage() {
                 />
               </div>
             </div>
+
 
             <div className="border rounded-lg overflow-hidden">
               <Table>
