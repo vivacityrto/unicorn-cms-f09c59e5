@@ -370,6 +370,23 @@ export default function BulkMembershipCertificatesPage() {
     setProgressLabel("");
   };
 
+  const CSC_COLORS = [
+    "bg-purple-100 text-purple-800",
+    "bg-blue-100 text-blue-800",
+    "bg-green-100 text-green-800",
+    "bg-amber-100 text-amber-800",
+    "bg-rose-100 text-rose-800",
+    "bg-cyan-100 text-cyan-800",
+    "bg-orange-100 text-orange-800",
+    "bg-teal-100 text-teal-800",
+  ];
+
+  function getCscColor(name: string): string {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return CSC_COLORS[Math.abs(hash) % CSC_COLORS.length];
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto p-6 space-y-6">
