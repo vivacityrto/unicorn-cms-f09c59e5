@@ -55,6 +55,35 @@ export function ViewAsClientButton({
   const [actingOptions, setActingOptions] = useState<ActingUserOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [selectedActingId, setSelectedActingId] = useState<string | null>(null);
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+
+  const REASON_PRESETS: { label: string; value: string }[] = [
+    { label: "Support ticket", value: "Investigating support ticket" },
+    { label: "Onboarding", value: "Client onboarding assistance" },
+    { label: "Team training", value: "Training new team member" },
+    { label: "Audit prep", value: "Audit preparation" },
+  ];
+
+  function formatRoleLabel(role: string): string {
+    switch (role) {
+      case "primary_contact": return "Primary contact";
+      case "secondary_contact": return "Secondary contact";
+      case "academy_user": return "Academy user";
+      case "user": return "User";
+      default:
+        return (role ?? "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+  }
+
+  const handlePresetClick = (label: string, value: string) => {
+    if (selectedPreset === label) {
+      setSelectedPreset(null);
+      setReason("");
+    } else {
+      setSelectedPreset(label);
+      setReason(value);
+    }
+  };
 
   const hasAcademyAccess = tenantType.startsWith("academy_") || tenantType === "compliance_system";
   const isAcademyOnly = tenantType.startsWith("academy_");
@@ -196,11 +225,27 @@ export function ViewAsClientButton({
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="reason">Reason for preview (optional)</Label>
+              <div className="flex flex-wrap gap-2">
+                {REASON_PRESETS.map((p) => (
+                  <Button
+                    key={p.label}
+                    type="button"
+                    size="sm"
+                    variant={selectedPreset === p.label ? "secondary" : "outline"}
+                    onClick={() => handlePresetClick(p.label, p.value)}
+                  >
+                    {p.label}
+                  </Button>
+                ))}
+              </div>
               <Textarea
                 id="reason"
                 placeholder="e.g., Investigating support ticket #123, training new team member..."
                 value={reason}
-                onChange={(e) => setReason(e.target.value)}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  if (selectedPreset !== null) setSelectedPreset(null);
+                }}
                 rows={3}
               />
               <p className="text-xs text-muted-foreground">
@@ -236,8 +281,12 @@ export function ViewAsClientButton({
                     <SelectContent>
                       {actingOptions.map((opt) => (
                         <SelectItem key={opt.user_uuid} value={opt.user_uuid}>
-                          {opt.full_name}
-                          {opt.is_default ? " (Primary contact)" : ""}
+                          <div className="flex flex-col leading-tight">
+                            <span>{opt.full_name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatRoleLabel(opt.relationship_role)}
+                            </span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
