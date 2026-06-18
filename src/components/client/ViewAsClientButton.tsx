@@ -114,7 +114,11 @@ export function ViewAsClientButton({
     try {
       const opts = await fetchActingUserOptions(tenantId);
       setActingOptions(opts);
-      const def = opts.find((o) => o.is_default) ?? opts[0] ?? null;
+      const isPortalMode = mode === "portal" && !isAcademyOnly;
+      const filtered = isPortalMode
+        ? opts.filter((o) => PORTAL_ELIGIBLE_ROLES.includes(o.relationship_role))
+        : opts;
+      const def = filtered.find((o) => o.is_default) ?? filtered[0] ?? null;
       setSelectedActingId(def?.user_uuid ?? null);
     } finally {
       setOptionsLoading(false);
