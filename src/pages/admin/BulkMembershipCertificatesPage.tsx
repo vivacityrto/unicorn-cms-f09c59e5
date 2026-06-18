@@ -519,6 +519,7 @@ export default function BulkMembershipCertificatesPage() {
                       />
                     </TableHead>
                     <TableHead>Group</TableHead>
+                    <TableHead>CSC</TableHead>
                     <TableHead>Code / Client</TableHead>
                     <TableHead>Contact Name</TableHead>
                     <TableHead>Email</TableHead>
