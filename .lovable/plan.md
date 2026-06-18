@@ -1,74 +1,60 @@
-# Phase 2a — Additive columns on `compliance_obligations`
+# Phase 2b — Backfill `audience_id` and `recurrence_id`
 
-Scope: one migration. Purely additive. No view/function/trigger/RLS changes. No backfill (Phase 2b).
+Scope: data-only backfill on `public.compliance_obligations`. No schema changes. No `NOT NULL` (that's Phase 2c). Uses the `supabase--insert` tool (UPDATE statements, not a migration).
 
-## Migration SQL
-
-```sql
-ALTER TABLE public.compliance_obligations
-  ADD COLUMN lead_times           integer[] NOT NULL DEFAULT ARRAY[30,14,7,1],
-  ADD COLUMN notification_message text,
-  ADD COLUMN due_date             date,
-  ADD COLUMN audience_id          integer REFERENCES public.dd_obligation_audience(id),
-  ADD COLUMN recurrence_id        integer REFERENCES public.dd_obligation_recurrence(id);
-```
-
-Rationale:
-- `lead_times` — constant array default ⇒ Postgres 11+ metadata-only, no rewrite.
-- `audience_id` / `recurrence_id` — nullable FKs to the Phase 1 `dd_*` tables. Stay NULL until Phase 2b backfill. No `NOT NULL` yet.
-- `notification_message`, `due_date` — nullable, no default.
-- No `GRANT` changes needed (table already exists with grants intact).
-- View `v_client_reporting_reminders` is unaffected — it does not select these new columns; PostgREST/consumers ignore unknown additive columns.
-
-## Verification (post-migration)
+## SQL
 
 ```sql
--- Columns present, audience_id/recurrence_id nullable
-SELECT column_name, data_type, is_nullable, column_default
-FROM information_schema.columns
-WHERE table_schema = 'public' AND table_name = 'compliance_obligations'
-ORDER BY ordinal_position;
+UPDATE public.compliance_obligations c
+   SET audience_id = a.id
+  FROM public.dd_obligation_audience a
+ WHERE a.value = c.audience;
 
--- View row count unchanged
-SELECT count(*) FROM public.v_client_reporting_reminders;  -- expect 2247
-
--- FK wiring correct
-SELECT conname, confrelid::regclass
-FROM pg_constraint
-WHERE conrelid = 'public.compliance_obligations'::regclass
-  AND contype = 'f'
-  AND conname LIKE '%audience%' OR conname LIKE '%recurrence%';
-
--- Default array materialised on existing rows
-SELECT count(*) FILTER (WHERE lead_times = ARRAY[30,14,7,1]) AS defaulted,
-       count(*) AS total
-FROM public.compliance_obligations;
+UPDATE public.compliance_obligations c
+   SET recurrence_id = r.id
+  FROM public.dd_obligation_recurrence r
+ WHERE r.value = c.recurrence;
 ```
+
+## Pre-check (already confirmed in Phase 1 audit)
+
+All distinct `audience` and `recurrence` text values on `compliance_obligations` are covered by the seeded `dd_*` lookup rows, so every row will match.
+
+## Verification — hard gate
+
+```sql
+SELECT count(*) AS null_audience_id
+FROM public.compliance_obligations
+WHERE audience_id IS NULL;          -- must be 0
+
+SELECT count(*) AS null_recurrence_id
+FROM public.compliance_obligations
+WHERE recurrence_id IS NULL;        -- must be 0
+
+SELECT count(*) FROM public.v_client_reporting_reminders;  -- must be 2247
+```
+
+If any null count is non-zero, stop — do not proceed to Phase 2c. Investigate the unmatched legacy text value and extend the `dd_*` table before retrying.
 
 ## Risk assessment
 
-- **Rewrite risk:** None. Constant-default fast path for `lead_times`; other adds are nullable.
-- **Consumer breakage:** None. View definition unchanged; select-list of `v_client_reporting_reminders` does not reference new columns. Frontend `types.ts` will regenerate post-approval; no code reads the new columns yet.
-- **RLS:** Unchanged. Existing 2 policies on `compliance_obligations` continue to apply to new columns.
-- **FK risk:** Nullable FKs against fully-seeded `dd_*` tables — no insert can fail until Phase 2b assigns values.
-- **Lock:** Brief `ACCESS EXCLUSIVE` on `compliance_obligations` for metadata update only.
+- **Data risk:** None — overwrites only NULLs, joined on equality against the canonical lookup.
+- **Concurrency:** Brief row-level locks on `compliance_obligations` during update. No DDL, no view rebuild.
+- **View impact:** `v_client_reporting_reminders` does not reference the new columns; count must stay at 2247.
+- **RLS:** Unchanged.
 
 ## Rollback
 
 ```sql
-ALTER TABLE public.compliance_obligations
-  DROP COLUMN lead_times,
-  DROP COLUMN notification_message,
-  DROP COLUMN due_date,
-  DROP COLUMN audience_id,
-  DROP COLUMN recurrence_id;
+UPDATE public.compliance_obligations
+   SET audience_id = NULL,
+       recurrence_id = NULL;
 ```
 
-Safe — no other object depends on these columns yet.
+Safe — no FK constraint requires these columns to be populated yet.
 
-## Out of scope (Phase 2b and beyond)
+## Out of scope
 
-- Backfilling `audience_id` / `recurrence_id` from legacy `audience` / `recurrence` text columns.
-- Setting `NOT NULL` on the new FK columns.
-- Updating `v_client_reporting_reminders` internals.
-- Edge function, cron, frontend CRUD.
+- Setting `NOT NULL` on `audience_id` / `recurrence_id` (Phase 2c).
+- Dropping the legacy `audience` / `recurrence` text columns (later phase).
+- View, edge function, cron, frontend changes.
