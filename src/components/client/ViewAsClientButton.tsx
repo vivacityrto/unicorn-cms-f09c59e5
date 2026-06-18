@@ -162,6 +162,8 @@ export function ViewAsClientButton({
     ? actingOptions
     : actingOptions.filter((o) => PORTAL_ELIGIBLE_ROLES.includes(o.relationship_role));
   const noUsersAvailable = !optionsLoading && displayOptions.length === 0;
+  const confirmDisabled =
+    isStarting || optionsLoading || (isAcademyMode && (noUsersAvailable || !selectedActingId));
 
   return (
     <>
