@@ -227,9 +227,21 @@ export default function BulkMembershipCertificatesPage() {
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }, [tenants]);
 
+  const uniqueGroups = useMemo(
+    () => [...new Set(tenants.map(t => t.package_slug).filter(Boolean))].sort(),
+    [tenants]
+  );
+
+  const uniqueStatuses = useMemo(
+    () => [...new Set(tenants.map(t => t.status).filter(Boolean))].sort(),
+    [tenants]
+  );
+
   const visibleTenants = useMemo(() => {
     let rows = tenants;
     if (activeOwner) rows = rows.filter(t => t.csc_name === activeOwner);
+    if (activeGroup) rows = rows.filter(t => t.package_slug === activeGroup);
+    if (activeStatus) rows = rows.filter(t => t.status === activeStatus);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       rows = rows.filter(
@@ -240,7 +252,7 @@ export default function BulkMembershipCertificatesPage() {
       );
     }
     return rows;
-  }, [tenants, activeOwner, searchQuery]);
+  }, [tenants, activeOwner, activeGroup, activeStatus, searchQuery]);
 
   const allVisibleSelected =
     visibleTenants.length > 0 && visibleTenants.every(t => selected.has(t.id));
