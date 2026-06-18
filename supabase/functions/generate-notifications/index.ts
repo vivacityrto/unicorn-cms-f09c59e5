@@ -689,11 +689,72 @@ Deno.serve(async (req) => {
     const supabase = createServiceClient();
 
     let scope = "all";
+    let body: Record<string, unknown> = {};
     try {
-      const body = await req.json();
-      if (body?.scope) scope = body.scope;
+      body = (await req.json()) ?? {};
+      if (body?.scope && typeof body.scope === "string") scope = body.scope;
     } catch {
       // no body or invalid JSON – run all scopes
+    }
+
+    // ── reporting_obligations scope ───────────────────────────────
+    if (scope === "reporting_obligations") {
+      const isPreview = body.preview === true;
+      const isBroadcast = body.broadcast === true;
+      const obligationIdRaw = body.obligation_id;
+      const obligationId =
+        typeof obligationIdRaw === "number"
+          ? obligationIdRaw
+          : typeof obligationIdRaw === "string" && obligationIdRaw.trim() !== ""
+          ? Number(obligationIdRaw)
+          : undefined;
+
+      // Scheduled: cron path, no JWT check (matches existing scopes).
+      // Preview/Broadcast: must be a super-admin.
+      let actorUserId: string | undefined;
+      if (isPreview || isBroadcast) {
+        const authHeader = req.headers.get("Authorization");
+        if (!authHeader?.startsWith("Bearer ")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const token = authHeader.replace("Bearer ", "");
+        const userClient = createUserClient(authHeader);
+        const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
+        if (claimsErr || !claimsData?.claims?.sub) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        actorUserId = claimsData.claims.sub as string;
+        const { data: isSa, error: saErr } = await supabase.rpc("is_super_admin_safe", {
+          p_user_id: actorUserId,
+        });
+        if (saErr || isSa !== true) {
+          return new Response(JSON.stringify({ error: "Forbidden" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (obligationId == null || Number.isNaN(obligationId)) {
+          return new Response(JSON.stringify({ error: "obligation_id required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      const mode: ReportingMode = isPreview ? "preview" : isBroadcast ? "broadcast" : "scheduled";
+      const result = await runReportingObligations(supabase, { mode, obligationId, actorUserId });
+
+      const payload = { scope, mode, ...result, ran_at: new Date().toISOString() };
+      console.log("generate-notifications summary:", JSON.stringify(payload));
+      return new Response(JSON.stringify(payload), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     let tasksCreated = 0;
