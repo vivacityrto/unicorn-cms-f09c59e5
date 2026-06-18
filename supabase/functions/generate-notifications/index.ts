@@ -524,7 +524,7 @@ async function runReportingObligations(
   opts: { mode: ReportingMode; obligationId?: number; actorUserId?: string }
 ): Promise<Record<string, unknown>> {
   const { mode, obligationId } = opts;
-  const todayAest = await getTodayAest(supabase);
+  const todayAest = getTodayAest();
 
   // 1. Fetch view rows
   let query = supabase.from("v_client_reporting_reminders").select("*");
