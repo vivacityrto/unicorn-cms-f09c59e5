@@ -117,8 +117,57 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
           loading="eager"
         />
       </div>
-      {/* Center: spacer */}
-      <div className="flex-1" />
+      {/* Center: preview banner or spacer */}
+      {isPreview ? (
+        <div className="flex-1 flex items-center justify-center min-w-0 px-4">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs border max-w-full"
+            style={{
+              backgroundColor: "hsl(270 60% 97%)",
+              borderColor: "hsl(270 30% 80%)",
+              color: "hsl(270 55% 41%)",
+            }}
+          >
+            <Eye className="h-3.5 w-3.5 flex-shrink-0" />
+            <span className="text-muted-foreground">Viewing as</span>
+            {actingUserOptions.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 font-semibold hover:underline focus:outline-none"
+                  >
+                    <span className="truncate max-w-[180px]">{activeUserName}</span>
+                    <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-64">
+                  <DropdownMenuLabel>Switch viewing as</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {actingUserOptions.map((opt) => (
+                    <DropdownMenuItem
+                      key={opt.user_uuid}
+                      onClick={() => setActingUserId(opt.user_uuid)}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <span className="truncate">{opt.full_name}</span>
+                      {opt.user_uuid === actingUserId && (
+                        <Check className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <span className="font-semibold truncate max-w-[180px]">{activeUserName}</span>
+            )}
+            <span className="text-muted-foreground">·</span>
+            <span className="text-muted-foreground whitespace-nowrap">{elapsedLabel}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1" />
+      )}
 
 
       {/* Right: Notifications + Help + Profile */}
