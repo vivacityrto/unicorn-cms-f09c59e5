@@ -10,7 +10,7 @@
  */
 
 import { corsHeaders } from "../_shared/cors.ts";
-import { createServiceClient } from "../_shared/supabase-client.ts";
+import { createServiceClient, createUserClient } from "../_shared/supabase-client.ts";
 
 interface NotificationRow {
   tenant_id: number;
