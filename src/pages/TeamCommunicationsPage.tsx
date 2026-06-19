@@ -18,7 +18,7 @@ import {
   AppModalBody,
   AppModalFooter,
 } from "@/components/ui/modals";
-import { MessageSquare, Plus, Send, Mail, MailOpen, Building2, Paperclip } from "lucide-react";
+import { MessageSquare, Plus, Send, Mail, MailOpen, Building2, Paperclip, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
@@ -27,6 +27,7 @@ import {
   uploadMessageAttachment,
   validateAttachment,
   MAX_FILES_PER_MESSAGE,
+  formatBytes,
   type MessageAttachmentRow,
 } from "@/lib/messageAttachments";
 import { MessageAttachments } from "@/components/messaging/MessageAttachments";
@@ -698,6 +699,8 @@ function NewTeamMessageDialog({
   const [type, setType] = useState("general");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch tenants for picker
   const { data: tenants = [] } = useQuery({
@@ -707,6 +710,30 @@ function NewTeamMessageDialog({
       return data || [];
     },
   });
+
+  const onFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    if (!picked.length) return;
+    const accepted: File[] = [];
+    for (const f of picked) {
+      if (queuedFiles.length + accepted.length >= MAX_FILES_PER_MESSAGE) {
+        toast.error(`You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`);
+        break;
+      }
+      try {
+        validateAttachment(f);
+        accepted.push(f);
+      } catch (err: any) {
+        toast.error(err?.message || `"${f.name}" was rejected.`);
+      }
+    }
+    if (accepted.length) setQueuedFiles(prev => [...prev, ...accepted]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeQueued = (idx: number) => {
+    setQueuedFiles(prev => prev.filter((_, i) => i !== idx));
+  };
 
   const handleSubmit = async () => {
     if (!tenantId || !message.trim() || !currentUserId) return;
@@ -759,7 +786,7 @@ function NewTeamMessageDialog({
       }
 
       // Send first message
-      await (supabase
+      const { data: newMsg, error: msgErr } = await (supabase
         .from("tenant_messages" as any)
         .insert({
           conversation_id: conv.id,
@@ -767,13 +794,27 @@ function NewTeamMessageDialog({
           sender_type: "staff",
           body: message.trim(),
           tenant_id: tid,
-        } as any)) as any;
+        } as any)
+        .select("id")
+        .single()) as any;
+      if (msgErr) throw msgErr;
+
+      // Upload queued attachments (best-effort, per-file)
+      for (const file of queuedFiles) {
+        try {
+          await uploadMessageAttachment(supabase, file, tid, conv.id, newMsg.id);
+        } catch {
+          toast.warning(`Attachment '${file.name}' failed to upload`);
+        }
+      }
 
       onCreated(conv.id);
       setTenantId("");
       setSubject("");
       setType("general");
       setMessage("");
+      setQueuedFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       onOpenChange(false);
     } finally {
       setSubmitting(false);
@@ -782,11 +823,11 @@ function NewTeamMessageDialog({
 
   return (
     <AppModal open={open} onOpenChange={onOpenChange}>
-      <AppModalContent size="md">
+      <AppModalContent size="lg">
         <AppModalHeader>
           <AppModalTitle>New Message to Client</AppModalTitle>
         </AppModalHeader>
-        <AppModalBody className="space-y-4">
+        <AppModalBody className="space-y-5">
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">Client</label>
             <Select value={tenantId} onValueChange={setTenantId}>
@@ -798,28 +839,67 @@ function NewTeamMessageDialog({
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Subject (optional)</label>
-            <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="What is this about?" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Category</label>
-            <Select value={type} onValueChange={setType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="general">General</SelectItem>
-                <SelectItem value="package">Package</SelectItem>
-                <SelectItem value="task">Task</SelectItem>
-                <SelectItem value="rock">Rock</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Subject</label>
+              <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="What is this about? (optional)" />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Category</label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General</SelectItem>
+                  <SelectItem value="package">Package</SelectItem>
+                  <SelectItem value="task">Task</SelectItem>
+                  <SelectItem value="rock">Rock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">Message</label>
-            <Textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Type your message…" rows={4} />
+            <Textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Type your message…" rows={5} />
+            <p className="text-xs text-muted-foreground mt-1">Your client will be notified when this message is sent.</p>
           </div>
+          {queuedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {queuedFiles.map((f, i) => (
+                <div key={i} className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-xs">
+                  <span className="truncate max-w-[200px]">{f.name}</span>
+                  <span className="text-muted-foreground">({formatBytes(f.size)})</span>
+                  <button
+                    type="button"
+                    onClick={() => removeQueued(i)}
+                    className="text-destructive hover:text-destructive/80"
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </AppModalBody>
         <AppModalFooter>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            hidden
+            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
+            onChange={onFilesPicked}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE}
+            aria-label="Attach files"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={!tenantId || !message.trim() || submitting} className="gap-1.5">
             <Send className="h-3.5 w-3.5" />
