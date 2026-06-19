@@ -914,6 +914,110 @@ export default function StaffEngagementDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create &amp; Invite to Unicorn</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={engagement.person_email ?? ""} readOnly />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Super Admin">Super Admin</SelectItem>
+                  <SelectItem value="Team Member">Team Member</SelectItem>
+                  <SelectItem value="CSC">CSC</SelectItem>
+                  <SelectItem value="Integrator">Integrator</SelectItem>
+                  <SelectItem value="BGT">BGT</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setInviteDialogOpen(false)}
+              disabled={inviteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => inviteMutation.mutate({ role: inviteRole })}
+              disabled={inviteMutation.isPending}
+            >
+              {inviteMutation.isPending ? "Sending…" : "Send Invite"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmRevoke} onOpenChange={setConfirmRevoke}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke Unicorn access?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`This will immediately block ${engagement.person_name}'s access to Unicorn. They will see a disabled account message on next login.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revokeMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); revokeMutation.mutate(); }}
+              disabled={revokeMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {revokeMutation.isPending ? "Revoking…" : "Revoke Access"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={linkUserOpen} onOpenChange={(o) => { setLinkUserOpen(o); if (!o) setLinkSearch(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Unicorn User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Search by name…"
+              value={linkSearch}
+              onChange={(e) => setLinkSearch(e.target.value)}
+              autoFocus
+            />
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {linkSearch.length < 2 ? (
+                <p className="text-xs text-muted-foreground px-2 py-1">
+                  Type at least 2 characters to search.
+                </p>
+              ) : userSearchQuery.isLoading ? (
+                <p className="text-xs text-muted-foreground px-2 py-1">Searching…</p>
+              ) : (userSearchQuery.data ?? []).length === 0 ? (
+                <p className="text-xs text-muted-foreground px-2 py-1">No results</p>
+              ) : (
+                (userSearchQuery.data ?? []).map((u) => (
+                  <button
+                    key={u.user_uuid}
+                    type="button"
+                    disabled={linkUserMutation.isPending}
+                    onClick={() => linkUserMutation.mutate({ userUuid: u.user_uuid })}
+                    className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-muted disabled:opacity-50"
+                  >
+                    {u.full_name ?? "(no name)"}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
