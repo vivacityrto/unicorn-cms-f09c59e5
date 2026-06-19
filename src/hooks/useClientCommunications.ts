@@ -21,6 +21,16 @@ export interface ConversationThread {
   isUnread: boolean;
 }
 
+export interface ConversationMessageAttachment {
+  id: string;
+  message_id: string;
+  storage_path: string;
+  filename: string;
+  mime_type: string | null;
+  file_size: number | null;
+  created_at: string;
+}
+
 export interface ConversationMessage {
   id: string;
   conversation_id: string;
@@ -31,6 +41,7 @@ export interface ConversationMessage {
   created_at: string;
   sender_name?: string;
   sender_avatar_url: string | null;
+  attachments?: ConversationMessageAttachment[];
 }
 
 /**
@@ -145,6 +156,20 @@ export function useClientCommunications() {
           avatarMap.set(u.user_uuid, u.avatar_url ?? null);
         });
 
+        const messageIds = data.map((m: any) => m.id);
+        const attMap = new Map<string, ConversationMessageAttachment[]>();
+        if (messageIds.length > 0) {
+          const { data: attRows } = await (supabase
+            .from("tenant_message_attachments" as any)
+            .select("*")
+            .in("message_id", messageIds)) as any;
+          (attRows || []).forEach((a: any) => {
+            const arr = attMap.get(a.message_id) || [];
+            arr.push(a as ConversationMessageAttachment);
+            attMap.set(a.message_id, arr);
+          });
+        }
+
         const mapped: ConversationMessage[] = data.map((m: any) => {
           const resolved = nameMap.get(m.sender_user_uuid) || "";
           const fallback = m.sender_type === "staff" ? "Vivacity Team" : "Unknown";
@@ -157,6 +182,7 @@ export function useClientCommunications() {
             created_at: m.created_at,
             sender_name: resolved || fallback,
             sender_avatar_url: avatarMap.get(m.sender_user_uuid) ?? null,
+            attachments: attMap.get(m.id) || [],
           };
         });
 
@@ -192,7 +218,7 @@ export function useClientCommunications() {
       if (isAcademyOnly) throw new Error("Conversations are not available for academy-only users");
       if (!currentUserId || !activeTenantId) throw new Error("Not authenticated");
 
-      const { error } = await (supabase
+      const { data: newMsg, error } = await (supabase
         .from("tenant_messages" as any)
         .insert({
           conversation_id: conversationId,
@@ -200,7 +226,9 @@ export function useClientCommunications() {
           sender_type: "client",
           body,
           tenant_id: activeTenantId,
-        } as any)) as any;
+        } as any)
+        .select("id")
+        .single()) as any;
 
       if (error) throw error;
 
@@ -209,6 +237,8 @@ export function useClientCommunications() {
         .update({ last_read_at: new Date().toISOString() } as any)
         .eq("conversation_id", conversationId)
         .eq("user_id", currentUserId)) as any;
+
+      return { messageId: newMsg.id as string, tenantId: activeTenantId as number };
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });

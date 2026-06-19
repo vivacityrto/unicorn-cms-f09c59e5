@@ -12,7 +12,9 @@ import {
   CheckCheck,
   ExternalLink,
   Info,
+  Paperclip,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  uploadMessageAttachment,
+  validateAttachment,
+  MAX_FILES_PER_MESSAGE,
+} from "@/lib/messageAttachments";
+import { MessageAttachments } from "@/components/messaging/MessageAttachments";
+import { AttachmentChips } from "@/components/messaging/AttachmentChips";
 
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientInbox } from "@/hooks/useClientInbox";
@@ -172,13 +182,15 @@ function MessagesTab() {
     currentUserId,
   } = useClientCommunications();
 
-  const { isReadOnly } = useClientTenant();
+  const { isReadOnly, activeTenantId } = useClientTenant();
   const [searchParams, setSearchParams] = useSearchParams();
   const threadParam = searchParams.get("thread") ?? searchParams.get("conversation");
   const [selectedId, setSelectedId] = useState<string | null>(threadParam);
   const [filterUnread, setFilterUnread] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [composerText, setComposerText] = useState("");
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Sync ?thread= URL param into selection
@@ -215,11 +227,52 @@ function MessagesTab() {
     if (conv.isUnread) markRead.mutate(conv.id);
   };
 
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!picked.length) return;
+    const accepted: File[] = [];
+    for (const f of picked) {
+      try {
+        validateAttachment(f);
+        accepted.push(f);
+      } catch (err: any) {
+        toast.error(err?.message ?? "Invalid file");
+      }
+    }
+    setQueuedFiles(prev => {
+      const room = MAX_FILES_PER_MESSAGE - prev.length;
+      if (room <= 0) {
+        toast.error(`You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`);
+        return prev;
+      }
+      if (accepted.length > room) {
+        toast.error(`Only the first ${room} file(s) were attached (max ${MAX_FILES_PER_MESSAGE} per message).`);
+      }
+      return [...prev, ...accepted.slice(0, room)];
+    });
+  };
+
+  const removeQueued = (idx: number) => {
+    setQueuedFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSend = async () => {
-    if (!composerText.trim() || !selectedId) return;
+    if ((!composerText.trim() && queuedFiles.length === 0) || !selectedId) return;
     const text = composerText.trim();
+    const filesToUpload = queuedFiles;
     setComposerText("");
-    await sendMessage.mutateAsync({ conversationId: selectedId, body: text });
+    setQueuedFiles([]);
+    const result: any = await sendMessage.mutateAsync({ conversationId: selectedId, body: text });
+    if (result?.messageId && activeTenantId != null && filesToUpload.length > 0) {
+      for (const f of filesToUpload) {
+        try {
+          await uploadMessageAttachment(supabase, f, activeTenantId, selectedId, result.messageId);
+        } catch (err: any) {
+          toast.warning(`Attachment "${f.name}" failed to upload: ${err?.message ?? "unknown error"}`);
+        }
+      }
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -398,6 +451,9 @@ function MessagesTab() {
                                 </p>
                               )}
                               <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                              {msg.attachments && msg.attachments.length > 0 && (
+                                <MessageAttachments attachments={msg.attachments} />
+                              )}
                               <p className="text-[11px] text-muted-foreground mt-1">
                                 {format(new Date(msg.created_at), "d MMM, HH:mm")}
                               </p>
@@ -411,22 +467,42 @@ function MessagesTab() {
                 </ScrollArea>
 
                 {!isReadOnly && (
-                  <div className="p-3 border-t border-border flex gap-2">
-                    <Textarea
-                      value={composerText}
-                      onChange={(e) => setComposerText(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
-                      className="min-h-[40px] max-h-[120px] resize-none"
-                      rows={1}
-                    />
-                    <Button
-                      size="icon"
-                      onClick={handleSend}
-                      disabled={!composerText.trim() || sendMessage.isPending}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
+                  <div className="p-3 border-t border-border">
+                    <AttachmentChips files={queuedFiles} onRemove={removeQueued} />
+                    <div className="flex gap-2">
+                      <Textarea
+                        value={composerText}
+                        onChange={(e) => setComposerText(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+                        className="min-h-[40px] max-h-[120px] resize-none"
+                        rows={1}
+                      />
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        hidden
+                        accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
+                        onChange={handleFilesPicked}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE}
+                        aria-label="Attach files"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        onClick={handleSend}
+                        disabled={(!composerText.trim() && queuedFiles.length === 0) || sendMessage.isPending}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
               </>

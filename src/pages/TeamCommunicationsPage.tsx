@@ -18,10 +18,19 @@ import {
   AppModalBody,
   AppModalFooter,
 } from "@/components/ui/modals";
-import { MessageSquare, Plus, Send, Mail, MailOpen, Building2 } from "lucide-react";
+import { MessageSquare, Plus, Send, Mail, MailOpen, Building2, Paperclip } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
+import { toast } from "sonner";
+import {
+  uploadMessageAttachment,
+  validateAttachment,
+  MAX_FILES_PER_MESSAGE,
+  type MessageAttachmentRow,
+} from "@/lib/messageAttachments";
+import { MessageAttachments } from "@/components/messaging/MessageAttachments";
+import { AttachmentChips } from "@/components/messaging/AttachmentChips";
 
 interface Conversation {
   id: string;
@@ -47,6 +56,7 @@ interface Message {
   created_at: string;
   sender_name?: string;
   sender_avatar_url: string | null;
+  attachments?: MessageAttachmentRow[];
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -62,6 +72,8 @@ export default function TeamCommunicationsPage() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [composerText, setComposerText] = useState("");
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [filterTenant, setFilterTenant] = useState<string>("all");
   const [filterStaff, setFilterStaff] = useState<string>("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
@@ -186,6 +198,20 @@ export default function TeamCommunicationsPage() {
         avatarMap.set(u.user_uuid, u.avatar_url ?? null);
       });
 
+      const messageIds = (data as any[]).map((m: any) => m.id);
+      const attMap = new Map<string, MessageAttachmentRow[]>();
+      if (messageIds.length > 0) {
+        const { data: attRows } = await (supabase
+          .from("tenant_message_attachments" as any)
+          .select("*")
+          .in("message_id", messageIds)) as any;
+        (attRows || []).forEach((a: any) => {
+          const arr = attMap.get(a.message_id) || [];
+          arr.push(a as MessageAttachmentRow);
+          attMap.set(a.message_id, arr);
+        });
+      }
+
       const mapped = (data as any[]).map((m: any) => {
         const resolved = nameMap.get(m.sender_user_uuid) || "";
         const fallback = m.sender_type === "staff" ? "Vivacity Team" : "Unknown";
@@ -198,6 +224,7 @@ export default function TeamCommunicationsPage() {
           created_at: m.created_at,
           sender_name: resolved || fallback,
           sender_avatar_url: avatarMap.get(m.sender_user_uuid) ?? null,
+          attachments: attMap.get(m.id) || [],
         };
       }) as Message[];
 
@@ -333,7 +360,7 @@ export default function TeamCommunicationsPage() {
         .eq("conversation_id", conversationId)
         .eq("user_id", currentUserId)) as any;
 
-      const { error } = await (supabase
+      const { data: newMsg, error } = await (supabase
         .from("tenant_messages" as any)
         .insert({
           conversation_id: conversationId,
@@ -341,8 +368,11 @@ export default function TeamCommunicationsPage() {
           sender_type: "staff",
           body,
           tenant_id: conv?.tenant_id,
-        } as any)) as any;
+        } as any)
+        .select("id")
+        .single()) as any;
       if (error) throw error;
+      return { messageId: newMsg.id as string, tenantId: conv?.tenant_id };
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["team-conversation-messages", vars.conversationId] });
@@ -350,11 +380,53 @@ export default function TeamCommunicationsPage() {
     },
   });
 
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!picked.length) return;
+    const accepted: File[] = [];
+    for (const f of picked) {
+      try {
+        validateAttachment(f);
+        accepted.push(f);
+      } catch (err: any) {
+        toast.error(err?.message ?? "Invalid file");
+      }
+    }
+    setQueuedFiles(prev => {
+      const room = MAX_FILES_PER_MESSAGE - prev.length;
+      if (room <= 0) {
+        toast.error(`You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`);
+        return prev;
+      }
+      if (accepted.length > room) {
+        toast.error(`Only the first ${room} file(s) were attached (max ${MAX_FILES_PER_MESSAGE} per message).`);
+      }
+      return [...prev, ...accepted.slice(0, room)];
+    });
+  };
+
+  const removeQueued = (idx: number) => {
+    setQueuedFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSend = async () => {
-    if (!composerText.trim() || !selectedId) return;
+    if ((!composerText.trim() && queuedFiles.length === 0) || !selectedId) return;
     const text = composerText.trim();
+    const filesToUpload = queuedFiles;
     setComposerText("");
-    await sendMessage.mutateAsync({ conversationId: selectedId, body: text });
+    setQueuedFiles([]);
+    const result = await sendMessage.mutateAsync({ conversationId: selectedId, body: text });
+    if (result?.messageId && result?.tenantId != null && filesToUpload.length > 0) {
+      for (const f of filesToUpload) {
+        try {
+          await uploadMessageAttachment(supabase, f, result.tenantId, selectedId, result.messageId);
+        } catch (err: any) {
+          toast.warning(`Attachment "${f.name}" failed to upload: ${err?.message ?? "unknown error"}`);
+        }
+      }
+      qc.invalidateQueries({ queryKey: ["team-conversation-messages", selectedId] });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -532,6 +604,9 @@ export default function TeamCommunicationsPage() {
                                 </div>
                               )}
                               <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                              {msg.attachments && msg.attachments.length > 0 && (
+                                <MessageAttachments attachments={msg.attachments} />
+                              )}
                               <p className="text-[11px] text-muted-foreground mt-1">{format(new Date(msg.created_at), "d MMM, HH:mm")}</p>
                             </div>
                           </div>
@@ -542,18 +617,42 @@ export default function TeamCommunicationsPage() {
                   </div>
                 </ScrollArea>
 
-                <div className="p-3 border-t border-border flex gap-2">
-                  <Textarea
-                    value={composerText}
-                    onChange={e => setComposerText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Type a message… (Enter to send)"
-                    className="min-h-[40px] max-h-[120px] resize-none"
-                    rows={1}
-                  />
-                  <Button size="icon" onClick={handleSend} disabled={!composerText.trim() || sendMessage.isPending}>
-                    <Send className="h-4 w-4" />
-                  </Button>
+                <div className="p-3 border-t border-border">
+                  <AttachmentChips files={queuedFiles} onRemove={removeQueued} />
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={composerText}
+                      onChange={e => setComposerText(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Type a message… (Enter to send)"
+                      className="min-h-[40px] max-h-[120px] resize-none"
+                      rows={1}
+                    />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      hidden
+                      accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
+                      onChange={handleFilesPicked}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE}
+                      aria-label="Attach files"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      onClick={handleSend}
+                      disabled={(!composerText.trim() && queuedFiles.length === 0) || sendMessage.isPending}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </>
             ) : (
