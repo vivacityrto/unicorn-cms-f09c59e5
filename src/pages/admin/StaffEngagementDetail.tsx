@@ -490,7 +490,7 @@ export default function StaffEngagementDetail() {
                 ) : (
                   <ul className="space-y-2">
                     {(activityQuery.data ?? []).map((r: any, idx: number) => {
-                      const name = r.users?.full_name ?? "Unknown user";
+                      const name = userNameMap.get(r.completed_by) ?? "Unknown user";
                       const label = findItemLabel(r.item_key) ?? r.item_key;
                       return (
                         <li key={idx} className="text-sm">
