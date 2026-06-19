@@ -21,6 +21,16 @@ export interface ConversationThread {
   isUnread: boolean;
 }
 
+export interface ConversationMessageAttachment {
+  id: string;
+  message_id: string;
+  storage_path: string;
+  filename: string;
+  mime_type: string | null;
+  file_size: number | null;
+  created_at: string;
+}
+
 export interface ConversationMessage {
   id: string;
   conversation_id: string;
@@ -31,6 +41,7 @@ export interface ConversationMessage {
   created_at: string;
   sender_name?: string;
   sender_avatar_url: string | null;
+  attachments?: ConversationMessageAttachment[];
 }
 
 /**
