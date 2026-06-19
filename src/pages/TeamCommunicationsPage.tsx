@@ -56,6 +56,7 @@ interface Message {
   created_at: string;
   sender_name?: string;
   sender_avatar_url: string | null;
+  attachments?: MessageAttachmentRow[];
 }
 
 const TYPE_COLORS: Record<string, string> = {
