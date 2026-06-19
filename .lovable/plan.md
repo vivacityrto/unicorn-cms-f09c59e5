@@ -1,28 +1,49 @@
-## Client portal attachments — fill remaining gap
+# Staff Onboarding & Offboarding — DB Migration
 
-Most of this work is already wired:
+Single migration adding three internal admin tables with RLS gated to Vivacity `Super Admin` / `Integrator` roles. No UI, no tenant data.
 
-- `useClientCommunications.sendMessage` already does `.insert(...).select("id").single()` and returns `{ messageId, tenantId }` — no change needed.
-- `MessagesTab` in `ClientInboxPage.tsx` already has `queuedFiles` state, `fileInputRef`, `handleFilesPicked`, `removeQueued`, a `Paperclip` button + hidden input in the composer, attachment chip rendering via `AttachmentChips`, and per-file `uploadMessageAttachment` after `sendMessage.mutateAsync`. The message list also renders `<MessageAttachments />` (which handles image thumbnails, PDF pills, Office download pills, and signed-URL fetching) under each message body.
+## Tables
 
-Only one gap remains: `NewConversationDialog` cannot attach files to the first message.
+### `public.staff_engagements`
+- `id` uuid PK default `gen_random_uuid()`
+- `person_name` text not null
+- `person_email` text not null
+- `role` text not null
+- `engagement_type` text not null, CHECK in (`contractor`,`employee`)
+- `type` text not null, CHECK in (`onboarding`,`offboarding`)
+- `start_date` date not null
+- `status` text not null default `in_progress`, CHECK in (`in_progress`,`pending_signoff`,`completed`,`cancelled`)
+- `linked_unicorn_user_id` uuid null
+- `created_by` uuid not null
+- `created_at` timestamptz not null default `now()`
 
-### Update `src/components/client/NewConversationDialog.tsx`
-- Import `useRef`, `Paperclip` and `X` from lucide-react, `toast` from sonner, `supabase` client, and `validateAttachment`, `uploadMessageAttachment`, `MAX_FILES_PER_MESSAGE`, `formatBytes` from `@/lib/messageAttachments`.
-- Add `queuedFiles: File[]` state and `fileInputRef`.
-- Add `onFilesPicked` mirroring `MessagesTab`: validate each file via `validateAttachment`, `toast.error` on rejects, respect `MAX_FILES_PER_MESSAGE` against current queue + accepted, append accepted to `queuedFiles`, then clear the input value.
-- Add a `removeQueued(idx)` helper.
-- Change the dialog API so it can do the upload itself:
-  - Update `NewConversationDialogProps.onSubmit` to **return the new conversation id** (`Promise<string>`).
-  - Update `MessagesTab.handleNewConversation` in `ClientInboxPage.tsx` to `return newId` so the dialog receives it.
-- In `handleSubmit`:
-  - Call `await onSubmit(...)` → `conversationId`.
-  - If `queuedFiles.length > 0` and we have a `conversationId` and a tenant, query `tenant_messages` filtered by `conversation_id` ordered `created_at asc` limit 1 to get the first message id.
-  - Loop `queuedFiles` calling `uploadMessageAttachment(supabase, file, tenantId, conversationId, firstMsg.id)` in per-file try/catch — `toast.warning` on failure, never throw.
-  - Get `tenantId` by accepting it as a new optional prop from the page (which already has `activeTenantId` via `useClientTenant`), or by reading it from the conversation row in the same lookup.
-  - Clear `queuedFiles`, reset `fileInputRef.current.value`, alongside the existing field resets.
-- Render queued file chips (filename + `formatBytes(size)` + red X remove) in a `flex flex-wrap gap-2` row inside `AppModalBody` below the Message textarea.
-- In `AppModalFooter`, add a `Button variant="ghost" size="icon" type="button"` with the `Paperclip` icon (clicks the hidden input) and a hidden `<input ref={fileInputRef} type="file" multiple hidden accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx" onChange={onFilesPicked} />` before Cancel/Send.
+### `public.checklist_item_completions`
+- `id` uuid PK default `gen_random_uuid()`
+- `engagement_id` uuid not null → `staff_engagements(id)` ON DELETE CASCADE
+- `item_key` text not null
+- `completed_by` uuid not null
+- `completed_at` timestamptz not null default `now()`
+- UNIQUE (`engagement_id`, `item_key`)
 
-### Scope
-No DB/schema changes. No changes to the hook or the existing `MessagesTab` composer/render — they already satisfy steps 1–3 of the request.
+### `public.engagement_signoffs`
+- `id` uuid PK default `gen_random_uuid()`
+- `engagement_id` uuid not null → `staff_engagements(id)` ON DELETE CASCADE
+- `signoff_role` text not null, CHECK in (`staff_member`,`operations_manager`,`ceo`)
+- `signed_by` uuid not null
+- `signed_at` timestamptz not null default `now()`
+- UNIQUE (`engagement_id`, `signoff_role`)
+
+## Security
+
+Helper SECURITY DEFINER function `public.is_vivacity_admin_role()` (search_path=''): returns true if `auth.uid()` maps to a `public.users` row (`user_uuid = auth.uid()`) whose `unicorn_role` is `Super Admin` or `Integrator`. Avoids referencing `users` directly in policies (prevents recursion / privilege leaks).
+
+For each of the three tables:
+1. `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated;` plus `GRANT ALL ... TO service_role;` (no `anon`).
+2. `ENABLE ROW LEVEL SECURITY`.
+3. Single `FOR ALL` policy `TO authenticated` USING + WITH CHECK `public.is_vivacity_admin_role()`.
+
+## Notes
+- No `updated_at` columns requested → none added; no update trigger.
+- No FK to `auth.users` (per project rules); `created_by`, `completed_by`, `signed_by`, `linked_unicorn_user_id` stored as plain uuid referencing `users.user_uuid` by convention.
+- Indexes on `engagement_id` for both child tables (implicit via UNIQUE, plus explicit btree on `staff_engagements(status)` for list filtering).
+- No enum types (per project rules) — CHECK constraints used as specified.
