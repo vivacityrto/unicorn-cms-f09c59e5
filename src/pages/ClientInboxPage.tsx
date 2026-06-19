@@ -525,7 +525,9 @@ function MessagesTab() {
         onOpenChange={setNewDialogOpen}
         onSubmit={handleNewConversation}
         isSubmitting={createConversation.isPending}
+        tenantId={activeTenantId ?? null}
       />
+
     </div>
   );
 }
