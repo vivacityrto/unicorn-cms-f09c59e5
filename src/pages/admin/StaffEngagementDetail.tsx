@@ -179,6 +179,11 @@ export default function StaffEngagementDetail() {
   const allowed = role === "Super Admin" || role === "Integrator";
   const queryClient = useQueryClient();
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteRole, setInviteRole] = useState("Team Member");
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
+  const [linkUserOpen, setLinkUserOpen] = useState(false);
+  const [linkSearch, setLinkSearch] = useState("");
 
   const engagementQuery = useQuery({
     queryKey: ["staff_engagement", id],
