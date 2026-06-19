@@ -341,10 +341,8 @@ export default function StaffEngagementDetail() {
       const next = new Set(completedKeys);
       if (checked) next.add(itemKey); else next.delete(itemKey);
 
-      const criticalKeys = phases.flatMap((p) =>
-        p.sections.flatMap((s) => s.items.filter((i) => i.critical).map((i) => i.key))
-      );
-      const allCriticalDone = criticalKeys.length > 0 && criticalKeys.every((k) => next.has(k));
+      const allCriticalDoneNext =
+        criticalKeys.length > 0 && criticalKeys.every((k) => next.has(k));
 
       if (allCriticalDone && engagement?.status === "in_progress") {
         await supabase.from("staff_engagements").update({ status: "pending_signoff" }).eq("id", id!);
