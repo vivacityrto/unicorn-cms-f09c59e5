@@ -200,8 +200,8 @@ export default function StaffEngagementDetail() {
     queryKey: ["checklist_activity", id],
     enabled: !!id && allowed,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("checklist_item_completions")
+      const { data, error } = await (supabase
+        .from("checklist_item_completions") as any)
         .select("item_key, completed_by, completed_at, users:completed_by ( full_name )")
         .eq("engagement_id", id!)
         .order("completed_at", { ascending: false });
