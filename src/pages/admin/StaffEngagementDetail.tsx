@@ -200,21 +200,32 @@ export default function StaffEngagementDetail() {
     queryKey: ["checklist_activity", id],
     enabled: !!id && allowed,
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from("checklist_item_completions") as any)
-        .select("item_key, completed_by, completed_at, users:completed_by ( full_name )")
+      const { data, error } = await supabase
+        .from("checklist_item_completions")
+        .select("item_key, completed_by, completed_at")
         .eq("engagement_id", id!)
         .order("completed_at", { ascending: false });
-      if (error) {
-        const { data: fb, error: fbErr } = await supabase
-          .from("checklist_item_completions")
-          .select("item_key, completed_by, completed_at")
-          .eq("engagement_id", id!)
-          .order("completed_at", { ascending: false });
-        if (fbErr) throw fbErr;
-        return (fb ?? []).map((r: any) => ({ ...r, users: null })) as any[];
-      }
+      if (error) throw error;
       return (data ?? []) as any[];
+    },
+  });
+
+  const uniqueCompletedByUuids = useMemo(() => {
+    const s = new Set<string>();
+    (completionsQuery.data ?? []).forEach((c) => { if (c.completed_by) s.add(c.completed_by); });
+    return Array.from(s);
+  }, [completionsQuery.data]);
+
+  const userNamesQuery = useQuery({
+    queryKey: ["checklist_user_names", id, uniqueCompletedByUuids],
+    enabled: !!id && allowed && uniqueCompletedByUuids.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, full_name")
+        .in("user_uuid", uniqueCompletedByUuids);
+      if (error) throw error;
+      return (data ?? []) as Array<{ user_uuid: string; full_name: string | null }>;
     },
   });
 
@@ -236,11 +247,11 @@ export default function StaffEngagementDetail() {
 
   const userNameMap = useMemo(() => {
     const m = new Map<string, string>();
-    (activityQuery.data ?? []).forEach((r: any) => {
-      if (r.completed_by && r.users?.full_name) m.set(r.completed_by, r.users.full_name);
+    (userNamesQuery.data ?? []).forEach((u: any) => {
+      if (u.user_uuid && u.full_name) m.set(u.user_uuid, u.full_name);
     });
     return m;
-  }, [activityQuery.data]);
+  }, [userNamesQuery.data]);
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
@@ -479,7 +490,7 @@ export default function StaffEngagementDetail() {
                 ) : (
                   <ul className="space-y-2">
                     {(activityQuery.data ?? []).map((r: any, idx: number) => {
-                      const name = r.users?.full_name ?? "Unknown user";
+                      const name = userNameMap.get(r.completed_by) ?? "Unknown user";
                       const label = findItemLabel(r.item_key) ?? r.item_key;
                       return (
                         <li key={idx} className="text-sm">
