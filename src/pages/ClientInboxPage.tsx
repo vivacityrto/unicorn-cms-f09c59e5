@@ -12,7 +12,9 @@ import {
   CheckCheck,
   ExternalLink,
   Info,
+  Paperclip,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  uploadMessageAttachment,
+  validateAttachment,
+  MAX_FILES_PER_MESSAGE,
+} from "@/lib/messageAttachments";
+import { MessageAttachments } from "@/components/messaging/MessageAttachments";
+import { AttachmentChips } from "@/components/messaging/AttachmentChips";
 
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useClientInbox } from "@/hooks/useClientInbox";
