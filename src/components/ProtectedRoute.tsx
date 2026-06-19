@@ -1,10 +1,13 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRBAC, ADMIN_ROUTES, CLIENT_ROUTES, EOS_ROUTES } from '@/hooks/useRBAC';
 import { useUserAccess } from '@/hooks/useUserAccess';
 import { ACADEMY_ONLY_ROUTES } from '@/config/navigationConfig';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,9 +19,47 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false }: Protecte
   const { canAccessRoute, isSuperAdmin, canAccessEOS, isVivacityTeam } = useRBAC();
   const { hasAcademyOnly, hasFullAccess, isVivacityStaff, isLoading: accessLoading } = useUserAccess();
   const location = useLocation();
-  
+  const navigate = useNavigate();
+
   // Track if we've shown the EOS redirect toast to avoid duplicates
   const hasShownEosToast = useRef(false);
+
+  // Disabled-account check (fetched separately because useAuth's profile
+  // select does not include the `disabled` column).
+  const [disabledState, setDisabledState] = useState<{ loaded: boolean; disabled: boolean }>({
+    loaded: false,
+    disabled: false,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) {
+      setDisabledState({ loaded: false, disabled: false });
+      return;
+    }
+    (async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('disabled')
+        .eq('user_uuid', user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.error('Error checking disabled flag:', error);
+        setDisabledState({ loaded: true, disabled: false });
+        return;
+      }
+      setDisabledState({ loaded: true, disabled: data?.disabled === true });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/login', { replace: true });
+  };
 
   if (loading) {
     return (
@@ -41,6 +82,37 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false }: Protecte
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary-dark to-secondary">
         <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // Wait for the disabled check before rendering anything else so we never
+  // flash the disabled screen or the app shell during the check.
+  if (!disabledState.loaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary via-primary-dark to-secondary">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (disabledState.disabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle>Account Disabled</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <p className="text-muted-foreground">
+              Your account has been disabled. You are no longer part of the
+              Vivacity internal team. Please contact your administrator.
+            </p>
+            <Button onClick={handleSignOut} className="w-full">
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
