@@ -43,11 +43,28 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
 
 import {
   ONBOARDING_PHASES,
@@ -162,6 +179,11 @@ export default function StaffEngagementDetail() {
   const allowed = role === "Super Admin" || role === "Integrator";
   const queryClient = useQueryClient();
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteRole, setInviteRole] = useState("Team Member");
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
+  const [linkUserOpen, setLinkUserOpen] = useState(false);
+  const [linkSearch, setLinkSearch] = useState("");
 
   const engagementQuery = useQuery({
     queryKey: ["staff_engagement", id],
@@ -245,6 +267,23 @@ export default function StaffEngagementDetail() {
       return (data ?? []) as Array<{ user_uuid: string; full_name: string | null }>;
     },
   });
+
+  const userSearchQuery = useQuery({
+    queryKey: ["vivacity_user_search", linkSearch],
+    enabled: linkSearch.length >= 2,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, full_name")
+        .eq("is_vivacity_internal", true)
+        .ilike("full_name", `%${linkSearch}%`)
+        .limit(8);
+      if (error) throw error;
+      return (data ?? []) as Array<{ user_uuid: string; full_name: string | null }>;
+    },
+  });
+
+
 
   const engagement = engagementQuery.data;
   const completions = completionsQuery.data ?? [];
@@ -398,6 +437,92 @@ export default function StaffEngagementDetail() {
       toast({ title: "Could not sign off", description: e?.message, variant: "destructive" }),
   });
 
+  const inviteMutation = useMutation({
+    mutationFn: async ({ role: inviteAsRole }: { role: string }) => {
+      if (!engagement) throw new Error("Engagement not loaded");
+      const res = await supabase.functions.invoke("invite-user", {
+        body: {
+          email: engagement.person_email,
+          role: inviteAsRole,
+          invite_as: "VIVACITY",
+        },
+      });
+      if (res.error || (res.data as any)?.ok !== true) {
+        throw new Error((res.data as any)?.detail ?? res.error?.message ?? "Invite failed");
+      }
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("Not authenticated");
+      const { error } = await supabase.from("checklist_item_completions").insert({
+        engagement_id: id!,
+        item_key: "access.unicorn_provisioned",
+        completed_by: userRes.user.id,
+        completed_at: new Date().toISOString(),
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Invite sent" });
+      setInviteDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["checklist_completions", id] });
+      queryClient.invalidateQueries({ queryKey: ["checklist_activity", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Could not send invite", description: e?.message, variant: "destructive" }),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: async () => {
+      if (!engagement?.linked_unicorn_user_id) throw new Error("No linked user");
+      const { error: updErr } = await supabase
+        .from("users")
+        .update({ disabled: true } as any)
+        .eq("user_uuid", engagement.linked_unicorn_user_id);
+      if (updErr) throw updErr;
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("Not authenticated");
+      const { error } = await supabase.from("checklist_item_completions").insert({
+        engagement_id: id!,
+        item_key: "access_revoke.unicorn",
+        completed_by: userRes.user.id,
+        completed_at: new Date().toISOString(),
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Access revoked" });
+      setConfirmRevoke(false);
+      queryClient.invalidateQueries({ queryKey: ["checklist_completions", id] });
+      queryClient.invalidateQueries({ queryKey: ["checklist_activity", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Could not revoke access", description: e?.message, variant: "destructive" }),
+  });
+
+  const linkUserMutation = useMutation({
+    mutationFn: async ({ userUuid }: { userUuid: string }) => {
+      const { error } = await supabase
+        .from("staff_engagements")
+        .update({ linked_unicorn_user_id: userUuid } as any)
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "User linked" });
+      setLinkUserOpen(false);
+      setLinkSearch("");
+      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Could not link user", description: e?.message, variant: "destructive" }),
+  });
+
+
+
   if (!allowed) {
     return (
       <DashboardLayout>
@@ -455,6 +580,29 @@ export default function StaffEngagementDetail() {
               >
                 Cancel Engagement
               </DropdownMenuItem>
+              {!engagement.linked_unicorn_user_id && (
+                <DropdownMenuItem
+                  onSelect={(e) => { e.preventDefault(); setLinkUserOpen(true); }}
+                >
+                  Link Unicorn User
+                </DropdownMenuItem>
+              )}
+              {!!engagement.linked_unicorn_user_id && (
+                <DropdownMenuItem
+                  onSelect={async (e) => {
+                    e.preventDefault();
+                    await supabase
+                      .from("staff_engagements")
+                      .update({ linked_unicorn_user_id: null } as any)
+                      .eq("id", id!);
+                    queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+                    queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+                    toast({ title: "User unlinked" });
+                  }}
+                >
+                  Unlink User
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -585,6 +733,93 @@ export default function StaffEngagementDetail() {
                                 const who = c?.completed_by
                                   ? userNameMap.get(c.completed_by) ?? "Unknown user"
                                   : null;
+                                if (item.key === "access.unicorn_provisioned") {
+                                  return (
+                                    <div key={item.key} className="flex items-start gap-3">
+                                      {checked ? (
+                                        <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                                      ) : (
+                                        <div className="h-4 w-4 mt-0.5 shrink-0" />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-sm">{item.label}</span>
+                                          {item.critical && (
+                                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                          )}
+                                        </div>
+                                        {checked && c && (
+                                          <div className="text-xs text-muted-foreground mt-0.5">
+                                            {who ?? "Unknown user"} · {fmtDateTime(c.completed_at)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                        {item.owner}
+                                      </span>
+                                      {!checked && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => setInviteDialogOpen(true)}
+                                        >
+                                          Create &amp; Invite
+                                        </Button>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                if (item.key === "access_revoke.unicorn") {
+                                  const noLink = !engagement.linked_unicorn_user_id;
+                                  const revokeBtn = (
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      disabled={noLink || revokeMutation.isPending}
+                                      onClick={() => setConfirmRevoke(true)}
+                                    >
+                                      Revoke Access
+                                    </Button>
+                                  );
+                                  return (
+                                    <div key={item.key} className="flex items-start gap-3">
+                                      {checked ? (
+                                        <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                                      ) : (
+                                        <div className="h-4 w-4 mt-0.5 shrink-0" />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-sm">{item.label}</span>
+                                          {item.critical && (
+                                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                          )}
+                                        </div>
+                                        {checked && c && (
+                                          <div className="text-xs text-muted-foreground mt-0.5">
+                                            {who ?? "Unknown user"} · {fmtDateTime(c.completed_at)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                        {item.owner}
+                                      </span>
+                                      {!checked &&
+                                        (noLink ? (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="inline-block">{revokeBtn}</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Link a Unicorn user first</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        ) : (
+                                          revokeBtn
+                                        ))}
+                                    </div>
+                                  );
+                                }
                                 return (
                                   <div key={item.key} className="flex items-start gap-3">
                                     <Checkbox
@@ -679,6 +914,110 @@ export default function StaffEngagementDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create &amp; Invite to Unicorn</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={engagement.person_email ?? ""} readOnly />
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={inviteRole} onValueChange={setInviteRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Super Admin">Super Admin</SelectItem>
+                  <SelectItem value="Team Member">Team Member</SelectItem>
+                  <SelectItem value="CSC">CSC</SelectItem>
+                  <SelectItem value="Integrator">Integrator</SelectItem>
+                  <SelectItem value="BGT">BGT</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setInviteDialogOpen(false)}
+              disabled={inviteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => inviteMutation.mutate({ role: inviteRole })}
+              disabled={inviteMutation.isPending}
+            >
+              {inviteMutation.isPending ? "Sending…" : "Send Invite"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmRevoke} onOpenChange={setConfirmRevoke}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke Unicorn access?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`This will immediately block ${engagement.person_name}'s access to Unicorn. They will see a disabled account message on next login.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revokeMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); revokeMutation.mutate(); }}
+              disabled={revokeMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {revokeMutation.isPending ? "Revoking…" : "Revoke Access"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={linkUserOpen} onOpenChange={(o) => { setLinkUserOpen(o); if (!o) setLinkSearch(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Unicorn User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              placeholder="Search by name…"
+              value={linkSearch}
+              onChange={(e) => setLinkSearch(e.target.value)}
+              autoFocus
+            />
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {linkSearch.length < 2 ? (
+                <p className="text-xs text-muted-foreground px-2 py-1">
+                  Type at least 2 characters to search.
+                </p>
+              ) : userSearchQuery.isLoading ? (
+                <p className="text-xs text-muted-foreground px-2 py-1">Searching…</p>
+              ) : (userSearchQuery.data ?? []).length === 0 ? (
+                <p className="text-xs text-muted-foreground px-2 py-1">No results</p>
+              ) : (
+                (userSearchQuery.data ?? []).map((u) => (
+                  <button
+                    key={u.user_uuid}
+                    type="button"
+                    disabled={linkUserMutation.isPending}
+                    onClick={() => linkUserMutation.mutate({ userUuid: u.user_uuid })}
+                    className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-muted disabled:opacity-50"
+                  >
+                    {u.full_name ?? "(no name)"}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
