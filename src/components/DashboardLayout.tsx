@@ -95,6 +95,7 @@ const resourceManagementMenuItems = [
 const administrationMenuItems = [
   { icon: Shield, label: "Team Users", path: "/admin/team-users" },
   { icon: Building2, label: "Tenant Users", path: "/admin/tenant-users" },
+  { icon: Users, label: "People", path: "/admin/staff-engagements", saOrIntegratorOnly: true },
   { icon: Mail, label: "Manage Invites", path: "/manage-invites", superAdminOnly: true },
   { icon: Send, label: "Cohort Sender", path: "/admin/cohort-sender", superAdminOnly: true },
   { icon: ShieldCheck, label: "User Audit", path: "/admin/user-audit", superAdminOnly: true },
@@ -248,12 +249,15 @@ export const DashboardLayout = ({
   // Filter Administration items based on role
   const filteredAdminItems = useMemo(() => {
     return administrationMenuItems.filter(item => {
+      if ((item as any).saOrIntegratorOnly) {
+        return isSuperAdmin || isIntegrator;
+      }
       if (item.superAdminOnly) {
         return isSuperAdmin;
       }
       return true;
     });
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, isIntegrator]);
 
   // Legacy menu items for client view
   const clientMenuItems = useMemo(() => {
