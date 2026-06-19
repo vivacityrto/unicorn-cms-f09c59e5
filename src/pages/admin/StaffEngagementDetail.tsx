@@ -268,6 +268,23 @@ export default function StaffEngagementDetail() {
     },
   });
 
+  const userSearchQuery = useQuery({
+    queryKey: ["vivacity_user_search", linkSearch],
+    enabled: linkSearch.length >= 2,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, full_name")
+        .eq("is_vivacity_internal", true)
+        .ilike("full_name", `%${linkSearch}%`)
+        .limit(8);
+      if (error) throw error;
+      return (data ?? []) as Array<{ user_uuid: string; full_name: string | null }>;
+    },
+  });
+
+
+
   const engagement = engagementQuery.data;
   const completions = completionsQuery.data ?? [];
   const signoffs = signoffsQuery.data ?? [];
