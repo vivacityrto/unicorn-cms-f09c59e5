@@ -200,21 +200,32 @@ export default function StaffEngagementDetail() {
     queryKey: ["checklist_activity", id],
     enabled: !!id && allowed,
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from("checklist_item_completions") as any)
-        .select("item_key, completed_by, completed_at, users:completed_by ( full_name )")
+      const { data, error } = await supabase
+        .from("checklist_item_completions")
+        .select("item_key, completed_by, completed_at")
         .eq("engagement_id", id!)
         .order("completed_at", { ascending: false });
-      if (error) {
-        const { data: fb, error: fbErr } = await supabase
-          .from("checklist_item_completions")
-          .select("item_key, completed_by, completed_at")
-          .eq("engagement_id", id!)
-          .order("completed_at", { ascending: false });
-        if (fbErr) throw fbErr;
-        return (fb ?? []).map((r: any) => ({ ...r, users: null })) as any[];
-      }
+      if (error) throw error;
       return (data ?? []) as any[];
+    },
+  });
+
+  const uniqueCompletedByUuids = useMemo(() => {
+    const s = new Set<string>();
+    (completionsQuery.data ?? []).forEach((c) => { if (c.completed_by) s.add(c.completed_by); });
+    return Array.from(s);
+  }, [completionsQuery.data]);
+
+  const userNamesQuery = useQuery({
+    queryKey: ["checklist_user_names", id, uniqueCompletedByUuids],
+    enabled: !!id && allowed && uniqueCompletedByUuids.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, full_name")
+        .in("user_uuid", uniqueCompletedByUuids);
+      if (error) throw error;
+      return (data ?? []) as Array<{ user_uuid: string; full_name: string | null }>;
     },
   });
 
