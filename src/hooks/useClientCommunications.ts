@@ -218,7 +218,7 @@ export function useClientCommunications() {
       if (isAcademyOnly) throw new Error("Conversations are not available for academy-only users");
       if (!currentUserId || !activeTenantId) throw new Error("Not authenticated");
 
-      const { error } = await (supabase
+      const { data: newMsg, error } = await (supabase
         .from("tenant_messages" as any)
         .insert({
           conversation_id: conversationId,
@@ -226,7 +226,9 @@ export function useClientCommunications() {
           sender_type: "client",
           body,
           tenant_id: activeTenantId,
-        } as any)) as any;
+        } as any)
+        .select("id")
+        .single()) as any;
 
       if (error) throw error;
 
@@ -235,6 +237,8 @@ export function useClientCommunications() {
         .update({ last_read_at: new Date().toISOString() } as any)
         .eq("conversation_id", conversationId)
         .eq("user_id", currentUserId)) as any;
+
+      return { messageId: newMsg.id as string, tenantId: activeTenantId as number };
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["conversation-messages", vars.conversationId] });
