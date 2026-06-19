@@ -249,12 +249,15 @@ export const DashboardLayout = ({
   // Filter Administration items based on role
   const filteredAdminItems = useMemo(() => {
     return administrationMenuItems.filter(item => {
+      if ((item as any).saOrIntegratorOnly) {
+        return isSuperAdmin || isIntegrator;
+      }
       if (item.superAdminOnly) {
         return isSuperAdmin;
       }
       return true;
     });
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, isIntegrator]);
 
   // Legacy menu items for client view
   const clientMenuItems = useMemo(() => {
