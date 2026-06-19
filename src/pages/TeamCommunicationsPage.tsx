@@ -360,7 +360,7 @@ export default function TeamCommunicationsPage() {
         .eq("conversation_id", conversationId)
         .eq("user_id", currentUserId)) as any;
 
-      const { error } = await (supabase
+      const { data: newMsg, error } = await (supabase
         .from("tenant_messages" as any)
         .insert({
           conversation_id: conversationId,
@@ -368,8 +368,11 @@ export default function TeamCommunicationsPage() {
           sender_type: "staff",
           body,
           tenant_id: conv?.tenant_id,
-        } as any)) as any;
+        } as any)
+        .select("id")
+        .single()) as any;
       if (error) throw error;
+      return { messageId: newMsg.id as string, tenantId: conv?.tenant_id };
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["team-conversation-messages", vars.conversationId] });
@@ -377,11 +380,53 @@ export default function TeamCommunicationsPage() {
     },
   });
 
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!picked.length) return;
+    const accepted: File[] = [];
+    for (const f of picked) {
+      try {
+        validateAttachment(f);
+        accepted.push(f);
+      } catch (err: any) {
+        toast.error(err?.message ?? "Invalid file");
+      }
+    }
+    setQueuedFiles(prev => {
+      const room = MAX_FILES_PER_MESSAGE - prev.length;
+      if (room <= 0) {
+        toast.error(`You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`);
+        return prev;
+      }
+      if (accepted.length > room) {
+        toast.error(`Only the first ${room} file(s) were attached (max ${MAX_FILES_PER_MESSAGE} per message).`);
+      }
+      return [...prev, ...accepted.slice(0, room)];
+    });
+  };
+
+  const removeQueued = (idx: number) => {
+    setQueuedFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSend = async () => {
-    if (!composerText.trim() || !selectedId) return;
+    if ((!composerText.trim() && queuedFiles.length === 0) || !selectedId) return;
     const text = composerText.trim();
+    const filesToUpload = queuedFiles;
     setComposerText("");
-    await sendMessage.mutateAsync({ conversationId: selectedId, body: text });
+    setQueuedFiles([]);
+    const result = await sendMessage.mutateAsync({ conversationId: selectedId, body: text });
+    if (result?.messageId && result?.tenantId != null && filesToUpload.length > 0) {
+      for (const f of filesToUpload) {
+        try {
+          await uploadMessageAttachment(supabase, f, result.tenantId, selectedId, result.messageId);
+        } catch (err: any) {
+          toast.warning(`Attachment "${f.name}" failed to upload: ${err?.message ?? "unknown error"}`);
+        }
+      }
+      qc.invalidateQueries({ queryKey: ["team-conversation-messages", selectedId] });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
