@@ -437,6 +437,92 @@ export default function StaffEngagementDetail() {
       toast({ title: "Could not sign off", description: e?.message, variant: "destructive" }),
   });
 
+  const inviteMutation = useMutation({
+    mutationFn: async ({ role: inviteAsRole }: { role: string }) => {
+      if (!engagement) throw new Error("Engagement not loaded");
+      const res = await supabase.functions.invoke("invite-user", {
+        body: {
+          email: engagement.person_email,
+          role: inviteAsRole,
+          invite_as: "VIVACITY",
+        },
+      });
+      if (res.error || (res.data as any)?.ok !== true) {
+        throw new Error((res.data as any)?.detail ?? res.error?.message ?? "Invite failed");
+      }
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("Not authenticated");
+      const { error } = await supabase.from("checklist_item_completions").insert({
+        engagement_id: id!,
+        item_key: "access.unicorn_provisioned",
+        completed_by: userRes.user.id,
+        completed_at: new Date().toISOString(),
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Invite sent" });
+      setInviteDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["checklist_completions", id] });
+      queryClient.invalidateQueries({ queryKey: ["checklist_activity", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Could not send invite", description: e?.message, variant: "destructive" }),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: async () => {
+      if (!engagement?.linked_unicorn_user_id) throw new Error("No linked user");
+      const { error: updErr } = await supabase
+        .from("users")
+        .update({ disabled: true } as any)
+        .eq("user_uuid", engagement.linked_unicorn_user_id);
+      if (updErr) throw updErr;
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("Not authenticated");
+      const { error } = await supabase.from("checklist_item_completions").insert({
+        engagement_id: id!,
+        item_key: "access_revoke.unicorn",
+        completed_by: userRes.user.id,
+        completed_at: new Date().toISOString(),
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Access revoked" });
+      setConfirmRevoke(false);
+      queryClient.invalidateQueries({ queryKey: ["checklist_completions", id] });
+      queryClient.invalidateQueries({ queryKey: ["checklist_activity", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Could not revoke access", description: e?.message, variant: "destructive" }),
+  });
+
+  const linkUserMutation = useMutation({
+    mutationFn: async ({ userUuid }: { userUuid: string }) => {
+      const { error } = await supabase
+        .from("staff_engagements")
+        .update({ linked_unicorn_user_id: userUuid } as any)
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "User linked" });
+      setLinkUserOpen(false);
+      setLinkSearch("");
+      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Could not link user", description: e?.message, variant: "destructive" }),
+  });
+
+
+
   if (!allowed) {
     return (
       <DashboardLayout>
