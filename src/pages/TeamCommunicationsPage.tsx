@@ -604,6 +604,9 @@ export default function TeamCommunicationsPage() {
                                 </div>
                               )}
                               <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
+                              {msg.attachments && msg.attachments.length > 0 && (
+                                <MessageAttachments attachments={msg.attachments} />
+                              )}
                               <p className="text-[11px] text-muted-foreground mt-1">{format(new Date(msg.created_at), "d MMM, HH:mm")}</p>
                             </div>
                           </div>
@@ -614,18 +617,42 @@ export default function TeamCommunicationsPage() {
                   </div>
                 </ScrollArea>
 
-                <div className="p-3 border-t border-border flex gap-2">
-                  <Textarea
-                    value={composerText}
-                    onChange={e => setComposerText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Type a message… (Enter to send)"
-                    className="min-h-[40px] max-h-[120px] resize-none"
-                    rows={1}
-                  />
-                  <Button size="icon" onClick={handleSend} disabled={!composerText.trim() || sendMessage.isPending}>
-                    <Send className="h-4 w-4" />
-                  </Button>
+                <div className="p-3 border-t border-border">
+                  <AttachmentChips files={queuedFiles} onRemove={removeQueued} />
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={composerText}
+                      onChange={e => setComposerText(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Type a message… (Enter to send)"
+                      className="min-h-[40px] max-h-[120px] resize-none"
+                      rows={1}
+                    />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      hidden
+                      accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
+                      onChange={handleFilesPicked}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE}
+                      aria-label="Attach files"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      onClick={handleSend}
+                      disabled={(!composerText.trim() && queuedFiles.length === 0) || sendMessage.isPending}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </>
             ) : (
