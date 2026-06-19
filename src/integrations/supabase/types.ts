@@ -8612,6 +8612,38 @@ export type Database = {
           },
         ]
       }
+      checklist_item_completions: {
+        Row: {
+          completed_at: string
+          completed_by: string
+          engagement_id: string
+          id: string
+          item_key: string
+        }
+        Insert: {
+          completed_at?: string
+          completed_by: string
+          engagement_id: string
+          id?: string
+          item_key: string
+        }
+        Update: {
+          completed_at?: string
+          completed_by?: string
+          engagement_id?: string
+          id?: string
+          item_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_item_completions_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "staff_engagements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clickup_integration: {
         Row: {
           access_token: string
@@ -23132,6 +23164,38 @@ export type Database = {
           validation_notes?: Json
         }
         Relationships: []
+      }
+      engagement_signoffs: {
+        Row: {
+          engagement_id: string
+          id: string
+          signed_at: string
+          signed_by: string
+          signoff_role: string
+        }
+        Insert: {
+          engagement_id: string
+          id?: string
+          signed_at?: string
+          signed_by: string
+          signoff_role: string
+        }
+        Update: {
+          engagement_id?: string
+          id?: string
+          signed_at?: string
+          signed_by?: string
+          signoff_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_signoffs_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "staff_engagements"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       eos_accountability_chart: {
         Row: {
@@ -42189,6 +42253,48 @@ export type Database = {
             referencedColumns: ["value"]
           },
         ]
+      }
+      staff_engagements: {
+        Row: {
+          created_at: string
+          created_by: string
+          engagement_type: string
+          id: string
+          linked_unicorn_user_id: string | null
+          person_email: string
+          person_name: string
+          role: string
+          start_date: string
+          status: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          engagement_type: string
+          id?: string
+          linked_unicorn_user_id?: string | null
+          person_email: string
+          person_name: string
+          role: string
+          start_date: string
+          status?: string
+          type: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          engagement_type?: string
+          id?: string
+          linked_unicorn_user_id?: string | null
+          person_email?: string
+          person_name?: string
+          role?: string
+          start_date?: string
+          status?: string
+          type?: string
+        }
+        Relationships: []
       }
       staff_provisioning_rules: {
         Row: {
@@ -65753,6 +65859,7 @@ export type Database = {
       }
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_vivacity: { Args: never; Returns: boolean }
+      is_vivacity_admin_role: { Args: never; Returns: boolean }
       is_vivacity_internal_safe: {
         Args: { p_user_id: string }
         Returns: boolean
