@@ -733,6 +733,93 @@ export default function StaffEngagementDetail() {
                                 const who = c?.completed_by
                                   ? userNameMap.get(c.completed_by) ?? "Unknown user"
                                   : null;
+                                if (item.key === "access.unicorn_provisioned") {
+                                  return (
+                                    <div key={item.key} className="flex items-start gap-3">
+                                      {checked ? (
+                                        <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                                      ) : (
+                                        <div className="h-4 w-4 mt-0.5 shrink-0" />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-sm">{item.label}</span>
+                                          {item.critical && (
+                                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                          )}
+                                        </div>
+                                        {checked && c && (
+                                          <div className="text-xs text-muted-foreground mt-0.5">
+                                            {who ?? "Unknown user"} · {fmtDateTime(c.completed_at)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                        {item.owner}
+                                      </span>
+                                      {!checked && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => setInviteDialogOpen(true)}
+                                        >
+                                          Create &amp; Invite
+                                        </Button>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                if (item.key === "access_revoke.unicorn") {
+                                  const noLink = !engagement.linked_unicorn_user_id;
+                                  const revokeBtn = (
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      disabled={noLink || revokeMutation.isPending}
+                                      onClick={() => setConfirmRevoke(true)}
+                                    >
+                                      Revoke Access
+                                    </Button>
+                                  );
+                                  return (
+                                    <div key={item.key} className="flex items-start gap-3">
+                                      {checked ? (
+                                        <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                                      ) : (
+                                        <div className="h-4 w-4 mt-0.5 shrink-0" />
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-sm">{item.label}</span>
+                                          {item.critical && (
+                                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                          )}
+                                        </div>
+                                        {checked && c && (
+                                          <div className="text-xs text-muted-foreground mt-0.5">
+                                            {who ?? "Unknown user"} · {fmtDateTime(c.completed_at)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                        {item.owner}
+                                      </span>
+                                      {!checked &&
+                                        (noLink ? (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="inline-block">{revokeBtn}</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Link a Unicorn user first</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        ) : (
+                                          revokeBtn
+                                        ))}
+                                    </div>
+                                  );
+                                }
                                 return (
                                   <div key={item.key} className="flex items-start gap-3">
                                     <Checkbox
