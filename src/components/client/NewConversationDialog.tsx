@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,15 @@ import {
   AppModalBody,
   AppModalFooter,
 } from "@/components/ui/modals";
-import { Send } from "lucide-react";
+import { Send, Paperclip, X } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  validateAttachment,
+  uploadMessageAttachment,
+  MAX_FILES_PER_MESSAGE,
+  formatBytes,
+} from "@/lib/messageAttachments";
 
 interface NewConversationDialogProps {
   open: boolean;
@@ -20,8 +28,9 @@ interface NewConversationDialogProps {
     subject?: string;
     type: string;
     firstMessage: string;
-  }) => Promise<void>;
+  }) => Promise<string>;
   isSubmitting?: boolean;
+  tenantId: number | null;
 }
 
 const CONVERSATION_TYPES = [
@@ -36,21 +45,81 @@ export function NewConversationDialog({
   onOpenChange,
   onSubmit,
   isSubmitting,
+  tenantId,
 }: NewConversationDialogProps) {
   const [subject, setSubject] = useState("");
   const [type, setType] = useState("general");
   const [message, setMessage] = useState("");
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!picked.length) return;
+    const accepted: File[] = [];
+    for (const f of picked) {
+      if (queuedFiles.length + accepted.length >= MAX_FILES_PER_MESSAGE) {
+        toast.error(`You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`);
+        break;
+      }
+      try {
+        validateAttachment(f);
+        accepted.push(f);
+      } catch (err: any) {
+        toast.error(err?.message ?? "Invalid file");
+      }
+    }
+    if (accepted.length) setQueuedFiles((prev) => [...prev, ...accepted]);
+  };
+
+  const removeQueued = (idx: number) => {
+    setQueuedFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const handleSubmit = async () => {
     if (!message.trim()) return;
-    await onSubmit({
+    const filesToUpload = queuedFiles;
+    const conversationId = await onSubmit({
       subject: subject.trim() || undefined,
       type,
       firstMessage: message.trim(),
     });
+
+    if (conversationId && tenantId != null && filesToUpload.length > 0) {
+      try {
+        const { data: firstMsg } = await (supabase
+          .from("tenant_messages" as any)
+          .select("id")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle()) as any;
+        if (firstMsg?.id) {
+          for (const f of filesToUpload) {
+            try {
+              await uploadMessageAttachment(supabase, f, tenantId, conversationId, firstMsg.id);
+            } catch (err: any) {
+              toast.warning(`Attachment "${f.name}" failed to upload: ${err?.message ?? "unknown error"}`);
+            }
+          }
+        } else {
+          for (const f of filesToUpload) {
+            toast.warning(`Attachment "${f.name}" failed to upload`);
+          }
+        }
+      } catch {
+        for (const f of filesToUpload) {
+          toast.warning(`Attachment "${f.name}" failed to upload`);
+        }
+      }
+    }
+
     setSubject("");
     setType("general");
     setMessage("");
+    setQueuedFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     onOpenChange(false);
   };
 
@@ -99,8 +168,47 @@ export function NewConversationDialog({
               rows={4}
             />
           </div>
+          {queuedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {queuedFiles.map((f, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-xs"
+                >
+                  <span className="truncate max-w-[200px]">{f.name}</span>
+                  <span className="text-muted-foreground">({formatBytes(f.size)})</span>
+                  <button
+                    type="button"
+                    onClick={() => removeQueued(i)}
+                    className="text-destructive hover:text-destructive/80"
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </AppModalBody>
         <AppModalFooter>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            hidden
+            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
+            onChange={onFilesPicked}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE}
+            aria-label="Attach files"
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
