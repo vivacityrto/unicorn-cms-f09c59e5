@@ -72,6 +72,8 @@ export default function TeamCommunicationsPage() {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [composerText, setComposerText] = useState("");
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [filterTenant, setFilterTenant] = useState<string>("all");
   const [filterStaff, setFilterStaff] = useState<string>("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
