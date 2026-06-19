@@ -247,11 +247,11 @@ export default function StaffEngagementDetail() {
 
   const userNameMap = useMemo(() => {
     const m = new Map<string, string>();
-    (activityQuery.data ?? []).forEach((r: any) => {
-      if (r.completed_by && r.users?.full_name) m.set(r.completed_by, r.users.full_name);
+    (userNamesQuery.data ?? []).forEach((u: any) => {
+      if (u.user_uuid && u.full_name) m.set(u.user_uuid, u.full_name);
     });
     return m;
-  }, [activityQuery.data]);
+  }, [userNamesQuery.data]);
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
