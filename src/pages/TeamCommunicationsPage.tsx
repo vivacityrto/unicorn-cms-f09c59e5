@@ -198,6 +198,20 @@ export default function TeamCommunicationsPage() {
         avatarMap.set(u.user_uuid, u.avatar_url ?? null);
       });
 
+      const messageIds = (data as any[]).map((m: any) => m.id);
+      const attMap = new Map<string, MessageAttachmentRow[]>();
+      if (messageIds.length > 0) {
+        const { data: attRows } = await (supabase
+          .from("tenant_message_attachments" as any)
+          .select("*")
+          .in("message_id", messageIds)) as any;
+        (attRows || []).forEach((a: any) => {
+          const arr = attMap.get(a.message_id) || [];
+          arr.push(a as MessageAttachmentRow);
+          attMap.set(a.message_id, arr);
+        });
+      }
+
       const mapped = (data as any[]).map((m: any) => {
         const resolved = nameMap.get(m.sender_user_uuid) || "";
         const fallback = m.sender_type === "staff" ? "Vivacity Team" : "Unknown";
@@ -210,6 +224,7 @@ export default function TeamCommunicationsPage() {
           created_at: m.created_at,
           sender_name: resolved || fallback,
           sender_avatar_url: avatarMap.get(m.sender_user_uuid) ?? null,
+          attachments: attMap.get(m.id) || [],
         };
       }) as Message[];
 
