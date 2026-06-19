@@ -286,14 +286,16 @@ function MessagesTab() {
     subject?: string;
     type: string;
     firstMessage: string;
-  }) => {
+  }): Promise<string> => {
     const newId = await createConversation.mutateAsync({
       subject: data.subject,
       type: data.type,
       firstMessage: data.firstMessage,
     });
     setSelectedId(newId);
+    return newId;
   };
+
 
   return (
     <div className="space-y-4">
@@ -523,7 +525,9 @@ function MessagesTab() {
         onOpenChange={setNewDialogOpen}
         onSubmit={handleNewConversation}
         isSubmitting={createConversation.isPending}
+        tenantId={activeTenantId ?? null}
       />
+
     </div>
   );
 }
