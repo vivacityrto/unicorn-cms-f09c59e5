@@ -227,11 +227,52 @@ function MessagesTab() {
     if (conv.isUnread) markRead.mutate(conv.id);
   };
 
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!picked.length) return;
+    const accepted: File[] = [];
+    for (const f of picked) {
+      try {
+        validateAttachment(f);
+        accepted.push(f);
+      } catch (err: any) {
+        toast.error(err?.message ?? "Invalid file");
+      }
+    }
+    setQueuedFiles(prev => {
+      const room = MAX_FILES_PER_MESSAGE - prev.length;
+      if (room <= 0) {
+        toast.error(`You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`);
+        return prev;
+      }
+      if (accepted.length > room) {
+        toast.error(`Only the first ${room} file(s) were attached (max ${MAX_FILES_PER_MESSAGE} per message).`);
+      }
+      return [...prev, ...accepted.slice(0, room)];
+    });
+  };
+
+  const removeQueued = (idx: number) => {
+    setQueuedFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSend = async () => {
-    if (!composerText.trim() || !selectedId) return;
+    if ((!composerText.trim() && queuedFiles.length === 0) || !selectedId) return;
     const text = composerText.trim();
+    const filesToUpload = queuedFiles;
     setComposerText("");
-    await sendMessage.mutateAsync({ conversationId: selectedId, body: text });
+    setQueuedFiles([]);
+    const result: any = await sendMessage.mutateAsync({ conversationId: selectedId, body: text });
+    if (result?.messageId && activeTenantId != null && filesToUpload.length > 0) {
+      for (const f of filesToUpload) {
+        try {
+          await uploadMessageAttachment(supabase, f, activeTenantId, selectedId, result.messageId);
+        } catch (err: any) {
+          toast.warning(`Attachment "${f.name}" failed to upload: ${err?.message ?? "unknown error"}`);
+        }
+      }
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
