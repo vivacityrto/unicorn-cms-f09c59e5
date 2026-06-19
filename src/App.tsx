@@ -126,6 +126,7 @@ const CohortAccessSenderJob = lazy(() => import("./pages/admin/CohortAccessSende
 const AdminZeroProgressPackagesPage = lazy(() => import("./pages/admin/AdminZeroProgressPackagesPage"));
 const BulkMembershipCertificatesPage = lazy(() => import("./pages/admin/BulkMembershipCertificatesPage"));
 const StaffEngagements = lazy(() => import("./pages/admin/StaffEngagements"));
+const StaffEngagementDetail = lazy(() => import("./pages/admin/StaffEngagementDetail"));
  const TenantUsers = lazy(() => import("./pages/TenantUsers"));
  const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
  const AdminManageStagesWrapper = lazy(() => import("./pages/AdminManageStagesWrapper"));
@@ -1052,6 +1053,7 @@ const App = () => (
             {/* Team & Tenant Users */}
             <Route path="/admin/team-users" element={<ProtectedRoute><TeamUsers /></ProtectedRoute>} />
             <Route path="/admin/staff-engagements" element={<ProtectedRoute><StaffEngagements /></ProtectedRoute>} />
+            <Route path="/admin/staff-engagements/:id" element={<ProtectedRoute><StaffEngagementDetail /></ProtectedRoute>} />
             <Route path="/admin/team-users/new-starter" element={<ProtectedRoute requireSuperAdmin><NewStarterWizard /></ProtectedRoute>} />
             <Route path="/admin/team-users/runs/:runId" element={<ProtectedRoute requireSuperAdmin><ProvisioningRunDetailPage /></ProtectedRoute>} />
             <Route path="/admin/team-users/runs/:runId/onboarding" element={<ProtectedRoute requireSuperAdmin><OnboardingHubPage /></ProtectedRoute>} />

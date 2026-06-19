@@ -1,53 +1,63 @@
-## People page — Staff Onboarding & Offboarding
+# Staff Engagement Detail Page
 
-### Files touched
-1. `src/pages/admin/StaffEngagements.tsx` (new) — list page + new engagement dialog
-2. `src/App.tsx` — lazy-import + protected route at `/admin/staff-engagements`
-3. `src/components/DashboardLayout.tsx` — add "People" nav item to Administration, gated to Super Admin + Integrator
+## Files
+- **New:** `src/pages/admin/StaffEngagementDetail.tsx` — full detail page
+- **New:** `src/pages/admin/staffEngagementChecklists.ts` — exports `ONBOARDING_PHASES` and `OFFBOARDING_PHASES` constants (verbatim from spec) so the same data can be reused by Activity Log lookups without bloating the page file
+- **Edit:** `src/App.tsx` — add lazy import + `<Route path="/admin/staff-engagements/:id" element={<ProtectedRoute><StaffEngagementDetail /></ProtectedRoute>} />` right after the existing list route
 
-### Routing & nav
-- Add lazy import `StaffEngagements` and a `<Route path="/admin/staff-engagements" element={<ProtectedRoute><DashboardLayout><StaffEngagements/></DashboardLayout></ProtectedRoute>} />` matching the surrounding admin route pattern.
-- In `administrationMenuItems`, add `{ icon: UserPlus, label: "People", path: "/admin/staff-engagements", saOrIntegratorOnly: true }`.
-- Extend `filteredAdminItems` filter: when `item.saOrIntegratorOnly`, return `isSuperAdmin || isIntegrator`. Existing section-level gate already shows Administration to SA/TL/Integrator, so the item appears for both target roles and stays hidden from Team Leader.
-- Page-level access: `StaffEngagements` checks `isSuperAdmin || isIntegrator` from `useAuth`; otherwise renders an "Access denied" message (route is still wrapped in `ProtectedRoute`).
+No other files touched.
 
-### People page
-- Fetch `staff_engagements` ordered by `created_at desc` via `useQuery` + `supabase.from('staff_engagements').select('*')`.
-- Header: H1 "People", subtitle "Manage staff onboarding and offboarding", right-aligned "New Engagement" button (opens shadcn `Dialog`).
-- `Switch` labelled "Show cancelled" above the table (default off). When off, filter out `status = 'cancelled'`.
-- shadcn `Table` with columns: Name, Role, Type, Status, Start Date, Created.
-  - Type badge: Onboarding = cyan (brand primary), Offboarding = amber/orange.
-  - Status badge mapping: `in_progress` → "In Progress" (blue), `pending_signoff` → "Pending Sign-Off" (amber), `completed` → "Completed" (green), `cancelled` → "Cancelled" (muted).
-  - Dates formatted with `date-fns` `format(d, "dd MMMM yyyy")`.
-  - Rows use `onClick={() => navigate(`/admin/staff-engagements/${row.id}`)}` with `cursor-pointer hover:bg-muted/50`.
-- Empty state: muted "No engagements yet" row.
+## Access gate
+Reuse the same pattern from `StaffEngagements.tsx`: read `profile.unicorn_role` from `useAuth()`, allow only `"Super Admin"` or `"Integrator"`, otherwise render the Access denied block inside `DashboardLayout`.
 
-### New Engagement dialog
-- shadcn `Dialog` triggered by header button. Form via `react-hook-form` + `zod`:
-  - `person_name` (text, required)
-  - `person_email` (email, required)
-  - `role` (text, required — free text)
-  - `engagement_type` — `RadioGroup` "Contractor" / "Employee" → `contractor` / `employee`
-  - `checklist_type` — `RadioGroup` "Onboarding" / "Offboarding" → `onboarding` / `offboarding`
-  - `start_date` — shadcn DatePicker (Popover + Calendar with `pointer-events-auto`). Label is dynamic: "First Day" for onboarding, "Last Day" for offboarding.
-- Submit:
-  - `supabase.auth.getUser()` → use `user.id` as `created_by`.
-  - Insert payload explicitly maps `type: checklist_type` (DB column is `type`, not `checklist_type`):
-    ```ts
-    {
-      person_name,
-      person_email,
-      role,
-      engagement_type,
-      type: checklist_type,
-      start_date: ISO date,
-      status: 'in_progress',
-      created_by,
-    }
-    ```
-  - On success: toast, close dialog, `queryClient.invalidateQueries(['staff_engagements'])`.
-  - On error: toast error, keep dialog open.
+## Data fetching
+Three parallel `useQuery` hooks keyed on `["staff_engagement", id]`, `["checklist_completions", id]`, `["engagement_signoffs", id]`:
+1. `staff_engagements` row by `id` — `select("*").single()`
+2. `checklist_item_completions` by `engagement_id` — `select("item_key, completed_by, completed_at")`
+3. `engagement_signoffs` by `engagement_id` — `select("signoff_role, signed_by, signed_at")`
 
-### Out of scope
-- Detail page at `/admin/staff-engagements/:id` (Prompt 4).
-- No edits to any other files.
+Activity Log uses a fourth query: `checklist_item_completions` with embed `users:completed_by ( full_name )` ordered by `completed_at desc`. (Falls back to raw user_uuid if embed fails.)
+
+## Header
+- Back arrow (`ArrowLeft`) → `navigate("/admin/staff-engagements")`
+- `H1`: `{person_name} — {role}` + `<StatusBadge>` (reuse mapping inline)
+- Subtitle: `Started {fmtDate(start_date)}` · `Type: Onboarding|Offboarding`
+- `DropdownMenu` "Manage" with single item **Cancel Engagement** → `AlertDialog` confirm → `UPDATE staff_engagements SET status='cancelled' WHERE id=:id`. Disabled if status is `completed` or `cancelled`.
+
+## Step progress component
+Local `PhaseProgress` component, 4 dots connected by thin lines. State per dot derived from completions / signoffs:
+- **filled** (bg cyan-600 / brand) when every item across all sections of that phase is in `completedKeys`; SIGN-OFF filled when 3 signoff rows exist
+- **active** (ring border, white fill) for first non-filled
+- **inactive** (muted) otherwise
+
+Empty `sections` phase (SIGN-OFF) is never "complete" via items — only via signoffs.
+
+## Tabs
+shadcn `Tabs` with `Checklist` (default), `Notes`, `Activity Log`.
+
+### Checklist tab
+- Select `phases = engagement.type === 'offboarding' ? OFFBOARDING_PHASES : ONBOARDING_PHASES`
+- For each phase render an `<h2>` phase label, then an `Accordion type="multiple"` with all section keys as default value
+- Section trigger: label left, `{doneCount}/{totalCount}` muted right
+- Item row: `Checkbox` + label, `AlertTriangle` amber icon if `critical`, owner muted right. When ticked, below label show `{full_name} · {fmtDateTime}` using a `usersById` map built from the joined Activity query
+- SIGN-OFF phase: render a single `Card` with muted text `Sign-off panel coming soon.`
+
+#### Tick / untick mutations
+- Tick: `INSERT { engagement_id, item_key, completed_by: auth user id, completed_at: now }`
+- Untick: `DELETE WHERE engagement_id AND item_key`
+- After each: compute `criticalKeys` from `phases`, check `allCriticalDone` against fresh `completedKeys`, and conditionally `UPDATE staff_engagements.status` between `in_progress` and `pending_signoff` (only those two transitions; never touches `completed`/`cancelled`)
+- Invalidate the three relevant queries on success; optimistic UI not required
+
+### Notes tab
+Muted `Card`: `Notes coming in a future update.`
+
+### Activity Log tab
+Map joined completions to `{full_name} ticked {labelLookup(item_key)} · {fmtDateTime}`. `labelLookup` walks the phases constant; fallback to raw key. Empty state `No activity yet.`
+
+## Helpers
+- `fmtDate(d)` — `dd MMMM yyyy`
+- `fmtDateTime(d)` — `dd MMMM yyyy HH:mm`
+- `StatusBadge` / `TypeBadge` re-declared locally (spec says "do not touch other files")
+
+## Out of scope (left for later prompts)
+Sign-off panel, Create & Invite, Revoke Access, real Notes, Link Unicorn User.

@@ -1,0 +1,522 @@
+import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { ArrowLeft, AlertTriangle, MoreHorizontal } from "lucide-react";
+
+import { DashboardLayout } from "@/components/DashboardLayout";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
+
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import {
+  ONBOARDING_PHASES,
+  OFFBOARDING_PHASES,
+  findItemLabel,
+  type ChecklistPhase,
+} from "./staffEngagementChecklists";
+
+type Engagement = {
+  id: string;
+  person_name: string;
+  person_email: string;
+  role: string;
+  engagement_type: string;
+  type: string;
+  status: string;
+  start_date: string | null;
+  created_at: string;
+};
+
+type Completion = {
+  item_key: string;
+  completed_by: string | null;
+  completed_at: string;
+};
+
+type Signoff = {
+  signoff_role: string;
+  signed_by: string | null;
+  signed_at: string;
+};
+
+function fmtDate(d: string | null | undefined) {
+  if (!d) return "—";
+  try { return format(new Date(d), "dd MMMM yyyy"); } catch { return "—"; }
+}
+function fmtDateTime(d: string | null | undefined) {
+  if (!d) return "—";
+  try { return format(new Date(d), "dd MMMM yyyy HH:mm"); } catch { return "—"; }
+}
+
+function StatusBadge({ value }: { value: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    in_progress: { label: "In Progress", cls: "border-blue-500/40 bg-blue-500/10 text-blue-700 dark:text-blue-300" },
+    pending_signoff: { label: "Pending Sign-Off", cls: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300" },
+    completed: { label: "Completed", cls: "border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300" },
+    cancelled: { label: "Cancelled", cls: "border-muted bg-muted text-muted-foreground" },
+  };
+  const e = map[value] ?? { label: value, cls: "" };
+  return <Badge variant="outline" className={e.cls}>{e.label}</Badge>;
+}
+
+function PhaseProgress({
+  phases,
+  completedKeys,
+  signoffCount,
+}: {
+  phases: ChecklistPhase[];
+  completedKeys: Set<string>;
+  signoffCount: number;
+}) {
+  const phaseStates = phases.map((phase) => {
+    if (phase.key === "signoff") return signoffCount >= 3;
+    const allItems = phase.sections.flatMap((s) => s.items);
+    if (allItems.length === 0) return false;
+    return allItems.every((i) => completedKeys.has(i.key));
+  });
+  const activeIdx = phaseStates.findIndex((s) => !s);
+
+  return (
+    <div className="flex items-start justify-between gap-2 py-4">
+      {phases.map((phase, idx) => {
+        const filled = phaseStates[idx];
+        const active = !filled && idx === activeIdx;
+        return (
+          <div key={phase.key} className="flex-1 flex flex-col items-center relative">
+            {idx < phases.length - 1 && (
+              <div
+                className={cn(
+                  "absolute top-3 left-1/2 right-[-50%] h-0.5 -z-0",
+                  phaseStates[idx] ? "bg-purple-600" : "bg-muted"
+                )}
+              />
+            )}
+            <div
+              className={cn(
+                "h-6 w-6 rounded-full border-2 z-10 bg-background",
+                filled && "bg-purple-600 border-purple-600",
+                active && "border-purple-600",
+                !filled && !active && "border-muted-foreground/30"
+              )}
+            />
+            <div className={cn(
+              "mt-2 text-xs font-medium text-center",
+              (filled || active) ? "text-foreground" : "text-muted-foreground"
+            )}>
+              {phase.label}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function StaffEngagementDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { profile } = useAuth();
+  const role = profile?.unicorn_role;
+  const allowed = role === "Super Admin" || role === "Integrator";
+  const queryClient = useQueryClient();
+  const [confirmCancel, setConfirmCancel] = useState(false);
+
+  const engagementQuery = useQuery({
+    queryKey: ["staff_engagement", id],
+    enabled: !!id && allowed,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("staff_engagements")
+        .select("*")
+        .eq("id", id!)
+        .single();
+      if (error) throw error;
+      return data as Engagement;
+    },
+  });
+
+  const completionsQuery = useQuery({
+    queryKey: ["checklist_completions", id],
+    enabled: !!id && allowed,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("checklist_item_completions")
+        .select("item_key, completed_by, completed_at")
+        .eq("engagement_id", id!);
+      if (error) throw error;
+      return (data ?? []) as Completion[];
+    },
+  });
+
+  const signoffsQuery = useQuery({
+    queryKey: ["engagement_signoffs", id],
+    enabled: !!id && allowed,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("engagement_signoffs")
+        .select("signoff_role, signed_by, signed_at")
+        .eq("engagement_id", id!);
+      if (error) throw error;
+      return (data ?? []) as Signoff[];
+    },
+  });
+
+  const activityQuery = useQuery({
+    queryKey: ["checklist_activity", id],
+    enabled: !!id && allowed,
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from("checklist_item_completions") as any)
+        .select("item_key, completed_by, completed_at, users:completed_by ( full_name )")
+        .eq("engagement_id", id!)
+        .order("completed_at", { ascending: false });
+      if (error) {
+        const { data: fb, error: fbErr } = await supabase
+          .from("checklist_item_completions")
+          .select("item_key, completed_by, completed_at")
+          .eq("engagement_id", id!)
+          .order("completed_at", { ascending: false });
+        if (fbErr) throw fbErr;
+        return (fb ?? []).map((r: any) => ({ ...r, users: null })) as any[];
+      }
+      return (data ?? []) as any[];
+    },
+  });
+
+  const engagement = engagementQuery.data;
+  const completions = completionsQuery.data ?? [];
+  const signoffs = signoffsQuery.data ?? [];
+
+  const phases = useMemo<ChecklistPhase[]>(() => {
+    if (!engagement) return [];
+    return engagement.type === "offboarding" ? OFFBOARDING_PHASES : ONBOARDING_PHASES;
+  }, [engagement]);
+
+  const completedKeys = useMemo(() => new Set(completions.map((c) => c.item_key)), [completions]);
+  const completedByMap = useMemo(() => {
+    const m = new Map<string, Completion>();
+    completions.forEach((c) => m.set(c.item_key, c));
+    return m;
+  }, [completions]);
+
+  const userNameMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (activityQuery.data ?? []).forEach((r: any) => {
+      if (r.completed_by && r.users?.full_name) m.set(r.completed_by, r.users.full_name);
+    });
+    return m;
+  }, [activityQuery.data]);
+
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("staff_engagements")
+        .update({ status: "cancelled" })
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Engagement cancelled" });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+      setConfirmCancel(false);
+    },
+    onError: (e: any) => toast({ title: "Could not cancel", description: e?.message, variant: "destructive" }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ itemKey, checked }: { itemKey: string; checked: boolean }) => {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("Not authenticated");
+
+      if (checked) {
+        const { error } = await supabase.from("checklist_item_completions").insert({
+          engagement_id: id!,
+          item_key: itemKey,
+          completed_by: userRes.user.id,
+          completed_at: new Date().toISOString(),
+        } as any);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("checklist_item_completions")
+          .delete()
+          .eq("engagement_id", id!)
+          .eq("item_key", itemKey);
+        if (error) throw error;
+      }
+
+      // Recompute completedKeys + auto-update status
+      const next = new Set(completedKeys);
+      if (checked) next.add(itemKey); else next.delete(itemKey);
+
+      const criticalKeys = phases.flatMap((p) =>
+        p.sections.flatMap((s) => s.items.filter((i) => i.critical).map((i) => i.key))
+      );
+      const allCriticalDone = criticalKeys.length > 0 && criticalKeys.every((k) => next.has(k));
+
+      if (allCriticalDone && engagement?.status === "in_progress") {
+        await supabase.from("staff_engagements").update({ status: "pending_signoff" }).eq("id", id!);
+      } else if (!allCriticalDone && engagement?.status === "pending_signoff") {
+        await supabase.from("staff_engagements").update({ status: "in_progress" }).eq("id", id!);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["checklist_completions", id] });
+      queryClient.invalidateQueries({ queryKey: ["checklist_activity", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+    },
+    onError: (e: any) => toast({ title: "Could not update", description: e?.message, variant: "destructive" }),
+  });
+
+  if (!allowed) {
+    return (
+      <DashboardLayout>
+        <div className="p-8">
+          <h1 className="text-2xl font-semibold">Access denied</h1>
+          <p className="text-muted-foreground mt-2">You do not have permission to view this page.</p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (engagementQuery.isLoading || !engagement) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 text-muted-foreground">Loading…</div>
+      </DashboardLayout>
+    );
+  }
+
+  const manageDisabled = engagement.status === "completed" || engagement.status === "cancelled";
+  const typeLabel = engagement.type === "offboarding" ? "Offboarding" : "Onboarding";
+
+  return (
+    <DashboardLayout>
+      <div className="p-6 space-y-6 max-w-5xl">
+        <button
+          onClick={() => navigate("/admin/staff-engagements")}
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to People
+        </button>
+
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-semibold">
+                {engagement.person_name} — {engagement.role}
+              </h1>
+              <StatusBadge value={engagement.status} />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Started {fmtDate(engagement.start_date)} · Type: {typeLabel}
+            </p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                Manage <MoreHorizontal className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                disabled={manageDisabled}
+                onSelect={(e) => { e.preventDefault(); setConfirmCancel(true); }}
+              >
+                Cancel Engagement
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <PhaseProgress
+          phases={phases}
+          completedKeys={completedKeys}
+          signoffCount={signoffs.length}
+        />
+
+        <Tabs defaultValue="checklist">
+          <TabsList>
+            <TabsTrigger value="checklist">Checklist</TabsTrigger>
+            <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="activity">Activity Log</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="checklist" className="space-y-6 mt-4">
+            {phases.map((phase) => {
+              if (phase.key === "signoff") {
+                return (
+                  <div key={phase.key} className="space-y-2">
+                    <h2 className="text-sm font-semibold tracking-wide text-muted-foreground">
+                      {phase.label}
+                    </h2>
+                    <Card>
+                      <CardContent className="p-6 text-muted-foreground text-sm">
+                        Sign-off panel coming soon.
+                      </CardContent>
+                    </Card>
+                  </div>
+                );
+              }
+
+              const defaultOpen = phase.sections.map((s) => s.key);
+              return (
+                <div key={phase.key} className="space-y-2">
+                  <h2 className="text-sm font-semibold tracking-wide text-muted-foreground">
+                    {phase.label}
+                  </h2>
+                  <Accordion type="multiple" defaultValue={defaultOpen} className="border rounded-md">
+                    {phase.sections.map((section) => {
+                      const done = section.items.filter((i) => completedKeys.has(i.key)).length;
+                      return (
+                        <AccordionItem key={section.key} value={section.key} className="px-4">
+                          <AccordionTrigger className="hover:no-underline">
+                            <div className="flex items-center justify-between w-full pr-2">
+                              <span className="font-medium">{section.label}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {done} / {section.items.length}
+                              </span>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="space-y-3 pb-2">
+                              {section.items.map((item) => {
+                                const checked = completedKeys.has(item.key);
+                                const c = completedByMap.get(item.key);
+                                const who = c?.completed_by
+                                  ? userNameMap.get(c.completed_by) ?? "Unknown user"
+                                  : null;
+                                return (
+                                  <div key={item.key} className="flex items-start gap-3">
+                                    <Checkbox
+                                      checked={checked}
+                                      disabled={toggleMutation.isPending}
+                                      onCheckedChange={(v) =>
+                                        toggleMutation.mutate({ itemKey: item.key, checked: !!v })
+                                      }
+                                      className="mt-0.5"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-sm">{item.label}</span>
+                                        {item.critical && (
+                                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                        )}
+                                      </div>
+                                      {checked && c && (
+                                        <div className="text-xs text-muted-foreground mt-0.5">
+                                          {who ?? "Unknown user"} · {fmtDateTime(c.completed_at)}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                      {item.owner}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </div>
+              );
+            })}
+          </TabsContent>
+
+          <TabsContent value="notes" className="mt-4">
+            <Card>
+              <CardContent className="p-6 text-muted-foreground text-sm">
+                Notes coming in a future update.
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="activity" className="mt-4">
+            <Card>
+              <CardContent className="p-6">
+                {(activityQuery.data ?? []).length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No activity yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {(activityQuery.data ?? []).map((r: any, idx: number) => {
+                      const name = r.users?.full_name ?? "Unknown user";
+                      const label = findItemLabel(r.item_key) ?? r.item_key;
+                      return (
+                        <li key={idx} className="text-sm">
+                          <span className="font-medium">{name}</span>
+                          <span className="text-muted-foreground"> ticked </span>
+                          <span>{label}</span>
+                          <span className="text-muted-foreground"> · {fmtDateTime(r.completed_at)}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this engagement?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The engagement will be marked as cancelled. This can be undone manually but not from this UI.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelMutation.isPending}>Keep</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); cancelMutation.mutate(); }}
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending ? "Cancelling…" : "Cancel Engagement"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </DashboardLayout>
+  );
+}
