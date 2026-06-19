@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, AlertTriangle, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, AlertTriangle, MoreHorizontal, Check } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +42,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import {
   ONBOARDING_PHASES,
@@ -59,6 +65,7 @@ type Engagement = {
   type: string;
   status: string;
   start_date: string | null;
+  linked_unicorn_user_id: string | null;
   created_at: string;
 };
 
@@ -210,20 +217,30 @@ export default function StaffEngagementDetail() {
     },
   });
 
-  const uniqueCompletedByUuids = useMemo(() => {
-    const s = new Set<string>();
-    (completionsQuery.data ?? []).forEach((c) => { if (c.completed_by) s.add(c.completed_by); });
-    return Array.from(s);
-  }, [completionsQuery.data]);
-
   const userNamesQuery = useQuery({
-    queryKey: ["checklist_user_names", id, uniqueCompletedByUuids],
-    enabled: !!id && allowed && uniqueCompletedByUuids.length > 0,
+    queryKey: [
+      "checklist_user_names",
+      id,
+      (completionsQuery.data ?? []).map((c) => c.completed_by).filter(Boolean),
+      (signoffsQuery.data ?? []).map((s) => s.signed_by).filter(Boolean),
+    ],
+    enabled:
+      !!id &&
+      allowed &&
+      ((completionsQuery.data?.length ?? 0) > 0 || (signoffsQuery.data?.length ?? 0) > 0),
     queryFn: async () => {
+      const completionUuids = (completionsQuery.data ?? [])
+        .map((c) => c.completed_by)
+        .filter(Boolean) as string[];
+      const signoffUuids = (signoffsQuery.data ?? [])
+        .map((s) => s.signed_by)
+        .filter(Boolean) as string[];
+      const uniqueUuids = [...new Set([...completionUuids, ...signoffUuids])];
+      if (uniqueUuids.length === 0) return [];
       const { data, error } = await supabase
         .from("users")
         .select("user_uuid, full_name")
-        .in("user_uuid", uniqueCompletedByUuids);
+        .in("user_uuid", uniqueUuids);
       if (error) throw error;
       return (data ?? []) as Array<{ user_uuid: string; full_name: string | null }>;
     },
@@ -252,6 +269,34 @@ export default function StaffEngagementDetail() {
     });
     return m;
   }, [userNamesQuery.data]);
+
+  const criticalKeys = useMemo(
+    () =>
+      phases.flatMap((p) =>
+        p.sections.flatMap((s) => s.items.filter((i) => i.critical).map((i) => i.key))
+      ),
+    [phases]
+  );
+  const allCriticalDone =
+    criticalKeys.length > 0 && criticalKeys.every((k) => completedKeys.has(k));
+
+  const signoffsByRole = useMemo(() => {
+    const m = new Map<string, Signoff>();
+    signoffs.forEach((s) => m.set(s.signoff_role, s));
+    return m;
+  }, [signoffs]);
+
+  const mySignoffRole: string | null = useMemo(() => {
+    if (
+      profile?.user_uuid &&
+      engagement?.linked_unicorn_user_id &&
+      profile.user_uuid === engagement.linked_unicorn_user_id
+    )
+      return "staff_member";
+    if (role === "Integrator") return "operations_manager";
+    if (role === "Super Admin") return "ceo";
+    return null;
+  }, [profile, engagement, role]);
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
@@ -296,14 +341,12 @@ export default function StaffEngagementDetail() {
       const next = new Set(completedKeys);
       if (checked) next.add(itemKey); else next.delete(itemKey);
 
-      const criticalKeys = phases.flatMap((p) =>
-        p.sections.flatMap((s) => s.items.filter((i) => i.critical).map((i) => i.key))
-      );
-      const allCriticalDone = criticalKeys.length > 0 && criticalKeys.every((k) => next.has(k));
+      const allCriticalDoneNext =
+        criticalKeys.length > 0 && criticalKeys.every((k) => next.has(k));
 
-      if (allCriticalDone && engagement?.status === "in_progress") {
+      if (allCriticalDoneNext && engagement?.status === "in_progress") {
         await supabase.from("staff_engagements").update({ status: "pending_signoff" }).eq("id", id!);
-      } else if (!allCriticalDone && engagement?.status === "pending_signoff") {
+      } else if (!allCriticalDoneNext && engagement?.status === "pending_signoff") {
         await supabase.from("staff_engagements").update({ status: "in_progress" }).eq("id", id!);
       }
     },
@@ -314,6 +357,45 @@ export default function StaffEngagementDetail() {
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
     },
     onError: (e: any) => toast({ title: "Could not update", description: e?.message, variant: "destructive" }),
+  });
+
+  const signoffMutation = useMutation({
+    mutationFn: async ({ signoffRole }: { signoffRole: string }) => {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("Not authenticated");
+
+      const { error: insertErr } = await supabase
+        .from("engagement_signoffs")
+        .insert({
+          engagement_id: id!,
+          signoff_role: signoffRole,
+          signed_by: userRes.user.id,
+          signed_at: new Date().toISOString(),
+        } as any);
+      if (insertErr) throw insertErr;
+
+      const { count, error: countErr } = await supabase
+        .from("engagement_signoffs")
+        .select("id", { count: "exact", head: true })
+        .eq("engagement_id", id!);
+      if (countErr) throw countErr;
+
+      if ((count ?? 0) === 3) {
+        const { error: updErr } = await supabase
+          .from("staff_engagements")
+          .update({ status: "completed" })
+          .eq("id", id!);
+        if (updErr) throw updErr;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Sign-off recorded" });
+      queryClient.invalidateQueries({ queryKey: ["engagement_signoffs", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Could not sign off", description: e?.message, variant: "destructive" }),
   });
 
   if (!allowed) {
@@ -393,16 +475,85 @@ export default function StaffEngagementDetail() {
           <TabsContent value="checklist" className="space-y-6 mt-4">
             {phases.map((phase) => {
               if (phase.key === "signoff") {
+                const SIGNOFF_ROLES: Array<{ key: string; label: string }> = [
+                  { key: "staff_member", label: "Staff Member" },
+                  { key: "operations_manager", label: "Operations Manager" },
+                  { key: "ceo", label: "CEO" },
+                ];
                 return (
-                  <div key={phase.key} className="space-y-2">
+                  <div key={phase.key} className="space-y-3">
                     <h2 className="text-sm font-semibold tracking-wide text-muted-foreground">
                       {phase.label}
                     </h2>
-                    <Card>
-                      <CardContent className="p-6 text-muted-foreground text-sm">
-                        Sign-off panel coming soon.
-                      </CardContent>
-                    </Card>
+                    {!allCriticalDone && (
+                      <Card className="border-amber-500/40 bg-amber-500/10">
+                        <CardContent className="p-4 flex items-start gap-2 text-sm text-amber-800 dark:text-amber-200">
+                          <AlertTriangle className="h-4 w-4 mt-0.5" />
+                          <span>Complete all required (⚠) items before signing off.</span>
+                        </CardContent>
+                      </Card>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {SIGNOFF_ROLES.map(({ key: rk, label }) => {
+                        const signed = signoffsByRole.get(rk);
+                        const isMine = mySignoffRole === rk;
+                        const needsLinkedUser = rk === "staff_member" && !engagement.linked_unicorn_user_id;
+                        const canSign = allCriticalDone && isMine && !needsLinkedUser;
+                        const signerName = signed?.signed_by
+                          ? userNameMap.get(signed.signed_by) ?? "Unknown user"
+                          : null;
+
+                        const signBtn = (
+                          <Button
+                            size="sm"
+                            disabled={!canSign || signoffMutation.isPending}
+                            onClick={() => signoffMutation.mutate({ signoffRole: rk })}
+                          >
+                            {signoffMutation.isPending ? "Signing…" : "Sign Off"}
+                          </Button>
+                        );
+
+                        return (
+                          <Card key={rk}>
+                            <CardContent className="p-4 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="font-medium text-sm">{label}</div>
+                                {signed && (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300"
+                                  >
+                                    <Check className="h-3 w-3 mr-1" /> Signed
+                                  </Badge>
+                                )}
+                              </div>
+                              {signed ? (
+                                <div className="text-xs text-muted-foreground space-y-0.5">
+                                  <div className="text-foreground">{signerName}</div>
+                                  <div>{fmtDateTime(signed.signed_at)}</div>
+                                </div>
+                              ) : (
+                                <div className="space-y-3">
+                                  <div className="text-xs text-muted-foreground">Awaiting sign-off</div>
+                                  {rk === "staff_member" && isMine && allCriticalDone && needsLinkedUser ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="inline-block">{signBtn}</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Link a Unicorn user first</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    signBtn
+                                  )}
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               }
