@@ -344,9 +344,9 @@ export default function StaffEngagementDetail() {
       const allCriticalDoneNext =
         criticalKeys.length > 0 && criticalKeys.every((k) => next.has(k));
 
-      if (allCriticalDone && engagement?.status === "in_progress") {
+      if (allCriticalDoneNext && engagement?.status === "in_progress") {
         await supabase.from("staff_engagements").update({ status: "pending_signoff" }).eq("id", id!);
-      } else if (!allCriticalDone && engagement?.status === "pending_signoff") {
+      } else if (!allCriticalDoneNext && engagement?.status === "pending_signoff") {
         await supabase.from("staff_engagements").update({ status: "in_progress" }).eq("id", id!);
       }
     },
@@ -357,6 +357,45 @@ export default function StaffEngagementDetail() {
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
     },
     onError: (e: any) => toast({ title: "Could not update", description: e?.message, variant: "destructive" }),
+  });
+
+  const signoffMutation = useMutation({
+    mutationFn: async ({ signoffRole }: { signoffRole: string }) => {
+      const { data: userRes, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userRes.user) throw new Error("Not authenticated");
+
+      const { error: insertErr } = await supabase
+        .from("engagement_signoffs")
+        .insert({
+          engagement_id: id!,
+          signoff_role: signoffRole,
+          signed_by: userRes.user.id,
+          signed_at: new Date().toISOString(),
+        } as any);
+      if (insertErr) throw insertErr;
+
+      const { count, error: countErr } = await supabase
+        .from("engagement_signoffs")
+        .select("id", { count: "exact", head: true })
+        .eq("engagement_id", id!);
+      if (countErr) throw countErr;
+
+      if ((count ?? 0) === 3) {
+        const { error: updErr } = await supabase
+          .from("staff_engagements")
+          .update({ status: "completed" })
+          .eq("id", id!);
+        if (updErr) throw updErr;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Sign-off recorded" });
+      queryClient.invalidateQueries({ queryKey: ["engagement_signoffs", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+    },
+    onError: (e: any) =>
+      toast({ title: "Could not sign off", description: e?.message, variant: "destructive" }),
   });
 
   if (!allowed) {
