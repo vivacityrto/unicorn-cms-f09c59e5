@@ -217,20 +217,30 @@ export default function StaffEngagementDetail() {
     },
   });
 
-  const uniqueCompletedByUuids = useMemo(() => {
-    const s = new Set<string>();
-    (completionsQuery.data ?? []).forEach((c) => { if (c.completed_by) s.add(c.completed_by); });
-    return Array.from(s);
-  }, [completionsQuery.data]);
-
   const userNamesQuery = useQuery({
-    queryKey: ["checklist_user_names", id, uniqueCompletedByUuids],
-    enabled: !!id && allowed && uniqueCompletedByUuids.length > 0,
+    queryKey: [
+      "checklist_user_names",
+      id,
+      (completionsQuery.data ?? []).map((c) => c.completed_by).filter(Boolean),
+      (signoffsQuery.data ?? []).map((s) => s.signed_by).filter(Boolean),
+    ],
+    enabled:
+      !!id &&
+      allowed &&
+      ((completionsQuery.data?.length ?? 0) > 0 || (signoffsQuery.data?.length ?? 0) > 0),
     queryFn: async () => {
+      const completionUuids = (completionsQuery.data ?? [])
+        .map((c) => c.completed_by)
+        .filter(Boolean) as string[];
+      const signoffUuids = (signoffsQuery.data ?? [])
+        .map((s) => s.signed_by)
+        .filter(Boolean) as string[];
+      const uniqueUuids = [...new Set([...completionUuids, ...signoffUuids])];
+      if (uniqueUuids.length === 0) return [];
       const { data, error } = await supabase
         .from("users")
         .select("user_uuid, full_name")
-        .in("user_uuid", uniqueCompletedByUuids);
+        .in("user_uuid", uniqueUuids);
       if (error) throw error;
       return (data ?? []) as Array<{ user_uuid: string; full_name: string | null }>;
     },
