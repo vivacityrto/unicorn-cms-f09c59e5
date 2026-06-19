@@ -182,13 +182,15 @@ function MessagesTab() {
     currentUserId,
   } = useClientCommunications();
 
-  const { isReadOnly } = useClientTenant();
+  const { isReadOnly, activeTenantId } = useClientTenant();
   const [searchParams, setSearchParams] = useSearchParams();
   const threadParam = searchParams.get("thread") ?? searchParams.get("conversation");
   const [selectedId, setSelectedId] = useState<string | null>(threadParam);
   const [filterUnread, setFilterUnread] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [composerText, setComposerText] = useState("");
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Sync ?thread= URL param into selection
