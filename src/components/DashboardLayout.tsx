@@ -514,8 +514,8 @@ export const DashboardLayout = ({
                   "resourceManagement"
                 )}
 
-              {/* 5. ADMINISTRATION Section - Super Admin full, Team Leader partial */}
-              {(isSuperAdmin || isTeamLeader) &&
+              {/* 5. ADMINISTRATION Section - Super Admin full, Team Leader & Integrator partial */}
+              {(isSuperAdmin || isTeamLeader || isIntegrator) &&
                 renderSection(
                   "administration",
                   "Administration",
