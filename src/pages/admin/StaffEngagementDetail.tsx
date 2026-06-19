@@ -65,6 +65,7 @@ type Engagement = {
   type: string;
   status: string;
   start_date: string | null;
+  linked_unicorn_user_id: string | null;
   created_at: string;
 };
 
