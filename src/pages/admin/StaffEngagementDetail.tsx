@@ -580,6 +580,29 @@ export default function StaffEngagementDetail() {
               >
                 Cancel Engagement
               </DropdownMenuItem>
+              {!engagement.linked_unicorn_user_id && (
+                <DropdownMenuItem
+                  onSelect={(e) => { e.preventDefault(); setLinkUserOpen(true); }}
+                >
+                  Link Unicorn User
+                </DropdownMenuItem>
+              )}
+              {!!engagement.linked_unicorn_user_id && (
+                <DropdownMenuItem
+                  onSelect={async (e) => {
+                    e.preventDefault();
+                    await supabase
+                      .from("staff_engagements")
+                      .update({ linked_unicorn_user_id: null } as any)
+                      .eq("id", id!);
+                    queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+                    queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+                    toast({ title: "User unlinked" });
+                  }}
+                >
+                  Unlink User
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
