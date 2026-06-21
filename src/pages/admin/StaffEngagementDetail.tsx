@@ -743,7 +743,9 @@ export default function StaffEngagementDetail() {
                                       )}
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="text-sm">{item.label}</span>
+                                          <span className={cn("text-sm", checked && "line-through text-muted-foreground")}>
+                                            {item.label}
+                                          </span>
                                           {item.critical && (
                                             <AlertTriangle className="h-4 w-4 text-amber-500" />
                                           )}
@@ -790,7 +792,9 @@ export default function StaffEngagementDetail() {
                                       )}
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="text-sm">{item.label}</span>
+                                          <span className={cn("text-sm", checked && "line-through text-muted-foreground")}>
+                                            {item.label}
+                                          </span>
                                           {item.critical && (
                                             <AlertTriangle className="h-4 w-4 text-amber-500" />
                                           )}
@@ -832,7 +836,9 @@ export default function StaffEngagementDetail() {
                                     />
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-sm">{item.label}</span>
+                                        <span className={cn("text-sm", checked && "line-through text-muted-foreground")}>
+                                          {item.label}
+                                        </span>
                                         {item.critical && (
                                           <AlertTriangle className="h-4 w-4 text-amber-500" />
                                         )}
