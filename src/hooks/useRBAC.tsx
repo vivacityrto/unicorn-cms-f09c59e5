@@ -7,6 +7,7 @@ export type Permission =
   | 'advanced_features:access'
   | 'eos:access'  // EOS access permission
   | 'ask_viv:access'  // Ask Viv access - Vivacity internal only
+  | 'staff_engagements:access'
   | 'vto:edit'
   | 'eos_meetings:schedule'
   | 'eos_meetings:edit'
@@ -98,6 +99,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   'Integrator': [
     'advanced_features:access',
     'eos:access',
+    'staff_engagements:access',
     'ask_viv:access',
     'vto:edit',
     'eos_meetings:schedule',
@@ -319,6 +321,9 @@ export const useRBAC = () => {
    * Check if a route is protected and user has access
    */
   const canAccessRoute = (path: string): boolean => {
+    if (path.startsWith('/admin/staff-engagements')) {
+      return hasPermission('administration:access') || hasPermission('staff_engagements:access');
+    }
     if (ADMIN_ROUTES.some(route => path.startsWith(route))) {
       return canAccessAdmin();
     }
