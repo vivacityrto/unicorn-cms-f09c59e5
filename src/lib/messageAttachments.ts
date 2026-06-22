@@ -123,11 +123,29 @@ export async function getAttachmentUrl(
   supabase: SupabaseClient,
   storagePath: string,
 ): Promise<string> {
-  const { data, error } = await supabase
-    .storage
-    .from(BUCKET)
-    .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
-  if (error) throw error;
-  if (!data?.signedUrl) throw new Error("Failed to create signed URL");
-  return data.signedUrl;
+  const { data, error } = await supabase.functions.invoke(
+    "get-message-attachment-url",
+    { body: { storage_path: storagePath } },
+  );
+
+  if (error) {
+    let serverMessage: string | undefined;
+    const ctx = (error as any)?.context;
+    if (ctx && typeof ctx.json === "function") {
+      try {
+        const b = await ctx.json();
+        if (b && typeof b.error === "string") serverMessage = b.error;
+      } catch { /* ignore */ }
+    }
+    throw new Error(serverMessage || error.message || "Failed to get attachment URL");
+  }
+
+  if (data && typeof (data as any).error === "string") {
+    throw new Error((data as any).error);
+  }
+
+  const signedUrl = (data as any)?.signedUrl;
+  if (!signedUrl) throw new Error("Failed to create signed URL");
+  return signedUrl as string;
 }
+
