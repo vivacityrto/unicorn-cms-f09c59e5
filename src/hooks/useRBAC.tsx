@@ -321,6 +321,9 @@ export const useRBAC = () => {
    * Check if a route is protected and user has access
    */
   const canAccessRoute = (path: string): boolean => {
+    if (path.startsWith('/admin/staff-engagements')) {
+      return hasPermission('administration:access') || hasPermission('staff_engagements:access');
+    }
     if (ADMIN_ROUTES.some(route => path.startsWith(route))) {
       return canAccessAdmin();
     }
