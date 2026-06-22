@@ -1,22 +1,23 @@
-## Scope
-Modify `src/pages/TasksManagement.tsx` to scope all three data-fetch queries to the current signed-in user, and update the page subtitle.
+## Problem
+Integrator role users are redirected to /dashboard when navigating to the People page (`/admin/staff-engagements`) because `ProtectedRoute` relies on `canAccessRoute`, which classifies all `/admin/` paths as admin routes requiring `administration:access` — a permission Integrators do not have.
 
-## Changes
+## Solution
+Two targeted changes in `src/hooks/useRBAC.tsx`:
 
-### 1. Data-fetch filters (in `fetchTasks`)
-- `tasks_tenants`: add `.eq('created_by', user.id)`
-- `client_action_items`: add `.or('owner_user_id.eq.${user.id},assignee_user_id.eq.${user.id}')`
-- `ops_work_items`: add `.or('owner_user_uuid.eq.${user.id},created_by.eq.${user.id}')`
+1. **Add permission type and grant it to Integrator**
+   - Extend the `Permission` union type with `'staff_engagements:access'`.
+   - Add `'staff_engagements:access'` to the `Integrator` role's permission array in `ROLE_PERMISSIONS`.
 
-All three queries already run in the same `fetchTasks` function and their merged result drives both the table and the four stat cards (Total Tasks, Completed, Overdue, In Progress). No separate stat-card fetch exists, so the counts will automatically reflect the filtered set.
+2. **Add route-specific access rule in `canAccessRoute()`**
+   - Insert a check before the generic `ADMIN_ROUTES` block:
+     ```typescript
+     if (path.startsWith('/admin/staff-engagements')) {
+       return hasPermission('administration:access') || hasPermission('staff_engagements:access');
+     }
+     ```
+   - This allows Integrators (and SuperAdmins) to reach `/admin/staff-engagements` without weakening access to any other `/admin/` route.
 
-### 2. Subtitle text
-Change the page subtitle from `"View and manage all client tasks"` to `"View and manage your tasks"`.
-
-## What will not change
-- Create Task button
-- Search bar logic
-- Column definitions
-- Status / priority badge rendering
-- Date formatting
-- Any other page in the codebase
+## Scope & Safety
+- **Only file changed:** `src/hooks/useRBAC.tsx`
+- **Not changed:** `ProtectedRoute.tsx`, `StaffEngagements.tsx`, `StaffEngagementDetail.tsx`, `DashboardLayout.tsx`, any other role mappings, routes, or backend policies.
+- **Preserved:** SuperAdmin access to the People page. All other `/admin/` routes remain inaccessible to Integrators.

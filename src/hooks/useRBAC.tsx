@@ -7,6 +7,7 @@ export type Permission =
   | 'advanced_features:access'
   | 'eos:access'  // EOS access permission
   | 'ask_viv:access'  // Ask Viv access - Vivacity internal only
+  | 'staff_engagements:access'
   | 'vto:edit'
   | 'eos_meetings:schedule'
   | 'eos_meetings:edit'
