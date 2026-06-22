@@ -125,7 +125,7 @@ export default function TasksManagement() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user?.id]);
   useEffect(() => {
     filterTasks();
   }, [searchQuery, statusFilter, tasks]);
