@@ -627,6 +627,14 @@ export default function StaffEngagementDetail() {
                   Unlink User
                 </DropdownMenuItem>
               )}
+              {role === "Super Admin" && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={(e) => { e.preventDefault(); setConfirmDelete(true); }}
+                >
+                  Delete Engagement
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
