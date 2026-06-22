@@ -1,21 +1,22 @@
-## Overview
-Add a "Latest Recordings" section to the Academy Dashboard that displays the 5 most recently uploaded training videos as a vertical stacked list. Each card links directly to its associated lesson.
+## Goal
+Add a single storage policy that allows Vivacity staff to upload files to the `message-attachments` bucket.
 
-## Files to Change
+## Why
+The existing `msg_attach_insert_tenant_member` policy only permits uploads by users who are members of the tenant (via `tenant_users`). Vivacity internal staff are not in `tenant_users` for client tenants, so their uploads are currently blocked at the storage level. The `tenant_message_attachments` table already has a staff insert policy (`tma_insert_staff`); this change closes the corresponding storage-object gap.
 
-### 1. Create `src/hooks/academy/useLatestRecordings.ts`
-New TanStack Query hook that fetches the 5 latest `training_videos` records, joins to `academy_lessons` (via `video_id`) and `academy_courses` (via `course_id`), filters for published video lessons, and returns flattened metadata including `lessonId` and `courseSlug` for routing.
+## Plan
+Create a new migration with exactly one policy statement:
 
-### 2. Edit `src/pages/client/AcademyDashboardPage.tsx`
-- Import `PlayCircle` from `lucide-react` and `useLatestRecordings` from the new hook.
-- Call the hook inside the component body.
-- Insert the "Latest Recordings" `<Card>` block between the existing "My Courses" `</Card>` (line 223) and the "Team Progress" `<Card>` (line 225).
-- The section uses a stacked list layout matching "My Courses": rows rendered inside `CardContent` with `space-y-3`, each row as a full-width `Link` with `flex items-center gap-4 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors`.
-- Loading state shows 3 skeleton rows (matching the My Courses skeleton style).
-- Empty state shows the same centered muted style as My Courses.
-- Each row displays: thumbnail image (or a `PlayCircle` fallback in a coloured square), video name, folder name dot-duration meta line, and a `ChevronRight` arrow.
+```sql
+CREATE POLICY "msg_attach_write_staff"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'message-attachments'
+  AND public.is_vivacity_team_safe((SELECT auth.uid()))
+);
+```
 
-## Notes
-- `Link`, `ChevronRight`, `Skeleton`, and `formatDuration` are already imported — no new dependencies.
-- No database schema or RLS changes required.
-- Cards link to `/academy/course/{courseSlug}/lesson/{lessonId}`.
+## Verification
+- `public.is_vivacity_team_safe` exists and checks `users.is_vivacity_internal = true` with archived/disabled guards.
+- The `message-attachments` bucket exists.
+- No other changes are needed — this is strictly the missing storage-layer counterpart to the existing `tma_insert_staff` table policy.
