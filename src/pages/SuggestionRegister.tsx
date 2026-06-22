@@ -42,7 +42,11 @@ export default function SuggestionRegister() {
   const isVivacityStaff =
     profile?.unicorn_role === 'Super Admin' ||
     profile?.unicorn_role === 'Team Leader' ||
-    profile?.unicorn_role === 'Team Member';
+    profile?.unicorn_role === 'Team Member' ||
+    profile?.unicorn_role === 'CSC' ||
+    profile?.unicorn_role === 'Integrator' ||
+    profile?.unicorn_role === 'BGT' ||
+    profile?.unicorn_role === 'CET';
   const { data: items, isLoading } = useSuggestItems();
   const { data: releasedItems, isLoading: releasedLoading } = useReleasedSuggestItems();
   const dropdowns = useSuggestDropdowns();
