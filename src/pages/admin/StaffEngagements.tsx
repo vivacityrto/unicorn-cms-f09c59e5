@@ -151,7 +151,8 @@ function NewEngagementDialog({ onCreated }: { onCreated: () => void }) {
       if (userErr || !userRes.user) throw new Error("Not authenticated");
 
       const payload = {
-        person_name: values.person_name,
+        first_name: values.first_name,
+        last_name: values.last_name,
         person_email: values.person_email,
         role: values.role,
         engagement_type: values.engagement_type,
@@ -162,6 +163,7 @@ function NewEngagementDialog({ onCreated }: { onCreated: () => void }) {
       };
 
       const { error } = await supabase.from("staff_engagements").insert(payload as any);
+
       if (error) throw error;
     },
     onSuccess: () => {
