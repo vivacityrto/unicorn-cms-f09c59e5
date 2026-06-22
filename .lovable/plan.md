@@ -1,41 +1,46 @@
-### Fix invite-user edge function skip_email routing for Vivacity staff
+# Fix invitation role check + Vivacity routing in accept_invitation_v2
 
-**File:** `supabase/functions/invite-user/index.ts`
+Apply both fixes as a single Supabase migration. No application code changes.
 
-**Change:** In the `skip_email` block (around line 425), update the `v_relationship_role` resolution logic so that Vivacity internal invites (`invite_as === 'VIVACITY'`) default to `null` instead of `'user'`.
+## Change 1 — Expand `user_invitations.unicorn_role` check constraint
 
-**Before:**
-```typescript
-let v_relationship_role: RelationshipRole;
-const isVivacityTarget = payload.invite_as === 'VIVACITY';
-if (payload.relationship_role) {
-  v_relationship_role = payload.relationship_role;
-} else if (payload.unicorn_role === 'Admin') {
-  v_relationship_role = 'primary_contact';
-} else {
-  v_relationship_role = 'user';
-}
+Drop and recreate the check to permit the Vivacity internal roles (`CSC`, `Integrator`, `BGT`, `CET`) alongside existing values.
+
+```sql
+ALTER TABLE public.user_invitations
+  DROP CONSTRAINT user_invitations_unicorn_role_check;
+
+ALTER TABLE public.user_invitations
+  ADD CONSTRAINT user_invitations_unicorn_role_check
+  CHECK (unicorn_role = ANY (ARRAY[
+    'Super Admin', 'Team Leader', 'Team Member',
+    'Admin', 'User',
+    'Integrator', 'BGT', 'CSC', 'CET'
+  ]));
 ```
 
-**After:**
-```typescript
-let v_relationship_role: RelationshipRole | null;
-const isVivacityTarget = payload.invite_as === 'VIVACITY';
-if (payload.relationship_role) {
-  v_relationship_role = payload.relationship_role;
-} else if (isVivacityTarget) {
-  v_relationship_role = null;
-} else if (payload.unicorn_role === 'Admin') {
-  v_relationship_role = 'primary_contact';
-} else {
-  v_relationship_role = 'user';
-}
-```
+## Change 2 — Patch `public.accept_invitation_v2`
 
-**Why:** Existing Vivacity team members have `relationship_role = null` in `tenant_users`. The frontend uses this `null` to route users to the Vivacity admin dashboard. Defaulting to `'user'` was incorrectly routing newly invited Vivacity staff to the Academy client portal.
+Re-create the function with two edits, leaving the rest of its body untouched:
 
-**Out of scope:**
-- Normal (non-skip_email) invite path — already correctly uses `payload.relationship_role ?? null`.
-- UI components, other edge functions, the switch statement, or the `isVivacityTarget` override block below this assignment.
+1. In the `v_relationship_role` resolution block, add a branch so invitations to `tenant_id = 6372` (Vivacity internal tenant) resolve to `NULL` instead of `'user'`. This is what the frontend uses to route staff to the admin dashboard instead of the Academy portal.
+2. Add an `ELSE NULL;` arm to the `CASE v_relationship_role` statement so the new `NULL` value does not raise a `CASE_NOT_FOUND`. Existing branches (`primary_contact`, `secondary_contact`, `user`, `academy_user`) stay byte-identical.
 
-**Verification:** After deployment, invite a Vivacity user via the skip_email path and confirm they land on the admin dashboard, not the Academy portal.
+The function will keep `SECURITY DEFINER`, `search_path = ''`, and fully qualified object references per project rules.
+
+## Technical notes
+
+- Single migration file, executed atomically.
+- Re-reading the current `accept_invitation_v2` source before the migration runs so the recreated body preserves every other line verbatim (signature, locals, audit logging, returns).
+- No data backfill required: existing rows with `relationship_role = 'user'` for Vivacity staff are out of scope for this fix (handled separately if needed).
+- No RLS, grant, trigger, or dependent-object changes.
+
+## Out of scope
+
+- `supabase/functions/invite-user/index.ts` and any other edge functions.
+- Any TypeScript, React, or UI code.
+- Other migrations or unrelated constraints.
+
+## Risk
+
+Low. Constraint widens (no existing row can violate it). Function change is additive — only the new `tenant_id = 6372` branch alters behaviour, and the `ELSE NULL` guard prevents regressions for the four existing role values.
