@@ -75,7 +75,9 @@ import {
 
 type Engagement = {
   id: string;
-  person_name: string;
+  first_name: string;
+  last_name: string;
+
   person_email: string;
   role: string;
   engagement_type: string;
@@ -443,10 +445,14 @@ export default function StaffEngagementDetail() {
       const res = await supabase.functions.invoke("invite-user", {
         body: {
           email: engagement.person_email,
-          role: inviteAsRole,
+          unicorn_role: inviteAsRole,
+          first_name: engagement.first_name,
+          last_name: engagement.last_name,
           invite_as: "VIVACITY",
+          tenant_id: 6372,
         },
       });
+
       if (res.error || (res.data as any)?.ok !== true) {
         throw new Error((res.data as any)?.detail ?? res.error?.message ?? "Invite failed");
       }
@@ -559,7 +565,7 @@ export default function StaffEngagementDetail() {
           <div className="space-y-1">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-semibold">
-                {engagement.person_name} — {engagement.role}
+                {`${engagement.first_name} ${engagement.last_name}`} — {engagement.role}
               </h1>
               <StatusBadge value={engagement.status} />
             </div>
@@ -970,7 +976,7 @@ export default function StaffEngagementDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke Unicorn access?</AlertDialogTitle>
             <AlertDialogDescription>
-              {`This will immediately block ${engagement.person_name}'s access to Unicorn. They will see a disabled account message on next login.`}
+              {`This will immediately block ${engagement.first_name} ${engagement.last_name}'s access to Unicorn. They will see a disabled account message on next login.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

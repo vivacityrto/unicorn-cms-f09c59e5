@@ -42259,10 +42259,11 @@ export type Database = {
           created_at: string
           created_by: string
           engagement_type: string
+          first_name: string
           id: string
+          last_name: string
           linked_unicorn_user_id: string | null
           person_email: string
-          person_name: string
           role: string
           start_date: string
           status: string
@@ -42272,10 +42273,11 @@ export type Database = {
           created_at?: string
           created_by: string
           engagement_type: string
+          first_name: string
           id?: string
+          last_name: string
           linked_unicorn_user_id?: string | null
           person_email: string
-          person_name: string
           role: string
           start_date: string
           status?: string
@@ -42285,10 +42287,11 @@ export type Database = {
           created_at?: string
           created_by?: string
           engagement_type?: string
+          first_name?: string
           id?: string
+          last_name?: string
           linked_unicorn_user_id?: string | null
           person_email?: string
-          person_name?: string
           role?: string
           start_date?: string
           status?: string

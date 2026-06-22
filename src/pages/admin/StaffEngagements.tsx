@@ -49,7 +49,8 @@ import { Calendar } from "@/components/ui/calendar";
 
 type Engagement = {
   id: string;
-  person_name: string;
+  first_name: string;
+  last_name: string;
   person_email: string;
   role: string;
   engagement_type: string;
@@ -61,13 +62,15 @@ type Engagement = {
 };
 
 const formSchema = z.object({
-  person_name: z.string().trim().min(1, "Required"),
+  first_name: z.string().trim().min(1, "Required"),
+  last_name: z.string().trim().min(1, "Required"),
   person_email: z.string().trim().email("Valid email required"),
   role: z.string().trim().min(1, "Required"),
   engagement_type: z.enum(["contractor", "employee"]),
   checklist_type: z.enum(["onboarding", "offboarding"]),
   start_date: z.date({ required_error: "Required" }),
 });
+
 type FormValues = z.infer<typeof formSchema>;
 
 function TypeBadge({ value }: { value: string }) {
@@ -129,12 +132,14 @@ function NewEngagementDialog({ onCreated }: { onCreated: () => void }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      person_name: "",
+      first_name: "",
+      last_name: "",
       person_email: "",
       role: "",
       engagement_type: "employee",
       checklist_type: "onboarding",
     },
+
   });
 
   const checklistType = form.watch("checklist_type");
@@ -146,7 +151,8 @@ function NewEngagementDialog({ onCreated }: { onCreated: () => void }) {
       if (userErr || !userRes.user) throw new Error("Not authenticated");
 
       const payload = {
-        person_name: values.person_name,
+        first_name: values.first_name,
+        last_name: values.last_name,
         person_email: values.person_email,
         role: values.role,
         engagement_type: values.engagement_type,
@@ -157,6 +163,7 @@ function NewEngagementDialog({ onCreated }: { onCreated: () => void }) {
       };
 
       const { error } = await supabase.from("staff_engagements").insert(payload as any);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -196,19 +203,35 @@ function NewEngagementDialog({ onCreated }: { onCreated: () => void }) {
             onSubmit={form.handleSubmit((v) => mutation.mutate(v))}
             className="space-y-4"
           >
-            <FormField
-              control={form.control}
-              name="person_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full name</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="first_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="last_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="person_email"
@@ -436,7 +459,7 @@ export default function StaffEngagements() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => navigate(`/admin/staff-engagements/${r.id}`)}
                   >
-                    <TableCell className="font-medium">{r.person_name}</TableCell>
+                    <TableCell className="font-medium">{`${r.first_name} ${r.last_name}`}</TableCell>
                     <TableCell>{r.role}</TableCell>
                     <TableCell><TypeBadge value={r.type} /></TableCell>
                     <TableCell><StatusBadge value={r.status} /></TableCell>
