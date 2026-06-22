@@ -528,6 +528,23 @@ export default function StaffEngagementDetail() {
       toast({ title: "Could not link user", description: e?.message, variant: "destructive" }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("staff_engagements")
+        .delete()
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Engagement deleted" });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+      navigate("/admin/staff-engagements");
+    },
+    onError: (e: any) =>
+      toast({ title: "Could not delete", description: e?.message, variant: "destructive" }),
+  });
+
 
 
   if (!allowed) {
