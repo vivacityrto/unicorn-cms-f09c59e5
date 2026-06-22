@@ -445,10 +445,14 @@ export default function StaffEngagementDetail() {
       const res = await supabase.functions.invoke("invite-user", {
         body: {
           email: engagement.person_email,
-          role: inviteAsRole,
+          unicorn_role: inviteAsRole,
+          first_name: engagement.first_name,
+          last_name: engagement.last_name,
           invite_as: "VIVACITY",
+          tenant_id: 6372,
         },
       });
+
       if (res.error || (res.data as any)?.ok !== true) {
         throw new Error((res.data as any)?.detail ?? res.error?.message ?? "Invite failed");
       }
