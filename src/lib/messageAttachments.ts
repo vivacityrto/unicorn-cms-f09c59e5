@@ -85,32 +85,35 @@ export async function uploadMessageAttachment(
   conversationId: string,
   messageId: string,
 ): Promise<MessageAttachmentRow> {
+  // Client-side pre-check (fast fail before network)
   validateAttachment(file);
 
-  const path = `${tenantId}/${conversationId}/${messageId}/${sanitiseFilename(file.name)}`;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("tenant_id", String(tenantId));
+  formData.append("conversation_id", conversationId);
+  formData.append("message_id", messageId);
 
-  const { error: upErr } = await supabase
-    .storage
-    .from(BUCKET)
-    .upload(path, file, { contentType: file.type, upsert: false });
-  if (upErr) throw upErr;
+  const { data, error } = await supabase.functions.invoke(
+    "upload-message-attachment",
+    { body: formData },
+  );
 
-  const { data, error: insErr } = await supabase
-    .from("tenant_message_attachments" as any)
-    .insert({
-      message_id: messageId,
-      storage_path: path,
-      filename: file.name,
-      mime_type: file.type,
-      file_size: file.size,
-    } as any)
-    .select("*")
-    .single();
+  if (error) {
+    // Try to surface the server-provided error message
+    let serverMessage: string | undefined;
+    const ctx = (error as any)?.context;
+    if (ctx && typeof ctx.json === "function") {
+      try {
+        const body = await ctx.json();
+        if (body && typeof body.error === "string") serverMessage = body.error;
+      } catch { /* ignore */ }
+    }
+    throw new Error(serverMessage || error.message || "Attachment upload failed");
+  }
 
-  if (insErr) {
-    // Best-effort cleanup
-    await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
-    throw insErr;
+  if (data && typeof (data as any).error === "string") {
+    throw new Error((data as any).error);
   }
 
   return data as MessageAttachmentRow;
