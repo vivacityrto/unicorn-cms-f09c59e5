@@ -186,6 +186,7 @@ export default function StaffEngagementDetail() {
   const [confirmRevoke, setConfirmRevoke] = useState(false);
   const [linkUserOpen, setLinkUserOpen] = useState(false);
   const [linkSearch, setLinkSearch] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const engagementQuery = useQuery({
     queryKey: ["staff_engagement", id],
@@ -527,6 +528,23 @@ export default function StaffEngagementDetail() {
       toast({ title: "Could not link user", description: e?.message, variant: "destructive" }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("staff_engagements")
+        .delete()
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Engagement deleted" });
+      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+      navigate("/admin/staff-engagements");
+    },
+    onError: (e: any) =>
+      toast({ title: "Could not delete", description: e?.message, variant: "destructive" }),
+  });
+
 
 
   if (!allowed) {
@@ -607,6 +625,14 @@ export default function StaffEngagementDetail() {
                   }}
                 >
                   Unlink User
+                </DropdownMenuItem>
+              )}
+              {role === "Super Admin" && (
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={(e) => { e.preventDefault(); setConfirmDelete(true); }}
+                >
+                  Delete Engagement
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -1030,6 +1056,27 @@ export default function StaffEngagementDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently delete this engagement?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`This will permanently delete the engagement for ${engagement.first_name} ${engagement.last_name} and all associated checklist and sign-off data. This cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete Permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
