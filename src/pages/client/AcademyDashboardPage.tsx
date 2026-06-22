@@ -11,7 +11,9 @@ import {
   ClipboardList,
   ChevronRight,
   Clock,
+  PlayCircle,
 } from "lucide-react";
+import { useLatestRecordings } from "@/hooks/academy/useLatestRecordings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -70,6 +72,7 @@ const statusLabel = (s: string | null) =>
 export default function AcademyDashboardPage() {
   const { data: stats, isLoading: statsLoading } = useAcademyDashboardStats();
   const { data: myCoursesAll = [], isLoading: coursesLoading } = useMyEnrolledCourses();
+  const { data: latestRecordings = [], isLoading: recordingsLoading } = useLatestRecordings();
   const { profile } = useAuth();
   const { isImpersonating } = useAcademyActingUserId();
   const { actingUserId, actingUserOptions, isPreviewMode } = useClientPreview();
@@ -219,6 +222,66 @@ export default function AcademyDashboardPage() {
               </Link>
             );
           })}
+        </CardContent>
+      </Card>
+
+      {/* Latest Recordings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PlayCircle className="h-5 w-5" style={{ color: "#23c0dd" }} />
+            Latest Recordings
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {recordingsLoading &&
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                <Skeleton className="h-12 w-20 rounded" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+            ))}
+          {!recordingsLoading && latestRecordings.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <PlayCircle className="h-10 w-10 mx-auto mb-3 opacity-50" />
+              <p className="text-sm">No recordings available yet.</p>
+            </div>
+          )}
+          {!recordingsLoading &&
+            latestRecordings.map((video) => (
+              <Link
+                key={video.id}
+                to={`/academy/course/${video.courseSlug}/lesson/${video.lessonId}`}
+                className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+              >
+                <div className="h-12 w-20 rounded overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+                  {video.thumbnail ? (
+                    <img
+                      src={video.thumbnail}
+                      alt={video.video_name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <PlayCircle className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm text-foreground truncate">
+                    {video.video_name}
+                  </h4>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {video.folder_name && <span>{video.folder_name} · </span>}
+                    {video.duration_seconds
+                      ? formatDuration(Math.round(video.duration_seconds / 60))
+                      : "Recording"}
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              </Link>
+            ))}
         </CardContent>
       </Card>
 
