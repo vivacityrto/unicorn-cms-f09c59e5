@@ -75,7 +75,9 @@ import {
 
 type Engagement = {
   id: string;
-  person_name: string;
+  first_name: string;
+  last_name: string;
+
   person_email: string;
   role: string;
   engagement_type: string;
