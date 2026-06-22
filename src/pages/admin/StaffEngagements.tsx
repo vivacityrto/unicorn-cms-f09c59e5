@@ -49,7 +49,8 @@ import { Calendar } from "@/components/ui/calendar";
 
 type Engagement = {
   id: string;
-  person_name: string;
+  first_name: string;
+  last_name: string;
   person_email: string;
   role: string;
   engagement_type: string;
@@ -61,13 +62,15 @@ type Engagement = {
 };
 
 const formSchema = z.object({
-  person_name: z.string().trim().min(1, "Required"),
+  first_name: z.string().trim().min(1, "Required"),
+  last_name: z.string().trim().min(1, "Required"),
   person_email: z.string().trim().email("Valid email required"),
   role: z.string().trim().min(1, "Required"),
   engagement_type: z.enum(["contractor", "employee"]),
   checklist_type: z.enum(["onboarding", "offboarding"]),
   start_date: z.date({ required_error: "Required" }),
 });
+
 type FormValues = z.infer<typeof formSchema>;
 
 function TypeBadge({ value }: { value: string }) {
