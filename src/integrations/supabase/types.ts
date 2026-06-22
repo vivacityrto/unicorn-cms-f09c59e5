@@ -64800,6 +64800,10 @@ export type Database = {
         Returns: boolean
       }
       can_manage_packages: { Args: never; Returns: boolean }
+      can_upload_message_attachment: {
+        Args: { p_owner: string; p_path: string }
+        Returns: boolean
+      }
       cancel_occurrence: {
         Args: { p_occurrence_id: string }
         Returns: undefined
