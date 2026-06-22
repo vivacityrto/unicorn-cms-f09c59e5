@@ -99,6 +99,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   'Integrator': [
     'advanced_features:access',
     'eos:access',
+    'staff_engagements:access',
     'ask_viv:access',
     'vto:edit',
     'eos_meetings:schedule',
