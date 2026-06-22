@@ -459,7 +459,7 @@ export default function StaffEngagements() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => navigate(`/admin/staff-engagements/${r.id}`)}
                   >
-                    <TableCell className="font-medium">{r.person_name}</TableCell>
+                    <TableCell className="font-medium">{`${r.first_name} ${r.last_name}`}</TableCell>
                     <TableCell>{r.role}</TableCell>
                     <TableCell><TypeBadge value={r.type} /></TableCell>
                     <TableCell><StatusBadge value={r.status} /></TableCell>
