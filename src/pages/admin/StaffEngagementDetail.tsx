@@ -561,7 +561,7 @@ export default function StaffEngagementDetail() {
           <div className="space-y-1">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-semibold">
-                {engagement.person_name} — {engagement.role}
+                {`${engagement.first_name} ${engagement.last_name}`} — {engagement.role}
               </h1>
               <StatusBadge value={engagement.status} />
             </div>
