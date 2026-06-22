@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -437,6 +437,46 @@ export default function TeamCommunicationsPage() {
     }
   };
 
+  const composerRef = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20;
+    const maxHeight = lineHeight * 6;
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
+  }, [composerText]);
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = Array.from(e.clipboardData?.items ?? []);
+    const images: File[] = [];
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        try {
+          validateAttachment(file);
+          images.push(file);
+        } catch (err: any) {
+          toast.error(err?.message ?? "Invalid file");
+        }
+      }
+    }
+    if (images.length === 0) return;
+    e.preventDefault();
+    setQueuedFiles(prev => {
+      const room = MAX_FILES_PER_MESSAGE - prev.length;
+      if (room <= 0) {
+        toast.error(`You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`);
+        return prev;
+      }
+      if (images.length > room) {
+        toast.error(`Only the first ${room} file(s) were attached (max ${MAX_FILES_PER_MESSAGE} per message).`);
+      }
+      return [...prev, ...images.slice(0, room)];
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -622,11 +662,13 @@ export default function TeamCommunicationsPage() {
                   <AttachmentChips files={queuedFiles} onRemove={removeQueued} />
                   <div className="flex gap-2">
                     <Textarea
+                      ref={composerRef}
                       value={composerText}
                       onChange={e => setComposerText(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      placeholder="Type a message… (Enter to send)"
-                      className="min-h-[40px] max-h-[120px] resize-none"
+                      onPaste={handlePaste}
+                      placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+                      className="min-h-[40px] resize-none overflow-y-auto"
                       rows={1}
                     />
                     <input
@@ -654,6 +696,11 @@ export default function TeamCommunicationsPage() {
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
+                  {composerText.length === 0 && queuedFiles.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tip: paste a screenshot directly into the message box
+                    </p>
+                  )}
                 </div>
               </>
             ) : (
