@@ -547,7 +547,7 @@ export default function TasksManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[28px] font-bold">Tasks Management</h1>
-          <p className="text-muted-foreground">View and manage all client tasks</p>
+          <p className="text-muted-foreground">View and manage your tasks</p>
         </div>
         <div className="flex items-center gap-2">
           <Dialog open={isCreateDialogOpen} onOpenChange={open => {
