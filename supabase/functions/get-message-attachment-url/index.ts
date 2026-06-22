@@ -1,0 +1,100 @@
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const BUCKET = "message-attachments";
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
+
+function json(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return json(405, { error: "Method not allowed" });
+  }
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader.toLowerCase().startsWith("bearer ")) {
+    return json(401, { error: "Missing Authorization header" });
+  }
+  const token = authHeader.slice(7).trim();
+
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data: userData, error: authErr } = await admin.auth.getUser(token);
+  if (authErr || !userData?.user) {
+    return json(401, { error: "Invalid auth token" });
+  }
+  const uid = userData.user.id;
+
+  let body: { storage_path?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return json(400, { error: "Expected JSON body" });
+  }
+  const storage_path = body?.storage_path;
+  if (typeof storage_path !== "string" || !storage_path.trim()) {
+    return json(400, { error: "storage_path is required" });
+  }
+
+  const tenantSegment = storage_path.split("/")[0];
+  const tenantIdNum = Number(tenantSegment);
+  if (!tenantSegment || !Number.isFinite(tenantIdNum)) {
+    return json(400, { error: "Invalid storage_path" });
+  }
+
+  // Authorisation: Vivacity internal staff OR tenant member
+  const { data: staffRow } = await admin
+    .from("users")
+    .select("is_vivacity_internal, archived")
+    .eq("user_uuid", uid)
+    .maybeSingle();
+
+  const isStaff = !!staffRow
+    && staffRow.is_vivacity_internal === true
+    && staffRow.archived !== true;
+
+  let authorised = isStaff;
+  if (!authorised) {
+    const { data: memberRow } = await admin
+      .from("tenant_users")
+      .select("user_id")
+      .eq("user_id", uid)
+      .eq("tenant_id", tenantIdNum)
+      .maybeSingle();
+    authorised = !!memberRow;
+  }
+  if (!authorised) {
+    return json(403, { error: "Not authorised to access this attachment" });
+  }
+
+  const { data, error } = await admin.storage
+    .from(BUCKET)
+    .createSignedUrl(storage_path, SIGNED_URL_TTL_SECONDS);
+
+  if (error || !data?.signedUrl) {
+    return json(500, {
+      error: error?.message || "Failed to create signed URL",
+    });
+  }
+
+  return json(200, { signedUrl: data.signedUrl });
+});
