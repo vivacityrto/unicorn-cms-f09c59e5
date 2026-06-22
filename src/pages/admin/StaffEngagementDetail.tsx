@@ -972,7 +972,7 @@ export default function StaffEngagementDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke Unicorn access?</AlertDialogTitle>
             <AlertDialogDescription>
-              {`This will immediately block ${engagement.person_name}'s access to Unicorn. They will see a disabled account message on next login.`}
+              {`This will immediately block ${engagement.first_name} ${engagement.last_name}'s access to Unicorn. They will see a disabled account message on next login.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
