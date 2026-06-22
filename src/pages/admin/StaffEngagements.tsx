@@ -132,12 +132,14 @@ function NewEngagementDialog({ onCreated }: { onCreated: () => void }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      person_name: "",
+      first_name: "",
+      last_name: "",
       person_email: "",
       role: "",
       engagement_type: "employee",
       checklist_type: "onboarding",
     },
+
   });
 
   const checklistType = form.watch("checklist_type");
