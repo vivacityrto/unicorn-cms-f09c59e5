@@ -422,10 +422,12 @@ serve(async (req) => {
 
       // Resolve final relationship_role. relationship_role is the source of truth;
       // never infer academy from unicorn_role alone.
-      let v_relationship_role: RelationshipRole;
+      let v_relationship_role: RelationshipRole | null;
       const isVivacityTarget = payload.invite_as === 'VIVACITY';
       if (payload.relationship_role) {
         v_relationship_role = payload.relationship_role;
+      } else if (isVivacityTarget) {
+        v_relationship_role = null;
       } else if (payload.unicorn_role === 'Admin') {
         v_relationship_role = 'primary_contact';
       } else {
