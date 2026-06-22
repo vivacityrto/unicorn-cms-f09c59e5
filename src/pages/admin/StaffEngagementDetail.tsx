@@ -186,6 +186,7 @@ export default function StaffEngagementDetail() {
   const [confirmRevoke, setConfirmRevoke] = useState(false);
   const [linkUserOpen, setLinkUserOpen] = useState(false);
   const [linkSearch, setLinkSearch] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const engagementQuery = useQuery({
     queryKey: ["staff_engagement", id],

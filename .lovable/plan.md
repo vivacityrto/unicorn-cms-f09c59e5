@@ -1,40 +1,26 @@
-## Plan: Split `person_name` into `first_name` + `last_name`
+## Plan: Add Hard Delete for Super Admins on Engagement Detail Page
 
-### 1. Migration (staff_engagements)
-```sql
-ALTER TABLE public.staff_engagements
-  ADD COLUMN first_name text NOT NULL DEFAULT '',
-  ADD COLUMN last_name text NOT NULL DEFAULT '';
+### Scope
+Only `src/pages/admin/StaffEngagementDetail.tsx` — checklist, sign-off, other mutations, and other files are untouched.
 
-ALTER TABLE public.staff_engagements DROP COLUMN person_name;
+### Changes
 
-ALTER TABLE public.staff_engagements
-  ALTER COLUMN first_name DROP DEFAULT,
-  ALTER COLUMN last_name DROP DEFAULT;
-```
+1. **New state variable** — Add `const [confirmDelete, setConfirmDelete] = useState(false);` alongside existing state hooks.
 
-### 2. `src/pages/admin/StaffEngagements.tsx`
-- Replace single "Full Name" form field with "First Name" + "Last Name" (both required).
-- Update insert payload to send `first_name` / `last_name` instead of `person_name`.
-- Update table display: render `${row.first_name} ${row.last_name}` where `person_name` was shown.
+2. **New `deleteMutation`** — Add a `useMutation` that:
+   - Calls `supabase.from("staff_engagements").delete().eq("id", id!)`
+   - On success: shows a toast, invalidates `staff_engagements` query cache, and navigates to `/admin/staff-engagements`
+   - On error: shows a destructive toast with the error message
 
-### 3. `src/pages/admin/StaffEngagementDetail.tsx`
-- `Engagement` type: replace `person_name: string` with `first_name: string; last_name: string`.
-- Replace all `engagement.person_name` displays with `` `${engagement.first_name} ${engagement.last_name}` ``.
-- In `inviteMutation.mutationFn`, set body to:
-  ```ts
-  body: {
-    email: engagement.person_email,
-    unicorn_role: inviteAsRole,
-    first_name: engagement.first_name,
-    last_name: engagement.last_name,
-    invite_as: 'VIVACITY',
-    tenant_id: 6372,
-  }
-  ```
+3. **Manage dropdown — add Delete item** — After the existing Unlink User item, insert a new `DropdownMenuItem` that:
+   - Only renders when `role === "Super Admin"`
+   - Uses `text-destructive` styling
+   - Opens the confirmation dialog via `setConfirmDelete(true)`
 
-### Out of scope
-Checklist logic, sign-off panel, other mutations, other files.
-
-### Note
-Dropping `person_name` is destructive — any existing rows will lose that value. New `first_name`/`last_name` on existing rows will be empty strings briefly during the ADD step before the NOT NULL DEFAULT is dropped (acceptable per spec).
+4. **New confirmation AlertDialog** — Place before the closing `</DashboardLayout>` tag. The dialog:
+   - Is controlled by `confirmDelete` state
+   - Displays a title "Permanently delete this engagement?"
+   - Shows a description including the engagement's first and last name
+   - Has a Cancel button and a destructive "Delete Permanently" action button
+   - Disables both buttons while `deleteMutation.isPending` is true
+   - Calls `deleteMutation.mutate()` on confirm
