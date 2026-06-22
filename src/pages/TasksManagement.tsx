@@ -125,7 +125,7 @@ export default function TasksManagement() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user?.id]);
   useEffect(() => {
     filterTasks();
   }, [searchQuery, statusFilter, tasks]);
@@ -136,7 +136,14 @@ export default function TasksManagement() {
     try {
       setLoading(true);
 
-      // Fetch all data from tasks_tenants table
+      const userId = user?.id;
+      if (!userId) {
+        setTasks([]);
+        setFilteredTasks([]);
+        return;
+      }
+
+      // Fetch tasks created by the current user
       const {
         data: tasksData,
         error: tasksError
@@ -154,15 +161,15 @@ export default function TasksManagement() {
           created_at,
           updated_at,
           file_paths
-        `).order("created_at", {
+        `).eq("created_by", userId).order("created_at", {
         ascending: false
       });
       if (tasksError) throw tasksError;
 
-      // Fetch action items from client_action_items and ops_work_items
+      // Fetch action items scoped to the current user
       const [{ data: clientActions }, { data: opsActions }] = await Promise.all([
-        supabase.from("client_action_items").select("id, title, description, priority, status, due_date, tenant_id, assignee_user_id, created_at, created_by_user_id, package_id").not('status', 'in', '("done","cancelled")'),
-        supabase.from("ops_work_items").select("id, title, description, priority, status, due_at, tenant_id, owner_user_uuid, created_at, created_by, package_instance_id").not('status', 'in', '("done","cancelled")'),
+        supabase.from("client_action_items").select("id, title, description, priority, status, due_date, tenant_id, assignee_user_id, created_at, created_by_user_id, package_id").not('status', 'in', '("done","cancelled")').or(`owner_user_id.eq.${userId},assignee_user_id.eq.${userId}`),
+        supabase.from("ops_work_items").select("id, title, description, priority, status, due_at, tenant_id, owner_user_uuid, created_at, created_by, package_instance_id").not('status', 'in', '("done","cancelled")').or(`owner_user_uuid.eq.${userId},created_by.eq.${userId}`),
       ]);
 
       // Resolve ops package_instance_id -> package_id so the Package column can populate.
@@ -540,7 +547,7 @@ export default function TasksManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[28px] font-bold">Tasks Management</h1>
-          <p className="text-muted-foreground">View and manage all client tasks</p>
+          <p className="text-muted-foreground">View and manage your tasks</p>
         </div>
         <div className="flex items-center gap-2">
           <Dialog open={isCreateDialogOpen} onOpenChange={open => {

@@ -1,23 +1,22 @@
-## Add paste-to-attach + composer UX polish
+## Scope
+Modify `src/pages/TasksManagement.tsx` to scope all three data-fetch queries to the current signed-in user, and update the page subtitle.
 
-Apply identical changes to the main message composers in `src/pages/TeamCommunicationsPage.tsx` and `src/pages/ClientInboxPage.tsx`.
+## Changes
 
-### 1. Paste-to-attach
-- Add `onPaste` handler to the composer `<Textarea>`.
-- Iterate `e.clipboardData.items`; for any `item.type.startsWith('image/')`, call `item.getAsFile()`, run through `validateAttachment`, and append to `queuedFiles` (respect `MAX_FILES_PER_MESSAGE`). Call `e.preventDefault()` only when at least one image was handled.
-- If validation throws, show `toast.error(err.message)`.
-- If clipboard has only text, do nothing — default paste runs.
+### 1. Data-fetch filters (in `fetchTasks`)
+- `tasks_tenants`: add `.eq('created_by', user.id)`
+- `client_action_items`: add `.or('owner_user_id.eq.${user.id},assignee_user_id.eq.${user.id}')`
+- `ops_work_items`: add `.or('owner_user_uuid.eq.${user.id},created_by.eq.${user.id}')`
 
-### 2. Auto-resize textarea
-- Switch the composer textarea to `rows={1}` with classes `resize-none overflow-y-auto`.
-- Add a `ref` + `useLayoutEffect` keyed on `composerText` that resets `height = 'auto'` then sets it to `min(scrollHeight, 6 * lineHeight)`. Line height read from computed style; cap stored as constant.
+All three queries already run in the same `fetchTasks` function and their merged result drives both the table and the four stat cards (Total Tasks, Completed, Overdue, In Progress). No separate stat-card fetch exists, so the counts will automatically reflect the filtered set.
 
-### 3. Placeholder hint
-- Directly below the composer row, render a small muted line (`text-xs text-muted-foreground mt-1`) reading **"Tip: paste a screenshot directly into the message box"**, shown only when `composerText.length === 0 && queuedFiles.length === 0`.
+### 2. Subtitle text
+Change the page subtitle from `"View and manage all client tasks"` to `"View and manage your tasks"`.
 
-### 4. Enter / Shift+Enter
-- Confirm existing `handleKeyDown` on both pages already sends on Enter and allows Shift+Enter newline. No change unless missing.
-
-### Scope
-- Only the main inline composers (TeamCommunicationsPage line ~624, ClientInboxPage line ~475). The `NewConversationDialog`-style textarea at TeamCommunicationsPage:862 is out of scope.
-- No changes to `messageAttachments.ts`, edge functions, or other files.
+## What will not change
+- Create Task button
+- Search bar logic
+- Column definitions
+- Status / priority badge rendering
+- Date formatting
+- Any other page in the codebase
