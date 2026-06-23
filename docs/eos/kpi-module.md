@@ -60,10 +60,22 @@ WHERE ur.role = 'kpi_reviewer';
 Expected: at least one row per `kpi_role` value used; exactly one
 `kpi_reviewer` (Nova).
 
-## Smoke tests
+## Manual smoke checklist (post-deploy)
 
-See `src/test/eos/kpi-access.test.ts` for the access-control smoke test.
-Full end-to-end UI tests are deferred to a separate harness pass.
+Run after the role-assignment SQL is applied:
+
+1. Sign in as a CSC (e.g. AJ) → `/my/kpi` renders the CSC dashboard, sign-off
+   panel shows one row, status badge is colour-coded.
+2. Click **Sign off** as that user → row updates to "Signed", page still loads.
+3. Sign in as Nova → `/admin/kpi-overview` lists every staff member with a
+   `kpi_role`, each linking through to `/admin/kpi-review`.
+4. Open one staff member's review → status is computed (not editable), notes
+   field saves, **Sign off as reviewer** records `signoff_type = 'reviewer'`.
+5. Sign in as Angela → same review now offers **Sign off as SuperAdmin**.
+   After signing, `kpi_reviews.locked_at` is populated and editing any of the
+   period's underlying rows is rejected by the lock guard.
+6. Sign in as a tenant user → `/my/kpi`, `/admin/kpi-review`, and
+   `/admin/kpi-overview` all redirect or 404 (RLS denies the underlying read).
 
 ## Troubleshooting
 
