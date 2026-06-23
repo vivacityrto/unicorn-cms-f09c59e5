@@ -1,33 +1,222 @@
-## Fix: HelpCenter access during client impersonation
 
-**Problem:** `HelpCenterProvider` checks `tenant_users` using the staff member's `profile.user_uuid` and `profile.tenant_id`. During client impersonation the staff user has no row in the client's `tenant_users`, so `canAccess` is false and Help Center features hide incorrectly.
+# EOS KPI Module — Final Implementation Plan (revised)
 
-**Fix scope:** one file — `src/components/help-center/HelpCenterContext.tsx`.
+All 6 design decisions locked, plus 5 review corrections applied. Approve to begin Phase 1.
 
-### Changes
+---
 
-1. Add import: `import { useClientPreview } from "@/contexts/ClientPreviewContext";`
-2. Inside `HelpCenterProvider`, call `const { isPreviewMode, actingUserId, actingUserOptions } = useClientPreview();`
-3. Derive a preview-mode relationship role:
-   ```ts
-   const previewRelationshipRole = isPreviewMode && actingUserId
-     ? actingUserOptions.find(o => o.user_uuid === actingUserId)?.relationship_role ?? null
-     : null;
-   ```
-4. Gate the existing `tenant_users` query: change `enabled` to `!!userId && !!tenantId && !isPreviewMode`. Leave query shape otherwise unchanged.
-5. Resolve the effective role and loading state:
-   ```ts
-   const effectiveRole = isPreviewMode ? previewRelationshipRole : relationshipRole;
-   const effectiveLoading = isPreviewMode ? false : accessLoading;
-   ```
-6. Use `effectiveRole` for the `canAccess` calculation (rule unchanged: `primary_contact` or `secondary_contact`). Pass `effectiveLoading` as `accessLoading` in the provider value.
+## Locked Design Decisions
 
-### Not changing
+| # | Decision | Choice |
+|---|---|---|
+| 1 | Sent Items strategy | On-demand read; cache into `kpi_email_log` |
+| 2 | Review cadence | Configurable per role via `dd_kpi_period_type` |
+| 3 | Churn representation | New nullable `churned_at TIMESTAMPTZ` on `public.tenants` |
+| 4 | Cross-staff KPI access | Row in `public.user_roles` with `role = 'kpi_reviewer'` |
+| 5 | Sign-off model | Generic `{reviewer_user_id, signoff_type}` rows (self / reviewer / superadmin) |
+| 6 | Email SLA | First message in same Outlook `conversationId` from staff to original sender |
+| 7 | CSC retention | "Active at `period_start` AND not churned by `period_end`" |
+| 8 | Developer tickets | `kpi_tickets` is the primary table (in-Unicorn). ClickUp untouched. |
+| 9 | Stage Health KPI | Point-in-time at `period_end`. Mapping: `healthy→green`, `monitoring→amber`, `at_risk+critical→red` |
 
-- The `canAccess` rule itself.
-- Non-preview behaviour (same query, same key, same staleTime).
-- Any other file. `ClientPreviewProvider` already wraps the app in `App.tsx`, so the hook is safe to call here.
+## Review Corrections Applied
 
-### Risk
+1. **`kpi_email_log.email_type`** added → new lookup `dd_kpi_email_type` (`general_email`, `client_message`). Enables CST SLA 1 vs SLA 2 split.
+2. **`kpi_tasks.assigned_by UUID NULL → users.user_uuid`** added (e.g. Nova → CST Assistant).
+3. **Stage Health query** changed to "latest snapshot WHERE `snapshot_date <= period_end` per tenant" — tolerates missed/weekend snapshots.
+4. **Angela does NOT get a `kpi_reviewer` row** — `is_super_admin_safe()` already covers her; she signs as `'superadmin'`. Only **Nova** gets the `kpi_reviewer` row.
+5. **`kpi_dev_milestones` moved into Phase 2** so Phase 4's KPI 6 has a source table.
 
-Low. Single component, additive logic, falls through to existing behaviour outside preview mode.
+---
+
+## Audit Headlines (recap)
+
+1. Canonical user table: `public.users` (`user_uuid`, `unicorn_role`, `is_csc`). `profiles` legacy — untouched.
+2. Canonical tenant table: `public.tenants`. No `churned_at` today.
+3. `eos_rocks.owner_id` is the assigned-user column (TEXT UUID); `seat_owner_user_id` mirrored by trigger.
+4. `stage_health_snapshots.health_status ∈ {healthy, monitoring, at_risk, critical}`; consultant link via `tenant_csc_assignments.csc_user_id, is_primary`.
+5. Sent Items already supported in `sync-outlook-calendar` (folder='sent'). `Mail.Read` scope sufficient. Linked Emails unaffected.
+6. Confirmed `dd_` pattern; zero name collisions for the 10 new lookups (9 originals + `dd_kpi_email_type`).
+7. `is_super_admin_safe()` and `is_vivacity_team_safe()` cover SuperAdmin + staff. New helper `is_kpi_reviewer_safe(uuid)` for the user_roles flag.
+8. `email_tickets` family is unrelated mailgun triage. No collision with `kpi_tickets`.
+9. ~502 users, <500 tenants — lock impact negligible. Still use `NOT VALID` + `VALIDATE CONSTRAINT` as hygiene.
+
+---
+
+## Phased Plan
+
+```text
+Phase 1  ── Lookups + column adds + kpi_reviewer helper
+Phase 2  ── KPI core tables + RLS (incl. kpi_dev_milestones)
+Phase 3  ── Outlook Sent Items hook + kpi_email_log on-demand sync
+Phase 4  ── KPI dashboards (CSC / CST / Developer)
+Phase 5  ── Review & 3-way sign-off workflow
+Phase 6  ── SuperAdmin oversight surface
+Phase 7  ── Seed lookups, assign kpi_role, Nova reviewer row, docs, smoke tests
+```
+
+### Phase 1 — Foundation (single migration)
+
+- Create **10** `dd_kpi_*` lookup tables (added `dd_kpi_email_type`) using the confirmed DDL pattern: `id integer GENERATED BY DEFAULT AS IDENTITY PK`, `value TEXT UNIQUE`, `label`, `description NULL`, `sort_order`, `is_active`, `created_at`. Each gets:
+  - `GRANT SELECT … TO authenticated`, `GRANT ALL … TO service_role` (no `anon`).
+  - RLS: authenticated SELECT all; SuperAdmin-managed writes.
+- `ALTER TABLE public.users ADD COLUMN kpi_role TEXT NULL` with `NOT VALID` FK → `dd_kpi_role(value)`, then `VALIDATE CONSTRAINT`.
+- `ALTER TABLE public.tenants ADD COLUMN churned_at TIMESTAMPTZ NULL` + `COMMENT`.
+- Extend `fn_audit_users()` WHEN clause to capture `kpi_role` changes.
+- New helper:
+  ```sql
+  CREATE OR REPLACE FUNCTION public.is_kpi_reviewer_safe(_uid uuid)
+  RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+  AS $$
+    SELECT EXISTS (
+      SELECT 1 FROM public.user_roles
+      WHERE user_id = _uid AND role = 'kpi_reviewer'
+    )
+  $$;
+  REVOKE ALL ON FUNCTION public.is_kpi_reviewer_safe(uuid) FROM PUBLIC;
+  GRANT EXECUTE ON FUNCTION public.is_kpi_reviewer_safe(uuid) TO authenticated;
+  ```
+
+Risk: Very low.
+
+### Phase 2 — KPI core tables + RLS
+
+Each table: `created_at`/`updated_at` (DB trigger), GRANTs (`authenticated` + `service_role`, no `anon`), RLS pattern below.
+
+- **`kpi_email_log`** — `owner_user_id`, `email_type TEXT → dd_kpi_email_type(value)` *(NEW)*, `conversation_id TEXT`, `original_sender TEXT`, `received_at`, `replied_at`, `response_minutes`, `sla_status → dd_kpi_metric_status`. UNIQUE `(owner_user_id, conversation_id)`.
+- **`kpi_tasks`** — `owner_user_id`, `assigned_by UUID NULL → users.user_uuid` *(NEW)*, `title`, `due_at`, `completed_at`, `status → dd_kpi_task_status`.
+- **`kpi_tickets`** — `owner_user_id`, `tenant_id NULL → tenants(id)`, `title`, `description`, `status → dd_kpi_ticket_status`, `priority → dd_kpi_ticket_priority`, `platform → dd_kpi_ticket_platform`, `opened_at`, `closed_at`, lifecycle timestamps.
+- **`kpi_ticket_comms`** — `ticket_id → kpi_tickets`, `comm_type → dd_kpi_ticket_comm_type`, `occurred_at`, `author_user_id`, `summary`.
+- **`kpi_dev_milestones`** *(NEW, moved from "follow-up" into Phase 2)* — `owner_user_id`, `tenant_id NULL`, `project_name TEXT`, `milestone_name TEXT`, `planned_at TIMESTAMPTZ`, `delivered_at TIMESTAMPTZ NULL`, `status → dd_kpi_metric_status`.
+- **`kpi_reviews`** — `owner_user_id`, `period_type → dd_kpi_period_type`, `period_start`, `period_end`, `overall_status → dd_kpi_overall_status`, `locked_at NULL`, `notes`. UNIQUE `(owner_user_id, period_type, period_start)`.
+- **`kpi_review_signoffs`** — `review_id → kpi_reviews`, `reviewer_user_id → users.user_uuid`, `signoff_type TEXT` (`'self'|'reviewer'|'superadmin'`), `signed_at`, `signature_note`. UNIQUE `(review_id, signoff_type, reviewer_user_id)`.
+
+RLS pattern on every `kpi_*` table:
+```sql
+USING (
+  public.is_super_admin_safe(auth.uid())
+  OR public.is_kpi_reviewer_safe(auth.uid())
+  OR (public.is_vivacity_team_safe(auth.uid()) AND owner_user_id = auth.uid())
+)
+```
+No `tenant_members` clause — clients are intentionally excluded.
+
+FK to `tenants(id)`: `ON DELETE SET NULL` (KPI history outlives tenant deletion).
+
+Risk: Low.
+
+### Phase 3 — Outlook Sent Items + on-demand email log sync
+
+- **`OutlookInboxBrowser.tsx`**: optional `folder` prop (`'inbox' | 'sent'`) + UI toggle (~15 lines).
+- **New edge function `kpi-email-log-sync`** (JWT-validated, staff-only):
+  - Reject if `is_vivacity_team_safe(auth.uid())` is false.
+  - Use caller's own `oauth_tokens` row.
+  - Fetch inbox + sent items via existing Graph helpers.
+  - For each inbound message: find **first staff-sent message in same `conversationId`** addressed to the inbound sender → `replied_at`.
+  - Compute `response_minutes`; classify via `dd_kpi_metric_status` thresholds.
+  - **Classify `email_type`** as `client_message` if `original_sender` matches an active tenant_users email; else `general_email`. (CST SLA 1 vs SLA 2.)
+  - Upsert into `kpi_email_log` keyed on `(owner_user_id, conversation_id)`.
+- **New hook `useKpiEmailLog({ from, to })`** triggers sync on dashboard open then reads.
+- Untouched: `capture-outlook-email`, `oauth_tokens`, `MAIL_SCOPES`, Linked Emails.
+
+Risk: Low–medium.
+
+### Phase 4 — KPI dashboards (CSC / CST / Developer)
+
+Route group `src/pages/eos/kpi/` (cyan theme per Core memory).
+
+Database views (SECURITY INVOKER — respect RLS):
+
+- **`v_kpi_csc_summary`** per `(owner_user_id, period_start, period_end)`:
+  - Email SLA from `kpi_email_log` in window.
+  - Retention:
+    ```sql
+    clients_at_start  = COUNT(t WHERE t.created_at <= period_start
+                                AND (t.churned_at IS NULL OR t.churned_at > period_start)
+                                AND assigned CSC = owner_user_id at period_start)
+    churned_in_period = COUNT(... AND t.churned_at BETWEEN period_start AND period_end)
+    retention_pct     = (clients_at_start - churned_in_period) / clients_at_start * 100
+    ```
+  - Stage Health (corrected): per assigned tenant, take the **latest** `stage_health_snapshots` row where `snapshot_date <= period_end`:
+    ```sql
+    SELECT DISTINCT ON (s.tenant_id) s.tenant_id, s.health_status
+    FROM public.stage_health_snapshots s
+    WHERE s.snapshot_date <= period_end
+    ORDER BY s.tenant_id, s.snapshot_date DESC;
+    ```
+    Then map `healthy→green`, `monitoring→amber`, `at_risk|critical→red`; `green_pct = green / total * 100`.
+- **`v_kpi_cst_summary`**: email SLA split by `email_type` (SLA 1 = general_email, SLA 2 = client_message) + task completion (`kpi_tasks` due-vs-completed).
+- **`v_kpi_dev_summary`**: ticket lifecycle (`kpi_tickets` open→closed), comms touchpoints (`kpi_ticket_comms`), rocks (`eos_rocks WHERE owner_id = staff_uuid`), milestones (`kpi_dev_milestones` planned-vs-delivered).
+
+Shared `<KpiDashboard role={...}/>` reads the appropriate view; cells coloured by `dd_kpi_metric_status` / `dd_kpi_overall_status`.
+
+Risk: Medium (UI scope).
+
+### Phase 5 — Review & sign-off
+
+- Open `kpi_reviews` on first dashboard load for `(owner, period_type, period_start)`.
+- Three sign-offs per review: `'self'`, `'reviewer'`, `'superadmin'`. UI gates buttons:
+  - `self` — current user = `owner_user_id`.
+  - `reviewer` — `is_kpi_reviewer_safe(auth.uid())`.
+  - `superadmin` — `is_super_admin_safe(auth.uid())`.
+- Trigger `kpi_review_lock_guard` rejects updates to related `kpi_email_log/tasks/tickets/ticket_comms/dev_milestones` rows when the linked `kpi_reviews.locked_at IS NOT NULL`.
+- `kpi_reviews.locked_at` set when all three sign-off types exist.
+- Every sign-off writes to `audit_events`.
+
+Risk: Low.
+
+### Phase 6 — SuperAdmin oversight
+
+- Route `eos/kpi/admin` listing all staff KPI status: current period progress, missing sign-offs, locked vs open.
+- Reuses `is_super_admin_safe` only. Read-only.
+
+Risk: Very low.
+
+### Phase 7 — Seed, assign, docs, tests
+
+- Seed all 10 `dd_kpi_*` lookups with values from the KPI rubric.
+- Manual one-off `supabase--insert`:
+  - Set `users.kpi_role` for existing CSC/CST/Dev staff.
+  - **Insert ONE `user_roles` row** (`role='kpi_reviewer'`) **for Nova only**. Angela is already SuperAdmin.
+- Vitest:
+  - `is_kpi_reviewer_safe` gating.
+  - Conversation correlation + `email_type` classification in `kpi-email-log-sync`.
+  - `kpi_review_lock_guard` blocks edits after lock.
+  - CSC retention edge cases (zero clients at start, churn on `period_end`).
+  - Stage Health "latest snapshot ≤ period_end" handles gaps correctly.
+- Docs: `docs/eos/kpi-module.md` covering KPI definitions, SLA 1/2 split, period cadences, health-status mapping, 3-way sign-off flow.
+
+---
+
+## Function Standards
+
+```sql
+CREATE OR REPLACE FUNCTION public.<name>(...) RETURNS ...
+LANGUAGE sql|plpgsql
+STABLE                       -- or SECURITY DEFINER where RLS bypass is required
+SET search_path = ''
+AS $$ ... fully.qualified.references ... $$;
+
+REVOKE ALL ON FUNCTION public.<name>(...) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.<name>(...) TO authenticated;  -- or service_role
+```
+
+---
+
+## Risk Register
+
+| Phase | Risk | Reversible? | Off-peak? |
+|---|---|---|---|
+| 1 | Very low | Drop columns/tables/helper | No |
+| 2 | Low | Drop tables | No |
+| 3 | Low–medium | Disable edge fn / hide toggle | No |
+| 4 | Medium (UI scope) | Hide route group | No |
+| 5 | Low | Drop trigger | No |
+| 6 | Very low | Hide route | No |
+| 7 | Very low | Re-run seeds | No |
+
+No phase modifies existing RLS, FK semantics, OAuth scopes, Linked Emails, or ClickUp integration.
+
+---
+
+Approve to start Phase 1.
