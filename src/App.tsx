@@ -135,7 +135,9 @@ const StaffEngagementDetail = lazy(() => import("./pages/admin/StaffEngagementDe
 const AdminStageAnalytics = lazy(() => import("./pages/AdminStageAnalytics"));
 const AdminOperations = lazy(() => import("./pages/AdminOperations"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
- const AdminReviews = lazy(() => import("./pages/AdminReviews"));
+const AdminReviews = lazy(() => import("./pages/AdminReviews"));
+const MyKpiDashboardPage = lazy(() => import("./pages/MyKpiDashboardPage"));
+const KpiReviewerPage = lazy(() => import("./pages/KpiReviewerPage"));
  const MyWork = lazy(() => import("./pages/MyWork"));
  const CalendarTimeCapture = lazy(() => import("./pages/CalendarTimeCapture"));
  const OutlookCallback = lazy(() => import("./pages/OutlookCallback"));
@@ -1073,6 +1075,8 @@ const App = () => (
             <Route path="/administration/role-permissions" element={<ProtectedRoute requireSuperAdmin><RolePermissionsEditor /></ProtectedRoute>} />
             <Route path="/admin/compliance-packs" element={<ProtectedRoute requireSuperAdmin><AdminCompliancePacks /></ProtectedRoute>} />
             <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
+            <Route path="/my/kpi" element={<ProtectedRoute><MyKpiDashboardPage /></ProtectedRoute>} />
+            <Route path="/admin/kpi-review" element={<ProtectedRoute><KpiReviewerPage /></ProtectedRoute>} />
             {/* AI Assistant - SuperAdmin only */}
             <Route path="/admin/assistant" element={<ProtectedRoute requireSuperAdmin><AdminAssistant /></ProtectedRoute>} />
            <Route path="/admin/knowledge" element={<ProtectedRoute requireSuperAdmin><AdminKnowledgeLibrary /></ProtectedRoute>} />
