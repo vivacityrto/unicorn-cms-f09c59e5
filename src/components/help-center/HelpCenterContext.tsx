@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useClientPreview } from "@/contexts/ClientPreviewContext";
 
 export type HelpCenterTab = "chatbot" | "csc" | "support";
 
@@ -21,13 +22,14 @@ export function HelpCenterProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<HelpCenterTab>("chatbot");
   const { profile } = useAuth();
+  const { isPreviewMode, actingUserId, actingUserOptions } = useClientPreview();
 
   const userId = profile?.user_uuid ?? null;
   const tenantId = profile?.tenant_id ?? null;
 
   const { data: relationshipRole, isLoading: accessLoading } = useQuery({
     queryKey: ["help_center_access", userId, tenantId],
-    enabled: !!userId && !!tenantId,
+    enabled: !!userId && !!tenantId && !isPreviewMode,
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<string | null> => {
       const { data, error } = await supabase
@@ -41,8 +43,17 @@ export function HelpCenterProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  const previewRelationshipRole =
+    isPreviewMode && actingUserId
+      ? actingUserOptions.find((o) => o.user_uuid === actingUserId)?.relationship_role ?? null
+      : null;
+
+  const effectiveRole = isPreviewMode ? previewRelationshipRole : relationshipRole;
+  const effectiveLoading = isPreviewMode ? false : accessLoading;
+
   const canAccess =
-    relationshipRole === "primary_contact" || relationshipRole === "secondary_contact";
+    effectiveRole === "primary_contact" || effectiveRole === "secondary_contact";
+
 
   const openHelpCenter = useCallback(
     (tab: HelpCenterTab = "chatbot") => {
@@ -66,8 +77,9 @@ export function HelpCenterProvider({ children }: { children: ReactNode }) {
         closeHelpCenter,
         setActiveTab,
         canAccess,
-        accessLoading,
+        accessLoading: effectiveLoading,
       }}
+
     >
       {children}
     </HelpCenterContext.Provider>
