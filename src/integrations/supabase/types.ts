@@ -66716,6 +66716,18 @@ export type Database = {
         Args: { p_user_uuid: string }
         Returns: number
       }
+      compute_kpi_overall_status: {
+        Args: {
+          p_kpi_role: string
+          p_period_end: string
+          p_period_start: string
+          p_subject_uuid: string
+        }
+        Returns: {
+          metrics: Json
+          overall_status: string
+        }[]
+      }
       compute_membership_usage: { Args: { p_client_id: number }; Returns: Json }
       compute_rock_rollup_status: { Args: { rock_id: string }; Returns: string }
       copy_stage_template_to_package: {
@@ -68697,6 +68709,37 @@ export type Database = {
           p_document_id: number
         }
         Returns: string
+      }
+      upsert_kpi_review: {
+        Args: {
+          p_kpi_role: string
+          p_notes?: string
+          p_period_end: string
+          p_period_start: string
+          p_period_type: string
+          p_subject_uuid: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          id: number
+          kpi_role: string
+          locked_at: string | null
+          metrics: Json
+          notes: string | null
+          overall_status: string | null
+          period_end: string
+          period_start: string
+          period_type: string
+          subject_uuid: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "kpi_reviews"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       upsert_rock_with_parenting: { Args: { p_payload: Json }; Returns: Json }
       user_has_tenant_access: {
