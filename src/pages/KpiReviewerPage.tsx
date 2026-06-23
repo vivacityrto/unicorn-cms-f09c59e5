@@ -72,7 +72,10 @@ export default function KpiReviewerPage() {
         </div>
 
         {subjectUuid ? (
-          <KpiDashboard subjectUuid={subjectUuid} roles={[role]} />
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <KpiDashboard subjectUuid={subjectUuid} roles={[role]} />
+            <KpiReviewPanel subjectUuid={subjectUuid} role={role} />
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground">Select a staff member to load their dashboard.</p>
         )}
