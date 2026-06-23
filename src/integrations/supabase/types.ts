@@ -18275,6 +18275,336 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_kpi_email_type: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_kpi_metric_status: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_kpi_overall_status: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_kpi_period_type: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_kpi_role: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_kpi_task_status: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_kpi_ticket_comm_type: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_kpi_ticket_platform: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_kpi_ticket_priority: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_kpi_ticket_status: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       dd_lifecycle_category: {
         Row: {
           code: string
@@ -51175,6 +51505,7 @@ export type Database = {
           assigned_consultant_user_id: string | null
           billing_status: Database["public"]["Enums"]["billing_status"]
           certificates_issued_count: number
+          churned_at: string | null
           client_onboarded_at: string | null
           closed_at: string | null
           closed_reason: string | null
@@ -51236,6 +51567,7 @@ export type Database = {
           assigned_consultant_user_id?: string | null
           billing_status?: Database["public"]["Enums"]["billing_status"]
           certificates_issued_count?: number
+          churned_at?: string | null
           client_onboarded_at?: string | null
           closed_at?: string | null
           closed_reason?: string | null
@@ -51297,6 +51629,7 @@ export type Database = {
           assigned_consultant_user_id?: string | null
           billing_status?: Database["public"]["Enums"]["billing_status"]
           certificates_issued_count?: number
+          churned_at?: string | null
           client_onboarded_at?: string | null
           closed_at?: string | null
           closed_reason?: string | null
@@ -54822,6 +55155,7 @@ export type Database = {
           is_vivacity_internal: boolean
           job_title: string | null
           keap_url: string | null
+          kpi_role: string | null
           last_name: string
           last_new_client_tasks_email: string | null
           last_sign_in_at: string | null
@@ -54908,6 +55242,7 @@ export type Database = {
           is_vivacity_internal?: boolean
           job_title?: string | null
           keap_url?: string | null
+          kpi_role?: string | null
           last_name: string
           last_new_client_tasks_email?: string | null
           last_sign_in_at?: string | null
@@ -54994,6 +55329,7 @@ export type Database = {
           is_vivacity_internal?: boolean
           job_title?: string | null
           keap_url?: string | null
+          kpi_role?: string | null
           last_name?: string
           last_new_client_tasks_email?: string | null
           last_sign_in_at?: string | null
@@ -55115,6 +55451,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "users_kpi_role_fkey"
+            columns: ["kpi_role"]
+            isOneToOne: false
+            referencedRelation: "dd_kpi_role"
+            referencedColumns: ["value"]
           },
           {
             foreignKeyName: "users_staff_team_fkey"
@@ -65838,6 +66181,7 @@ export type Database = {
       }
       is_ghost_user: { Args: { p_user_uuid: string }; Returns: boolean }
       is_integrator_or_above: { Args: { p_user_id: string }; Returns: boolean }
+      is_kpi_reviewer_safe: { Args: { _uid: string }; Returns: boolean }
       is_meeting_participant: {
         Args: { _meeting_id: string; _user_id: string }
         Returns: boolean
