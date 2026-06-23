@@ -931,6 +931,22 @@ function SharedFolderSection({
   onSaved: () => Promise<void>;
   toast: ReturnType<typeof useToast>['toast'];
 }) {
+  const [sharedFolderReachable, setSharedFolderReachable] = useState<'checking' | 'ok' | 'missing' | null>(null);
+
+  useEffect(() => {
+    if (!settings.shared_folder_item_id) {
+      setSharedFolderReachable(null);
+      return;
+    }
+    setSharedFolderReachable('checking');
+    supabase.functions
+      .invoke('resolve-sharepoint-folder-url', { body: { tenant_id: tenantId } })
+      .then(({ error }) => {
+        setSharedFolderReachable(error ? 'missing' : 'ok');
+      })
+      .catch(() => setSharedFolderReachable('missing'));
+  }, [settings.shared_folder_item_id, tenantId]);
+
   const loadFolder = async (folderId?: string) => {
     setSharedFolderBrowseLoading(true);
     try {
