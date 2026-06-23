@@ -6,6 +6,7 @@ import { KpiDashboard } from "@/components/kpi/KpiDashboard";
 import { KpiStaffSelector } from "@/components/kpi/KpiStaffSelector";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { KpiReviewPanel } from "@/components/kpi/KpiReviewPanel";
 import type { KpiRole } from "@/hooks/useKpiSummary";
 
 const ROLE_LABEL: Record<KpiRole, string> = {
@@ -71,7 +72,10 @@ export default function KpiReviewerPage() {
         </div>
 
         {subjectUuid ? (
-          <KpiDashboard subjectUuid={subjectUuid} roles={[role]} />
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <KpiDashboard subjectUuid={subjectUuid} roles={[role]} />
+            <KpiReviewPanel subjectUuid={subjectUuid} role={role} />
+          </div>
         ) : (
           <p className="text-sm text-muted-foreground">Select a staff member to load their dashboard.</p>
         )}
