@@ -34,6 +34,8 @@ export default function ClientFilesPage() {
   const { activeTenantId: tenantId } = useClientTenant();
   const [sharedFolderName, setSharedFolderName] = useState<string | null>(null);
   const [sharedFolderUrl, setSharedFolderUrl] = useState<string | null>(null);
+  const [sharedFolderItemId, setSharedFolderItemId] = useState<string | null>(null);
+  const [openingFolder, setOpeningFolder] = useState(false);
   const [referenceLinks, setReferenceLinks] = useState<ReferenceLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -48,7 +50,7 @@ export default function ClientFilesPage() {
       const [settingsRes, linksRes] = await Promise.all([
         supabase
           .from('tenant_sharepoint_settings')
-          .select('shared_folder_name, shared_folder_url')
+          .select('shared_folder_name, shared_folder_url, shared_folder_item_id')
           .eq('tenant_id', tenantId)
           .maybeSingle(),
         supabase
@@ -62,6 +64,7 @@ export default function ClientFilesPage() {
       const s = settingsRes.data as any;
       setSharedFolderName(s?.shared_folder_name ?? null);
       setSharedFolderUrl(s?.shared_folder_url ?? null);
+      setSharedFolderItemId(s?.shared_folder_item_id ?? null);
 
       setReferenceLinks((linksRes.data || []) as ReferenceLink[]);
       setLoading(false);
@@ -79,6 +82,26 @@ export default function ClientFilesPage() {
       </div>
     );
   }
+
+  const handleOpenFolder = async () => {
+    if (!sharedFolderItemId) {
+      if (sharedFolderUrl) window.open(sharedFolderUrl, '_blank');
+      return;
+    }
+    setOpeningFolder(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resolve-sharepoint-folder-url', {
+        body: { tenant_id: tenantId },
+      });
+      if (error || !data?.url) throw error ?? new Error('No URL returned');
+      window.open(data.url, '_blank');
+    } catch {
+      if (sharedFolderUrl) window.open(sharedFolderUrl, '_blank');
+      toast.error('Could not resolve the folder URL. Opening last known link instead.');
+    } finally {
+      setOpeningFolder(false);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -106,11 +129,11 @@ export default function ClientFilesPage() {
               {sharedFolderName && (
                 <p className="text-sm font-medium">{sharedFolderName}</p>
               )}
-              <Button asChild size="lg">
-                <a href={sharedFolderUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Open Shared Folder
-                </a>
+              <Button size="lg" onClick={handleOpenFolder} disabled={openingFolder}>
+                {openingFolder
+                  ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  : <ExternalLink className="h-4 w-4 mr-2" />}
+                Open Shared Folder
               </Button>
 
               {/* Inline folder browser */}
