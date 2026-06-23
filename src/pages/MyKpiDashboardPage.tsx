@@ -45,6 +45,7 @@ export default function MyKpiDashboardPage() {
             </Button>
           )}
         </div>
+        <MyKpiSignOffSection />
         <KpiDashboard subjectUuid={profile.user_uuid} />
       </div>
     </DashboardLayout>
