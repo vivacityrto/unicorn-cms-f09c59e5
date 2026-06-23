@@ -1044,6 +1044,15 @@ function SharedFolderSection({
         <div className="flex items-center gap-2">
           <FolderOpen className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium">{settings.shared_folder_name}</span>
+          {sharedFolderReachable === 'checking' && (
+            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          )}
+          {sharedFolderReachable === 'missing' && (
+            <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+              <AlertTriangle className="h-3 w-3" />
+              Folder not found on SharePoint — please re-select
+            </span>
+          )}
           <Button variant="outline" size="sm" onClick={startBrowsing} className="ml-auto">
             Change
           </Button>
