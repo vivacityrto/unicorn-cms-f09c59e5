@@ -6,6 +6,7 @@ import { KpiDashboard } from "@/components/kpi/KpiDashboard";
 import { KpiStaffSelector } from "@/components/kpi/KpiStaffSelector";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { KpiReviewPanel } from "@/components/kpi/KpiReviewPanel";
 import type { KpiRole } from "@/hooks/useKpiSummary";
 
 const ROLE_LABEL: Record<KpiRole, string> = {
