@@ -21,11 +21,11 @@ export function useKpiAccess() {
       return;
     }
     (async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("user_roles")
         .select("id")
         .eq("user_id", user.id)
-        .eq("role", "kpi_reviewer" as never)
+        .eq("role", "kpi_reviewer")
         .limit(1)
         .maybeSingle();
       if (!cancelled) {
