@@ -1,6 +1,7 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { KpiDashboard } from "@/components/kpi/KpiDashboard";
+import { MyKpiSignOffSection } from "@/components/kpi/MyKpiSignOffSection";
 import { Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ export default function MyKpiDashboardPage() {
             </Button>
           )}
         </div>
+        <MyKpiSignOffSection />
         <KpiDashboard subjectUuid={profile.user_uuid} />
       </div>
     </DashboardLayout>
