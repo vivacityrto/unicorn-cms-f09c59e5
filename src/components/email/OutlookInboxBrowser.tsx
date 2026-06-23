@@ -76,27 +76,27 @@ export function OutlookInboxBrowser({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Outlook Inbox
-          </CardTitle>
-          <CardDescription>
-            Connect your Outlook account to link emails to Unicorn records
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <Mail className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground mb-4">
-              Your Outlook account is not connected or the session has expired.
-            </p>
-            <Button onClick={handleConnectOutlook}>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Connect Outlook
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Outlook {folderLabel}
+            </CardTitle>
+            <CardDescription>
+              Connect your Outlook account to link emails to Unicorn records
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <Mail className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <p className="text-muted-foreground mb-4">
+                Your Outlook account is not connected or the session has expired.
+              </p>
+              <Button onClick={handleConnectOutlook}>
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Connect Outlook
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
     );
   }
 
@@ -108,7 +108,7 @@ export function OutlookInboxBrowser({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5" />
-                Outlook Inbox
+                Outlook {folderLabel}
               </CardTitle>
               <CardDescription>
                 Select an email to link it to a client, package, or task
