@@ -135,7 +135,9 @@ const StaffEngagementDetail = lazy(() => import("./pages/admin/StaffEngagementDe
 const AdminStageAnalytics = lazy(() => import("./pages/AdminStageAnalytics"));
 const AdminOperations = lazy(() => import("./pages/AdminOperations"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
- const AdminReviews = lazy(() => import("./pages/AdminReviews"));
+const AdminReviews = lazy(() => import("./pages/AdminReviews"));
+const MyKpiDashboardPage = lazy(() => import("./pages/MyKpiDashboardPage"));
+const KpiReviewerPage = lazy(() => import("./pages/KpiReviewerPage"));
  const MyWork = lazy(() => import("./pages/MyWork"));
  const CalendarTimeCapture = lazy(() => import("./pages/CalendarTimeCapture"));
  const OutlookCallback = lazy(() => import("./pages/OutlookCallback"));
