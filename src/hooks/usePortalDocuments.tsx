@@ -113,17 +113,7 @@ export function useClientVisibleDocuments(tenantId: number | null) {
   });
 }
 
-// Sanitize filename for Supabase Storage paths
-function sanitizeStoragePath(filename: string): string {
-  return filename
-    .normalize('NFD')                          // Decompose accents
-    .replace(/[\u0300-\u036f]/g, '')           // Remove accent marks
-    .replace(/[\u2013\u2014]/g, '-')           // Replace en-dash/em-dash with hyphen
-    .replace(/\s+/g, '_')                      // Replace spaces with underscores
-    .replace(/[^a-zA-Z0-9._-]/g, '')           // Remove any remaining special chars
-    .replace(/_+/g, '_')                       // Collapse multiple underscores
-    .replace(/-+/g, '-');                      // Collapse multiple hyphens
-}
+
 
 interface UploadDocumentParams {
   tenantId: number;
@@ -155,50 +145,23 @@ export function useUploadPortalDocument() {
       linkedTaskId,
       evidenceRequestItemId,
     }: UploadDocumentParams) => {
-      // Upload to storage with sanitized filename
-      const sanitizedName = sanitizeStoragePath(file.name);
-      const storagePath = `${tenantId}/${direction}/${Date.now()}_${sanitizedName}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('portal-documents')
-        .upload(storagePath, file);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('tenant_id', String(tenantId));
+      formData.append('direction', direction);
+      formData.append('is_client_visible', String(isClientVisible));
+      if (categoryId) formData.append('category_id', categoryId);
+      if (tags && tags.length) formData.append('tags', JSON.stringify(tags));
+      if (linkedPackageId != null) formData.append('linked_package_id', String(linkedPackageId));
+      if (linkedStageId != null) formData.append('linked_stage_id', String(linkedStageId));
+      if (linkedTaskId) formData.append('linked_task_id', linkedTaskId);
+      if (evidenceRequestItemId) formData.append('evidence_request_item_id', evidenceRequestItemId);
 
-      if (uploadError) throw uploadError;
-
-      // Create DB record
-      const { data, error } = await supabase
-        .from('portal_documents')
-        .insert({
-          tenant_id: tenantId,
-          storage_path: storagePath,
-          file_name: file.name,
-          file_type: file.type || null,
-          file_size: file.size,
-          direction,
-          is_client_visible: isClientVisible,
-          status: isClientVisible ? 'shared' : 'draft',
-          source: 'manual_upload',
-          category_id: categoryId || null,
-          tags: tags || null,
-          linked_package_id: linkedPackageId || null,
-          linked_stage_id: linkedStageId || null,
-          linked_task_id: linkedTaskId || null,
-          evidence_request_item_id: evidenceRequestItemId || null,
-        })
-        .select()
-        .single();
-
+      const { data, error } = await supabase.functions.invoke(
+        'upload-portal-document',
+        { body: formData },
+      );
       if (error) throw error;
-
-      // Log audit event
-      await supabase.rpc('log_portal_document_event', {
-        p_document_id: data.id,
-        p_document_type: 'portal_document',
-        p_tenant_id: tenantId,
-        p_action: 'uploaded',
-        p_reason: null,
-      });
-
       return data;
     },
     onSuccess: (_, variables) => {
