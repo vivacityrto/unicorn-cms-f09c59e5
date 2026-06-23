@@ -151,8 +151,8 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen }: ClientSidebarProp
       {/* Left Sidebar */}
       <aside
         className={cn(
-          "transition-all duration-300 flex flex-col fixed left-0 h-screen z-30",
-          isPreview ? "top-12" : "top-0",
+          "transition-all duration-300 flex flex-col fixed left-0 z-30",
+          isPreview ? "top-12 h-[calc(100vh-3rem)]" : "top-0 h-screen",
           sidebarOpen ? "w-60" : "w-16",
           "max-md:w-[85vw] max-md:max-w-72",
           !sidebarOpen && "max-md:-translate-x-full"
