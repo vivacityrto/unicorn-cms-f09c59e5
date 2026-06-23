@@ -15,6 +15,11 @@ interface OutlookInboxBrowserProps {
   defaultClientId?: number;
   onEmailLinked?: () => void;
   filterEmail?: string;
+  /**
+   * Mail folder to browse. Defaults to 'inbox' so existing Linked Emails
+   * usages need no changes. Pass 'sent' for the Sent Items folder.
+   */
+  folder?: "inbox" | "sent";
 }
 
 interface OutlookEmail {
@@ -37,9 +42,11 @@ export function OutlookInboxBrowser({
   defaultClientId,
   onEmailLinked,
   filterEmail,
+  folder = "inbox",
 }: OutlookInboxBrowserProps) {
   const navigate = useNavigate();
-  const { emails, isLoading, error, hasConnection, fetchEmails, checkConnection } = useOutlookInbox({ filterEmail });
+  const { emails, isLoading, error, hasConnection, fetchEmails, checkConnection } = useOutlookInbox({ filterEmail, folder });
+  const folderLabel = folder === "sent" ? "Sent Items" : "Inbox";
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEmail, setSelectedEmail] = useState<OutlookEmail | null>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
