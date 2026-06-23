@@ -64007,6 +64007,83 @@ export type Database = {
         }
         Relationships: []
       }
+      v_kpi_csc_summary: {
+        Row: {
+          billable_minutes: number | null
+          billable_pct: number | null
+          entry_count: number | null
+          period_start: string | null
+          period_type: string | null
+          review_locked_at: string | null
+          review_status: string | null
+          subject_uuid: string | null
+          total_minutes: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_reviews_status_fk"
+            columns: ["review_status"]
+            isOneToOne: false
+            referencedRelation: "dd_kpi_overall_status"
+            referencedColumns: ["value"]
+          },
+        ]
+      }
+      v_kpi_cst_summary: {
+        Row: {
+          period_start: string | null
+          period_type: string | null
+          review_locked_at: string | null
+          review_status: string | null
+          sla1_avg_minutes: number | null
+          sla1_met: number | null
+          sla1_pct: number | null
+          sla1_total: number | null
+          sla2_avg_minutes: number | null
+          sla2_met: number | null
+          sla2_pct: number | null
+          sla2_total: number | null
+          subject_uuid: string | null
+          tasks_completed: number | null
+          tasks_on_time: number | null
+          tasks_total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_reviews_status_fk"
+            columns: ["review_status"]
+            isOneToOne: false
+            referencedRelation: "dd_kpi_overall_status"
+            referencedColumns: ["value"]
+          },
+        ]
+      }
+      v_kpi_dev_summary: {
+        Row: {
+          avg_first_response_minutes: number | null
+          avg_resolution_hours: number | null
+          milestones_delivered: number | null
+          milestones_on_time: number | null
+          milestones_total: number | null
+          period_start: string | null
+          period_type: string | null
+          reopen_count: number | null
+          review_locked_at: string | null
+          review_status: string | null
+          subject_uuid: string | null
+          tickets_opened: number | null
+          tickets_resolved: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_reviews_status_fk"
+            columns: ["review_status"]
+            isOneToOne: false
+            referencedRelation: "dd_kpi_overall_status"
+            referencedColumns: ["value"]
+          },
+        ]
+      }
       v_membership_combined_usage: {
         Row: {
           remaining_minutes: number | null
