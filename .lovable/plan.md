@@ -1,38 +1,33 @@
-# Fix: Dynamic SharePoint Shared Folder URL Resolution
+## Fix: HelpCenter access during client impersonation
 
-The "Open Shared Folder" button on the Client Files page sometimes 404s because the stored `shared_folder_url` goes stale when the SharePoint folder is renamed/moved. Fix: resolve the live URL from the stored item ID via Graph at click time, and self-heal the stored URL.
+**Problem:** `HelpCenterProvider` checks `tenant_users` using the staff member's `profile.user_uuid` and `profile.tenant_id`. During client impersonation the staff user has no row in the client's `tenant_users`, so `canAccess` is false and Help Center features hide incorrectly.
 
-## Change 1 — New edge function
+**Fix scope:** one file — `src/components/help-center/HelpCenterContext.tsx`.
 
-**File:** `supabase/functions/resolve-sharepoint-folder-url/index.ts`
+### Changes
 
-- Accept `POST { tenant_id?: number }`.
-- Inline `corsHeaders` (matching `browse-sharepoint-folder` style); handle OPTIONS preflight.
-- Auth: validate JWT via `createClient` with `SUPABASE_SERVICE_ROLE_KEY` (pattern from `browse-sharepoint-folder` lines 125–161). Look up caller in `users` to read `tenant_id`, `unicorn_role`, `global_role`.
-- SuperAdmins may pass an explicit `tenant_id`; regular users are forced to their own.
-- Using the service-role client, `SELECT drive_id, shared_folder_item_id FROM tenant_sharepoint_settings WHERE tenant_id = :tenantId`.
-- If either field missing → `{ error: "Shared folder not configured" }`, status 400.
-- Call `graphGet` from `../_shared/graph-app-client.ts`: `/drives/{drive_id}/items/{shared_folder_item_id}?$select=webUrl`. Return Graph errors with appropriate status.
-- Self-heal: `UPDATE tenant_sharepoint_settings SET shared_folder_url = :webUrl, updated_at = now() WHERE tenant_id = :tenantId`.
-- Return `{ url: webUrl }`, status 200.
-- Wrap in try/catch returning 500 on unexpected errors.
+1. Add import: `import { useClientPreview } from "@/contexts/ClientPreviewContext";`
+2. Inside `HelpCenterProvider`, call `const { isPreviewMode, actingUserId, actingUserOptions } = useClientPreview();`
+3. Derive a preview-mode relationship role:
+   ```ts
+   const previewRelationshipRole = isPreviewMode && actingUserId
+     ? actingUserOptions.find(o => o.user_uuid === actingUserId)?.relationship_role ?? null
+     : null;
+   ```
+4. Gate the existing `tenant_users` query: change `enabled` to `!!userId && !!tenantId && !isPreviewMode`. Leave query shape otherwise unchanged.
+5. Resolve the effective role and loading state:
+   ```ts
+   const effectiveRole = isPreviewMode ? previewRelationshipRole : relationshipRole;
+   const effectiveLoading = isPreviewMode ? false : accessLoading;
+   ```
+6. Use `effectiveRole` for the `canAccess` calculation (rule unchanged: `primary_contact` or `secondary_contact`). Pass `effectiveLoading` as `accessLoading` in the provider value.
 
-## Change 2 — `src/pages/client/ClientFilesPage.tsx`
+### Not changing
 
-- **fetchData select (~line 51):** add `shared_folder_item_id` to the `.select()`.
-- **State (~line 36):** add
-  - `sharedFolderItemId: string | null`
-  - `openingFolder: boolean`
-- **fetchData setters (~line 63):** `setSharedFolderItemId(s?.shared_folder_item_id ?? null)`.
-- **New handler** `handleOpenFolder`:
-  - If no `sharedFolderItemId`, fall back to opening the stored `sharedFolderUrl`.
-  - Otherwise set `openingFolder=true`, invoke `resolve-sharepoint-folder-url` with `{ tenant_id: tenantId }`, open returned `data.url` in a new tab.
-  - On error: open stored `sharedFolderUrl` if present and toast "Could not resolve the folder URL. Opening last known link instead."
-  - Always clear `openingFolder` in `finally`.
-- **Replace button (lines 109–114):** swap the anchor for a `<Button onClick={handleOpenFolder} disabled={openingFolder}>` showing `Loader2` (spinning) while loading, otherwise `ExternalLink`, label "Open Shared Folder". `Loader2` is already imported.
+- The `canAccess` rule itself.
+- Non-preview behaviour (same query, same key, same staleTime).
+- Any other file. `ClientPreviewProvider` already wraps the app in `App.tsx`, so the hook is safe to call here.
 
-## Scope / non-goals
+### Risk
 
-- No DB migrations; `shared_folder_item_id` is assumed to already exist on `tenant_sharepoint_settings`.
-- No changes to other pages, components, or edge functions.
-- RLS unchanged — function uses service role after validating the JWT, mirroring existing SharePoint functions.
+Low. Single component, additive logic, falls through to existing behaviour outside preview mode.
