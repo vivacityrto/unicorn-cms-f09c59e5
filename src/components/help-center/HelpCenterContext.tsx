@@ -77,8 +77,9 @@ export function HelpCenterProvider({ children }: { children: ReactNode }) {
         closeHelpCenter,
         setActiveTab,
         canAccess,
-        accessLoading,
+        accessLoading: effectiveLoading,
       }}
+
     >
       {children}
     </HelpCenterContext.Provider>
