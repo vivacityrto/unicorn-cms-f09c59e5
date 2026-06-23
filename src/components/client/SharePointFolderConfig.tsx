@@ -1047,6 +1047,9 @@ function SharedFolderSection({
           {sharedFolderReachable === 'checking' && (
             <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
           )}
+          {sharedFolderReachable === 'ok' && (
+            <CheckCircle2 className="h-3 w-3 text-green-500" />
+          )}
           {sharedFolderReachable === 'missing' && (
             <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
               <AlertTriangle className="h-3 w-3" />
