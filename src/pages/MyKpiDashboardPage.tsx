@@ -5,6 +5,7 @@ import { KpiDashboard } from "@/components/kpi/KpiDashboard";
 import { MyKpiSignOffSection } from "@/components/kpi/MyKpiSignOffSection";
 import { KpiEmailLogSection } from "@/components/kpi/KpiEmailLogSection";
 import { KpiMonthlySummaryCards } from "@/components/kpi/KpiMonthlySummaryCards";
+import { RaiseTicketButton } from "@/components/kpi/RaiseTicketSheet";
 import { Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
