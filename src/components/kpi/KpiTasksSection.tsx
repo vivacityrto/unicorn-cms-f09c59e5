@@ -129,7 +129,8 @@ function sortPending(a: KpiTaskRow, b: KpiTaskRow) {
   return at - bt;
 }
 
-export function KpiTasksSection() {
+export function KpiTasksSection({ viewerRole = null }: { viewerRole?: string | null } = {}) {
+  const isCst = viewerRole === "cst_assistant";
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
@@ -329,20 +330,28 @@ export function KpiTasksSection() {
                     {fmtDate(t.due_at)}
                   </div>
                   <div className="flex gap-1 flex-wrap justify-end">
-                    <Button size="sm" onClick={() => markStatus(t.id, "done_on_time")}>
-                      Done on time
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={() => markStatus(t.id, "rectified")}>
-                      Rectified
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-rose-600 border-rose-200 hover:bg-rose-50"
-                      onClick={() => markStatus(t.id, "delayed")}
-                    >
-                      Delayed
-                    </Button>
+                    {isCst ? (
+                      <>
+                        <Button size="sm" onClick={() => markStatus(t.id, "done_on_time")}>
+                          Done on time
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => markStatus(t.id, "rectified")}>
+                          Rectified
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                          onClick={() => markStatus(t.id, "delayed")}
+                        >
+                          Delayed
+                        </Button>
+                      </>
+                    ) : (
+                      <Button size="sm" onClick={() => markStatus(t.id, "done_on_time")}>
+                        Mark complete
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

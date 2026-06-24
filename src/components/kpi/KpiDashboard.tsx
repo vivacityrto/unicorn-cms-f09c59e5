@@ -229,7 +229,7 @@ export function KpiDashboard({ subjectUuid, roles, weeks = 12, periodLabel }: Pr
         </div>
       )}
       {isOwnDashboard && profile?.kpi_role === "developer" && <KpiDeveloperTicketQueue />}
-      {isOwnDashboard && profile?.kpi_role === "cst_assistant" && <KpiTasksSection />}
+      {isOwnDashboard && <KpiTasksSection viewerRole={profile?.kpi_role ?? null} />}
     </div>
   );
 }
