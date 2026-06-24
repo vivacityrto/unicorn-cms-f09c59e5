@@ -198,10 +198,14 @@ export default function OutlookCallback() {
         // If user session exists on this origin, return to Time Capture.
         // Otherwise, send them to login (common when redirect returns to a different preview domain).
         setTimeout(async () => {
+          const returnTo = localStorage.getItem('outlook_oauth_return_to');
+          if (returnTo) {
+            localStorage.removeItem('outlook_oauth_return_to');
+          }
           try {
             const { data } = await supabase.auth.getSession();
             if (data.session) {
-              navigate('/calendar/time-capture');
+              navigate(returnTo || '/calendar/time-capture');
               return;
             }
           } catch {
