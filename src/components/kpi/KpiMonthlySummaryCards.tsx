@@ -5,10 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 
 type Period = "weekly" | "monthly" | "quarterly";
+type Role = "csc_consultant" | "cst_assistant" | "developer";
 
 interface Props {
   subjectUuid: string;
   period: Period;
+  role: Role;
 }
 
 const PERIOD_LABEL: Record<Period, string> = {
@@ -42,11 +44,18 @@ function statusBadge(status: Status) {
   return <Badge variant="secondary">No data</Badge>;
 }
 
-function emailStatus(pct: number | null): Status {
+function pctStatus(pct: number | null, on: number, risk: number): Status {
   if (pct == null) return "none";
-  if (pct >= 80) return "on";
-  if (pct >= 72) return "risk";
+  if (pct >= on) return "on";
+  if (pct >= risk) return "risk";
   return "below";
+}
+
+function formatMinutes(min: number | null): string {
+  if (min == null) return "No data";
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  return `${h}h ${m}m`;
 }
 
 interface CardSpec {
@@ -56,58 +65,13 @@ interface CardSpec {
   status: Status;
 }
 
-export function KpiMonthlySummaryCards({ subjectUuid, period }: Props) {
-  const [loading, setLoading] = useState(true);
-  const [emailPct, setEmailPct] = useState<number | null>(null);
+function isoSince(period: Period, offset = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() - PERIOD_DAYS[period] * (1 + offset) + (offset > 0 ? PERIOD_DAYS[period] : 0));
+  return d.toISOString();
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    if (!subjectUuid) return;
-    setLoading(true);
-    (async () => {
-      const since = new Date();
-      since.setDate(since.getDate() - PERIOD_DAYS[period]);
-      const { data } = await (supabase as any)
-        .from("v_kpi_csc_summary")
-        .select("email_total,email_sla_met")
-        .eq("subject_uuid", subjectUuid)
-        .gte("period_start", since.toISOString().slice(0, 10));
-      if (cancelled) return;
-      const rows = (data ?? []) as Array<{ email_total: number; email_sla_met: number }>;
-      const total = rows.reduce((s, r) => s + (r.email_total ?? 0), 0);
-      const met = rows.reduce((s, r) => s + (r.email_sla_met ?? 0), 0);
-      setEmailPct(total > 0 ? (met / total) * 100 : null);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [subjectUuid, period]);
-
-  const cards = useMemo<CardSpec[]>(
-    () => [
-      {
-        label: "EMAILS ≤ 12 HRS",
-        actual: emailPct == null ? "No data" : `${emailPct.toFixed(0)}%`,
-        target: "Target: 80%",
-        status: emailStatus(emailPct),
-      },
-      {
-        label: "CLIENT RETENTION",
-        actual: "No data",
-        target: "Target: 90%",
-        status: "none",
-      },
-      {
-        label: "STAGE HEALTH",
-        actual: "No data",
-        target: "Target: 100% green",
-        status: "none",
-      },
-    ],
-    [emailPct],
-  );
-
+function CardGrid({ cards, period, loading }: { cards: CardSpec[]; period: Period; loading: boolean }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -139,3 +103,216 @@ export function KpiMonthlySummaryCards({ subjectUuid, period }: Props) {
   );
 }
 
+export function KpiMonthlySummaryCards({ subjectUuid, period, role }: Props) {
+  if (role === "csc_consultant") return <CscCards subjectUuid={subjectUuid} period={period} />;
+  if (role === "cst_assistant") return <CstCards subjectUuid={subjectUuid} period={period} />;
+  return <DevCards subjectUuid={subjectUuid} period={period} />;
+}
+
+function CscCards({ subjectUuid, period }: { subjectUuid: string; period: Period }) {
+  const [loading, setLoading] = useState(true);
+  const [emailPct, setEmailPct] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!subjectUuid) return;
+    setLoading(true);
+    (async () => {
+      const since = new Date();
+      since.setDate(since.getDate() - PERIOD_DAYS[period]);
+      const { data } = await (supabase as any)
+        .from("v_kpi_csc_summary")
+        .select("email_total,email_sla_met")
+        .eq("subject_uuid", subjectUuid)
+        .gte("period_start", since.toISOString().slice(0, 10));
+      if (cancelled) return;
+      const rows = (data ?? []) as Array<{ email_total: number; email_sla_met: number }>;
+      const total = rows.reduce((s, r) => s + (r.email_total ?? 0), 0);
+      const met = rows.reduce((s, r) => s + (r.email_sla_met ?? 0), 0);
+      setEmailPct(total > 0 ? (met / total) * 100 : null);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [subjectUuid, period]);
+
+  const cards = useMemo<CardSpec[]>(() => [
+    {
+      label: "EMAILS ≤ 12 HRS",
+      actual: emailPct == null ? "No data" : `${emailPct.toFixed(0)}%`,
+      target: "Target: 80%",
+      status: pctStatus(emailPct, 80, 72),
+    },
+    { label: "CLIENT RETENTION", actual: "No data", target: "Target: 90%", status: "none" },
+    { label: "STAGE HEALTH", actual: "No data", target: "Target: 100% green", status: "none" },
+  ], [emailPct]);
+
+  return <CardGrid cards={cards} period={period} loading={loading} />;
+}
+
+function CstCards({ subjectUuid, period }: { subjectUuid: string; period: Period }) {
+  const [loading, setLoading] = useState(true);
+  const [sla1, setSla1] = useState<number | null>(null);
+  const [sla2, setSla2] = useState<number | null>(null);
+  const [tasksPct, setTasksPct] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!subjectUuid) return;
+    setLoading(true);
+    (async () => {
+      const since = new Date();
+      since.setDate(since.getDate() - PERIOD_DAYS[period]);
+      const { data } = await (supabase as any)
+        .from("v_kpi_cst_summary")
+        .select("sla1_total,sla1_met,sla2_total,sla2_met,tasks_total,tasks_on_time")
+        .eq("subject_uuid", subjectUuid)
+        .gte("period_start", since.toISOString().slice(0, 10));
+      if (cancelled) return;
+      const rows = (data ?? []) as Array<any>;
+      const sum = (k: string) => rows.reduce((s, r) => s + (r[k] ?? 0), 0);
+      const s1t = sum("sla1_total"), s1m = sum("sla1_met");
+      const s2t = sum("sla2_total"), s2m = sum("sla2_met");
+      const tt = sum("tasks_total"), tot = sum("tasks_on_time");
+      setSla1(s1t > 0 ? (s1m / s1t) * 100 : null);
+      setSla2(s2t > 0 ? (s2m / s2t) * 100 : null);
+      setTasksPct(tt > 0 ? (tot / tt) * 100 : null);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [subjectUuid, period]);
+
+  const cards = useMemo<CardSpec[]>(() => [
+    {
+      label: "SLA 1 — EMAILS ≤ 12 HRS",
+      actual: sla1 == null ? "No data" : `${sla1.toFixed(0)}%`,
+      target: "Target: 90%",
+      status: pctStatus(sla1, 90, 80),
+    },
+    {
+      label: "SLA 2 — CLIENT MESSAGES ≤ 12 HRS",
+      actual: sla2 == null ? "No data" : `${sla2.toFixed(0)}%`,
+      target: "Target: 90%",
+      status: pctStatus(sla2, 90, 80),
+    },
+    {
+      label: "TASKS BEFORE DEADLINE",
+      actual: tasksPct == null ? "No data" : `${tasksPct.toFixed(0)}%`,
+      target: "Target: 80%",
+      status: pctStatus(tasksPct, 80, 70),
+    },
+  ], [sla1, sla2, tasksPct]);
+
+  return <CardGrid cards={cards} period={period} loading={loading} />;
+}
+
+function DevCards({ subjectUuid, period }: { subjectUuid: string; period: Period }) {
+  const [loading, setLoading] = useState(true);
+  const [firstResp, setFirstResp] = useState<{ avg: number | null; allOk: boolean; anyOver: boolean }>({ avg: null, allOk: false, anyOver: false });
+  const [stalled, setStalled] = useState<number | null>(null);
+  const [trend, setTrend] = useState<{ current: number; prior: number } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!subjectUuid) return;
+    setLoading(true);
+    (async () => {
+      const days = PERIOD_DAYS[period];
+      const since = new Date(); since.setDate(since.getDate() - days);
+      const sincePrior = new Date(); sincePrior.setDate(sincePrior.getDate() - 2 * days);
+      const stallThreshold = new Date(); stallThreshold.setDate(stallThreshold.getDate() - 2);
+
+      // KPI 1: first response weighted avg
+      const { data: devRows } = await (supabase as any)
+        .from("v_kpi_dev_summary")
+        .select("tickets_opened,avg_first_response_minutes")
+        .eq("subject_uuid", subjectUuid)
+        .gte("period_start", since.toISOString().slice(0, 10));
+      const rows = (devRows ?? []) as Array<{ tickets_opened: number; avg_first_response_minutes: number | null }>;
+      let wsum = 0, wcount = 0, anyOver = false, allOk = rows.length > 0;
+      for (const r of rows) {
+        if (r.avg_first_response_minutes == null) continue;
+        const w = r.tickets_opened ?? 0;
+        if (w <= 0) continue;
+        wsum += r.avg_first_response_minutes * w;
+        wcount += w;
+        if (r.avg_first_response_minutes > 720) anyOver = true; else void 0;
+      }
+      const avg = wcount > 0 ? wsum / wcount : null;
+      if (rows.length === 0) allOk = false;
+
+      // KPI 2: stalled in_progress
+      const { count: stalledCount } = await (supabase as any)
+        .from("kpi_tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("assignee_uuid", subjectUuid)
+        .eq("status", "in_progress")
+        .lt("opened_at", stallThreshold.toISOString());
+
+      // KPI 4: trend
+      const { count: curCount } = await (supabase as any)
+        .from("kpi_tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("assignee_uuid", subjectUuid)
+        .gte("opened_at", since.toISOString());
+      const { count: priorCount } = await (supabase as any)
+        .from("kpi_tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("assignee_uuid", subjectUuid)
+        .gte("opened_at", sincePrior.toISOString())
+        .lt("opened_at", since.toISOString());
+
+      if (cancelled) return;
+      setFirstResp({ avg, allOk: allOk && !anyOver, anyOver });
+      setStalled(stalledCount ?? 0);
+      setTrend({ current: curCount ?? 0, prior: priorCount ?? 0 });
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [subjectUuid, period]);
+
+  const cards = useMemo<CardSpec[]>(() => {
+    const firstStatus: Status = firstResp.avg == null ? "none" : firstResp.anyOver ? "below" : "on";
+
+    const stalledStatus: Status = stalled == null ? "none" : stalled === 0 ? "on" : "below";
+
+    let trendActual = "No data";
+    let trendStatus: Status = "none";
+    if (trend) {
+      if (trend.prior === 0 && trend.current === 0) {
+        trendActual = "No change";
+        trendStatus = "risk";
+      } else if (trend.prior === 0) {
+        trendActual = `↑ ${trend.current}`;
+        trendStatus = "below";
+      } else {
+        const change = ((trend.current - trend.prior) / trend.prior) * 100;
+        if (Math.abs(change) < 0.5) { trendActual = "No change"; trendStatus = "risk"; }
+        else if (change < 0) { trendActual = `↓ ${Math.abs(change).toFixed(0)}%`; trendStatus = "on"; }
+        else { trendActual = `↑ ${change.toFixed(0)}%`; trendStatus = "below"; }
+      }
+    }
+
+    return [
+      {
+        label: "KPI 1 — FIRST RESPONSE",
+        actual: formatMinutes(firstResp.avg),
+        target: "Target: ≤ 12 hrs",
+        status: firstStatus,
+      },
+      {
+        label: "KPI 2 — IN-PROGRESS STALLED",
+        actual: stalled == null ? "No data" : String(stalled),
+        target: "Target: 0 stalled",
+        status: stalledStatus,
+      },
+      {
+        label: "KPI 4 — TICKET VOLUME TREND",
+        actual: trendActual,
+        target: "Target: month-on-month decrease",
+        status: trendStatus,
+      },
+    ];
+  }, [firstResp, stalled, trend]);
+
+  return <CardGrid cards={cards} period={period} loading={loading} />;
+}
