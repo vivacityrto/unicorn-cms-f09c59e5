@@ -158,6 +158,112 @@ serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
+
+    // ---- Manual pair mode -------------------------------------------------
+    if (body?.mode === "manual") {
+      const inboundMessageId: string | undefined = body.inboundMessageId;
+      const outboundMessageId: string | undefined = body.outboundMessageId;
+      const emailType: "general_email" | "client_message" =
+        body.emailType === "client_message" ? "client_message" : "general_email";
+
+      if (!inboundMessageId || !outboundMessageId) {
+        return new Response(
+          JSON.stringify({ error: "inboundMessageId and outboundMessageId are required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: tokenRowM, error: tokErrM } = await admin
+        .from("oauth_tokens")
+        .select("access_token,refresh_token,expires_at,scope")
+        .eq("user_id", userId)
+        .eq("provider", "microsoft")
+        .maybeSingle();
+      if (tokErrM || !tokenRowM) {
+        return new Response(
+          JSON.stringify({ error: "Outlook not connected for this user" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const accessTokenM = await refreshIfNeeded(admin, userId, tokenRowM as TokenRecord);
+
+      const select =
+        "id,subject,conversationId,from,toRecipients,receivedDateTime,sentDateTime,bodyPreview";
+      const fetchMsg = async (id: string): Promise<GraphMessage> => {
+        const res = await fetch(
+          `https://graph.microsoft.com/v1.0/me/messages/${encodeURIComponent(id)}?$select=${select}`,
+          { headers: { Authorization: `Bearer ${accessTokenM}` } }
+        );
+        if (!res.ok) throw new Error(`Graph fetch message ${id} failed: ${await res.text()}`);
+        return (await res.json()) as GraphMessage;
+      };
+
+      const [inMsg, outMsg] = await Promise.all([
+        fetchMsg(inboundMessageId),
+        fetchMsg(outboundMessageId),
+      ]);
+
+      const receivedAt = inMsg.receivedDateTime ?? null;
+      const sentAt = outMsg.sentDateTime ?? null;
+      let responseMinutes: number | null = null;
+      let slaMet: boolean | null = null;
+      if (receivedAt && sentAt && new Date(sentAt) >= new Date(receivedAt)) {
+        responseMinutes = Math.round(
+          (new Date(sentAt).getTime() - new Date(receivedAt).getTime()) / 60000
+        );
+        slaMet = responseMinutes <= SLA_MINUTES[emailType];
+      }
+      const conversationId = inMsg.conversationId ?? outMsg.conversationId ?? null;
+
+      const manualRows = [
+        {
+          user_uuid: userId,
+          email_type: emailType,
+          direction: "inbound",
+          message_id: inMsg.id,
+          conversation_id: conversationId,
+          subject: inMsg.subject ?? null,
+          from_address: inMsg.from?.emailAddress?.address ?? null,
+          to_address: inMsg.toRecipients?.[0]?.emailAddress?.address ?? null,
+          received_at: receivedAt,
+          sent_at: null,
+          responded_at: sentAt,
+          response_minutes: responseMinutes,
+          sla_met: slaMet,
+          raw_folder: "inbox",
+          metadata: { source: "manual" },
+        },
+        {
+          user_uuid: userId,
+          email_type: emailType,
+          direction: "outbound",
+          message_id: outMsg.id,
+          conversation_id: conversationId,
+          subject: outMsg.subject ?? null,
+          from_address: outMsg.from?.emailAddress?.address ?? null,
+          to_address: outMsg.toRecipients?.[0]?.emailAddress?.address ?? null,
+          received_at: null,
+          sent_at: sentAt,
+          responded_at: null,
+          response_minutes: null,
+          sla_met: null,
+          raw_folder: "sentitems",
+          metadata: { source: "manual" },
+        },
+      ];
+
+      const { error: upErrM } = await admin
+        .from("kpi_email_log")
+        .upsert(manualRows, { onConflict: "user_uuid,message_id" });
+      if (upErrM) throw upErrM;
+
+      return new Response(
+        JSON.stringify({ ok: true, mode: "manual", inserted: 2 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    // ---- end manual mode --------------------------------------------------
+
     const folders: Folder[] = Array.isArray(body.folders) ? body.folders : ["inbox", "sent"];
     const top: number = typeof body.top === "number" ? body.top : 200;
 

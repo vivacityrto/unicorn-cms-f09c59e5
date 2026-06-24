@@ -112,9 +112,43 @@ export function useKpiEmailLog(options: UseKpiEmailLogOptions = {}) {
     [fetchRows]
   );
 
+  const logManualPair = useCallback(
+    async (params: {
+      inboundMessageId: string;
+      outboundMessageId: string;
+      emailType: KpiEmailType;
+    }) => {
+      setIsSyncing(true);
+      setError(null);
+      try {
+        const { data, error: fnErr } = await supabase.functions.invoke("kpi-email-log-sync", {
+          body: {
+            mode: "manual",
+            inboundMessageId: params.inboundMessageId,
+            outboundMessageId: params.outboundMessageId,
+            emailType: params.emailType,
+          },
+        });
+        if (fnErr) throw fnErr;
+        if (data?.error) throw new Error(data.error);
+        toast.success("Email response logged");
+        await fetchRows();
+        return data;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to log email response";
+        setError(msg);
+        toast.error(msg);
+        throw err;
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    [fetchRows]
+  );
+
   useEffect(() => {
     fetchRows();
   }, [fetchRows]);
 
-  return { rows, isLoading, isSyncing, error, refetch: fetchRows, sync };
+  return { rows, isLoading, isSyncing, error, refetch: fetchRows, sync, logManualPair };
 }
