@@ -175,8 +175,8 @@ function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: str
                   <tr key={e.id} className="border-t">
                     <td className="px-2 py-1">{fmtDateTime(e.received_at)}</td>
                     <td className="px-2 py-1">{fmtDateTime(e.responded_at)}</td>
-                    <td className="px-2 py-1">{e.response_minutes ?? "—"}</td>
-                    <td className="px-2 py-1">{e.email_type}</td>
+                    <td className="px-2 py-1">{fmtMinutes(e.response_minutes)}</td>
+                    <td className="px-2 py-1">{fmtEmailType(e.email_type)}</td>
                     <td className="px-2 py-1">
                       <Badge variant={e.sla_met ? "default" : "destructive"}>
                         {e.sla_met == null ? "—" : e.sla_met ? "Met" : "Missed"}
