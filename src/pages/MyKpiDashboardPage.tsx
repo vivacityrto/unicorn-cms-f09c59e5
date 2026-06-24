@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { KpiDashboard } from "@/components/kpi/KpiDashboard";
@@ -5,11 +6,33 @@ import { MyKpiSignOffSection } from "@/components/kpi/MyKpiSignOffSection";
 import { Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useKpiAccess } from "@/hooks/useKpiAccess";
+import type { KpiRole } from "@/hooks/useKpiSummary";
+
+type Period = "weekly" | "monthly" | "quarterly";
+
+const PERIOD_WEEKS: Record<Period, number> = {
+  weekly: 1,
+  monthly: 5,
+  quarterly: 13,
+};
+
+const KPI_ROLE_TO_SHORT: Record<string, KpiRole> = {
+  csc_consultant: "csc",
+  cst_assistant: "cst",
+  developer: "dev",
+};
 
 export default function MyKpiDashboardPage() {
   const { profile, loading } = useAuth();
   const { canViewAnyStaff } = useKpiAccess();
+  const [period, setPeriod] = useState<Period>("weekly");
+
+  const roles = useMemo<KpiRole[] | undefined>(() => {
+    const short = profile?.kpi_role ? KPI_ROLE_TO_SHORT[profile.kpi_role] : undefined;
+    return short ? [short] : undefined;
+  }, [profile?.kpi_role]);
 
   if (loading) {
     return (
@@ -36,17 +59,32 @@ export default function MyKpiDashboardPage() {
           <div>
             <h1 className="text-2xl font-semibold">My KPI dashboard</h1>
             <p className="text-sm text-muted-foreground">
-              Your weekly KPI rollup across CSC, CST and Dev metrics.
+              Your KPI rollup and role-specific activity.
             </p>
           </div>
-          {canViewAnyStaff && (
-            <Button asChild variant="outline" size="sm">
-              <Link to="/admin/kpi-review">Open reviewer view</Link>
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+              <TabsList>
+                <TabsTrigger value="weekly">Weekly</TabsTrigger>
+                <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {canViewAnyStaff && (
+              <Button asChild variant="outline" size="sm">
+                <Link to="/admin/kpi-review">Open reviewer view</Link>
+              </Button>
+            )}
+          </div>
         </div>
+
+        <KpiDashboard
+          subjectUuid={profile.user_uuid}
+          roles={roles}
+          weeks={PERIOD_WEEKS[period]}
+        />
+
         <MyKpiSignOffSection />
-        <KpiDashboard subjectUuid={profile.user_uuid} />
       </div>
     </DashboardLayout>
   );
