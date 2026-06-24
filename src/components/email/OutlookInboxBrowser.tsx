@@ -244,7 +244,7 @@ export function OutlookInboxBrowser({
         onOpenChange={setLinkModalOpen}
         email={selectedEmail}
         defaultClientId={defaultClientId}
-        tenantId={tenantId}
+        tenantId={tenantId ?? ""}
         onSuccess={onEmailLinked}
       />
     </>
