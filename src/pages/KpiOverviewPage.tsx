@@ -113,7 +113,7 @@ export default function KpiOverviewPage() {
         const { data: reviews } = await (supabase as any)
           .from("kpi_reviews")
           .select("id, subject_uuid, locked_at")
-          .eq("kpi_role", role)
+          .eq("kpi_role", ROLE_TO_KPI_ROLE[role])
           .eq("period_type", periodType)
           .eq("period_start", periodStart)
           .in("subject_uuid", filtered.map((f) => f.user_uuid));
@@ -138,7 +138,7 @@ export default function KpiOverviewPage() {
         const computed = await Promise.all(
           filtered.map(async (u) => {
             const { data } = await (supabase as any).rpc("compute_kpi_overall_status", {
-              p_kpi_role: role,
+              p_kpi_role: ROLE_TO_KPI_ROLE[role],
               p_subject_uuid: u.user_uuid,
               p_period_start: periodStart,
               p_period_end: periodEnd,
