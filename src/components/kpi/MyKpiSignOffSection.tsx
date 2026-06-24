@@ -80,6 +80,10 @@ function fmtMinutes(m: number | null | undefined) {
   if (h === 0) return `${r}m`;
   return `${h}h ${r}m`;
 }
+function fmtSubject(s: string | null | undefined) {
+  if (!s) return "—";
+  return s.length > 50 ? s.slice(0, 50) + "…" : s;
+}
 
 function periodHeader(r: ReviewRow) {
   const start = parseISO(r.period_start);
