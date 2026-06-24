@@ -305,7 +305,7 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           <TrafficLight pct={sla2Pct} target={90} label="SLA 2" />
         </div>
         {emails.length > 0 && (
-          <div className="rounded border">
+          <div className="rounded border max-h-[240px] overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-left">
                 <tr>
