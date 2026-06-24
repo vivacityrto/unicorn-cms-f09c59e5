@@ -20,6 +20,13 @@ const PERIOD_WEEKS: Record<Period, number> = {
   quarterly: 13,
 };
 
+const PERIOD_LABEL: Record<Period, string> = {
+  weekly: "This week",
+  monthly: "Last 4 weeks",
+  quarterly: "Last 13 weeks",
+};
+
+
 const KPI_ROLE_TO_SHORT: Record<string, KpiRole> = {
   csc_consultant: "csc",
   cst_assistant: "cst",
