@@ -23,6 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { KpiEmailLogSection } from "@/components/kpi/KpiEmailLogSection";
 import { KpiTasksSection } from "@/components/kpi/KpiTasksSection";
 import { KpiDeveloperTicketQueue } from "@/components/kpi/KpiDeveloperTicketQueue";
+import { RaiseTicketButton } from "@/components/kpi/RaiseTicketSheet";
 
 interface Props {
   subjectUuid: string;
@@ -222,8 +223,13 @@ export function KpiDashboard({ subjectUuid, roles, weeks = 12, periodLabel }: Pr
       </Card>
 
       {/* Email log rendered by MyKpiDashboardPage for csc/cst roles */}
+      {isOwnDashboard && profile?.kpi_role === "developer" && (
+        <div className="flex justify-end">
+          <RaiseTicketButton />
+        </div>
+      )}
       {isOwnDashboard && profile?.kpi_role === "developer" && <KpiDeveloperTicketQueue />}
-      {isOwnDashboard && profile?.kpi_role && <KpiTasksSection />}
+      {isOwnDashboard && profile?.kpi_role === "cst_assistant" && <KpiTasksSection />}
     </div>
   );
 }
