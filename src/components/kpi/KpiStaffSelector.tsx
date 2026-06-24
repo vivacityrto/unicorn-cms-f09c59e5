@@ -18,10 +18,10 @@ interface Props {
   label?: string;
 }
 
-const ROLE_TO_UNICORN: Record<string, string[]> = {
-  csc: ["CSC"],
-  cst: ["CET", "Admin", "User"],
-  dev: ["Team Member", "Team Leader", "Integrator"],
+const ROLE_TO_KPI_ROLE: Record<string, string> = {
+  csc: "csc_consultant",
+  cst: "cst_assistant",
+  dev: "developer",
 };
 
 export function KpiStaffSelector({ value, onChange, filterRole, label = "Viewing staff member" }: Props) {
@@ -33,22 +33,21 @@ export function KpiStaffSelector({ value, onChange, filterRole, label = "Viewing
     (async () => {
       let query = (supabase as any)
         .from("users")
-        .select("user_uuid, first_name, last_name, email, unicorn_role, is_vivacity_internal, status, kpi_pod")
+        .select("user_uuid, first_name, last_name, email, unicorn_role, is_vivacity_internal, kpi_role, kpi_pod")
         .eq("is_vivacity_internal", true)
-        .neq("status", "archived")
         .order("first_name", { ascending: true });
+      if (filterRole) {
+        query = query.eq("kpi_role", ROLE_TO_KPI_ROLE[filterRole]);
+      }
       const { data } = await query;
       if (cancelled) return;
-      const allowed = filterRole ? ROLE_TO_UNICORN[filterRole] : null;
-      const list = (data ?? [])
-        .filter((u: any) => !allowed || allowed.includes(u.unicorn_role))
-        .map((u: any) => ({
-          user_uuid: u.user_uuid as string,
-          display_name:
-            [u.first_name, u.last_name].filter(Boolean).join(" ").trim() || (u.email as string) || "Unknown",
-          unicorn_role: u.unicorn_role,
-          is_qa: u.kpi_pod === "qa",
-        }));
+      const list = (data ?? []).map((u: any) => ({
+        user_uuid: u.user_uuid as string,
+        display_name:
+          [u.first_name, u.last_name].filter(Boolean).join(" ").trim() || (u.email as string) || "Unknown",
+        unicorn_role: u.unicorn_role,
+        is_qa: u.kpi_pod === "qa",
+      }));
       setStaff(list);
       setLoading(false);
     })();
