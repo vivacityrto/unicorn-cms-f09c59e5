@@ -22,6 +22,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { KpiEmailLogSection } from "@/components/kpi/KpiEmailLogSection";
 import { KpiTasksSection } from "@/components/kpi/KpiTasksSection";
+import { KpiDeveloperTicketQueue } from "@/components/kpi/KpiDeveloperTicketQueue";
 
 interface Props {
   subjectUuid: string;
@@ -209,6 +210,7 @@ export function KpiDashboard({ subjectUuid, roles, weeks = 12 }: Props) {
       </Card>
 
       {showEmailLog && <KpiEmailLogSection subjectUuid={subjectUuid} />}
+      {isOwnDashboard && profile?.kpi_role === "developer" && <KpiDeveloperTicketQueue />}
       {isOwnDashboard && profile?.kpi_role && <KpiTasksSection />}
     </div>
   );
