@@ -35,6 +35,7 @@ interface PickedEmail {
   subject: string;
   from?: { emailAddress?: { name?: string; address?: string } };
   receivedDateTime?: string;
+  sentDateTime?: string;
 }
 
 function fmtDt(iso: string | null | undefined) {
@@ -307,9 +308,16 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
                   <div className="font-medium">Replied</div>
                   <div>{outbound.subject || "(No subject)"}</div>
                   <div className="text-muted-foreground">
-                    {fmtDt((outbound as any).sentDateTime ?? null)}
+                    Sent: {fmtDt(outbound.sentDateTime ?? null)}
                   </div>
                 </div>
+
+                {!outbound.sentDateTime && (
+                  <div className="p-3 rounded-md border border-amber-300 bg-amber-50 text-sm text-amber-900">
+                    This email may not be a sent item — no sent timestamp found.
+                    Go back and select from your Sent Items folder.
+                  </div>
+                )}
 
                 <div>
                   <Label className="mb-2 block">Email type</Label>
@@ -333,7 +341,7 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button onClick={handleConfirm} disabled={isSyncing}>
+                  <Button onClick={handleConfirm} disabled={isSyncing || !outbound.sentDateTime}>
                     {isSyncing ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Logging…
