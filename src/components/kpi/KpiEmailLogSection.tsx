@@ -54,6 +54,11 @@ function fmtMinutes(mins: number | null | undefined) {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
+function fmtSubject(s: string | null | undefined) {
+  if (!s) return "—";
+  return s.length > 50 ? s.slice(0, 50) + "…" : s;
+}
+
 function SlaBadge({ value }: { value: boolean | null }) {
   if (value === null || value === undefined) {
     return <span className="text-muted-foreground">—</span>;
@@ -97,6 +102,8 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
 
   const handleConnect = async () => {
     try {
+      // Tell the OAuth callback to bring the user back here after auth.
+      localStorage.setItem("outlook_oauth_return_to", "/my/kpi");
       const result: any = await connect();
       if (result && "openedInNewTab" in result && !result.openedInNewTab && result.authUrl) {
         setPopupAuthUrl(result.authUrl);
@@ -202,20 +209,22 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Received</TableHead>
-                  <TableHead>Replied</TableHead>
-                  <TableHead>Response time</TableHead>
-                  <TableHead>SLA</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Responded</TableHead>
+                  <TableHead>Duration</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead>SLA</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {inboundRows.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell>{fmtDt(r.received_at)}</TableCell>
+                    <TableCell title={r.subject ?? ""}>{fmtSubject(r.subject)}</TableCell>
                     <TableCell>{fmtDt(r.responded_at)}</TableCell>
                     <TableCell>{fmtMinutes(r.response_minutes)}</TableCell>
-                    <TableCell><SlaBadge value={r.sla_met} /></TableCell>
                     <TableCell>{typeLabel(r.email_type)}</TableCell>
+                    <TableCell><SlaBadge value={r.sla_met} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
