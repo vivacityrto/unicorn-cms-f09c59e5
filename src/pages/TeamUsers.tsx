@@ -96,6 +96,7 @@ export default function TeamUsers() {
           is_csc
         `)
         .or('global_role.eq.SuperAdmin,unicorn_role.eq.Super Admin,user_type.eq.Vivacity Team,user_type.eq.Vivacity')
+        .neq('kpi_pod', 'qa')
         .order('first_name', { ascending: true });
 
       if (error) throw error;
