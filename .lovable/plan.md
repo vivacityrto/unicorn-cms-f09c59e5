@@ -1,34 +1,12 @@
-## Fix `useKpiAccess` reviewer source
+## Add KPI entries to EOS sidebar section
 
-Reviewer status now lives on `users.kpi_role = 'reviewer'` (already exposed via `useAuth().profile`). Replace the `user_roles` query with a synchronous profile check.
+In `src/components/DashboardLayout.tsx`:
 
-### Change — `src/hooks/useKpiAccess.tsx`
+1. Import `useAuth` (if not already used in component for `profile`) and `useKpiAccess` from `@/hooks/useKpiAccess`. Add `Gauge` (or reuse an existing lucide icon already imported, e.g. `BarChart3`/`Target`) for KPI items.
+2. Inside the component, read `profile?.kpi_role` and `const { canViewAnyStaff } = useKpiAccess();`.
+3. Extend `filteredEosItems` memo (deps include `profile?.kpi_role`, `canViewAnyStaff`) to append, after the existing static EOS items:
+   - If `profile?.kpi_role` is set (any non-null value): `{ icon: Gauge, label: "My KPI", path: "/my/kpi" }`
+   - If `canViewAnyStaff` is true: `{ icon: BarChart3, label: "KPI Review", path: "/admin/kpi-review" }` and `{ icon: Target, label: "KPI Overview", path: "/admin/kpi-overview" }`
+4. Users with no `kpi_role` and not SuperAdmin/reviewer get nothing extra.
 
-- Drop the `useEffect`, `useState`, `supabase`, and `user` usage.
-- Compute `isReviewer` directly: `profile?.kpi_role === "reviewer"`.
-- Drop `loading` (now synchronous) — return `loading: false` to keep the existing return shape and avoid touching callers.
-- Update the doc comment to reference `users.kpi_role = 'reviewer'`.
-
-Resulting hook:
-
-```ts
-import { useAuth } from "@/hooks/useAuth";
-
-/**
- * Whether the current user can view any staff member's KPI dashboard.
- * True for SuperAdmins and profiles where `users.kpi_role = 'reviewer'`.
- */
-export function useKpiAccess() {
-  const { profile } = useAuth();
-  const isSuperAdmin = profile?.global_role === "SuperAdmin";
-  const isReviewer = profile?.kpi_role === "reviewer";
-  return {
-    isSuperAdmin,
-    isReviewer,
-    canViewAnyStaff: isSuperAdmin || isReviewer,
-    loading: false,
-  };
-}
-```
-
-No DB, RLS, or caller changes.
+No other sections, routes, or styles changed — entries follow the same `{ icon, label, path }` shape as the existing EOS items so `renderSection("eos", ...)` handles them automatically.

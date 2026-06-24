@@ -1,8 +1,9 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, BellRing, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, ClipboardCheck, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, BellRing, MapPin, Database, FileCheck, Tags, Globe, GraduationCap, LifeBuoy, Award, Send, Download, Gauge } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useKpiAccess } from "@/hooks/useKpiAccess";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { TopBar } from "@/components/layout/TopBar";
@@ -221,16 +222,28 @@ export const DashboardLayout = ({
   // Determine if we should show Vivacity Team menu or Client menu
   const showVivacityMenu = isVivacityTeam && !isViewingAsClient;
 
+  const { canViewAnyStaff } = useKpiAccess();
+  const kpiRole = profile?.kpi_role ?? null;
+
   // Filter EOS items based on role
   const filteredEosItems = useMemo(() => {
-    return eosMenuItems.filter(item => {
+    const base = eosMenuItems.filter(item => {
       if (item.leadershipOnly) {
         // Only Super Admin and Team Leader can see leadership-only items
         return isSuperAdmin || isTeamLeader;
       }
       return true;
     });
-  }, [isSuperAdmin, isTeamLeader]);
+    const extras: typeof eosMenuItems = [];
+    if (kpiRole) {
+      extras.push({ icon: Gauge, label: "My KPI", path: "/my/kpi" } as any);
+    }
+    if (canViewAnyStaff) {
+      extras.push({ icon: BarChart3, label: "KPI Review", path: "/admin/kpi-review" } as any);
+      extras.push({ icon: Target, label: "KPI Overview", path: "/admin/kpi-overview" } as any);
+    }
+    return [...base, ...extras];
+  }, [isSuperAdmin, isTeamLeader, kpiRole, canViewAnyStaff]);
 
   // Filter Work items based on role
   const filteredWorkItems = useMemo(() => {
