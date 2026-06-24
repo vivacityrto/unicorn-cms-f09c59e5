@@ -72,7 +72,7 @@ export function useCalendarShares() {
         .select('user_uuid, first_name, last_name, email, unicorn_role')
         .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
         .neq('user_uuid', user.id) // Exclude self
-        .neq('kpi_pod', 'qa')
+        .or('kpi_pod.is.null,kpi_pod.neq.qa')
         .order('first_name');
 
       if (error) throw error;

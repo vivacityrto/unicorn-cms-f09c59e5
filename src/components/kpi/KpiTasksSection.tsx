@@ -205,7 +205,7 @@ export function KpiTasksSection() {
         .from("users")
         .select("user_uuid, first_name, last_name, email, kpi_role")
         .not("kpi_role", "is", null)
-        .neq("kpi_pod", "qa")
+        .or("kpi_pod.is.null,kpi_pod.neq.qa")
         .order("first_name", { ascending: true });
       if (error) {
         console.error("[KpiTasksSection] load assignables", error);

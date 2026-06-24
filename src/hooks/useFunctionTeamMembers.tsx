@@ -59,7 +59,7 @@ export function useFunctionTeamMembers(functionId: string | undefined) {
         .from('users')
         .select('user_uuid, first_name, last_name, email, avatar_url, unicorn_role, job_title')
         .in('user_uuid', userIds)
-        .neq('kpi_pod', 'qa');
+        .or('kpi_pod.is.null,kpi_pod.neq.qa');
 
       if (usersError) throw usersError;
 
@@ -199,7 +199,7 @@ export function useAllFunctionTeamMembers(functionIds: string[]) {
         .from('users')
         .select('user_uuid, first_name, last_name, email, avatar_url, unicorn_role, job_title')
         .in('user_uuid', userIds)
-        .neq('kpi_pod', 'qa');
+        .or('kpi_pod.is.null,kpi_pod.neq.qa');
 
       if (usersError) throw usersError;
 

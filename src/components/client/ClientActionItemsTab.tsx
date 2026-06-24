@@ -124,7 +124,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
       .from('users')
       .select('user_uuid, first_name, last_name, avatar_url')
       .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
-      .neq('kpi_pod', 'qa')
+      .or('kpi_pod.is.null,kpi_pod.neq.qa')
       .order('first_name');
     
     setTeamMembers(data || []);
