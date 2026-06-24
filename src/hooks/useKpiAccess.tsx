@@ -5,13 +5,13 @@ import { useAuth } from "@/hooks/useAuth";
  * True for SuperAdmins and profiles where `users.kpi_role = 'reviewer'`.
  */
 export function useKpiAccess() {
-  const { profile } = useAuth();
+  const { profile, loading } = useAuth();
   const isSuperAdmin = profile?.global_role === "SuperAdmin";
   const isReviewer = profile?.kpi_role === "reviewer";
   return {
     isSuperAdmin,
     isReviewer,
     canViewAnyStaff: isSuperAdmin || isReviewer,
-    loading: false,
+    loading,
   };
 }
