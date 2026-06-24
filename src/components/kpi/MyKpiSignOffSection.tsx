@@ -676,8 +676,8 @@ export function MyKpiSignOffSection() {
                       </Button>
                     </div>
                   )}
-                </div>
-              </ScrollArea>
+              </div>
+
             </div>
           );
         })}
