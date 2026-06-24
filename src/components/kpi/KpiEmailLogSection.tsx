@@ -54,6 +54,11 @@ function fmtMinutes(mins: number | null | undefined) {
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
 }
 
+function fmtSubject(s: string | null | undefined) {
+  if (!s) return "—";
+  return s.length > 50 ? s.slice(0, 50) + "…" : s;
+}
+
 function SlaBadge({ value }: { value: boolean | null }) {
   if (value === null || value === undefined) {
     return <span className="text-muted-foreground">—</span>;
