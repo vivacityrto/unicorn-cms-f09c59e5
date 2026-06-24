@@ -223,8 +223,13 @@ export function KpiDashboard({ subjectUuid, roles, weeks = 12, periodLabel }: Pr
       </Card>
 
       {/* Email log rendered by MyKpiDashboardPage for csc/cst roles */}
+      {isOwnDashboard && profile?.kpi_role === "developer" && (
+        <div className="flex justify-end">
+          <RaiseTicketButton />
+        </div>
+      )}
       {isOwnDashboard && profile?.kpi_role === "developer" && <KpiDeveloperTicketQueue />}
-      {isOwnDashboard && profile?.kpi_role && <KpiTasksSection />}
+      {isOwnDashboard && profile?.kpi_role === "cst_assistant" && <KpiTasksSection />}
     </div>
   );
 }
