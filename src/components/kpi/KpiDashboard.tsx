@@ -69,26 +69,25 @@ function CscTable({ subjectUuid, weeks }: { subjectUuid: string; weeks: number }
       <TableHeader>
         <TableRow>
           <TableHead>Week</TableHead>
-          <TableHead className="text-right">Entries</TableHead>
-          <TableHead className="text-right">Total hrs</TableHead>
-          <TableHead className="text-right">Billable hrs</TableHead>
-          <TableHead className="text-right">Billable %</TableHead>
-          <TableHead>Review</TableHead>
+          <TableHead className="text-right">Emails received</TableHead>
+          <TableHead className="text-right">Emails replied ≤12 hrs</TableHead>
+          <TableHead className="text-right">SLA %</TableHead>
+          <TableHead>Review status</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {(rows as CscSummaryRow[]).map((r) => (
           <TableRow key={r.period_start}>
             <TableCell>{fmtDate(r.period_start)}</TableCell>
-            <TableCell className="text-right">{r.entry_count}</TableCell>
-            <TableCell className="text-right">{(r.total_minutes / 60).toFixed(1)}</TableCell>
-            <TableCell className="text-right">{(r.billable_minutes / 60).toFixed(1)}</TableCell>
-            <TableCell className="text-right"><PctCell value={r.billable_pct} /></TableCell>
+            <TableCell className="text-right">{r.email_total}</TableCell>
+            <TableCell className="text-right">{r.email_sla_met}</TableCell>
+            <TableCell className="text-right"><PctCell value={r.email_sla_pct} /></TableCell>
             <TableCell><StatusBadge status={r.review_status} /></TableCell>
           </TableRow>
         ))}
       </TableBody>
     </Table>
+
   );
 }
 
