@@ -75,8 +75,12 @@ function typeLabel(t: KpiEmailType) {
 }
 
 export function KpiEmailLogSection({ subjectUuid }: Props) {
-  const { isConnected, isLoading: connLoading, connect, isConnecting } =
+  const { connectionStatus, isLoading: connLoading, connect, isConnecting } =
     useOutlookConnectionStatus();
+  // A row in oauth_tokens (surfaced via the user_outlook_connection_status view)
+  // means the user has already linked Microsoft — same check the calendar uses.
+  // Even an expired row counts: don't push them through OAuth again.
+  const hasMicrosoftRow = !!connectionStatus;
   const { rows, isLoading, logManualPair, isSyncing } = useKpiEmailLog({
     userUuid: subjectUuid,
   });
