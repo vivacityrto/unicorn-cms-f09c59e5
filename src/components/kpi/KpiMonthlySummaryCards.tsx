@@ -25,13 +25,20 @@ const PERIOD_DAYS: Record<Period, number> = {
 
 type Status = "on" | "risk" | "below" | "none";
 
+const ACCENT: Record<Status, string> = {
+  on: "bg-emerald-600",
+  risk: "bg-amber-600",
+  below: "bg-rose-600",
+  none: "bg-muted-foreground/30",
+};
+
 function statusBadge(status: Status) {
   if (status === "on")
-    return <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 border-emerald-500/30">On Target</Badge>;
+    return <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 border border-emerald-500/30">On Target</Badge>;
   if (status === "risk")
-    return <Badge className="bg-amber-500/15 text-amber-700 hover:bg-amber-500/15 border-amber-500/30">At Risk</Badge>;
+    return <Badge className="bg-amber-500/15 text-amber-700 hover:bg-amber-500/15 border border-amber-500/30">At Risk</Badge>;
   if (status === "below")
-    return <Badge className="bg-rose-500/15 text-rose-700 hover:bg-rose-500/15 border-rose-500/30">Below Target</Badge>;
+    return <Badge className="bg-rose-500/15 text-rose-700 hover:bg-rose-500/15 border border-rose-500/30">Below Target</Badge>;
   return <Badge variant="secondary">No data</Badge>;
 }
 
@@ -43,7 +50,7 @@ function emailStatus(pct: number | null): Status {
 }
 
 interface CardSpec {
-  name: string;
+  label: string;
   actual: string;
   target: string;
   status: Status;
@@ -80,21 +87,21 @@ export function KpiMonthlySummaryCards({ subjectUuid, period }: Props) {
   const cards = useMemo<CardSpec[]>(
     () => [
       {
-        name: "Emails ≤ 12 hrs",
+        label: "EMAILS ≤ 12 HRS",
         actual: emailPct == null ? "No data" : `${emailPct.toFixed(0)}%`,
-        target: "Target 80%",
+        target: "Target: 80%",
         status: emailStatus(emailPct),
       },
       {
-        name: "Client retention",
+        label: "CLIENT RETENTION",
         actual: "No data",
-        target: "Target 90%",
+        target: "Target: 90%",
         status: "none",
       },
       {
-        name: "Stage health",
+        label: "STAGE HEALTH",
         actual: "No data",
-        target: "Target 100% green",
+        target: "Target: 100% green",
         status: "none",
       },
     ],
@@ -109,22 +116,26 @@ export function KpiMonthlySummaryCards({ subjectUuid, period }: Props) {
         </h2>
         {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {cards.map((c) => (
-          <Card key={c.name} className="p-4 flex items-center justify-between gap-3 rounded-full">
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground truncate">
-                {c.name}
+          <Card key={c.label} className="relative overflow-hidden border shadow-sm">
+            <div className={`absolute inset-x-0 top-0 h-1.5 ${ACCENT[c.status]}`} />
+            <div className="p-5 pt-6 flex flex-col gap-3 min-h-[140px]">
+              <div className="text-[11px] font-semibold tracking-wider text-muted-foreground">
+                {c.label}
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xl font-semibold">{c.actual}</span>
+              <div className="text-4xl font-bold leading-none text-foreground">
+                {c.actual}
+              </div>
+              <div className="mt-auto flex items-end justify-between gap-2">
                 <span className="text-xs text-muted-foreground">{c.target}</span>
+                {statusBadge(c.status)}
               </div>
             </div>
-            {statusBadge(c.status)}
           </Card>
         ))}
       </div>
     </div>
   );
 }
+

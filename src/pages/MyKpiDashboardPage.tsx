@@ -20,6 +20,13 @@ const PERIOD_WEEKS: Record<Period, number> = {
   quarterly: 13,
 };
 
+const PERIOD_LABEL: Record<Period, string> = {
+  weekly: "This week",
+  monthly: "Last 4 weeks",
+  quarterly: "Last 13 weeks",
+};
+
+
 const KPI_ROLE_TO_SHORT: Record<string, KpiRole> = {
   csc_consultant: "csc",
   cst_assistant: "cst",
@@ -88,7 +95,9 @@ export default function MyKpiDashboardPage() {
           subjectUuid={profile.user_uuid}
           roles={roles}
           weeks={PERIOD_WEEKS[period]}
+          periodLabel={PERIOD_LABEL[period]}
         />
+
 
         {(profile.kpi_role === "csc_consultant" || profile.kpi_role === "cst_assistant") && (
           <KpiEmailLogSection subjectUuid={profile.user_uuid} />

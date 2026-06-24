@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, addDays } from "date-fns";
 import {
   type CscSummaryRow,
   type CstSummaryRow,
@@ -30,6 +30,8 @@ interface Props {
   roles?: KpiRole[];
   /** How many weeks of history to render. */
   weeks?: number;
+  /** Human label for the selected period (e.g. "This week", "Last 4 weeks"). */
+  periodLabel?: string;
 }
 
 const ROLE_LABEL: Record<KpiRole, string> = {
@@ -38,13 +40,19 @@ const ROLE_LABEL: Record<KpiRole, string> = {
   dev: "Dev tickets",
 };
 
-function fmtDate(iso: string) {
+function fmtWeekRange(iso: string) {
   try {
-    return format(parseISO(iso), "dd/MM/yyyy");
+    const start = parseISO(iso);
+    const end = addDays(start, 6);
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const startStr = format(start, sameYear ? "dd MMM" : "dd MMM yyyy");
+    const endStr = format(end, "dd MMM yyyy");
+    return `${startStr} – ${endStr}`;
   } catch {
     return iso;
   }
 }
+
 
 function StatusBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-muted-foreground text-xs">—</span>;
@@ -78,7 +86,7 @@ function CscTable({ subjectUuid, weeks }: { subjectUuid: string; weeks: number }
       <TableBody>
         {(rows as CscSummaryRow[]).map((r) => (
           <TableRow key={r.period_start}>
-            <TableCell>{fmtDate(r.period_start)}</TableCell>
+            <TableCell>{fmtWeekRange(r.period_start)}</TableCell>
             <TableCell className="text-right">{r.email_total}</TableCell>
             <TableCell className="text-right">{r.email_sla_met}</TableCell>
             <TableCell className="text-right"><PctCell value={r.email_sla_pct} /></TableCell>
@@ -111,7 +119,7 @@ function CstTable({ subjectUuid, weeks }: { subjectUuid: string; weeks: number }
       <TableBody>
         {(rows as CstSummaryRow[]).map((r) => (
           <TableRow key={r.period_start}>
-            <TableCell>{fmtDate(r.period_start)}</TableCell>
+            <TableCell>{fmtWeekRange(r.period_start)}</TableCell>
             <TableCell className="text-right">
               <PctCell value={r.sla1_pct} />
               <span className="text-muted-foreground text-xs"> ({r.sla1_met}/{r.sla1_total})</span>
@@ -152,7 +160,7 @@ function DevTable({ subjectUuid, weeks }: { subjectUuid: string; weeks: number }
       <TableBody>
         {(rows as DevSummaryRow[]).map((r) => (
           <TableRow key={r.period_start}>
-            <TableCell>{fmtDate(r.period_start)}</TableCell>
+            <TableCell>{fmtWeekRange(r.period_start)}</TableCell>
             <TableCell className="text-right">{r.tickets_opened}</TableCell>
             <TableCell className="text-right">{r.tickets_resolved}</TableCell>
             <TableCell className="text-right">{r.reopen_count}</TableCell>
@@ -167,7 +175,7 @@ function DevTable({ subjectUuid, weeks }: { subjectUuid: string; weeks: number }
   );
 }
 
-export function KpiDashboard({ subjectUuid, roles, weeks = 12 }: Props) {
+export function KpiDashboard({ subjectUuid, roles, weeks = 12, periodLabel }: Props) {
   const enabledRoles = useMemo<KpiRole[]>(() => roles ?? ["csc", "cst", "dev"], [roles]);
   const defaultTab = enabledRoles[0];
   const { profile } = useAuth();
@@ -175,20 +183,25 @@ export function KpiDashboard({ subjectUuid, roles, weeks = 12 }: Props) {
   const showEmailLog =
     isOwnDashboard &&
     (profile?.kpi_role === "csc_consultant" || profile?.kpi_role === "cst_assistant");
+  const titleSuffix = periodLabel ?? `last ${weeks} weeks`;
+  const showTabs = enabledRoles.length > 1;
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">KPI summary · last {weeks} weeks</CardTitle>
+          <CardTitle className="text-base">Weekly breakdown · {titleSuffix}</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue={defaultTab}>
-            <TabsList>
-              {enabledRoles.map((r) => (
-                <TabsTrigger key={r} value={r}>{ROLE_LABEL[r]}</TabsTrigger>
-              ))}
-            </TabsList>
+            {showTabs && (
+              <TabsList>
+                {enabledRoles.map((r) => (
+                  <TabsTrigger key={r} value={r}>{ROLE_LABEL[r]}</TabsTrigger>
+                ))}
+              </TabsList>
+            )}
+
             {enabledRoles.includes("csc") && (
               <TabsContent value="csc" className="mt-4">
                 <CscTable subjectUuid={subjectUuid} weeks={weeks} />
