@@ -64036,17 +64036,65 @@ export type Database = {
       }
       v_kpi_csc_summary: {
         Row: {
-          billable_minutes: number | null
-          billable_pct: number | null
-          entry_count: number | null
+          email_sla_met: number | null
+          email_sla_pct: number | null
+          email_total: number | null
           period_start: string | null
           period_type: string | null
           review_locked_at: string | null
           review_status: string | null
           subject_uuid: string | null
-          total_minutes: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "kpi_email_log_user_uuid_fkey"
+            columns: ["subject_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "kpi_email_log_user_uuid_fkey"
+            columns: ["subject_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_auth_user_state"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "kpi_email_log_user_uuid_fkey"
+            columns: ["subject_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "kpi_email_log_user_uuid_fkey"
+            columns: ["subject_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "kpi_email_log_user_uuid_fkey"
+            columns: ["subject_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "kpi_email_log_user_uuid_fkey"
+            columns: ["subject_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "kpi_email_log_user_uuid_fkey"
+            columns: ["subject_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
           {
             foreignKeyName: "kpi_reviews_status_fk"
             columns: ["review_status"]
