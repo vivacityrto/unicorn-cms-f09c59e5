@@ -129,7 +129,8 @@ function sortPending(a: KpiTaskRow, b: KpiTaskRow) {
   return at - bt;
 }
 
-export function KpiTasksSection() {
+export function KpiTasksSection({ viewerRole = null }: { viewerRole?: string | null } = {}) {
+  const isCst = viewerRole === "cst_assistant";
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
