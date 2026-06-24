@@ -31358,6 +31358,30 @@ export type Database = {
           },
         ]
       }
+      kpi_ticket_number_counters: {
+        Row: {
+          created_at: string
+          last_seq: number
+          platform: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          last_seq?: number
+          platform: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          last_seq?: number
+          platform?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       kpi_tickets: {
         Row: {
           assignee_uuid: string | null
@@ -67758,6 +67782,7 @@ export type Database = {
         }
         Returns: Json
       }
+      next_kpi_ticket_number: { Args: { p_platform: string }; Returns: string }
       normalise_abn: { Args: { p: string }; Returns: string }
       normalise_name: { Args: { p: string }; Returns: string }
       normalize_company_key: { Args: { txt: string }; Returns: string }
