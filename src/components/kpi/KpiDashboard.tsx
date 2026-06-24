@@ -210,6 +210,7 @@ export function KpiDashboard({ subjectUuid, roles, weeks = 12 }: Props) {
       </Card>
 
       {showEmailLog && <KpiEmailLogSection subjectUuid={subjectUuid} />}
+      {isOwnDashboard && profile?.kpi_role === "developer" && <KpiDeveloperTicketQueue />}
       {isOwnDashboard && profile?.kpi_role && <KpiTasksSection />}
     </div>
   );
