@@ -85,6 +85,10 @@ export default function MyKpiDashboardPage() {
           weeks={PERIOD_WEEKS[period]}
         />
 
+        {(profile.kpi_role === "csc_consultant" || profile.kpi_role === "cst_assistant") && (
+          <KpiEmailLogSection subjectUuid={profile.user_uuid} />
+        )}
+
         <MyKpiSignOffSection />
       </div>
     </DashboardLayout>
