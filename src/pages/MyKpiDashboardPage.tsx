@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { KpiDashboard } from "@/components/kpi/KpiDashboard";
 import { MyKpiSignOffSection } from "@/components/kpi/MyKpiSignOffSection";
 import { KpiEmailLogSection } from "@/components/kpi/KpiEmailLogSection";
+import { KpiMonthlySummaryCards } from "@/components/kpi/KpiMonthlySummaryCards";
 import { Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,10 @@ export default function MyKpiDashboardPage() {
             )}
           </div>
         </div>
+
+        {profile.kpi_role === "csc_consultant" && (
+          <KpiMonthlySummaryCards subjectUuid={profile.user_uuid} period={period} />
+        )}
 
         <KpiDashboard
           subjectUuid={profile.user_uuid}
