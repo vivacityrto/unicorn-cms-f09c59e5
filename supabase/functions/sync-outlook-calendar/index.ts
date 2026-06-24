@@ -184,7 +184,7 @@ async function fetchEmails(accessToken: string, folder: string, top: number, fil
   const url = new URL(`https://graph.microsoft.com/v1.0/me/mailFolders/${folderPath}/messages`);
   const pageSize = filterEmail ? Math.min(Math.max(top * 2, 50), 100) : top;
   const maxMessagesToScan = filterEmail ? 500 : top;
-  url.searchParams.set('$select', 'id,subject,from,toRecipients,ccRecipients,receivedDateTime,sentDateTime,hasAttachments,bodyPreview,isRead');
+  url.searchParams.set('$select', 'id,subject,from,toRecipients,ccRecipients,receivedDateTime,sentDateTime,hasAttachments,bodyPreview,isRead,conversationId');
   url.searchParams.set('$orderby', 'receivedDateTime desc');
   url.searchParams.set('$top', String(pageSize));
 
