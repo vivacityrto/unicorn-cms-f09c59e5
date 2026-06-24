@@ -64,6 +64,22 @@ function fmtDateTime(iso: string | null | undefined) {
   if (!iso) return "—";
   try { return format(parseISO(iso), "dd/MM/yyyy HH:mm"); } catch { return iso; }
 }
+const EMAIL_TYPE_LABEL: Record<string, string> = {
+  general_email: "General email",
+  client_message: "Client message",
+};
+function fmtEmailType(t: string | null | undefined) {
+  if (!t) return "—";
+  return EMAIL_TYPE_LABEL[t] ?? t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function fmtMinutes(m: number | null | undefined) {
+  if (m == null) return "—";
+  const mins = Math.max(0, Math.round(Number(m)));
+  const h = Math.floor(mins / 60);
+  const r = mins % 60;
+  if (h === 0) return `${r}m`;
+  return `${h}h ${r}m`;
+}
 
 function periodHeader(r: ReviewRow) {
   const start = parseISO(r.period_start);
@@ -143,7 +159,7 @@ function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           <TrafficLight pct={s.email_sla_pct} target={80} label="SLA" />
         </div>
         {emails.length > 0 ? (
-          <div className="mt-2 rounded border">
+          <div className="mt-2 rounded border max-h-[240px] overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-left">
                 <tr>
@@ -159,8 +175,8 @@ function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: str
                   <tr key={e.id} className="border-t">
                     <td className="px-2 py-1">{fmtDateTime(e.received_at)}</td>
                     <td className="px-2 py-1">{fmtDateTime(e.responded_at)}</td>
-                    <td className="px-2 py-1">{e.response_minutes ?? "—"}</td>
-                    <td className="px-2 py-1">{e.email_type}</td>
+                    <td className="px-2 py-1">{fmtMinutes(e.response_minutes)}</td>
+                    <td className="px-2 py-1">{fmtEmailType(e.email_type)}</td>
                     <td className="px-2 py-1">
                       <Badge variant={e.sla_met ? "default" : "destructive"}>
                         {e.sla_met == null ? "—" : e.sla_met ? "Met" : "Missed"}
@@ -289,7 +305,7 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           <TrafficLight pct={sla2Pct} target={90} label="SLA 2" />
         </div>
         {emails.length > 0 && (
-          <div className="rounded border">
+          <div className="rounded border max-h-[240px] overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-left">
                 <tr>
@@ -303,8 +319,8 @@ function CstDetail({ uuid, start, end }: { uuid: string; start: string; end: str
                 {emails.map((e: any) => (
                   <tr key={e.id} className="border-t">
                     <td className="px-2 py-1">{fmtDateTime(e.received_at)}</td>
-                    <td className="px-2 py-1">{e.email_type}</td>
-                    <td className="px-2 py-1">{e.response_minutes ?? "—"}</td>
+                    <td className="px-2 py-1">{fmtEmailType(e.email_type)}</td>
+                    <td className="px-2 py-1">{fmtMinutes(e.response_minutes)}</td>
                     <td className="px-2 py-1">
                       <Badge variant={e.sla_met ? "default" : "destructive"}>
                         {e.sla_met == null ? "—" : e.sla_met ? "Met" : "Missed"}
