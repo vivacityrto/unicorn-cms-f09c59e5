@@ -149,7 +149,7 @@ serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Staff gate — must be internal Vivacity team
-    const { data: staffCheck } = await admin.rpc("is_vivacity_team_safe", { _user_id: userId });
+    const { data: staffCheck } = await admin.rpc("is_vivacity_team_safe", { p_user_id: userId });
     if (!staffCheck) {
       return new Response(JSON.stringify({ error: "Forbidden: staff only" }), {
         status: 403,
