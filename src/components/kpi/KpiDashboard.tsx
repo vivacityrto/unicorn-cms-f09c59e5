@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, addDays } from "date-fns";
 import {
   type CscSummaryRow,
   type CstSummaryRow,
@@ -30,6 +30,8 @@ interface Props {
   roles?: KpiRole[];
   /** How many weeks of history to render. */
   weeks?: number;
+  /** Human label for the selected period (e.g. "This week", "Last 4 weeks"). */
+  periodLabel?: string;
 }
 
 const ROLE_LABEL: Record<KpiRole, string> = {
@@ -38,13 +40,19 @@ const ROLE_LABEL: Record<KpiRole, string> = {
   dev: "Dev tickets",
 };
 
-function fmtDate(iso: string) {
+function fmtWeekRange(iso: string) {
   try {
-    return format(parseISO(iso), "dd/MM/yyyy");
+    const start = parseISO(iso);
+    const end = addDays(start, 6);
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const startStr = format(start, sameYear ? "dd MMM" : "dd MMM yyyy");
+    const endStr = format(end, "dd MMM yyyy");
+    return `${startStr} – ${endStr}`;
   } catch {
     return iso;
   }
 }
+
 
 function StatusBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-muted-foreground text-xs">—</span>;
