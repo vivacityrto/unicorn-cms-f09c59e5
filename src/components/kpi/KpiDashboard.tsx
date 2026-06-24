@@ -22,6 +22,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { KpiEmailLogSection } from "@/components/kpi/KpiEmailLogSection";
 import { KpiTasksSection } from "@/components/kpi/KpiTasksSection";
+import { KpiDeveloperTicketQueue } from "@/components/kpi/KpiDeveloperTicketQueue";
 
 interface Props {
   subjectUuid: string;
