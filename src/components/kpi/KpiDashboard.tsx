@@ -19,6 +19,8 @@ import {
   type KpiRole,
   useKpiSummary,
 } from "@/hooks/useKpiSummary";
+import { useAuth } from "@/hooks/useAuth";
+import { KpiEmailLogSection } from "@/components/kpi/KpiEmailLogSection";
 
 interface Props {
   subjectUuid: string;
