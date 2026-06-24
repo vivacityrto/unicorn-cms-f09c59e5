@@ -17,6 +17,7 @@ interface UserProfile {
   avatar_url: string | null;
   job_title: string | null;
   is_vivacity_internal: boolean | null;
+  kpi_role: string | null;
 }
 
 // Tenant membership info for RBAC
@@ -90,7 +91,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('user_uuid, email, first_name, last_name, unicorn_role, global_role, superadmin_level, tenant_id, avatar_url, job_title, is_vivacity_internal')
+        .select('user_uuid, email, first_name, last_name, unicorn_role, global_role, superadmin_level, tenant_id, avatar_url, job_title, is_vivacity_internal, kpi_role')
         .eq('user_uuid', userId)
         .maybeSingle();
 
