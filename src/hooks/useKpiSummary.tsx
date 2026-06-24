@@ -7,13 +7,13 @@ export interface CscSummaryRow {
   subject_uuid: string;
   period_start: string;
   period_type: string;
-  entry_count: number;
-  total_minutes: number;
-  billable_minutes: number;
-  billable_pct: number;
+  email_total: number;
+  email_sla_met: number;
+  email_sla_pct: number;
   review_status: string | null;
   review_locked_at: string | null;
 }
+
 
 export interface CstSummaryRow {
   subject_uuid: string;
