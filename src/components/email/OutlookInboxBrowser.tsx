@@ -11,7 +11,7 @@ import { LinkEmailModal } from "./LinkEmailModal";
 import { useNavigate } from "react-router-dom";
 
 interface OutlookInboxBrowserProps {
-  tenantId: string;
+  tenantId?: string;
   defaultClientId?: number;
   onEmailLinked?: () => void;
   filterEmail?: string;
@@ -20,6 +20,12 @@ interface OutlookInboxBrowserProps {
    * usages need no changes. Pass 'sent' for the Sent Items folder.
    */
   folder?: "inbox" | "sent";
+  /**
+   * Optional selection callback. When provided, clicking an email calls
+   * this instead of opening the LinkEmailModal — used by flows that just
+   * need to pick a Graph message (e.g. KPI manual logging).
+   */
+  onSelectEmail?: (email: OutlookEmail) => void;
 }
 
 interface OutlookEmail {
@@ -43,6 +49,7 @@ export function OutlookInboxBrowser({
   onEmailLinked,
   filterEmail,
   folder = "inbox",
+  onSelectEmail,
 }: OutlookInboxBrowserProps) {
   const navigate = useNavigate();
   const { emails, isLoading, error, hasConnection, fetchEmails, checkConnection } = useOutlookInbox({ filterEmail, folder });
@@ -64,6 +71,10 @@ export function OutlookInboxBrowser({
   });
 
   const handleLinkEmail = (email: OutlookEmail) => {
+    if (onSelectEmail) {
+      onSelectEmail(email);
+      return;
+    }
     setSelectedEmail(email);
     setLinkModalOpen(true);
   };
