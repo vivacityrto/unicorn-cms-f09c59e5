@@ -97,6 +97,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'risks:create',
   ],
   'Integrator': [
+    'administration:access',
     'advanced_features:access',
     'eos:access',
     'staff_engagements:access',
