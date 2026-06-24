@@ -86,7 +86,7 @@ function CscTable({ subjectUuid, weeks }: { subjectUuid: string; weeks: number }
       <TableBody>
         {(rows as CscSummaryRow[]).map((r) => (
           <TableRow key={r.period_start}>
-            <TableCell>{fmtDate(r.period_start)}</TableCell>
+            <TableCell>{fmtWeekRange(r.period_start)}</TableCell>
             <TableCell className="text-right">{r.email_total}</TableCell>
             <TableCell className="text-right">{r.email_sla_met}</TableCell>
             <TableCell className="text-right"><PctCell value={r.email_sla_pct} /></TableCell>
@@ -119,7 +119,7 @@ function CstTable({ subjectUuid, weeks }: { subjectUuid: string; weeks: number }
       <TableBody>
         {(rows as CstSummaryRow[]).map((r) => (
           <TableRow key={r.period_start}>
-            <TableCell>{fmtDate(r.period_start)}</TableCell>
+            <TableCell>{fmtWeekRange(r.period_start)}</TableCell>
             <TableCell className="text-right">
               <PctCell value={r.sla1_pct} />
               <span className="text-muted-foreground text-xs"> ({r.sla1_met}/{r.sla1_total})</span>
@@ -160,7 +160,7 @@ function DevTable({ subjectUuid, weeks }: { subjectUuid: string; weeks: number }
       <TableBody>
         {(rows as DevSummaryRow[]).map((r) => (
           <TableRow key={r.period_start}>
-            <TableCell>{fmtDate(r.period_start)}</TableCell>
+            <TableCell>{fmtWeekRange(r.period_start)}</TableCell>
             <TableCell className="text-right">{r.tickets_opened}</TableCell>
             <TableCell className="text-right">{r.tickets_resolved}</TableCell>
             <TableCell className="text-right">{r.reopen_count}</TableCell>
