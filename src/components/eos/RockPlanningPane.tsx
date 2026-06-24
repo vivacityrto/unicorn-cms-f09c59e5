@@ -85,7 +85,8 @@ export const RockPlanningPane = ({
       const { data: users } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name')
-        .in('user_uuid', userIds);
+        .in('user_uuid', userIds)
+        .neq('kpi_pod', 'qa');
 
       const userMap = new Map(users?.map(u => [u.user_uuid, `${u.first_name || ''} ${u.last_name || ''}`.trim()]) || []);
       const assignmentMap = new Map(assignments?.map(a => [a.seat_id, a.user_id]) || []);

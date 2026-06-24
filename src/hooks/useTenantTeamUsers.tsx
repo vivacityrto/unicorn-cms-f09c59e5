@@ -47,6 +47,7 @@ export function useTenantTeamUsers() {
           .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
           .eq('archived', false)
           .eq('disabled', false)
+          .neq('kpi_pod', 'qa')
           .order('first_name', { ascending: true });
 
         if (error) throw error;

@@ -96,7 +96,8 @@ export const LiveMeetingView = () => {
       const { data, error } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name')
-        .in('user_uuid', ownerIds);
+        .in('user_uuid', ownerIds)
+        .neq('kpi_pod', 'qa');
       if (error) throw error;
       const map: Record<string, string> = {};
       data?.forEach(u => {
@@ -121,7 +122,8 @@ export const LiveMeetingView = () => {
       const { data, error } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name')
-        .in('user_uuid', todoOwnerIds);
+        .in('user_uuid', todoOwnerIds)
+        .neq('kpi_pod', 'qa');
       if (error) throw error;
       const map: Record<string, string> = {};
       data?.forEach(u => {

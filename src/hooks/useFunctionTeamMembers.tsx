@@ -58,7 +58,8 @@ export function useFunctionTeamMembers(functionId: string | undefined) {
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name, email, avatar_url, unicorn_role, job_title')
-        .in('user_uuid', userIds);
+        .in('user_uuid', userIds)
+        .neq('kpi_pod', 'qa');
 
       if (usersError) throw usersError;
 
@@ -197,7 +198,8 @@ export function useAllFunctionTeamMembers(functionIds: string[]) {
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name, email, avatar_url, unicorn_role, job_title')
-        .in('user_uuid', userIds);
+        .in('user_uuid', userIds)
+        .neq('kpi_pod', 'qa');
 
       if (usersError) throw usersError;
 

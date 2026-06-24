@@ -56477,6 +56477,7 @@ export type Database = {
           is_vivacity_internal: boolean
           job_title: string | null
           keap_url: string | null
+          kpi_pod: string | null
           kpi_role: string | null
           last_name: string
           last_new_client_tasks_email: string | null
@@ -56564,6 +56565,7 @@ export type Database = {
           is_vivacity_internal?: boolean
           job_title?: string | null
           keap_url?: string | null
+          kpi_pod?: string | null
           kpi_role?: string | null
           last_name: string
           last_new_client_tasks_email?: string | null
@@ -56651,6 +56653,7 @@ export type Database = {
           is_vivacity_internal?: boolean
           job_title?: string | null
           keap_url?: string | null
+          kpi_pod?: string | null
           kpi_role?: string | null
           last_name?: string
           last_new_client_tasks_email?: string | null

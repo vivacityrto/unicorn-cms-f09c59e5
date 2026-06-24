@@ -54,6 +54,7 @@ interface StaffRow {
   user_uuid: string;
   display_name: string;
   unicorn_role: string | null;
+  is_qa: boolean;
 }
 
 interface OverviewRow extends StaffRow {
@@ -88,7 +89,7 @@ export default function KpiOverviewPage() {
     try {
       const { data: users } = await (supabase as any)
         .from("users")
-        .select("user_uuid, first_name, last_name, email, unicorn_role, is_vivacity_internal, status")
+        .select("user_uuid, first_name, last_name, email, unicorn_role, is_vivacity_internal, status, kpi_pod")
         .eq("is_vivacity_internal", true)
         .neq("status", "archived")
         .order("first_name", { ascending: true });
@@ -97,6 +98,7 @@ export default function KpiOverviewPage() {
         user_uuid: u.user_uuid,
         display_name: [u.first_name, u.last_name].filter(Boolean).join(" ").trim() || u.email || "Unknown",
         unicorn_role: u.unicorn_role,
+        is_qa: u.kpi_pod === "qa",
       }));
 
       const result: Record<KpiRole, OverviewRow[]> = { csc: [], cst: [], dev: [] };
@@ -252,7 +254,16 @@ export default function KpiOverviewPage() {
                     <tbody>
                       {rowsByRole[role].map((r) => (
                         <tr key={r.user_uuid} className="border-b last:border-0">
-                          <td className="py-2 pr-4 font-medium">{r.display_name}</td>
+                          <td className="py-2 pr-4 font-medium">
+                            <span className="inline-flex items-center gap-1.5">
+                              {r.display_name}
+                              {r.is_qa ? (
+                                <span className="rounded-sm px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                                  QA
+                                </span>
+                              ) : null}
+                            </span>
+                          </td>
                           <td className="py-2 pr-4 text-muted-foreground">{r.unicorn_role ?? "—"}</td>
                           <td className="py-2 pr-4"><StatusPill status={r.computed} /></td>
                           <td className="py-2 pr-4">

@@ -104,7 +104,8 @@ export function useAccountabilityChart() {
           .from('users')
           .select('user_uuid, first_name, last_name, email, avatar_url')
           .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
-          .eq('archived', false),
+          .eq('archived', false)
+          .neq('kpi_pod', 'qa'),
         // Fetch linked data from the view
         supabase
           .from('seat_linked_data')

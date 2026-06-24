@@ -86,7 +86,8 @@ export function useSeatSuccession() {
         .from('users')
         .select('user_uuid, first_name, last_name, leave_from, leave_until')
         .in('unicorn_role', [...VIVACITY_STAFF_ROLES])
-        .eq('archived', false);
+        .eq('archived', false)
+        .neq('kpi_pod', 'qa');
 
       if (usersError) throw usersError;
 
