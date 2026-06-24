@@ -1080,6 +1080,7 @@ const App = () => (
             <Route path="/my/kpi" element={<ProtectedRoute><MyKpiDashboardPage /></ProtectedRoute>} />
             <Route path="/admin/kpi-review" element={<ProtectedRoute><KpiReviewerPage /></ProtectedRoute>} />
             <Route path="/admin/kpi-overview" element={<ProtectedRoute><KpiOverviewPage /></ProtectedRoute>} />
+            <Route path="/admin/kpi-tickets" element={<ProtectedRoute><KpiTicketsPage /></ProtectedRoute>} />
             {/* AI Assistant - SuperAdmin only */}
             <Route path="/admin/assistant" element={<ProtectedRoute requireSuperAdmin><AdminAssistant /></ProtectedRoute>} />
            <Route path="/admin/knowledge" element={<ProtectedRoute requireSuperAdmin><AdminKnowledgeLibrary /></ProtectedRoute>} />
