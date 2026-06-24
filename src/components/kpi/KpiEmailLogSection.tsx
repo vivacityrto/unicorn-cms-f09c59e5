@@ -262,6 +262,7 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
             {step === 1 && (
               <OutlookInboxBrowser
                 folder="inbox"
+                description="Select the email you received from your inbox"
                 onSelectEmail={(e) => {
                   setInbound(e as PickedEmail);
                   setStep(2);
@@ -282,7 +283,8 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
                 )}
                 <OutlookInboxBrowser
                   folder="sent"
-                  filterEmail={inbound?.from?.emailAddress?.address}
+                  description="Select the reply you sent to this email"
+                  recipientFilter={inbound?.from?.emailAddress?.address}
                   onSelectEmail={(e) => {
                     setOutbound(e as PickedEmail);
                     setStep(3);
