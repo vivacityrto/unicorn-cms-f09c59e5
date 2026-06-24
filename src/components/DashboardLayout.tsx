@@ -241,6 +241,7 @@ export const DashboardLayout = ({
     if (canViewAnyStaff) {
       extras.push({ icon: BarChart3, label: "KPI Review", path: "/admin/kpi-review" } as any);
       extras.push({ icon: Target, label: "KPI Overview", path: "/admin/kpi-overview" } as any);
+      extras.push({ icon: LifeBuoy, label: "KPI Tickets", path: "/admin/kpi-tickets" } as any);
     }
     return [...base, ...extras];
   }, [isSuperAdmin, isTeamLeader, kpiRole, canViewAnyStaff]);
