@@ -100,7 +100,12 @@ export default function MyKpiDashboardPage() {
 
 
         {(profile.kpi_role === "csc_consultant" || profile.kpi_role === "cst_assistant") && (
-          <KpiEmailLogSection subjectUuid={profile.user_uuid} />
+          <>
+            <KpiEmailLogSection subjectUuid={profile.user_uuid} />
+            <div className="flex justify-end">
+              <RaiseTicketButton variant="outline" />
+            </div>
+          </>
         )}
 
         <MyKpiSignOffSection />
