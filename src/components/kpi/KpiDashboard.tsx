@@ -208,7 +208,7 @@ export function KpiDashboard({ subjectUuid, roles, weeks = 12 }: Props) {
         </CardContent>
       </Card>
 
-      {showEmailLog && <KpiEmailLogSection subjectUuid={subjectUuid} />}
+      {/* Email log rendered by MyKpiDashboardPage for csc/cst roles */}
       {isOwnDashboard && profile?.kpi_role === "developer" && <KpiDeveloperTicketQueue />}
       {isOwnDashboard && profile?.kpi_role && <KpiTasksSection />}
     </div>
