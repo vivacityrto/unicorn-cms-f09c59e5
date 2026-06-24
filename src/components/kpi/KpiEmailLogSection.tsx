@@ -281,6 +281,7 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
                 )}
                 <OutlookInboxBrowser
                   folder="sent"
+                  filterEmail={inbound?.from?.emailAddress?.address}
                   onSelectEmail={(e) => {
                     setOutbound(e as PickedEmail);
                     setStep(3);
