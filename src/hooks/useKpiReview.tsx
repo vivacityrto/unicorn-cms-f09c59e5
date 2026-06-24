@@ -39,6 +39,12 @@ interface Params {
   periodEnd: string;
 }
 
+const ROLE_TO_DD: Record<KpiRole, string> = {
+  csc: "csc_consultant",
+  cst: "cst_assistant",
+  dev: "developer",
+};
+
 export function useKpiReview({ subjectUuid, role, periodType, periodStart, periodEnd }: Params) {
   const { user } = useAuth();
   const [review, setReview] = useState<KpiReview | null>(null);
@@ -57,11 +63,12 @@ export function useKpiReview({ subjectUuid, role, periodType, periodStart, perio
       return;
     }
     setLoading(true);
+    const ddRole = ROLE_TO_DD[role];
     const { data: rev } = await (supabase as any)
       .from("kpi_reviews")
       .select("*")
       .eq("subject_uuid", subjectUuid)
-      .eq("kpi_role", role)
+      .eq("kpi_role", ddRole)
       .eq("period_type", periodType)
       .eq("period_start", periodStart)
       .maybeSingle();
@@ -79,7 +86,7 @@ export function useKpiReview({ subjectUuid, role, periodType, periodStart, perio
     }
 
     const { data: comp } = await (supabase as any).rpc("compute_kpi_overall_status", {
-      p_kpi_role: role,
+      p_kpi_role: ddRole,
       p_subject_uuid: subjectUuid,
       p_period_start: periodStart,
       p_period_end: periodEnd,
@@ -99,7 +106,7 @@ export function useKpiReview({ subjectUuid, role, periodType, periodStart, perio
     setBusy(true);
     const { data, error } = await (supabase as any).rpc("upsert_kpi_review", {
       p_subject_uuid: subjectUuid,
-      p_kpi_role: role,
+      p_kpi_role: ROLE_TO_DD[role],
       p_period_type: periodType,
       p_period_start: periodStart,
       p_period_end: periodEnd,
@@ -110,6 +117,7 @@ export function useKpiReview({ subjectUuid, role, periodType, periodStart, perio
     await load();
     return data as KpiReview;
   }, [subjectUuid, role, periodType, periodStart, periodEnd, load]);
+
 
   const signOff = useCallback(async (signoffType: string, comment: string) => {
     if (!review || !user?.id) return;
