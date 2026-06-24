@@ -145,9 +145,14 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false }: Protecte
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Admin routes require administration:access (Super Admin only).
+  // Admin routes require administration:access (Super Admin only),
+  // except /admin/kpi-* which is also accessible to KPI reviewers.
   if (isAdminRoute && !canAccessRoute(currentPath)) {
-    return <Navigate to="/dashboard" replace />;
+    const isKpiAdminRoute = currentPath.startsWith('/admin/kpi-');
+    const hasKpiReviewerAccess = profile?.kpi_role === 'reviewer';
+    if (!(isKpiAdminRoute && hasKpiReviewerAccess)) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   // EOS routes: Vivacity Team only — keep existing toast logic below this check unchanged.
