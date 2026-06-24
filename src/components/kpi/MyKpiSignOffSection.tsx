@@ -622,8 +622,7 @@ export function MyKpiSignOffSection() {
                 )}
               </div>
 
-              <ScrollArea className="max-h-[600px]">
-                <div className="p-3 space-y-4">
+              <div className="p-3 space-y-4">
                   <div>
                     <h3 className="text-sm font-semibold mb-2">KPI breakdown</h3>
                     {r.kpi_role === "csc_consultant" && (
@@ -677,8 +676,8 @@ export function MyKpiSignOffSection() {
                       </Button>
                     </div>
                   )}
-                </div>
-              </ScrollArea>
+              </div>
+
             </div>
           );
         })}
