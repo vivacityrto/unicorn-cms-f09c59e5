@@ -207,20 +207,22 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Received</TableHead>
-                  <TableHead>Replied</TableHead>
-                  <TableHead>Response time</TableHead>
-                  <TableHead>SLA</TableHead>
+                  <TableHead>Subject</TableHead>
+                  <TableHead>Responded</TableHead>
+                  <TableHead>Duration</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead>SLA</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {inboundRows.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell>{fmtDt(r.received_at)}</TableCell>
+                    <TableCell title={r.subject ?? ""}>{fmtSubject(r.subject)}</TableCell>
                     <TableCell>{fmtDt(r.responded_at)}</TableCell>
                     <TableCell>{fmtMinutes(r.response_minutes)}</TableCell>
-                    <TableCell><SlaBadge value={r.sla_met} /></TableCell>
                     <TableCell>{typeLabel(r.email_type)}</TableCell>
+                    <TableCell><SlaBadge value={r.sla_met} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
