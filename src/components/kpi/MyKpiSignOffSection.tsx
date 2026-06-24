@@ -159,7 +159,7 @@ function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: str
           <TrafficLight pct={s.email_sla_pct} target={80} label="SLA" />
         </div>
         {emails.length > 0 ? (
-          <div className="mt-2 rounded border">
+          <div className="mt-2 rounded border max-h-[240px] overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-left">
                 <tr>
