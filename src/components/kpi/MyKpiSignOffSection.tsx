@@ -64,6 +64,22 @@ function fmtDateTime(iso: string | null | undefined) {
   if (!iso) return "—";
   try { return format(parseISO(iso), "dd/MM/yyyy HH:mm"); } catch { return iso; }
 }
+const EMAIL_TYPE_LABEL: Record<string, string> = {
+  general_email: "General email",
+  client_message: "Client message",
+};
+function fmtEmailType(t: string | null | undefined) {
+  if (!t) return "—";
+  return EMAIL_TYPE_LABEL[t] ?? t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function fmtMinutes(m: number | null | undefined) {
+  if (m == null) return "—";
+  const mins = Math.max(0, Math.round(Number(m)));
+  const h = Math.floor(mins / 60);
+  const r = mins % 60;
+  if (h === 0) return `${r}m`;
+  return `${h}h ${r}m`;
+}
 
 function periodHeader(r: ReviewRow) {
   const start = parseISO(r.period_start);
