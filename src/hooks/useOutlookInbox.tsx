@@ -12,10 +12,13 @@ interface OutlookEmail {
       address: string;
     };
   };
+  toRecipients?: Array<{ emailAddress?: { name?: string; address?: string } }>;
   receivedDateTime: string;
+  sentDateTime?: string;
   hasAttachments: boolean;
   bodyPreview: string;
   isRead: boolean;
+  conversationId?: string;
 }
 
 interface UseOutlookInboxOptions {
