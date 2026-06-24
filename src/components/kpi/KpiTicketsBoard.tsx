@@ -84,7 +84,7 @@ export function KpiTicketsBoard() {
       .from("users")
       .select("user_uuid, first_name, last_name, email, kpi_role, kpi_pod")
       .eq("kpi_role", "developer")
-      .neq("kpi_pod", "qa");
+      .or("kpi_pod.is.null,kpi_pod.neq.qa");
     const devRows: DevUser[] = (d ?? []) as DevUser[];
     setDevs(devRows);
 

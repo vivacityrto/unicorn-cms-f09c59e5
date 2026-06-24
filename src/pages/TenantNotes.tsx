@@ -220,7 +220,7 @@ export default function TenantNotes() {
         .in("unicorn_role", [...VIVACITY_STAFF_ROLES])
         .eq("disabled", false)
         .eq("archived", false)
-        .neq("kpi_pod", "qa")
+        .or("kpi_pod.is.null,kpi_pod.neq.qa")
         .order("first_name");
       if (error) throw error;
       setVivacityTeam(data || []);
