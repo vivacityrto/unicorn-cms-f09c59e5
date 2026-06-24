@@ -169,36 +169,45 @@ function DevTable({ subjectUuid, weeks }: { subjectUuid: string; weeks: number }
 export function KpiDashboard({ subjectUuid, roles, weeks = 12 }: Props) {
   const enabledRoles = useMemo<KpiRole[]>(() => roles ?? ["csc", "cst", "dev"], [roles]);
   const defaultTab = enabledRoles[0];
+  const { profile } = useAuth();
+  const isOwnDashboard = profile?.user_uuid === subjectUuid;
+  const showEmailLog =
+    isOwnDashboard &&
+    (profile?.kpi_role === "csc_consultant" || profile?.kpi_role === "cst_assistant");
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">KPI summary · last {weeks} weeks</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue={defaultTab}>
-          <TabsList>
-            {enabledRoles.map((r) => (
-              <TabsTrigger key={r} value={r}>{ROLE_LABEL[r]}</TabsTrigger>
-            ))}
-          </TabsList>
-          {enabledRoles.includes("csc") && (
-            <TabsContent value="csc" className="mt-4">
-              <CscTable subjectUuid={subjectUuid} weeks={weeks} />
-            </TabsContent>
-          )}
-          {enabledRoles.includes("cst") && (
-            <TabsContent value="cst" className="mt-4">
-              <CstTable subjectUuid={subjectUuid} weeks={weeks} />
-            </TabsContent>
-          )}
-          {enabledRoles.includes("dev") && (
-            <TabsContent value="dev" className="mt-4">
-              <DevTable subjectUuid={subjectUuid} weeks={weeks} />
-            </TabsContent>
-          )}
-        </Tabs>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">KPI summary · last {weeks} weeks</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue={defaultTab}>
+            <TabsList>
+              {enabledRoles.map((r) => (
+                <TabsTrigger key={r} value={r}>{ROLE_LABEL[r]}</TabsTrigger>
+              ))}
+            </TabsList>
+            {enabledRoles.includes("csc") && (
+              <TabsContent value="csc" className="mt-4">
+                <CscTable subjectUuid={subjectUuid} weeks={weeks} />
+              </TabsContent>
+            )}
+            {enabledRoles.includes("cst") && (
+              <TabsContent value="cst" className="mt-4">
+                <CstTable subjectUuid={subjectUuid} weeks={weeks} />
+              </TabsContent>
+            )}
+            {enabledRoles.includes("dev") && (
+              <TabsContent value="dev" className="mt-4">
+                <DevTable subjectUuid={subjectUuid} weeks={weeks} />
+              </TabsContent>
+            )}
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {showEmailLog && <KpiEmailLogSection subjectUuid={subjectUuid} />}
+    </div>
   );
 }
