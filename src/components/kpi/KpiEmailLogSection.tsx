@@ -133,7 +133,7 @@ export function KpiEmailLogSection({ subjectUuid }: Props) {
   };
 
   // ---------- State 1: not connected ----------
-  if (!connLoading && !isConnected) {
+  if (!connLoading && !hasMicrosoftRow) {
     return (
       <Card>
         <CardHeader>
