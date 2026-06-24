@@ -14,10 +14,10 @@ import type { KpiRole } from "@/hooks/useKpiSummary";
 import type { OverallStatus, PeriodType } from "@/hooks/useKpiReview";
 
 const ROLE_LABEL: Record<KpiRole, string> = { csc: "CSC", cst: "CST", dev: "Dev" };
-const ROLE_TO_UNICORN: Record<KpiRole, string[]> = {
-  csc: ["CSC"],
-  cst: ["CET", "Admin", "User"],
-  dev: ["Team Member", "Team Leader", "Integrator"],
+const ROLE_TO_KPI_ROLE: Record<KpiRole, string> = {
+  csc: "csc_consultant",
+  cst: "cst_assistant",
+  dev: "developer",
 };
 
 const STATUS_LABEL: Record<OverallStatus, string> = {
@@ -89,22 +89,24 @@ export default function KpiOverviewPage() {
     try {
       const { data: users } = await (supabase as any)
         .from("users")
-        .select("user_uuid, first_name, last_name, email, unicorn_role, is_vivacity_internal, status, kpi_pod")
+        .select("user_uuid, first_name, last_name, email, unicorn_role, is_vivacity_internal, kpi_role, kpi_pod")
         .eq("is_vivacity_internal", true)
-        .neq("status", "archived")
         .order("first_name", { ascending: true });
 
-      const all: StaffRow[] = (users ?? []).map((u: any) => ({
-        user_uuid: u.user_uuid,
+      const allWithRole = (users ?? []).map((u: any) => ({
+        user_uuid: u.user_uuid as string,
         display_name: [u.first_name, u.last_name].filter(Boolean).join(" ").trim() || u.email || "Unknown",
         unicorn_role: u.unicorn_role,
         is_qa: u.kpi_pod === "qa",
+        kpi_role: u.kpi_role as string | null,
       }));
 
       const result: Record<KpiRole, OverviewRow[]> = { csc: [], cst: [], dev: [] };
 
       for (const role of Object.keys(ROLE_LABEL) as KpiRole[]) {
-        const filtered = all.filter((u) => ROLE_TO_UNICORN[role].includes(u.unicorn_role ?? ""));
+        const filtered: StaffRow[] = allWithRole
+          .filter((u) => u.kpi_role === ROLE_TO_KPI_ROLE[role])
+          .map(({ kpi_role, ...rest }) => rest);
         if (filtered.length === 0) continue;
 
         // Existing reviews for this role + period.
