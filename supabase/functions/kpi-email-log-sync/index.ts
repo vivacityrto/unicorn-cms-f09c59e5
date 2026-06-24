@@ -23,8 +23,8 @@ const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET")!;
 
 // SLA thresholds (minutes). Tune via app_settings later if needed.
 const SLA_MINUTES: Record<string, number> = {
-  general_email: 24 * 60, // 24h
-  client_message: 4 * 60, // 4h
+  general_email: 12 * 60, // 12h
+  client_message: 12 * 60, // 12h
 };
 
 type Folder = "inbox" | "sent";
