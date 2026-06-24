@@ -33,6 +33,8 @@ interface Props {
   weeks?: number;
   /** Human label for the selected period (e.g. "This week", "Last 4 weeks"). */
   periodLabel?: string;
+  /** When true, hide KpiTasksSection and KpiDeveloperTicketQueue (weekly breakdown still shown). */
+  hideSections?: boolean;
 }
 
 const ROLE_LABEL: Record<KpiRole, string> = {
@@ -176,14 +178,11 @@ function DevTable({ subjectUuid, weeks }: { subjectUuid: string; weeks: number }
   );
 }
 
-export function KpiDashboard({ subjectUuid, roles, weeks = 12, periodLabel }: Props) {
+export function KpiDashboard({ subjectUuid, roles, weeks = 12, periodLabel, hideSections = false }: Props) {
   const enabledRoles = useMemo<KpiRole[]>(() => roles ?? ["csc", "cst", "dev"], [roles]);
   const defaultTab = enabledRoles[0];
   const { profile } = useAuth();
   const isOwnDashboard = profile?.user_uuid === subjectUuid;
-  const showEmailLog =
-    isOwnDashboard &&
-    (profile?.kpi_role === "csc_consultant" || profile?.kpi_role === "cst_assistant");
   const titleSuffix = periodLabel ?? `last ${weeks} weeks`;
   const showTabs = enabledRoles.length > 1;
 
@@ -222,14 +221,13 @@ export function KpiDashboard({ subjectUuid, roles, weeks = 12, periodLabel }: Pr
         </CardContent>
       </Card>
 
-      {/* Email log rendered by MyKpiDashboardPage for csc/cst roles */}
-      {isOwnDashboard && profile?.kpi_role === "developer" && (
+      {!hideSections && isOwnDashboard && profile?.kpi_role === "developer" && (
         <div className="flex justify-end">
           <RaiseTicketButton />
         </div>
       )}
-      {isOwnDashboard && profile?.kpi_role === "developer" && <KpiDeveloperTicketQueue />}
-      {isOwnDashboard && <KpiTasksSection viewerRole={profile?.kpi_role ?? null} />}
+      {!hideSections && isOwnDashboard && profile?.kpi_role === "developer" && <KpiDeveloperTicketQueue />}
+      {!hideSections && isOwnDashboard && <KpiTasksSection viewerRole={profile?.kpi_role ?? null} />}
     </div>
   );
 }
