@@ -168,8 +168,9 @@ function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: str
               <thead className="bg-muted/40 text-left">
                 <tr>
                   <th className="px-2 py-1">Received</th>
+                  <th className="px-2 py-1">Subject</th>
                   <th className="px-2 py-1">Responded</th>
-                  <th className="px-2 py-1">Mins</th>
+                  <th className="px-2 py-1">Duration</th>
                   <th className="px-2 py-1">Type</th>
                   <th className="px-2 py-1">SLA</th>
                 </tr>
@@ -178,6 +179,7 @@ function CscDetail({ uuid, start, end }: { uuid: string; start: string; end: str
                 {emails.map((e: any) => (
                   <tr key={e.id} className="border-t">
                     <td className="px-2 py-1">{fmtDateTime(e.received_at)}</td>
+                    <td className="px-2 py-1" title={e.subject ?? ""}>{fmtSubject(e.subject)}</td>
                     <td className="px-2 py-1">{fmtDateTime(e.responded_at)}</td>
                     <td className="px-2 py-1">{fmtMinutes(e.response_minutes)}</td>
                     <td className="px-2 py-1">{fmtEmailType(e.email_type)}</td>
