@@ -95,7 +95,9 @@ export default function MyKpiDashboardPage() {
           subjectUuid={profile.user_uuid}
           roles={roles}
           weeks={PERIOD_WEEKS[period]}
+          periodLabel={PERIOD_LABEL[period]}
         />
+
 
         {(profile.kpi_role === "csc_consultant" || profile.kpi_role === "cst_assistant") && (
           <KpiEmailLogSection subjectUuid={profile.user_uuid} />
