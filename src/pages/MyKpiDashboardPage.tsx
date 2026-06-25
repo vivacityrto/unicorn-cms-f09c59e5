@@ -180,7 +180,7 @@ export default function MyKpiDashboardPage() {
             <div className="flex justify-end">
               <RaiseTicketButton />
             </div>
-            <KpiDeveloperTicketQueue />
+            {profile.kpi_role === "developer" ? <KpiDeveloperTicketQueue /> : <KpiReporterTicketView />}
           </TabsContent>
 
           {visibleTabs.includes("email_log") && (
