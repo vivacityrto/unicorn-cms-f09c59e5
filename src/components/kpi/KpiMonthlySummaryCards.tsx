@@ -205,11 +205,35 @@ function CstCards({ subjectUuid, period }: { subjectUuid: string; period: Period
   return <CardGrid cards={cards} period={period} loading={loading} />;
 }
 
+function DevCard({ c }: { c: CardSpec }) {
+  return (
+    <Card className="relative overflow-hidden border shadow-sm">
+      <div className={`absolute inset-x-0 top-0 h-1.5 ${ACCENT[c.status]}`} />
+      <div className="p-5 pt-6 flex flex-col gap-3 min-h-[140px]">
+        <div className="text-[11px] font-semibold tracking-wider text-muted-foreground">
+          {c.label}
+        </div>
+        <div className="text-4xl font-bold leading-none text-foreground">
+          {c.actual}
+        </div>
+        <div className="mt-auto flex items-end justify-between gap-2">
+          <span className="text-xs text-muted-foreground">{c.target}</span>
+          {statusBadge(c.status)}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function DevCards({ subjectUuid, period }: { subjectUuid: string; period: Period }) {
   const [loading, setLoading] = useState(true);
   const [firstResp, setFirstResp] = useState<{ avg: number | null; allOk: boolean; anyOver: boolean }>({ avg: null, allOk: false, anyOver: false });
   const [stalled, setStalled] = useState<number | null>(null);
   const [trend, setTrend] = useState<{ current: number; prior: number } | null>(null);
+  const [commsPct, setCommsPct] = useState<number | null>(null);
+  const [deliveryLoading, setDeliveryLoading] = useState(true);
+  const [deliveryPct, setDeliveryPct] = useState<number | null>(null);
+  const [deliveryTotal, setDeliveryTotal] = useState<number>(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -235,7 +259,7 @@ function DevCards({ subjectUuid, period }: { subjectUuid: string; period: Period
         if (w <= 0) continue;
         wsum += r.avg_first_response_minutes * w;
         wcount += w;
-        if (r.avg_first_response_minutes > 720) anyOver = true; else void 0;
+        if (r.avg_first_response_minutes > 720) anyOver = true;
       }
       const avg = wcount > 0 ? wsum / wcount : null;
       if (rows.length === 0) allOk = false;
@@ -261,18 +285,74 @@ function DevCards({ subjectUuid, period }: { subjectUuid: string; period: Period
         .gte("opened_at", sincePrior.toISOString())
         .lt("opened_at", since.toISOString());
 
+      // KPI 3: comms compliance
+      const { data: ticketRows } = await (supabase as any)
+        .from("kpi_tickets")
+        .select("id,status,reopen_count")
+        .eq("assignee_uuid", subjectUuid)
+        .gte("opened_at", since.toISOString());
+      const tickets = (ticketRows ?? []) as Array<{ id: string; status: string; reopen_count: number | null }>;
+      let commsPctVal: number | null = null;
+      if (tickets.length > 0) {
+        const ids = tickets.map((t) => t.id);
+        const { data: commRows } = await (supabase as any)
+          .from("kpi_ticket_comms")
+          .select("ticket_id,comm_key")
+          .in("ticket_id", ids);
+        const byTicket = new Map<string, Set<string>>();
+        for (const c of (commRows ?? []) as Array<{ ticket_id: string; comm_key: string }>) {
+          if (!byTicket.has(c.ticket_id)) byTicket.set(c.ticket_id, new Set());
+          byTicket.get(c.ticket_id)!.add(c.comm_key);
+        }
+        let compliant = 0;
+        for (const t of tickets) {
+          const required = new Set<string>(["received_ack", "in_progress_notify"]);
+          if ((t.reopen_count ?? 0) > 0) required.add("reopened_notify");
+          if (t.status === "solved") required.add("resolved_notify");
+          const logged = byTicket.get(t.id) ?? new Set<string>();
+          let ok = true;
+          for (const k of required) if (!logged.has(k)) { ok = false; break; }
+          if (ok) compliant++;
+        }
+        commsPctVal = (compliant / tickets.length) * 100;
+      }
+
       if (cancelled) return;
       setFirstResp({ avg, allOk: allOk && !anyOver, anyOver });
       setStalled(stalledCount ?? 0);
       setTrend({ current: curCount ?? 0, prior: priorCount ?? 0 });
+      setCommsPct(commsPctVal);
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [subjectUuid, period]);
 
-  const cards = useMemo<CardSpec[]>(() => {
-    const firstStatus: Status = firstResp.avg == null ? "none" : firstResp.anyOver ? "below" : "on";
+  // Group 2: rocks & delivery — always quarterly
+  useEffect(() => {
+    let cancelled = false;
+    if (!subjectUuid) return;
+    setDeliveryLoading(true);
+    (async () => {
+      const since = new Date();
+      since.setDate(since.getDate() - PERIOD_DAYS.quarterly);
+      const { data } = await (supabase as any)
+        .from("v_kpi_dev_summary")
+        .select("milestones_total,milestones_on_time")
+        .eq("subject_uuid", subjectUuid)
+        .gte("period_start", since.toISOString().slice(0, 10));
+      if (cancelled) return;
+      const rows = (data ?? []) as Array<{ milestones_total: number | null; milestones_on_time: number | null }>;
+      const total = rows.reduce((s, r) => s + (r.milestones_total ?? 0), 0);
+      const onTime = rows.reduce((s, r) => s + (r.milestones_on_time ?? 0), 0);
+      setDeliveryTotal(total);
+      setDeliveryPct(total > 0 ? (onTime / total) * 100 : null);
+      setDeliveryLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [subjectUuid]);
 
+  const ticketCards = useMemo<CardSpec[]>(() => {
+    const firstStatus: Status = firstResp.avg == null ? "none" : firstResp.anyOver ? "below" : "on";
     const stalledStatus: Status = stalled == null ? "none" : stalled === 0 ? "on" : "below";
 
     let trendActual = "No data";
@@ -306,13 +386,47 @@ function DevCards({ subjectUuid, period }: { subjectUuid: string; period: Period
         status: stalledStatus,
       },
       {
+        label: "KPI 3 — COMMS COMPLIANCE",
+        actual: commsPct == null ? "No data" : `${commsPct.toFixed(0)}%`,
+        target: "Target: 100%",
+        status: pctStatus(commsPct, 100, 80),
+      },
+      {
         label: "KPI 4 — TICKET VOLUME TREND",
         actual: trendActual,
         target: "Target: month-on-month decrease",
         status: trendStatus,
       },
     ];
-  }, [firstResp, stalled, trend]);
+  }, [firstResp, stalled, trend, commsPct]);
 
-  return <CardGrid cards={cards} period={period} loading={loading} />;
+  const deliveryCard = useMemo<CardSpec>(() => ({
+    label: "KPI 5 & 6 — ROCKS & DELIVERY",
+    actual: deliveryTotal === 0 || deliveryPct == null ? "No data" : `${deliveryPct.toFixed(0)}%`,
+    target: "Target: 100% on time",
+    status: deliveryTotal === 0 ? "none" : pctStatus(deliveryPct, 100, 80),
+  }), [deliveryPct, deliveryTotal]);
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted-foreground">Ticket performance · {PERIOD_LABEL[period]}</h2>
+          {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {ticketCards.map((c) => <DevCard key={c.label} c={c} />)}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted-foreground">Rocks & delivery · This quarter</h2>
+          {deliveryLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+        </div>
+        <div className="max-w-sm">
+          <DevCard c={deliveryCard} />
+        </div>
+      </div>
+    </div>
+  );
 }
