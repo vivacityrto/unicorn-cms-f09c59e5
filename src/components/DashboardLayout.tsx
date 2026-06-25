@@ -37,6 +37,7 @@ const workMenuItems = [
   { icon: Calendar, label: "My Calendar", path: "/work/calendar" },
   { icon: Video, label: "Meetings", path: "/work/meetings" },
   { icon: Calendar, label: "Event Calendar", path: "/calendar" },
+  { icon: GraduationCap, label: "Vivacity Academy", path: "/academy" },
 ];
 
 const EMAIL_TRIAGE_ROLES = new Set(["Super Admin", "Team Member", "CSC", "Integrator", "BGT"]);
