@@ -570,9 +570,6 @@ export const DashboardLayout = ({
                   systemConfigMenuItems,
                   "systemConfig"
                 )}
-
-              {/* Vivacity Academy - standalone, all staff */}
-              {renderMenuItem({ icon: GraduationCap, label: "Vivacity Academy", path: "/academy" })}
             </>
           ) : (
             <>
