@@ -206,6 +206,7 @@ export function KpiTasksSection({ viewerRole = null }: { viewerRole?: string | n
         .from("users")
         .select("user_uuid, first_name, last_name, email, kpi_role")
         .not("kpi_role", "is", null)
+        .neq("kpi_role", "developer")
         .or("kpi_pod.is.null,kpi_pod.neq.qa")
         .order("first_name", { ascending: true });
       if (error) {
