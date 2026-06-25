@@ -8,6 +8,7 @@ import { KpiEmailLogSection } from "@/components/kpi/KpiEmailLogSection";
 import { KpiMonthlySummaryCards } from "@/components/kpi/KpiMonthlySummaryCards";
 import { KpiTasksSection } from "@/components/kpi/KpiTasksSection";
 import { KpiDeveloperTicketQueue } from "@/components/kpi/KpiDeveloperTicketQueue";
+import { KpiReporterTicketView } from "@/components/kpi/KpiReporterTicketView";
 import { RaiseTicketButton } from "@/components/kpi/RaiseTicketSheet";
 import { Loader2, LayoutDashboard, CheckSquare, Ticket, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -179,7 +180,7 @@ export default function MyKpiDashboardPage() {
             <div className="flex justify-end">
               <RaiseTicketButton />
             </div>
-            <KpiDeveloperTicketQueue />
+            {profile.kpi_role === "developer" ? <KpiDeveloperTicketQueue /> : <KpiReporterTicketView />}
           </TabsContent>
 
           {visibleTabs.includes("email_log") && (
