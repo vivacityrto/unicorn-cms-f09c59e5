@@ -10,8 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Plus, Trash2, FileText, GripVertical, Search, Eye, Download, Loader2, CheckSquare, Square, Wand2
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Plus, Trash2, FileText, GripVertical, Search, Eye, Download, Loader2, CheckSquare, Square, Wand2, Link2
 } from 'lucide-react';
 import {
   DndContext,
