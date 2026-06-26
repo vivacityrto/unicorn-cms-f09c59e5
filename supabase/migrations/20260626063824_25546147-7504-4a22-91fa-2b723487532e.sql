@@ -1,0 +1,1 @@
+ALTER FUNCTION app.user_can_access_tenant(bigint) SET search_path = public, app, auth;
