@@ -107,6 +107,7 @@ export default function ClientDetail() {
   const [tgaLinked, setTgaLinked] = useState(false);
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
+  const { count: messagesUnread, refresh: refreshMessagesUnread } = useClientMessagesUnread(tenantIdNum);
   
   const { 
     profile, 
