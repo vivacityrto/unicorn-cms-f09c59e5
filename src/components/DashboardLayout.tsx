@@ -18,6 +18,7 @@ import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
 import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupReminderModal";
 import { cn } from "@/lib/utils";
 import { useTeamUnreadCount } from "@/hooks/useTeamUnreadCount";
+import { useMyAssignedConversationsCount } from "@/hooks/useMyAssignedConversationsCount";
 import { useSupportTicketsBadge } from "@/hooks/useSupportTicketsBadge";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 
