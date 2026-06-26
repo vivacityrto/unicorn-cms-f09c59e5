@@ -1,97 +1,33 @@
-## KPI Tasks management UI
+## Context
 
-Add a new `KpiTasksSection` rendered inside `KpiDashboard.tsx` for every user (any `kpi_role`). It backs onto `public.kpi_tasks` (column name is `assignee_uuid`, not `owner_user_id` — code will use the real column).
+Audit of the codebase shows three of the four asks in this suggestion are already shipped on the client-facing Stage Documents drawer (`src/components/client/StageDocumentsSection.tsx`, opened at `/tenant/:tenantId` → Package → Stage → Documents):
 
-### 1. Lookup seed migration
+- Name filter (`Input` with search icon).
+- Category filter (`Select` populated from distinct doc categories).
+- SharePoint-link indicator (`Link2` icon shown next to the title + `?` description button, driven by `documents.source_template_url` or `documents.uploaded_files`).
+- Click-to-generate on the `Pending` badge (opens confirm dialog and calls `deliver-governance-document` with `force: true`).
 
-Spec uses statuses `pending`, `done_on_time`, `rectified`, `delayed`. Add them to `public.dd_kpi_task_status` (without removing existing rows) so the lookup stays the source of truth:
+The user confirmed that surface is done. The only outstanding piece is the **SharePoint link indicator on the Admin Package Builder's Stage Documents list** (`src/components/package-builder/StageDocumentsTab.tsx`), which lists template-level documents linked to each stage in the package definition and currently shows no indicator at all.
 
-```sql
-INSERT INTO public.dd_kpi_task_status (value, label, sort_order, is_active) VALUES
-  ('pending',      'Pending',      10, true),
-  ('done_on_time', 'Done on time', 20, true),
-  ('rectified',    'Rectified',    30, true),
-  ('delayed',      'Delayed',      40, true)
-ON CONFLICT (value) DO NOTHING;
-```
+## Change
 
-No table/RLS/grant changes — `kpi_tasks` already exists with policies.
+Add a small SharePoint link icon to each row in the Package Builder Stage Documents list, rendered immediately after the document title (same visual treatment as the client-side drawer: `Link2` icon, primary colour, wrapped in a `Tooltip` saying "Linked to SharePoint template").
 
-### 2. New file `src/components/kpi/KpiTasksSection.tsx`
+## Files
 
-Props: none (operates on the current user).
+1. `src/hooks/usePackageBuilder.tsx`
+   - Extend the `package_stage_documents` select on line 789 to also pull `source_template_url, uploaded_files` from the joined `documents` row.
+   - Extend the `StageDocument['document']` interface (lines 996-1004) with `source_template_url: string | null` and `uploaded_files: any[] | null`.
 
-State / data:
-- `useAuth()` → `user.id`, `profile`.
-- `assignedToMe`: `kpi_tasks` rows where `assignee_uuid = user.id`, plus assigner display name fetched in a follow-up `.in('user_uuid', [...])` against `users` (`user_uuid, first_name, last_name, kpi_role`).
-- `assignedByMe`: `kpi_tasks` rows where `assigned_by = user.id`, plus assignee display via the same lookup.
-- Both lists fetched in a single `useEffect`/refresh cycle and exposed as `refresh()`.
-- `assignableUsers`: from `users` with `.not('kpi_role','is',null).neq('kpi_pod','qa').order('first_name')` (matches existing project convention).
+2. `src/components/package-builder/StageDocumentsTab.tsx`
+   - Import `Link2` from `lucide-react` and the `Tooltip` primitives from `@/components/ui/tooltip`.
+   - In `SortableDocumentRow`, after the title `<span>` (line 88), conditionally render the `Link2` icon when `doc.document.source_template_url` is set or `doc.document.uploaded_files?.length > 0`, wrapped in a tooltip. Match the styling used in `StageDocumentsSection.tsx` (`h-3.5 w-3.5 text-primary shrink-0`).
+   - Optional polish: also show the icon next to each row inside the "Link Documents" picker dialog (line 483 area) so users can see at a glance which library documents already have a SharePoint template attached. Same `Link2` + tooltip pattern. (This will require pulling the same two extra columns in the picker's `availableDocuments` query.)
 
-Helpers:
-- `dueTone(due_at)` → `text-foreground` (>2d), `text-amber-600` (≤2d), `text-rose-600` (overdue).
-- `statusBadge(status)` → coloured `Badge` (emerald `Done on time`, amber `Rectified`, rose `Delayed`, slate `Pending`).
-- `fullName(u)` → `"First Last"` fallback to email/uuid.
+## Out of scope
 
-#### PART 1 — "Tasks assigned to me" card
+No database migration, no edge function changes, no changes to the client-facing Stage Documents drawer or to the Documents Hub.
 
-Ordering done in JS:
-1. Pending overdue (`status === 'pending'` && `due_at < now`), by `due_at asc`.
-2. Other pending, by `due_at asc nulls last`.
-3. Completed (`status !== 'pending'`), collapsed under a `<Collapsible>` toggle showing count, expanded on click.
+## Verification
 
-Pending row layout (flex):
-- Title (font-medium) + small "Assigned by {full name}" muted line.
-- Due-date pill using `dueTone`, formatted `dd/MM/yyyy`.
-- Three buttons (small): `Done on time` (default variant), `Rectified` (secondary), `Delayed` (destructive-outline).
-
-`markStatus(id, newStatus)`:
-```ts
-await supabase.from('kpi_tasks')
-  .update({ status: newStatus, completed_at: new Date().toISOString() })
-  .eq('id', id).eq('assignee_uuid', user.id);
-```
-On success: optimistic patch + `refresh()`. Once completed, the row re-renders in the Completed group (read-only with status badge).
-
-Completed row layout: title, "Assigned by …", status badge, completed date.
-
-#### PART 2 — "Tasks I've assigned" card
-
-Read-only list grouped same way (overdue pending first, pending, then completed collapsible). Row: assignee avatar (initials) + name, title, due-date with `dueTone`, status badge. No action buttons.
-
-#### PART 3 — "+ Assign a task" sheet
-
-Card header right-aligned button `+ Assign a task` opens a right-side `Sheet`.
-
-Form (react-hook-form not required — local `useState`):
-- `title` (Input, required).
-- `assigneeUuid` (Radix `Select`, required) — options from `assignableUsers`, each item shows `First Last` + small role badge derived from `kpi_role` value (e.g. `CSC consultant`, `CST assistant`, `Developer`, `Reviewer`).
-- `dueAt` (shadcn Popover + Calendar date picker per shadcn-datepicker guidance, `pointer-events-auto` on the Calendar; stores midnight UTC ISO).
-- `description` (Textarea, optional).
-
-Submit:
-```ts
-await supabase.from('kpi_tasks').insert({
-  assignee_uuid: assigneeUuid,
-  assigned_by: user.id,
-  title,
-  description: description || null,
-  status: 'pending',
-  due_at: dueAtIso,
-});
-```
-On success: toast, close sheet, reset form, call `refresh()` so both lists update.
-
-Validation: disable submit until `title`, `assigneeUuid`, `dueAt` all set. Surface Supabase errors via `sonner` toast.
-
-### 3. Wire into `KpiDashboard.tsx`
-
-- Import `KpiTasksSection`.
-- Inside the existing `<div className="space-y-6">`, render `<KpiTasksSection />` once, gated by `isOwnDashboard && profile?.kpi_role` (any value) — placed below `KpiEmailLogSection`.
-- No other dashboard changes.
-
-### Notes
-
-- Uses real column `assignee_uuid` (spec called it `owner_user_id`).
-- No FK/grant/RLS changes; existing `kpi_tasks` policies already permit owners/assigners to read+update their rows.
-- `dd_kpi_task_status` is extended (not replaced) so the rest of the platform that may reference legacy values (`completed`, `in_progress`, `overdue`, etc.) keeps working.
+After build, open `/admin/package/:id` → select a stage → Documents tab. Rows whose underlying `documents.source_template_url` is set (or that have uploaded files) show the `Link2` icon with tooltip; rows without remain unchanged. The client-facing drawer at `/tenant/:tenantId` is untouched and continues to behave as before.
