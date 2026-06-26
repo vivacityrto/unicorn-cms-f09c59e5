@@ -786,7 +786,7 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
       .from('package_stage_documents' as any)
       .select(`
         *,
-        document:documents(id, title, format, category, is_team_only, is_tenant_downloadable, is_auto_generated)
+        document:documents(id, title, format, category, is_team_only, is_tenant_downloadable, is_auto_generated, source_template_url, uploaded_files)
       `)
       .eq('package_id', packageId)
       .eq('stage_id', stageId)
