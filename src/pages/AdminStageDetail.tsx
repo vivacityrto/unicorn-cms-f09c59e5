@@ -1680,6 +1680,12 @@ export default function AdminStageDetail() {
             )}
           </TabsContent>
 
+          {/* Messages Tab */}
+          <TabsContent value="messages" className="space-y-4">
+            {renderReuseInfoBadge()}
+            <StageMessagesPanelWithProvider stageId={stageIdNum!} />
+          </TabsContent>
+
           {/* Documents Tab */}
           <TabsContent value="documents" className="space-y-4">
             {renderReuseInfoBadge()}
