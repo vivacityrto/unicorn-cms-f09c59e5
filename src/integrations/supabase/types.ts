@@ -44788,6 +44788,56 @@ export type Database = {
           },
         ]
       }
+      stage_message_templates: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          recipient_type: string
+          sort_order: number
+          stage_id: number
+          trigger_hint: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          recipient_type?: string
+          sort_order?: number
+          stage_id: number
+          trigger_hint?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          recipient_type?: string
+          sort_order?: number
+          stage_id?: number
+          trigger_hint?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_message_templates_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_release_items: {
         Row: {
           created_at: string
