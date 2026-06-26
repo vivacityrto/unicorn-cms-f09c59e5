@@ -3,8 +3,8 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import type { PluginOption } from "vite";
-// @ts-ignore - critters types issue with package.json exports
-import Critters from "critters"; 
+// @ts-ignore - beasties types issue with package.json exports
+import Beasties from "beasties";
 import { writeFileSync, readFileSync, existsSync } from "fs";
 import { resolve, join } from "path";
 
