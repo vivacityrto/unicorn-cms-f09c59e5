@@ -20,7 +20,7 @@ import {
   Inbox,
   GraduationCap,
   ExternalLink,
-  Lightbulb,
+  LifeBuoy,
   ScrollText,
   Award,
 } from "lucide-react";
@@ -54,7 +54,7 @@ const clientMenuItemsAfter: SidebarMenuItem[] = [
   { icon: Library, label: "Resource Hub", path: "/client/resource-hub" },
   { icon: Calendar, label: "Calendar", path: "/client/calendar" },
   { icon: BarChart3, label: "Reports", path: "/client/reports" },
-  { icon: Lightbulb, label: "Suggestions", path: "/client/suggestions" },
+  { icon: LifeBuoy, label: "Support Tickets", path: "/client/support-tickets" },
   { icon: Users, label: "Users", path: "/client/users", adminOnly: true },
   { icon: GraduationCap, label: "Staff PDPs", path: "/client/staff-pdps", adminOnly: true },
   { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },
@@ -247,8 +247,8 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen }: ClientSidebarProp
 
           {/* Items after Academy */}
           {filterAdmin(clientMenuItemsAfter).map((item) => {
-            const isActive = item.path === "/client/suggestions"
-              ? location.pathname.startsWith("/client/suggestions")
+            const isActive = item.path === "/client/support-tickets"
+              ? location.pathname.startsWith("/client/support-tickets")
               : location.pathname === item.path;
             return <NavItem key={item.path} item={item} isActive={isActive} sidebarOpen={sidebarOpen} />;
           })}
