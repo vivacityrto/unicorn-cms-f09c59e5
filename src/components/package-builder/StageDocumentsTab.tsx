@@ -187,7 +187,7 @@ export function StageDocumentsTab({
 
       if (error) throw error;
 
-      setAvailableDocuments(data || []);
+      setAvailableDocuments((data as any) || []);
       
       // Extract unique categories
       const uniqueCategories = [...new Set(
