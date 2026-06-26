@@ -111,7 +111,7 @@ export default function TenantDetail() {
   const [orgType, setOrgType] = useState<string | null>(null);
   const [rtoNumber, setRtoNumber] = useState<string | null>(null);
   const [cricosNumber, setCricosNumber] = useState<string | null>(null);
-  const [tgaLinked, setTgaLinked] = useState(false);
+  
   const [loading, setLoading] = useState(false);
   const parsedTenantIdForReview = tenantId ? parseInt(tenantId) : null;
   const { reviewMode, toggleReviewMode, reviewSummary, summaryLoading } = useReviewMode(parsedTenantIdForReview);
@@ -284,13 +284,6 @@ export default function TenantDetail() {
       setRtoNumber(tpData?.rto_number || null);
       setCricosNumber(tpData?.cricos_number || null);
 
-      const { data: linkRow } = await supabase
-        .from('tenant_registry_links')
-        .select('link_status')
-        .eq('tenant_id', parseInt(tenantId))
-        .eq('registry', 'tga')
-        .maybeSingle();
-      setTgaLinked(linkRow?.link_status === 'linked' && !!tpData?.rto_number);
 
       setLogoPath((tenantData as any).logo_path || null);
       setLogoPath((tenantData as any).logo_path || null);
@@ -622,18 +615,6 @@ export default function TenantDetail() {
                       {clientData.companyname}
                     </span>
                     <OrgTypeBadge orgType={orgType} rtoNumber={rtoNumber} cricosNumber={cricosNumber} />
-                    {tgaLinked && rtoNumber && (
-                      <a
-                        href={`https://training.gov.au/Organisation/Details/${rtoNumber}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Open this RTO on training.gov.au"
-                        className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 px-2 py-0.5 text-xs font-medium text-white border border-white/25 transition-colors"
-                      >
-                        View on TGA
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-white/70">
                     <User className="h-4 w-4" />

@@ -39,7 +39,8 @@ import {
   FolderOpen,
   ShieldAlert,
   Clock,
-  Phone
+  Phone,
+  ExternalLink
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { TenantRelationships } from '@/components/tenant/TenantRelationships';
@@ -100,6 +101,7 @@ export default function ClientDetail() {
   const [tenantPhone, setTenantPhone] = useState<string | null>(null);
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [tgaLinked, setTgaLinked] = useState(false);
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
   
@@ -140,6 +142,26 @@ export default function ClientDetail() {
       fetchPrimaryContact();
     }
   }, [tenantIdNum]);
+
+  useEffect(() => {
+    if (!tenantIdNum || !profile?.rto_number) {
+      setTgaLinked(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data: linkRow } = await supabase
+        .from('tenant_registry_links')
+        .select('link_status')
+        .eq('tenant_id', tenantIdNum)
+        .eq('registry', 'tga')
+        .maybeSingle();
+      if (!cancelled) {
+        setTgaLinked(linkRow?.link_status === 'linked' && !!profile?.rto_number);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tenantIdNum, profile?.rto_number]);
 
   const fetchTenantBasic = async () => {
     if (!tenantIdNum) return;
@@ -319,6 +341,17 @@ export default function ClientDetail() {
                     }}
                   />
                   <OrgTypeBadge orgType={profile?.org_type} rtoNumber={profile?.rto_number} cricosNumber={profile?.cricos_number} />
+                  {tgaLinked && profile?.rto_number && (
+                    <a
+                      href={`https://training.gov.au/Organisation/Details/${profile.rto_number}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open this RTO on training.gov.au"
+                      className="inline-flex items-center gap-1 rounded-full bg-muted hover:bg-muted/80 px-2 py-0.5 text-xs font-medium text-foreground border border-border transition-colors"
+                    >
+                      View on TGA <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                 </div>
                 {tenantPhone && (
                   <a href={`tel:${tenantPhone}`} className="text-xs text-muted-foreground mt-1 hover:text-primary hover:underline inline-flex items-center gap-1">
