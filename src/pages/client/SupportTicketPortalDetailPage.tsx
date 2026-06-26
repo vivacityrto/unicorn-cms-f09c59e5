@@ -46,6 +46,7 @@ export default function SupportTicketPortalDetailPage() {
   const handleOpenAttachment = async (path: string) => {
     try {
       const url = await getAttachmentSignedUrl(path);
+      if (!url) throw new Error('Could not create download link');
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (e: any) {
       toast({ title: 'Failed to open attachment', description: e?.message, variant: 'destructive' });
