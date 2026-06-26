@@ -100,7 +100,7 @@ export default function ManageCategories() {
         .insert({
           value: generatedValue,
           label: formData.name.trim(),
-          description: formData.description.trim() || null,
+          // description column not present on dd_document_categories
           is_active: true,
           sort_order: maxSort + 1,
         });
@@ -137,7 +137,7 @@ export default function ManageCategories() {
     try {
       const { error } = await supabase
         .from('dd_document_categories')
-        .update({ label: formData.name.trim(), description: formData.description.trim() || null })
+        .update({ label: formData.name.trim() })
         .eq('value', editingCategory.value);
 
       if (error) throw error;

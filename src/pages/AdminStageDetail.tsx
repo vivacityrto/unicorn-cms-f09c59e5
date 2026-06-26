@@ -37,7 +37,8 @@ import {
   ArrowLeft, Layers, ShieldCheck, ShieldX, Settings, Users, CheckSquare, 
   Mail, FileText, BarChart3, History, Copy, AlertTriangle, Plus, Trash2, 
   User, Clock, GripVertical, Package, Info, Loader2, RefreshCw, ExternalLink,
-  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2, Globe, Play, Pencil, KeyRound
+  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2, Globe, Play, Pencil, KeyRound,
+  MessageSquare
 } from 'lucide-react';
 import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTab';
 import { StageQualityPanel, StageQualityBadge } from '@/components/stage/StageQualityPanel';
@@ -52,6 +53,7 @@ import { DocumentSyncAuditPanel } from '@/components/stage/DocumentSyncAuditPane
 import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
 import { SortableStaffTaskList } from '@/components/stage/SortableStaffTaskList';
+import StageMessagesPanelWithProvider from '@/components/stage/StageMessagesPanel';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
@@ -1227,7 +1229,7 @@ export default function AdminStageDetail() {
       {/* Tabs - Full Width */}
       {stage && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="settings" className="text-xs">
               <Settings className="h-3 w-3 mr-1" />
               Settings
@@ -1243,6 +1245,10 @@ export default function AdminStageDetail() {
             <TabsTrigger value="emails" className="text-xs">
               <Mail className="h-3 w-3 mr-1" />
               Emails
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="text-xs">
+              <MessageSquare className="h-3 w-3 mr-1" />
+              Messages
             </TabsTrigger>
             <TabsTrigger value="documents" className="text-xs">
               <FileText className="h-3 w-3 mr-1" />
@@ -1672,6 +1678,12 @@ export default function AdminStageDetail() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Messages Tab */}
+          <TabsContent value="messages" className="space-y-4">
+            {renderReuseInfoBadge()}
+            <StageMessagesPanelWithProvider stageId={stageIdNum!} />
           </TabsContent>
 
           {/* Documents Tab */}

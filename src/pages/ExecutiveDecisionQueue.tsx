@@ -120,7 +120,7 @@ export default function ExecutiveDecisionQueue() {
         updates.decided_at = new Date().toISOString();
         updates.decided_by = user?.id ?? null;
       }
-      const { error } = await supabase.from('ceo_decision_queue').update(updates).eq('id', selected.id);
+      const { error } = await supabase.from('ceo_decision_queue').update(updates as any).eq('id', selected.id);
       if (error) throw error;
       toast({ title: 'Success', description: 'Decision item updated' });
       setIsEditOpen(false);
