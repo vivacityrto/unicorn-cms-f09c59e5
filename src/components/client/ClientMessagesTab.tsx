@@ -711,7 +711,94 @@ function ConversationThread({
   );
 }
 
-function AttachmentLink({ filename, path, isStaff }: { filename: string; path: string; isStaff: boolean }) {
+function AssigneePill({ assignee }: { assignee: StaffMember | null }) {
+  if (!assignee) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5 text-[11px]">
+        <UserPlus className="h-3 w-3" />
+        Unassigned
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
+      title={`Assigned to ${staffName(assignee)}`}
+    >
+      <Avatar className="h-5 w-5">
+        <AvatarFallback className="text-[9px] bg-[#7130A0] text-white">
+          {staffInitials(assignee)}
+        </AvatarFallback>
+      </Avatar>
+      <span className="hidden sm:inline truncate max-w-[100px]">{staffName(assignee)}</span>
+    </span>
+  );
+}
+
+function AssignControl({
+  assignee,
+  staffList,
+  onAssign,
+}: {
+  assignee: StaffMember | null;
+  staffList: StaffMember[];
+  onAssign: (assigneeUuid: string | null) => void | Promise<void>;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 hover:bg-muted px-2 py-0.5 text-xs"
+        >
+          {assignee ? (
+            <>
+              <Avatar className="h-5 w-5">
+                <AvatarFallback className="text-[9px] bg-[#7130A0] text-white">
+                  {staffInitials(assignee)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="hidden sm:inline max-w-[120px] truncate">{staffName(assignee)}</span>
+            </>
+          ) : (
+            <>
+              <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Unassigned</span>
+            </>
+          )}
+          <ChevronDown className="h-3 w-3" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto w-60">
+        <DropdownMenuLabel className="text-xs">Assign to</DropdownMenuLabel>
+        {staffList.length === 0 ? (
+          <DropdownMenuItem disabled>No staff available</DropdownMenuItem>
+        ) : (
+          staffList.map((s) => (
+            <DropdownMenuItem
+              key={s.user_uuid}
+              onClick={() => onAssign(s.user_uuid)}
+              className="flex items-center gap-2"
+            >
+              <Avatar className="h-5 w-5">
+                <AvatarFallback className="text-[9px] bg-[#7130A0] text-white">
+                  {staffInitials(s)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="truncate">{staffName(s)}</span>
+            </DropdownMenuItem>
+          ))
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => onAssign(null)} className="text-muted-foreground">
+          <UserCircle2 className="h-4 w-4 mr-2" />
+          Unassign
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     (async () => {
