@@ -48,7 +48,7 @@ interface Message {
   attachments?: Array<{ id: string; filename: string; storage_path: string; mime_type: string | null }>;
 }
 
-type FilterValue = 'all' | 'unread' | 'from-client';
+type FilterValue = 'all' | 'unread' | 'from-client' | 'resolved';
 
 const TYPE_STYLES: Record<string, string> = {
   csc: 'bg-[#7130A0]/10 text-[#7130A0] border-[#7130A0]/30',
