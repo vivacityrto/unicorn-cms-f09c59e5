@@ -265,6 +265,21 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     await loadConversations();
   };
 
+  const changeStatus = async (newStatus: 'open' | 'resolved' | 'closed') => {
+    if (!selected || !canChangeStatus) return;
+    const { error } = await (supabase as any)
+      .from('tenant_conversations')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', selected.id);
+    if (error) {
+      toast({ title: 'Failed to update status', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setSelected({ ...selected, status: newStatus });
+    setConversations((prev) => prev.map((c) => (c.id === selected.id ? { ...c, status: newStatus } : c)));
+    toast({ title: `Conversation marked as ${newStatus}` });
+  };
+
   if (selected) {
     return (
       <ConversationThread
@@ -280,6 +295,8 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
         onSend={sendReply}
         sending={sending}
         clientName={clientName}
+        canChangeStatus={canChangeStatus}
+        onChangeStatus={changeStatus}
       />
     );
   }
