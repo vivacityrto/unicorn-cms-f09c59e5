@@ -546,6 +546,9 @@ function ConversationThread({
   clientName,
   canChangeStatus,
   onChangeStatus,
+  staffList,
+  assignee,
+  onAssign,
 }: {
   conversation: Conversation;
   messages: Message[];
@@ -558,6 +561,9 @@ function ConversationThread({
   clientName: string;
   canChangeStatus: boolean;
   onChangeStatus: (status: 'open' | 'resolved' | 'closed') => void | Promise<void>;
+  staffList: StaffMember[];
+  assignee: StaffMember | null;
+  onAssign: (assigneeUuid: string | null) => void | Promise<void>;
 }) {
   const status = (conversation.status || 'open') as 'open' | 'resolved' | 'closed';
   const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
