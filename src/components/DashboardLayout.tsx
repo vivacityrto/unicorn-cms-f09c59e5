@@ -192,6 +192,7 @@ export const DashboardLayout = ({
     getBestTab,
   } = useProfileSetupReminder();
   const teamUnreadCount = useTeamUnreadCount();
+  const myAssignedConvosCount = useMyAssignedConversationsCount();
   const supportTicketsCount = useSupportTicketsBadge();
 
   // Determine user role
