@@ -72,6 +72,8 @@ function typeLabel(t?: string | null) {
 
 export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: ClientMessagesTabProps) {
   const { toast } = useToast();
+  const { profile } = useAuth();
+  const canChangeStatus = isVivacityStaffRole(profile?.unicorn_role);
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [filter, setFilter] = useState<FilterValue>('all');
