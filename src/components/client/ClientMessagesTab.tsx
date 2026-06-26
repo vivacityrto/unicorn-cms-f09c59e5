@@ -514,11 +514,14 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
                           </p>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground shrink-0 mt-1">
-                        {c.last_message_at
-                          ? formatDistanceToNow(new Date(c.last_message_at), { addSuffix: true })
-                          : 'No messages'}
-                      </span>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-xs text-muted-foreground mt-1">
+                          {c.last_message_at
+                            ? formatDistanceToNow(new Date(c.last_message_at), { addSuffix: true })
+                            : 'No messages'}
+                        </span>
+                        <AssigneePill assignee={c.assigned_to_user_uuid ? staffById.get(c.assigned_to_user_uuid) ?? null : null} />
+                      </div>
                     </button>
                   </li>
                 );
