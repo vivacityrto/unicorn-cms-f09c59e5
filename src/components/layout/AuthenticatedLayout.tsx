@@ -6,6 +6,7 @@ import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
 import { useDevOverflowWarning } from "@/hooks/useDevOverflowWarning";
 import { Loader2 } from "lucide-react";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
+import { useYouveGotMailToast } from "@/hooks/useYouveGotMailToast";
 
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
@@ -25,6 +26,8 @@ export const AuthenticatedLayout = ({ children }: AuthenticatedLayoutProps) => {
 
   // Dev-only: Warn about page overflow issues
   useDevOverflowWarning();
+  // Fire "You've got mail" toast for Vivacity staff with unread client messages
+  useYouveGotMailToast();
 
   const loading = authLoading || tenantLoading;
 
