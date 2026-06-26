@@ -483,6 +483,13 @@ export default function ClientDetail() {
                 Emails
               </TabsTrigger>
               <TabsTrigger
+                value="messages"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Messages
+              </TabsTrigger>
+              <TabsTrigger
                 value="sharepoint"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
               >
