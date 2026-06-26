@@ -10,6 +10,7 @@ import { ClientLoginHistoryTab } from '@/components/client/ClientLoginHistoryTab
 import { ClientStructuredNotesTab } from '@/components/client/ClientStructuredNotesTab';
 import { ClientActionItemsTab } from '@/components/client/ClientActionItemsTab';
 import { ClientEmailsTab } from '@/components/client/ClientEmailsTab';
+import { ClientMessagesTab } from '@/components/client/ClientMessagesTab';
 import { ClientFilesTab } from '@/components/client/ClientFilesTab';
 import { useClientProfile, useClientPackages } from '@/hooks/useClientManagement';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +37,7 @@ import {
   Save,
   Loader2,
   Mail,
+  MessageSquare,
   FolderOpen,
   ShieldAlert,
   Clock,
@@ -481,6 +483,13 @@ export default function ClientDetail() {
                 Emails
               </TabsTrigger>
               <TabsTrigger
+                value="messages"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Messages
+              </TabsTrigger>
+              <TabsTrigger
                 value="sharepoint"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
               >
@@ -611,6 +620,10 @@ export default function ClientDetail() {
 
           <TabsContent value="emails" className="mt-0">
             <ClientEmailsTab tenantId={tenantIdNum!} clientName={tenant.name} />
+          </TabsContent>
+
+          <TabsContent value="messages" className="mt-0">
+            <ClientMessagesTab tenantId={tenantIdNum!} clientName={tenant.name} />
           </TabsContent>
 
           <TabsContent value="sharepoint" className="mt-0">
