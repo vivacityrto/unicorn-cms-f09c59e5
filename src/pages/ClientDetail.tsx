@@ -39,7 +39,8 @@ import {
   FolderOpen,
   ShieldAlert,
   Clock,
-  Phone
+  Phone,
+  ExternalLink
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { TenantRelationships } from '@/components/tenant/TenantRelationships';
