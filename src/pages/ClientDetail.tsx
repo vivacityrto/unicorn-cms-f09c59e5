@@ -10,6 +10,7 @@ import { ClientLoginHistoryTab } from '@/components/client/ClientLoginHistoryTab
 import { ClientStructuredNotesTab } from '@/components/client/ClientStructuredNotesTab';
 import { ClientActionItemsTab } from '@/components/client/ClientActionItemsTab';
 import { ClientEmailsTab } from '@/components/client/ClientEmailsTab';
+import { ClientMessagesTab } from '@/components/client/ClientMessagesTab';
 import { ClientFilesTab } from '@/components/client/ClientFilesTab';
 import { useClientProfile, useClientPackages } from '@/hooks/useClientManagement';
 import { Badge } from '@/components/ui/badge';
