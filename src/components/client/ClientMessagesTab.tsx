@@ -286,7 +286,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          {(['all', 'unread', 'from-client'] as FilterValue[]).map((f) => (
+          {(['all', 'unread', 'from-client', 'resolved'] as FilterValue[]).map((f) => (
             <Button
               key={f}
               variant={filter === f ? 'default' : 'outline'}
@@ -294,7 +294,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
               className={filter === f ? 'bg-[#7130A0] hover:bg-[#7130A0]/90' : ''}
               onClick={() => setFilter(f)}
             >
-              {f === 'all' ? 'All' : f === 'unread' ? 'Unread' : 'From client'}
+              {f === 'all' ? 'All' : f === 'unread' ? 'Unread' : f === 'from-client' ? 'From client' : 'Resolved'}
             </Button>
           ))}
         </div>
