@@ -1001,5 +1001,7 @@ export interface StageDocument {
     is_team_only: boolean | null;
     is_tenant_downloadable: boolean | null;
     is_auto_generated: boolean | null;
+    source_template_url: string | null;
+    uploaded_files: any[] | null;
   };
 }
