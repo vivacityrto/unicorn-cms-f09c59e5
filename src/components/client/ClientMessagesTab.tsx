@@ -587,10 +587,19 @@ function ConversationThread({
           <ArrowLeft className="h-4 w-4 mr-1.5" />
           Back to messages
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Badge variant="outline" className={TYPE_STYLES[conversation.type || 'general']}>
             {typeLabel(conversation.type)}
           </Badge>
+          {canChangeStatus ? (
+            <AssignControl
+              assignee={assignee}
+              staffList={staffList}
+              onAssign={onAssign}
+            />
+          ) : (
+            <AssigneePill assignee={assignee} />
+          )}
           {canChangeStatus ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
