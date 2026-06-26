@@ -340,9 +340,13 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center py-16 px-6">
               <MessageSquare className="h-12 w-12 text-muted-foreground mb-3" />
-              <p className="font-semibold">No messages yet</p>
+              <p className="font-semibold">
+                {filter === 'resolved' ? 'No resolved conversations' : 'No messages yet'}
+              </p>
               <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                When this client sends a message through their portal, it will appear here.
+                {filter === 'resolved'
+                  ? 'Resolved conversations will appear here.'
+                  : 'When this client sends a message through their portal, it will appear here.'}
               </p>
             </div>
           ) : (
