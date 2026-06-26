@@ -9,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, MessageSquare, Plus, Send, Loader2, ChevronDown } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ArrowLeft, MessageSquare, Plus, Send, Loader2, ChevronDown, UserPlus, UserCircle2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
@@ -48,7 +49,29 @@ interface Message {
   attachments?: Array<{ id: string; filename: string; storage_path: string; mime_type: string | null }>;
 }
 
-type FilterValue = 'all' | 'unread' | 'from-client' | 'resolved';
+type FilterValue = 'all' | 'unread' | 'from-client' | 'resolved' | 'mine';
+
+interface StaffMember {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
+function staffName(s: StaffMember | undefined | null) {
+  if (!s) return 'Unassigned';
+  const name = [s.first_name, s.last_name].filter(Boolean).join(' ').trim();
+  return name || s.email || 'Unknown';
+}
+
+function staffInitials(s: StaffMember | undefined | null) {
+  if (!s) return '?';
+  const fi = s.first_name?.[0] ?? '';
+  const li = s.last_name?.[0] ?? '';
+  const combined = `${fi}${li}`.toUpperCase();
+  if (combined) return combined;
+  return (s.email?.[0] ?? '?').toUpperCase();
+}
 
 const TYPE_STYLES: Record<string, string> = {
   csc: 'bg-[#7130A0]/10 text-[#7130A0] border-[#7130A0]/30',
@@ -84,9 +107,30 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
   const [sending, setSending] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const staffById = useMemo(() => {
+    const m = new Map<string, StaffMember>();
+    staffList.forEach((s) => m.set(s.user_uuid, s));
+    return m;
+  }, [staffList]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
+  // Load active Vivacity staff for the assignment dropdown + avatars
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('users')
+        .select('user_uuid, first_name, last_name, email, is_vivacity_internal, unicorn_role, disabled, archived, kpi_pod')
+        .or('is_vivacity_internal.eq.true,unicorn_role.in.(Admin,CSC,Super Admin)');
+      const rows = (data ?? []).filter(
+        (u: any) => !u.disabled && !u.archived && u.kpi_pod !== 'qa' && u.user_uuid,
+      );
+      rows.sort((a: any, b: any) => staffName(a).localeCompare(staffName(b)));
+      setStaffList(rows as StaffMember[]);
+    })();
   }, []);
 
   const loadConversations = async () => {
@@ -231,8 +275,54 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
       return conversations.filter((c) => c.last_sender_type === 'client');
     if (filter === 'resolved')
       return conversations.filter((c) => c.status === 'resolved' || c.status === 'closed');
+    if (filter === 'mine')
+      return conversations.filter((c) => c.assigned_to_user_uuid === currentUserId);
     return conversations;
-  }, [conversations, filter]);
+  }, [conversations, filter, currentUserId]);
+
+  const assignConversation = async (assigneeUuid: string | null) => {
+    if (!selected || !canChangeStatus) return;
+    const { error } = await (supabase as any)
+      .from('tenant_conversations')
+      .update({ assigned_to_user_uuid: assigneeUuid, updated_at: new Date().toISOString() })
+      .eq('id', selected.id);
+    if (error) {
+      toast({ title: 'Failed to assign', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setSelected({ ...selected, assigned_to_user_uuid: assigneeUuid });
+    setConversations((prev) =>
+      prev.map((c) => (c.id === selected.id ? { ...c, assigned_to_user_uuid: assigneeUuid } : c)),
+    );
+
+    // Insert notification for assignee (skip self-assign)
+    if (assigneeUuid && assigneeUuid !== currentUserId) {
+      const assignee = staffById.get(assigneeUuid);
+      const subject = selected.subject || '(No subject)';
+      await (supabase as any)
+        .from('user_notifications')
+        .upsert(
+          {
+            user_id: assigneeUuid,
+            tenant_id: tenantId,
+            type: 'message',
+            title: `Conversation assigned to you: ${subject}`,
+            message: `You have been assigned a client conversation from ${clientName}`,
+            link: `/tenant/${tenantId}?tab=messages&conversation=${selected.id}`,
+            source_id: selected.id,
+            is_read: false,
+            created_by: currentUserId,
+            dedupe_key: `assign:${selected.id}:${assigneeUuid}`,
+          },
+          { onConflict: 'dedupe_key', ignoreDuplicates: true },
+        );
+      toast({ title: `Assigned to ${staffName(assignee)}` });
+    } else if (!assigneeUuid) {
+      toast({ title: 'Conversation unassigned' });
+    } else {
+      toast({ title: 'Assigned to you' });
+    }
+  };
 
   const sendReply = async () => {
     if (!selected || !reply.trim() || !currentUserId) return;
@@ -297,6 +387,9 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
         clientName={clientName}
         canChangeStatus={canChangeStatus}
         onChangeStatus={changeStatus}
+        staffList={staffList}
+        assignee={selected.assigned_to_user_uuid ? staffById.get(selected.assigned_to_user_uuid) ?? null : null}
+        onAssign={assignConversation}
       />
     );
   }
@@ -304,8 +397,8 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {(['all', 'unread', 'from-client', 'resolved'] as FilterValue[]).map((f) => (
+        <div className="flex items-center gap-2 flex-wrap">
+          {(['all', 'unread', 'from-client', 'mine', 'resolved'] as FilterValue[]).map((f) => (
             <Button
               key={f}
               variant={filter === f ? 'default' : 'outline'}
@@ -313,7 +406,15 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
               className={filter === f ? 'bg-[#7130A0] hover:bg-[#7130A0]/90' : ''}
               onClick={() => setFilter(f)}
             >
-              {f === 'all' ? 'All' : f === 'unread' ? 'Unread' : f === 'from-client' ? 'From client' : 'Resolved'}
+              {f === 'all'
+                ? 'All'
+                : f === 'unread'
+                  ? 'Unread'
+                  : f === 'from-client'
+                    ? 'From client'
+                    : f === 'mine'
+                      ? 'Mine'
+                      : 'Resolved'}
             </Button>
           ))}
         </div>
@@ -413,11 +514,14 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
                           </p>
                         )}
                       </div>
-                      <span className="text-xs text-muted-foreground shrink-0 mt-1">
-                        {c.last_message_at
-                          ? formatDistanceToNow(new Date(c.last_message_at), { addSuffix: true })
-                          : 'No messages'}
-                      </span>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className="text-xs text-muted-foreground mt-1">
+                          {c.last_message_at
+                            ? formatDistanceToNow(new Date(c.last_message_at), { addSuffix: true })
+                            : 'No messages'}
+                        </span>
+                        <AssigneePill assignee={c.assigned_to_user_uuid ? staffById.get(c.assigned_to_user_uuid) ?? null : null} />
+                      </div>
                     </button>
                   </li>
                 );
@@ -442,6 +546,9 @@ function ConversationThread({
   clientName,
   canChangeStatus,
   onChangeStatus,
+  staffList,
+  assignee,
+  onAssign,
 }: {
   conversation: Conversation;
   messages: Message[];
@@ -454,6 +561,9 @@ function ConversationThread({
   clientName: string;
   canChangeStatus: boolean;
   onChangeStatus: (status: 'open' | 'resolved' | 'closed') => void | Promise<void>;
+  staffList: StaffMember[];
+  assignee: StaffMember | null;
+  onAssign: (assigneeUuid: string | null) => void | Promise<void>;
 }) {
   const status = (conversation.status || 'open') as 'open' | 'resolved' | 'closed';
   const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
@@ -477,10 +587,19 @@ function ConversationThread({
           <ArrowLeft className="h-4 w-4 mr-1.5" />
           Back to messages
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Badge variant="outline" className={TYPE_STYLES[conversation.type || 'general']}>
             {typeLabel(conversation.type)}
           </Badge>
+          {canChangeStatus ? (
+            <AssignControl
+              assignee={assignee}
+              staffList={staffList}
+              onAssign={onAssign}
+            />
+          ) : (
+            <AssigneePill assignee={assignee} />
+          )}
           {canChangeStatus ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -589,6 +708,94 @@ function ConversationThread({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function AssigneePill({ assignee }: { assignee: StaffMember | null }) {
+  if (!assignee) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-muted text-muted-foreground border border-border px-2 py-0.5 text-[11px]">
+        <UserPlus className="h-3 w-3" />
+        Unassigned
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
+      title={`Assigned to ${staffName(assignee)}`}
+    >
+      <Avatar className="h-5 w-5">
+        <AvatarFallback className="text-[9px] bg-[#7130A0] text-white">
+          {staffInitials(assignee)}
+        </AvatarFallback>
+      </Avatar>
+      <span className="hidden sm:inline truncate max-w-[100px]">{staffName(assignee)}</span>
+    </span>
+  );
+}
+
+function AssignControl({
+  assignee,
+  staffList,
+  onAssign,
+}: {
+  assignee: StaffMember | null;
+  staffList: StaffMember[];
+  onAssign: (assigneeUuid: string | null) => void | Promise<void>;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 hover:bg-muted px-2 py-0.5 text-xs"
+        >
+          {assignee ? (
+            <>
+              <Avatar className="h-5 w-5">
+                <AvatarFallback className="text-[9px] bg-[#7130A0] text-white">
+                  {staffInitials(assignee)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="hidden sm:inline max-w-[120px] truncate">{staffName(assignee)}</span>
+            </>
+          ) : (
+            <>
+              <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Unassigned</span>
+            </>
+          )}
+          <ChevronDown className="h-3 w-3" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto w-60">
+        <DropdownMenuLabel className="text-xs">Assign to</DropdownMenuLabel>
+        {staffList.length === 0 ? (
+          <DropdownMenuItem disabled>No staff available</DropdownMenuItem>
+        ) : (
+          staffList.map((s) => (
+            <DropdownMenuItem
+              key={s.user_uuid}
+              onClick={() => onAssign(s.user_uuid)}
+              className="flex items-center gap-2"
+            >
+              <Avatar className="h-5 w-5">
+                <AvatarFallback className="text-[9px] bg-[#7130A0] text-white">
+                  {staffInitials(s)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="truncate">{staffName(s)}</span>
+            </DropdownMenuItem>
+          ))
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => onAssign(null)} className="text-muted-foreground">
+          <UserCircle2 className="h-4 w-4 mr-2" />
+          Unassign
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

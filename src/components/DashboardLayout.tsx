@@ -18,6 +18,7 @@ import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
 import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupReminderModal";
 import { cn } from "@/lib/utils";
 import { useTeamUnreadCount } from "@/hooks/useTeamUnreadCount";
+import { useMyAssignedConversationsCount } from "@/hooks/useMyAssignedConversationsCount";
 import { useSupportTicketsBadge } from "@/hooks/useSupportTicketsBadge";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 
@@ -191,6 +192,7 @@ export const DashboardLayout = ({
     getBestTab,
   } = useProfileSetupReminder();
   const teamUnreadCount = useTeamUnreadCount();
+  const myAssignedConvosCount = useMyAssignedConversationsCount();
   const supportTicketsCount = useSupportTicketsBadge();
 
   // Determine user role
@@ -506,8 +508,10 @@ export const DashboardLayout = ({
                 "Clients",
                 clientsMenuItems
                   .map(item => {
-                    if (item.path === "/communications")
-                      return { ...item, badge: teamUnreadCount || undefined };
+                    if (item.path === "/communications") {
+                      const total = (teamUnreadCount || 0) + (myAssignedConvosCount || 0);
+                      return { ...item, badge: total || undefined };
+                    }
                     if (item.path === "/support-tickets")
                       return { ...item, badge: supportTicketsCount || undefined };
                     return item;
