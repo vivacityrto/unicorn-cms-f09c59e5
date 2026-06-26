@@ -39,7 +39,7 @@ interface Props {
 export function AdminTicketsTable({ rows, isLoading }: Props) {
   const navigate = useNavigate();
   const [sortKey, setSortKey] = useState<SortKey>('created');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [page, setPage] = useState(1);
 
   const sorted = useMemo(() => {
