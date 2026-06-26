@@ -440,6 +440,8 @@ function ConversationThread({
   onSend,
   sending,
   clientName,
+  canChangeStatus,
+  onChangeStatus,
 }: {
   conversation: Conversation;
   messages: Message[];
@@ -450,7 +452,24 @@ function ConversationThread({
   onSend: () => void;
   sending: boolean;
   clientName: string;
+  canChangeStatus: boolean;
+  onChangeStatus: (status: 'open' | 'resolved' | 'closed') => void | Promise<void>;
 }) {
+  const status = (conversation.status || 'open') as 'open' | 'resolved' | 'closed';
+  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+  const transitions: Array<{ label: string; value: 'open' | 'resolved' | 'closed' }> =
+    status === 'open'
+      ? [
+          { label: 'Mark as Resolved', value: 'resolved' },
+          { label: 'Close conversation', value: 'closed' },
+        ]
+      : status === 'resolved'
+        ? [
+            { label: 'Reopen', value: 'open' },
+            { label: 'Close conversation', value: 'closed' },
+          ]
+        : [{ label: 'Reopen', value: 'open' }];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -462,11 +481,33 @@ function ConversationThread({
           <Badge variant="outline" className={TYPE_STYLES[conversation.type || 'general']}>
             {typeLabel(conversation.type)}
           </Badge>
-          <Badge variant="outline" className={STATUS_STYLES[conversation.status || 'open']}>
-            {(conversation.status || 'open').charAt(0).toUpperCase() + (conversation.status || 'open').slice(1)}
-          </Badge>
+          {canChangeStatus ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
+                  type="button"
+                >
+                  {statusLabel}
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {transitions.map((t) => (
+                  <DropdownMenuItem key={t.value} onClick={() => onChangeStatus(t.value)}>
+                    {t.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Badge variant="outline" className={STATUS_STYLES[status]}>
+              {statusLabel}
+            </Badge>
+          )}
         </div>
       </div>
+
 
       <Card>
         <CardContent className="p-4">
