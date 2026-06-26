@@ -1229,7 +1229,7 @@ export default function AdminStageDetail() {
       {/* Tabs - Full Width */}
       {stage && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="settings" className="text-xs">
               <Settings className="h-3 w-3 mr-1" />
               Settings
@@ -1245,6 +1245,10 @@ export default function AdminStageDetail() {
             <TabsTrigger value="emails" className="text-xs">
               <Mail className="h-3 w-3 mr-1" />
               Emails
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="text-xs">
+              <MessageSquare className="h-3 w-3 mr-1" />
+              Messages
             </TabsTrigger>
             <TabsTrigger value="documents" className="text-xs">
               <FileText className="h-3 w-3 mr-1" />
