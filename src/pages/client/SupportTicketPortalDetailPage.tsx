@@ -146,10 +146,10 @@ export default function SupportTicketPortalDetailPage() {
                   <button
                     key={a.id}
                     type="button"
-                    onClick={() => handleOpenAttachment(a.storage_path)}
+                    onClick={() => handleOpenAttachment(a.file_path)}
                     className="block text-left text-[#7130A0] hover:underline text-xs truncate w-full"
                   >
-                    {a.file_name || a.storage_path}
+                    {a.file_name || a.file_path}
                   </button>
                 ))}
               </CardContent>
