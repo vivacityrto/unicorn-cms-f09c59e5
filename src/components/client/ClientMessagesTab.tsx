@@ -799,6 +799,7 @@ function AssignControl({
   );
 }
 
+function AttachmentLink({ filename, path, isStaff }: { filename: string; path: string; isStaff: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     (async () => {
