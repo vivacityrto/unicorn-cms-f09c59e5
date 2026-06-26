@@ -10,8 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Plus, Trash2, FileText, GripVertical, Search, Eye, Download, Loader2, CheckSquare, Square, Wand2
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Plus, Trash2, FileText, GripVertical, Search, Eye, Download, Loader2, CheckSquare, Square, Wand2, Link2
 } from 'lucide-react';
 import {
   DndContext,
@@ -48,6 +49,8 @@ interface Document {
   title: string;
   format: string | null;
   category: string | null;
+  source_template_url: string | null;
+  uploaded_files: any[] | null;
 }
 
 function SortableDocumentRow({ 
@@ -85,7 +88,19 @@ function SortableDocumentRow({
       </div>
       <FileText className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
       <div className="flex-1 min-w-0">
-        <span className="font-medium block truncate">{doc.document.title}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-medium truncate">{doc.document.title}</span>
+          {(doc.document.source_template_url || (doc.document.uploaded_files && doc.document.uploaded_files.length > 0)) && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                </TooltipTrigger>
+                <TooltipContent><p className="text-xs">Linked to SharePoint template</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {doc.document.format && (
             <Badge variant="outline" className="text-xs uppercase">{doc.document.format}</Badge>
@@ -179,12 +194,12 @@ export function StageDocumentsTab({
     try {
       const { data, error } = await supabase
         .from('documents')
-        .select('id, title, format, category')
+        .select('id, title, format, category, source_template_url, uploaded_files')
         .order('title', { ascending: true });
 
       if (error) throw error;
 
-      setAvailableDocuments(data || []);
+      setAvailableDocuments((data as any) || []);
       
       // Extract unique categories
       const uniqueCategories = [...new Set(
@@ -480,7 +495,19 @@ export function StageDocumentsTab({
                       />
                       <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium truncate">{doc.title}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium truncate">{doc.title}</p>
+                          {(doc.source_template_url || (doc.uploaded_files && doc.uploaded_files.length > 0)) && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                                </TooltipTrigger>
+                                <TooltipContent><p className="text-xs">Linked to SharePoint template</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           {doc.format && (
                             <Badge variant="outline" className="text-xs uppercase">{doc.format}</Badge>
