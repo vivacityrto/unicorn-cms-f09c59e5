@@ -615,18 +615,6 @@ export default function TenantDetail() {
                       {clientData.companyname}
                     </span>
                     <OrgTypeBadge orgType={orgType} rtoNumber={rtoNumber} cricosNumber={cricosNumber} />
-                    {tgaLinked && rtoNumber && (
-                      <a
-                        href={`https://training.gov.au/Organisation/Details/${rtoNumber}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Open this RTO on training.gov.au"
-                        className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 px-2 py-0.5 text-xs font-medium text-white border border-white/25 transition-colors"
-                      >
-                        View on TGA
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-white/70">
                     <User className="h-4 w-4" />
