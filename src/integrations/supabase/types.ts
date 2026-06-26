@@ -45676,11 +45676,16 @@ export type Database = {
       }
       suggest_items: {
         Row: {
+          affected_areas: string[] | null
           assigned_to: string | null
           created_at: string
           created_by: string
           description: string
+          error_message: string | null
+          expected_behaviour: string | null
+          feature_context: string | null
           id: string
+          improvement_context: string | null
           is_client_visible: boolean
           is_deleted: boolean
           release_notes: string | null
@@ -45695,6 +45700,7 @@ export type Database = {
           source_component: string | null
           source_page_label: string | null
           source_page_url: string | null
+          steps_to_reproduce: string | null
           suggest_category_id: string | null
           suggest_impact_rating_id: string
           suggest_item_type_id: string
@@ -45704,15 +45710,23 @@ export type Database = {
           tenant_id: number
           title: string
           title_generated_by_ai: boolean
+          trying_to_do: string | null
           updated_at: string
           updated_by: string | null
+          urgency: string | null
+          what_happened: string | null
         }
         Insert: {
+          affected_areas?: string[] | null
           assigned_to?: string | null
           created_at?: string
           created_by: string
           description: string
+          error_message?: string | null
+          expected_behaviour?: string | null
+          feature_context?: string | null
           id?: string
+          improvement_context?: string | null
           is_client_visible?: boolean
           is_deleted?: boolean
           release_notes?: string | null
@@ -45727,6 +45741,7 @@ export type Database = {
           source_component?: string | null
           source_page_label?: string | null
           source_page_url?: string | null
+          steps_to_reproduce?: string | null
           suggest_category_id?: string | null
           suggest_impact_rating_id: string
           suggest_item_type_id: string
@@ -45736,15 +45751,23 @@ export type Database = {
           tenant_id: number
           title: string
           title_generated_by_ai?: boolean
+          trying_to_do?: string | null
           updated_at?: string
           updated_by?: string | null
+          urgency?: string | null
+          what_happened?: string | null
         }
         Update: {
+          affected_areas?: string[] | null
           assigned_to?: string | null
           created_at?: string
           created_by?: string
           description?: string
+          error_message?: string | null
+          expected_behaviour?: string | null
+          feature_context?: string | null
           id?: string
+          improvement_context?: string | null
           is_client_visible?: boolean
           is_deleted?: boolean
           release_notes?: string | null
@@ -45759,6 +45782,7 @@ export type Database = {
           source_component?: string | null
           source_page_label?: string | null
           source_page_url?: string | null
+          steps_to_reproduce?: string | null
           suggest_category_id?: string | null
           suggest_impact_rating_id?: string
           suggest_item_type_id?: string
@@ -45768,8 +45792,11 @@ export type Database = {
           tenant_id?: number
           title?: string
           title_generated_by_ai?: boolean
+          trying_to_do?: string | null
           updated_at?: string
           updated_by?: string | null
+          urgency?: string | null
+          what_happened?: string | null
         }
         Relationships: [
           {
