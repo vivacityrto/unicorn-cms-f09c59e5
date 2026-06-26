@@ -622,6 +622,10 @@ export default function ClientDetail() {
             <ClientEmailsTab tenantId={tenantIdNum!} clientName={tenant.name} />
           </TabsContent>
 
+          <TabsContent value="messages" className="mt-0">
+            <ClientMessagesTab tenantId={tenantIdNum!} clientName={tenant.name} />
+          </TabsContent>
+
           <TabsContent value="sharepoint" className="mt-0">
             <ClientFilesTab tenantId={tenantIdNum!} clientName={tenant.name} />
           </TabsContent>
