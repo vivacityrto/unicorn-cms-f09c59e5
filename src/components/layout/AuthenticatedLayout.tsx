@@ -26,6 +26,8 @@ export const AuthenticatedLayout = ({ children }: AuthenticatedLayoutProps) => {
 
   // Dev-only: Warn about page overflow issues
   useDevOverflowWarning();
+  // Fire "You've got mail" toast for Vivacity staff with unread client messages
+  useYouveGotMailToast();
 
   const loading = authLoading || tenantLoading;
 
