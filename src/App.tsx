@@ -236,9 +236,8 @@ const ClientTgaDetailsWrapperNew = lazy(() => import("./pages/client/ClientTgaDe
 const ClientFilesWrapperNew = lazy(() => import("./pages/client/ClientFilesWrapper"));
 const ClientTasksWrapperNew = lazy(() => import("./pages/client/ClientTasksWrapper"));
 const ClientCertificateWrapper = lazy(() => import("./pages/client/ClientCertificateWrapper"));
-const ClientSuggestionsWrapperNew = lazy(() => import("./pages/client/ClientSuggestionsWrapper"));
-const ClientNewSuggestionWrapperNew = lazy(() => import("./pages/client/ClientNewSuggestionWrapper"));
-const ClientSuggestionDetailWrapperNew = lazy(() => import("./pages/client/ClientSuggestionDetailWrapper"));
+const SupportTicketsPortalWrapper = lazy(() => import("./pages/client/SupportTicketsPortalWrapper"));
+const SupportTicketPortalDetailWrapper = lazy(() => import("./pages/client/SupportTicketPortalDetailWrapper"));
 // ClientCommunicationsWrapperNew removed — consolidated into ClientInboxPage
 const ClientPackagesWrapperNew = lazy(() => import("./pages/client/ClientPackagesWrapper"));
 const ClientInboxWrapperNew = lazy(() => import("./pages/client/ClientInboxWrapper"));
@@ -1164,9 +1163,11 @@ const App = () => (
             <Route path="/client/tga" element={<ProtectedRoute><ClientTgaDetailsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/files" element={<ProtectedRoute><ClientFilesWrapperNew /></ProtectedRoute>} />
             <Route path="/client/certificate" element={<ProtectedRoute><ClientCertificateWrapper /></ProtectedRoute>} />
-            <Route path="/client/suggestions" element={<ProtectedRoute><ClientSuggestionsWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/suggestions/new" element={<ProtectedRoute><ClientNewSuggestionWrapperNew /></ProtectedRoute>} />
-            <Route path="/client/suggestions/:id" element={<ProtectedRoute><ClientSuggestionDetailWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/support-tickets" element={<ProtectedRoute><SupportTicketsPortalWrapper /></ProtectedRoute>} />
+            <Route path="/client/support-tickets/:id" element={<ProtectedRoute><SupportTicketPortalDetailWrapper /></ProtectedRoute>} />
+            <Route path="/client/suggestions" element={<Navigate to="/client/support-tickets" replace />} />
+            <Route path="/client/suggestions/new" element={<Navigate to="/client/support-tickets" replace />} />
+            <Route path="/client/suggestions/:id" element={<Navigate to="/client/support-tickets" replace />} />
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboardWrapperNew /></ProtectedRoute>} />
             <Route path="/academy/trainer" element={<ProtectedRoute><AcademyTrainerWrapperNew /></ProtectedRoute>} />
             <Route path="/academy/compliance-manager" element={<ProtectedRoute><AcademyComplianceManagerWrapperNew /></ProtectedRoute>} />
