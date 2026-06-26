@@ -198,6 +198,25 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     setSelected(c);
     setReply('');
     await loadMessages(c.id);
+    // Mark conversation as read for this staff user
+    if (currentUserId) {
+      await (supabase as any)
+        .from('conversation_participants')
+        .upsert(
+          {
+            conversation_id: c.id,
+            user_id: currentUserId,
+            role: 'staff',
+            last_read_at: new Date().toISOString(),
+          },
+          { onConflict: 'conversation_id,user_id' },
+        );
+      // Reflect locally and refresh parent badge
+      setConversations((prev) =>
+        prev.map((x) => (x.id === c.id ? { ...x, unread: false } : x)),
+      );
+      onReadStateChange?.();
+    }
   };
 
   const filtered = useMemo(() => {
