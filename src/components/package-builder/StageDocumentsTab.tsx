@@ -182,7 +182,7 @@ export function StageDocumentsTab({
     try {
       const { data, error } = await supabase
         .from('documents')
-        .select('id, title, format, category')
+        .select('id, title, format, category, source_template_url, uploaded_files')
         .order('title', { ascending: true });
 
       if (error) throw error;
