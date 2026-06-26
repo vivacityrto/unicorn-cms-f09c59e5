@@ -36625,8 +36625,15 @@ export type Database = {
             foreignKeyName: "package_stage_documents_stage_id_fkey"
             columns: ["stage_id"]
             isOneToOne: false
-            referencedRelation: "documents_stages"
+            referencedRelation: "stages"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_stage_documents_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_stages"
+            referencedColumns: ["stage_id"]
           },
         ]
       }
