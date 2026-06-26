@@ -53,6 +53,7 @@ import { DocumentSyncAuditPanel } from '@/components/stage/DocumentSyncAuditPane
 import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
 import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
 import { SortableStaffTaskList } from '@/components/stage/SortableStaffTaskList';
+import StageMessagesPanelWithProvider from '@/components/stage/StageMessagesPanel';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
