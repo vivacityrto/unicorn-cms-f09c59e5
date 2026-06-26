@@ -508,8 +508,10 @@ export const DashboardLayout = ({
                 "Clients",
                 clientsMenuItems
                   .map(item => {
-                    if (item.path === "/communications")
-                      return { ...item, badge: teamUnreadCount || undefined };
+                    if (item.path === "/communications") {
+                      const total = (teamUnreadCount || 0) + (myAssignedConvosCount || 0);
+                      return { ...item, badge: total || undefined };
+                    }
                     if (item.path === "/support-tickets")
                       return { ...item, badge: supportTicketsCount || undefined };
                     return item;
