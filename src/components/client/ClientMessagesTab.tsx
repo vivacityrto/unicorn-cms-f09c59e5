@@ -49,7 +49,29 @@ interface Message {
   attachments?: Array<{ id: string; filename: string; storage_path: string; mime_type: string | null }>;
 }
 
-type FilterValue = 'all' | 'unread' | 'from-client' | 'resolved';
+type FilterValue = 'all' | 'unread' | 'from-client' | 'resolved' | 'mine';
+
+interface StaffMember {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
+function staffName(s: StaffMember | undefined | null) {
+  if (!s) return 'Unassigned';
+  const name = [s.first_name, s.last_name].filter(Boolean).join(' ').trim();
+  return name || s.email || 'Unknown';
+}
+
+function staffInitials(s: StaffMember | undefined | null) {
+  if (!s) return '?';
+  const fi = s.first_name?.[0] ?? '';
+  const li = s.last_name?.[0] ?? '';
+  const combined = `${fi}${li}`.toUpperCase();
+  if (combined) return combined;
+  return (s.email?.[0] ?? '?').toUpperCase();
+}
 
 const TYPE_STYLES: Record<string, string> = {
   csc: 'bg-[#7130A0]/10 text-[#7130A0] border-[#7130A0]/30',
