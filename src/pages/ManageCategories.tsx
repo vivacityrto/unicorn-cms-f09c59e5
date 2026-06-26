@@ -100,7 +100,7 @@ export default function ManageCategories() {
         .insert({
           value: generatedValue,
           label: formData.name.trim(),
-          description: formData.description.trim() || null,
+          // description column not present on dd_document_categories
           is_active: true,
           sort_order: maxSort + 1,
         });
