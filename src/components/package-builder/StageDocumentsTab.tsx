@@ -49,6 +49,8 @@ interface Document {
   title: string;
   format: string | null;
   category: string | null;
+  source_template_url: string | null;
+  uploaded_files: any[] | null;
 }
 
 function SortableDocumentRow({ 
