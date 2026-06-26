@@ -321,8 +321,13 @@ export function useClientProfile(tenantId: number | null) {
           tgaOrgType = 'rto';
         }
       }
-      // If tenant has both RTO and CRICOS, override to rto_cricos
-      if (tgaOrgType === 'rto' && tenant.cricos_id) {
+      // If tenant has both RTO and CRICOS, override to rto_cricos.
+      // Treat placeholder values (N/A, TBC, TBA, empty) as "no CRICOS".
+      const cricosPlaceholders = ['', 'n/a', 'na', 'tbc', 'tba'];
+      const hasRealCricos =
+        typeof tenant.cricos_id === 'string' &&
+        !cricosPlaceholders.includes(tenant.cricos_id.trim().toLowerCase());
+      if (tgaOrgType === 'rto' && hasRealCricos) {
         tgaOrgType = 'rto_cricos';
       }
 
