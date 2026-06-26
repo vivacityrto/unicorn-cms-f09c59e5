@@ -1,9 +1,9 @@
 import { cn } from '@/lib/utils';
 
-export type StatusTab = 'all' | 'new' | 'triaged' | 'in_progress' | 'resolved' | 'closed' | 'declined';
+export type StatusTab = 'active' | 'new' | 'triaged' | 'in_progress' | 'resolved' | 'closed' | 'declined';
 
 const TABS: { key: StatusTab; label: string }[] = [
-  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
   { key: 'new', label: 'New' },
   { key: 'triaged', label: 'Under Review' },
   { key: 'in_progress', label: 'In Progress' },
