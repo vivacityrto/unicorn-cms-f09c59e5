@@ -495,7 +495,19 @@ export function StageDocumentsTab({
                       />
                       <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium truncate">{doc.title}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium truncate">{doc.title}</p>
+                          {(doc.source_template_url || (doc.uploaded_files && doc.uploaded_files.length > 0)) && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                                </TooltipTrigger>
+                                <TooltipContent><p className="text-xs">Linked to SharePoint template</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           {doc.format && (
                             <Badge variant="outline" className="text-xs uppercase">{doc.format}</Badge>
