@@ -630,7 +630,7 @@ export default function ClientDetail() {
           </TabsContent>
 
           <TabsContent value="messages" className="mt-0">
-            <ClientMessagesTab tenantId={tenantIdNum!} clientName={tenant.name} />
+            <ClientMessagesTab tenantId={tenantIdNum!} clientName={tenant.name} onReadStateChange={refreshMessagesUnread} />
           </TabsContent>
 
           <TabsContent value="sharepoint" className="mt-0">
