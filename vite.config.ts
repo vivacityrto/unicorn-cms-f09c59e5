@@ -20,7 +20,7 @@ function criticalCssPlugin(): PluginOption {
       
       if (!existsSync(htmlPath)) return;
       
-      const critters = new Critters({
+      const critters = new Beasties({
         path: distPath,
         publicPath: "/",
         inlineThreshold: 0,
