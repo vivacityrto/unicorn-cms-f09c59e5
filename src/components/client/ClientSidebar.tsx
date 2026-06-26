@@ -247,8 +247,8 @@ export function ClientSidebar({ sidebarOpen, setSidebarOpen }: ClientSidebarProp
 
           {/* Items after Academy */}
           {filterAdmin(clientMenuItemsAfter).map((item) => {
-            const isActive = item.path === "/client/suggestions"
-              ? location.pathname.startsWith("/client/suggestions")
+            const isActive = item.path === "/client/support-tickets"
+              ? location.pathname.startsWith("/client/support-tickets")
               : location.pathname === item.path;
             return <NavItem key={item.path} item={item} isActive={isActive} sidebarOpen={sidebarOpen} />;
           })}
