@@ -16,6 +16,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface ClientMessagesTabProps {
   tenantId: number;
   clientName: string;
+  onReadStateChange?: () => void;
 }
 
 interface Conversation {
@@ -66,7 +67,7 @@ function typeLabel(t?: string | null) {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-export function ClientMessagesTab({ tenantId, clientName }: ClientMessagesTabProps) {
+export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: ClientMessagesTabProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -197,6 +198,25 @@ export function ClientMessagesTab({ tenantId, clientName }: ClientMessagesTabPro
     setSelected(c);
     setReply('');
     await loadMessages(c.id);
+    // Mark conversation as read for this staff user
+    if (currentUserId) {
+      await (supabase as any)
+        .from('conversation_participants')
+        .upsert(
+          {
+            conversation_id: c.id,
+            user_id: currentUserId,
+            role: 'staff',
+            last_read_at: new Date().toISOString(),
+          },
+          { onConflict: 'conversation_id,user_id' },
+        );
+      // Reflect locally and refresh parent badge
+      setConversations((prev) =>
+        prev.map((x) => (x.id === c.id ? { ...x, unread: false } : x)),
+      );
+      onReadStateChange?.();
+    }
   };
 
   const filtered = useMemo(() => {

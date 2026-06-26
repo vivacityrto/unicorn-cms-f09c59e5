@@ -13,6 +13,7 @@ import { ClientEmailsTab } from '@/components/client/ClientEmailsTab';
 import { ClientMessagesTab } from '@/components/client/ClientMessagesTab';
 import { ClientFilesTab } from '@/components/client/ClientFilesTab';
 import { useClientProfile, useClientPackages } from '@/hooks/useClientManagement';
+import { useClientMessagesUnread } from '@/hooks/useClientMessagesUnread';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -106,6 +107,7 @@ export default function ClientDetail() {
   const [tgaLinked, setTgaLinked] = useState(false);
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
+  const { count: messagesUnread, refresh: refreshMessagesUnread } = useClientMessagesUnread(tenantIdNum);
   
   const { 
     profile, 
@@ -488,6 +490,11 @@ export default function ClientDetail() {
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Messages
+                {messagesUnread > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#ED1878] text-white text-[10px] font-semibold leading-none">
+                    {messagesUnread > 9 ? '9+' : messagesUnread}
+                  </span>
+                )}
               </TabsTrigger>
               <TabsTrigger
                 value="sharepoint"
@@ -623,7 +630,7 @@ export default function ClientDetail() {
           </TabsContent>
 
           <TabsContent value="messages" className="mt-0">
-            <ClientMessagesTab tenantId={tenantIdNum!} clientName={tenant.name} />
+            <ClientMessagesTab tenantId={tenantIdNum!} clientName={tenant.name} onReadStateChange={refreshMessagesUnread} />
           </TabsContent>
 
           <TabsContent value="sharepoint" className="mt-0">
