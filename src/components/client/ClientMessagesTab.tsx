@@ -67,7 +67,7 @@ function typeLabel(t?: string | null) {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-export function ClientMessagesTab({ tenantId, clientName }: ClientMessagesTabProps) {
+export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: ClientMessagesTabProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
