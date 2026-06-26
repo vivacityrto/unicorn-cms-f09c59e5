@@ -143,6 +143,26 @@ export default function ClientDetail() {
     }
   }, [tenantIdNum]);
 
+  useEffect(() => {
+    if (!tenantIdNum || !profile?.rto_number) {
+      setTgaLinked(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data: linkRow } = await supabase
+        .from('tenant_registry_links')
+        .select('link_status')
+        .eq('tenant_id', tenantIdNum)
+        .eq('registry', 'tga')
+        .maybeSingle();
+      if (!cancelled) {
+        setTgaLinked(linkRow?.link_status === 'linked' && !!profile?.rto_number);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tenantIdNum, profile?.rto_number]);
+
   const fetchTenantBasic = async () => {
     if (!tenantIdNum) return;
     
