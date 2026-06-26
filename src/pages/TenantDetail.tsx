@@ -284,6 +284,14 @@ export default function TenantDetail() {
       setRtoNumber(tpData?.rto_number || null);
       setCricosNumber(tpData?.cricos_number || null);
 
+      const { data: linkRow } = await supabase
+        .from('tenant_registry_links')
+        .select('link_status')
+        .eq('tenant_id', parseInt(tenantId))
+        .eq('registry', 'tga')
+        .maybeSingle();
+      setTgaLinked(linkRow?.link_status === 'linked' && !!tpData?.rto_number);
+
       setLogoPath((tenantData as any).logo_path || null);
       setLogoPath((tenantData as any).logo_path || null);
       const {
