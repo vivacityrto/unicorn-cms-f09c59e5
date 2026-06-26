@@ -173,6 +173,8 @@ const LifecycleChecklistsAdmin = lazy(() => import("./pages/admin/LifecycleCheck
 const SuggestionRegister = lazy(() => import("./pages/SuggestionRegister"));
 const NewSuggestionForm = lazy(() => import("./pages/NewSuggestionForm"));
 const SuggestionDetail = lazy(() => import("./pages/SuggestionDetail"));
+const SupportTicketsPage = lazy(() => import("./pages/SupportTicketsPage"));
+const NewSupportTicketPage = lazy(() => import("./pages/NewSupportTicketPage"));
 const MergeFieldTagsAdmin = lazy(() => import("./pages/admin/MergeFieldTagsAdmin"));
 const ReportingObligationsAdmin = lazy(() => import("./pages/admin/settings/ReportingObligations"));
 const TeamCommunicationsWrapper = lazy(() => import("./pages/TeamCommunicationsWrapper"));
@@ -1110,10 +1112,14 @@ const App = () => (
             <Route path="/admin/strategic-orchestration" element={<ProtectedRoute requireSuperAdmin><StrategicOrchestrationDashboard /></ProtectedRoute>} />
             <Route path="/admin/code-tables" element={<ProtectedRoute requireSuperAdmin><CodeTablesAdmin /></ProtectedRoute>} />
             <Route path="/admin/lifecycle-checklists" element={<ProtectedRoute requireSuperAdmin><LifecycleChecklistsAdmin /></ProtectedRoute>} />
-            {/* Suggestion & Issue Register */}
-            <Route path="/suggestions" element={<ProtectedRoute><SuggestionRegister /></ProtectedRoute>} />
-            <Route path="/suggestions/new" element={<ProtectedRoute><NewSuggestionForm /></ProtectedRoute>} />
+            {/* Suggestion & Issue Register (legacy → redirect to Support Tickets) */}
+            <Route path="/suggestions" element={<Navigate to="/support-tickets" replace />} />
+            <Route path="/suggestions/new" element={<Navigate to="/support-tickets/new" replace />} />
             <Route path="/suggestions/:id" element={<ProtectedRoute><SuggestionDetail /></ProtectedRoute>} />
+            {/* Support Tickets */}
+            <Route path="/support-tickets" element={<ProtectedRoute><SupportTicketsPage /></ProtectedRoute>} />
+            <Route path="/support-tickets/new" element={<ProtectedRoute><NewSupportTicketPage /></ProtectedRoute>} />
+            <Route path="/support-tickets/:id" element={<ProtectedRoute><SuggestionDetail /></ProtectedRoute>} />
             <Route path="/admin/merge-field-tags" element={<ProtectedRoute requireSuperAdmin><MergeFieldTagsAdmin /></ProtectedRoute>} />
             <Route path="/admin/settings/reporting-obligations" element={<ProtectedRoute requireSuperAdmin><ReportingObligationsAdmin /></ProtectedRoute>} />
             {/* SuperAdmin Academy Management */}

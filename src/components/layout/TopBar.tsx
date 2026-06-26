@@ -7,6 +7,7 @@ import {
   Search,
   ChevronRight,
   Lightbulb,
+  LifeBuoy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { FloatingSuggestionsDialog } from "./FloatingSuggestionsDialog";
+import { SupportTicketsPanel } from "@/components/support-tickets/SupportTicketsPanel";
 
 import { AskVivButton } from "@/components/ask-viv";
 import { useHelpCenter } from "@/components/help-center";
@@ -51,6 +53,8 @@ const routeTitles: Record<string, string> = {
   "/rto-tips": "RTO Tips",
   "/suggestions": "Suggestions",
   "/suggestions/new": "New Suggestion",
+  "/support-tickets": "Support Tickets",
+  "/support-tickets/new": "New Support Ticket",
   "/eos": "EOS Overview",
   "/eos/leadership": "Leadership Dashboard",
   "/eos/scorecard": "Scorecard",
@@ -132,7 +136,7 @@ const getBreadcrumbs = (pathname: string) => {
   return breadcrumbs;
 };
 
-function SuggestionsButton() {
+function SupportTicketsButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -140,12 +144,12 @@ function SuggestionsButton() {
         size="sm"
         className="gap-1.5 text-xs bg-brand-aqua text-white hover:bg-brand-aqua-600"
         onClick={() => setOpen(prev => !prev)}
-        title="Suggestion & Issue Register"
+        title="Support Tickets"
       >
-        <Lightbulb className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Suggestions</span>
+        <LifeBuoy className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Support Tickets</span>
       </Button>
-      <FloatingSuggestionsDialog open={open} onClose={() => setOpen(false)} />
+      <SupportTicketsPanel open={open} onOpenChange={setOpen} />
     </>
   );
 }
@@ -255,8 +259,8 @@ export function TopBar({ showSearch = false }: TopBarProps) {
 
       {/* Right: Actions & Avatar - never pushed off-screen */}
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-        {/* Suggestions button */}
-        <SuggestionsButton />
+        {/* Support Tickets button */}
+        <SupportTicketsButton />
         <TooltipProvider>
           {/* Help Center button - Client roles only, gated to primary/secondary contacts */}
           {isClientRole && helpCenter.canAccess && (
