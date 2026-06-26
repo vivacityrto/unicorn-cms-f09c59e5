@@ -13,6 +13,7 @@ import { ClientEmailsTab } from '@/components/client/ClientEmailsTab';
 import { ClientMessagesTab } from '@/components/client/ClientMessagesTab';
 import { ClientFilesTab } from '@/components/client/ClientFilesTab';
 import { useClientProfile, useClientPackages } from '@/hooks/useClientManagement';
+import { useClientMessagesUnread } from '@/hooks/useClientMessagesUnread';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
