@@ -1,6 +1,5 @@
 import { Search, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -37,13 +36,13 @@ export function AdminTicketFilters(props: Props) {
 
   const dateChip = (val: DateRangeFilter, label: string) => (
     <button
-      key={String(val)}
+      key={String(val) + label}
       onClick={() => onDateRangeChange(val)}
       className={cn(
-        'px-2.5 py-1 text-xs rounded-md border transition-colors',
-        dateRange === val
+        'border rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+        dateRange === val && val !== null
           ? 'bg-[#7130A0] text-white border-[#7130A0]'
-          : 'bg-background text-muted-foreground hover:text-foreground',
+          : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50',
       )}
     >
       {label}
@@ -51,9 +50,9 @@ export function AdminTicketFilters(props: Props) {
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-2 py-3">
-      <div className="relative flex-1 min-w-[200px] max-w-xs">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <div className="px-6 py-3 flex items-center gap-3 flex-wrap border-b border-gray-100 bg-white">
+      <div className="relative w-56">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -63,7 +62,7 @@ export function AdminTicketFilters(props: Props) {
       </div>
 
       <Select value={typeFilter} onValueChange={(v) => onTypeChange(v as TypeFilter)}>
-        <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Types</SelectItem>
           <SelectItem value="bug">Something is broken</SelectItem>
@@ -76,7 +75,7 @@ export function AdminTicketFilters(props: Props) {
       </Select>
 
       <Select value={urgencyFilter} onValueChange={(v) => onUrgencyChange(v as UrgencyFilter)}>
-        <SelectTrigger className="h-9 w-[150px]"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Urgencies</SelectItem>
           <SelectItem value="low">Low</SelectItem>
@@ -87,7 +86,7 @@ export function AdminTicketFilters(props: Props) {
       </Select>
 
       <Select value={clientFilter} onValueChange={onClientChange}>
-        <SelectTrigger className="h-9 w-[200px]"><SelectValue /></SelectTrigger>
+        <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Clients</SelectItem>
           {clientOptions.map((c) => (
@@ -96,24 +95,25 @@ export function AdminTicketFilters(props: Props) {
         </SelectContent>
       </Select>
 
-      <div className="flex items-center gap-1 ml-1">
+      <div className="flex items-center gap-1.5">
         {dateChip('7d', '7d')}
         {dateChip('30d', '30d')}
         {dateChip('90d', '90d')}
         <button
           onClick={() => onDateRangeChange(null)}
-          className="px-2.5 py-1 text-xs rounded-md border bg-background text-muted-foreground hover:text-foreground"
+          className="border border-gray-300 rounded-md px-3 py-1.5 text-xs font-medium bg-white text-gray-600 hover:bg-gray-50"
         >
           Clear
         </button>
       </div>
 
-      <div className="ml-auto">
-        <Button variant="outline" size="sm" onClick={onExportCsv} className="gap-1.5">
-          <Download className="h-4 w-4" />
-          CSV
-        </Button>
-      </div>
+      <button
+        onClick={onExportCsv}
+        className="ml-auto border border-gray-300 text-gray-700 text-xs px-3 py-1.5 rounded-md flex items-center gap-1.5 hover:bg-gray-50"
+      >
+        <Download className="h-3.5 w-3.5" />
+        CSV
+      </button>
     </div>
   );
 }

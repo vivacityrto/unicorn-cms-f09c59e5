@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { NewTicketModal } from '@/components/support-tickets/NewTicketModal';
@@ -71,7 +70,6 @@ export default function SupportTicketsPage() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [rows]);
 
-  // Apply non-status filters; status tab handled separately so tab counts reflect the rest of filters
   const baseFiltered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const cutoff = dateRange
@@ -133,63 +131,62 @@ export default function SupportTicketsPage() {
   };
 
   if (!allowed) {
-    return (
-      <DashboardLayout>
-        <div className="p-6 text-sm text-muted-foreground">Redirecting…</div>
-      </DashboardLayout>
-    );
+    return <div className="p-6 text-sm text-muted-foreground">Redirecting…</div>;
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-4">
-        {/* Hero header */}
-        <div
-          className="rounded-lg px-6 py-6 flex items-center justify-between"
-          style={{ background: 'linear-gradient(90deg, #7130A0 0%, #ED1878 100%)' }}
-        >
-          <div className="text-white">
-            <h1 className="text-3xl font-bold" style={{ fontFamily: 'Anton, sans-serif' }}>
-              Support Tickets
-            </h1>
-            <p className="text-sm text-white/80 mt-1">
-              Manage and triage suggestions, bugs, and feature requests across all clients
-            </p>
-          </div>
-          <Button
-            onClick={() => setNewOpen(true)}
-            disabled={!hasTenant}
-            className="bg-white text-[#7130A0] hover:bg-white/90 gap-1.5"
+    <div className="bg-gray-50 min-h-full">
+      {/* Hero banner — edge to edge */}
+      <div
+        className="px-8 py-10 flex items-center justify-between"
+        style={{ background: 'linear-gradient(135deg, #7130A0 0%, #ED1878 100%)' }}
+      >
+        <div>
+          <h1
+            className="text-4xl font-normal text-white tracking-wide"
+            style={{ fontFamily: "'Anton', sans-serif" }}
           >
-            <Plus className="h-4 w-4" />
-            Submit Support Ticket
-          </Button>
+            Support Tickets
+          </h1>
+          <p className="text-sm text-white/75 mt-1">
+            Manage and triage suggestions, bugs, and feature requests across all clients
+          </p>
         </div>
-
-        <div className="px-1">
-          <AdminTicketStats rows={rows} />
-        </div>
-
-        <div className="px-1">
-          <AdminTicketStatusTabs value={statusTab} onChange={setStatusTab} counts={tabCounts} />
-        </div>
-
-        <div className="px-1">
-          <AdminTicketFilters
-            search={search} onSearchChange={setSearch}
-            typeFilter={typeFilter} onTypeChange={setTypeFilter}
-            urgencyFilter={urgencyFilter} onUrgencyChange={setUrgencyFilter}
-            clientFilter={clientFilter} onClientChange={setClientFilter}
-            clientOptions={clientOptions}
-            dateRange={dateRange} onDateRangeChange={setDateRange}
-            onExportCsv={handleExportCsv}
-          />
-        </div>
-
-        <AdminTicketsTable rows={visibleRows} isLoading={isLoading} />
+        <Button
+          onClick={() => setNewOpen(true)}
+          disabled={!hasTenant}
+          className="bg-white text-[#7130A0] hover:bg-white/90 font-semibold rounded-lg px-5 py-2.5 text-sm h-auto"
+        >
+          <Plus className="h-4 w-4 mr-1.5" />
+          Submit Support Ticket
+        </Button>
       </div>
 
+      {/* Stats */}
+      <div className="bg-white border-b border-gray-100">
+        <AdminTicketStats rows={rows} />
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white">
+        <AdminTicketStatusTabs value={statusTab} onChange={setStatusTab} counts={tabCounts} />
+      </div>
+
+      {/* Filters */}
+      <AdminTicketFilters
+        search={search} onSearchChange={setSearch}
+        typeFilter={typeFilter} onTypeChange={setTypeFilter}
+        urgencyFilter={urgencyFilter} onUrgencyChange={setUrgencyFilter}
+        clientFilter={clientFilter} onClientChange={setClientFilter}
+        clientOptions={clientOptions}
+        dateRange={dateRange} onDateRangeChange={setDateRange}
+        onExportCsv={handleExportCsv}
+      />
+
+      {/* Table */}
+      <AdminTicketsTable rows={visibleRows} isLoading={isLoading} />
+
       <NewTicketModal open={newOpen} onOpenChange={setNewOpen} />
-    </DashboardLayout>
+    </div>
   );
 }
