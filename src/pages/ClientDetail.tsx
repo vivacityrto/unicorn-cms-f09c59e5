@@ -37,6 +37,7 @@ import {
   Save,
   Loader2,
   Mail,
+  MessageSquare,
   FolderOpen,
   ShieldAlert,
   Clock,
