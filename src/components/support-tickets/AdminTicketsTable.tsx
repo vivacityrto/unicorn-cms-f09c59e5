@@ -1,10 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ArrowUpDown, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowUpDown, ChevronUp, ChevronDown, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AdminTicketRow } from './useAdminSupportTickets';
 
@@ -12,19 +9,19 @@ type SortKey = 'title' | 'client' | 'type' | 'status' | 'urgency' | 'created';
 type SortDir = 'asc' | 'desc';
 
 const STATUS_BADGE: Record<string, string> = {
-  new: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
-  triaged: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
-  in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
-  blocked: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
-  resolved: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200',
-  closed: 'bg-muted text-muted-foreground/80',
+  new: 'bg-gray-100 text-gray-600',
+  triaged: 'bg-amber-100 text-amber-700',
+  in_progress: 'bg-blue-100 text-blue-700',
+  blocked: 'bg-red-100 text-red-700',
+  resolved: 'bg-green-100 text-green-700',
+  closed: 'bg-gray-200 text-gray-500',
 };
 
 const URGENCY_BADGE: Record<string, string> = {
-  low: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
-  medium: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200',
-  high: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
-  critical: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
+  low: 'bg-gray-100 text-gray-500',
+  medium: 'bg-blue-100 text-blue-600',
+  high: 'bg-amber-100 text-amber-700',
+  critical: 'bg-red-100 text-red-700',
 };
 
 const PAGE_SIZE = 25;
@@ -74,22 +71,51 @@ export function AdminTicketsTable({ rows, isLoading }: Props) {
     else { setSortKey(key); setSortDir(key === 'created' ? 'desc' : 'asc'); }
   };
 
-  const Th = ({ k, children, className }: { k?: SortKey; children: React.ReactNode; className?: string }) => (
-    <th className={cn('px-3 py-2 text-left text-xs font-medium text-muted-foreground', className)}>
-      {k ? (
-        <button onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 hover:text-foreground">
-          {children}
-          <ArrowUpDown className={cn('h-3 w-3', sortKey === k ? 'text-foreground' : 'opacity-50')} />
-        </button>
-      ) : children}
-    </th>
-  );
+  const Th = ({
+    k, children, className,
+  }: { k?: SortKey; children: React.ReactNode; className?: string }) => {
+    const active = k && sortKey === k;
+    const Arrow = active ? (sortDir === 'asc' ? ChevronUp : ChevronDown) : ArrowUpDown;
+    return (
+      <th
+        className={cn(
+          'text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 text-left',
+          className,
+        )}
+      >
+        {k ? (
+          <button
+            onClick={() => toggleSort(k)}
+            className="group inline-flex items-center gap-1 hover:text-gray-700"
+          >
+            {children}
+            <Arrow
+              className={cn(
+                'h-3 w-3 transition-opacity',
+                active ? 'opacity-100 text-gray-700' : 'opacity-0 group-hover:opacity-60',
+              )}
+            />
+          </button>
+        ) : children}
+      </th>
+    );
+  };
 
   return (
-    <div className="rounded-lg border bg-card overflow-hidden">
+    <div className="bg-white">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40 border-b">
+        <table className="w-full">
+          <colgroup>
+            <col />
+            <col className="w-36" />
+            <col className="w-40" />
+            <col className="w-36" />
+            <col className="w-32" />
+            <col className="w-24" />
+            <col className="w-36" />
+            <col className="w-28" />
+          </colgroup>
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <Th k="title">Title</Th>
               <Th k="client">Client</Th>
@@ -101,21 +127,23 @@ export function AdminTicketsTable({ rows, isLoading }: Props) {
               <Th k="created">Created</Th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
+                <tr key={i} className="border-b border-gray-100">
                   {Array.from({ length: 8 }).map((__, j) => (
-                    <td key={j} className="px-3 py-3"><Skeleton className="h-4 w-full" /></td>
+                    <td key={j} className="px-4 py-3">
+                      <div className="animate-pulse bg-gray-200 h-4 rounded" />
+                    </td>
                   ))}
                 </tr>
               ))
             ) : pageRows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-16 text-center">
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Inbox className="h-10 w-10 opacity-40" />
-                    <p className="text-sm">No support tickets match your filters</p>
+                <td colSpan={8} className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <Inbox className="w-10 h-10 text-gray-300" />
+                    <p className="text-gray-400 text-sm mt-3">No tickets match your filters</p>
                   </div>
                 </td>
               </tr>
@@ -124,39 +152,53 @@ export function AdminTicketsTable({ rows, isLoading }: Props) {
                 const statusCode = r.status?.code ?? '';
                 const unread = r.is_client_visible === false && statusCode === 'new';
                 return (
-                  <tr key={r.id} className="hover:bg-muted/40 transition-colors">
-                    <td className="px-3 py-2.5">
+                  <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-sm">
                       <button
                         onClick={() => navigate(`/support-tickets/${r.id}`)}
-                        className="text-left font-medium text-foreground hover:text-[#7130A0] hover:underline"
+                        className="font-medium text-gray-900 hover:text-[#7130A0] cursor-pointer text-left truncate max-w-[400px]"
                       >
-                        {truncate(r.title, 60)}
+                        {truncate(r.title, 55)}
                       </button>
                       {unread && (
-                        <Badge className="ml-2 bg-amber-100 text-amber-800 hover:bg-amber-100 text-[10px] px-1.5 py-0">
+                        <span className="bg-amber-100 text-amber-700 text-[10px] font-semibold px-1.5 py-0.5 rounded ml-2 align-middle">
                           Unread
-                        </Badge>
+                        </span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-muted-foreground">{truncate(r.tenant?.name ?? '—', 15)}</td>
-                    <td className="px-3 py-2.5 text-muted-foreground">{r.reporter?.full_name ?? '—'}</td>
-                    <td className="px-3 py-2.5">
-                      <Badge variant="secondary" className="font-normal">{r.item_type?.label ?? '—'}</Badge>
+                    <td className="px-4 py-3 text-sm text-gray-900 truncate">
+                      {r.tenant?.name ?? '—'}
                     </td>
-                    <td className="px-3 py-2.5">
-                      <Badge className={cn('font-normal', STATUS_BADGE[statusCode] ?? 'bg-muted')}>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {r.reporter?.full_name ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className="bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                        {r.item_type?.label ?? '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={cn(
+                        'text-xs font-medium px-2 py-0.5 rounded-full',
+                        STATUS_BADGE[statusCode] ?? 'bg-gray-100 text-gray-600',
+                      )}>
                         {r.status?.label ?? '—'}
-                      </Badge>
+                      </span>
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-4 py-3 text-sm">
                       {r.urgency ? (
-                        <Badge className={cn('font-normal capitalize', URGENCY_BADGE[r.urgency] ?? 'bg-muted')}>
+                        <span className={cn(
+                          'text-xs font-medium px-2 py-0.5 rounded-full capitalize',
+                          URGENCY_BADGE[r.urgency] ?? 'bg-gray-100 text-gray-600',
+                        )}>
                           {r.urgency}
-                        </Badge>
-                      ) : <span className="text-muted-foreground">—</span>}
+                        </span>
+                      ) : <span className="text-gray-400">—</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-muted-foreground">{r.assignee?.full_name ?? '—'}</td>
-                    <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {r.assignee?.full_name ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
                       {format(new Date(r.created_at), 'dd MMM yyyy')}
                     </td>
                   </tr>
@@ -168,18 +210,26 @@ export function AdminTicketsTable({ rows, isLoading }: Props) {
       </div>
 
       {!isLoading && sorted.length > 0 && (
-        <div className="flex items-center justify-between px-3 py-2 border-t bg-muted/20">
-          <span className="text-xs text-muted-foreground">
-            Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, sorted.length)} of {sorted.length}
+        <div className="px-6 py-3 flex items-center justify-between border-t border-gray-100">
+          <span className="text-sm text-gray-500">
+            Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, sorted.length)} of {sorted.length} tickets
           </span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={safePage <= 1} onClick={() => setPage((p) => p - 1)}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-xs">Page {safePage} of {totalPages}</span>
-            <Button variant="outline" size="sm" disabled={safePage >= totalPages} onClick={() => setPage((p) => p + 1)}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <button
+              disabled={safePage <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="border border-gray-300 rounded-md px-3 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Prev
+            </button>
+            <span className="text-xs text-gray-500">Page {safePage} of {totalPages}</span>
+            <button
+              disabled={safePage >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="border border-gray-300 rounded-md px-3 py-1.5 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
           </div>
         </div>
       )}

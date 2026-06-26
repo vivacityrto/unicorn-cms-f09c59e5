@@ -39,18 +39,16 @@ export function AdminTicketStats({ rows }: Props) {
   }, [rows]);
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
+    <div className="flex gap-3 overflow-x-auto py-4 px-6">
       {stats.map(({ icon: Icon, value, label }) => (
         <div
           key={label}
-          className="flex-shrink-0 min-w-[140px] rounded-lg border bg-card px-4 py-3 flex items-center gap-3"
+          className="flex-shrink-0 min-w-[130px] bg-white border border-gray-100 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm"
         >
-          <div className="h-9 w-9 rounded-md bg-[#23C0DD]/10 flex items-center justify-center">
-            <Icon className="h-4 w-4 text-[#23C0DD]" />
-          </div>
-          <div>
-            <div className="text-xl font-bold leading-none">{value}</div>
-            <div className="text-xs text-muted-foreground mt-1">{label}</div>
+          <Icon className="w-5 h-5 text-[#23C0DD] flex-shrink-0" />
+          <div className="min-w-0">
+            <div className="text-2xl font-bold text-gray-900 leading-none">{value}</div>
+            <div className="text-xs text-gray-500 mt-0.5 whitespace-nowrap">{label}</div>
           </div>
         </div>
       ))}
