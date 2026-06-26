@@ -111,7 +111,7 @@ export default function TenantDetail() {
   const [orgType, setOrgType] = useState<string | null>(null);
   const [rtoNumber, setRtoNumber] = useState<string | null>(null);
   const [cricosNumber, setCricosNumber] = useState<string | null>(null);
-  const [tgaLinked, setTgaLinked] = useState(false);
+  
   const [loading, setLoading] = useState(false);
   const parsedTenantIdForReview = tenantId ? parseInt(tenantId) : null;
   const { reviewMode, toggleReviewMode, reviewSummary, summaryLoading } = useReviewMode(parsedTenantIdForReview);
