@@ -387,6 +387,9 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
         clientName={clientName}
         canChangeStatus={canChangeStatus}
         onChangeStatus={changeStatus}
+        staffList={staffList}
+        assignee={selected.assigned_to_user_uuid ? staffById.get(selected.assigned_to_user_uuid) ?? null : null}
+        onAssign={assignConversation}
       />
     );
   }
