@@ -227,6 +227,8 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     if (filter === 'unread') return conversations.filter((c) => c.unread);
     if (filter === 'from-client')
       return conversations.filter((c) => c.last_sender_type === 'client');
+    if (filter === 'resolved')
+      return conversations.filter((c) => c.status === 'resolved' || c.status === 'closed');
     return conversations;
   }, [conversations, filter]);
 
