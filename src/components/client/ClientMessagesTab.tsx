@@ -107,9 +107,32 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
   const [sending, setSending] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const staffById = useMemo(() => {
+    const m = new Map<string, StaffMember>();
+    staffList.forEach((s) => m.set(s.user_uuid, s));
+    return m;
+  }, [staffList]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
+  // Load active Vivacity staff for the assignment dropdown + avatars
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('users')
+        .select('user_uuid, first_name, last_name, email, is_vivacity_internal, unicorn_role, disabled, archived, kpi_pod')
+        .or('is_vivacity_internal.eq.true,unicorn_role.in.(Admin,CSC,Super Admin)')
+        .or('disabled.is.null,disabled.eq.false')
+        .or('archived.is.null,archived.eq.false');
+      const rows = (data ?? []).filter((u: any) => !u.disabled && !u.archived && u.kpi_pod !== 'qa');
+      rows.sort((a: any, b: any) =>
+        staffName(a).localeCompare(staffName(b))
+      );
+      setStaffList(rows as StaffMember[]);
+    })();
   }, []);
 
   const loadConversations = async () => {
