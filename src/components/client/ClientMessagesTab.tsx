@@ -16,6 +16,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface ClientMessagesTabProps {
   tenantId: number;
   clientName: string;
+  onReadStateChange?: () => void;
 }
 
 interface Conversation {
