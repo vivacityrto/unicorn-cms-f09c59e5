@@ -88,7 +88,19 @@ function SortableDocumentRow({
       </div>
       <FileText className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
       <div className="flex-1 min-w-0">
-        <span className="font-medium block truncate">{doc.document.title}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="font-medium truncate">{doc.document.title}</span>
+          {(doc.document.source_template_url || (doc.document.uploaded_files && doc.document.uploaded_files.length > 0)) && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                </TooltipTrigger>
+                <TooltipContent><p className="text-xs">Linked to SharePoint template</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {doc.document.format && (
             <Badge variant="outline" className="text-xs uppercase">{doc.document.format}</Badge>
