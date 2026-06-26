@@ -9,9 +9,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, MessageSquare, Plus, Send, Loader2 } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Plus, Send, Loader2, ChevronDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+import { isVivacityStaffRole } from '@/lib/roles/vivacityRoles';
 
 interface ClientMessagesTabProps {
   tenantId: number;
@@ -45,7 +48,7 @@ interface Message {
   attachments?: Array<{ id: string; filename: string; storage_path: string; mime_type: string | null }>;
 }
 
-type FilterValue = 'all' | 'unread' | 'from-client';
+type FilterValue = 'all' | 'unread' | 'from-client' | 'resolved';
 
 const TYPE_STYLES: Record<string, string> = {
   csc: 'bg-[#7130A0]/10 text-[#7130A0] border-[#7130A0]/30',
@@ -57,8 +60,8 @@ const TYPE_STYLES: Record<string, string> = {
 
 const STATUS_STYLES: Record<string, string> = {
   open: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  resolved: 'bg-muted text-muted-foreground border-border',
-  closed: 'bg-slate-200 text-slate-700 border-slate-300',
+  resolved: 'bg-slate-100 text-slate-600 border-slate-200',
+  closed: 'bg-slate-700 text-white border-slate-700',
 };
 
 function typeLabel(t?: string | null) {
@@ -69,6 +72,8 @@ function typeLabel(t?: string | null) {
 
 export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: ClientMessagesTabProps) {
   const { toast } = useToast();
+  const { profile } = useAuth();
+  const canChangeStatus = isVivacityStaffRole(profile?.unicorn_role);
   const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [filter, setFilter] = useState<FilterValue>('all');
@@ -224,6 +229,8 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     if (filter === 'unread') return conversations.filter((c) => c.unread);
     if (filter === 'from-client')
       return conversations.filter((c) => c.last_sender_type === 'client');
+    if (filter === 'resolved')
+      return conversations.filter((c) => c.status === 'resolved' || c.status === 'closed');
     return conversations;
   }, [conversations, filter]);
 
@@ -258,6 +265,21 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     await loadConversations();
   };
 
+  const changeStatus = async (newStatus: 'open' | 'resolved' | 'closed') => {
+    if (!selected || !canChangeStatus) return;
+    const { error } = await (supabase as any)
+      .from('tenant_conversations')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', selected.id);
+    if (error) {
+      toast({ title: 'Failed to update status', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setSelected({ ...selected, status: newStatus });
+    setConversations((prev) => prev.map((c) => (c.id === selected.id ? { ...c, status: newStatus } : c)));
+    toast({ title: `Conversation marked as ${newStatus}` });
+  };
+
   if (selected) {
     return (
       <ConversationThread
@@ -273,6 +295,8 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
         onSend={sendReply}
         sending={sending}
         clientName={clientName}
+        canChangeStatus={canChangeStatus}
+        onChangeStatus={changeStatus}
       />
     );
   }
@@ -281,7 +305,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          {(['all', 'unread', 'from-client'] as FilterValue[]).map((f) => (
+          {(['all', 'unread', 'from-client', 'resolved'] as FilterValue[]).map((f) => (
             <Button
               key={f}
               variant={filter === f ? 'default' : 'outline'}
@@ -289,7 +313,7 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
               className={filter === f ? 'bg-[#7130A0] hover:bg-[#7130A0]/90' : ''}
               onClick={() => setFilter(f)}
             >
-              {f === 'all' ? 'All' : f === 'unread' ? 'Unread' : 'From client'}
+              {f === 'all' ? 'All' : f === 'unread' ? 'Unread' : f === 'from-client' ? 'From client' : 'Resolved'}
             </Button>
           ))}
         </div>
@@ -335,9 +359,13 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center py-16 px-6">
               <MessageSquare className="h-12 w-12 text-muted-foreground mb-3" />
-              <p className="font-semibold">No messages yet</p>
+              <p className="font-semibold">
+                {filter === 'resolved' ? 'No resolved conversations' : 'No messages yet'}
+              </p>
               <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                When this client sends a message through their portal, it will appear here.
+                {filter === 'resolved'
+                  ? 'Resolved conversations will appear here.'
+                  : 'When this client sends a message through their portal, it will appear here.'}
               </p>
             </div>
           ) : (
@@ -412,6 +440,8 @@ function ConversationThread({
   onSend,
   sending,
   clientName,
+  canChangeStatus,
+  onChangeStatus,
 }: {
   conversation: Conversation;
   messages: Message[];
@@ -422,7 +452,24 @@ function ConversationThread({
   onSend: () => void;
   sending: boolean;
   clientName: string;
+  canChangeStatus: boolean;
+  onChangeStatus: (status: 'open' | 'resolved' | 'closed') => void | Promise<void>;
 }) {
+  const status = (conversation.status || 'open') as 'open' | 'resolved' | 'closed';
+  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+  const transitions: Array<{ label: string; value: 'open' | 'resolved' | 'closed' }> =
+    status === 'open'
+      ? [
+          { label: 'Mark as Resolved', value: 'resolved' },
+          { label: 'Close conversation', value: 'closed' },
+        ]
+      : status === 'resolved'
+        ? [
+            { label: 'Reopen', value: 'open' },
+            { label: 'Close conversation', value: 'closed' },
+          ]
+        : [{ label: 'Reopen', value: 'open' }];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -434,11 +481,33 @@ function ConversationThread({
           <Badge variant="outline" className={TYPE_STYLES[conversation.type || 'general']}>
             {typeLabel(conversation.type)}
           </Badge>
-          <Badge variant="outline" className={STATUS_STYLES[conversation.status || 'open']}>
-            {(conversation.status || 'open').charAt(0).toUpperCase() + (conversation.status || 'open').slice(1)}
-          </Badge>
+          {canChangeStatus ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
+                  type="button"
+                >
+                  {statusLabel}
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {transitions.map((t) => (
+                  <DropdownMenuItem key={t.value} onClick={() => onChangeStatus(t.value)}>
+                    {t.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Badge variant="outline" className={STATUS_STYLES[status]}>
+              {statusLabel}
+            </Badge>
+          )}
         </div>
       </div>
+
 
       <Card>
         <CardContent className="p-4">
