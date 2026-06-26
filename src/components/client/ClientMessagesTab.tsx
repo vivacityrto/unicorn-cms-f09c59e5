@@ -275,8 +275,54 @@ export function ClientMessagesTab({ tenantId, clientName, onReadStateChange }: C
       return conversations.filter((c) => c.last_sender_type === 'client');
     if (filter === 'resolved')
       return conversations.filter((c) => c.status === 'resolved' || c.status === 'closed');
+    if (filter === 'mine')
+      return conversations.filter((c) => c.assigned_to_user_uuid === currentUserId);
     return conversations;
-  }, [conversations, filter]);
+  }, [conversations, filter, currentUserId]);
+
+  const assignConversation = async (assigneeUuid: string | null) => {
+    if (!selected || !canChangeStatus) return;
+    const { error } = await (supabase as any)
+      .from('tenant_conversations')
+      .update({ assigned_to_user_uuid: assigneeUuid, updated_at: new Date().toISOString() })
+      .eq('id', selected.id);
+    if (error) {
+      toast({ title: 'Failed to assign', description: error.message, variant: 'destructive' });
+      return;
+    }
+    setSelected({ ...selected, assigned_to_user_uuid: assigneeUuid });
+    setConversations((prev) =>
+      prev.map((c) => (c.id === selected.id ? { ...c, assigned_to_user_uuid: assigneeUuid } : c)),
+    );
+
+    // Insert notification for assignee (skip self-assign)
+    if (assigneeUuid && assigneeUuid !== currentUserId) {
+      const assignee = staffById.get(assigneeUuid);
+      const subject = selected.subject || '(No subject)';
+      await (supabase as any)
+        .from('user_notifications')
+        .upsert(
+          {
+            user_id: assigneeUuid,
+            tenant_id: tenantId,
+            type: 'message',
+            title: `Conversation assigned to you: ${subject}`,
+            message: `You have been assigned a client conversation from ${clientName}`,
+            link: `/tenant/${tenantId}?tab=messages&conversation=${selected.id}`,
+            source_id: selected.id,
+            is_read: false,
+            created_by: currentUserId,
+            dedupe_key: `assign:${selected.id}:${assigneeUuid}`,
+          },
+          { onConflict: 'dedupe_key', ignoreDuplicates: true },
+        );
+      toast({ title: `Assigned to ${staffName(assignee)}` });
+    } else if (!assigneeUuid) {
+      toast({ title: 'Conversation unassigned' });
+    } else {
+      toast({ title: 'Assigned to you' });
+    }
+  };
 
   const sendReply = async () => {
     if (!selected || !reply.trim() || !currentUserId) return;
