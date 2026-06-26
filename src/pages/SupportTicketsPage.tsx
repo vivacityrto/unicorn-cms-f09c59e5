@@ -53,7 +53,7 @@ export default function SupportTicketsPage() {
 
   const { data: rows = [], isLoading } = useAdminSupportTickets();
 
-  const [statusTab, setStatusTab] = useState<StatusTab>('all');
+  const [statusTab, setStatusTab] = useState<StatusTab>('active');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [urgencyFilter, setUrgencyFilter] = useState<UrgencyFilter>('all');
@@ -88,18 +88,19 @@ export default function SupportTicketsPage() {
 
   const tabCounts = useMemo<Record<StatusTab, number>>(() => {
     const c: Record<StatusTab, number> = {
-      all: baseFiltered.length, new: 0, triaged: 0, in_progress: 0,
+      active: 0, new: 0, triaged: 0, in_progress: 0,
       resolved: 0, closed: 0, declined: 0,
     };
     baseFiltered.forEach((r) => {
       const code = r.status?.code as StatusTab | undefined;
       if (code && code in c) (c[code] as number) = (c[code] as number) + 1;
+      if (code !== 'resolved' && code !== 'closed') c.active += 1;
     });
     return c;
   }, [baseFiltered]);
 
   const visibleRows = useMemo(() => {
-    if (statusTab === 'all') return baseFiltered;
+    if (statusTab === 'active') return baseFiltered.filter((r) => r.status?.code !== 'resolved' && r.status?.code !== 'closed');
     if (statusTab === 'declined') return [];
     return baseFiltered.filter((r) => r.status?.code === statusTab);
   }, [baseFiltered, statusTab]);
