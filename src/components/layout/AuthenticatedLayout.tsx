@@ -6,6 +6,7 @@ import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
 import { useDevOverflowWarning } from "@/hooks/useDevOverflowWarning";
 import { Loader2 } from "lucide-react";
 import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
+import { useYouveGotMailToast } from "@/hooks/useYouveGotMailToast";
 
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
