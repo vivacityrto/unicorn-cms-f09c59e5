@@ -341,6 +341,17 @@ export default function ClientDetail() {
                     }}
                   />
                   <OrgTypeBadge orgType={profile?.org_type} rtoNumber={profile?.rto_number} cricosNumber={profile?.cricos_number} />
+                  {tgaLinked && profile?.rto_number && (
+                    <a
+                      href={`https://training.gov.au/Organisation/Details/${profile.rto_number}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open this RTO on training.gov.au"
+                      className="inline-flex items-center gap-1 rounded-full bg-muted hover:bg-muted/80 px-2 py-0.5 text-xs font-medium text-foreground border border-border transition-colors"
+                    >
+                      View on TGA <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                 </div>
                 {tenantPhone && (
                   <a href={`tel:${tenantPhone}`} className="text-xs text-muted-foreground mt-1 hover:text-primary hover:underline inline-flex items-center gap-1">
