@@ -86,22 +86,34 @@ export function RichTextEditor({ value, onChange, className, placeholder, minHei
   );
 
   const handleInsertLink = (url: string, linkText?: string) => {
-    if (url && editor) {
-      const { from, to } = editor.state.selection;
-      const hasSelection = from !== to;
+    if (!url || !editor) return;
+    const { from, to } = editor.state.selection;
+    const hasSelection = from !== to;
 
-      if (hasSelection) {
-        // Apply link to selected text
-        editor.chain().focus().setLink({ href: url }).run();
-      } else {
-        // No selection — insert the link text (filename) as a clickable link
-        const displayText = linkText || url.split('/').pop() || url;
-        editor
-          .chain()
-          .focus()
-          .insertContent(`<a href="${url}"><u>${displayText}</u></a> `)
-          .run();
-      }
+    if (hasSelection) {
+      // Apply link to selected text — schema-native, no HTML parsing.
+      editor.chain().focus().setLink({ href: url }).run();
+    } else {
+      // No selection — insert the link as JSON nodes so TipTap uses the
+      // editor's own schema instead of routing through an HTML parser
+      // (which can bind to a duplicate prosemirror-model instance and
+      // silently drop the transaction).
+      const displayText = linkText || url.split('/').pop() || url;
+      editor
+        .chain()
+        .focus()
+        .insertContent([
+          {
+            type: 'text',
+            text: displayText,
+            marks: [
+              { type: 'link', attrs: { href: url } },
+              { type: 'underline' },
+            ],
+          },
+          { type: 'text', text: ' ' },
+        ])
+        .run();
     }
   };
 
