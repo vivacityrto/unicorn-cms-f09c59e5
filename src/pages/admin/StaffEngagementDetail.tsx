@@ -555,18 +555,10 @@ export default function StaffEngagementDetail() {
         <PhaseProgress
           phases={phases}
           completedKeys={completedKeys}
-          signoffCount={signoffs.length}
         />
 
-        <Tabs defaultValue="checklist">
-          <TabsList>
-            <TabsTrigger value="checklist">Checklist</TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="activity">Activity Log</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="checklist" className="space-y-6 mt-4">
-            {phases.map((phase) => {
+        <div className="space-y-6 mt-4">
+          {phases.map((phase) => {
               if (phase.key === "signoff") {
                 const SIGNOFF_ROLES: Array<{ key: string; label: string }> = [
                   { key: "staff_member", label: "Staff Member" },
