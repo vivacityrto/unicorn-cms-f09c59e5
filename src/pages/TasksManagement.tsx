@@ -845,6 +845,8 @@ export default function TasksManagement() {
                       created_by: user.id,
                       followers: assignedFollowers.length > 0 ? assignedFollowers : [],
                       status: formData.status || 'not_started',
+                      priority: formData.priority || null,
+                      milestones: milestones.length > 0 ? milestones : null,
                       completed: false
                     }).select().single();
 
