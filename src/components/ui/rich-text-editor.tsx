@@ -88,33 +88,30 @@ export function RichTextEditor({ value, onChange, className, placeholder, minHei
   const handleInsertLink = (url: string, linkText?: string) => {
     if (!url || !editor) return;
     const { from, to } = editor.state.selection;
-    const hasSelection = from !== to;
 
-    if (hasSelection) {
-      // Apply link to selected text — schema-native, no HTML parsing.
+    if (from !== to) {
+      // Text is selected — apply link mark to selection (no insertContent needed)
       editor.chain().focus().setLink({ href: url }).run();
-    } else {
-      // No selection — insert the link as JSON nodes so TipTap uses the
-      // editor's own schema instead of routing through an HTML parser
-      // (which can bind to a duplicate prosemirror-model instance and
-      // silently drop the transaction).
-      const displayText = linkText || url.split('/').pop() || url;
-      editor
-        .chain()
-        .focus()
-        .insertContent([
-          {
-            type: 'text',
-            text: displayText,
-            marks: [
-              { type: 'link', attrs: { href: url } },
-              { type: 'underline' },
-            ],
-          },
-          { type: 'text', text: ' ' },
-        ])
-        .run();
+      return;
     }
+
+    // No selection — build nodes directly from schema to avoid TipTap's
+    // insertContent routing through Fragment.from (which fails in this bundle
+    // due to a prosemirror-model instance mismatch).
+    const displayText = linkText || url.split('/').pop() || url;
+    const schema = editor.schema;
+
+    const marks = [
+      schema.marks.link?.create({ href: url }),
+      schema.marks.underline?.create(),
+    ].filter(Boolean) as import('@tiptap/pm/model').Mark[];
+
+    const textNode = schema.text(displayText, marks.length ? marks : undefined);
+    const spaceNode = schema.text(' ');
+
+    const tr = editor.state.tr.insert(from, [textNode, spaceNode]);
+    editor.view.dispatch(tr);
+    editor.view.focus();
   };
 
   return (
