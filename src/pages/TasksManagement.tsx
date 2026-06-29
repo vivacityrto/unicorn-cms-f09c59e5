@@ -930,6 +930,8 @@ export default function TasksManagement() {
           if (!open) {
             setEditingTask(null);
             setUploadedFiles([]);
+            setMilestones([]);
+            setFormData(prev => ({ ...prev, priority: "" }));
           }
         }}>
           <DialogContent className="max-w-2xl border-[3px] border-[#dfdfdf]">
