@@ -1579,5 +1579,9 @@ export default function TasksManagement() {
             </div>}
         </SheetContent>
       </Sheet>
+      </main>
+      {isNotesOpen && user?.id && (
+        <TaskNotesSidebar isOpen={isNotesOpen} onClose={() => setIsNotesOpen(false)} userId={user.id} />
+      )}
     </div>;
 }
