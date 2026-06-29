@@ -304,6 +304,7 @@ Deno.serve(async (req) => {
           received_at: emailData.receivedDateTime,
           has_attachments: emailData.hasAttachments || false,
           body_preview: previewText.substring(0, 900) || null,
+          body_html: emailData?.body?.content ?? null,
           ai_summary: aiSummary,
         })
         .eq("id", email_id);
@@ -371,6 +372,7 @@ Deno.serve(async (req) => {
         received_at: emailData.receivedDateTime,
         has_attachments: emailData.hasAttachments || false,
         body_preview: previewText.substring(0, 900) || null,
+        body_html: emailData?.body?.content ?? null,
         ai_summary: aiSummary,
         client_id: client_id ? parseInt(client_id) : null,
         package_id: package_id ? parseInt(package_id) : null,
