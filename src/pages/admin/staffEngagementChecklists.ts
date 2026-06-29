@@ -102,7 +102,6 @@ export const ONBOARDING_PHASES: ChecklistPhase[] = [
       },
     ],
   },
-  { key: "signoff", label: "SIGN-OFF", sections: [] },
 ];
 
 export const OFFBOARDING_PHASES: ChecklistPhase[] = [
@@ -133,6 +132,18 @@ export const OFFBOARDING_PHASES: ChecklistPhase[] = [
           { key: "knowledge.clarity_calls_transferred", label: "Pending Clarity Call follow-ups documented and transferred", owner: "Staff Member / Admin", critical: false },
         ],
       },
+      {
+        key: "exit_interview",
+        label: "Exit Interview",
+        items: [
+          {
+            key: "exit_interview.completed",
+            label: "Exit interview completed and submitted by staff member",
+            owner: "Nova / Staff Member",
+            critical: false,
+          },
+        ],
+      },
     ],
   },
   {
@@ -145,13 +156,13 @@ export const OFFBOARDING_PHASES: ChecklistPhase[] = [
         items: [
           { key: "access_revoke.google_workspace", label: "Google Workspace account suspended and scheduled for deletion", owner: "Dave", critical: true },
           { key: "access_revoke.complyhub", label: "ComplyHub AI access revoked", owner: "Rhald", critical: true },
-          { key: "access_revoke.unicorn", label: "Unicorn CMS access revoked", owner: "Nova", critical: true },
           { key: "access_revoke.xero", label: "Xero access removed", owner: "Nova", critical: true },
           { key: "access_revoke.m365", label: "Microsoft 365 licence unassigned", owner: "Dave", critical: false },
           { key: "access_revoke.teams", label: "Teams communication platform access removed", owner: "Admin", critical: false },
           { key: "access_revoke.zoom", label: "Zoom licence unassigned if applicable", owner: "Admin", critical: false },
           { key: "access_revoke.password_manager", label: "Password manager entry removed or credentials rotated", owner: "Dave", critical: true },
           { key: "access_revoke.email_aliases", label: "Shared email aliases or forwarding rules updated", owner: "Admin", critical: false },
+          { key: "access_revoke.unicorn", label: "Unicorn CMS access revoked", owner: "Nova", critical: true },
         ],
       },
       {
@@ -216,7 +227,7 @@ export const OFFBOARDING_PHASES: ChecklistPhase[] = [
       },
     ],
   },
-  { key: "signoff", label: "SIGN-OFF", sections: [] },
+  
 ];
 
 export function findItemLabel(itemKey: string): string | null {
