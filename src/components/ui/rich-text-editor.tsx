@@ -35,6 +35,8 @@ export function RichTextEditor({ value, onChange, className, placeholder, minHei
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
+        link: false,
+        underline: false,
       }),
       Link.configure({ openOnClick: false }),
       Underline,
