@@ -20,7 +20,7 @@ import {
 import { format } from "date-fns";
 import { useOutlookInbox } from "@/hooks/useOutlookInbox";
 import { LinkEmailModal } from "./LinkEmailModal";
-import { useNavigate } from "react-router-dom";
+import { useOutlookConnectionStatus } from "@/hooks/useOutlookConnectionStatus";
 
 interface OutlookInboxBrowserProps {
   tenantId?: string;
@@ -70,7 +70,7 @@ export function OutlookInboxBrowser({
   recipientFilter,
   description,
 }: OutlookInboxBrowserProps) {
-  const navigate = useNavigate();
+  const { connect, isConnecting } = useOutlookConnectionStatus();
   const { emails, isLoading, error, hasConnection, fetchEmails } = useOutlookInbox({
     filterEmail,
     folder,
@@ -149,8 +149,16 @@ export function OutlookInboxBrowser({
     setLinkModalOpen(true);
   };
 
-  const handleConnectOutlook = () => {
-    navigate("/settings?tab=calendar");
+  const handleConnectOutlook = async () => {
+    localStorage.setItem(
+      'outlook_oauth_return_to',
+      window.location.pathname + window.location.search
+    );
+    try {
+      await connect();
+    } catch {
+      // error toast is already handled inside the hook
+    }
   };
 
   if (!hasConnection) {
@@ -171,9 +179,18 @@ export function OutlookInboxBrowser({
             <p className="text-muted-foreground mb-4">
               Your Outlook account is not connected or the session has expired.
             </p>
-            <Button onClick={handleConnectOutlook}>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Connect Outlook
+            <Button onClick={handleConnectOutlook} disabled={isConnecting}>
+              {isConnecting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Connect Outlook
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
