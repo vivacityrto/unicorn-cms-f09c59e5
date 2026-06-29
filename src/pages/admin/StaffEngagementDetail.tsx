@@ -245,7 +245,6 @@ export default function StaffEngagementDetail() {
 
   const engagement = engagementQuery.data;
   const completions = completionsQuery.data ?? [];
-  const signoffs = signoffsQuery.data ?? [];
 
   const phases = useMemo<ChecklistPhase[]>(() => {
     if (!engagement) return [];
@@ -276,24 +275,6 @@ export default function StaffEngagementDetail() {
   );
   const allCriticalDone =
     criticalKeys.length > 0 && criticalKeys.every((k) => completedKeys.has(k));
-
-  const signoffsByRole = useMemo(() => {
-    const m = new Map<string, Signoff>();
-    signoffs.forEach((s) => m.set(s.signoff_role, s));
-    return m;
-  }, [signoffs]);
-
-  const mySignoffRole: string | null = useMemo(() => {
-    if (
-      profile?.user_uuid &&
-      engagement?.linked_unicorn_user_id &&
-      profile.user_uuid === engagement.linked_unicorn_user_id
-    )
-      return "staff_member";
-    if (role === "Integrator") return "operations_manager";
-    if (role === "Super Admin") return "ceo";
-    return null;
-  }, [profile, engagement, role]);
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
