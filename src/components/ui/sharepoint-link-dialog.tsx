@@ -49,8 +49,8 @@ export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLin
 
   const handleInsertFolderLink = () => {
     if (folderUrl) {
-      onSelectLink(folderUrl);
       onOpenChange(false);
+      requestAnimationFrame(() => onSelectLink(folderUrl));
     }
   };
 
