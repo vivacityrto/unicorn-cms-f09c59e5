@@ -544,7 +544,8 @@ export default function TasksManagement() {
         </div>
       </div>;
   }
-  return <div className="p-6 space-y-6 animate-fade-in">
+  return <div className="flex flex-row w-full">
+      <main className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -552,6 +553,10 @@ export default function TasksManagement() {
           <p className="text-muted-foreground">View and manage your tasks</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsNotesOpen(o => !o)}>
+            <NotebookPen className="h-4 w-4 mr-2" />
+            Notes
+          </Button>
           <Dialog open={isCreateDialogOpen} onOpenChange={open => {
           setIsCreateDialogOpen(open);
           if (!open) {
