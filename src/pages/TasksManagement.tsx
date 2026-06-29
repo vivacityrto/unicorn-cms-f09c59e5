@@ -47,6 +47,7 @@ interface Task {
   file_paths?: string[];
   source?: 'task' | 'action' | 'ops';
   priority: string | null;
+  milestones?: Array<{ id: string; text: string; completed: boolean }> | null;
   assignee_user?: { user_uuid: string; first_name: string; last_name: string; avatar_url: string | null } | null;
 }
 type TaskStatus = "pending" | "in_progress" | "completed" | "overdue" | "extended";
