@@ -122,8 +122,8 @@ export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLin
               <SharePointFileBrowser
                 tenantId={tenantId}
                 onSelectLink={(url, fileName) => {
-                  onSelectLink(url, fileName);
                   onOpenChange(false);
+                  requestAnimationFrame(() => onSelectLink(url, fileName));
                 }}
               />
             </div>
