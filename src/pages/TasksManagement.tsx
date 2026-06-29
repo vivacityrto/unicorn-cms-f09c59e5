@@ -896,9 +896,11 @@ export default function TasksManagement() {
                       package_id: "",
                       package_name: "",
                       status: "not_started",
-                      assigned_to: ""
+                      assigned_to: "",
+                      priority: ""
                     });
                     setFollowers([]);
+                    setMilestones([]);
                     setUploadedFiles([]);
                     fetchTasks();
                   } catch (error: any) {
