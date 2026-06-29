@@ -315,18 +315,6 @@ export default function StaffEngagementDetail() {
         if (error) throw error;
       }
 
-      // Recompute completedKeys + auto-update status
-      const next = new Set(completedKeys);
-      if (checked) next.add(itemKey); else next.delete(itemKey);
-
-      const allCriticalDoneNext =
-        criticalKeys.length > 0 && criticalKeys.every((k) => next.has(k));
-
-      if (allCriticalDoneNext && engagement?.status === "in_progress") {
-        await supabase.from("staff_engagements").update({ status: "pending_signoff" }).eq("id", id!);
-      } else if (!allCriticalDoneNext && engagement?.status === "pending_signoff") {
-        await supabase.from("staff_engagements").update({ status: "in_progress" }).eq("id", id!);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["checklist_completions", id] });
@@ -337,43 +325,21 @@ export default function StaffEngagementDetail() {
     onError: (e: any) => toast({ title: "Could not update", description: e?.message, variant: "destructive" }),
   });
 
-  const signoffMutation = useMutation({
-    mutationFn: async ({ signoffRole }: { signoffRole: string }) => {
-      const { data: userRes, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !userRes.user) throw new Error("Not authenticated");
-
-      const { error: insertErr } = await supabase
-        .from("engagement_signoffs")
-        .insert({
-          engagement_id: id!,
-          signoff_role: signoffRole,
-          signed_by: userRes.user.id,
-          signed_at: new Date().toISOString(),
-        } as any);
-      if (insertErr) throw insertErr;
-
-      const { count, error: countErr } = await supabase
-        .from("engagement_signoffs")
-        .select("id", { count: "exact", head: true })
-        .eq("engagement_id", id!);
-      if (countErr) throw countErr;
-
-      if ((count ?? 0) === 3) {
-        const { error: updErr } = await supabase
-          .from("staff_engagements")
-          .update({ status: "completed" })
-          .eq("id", id!);
-        if (updErr) throw updErr;
-      }
+  const completeMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("staff_engagements")
+        .update({ status: "completed" })
+        .eq("id", id!);
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Sign-off recorded" });
-      queryClient.invalidateQueries({ queryKey: ["engagement_signoffs", id] });
+      toast({ title: "Engagement completed" });
       queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
     },
     onError: (e: any) =>
-      toast({ title: "Could not sign off", description: e?.message, variant: "destructive" }),
+      toast({ title: "Could not complete", description: e?.message, variant: "destructive" }),
   });
 
   const inviteMutation = useMutation({
