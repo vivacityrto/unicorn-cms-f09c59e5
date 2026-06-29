@@ -1419,9 +1419,11 @@ export default function TasksManagement() {
                                   package_id: task.package_id?.toString() || "",
                                   package_name: task.package_name || "",
                                   status: task.status || "not_started",
-                                  assigned_to: ""
+                                  assigned_to: "",
+                                  priority: task.priority || ""
                                 });
                                 setFollowers(task.followers || []);
+                                setMilestones(task.milestones || []);
                                 setIsEditDialogOpen(true);
                               }}
                               className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
