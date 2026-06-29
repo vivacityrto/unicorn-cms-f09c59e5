@@ -1130,6 +1130,8 @@ export default function TasksManagement() {
                     due_date: formData.due_date,
                     followers: followers,
                     status: formData.status || 'not_started',
+                    priority: formData.priority || null,
+                    milestones: milestones.length > 0 ? milestones : null,
                     updated_at: new Date().toISOString()
                   };
 
