@@ -201,52 +201,21 @@ export default function StaffEngagementDetail() {
     },
   });
 
-  const signoffsQuery = useQuery({
-    queryKey: ["engagement_signoffs", id],
-    enabled: !!id && allowed,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("engagement_signoffs")
-        .select("signoff_role, signed_by, signed_at")
-        .eq("engagement_id", id!);
-      if (error) throw error;
-      return (data ?? []) as Signoff[];
-    },
-  });
-
-  const activityQuery = useQuery({
-    queryKey: ["checklist_activity", id],
-    enabled: !!id && allowed,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("checklist_item_completions")
-        .select("item_key, completed_by, completed_at")
-        .eq("engagement_id", id!)
-        .order("completed_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as any[];
-    },
-  });
-
   const userNamesQuery = useQuery({
     queryKey: [
       "checklist_user_names",
       id,
       (completionsQuery.data ?? []).map((c) => c.completed_by).filter(Boolean),
-      (signoffsQuery.data ?? []).map((s) => s.signed_by).filter(Boolean),
     ],
     enabled:
       !!id &&
       allowed &&
-      ((completionsQuery.data?.length ?? 0) > 0 || (signoffsQuery.data?.length ?? 0) > 0),
+      (completionsQuery.data?.length ?? 0) > 0,
     queryFn: async () => {
       const completionUuids = (completionsQuery.data ?? [])
         .map((c) => c.completed_by)
         .filter(Boolean) as string[];
-      const signoffUuids = (signoffsQuery.data ?? [])
-        .map((s) => s.signed_by)
-        .filter(Boolean) as string[];
-      const uniqueUuids = [...new Set([...completionUuids, ...signoffUuids])];
+      const uniqueUuids = [...new Set(completionUuids)];
       if (uniqueUuids.length === 0) return [];
       const { data, error } = await supabase
         .from("users")
