@@ -56,9 +56,10 @@ export function SharePointLinkDialog({ open, onOpenChange, tenantId, onSelectLin
 
   const handleInsertCustomUrl = () => {
     if (customUrl.trim()) {
-      onSelectLink(customUrl.trim());
+      const url = customUrl.trim();
       setCustomUrl('');
       onOpenChange(false);
+      requestAnimationFrame(() => onSelectLink(url));
     }
   };
 
