@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, Clock, AlertTriangle, Search, Calendar, CheckCheck, X, Plus, AlertCircle, ListTodo, CalendarIcon, ClipboardList, CalendarClock, Upload, File as FileIcon, Building, Download, User, UserCheck, Pencil, Trash2, Users } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, Search, Calendar, CheckCheck, X, Plus, AlertCircle, ListTodo, CalendarIcon, ClipboardList, CalendarClock, Upload, File as FileIcon, Building, Download, User, UserCheck, Pencil, Trash2, Users, NotebookPen } from "lucide-react";
+import TaskNotesSidebar from "@/components/TaskNotesSidebar";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Combobox } from "@/components/ui/combobox";
@@ -64,6 +65,7 @@ export default function TasksManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -542,7 +544,8 @@ export default function TasksManagement() {
         </div>
       </div>;
   }
-  return <div className="p-6 space-y-6 animate-fade-in">
+  return <div className="flex flex-row w-full">
+      <main className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -550,6 +553,10 @@ export default function TasksManagement() {
           <p className="text-muted-foreground">View and manage your tasks</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsNotesOpen(o => !o)}>
+            <NotebookPen className="h-4 w-4 mr-2" />
+            Notes
+          </Button>
           <Dialog open={isCreateDialogOpen} onOpenChange={open => {
           setIsCreateDialogOpen(open);
           if (!open) {
@@ -1572,5 +1579,9 @@ export default function TasksManagement() {
             </div>}
         </SheetContent>
       </Sheet>
+      </main>
+      {isNotesOpen && user?.id && (
+        <TaskNotesSidebar isOpen={isNotesOpen} onClose={() => setIsNotesOpen(false)} userId={user.id} />
+      )}
     </div>;
 }
