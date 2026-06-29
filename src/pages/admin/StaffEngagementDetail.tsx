@@ -15,12 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -94,11 +88,6 @@ type Completion = {
   completed_at: string;
 };
 
-type Signoff = {
-  signoff_role: string;
-  signed_by: string | null;
-  signed_at: string;
-};
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return "—";
@@ -123,14 +112,11 @@ function StatusBadge({ value }: { value: string }) {
 function PhaseProgress({
   phases,
   completedKeys,
-  signoffCount,
 }: {
   phases: ChecklistPhase[];
   completedKeys: Set<string>;
-  signoffCount: number;
 }) {
   const phaseStates = phases.map((phase) => {
-    if (phase.key === "signoff") return signoffCount >= 3;
     const allItems = phase.sections.flatMap((s) => s.items);
     if (allItems.length === 0) return false;
     return allItems.every((i) => completedKeys.has(i.key));
@@ -215,52 +201,21 @@ export default function StaffEngagementDetail() {
     },
   });
 
-  const signoffsQuery = useQuery({
-    queryKey: ["engagement_signoffs", id],
-    enabled: !!id && allowed,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("engagement_signoffs")
-        .select("signoff_role, signed_by, signed_at")
-        .eq("engagement_id", id!);
-      if (error) throw error;
-      return (data ?? []) as Signoff[];
-    },
-  });
-
-  const activityQuery = useQuery({
-    queryKey: ["checklist_activity", id],
-    enabled: !!id && allowed,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("checklist_item_completions")
-        .select("item_key, completed_by, completed_at")
-        .eq("engagement_id", id!)
-        .order("completed_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as any[];
-    },
-  });
-
   const userNamesQuery = useQuery({
     queryKey: [
       "checklist_user_names",
       id,
       (completionsQuery.data ?? []).map((c) => c.completed_by).filter(Boolean),
-      (signoffsQuery.data ?? []).map((s) => s.signed_by).filter(Boolean),
     ],
     enabled:
       !!id &&
       allowed &&
-      ((completionsQuery.data?.length ?? 0) > 0 || (signoffsQuery.data?.length ?? 0) > 0),
+      (completionsQuery.data?.length ?? 0) > 0,
     queryFn: async () => {
       const completionUuids = (completionsQuery.data ?? [])
         .map((c) => c.completed_by)
         .filter(Boolean) as string[];
-      const signoffUuids = (signoffsQuery.data ?? [])
-        .map((s) => s.signed_by)
-        .filter(Boolean) as string[];
-      const uniqueUuids = [...new Set([...completionUuids, ...signoffUuids])];
+      const uniqueUuids = [...new Set(completionUuids)];
       if (uniqueUuids.length === 0) return [];
       const { data, error } = await supabase
         .from("users")
@@ -290,7 +245,6 @@ export default function StaffEngagementDetail() {
 
   const engagement = engagementQuery.data;
   const completions = completionsQuery.data ?? [];
-  const signoffs = signoffsQuery.data ?? [];
 
   const phases = useMemo<ChecklistPhase[]>(() => {
     if (!engagement) return [];
@@ -321,24 +275,6 @@ export default function StaffEngagementDetail() {
   );
   const allCriticalDone =
     criticalKeys.length > 0 && criticalKeys.every((k) => completedKeys.has(k));
-
-  const signoffsByRole = useMemo(() => {
-    const m = new Map<string, Signoff>();
-    signoffs.forEach((s) => m.set(s.signoff_role, s));
-    return m;
-  }, [signoffs]);
-
-  const mySignoffRole: string | null = useMemo(() => {
-    if (
-      profile?.user_uuid &&
-      engagement?.linked_unicorn_user_id &&
-      profile.user_uuid === engagement.linked_unicorn_user_id
-    )
-      return "staff_member";
-    if (role === "Integrator") return "operations_manager";
-    if (role === "Super Admin") return "ceo";
-    return null;
-  }, [profile, engagement, role]);
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
@@ -379,18 +315,6 @@ export default function StaffEngagementDetail() {
         if (error) throw error;
       }
 
-      // Recompute completedKeys + auto-update status
-      const next = new Set(completedKeys);
-      if (checked) next.add(itemKey); else next.delete(itemKey);
-
-      const allCriticalDoneNext =
-        criticalKeys.length > 0 && criticalKeys.every((k) => next.has(k));
-
-      if (allCriticalDoneNext && engagement?.status === "in_progress") {
-        await supabase.from("staff_engagements").update({ status: "pending_signoff" }).eq("id", id!);
-      } else if (!allCriticalDoneNext && engagement?.status === "pending_signoff") {
-        await supabase.from("staff_engagements").update({ status: "in_progress" }).eq("id", id!);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["checklist_completions", id] });
@@ -401,43 +325,21 @@ export default function StaffEngagementDetail() {
     onError: (e: any) => toast({ title: "Could not update", description: e?.message, variant: "destructive" }),
   });
 
-  const signoffMutation = useMutation({
-    mutationFn: async ({ signoffRole }: { signoffRole: string }) => {
-      const { data: userRes, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !userRes.user) throw new Error("Not authenticated");
-
-      const { error: insertErr } = await supabase
-        .from("engagement_signoffs")
-        .insert({
-          engagement_id: id!,
-          signoff_role: signoffRole,
-          signed_by: userRes.user.id,
-          signed_at: new Date().toISOString(),
-        } as any);
-      if (insertErr) throw insertErr;
-
-      const { count, error: countErr } = await supabase
-        .from("engagement_signoffs")
-        .select("id", { count: "exact", head: true })
-        .eq("engagement_id", id!);
-      if (countErr) throw countErr;
-
-      if ((count ?? 0) === 3) {
-        const { error: updErr } = await supabase
-          .from("staff_engagements")
-          .update({ status: "completed" })
-          .eq("id", id!);
-        if (updErr) throw updErr;
-      }
+  const completeMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("staff_engagements")
+        .update({ status: "completed" })
+        .eq("id", id!);
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "Sign-off recorded" });
-      queryClient.invalidateQueries({ queryKey: ["engagement_signoffs", id] });
+      toast({ title: "Engagement completed" });
       queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
       queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
     },
     onError: (e: any) =>
-      toast({ title: "Could not sign off", description: e?.message, variant: "destructive" }),
+      toast({ title: "Could not complete", description: e?.message, variant: "destructive" }),
   });
 
   const inviteMutation = useMutation({
@@ -591,152 +493,72 @@ export default function StaffEngagementDetail() {
               Started {fmtDate(engagement.start_date)} · Type: {typeLabel}
             </p>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                Manage <MoreHorizontal className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                disabled={manageDisabled}
-                onSelect={(e) => { e.preventDefault(); setConfirmCancel(true); }}
+          <div className="flex items-center gap-2">
+            {(engagement.status === "in_progress" || engagement.status === "pending_signoff") && allCriticalDone && (
+              <Button
+                variant="default"
+                disabled={completeMutation.isPending}
+                onClick={() => completeMutation.mutate()}
               >
-                Cancel Engagement
-              </DropdownMenuItem>
-              {!engagement.linked_unicorn_user_id && (
+                {completeMutation.isPending ? "Completing…" : "Mark as Complete"}
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  Manage <MoreHorizontal className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onSelect={(e) => { e.preventDefault(); setLinkUserOpen(true); }}
+                  disabled={manageDisabled}
+                  onSelect={(e) => { e.preventDefault(); setConfirmCancel(true); }}
                 >
-                  Link Unicorn User
+                  Cancel Engagement
                 </DropdownMenuItem>
-              )}
-              {!!engagement.linked_unicorn_user_id && (
-                <DropdownMenuItem
-                  onSelect={async (e) => {
-                    e.preventDefault();
-                    await supabase
-                      .from("staff_engagements")
-                      .update({ linked_unicorn_user_id: null } as any)
-                      .eq("id", id!);
-                    queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
-                    queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
-                    toast({ title: "User unlinked" });
-                  }}
-                >
-                  Unlink User
-                </DropdownMenuItem>
-              )}
-              {role === "Super Admin" && (
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onSelect={(e) => { e.preventDefault(); setConfirmDelete(true); }}
-                >
-                  Delete Engagement
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {!engagement.linked_unicorn_user_id && (
+                  <DropdownMenuItem
+                    onSelect={(e) => { e.preventDefault(); setLinkUserOpen(true); }}
+                  >
+                    Link Unicorn User
+                  </DropdownMenuItem>
+                )}
+                {!!engagement.linked_unicorn_user_id && (
+                  <DropdownMenuItem
+                    onSelect={async (e) => {
+                      e.preventDefault();
+                      await supabase
+                        .from("staff_engagements")
+                        .update({ linked_unicorn_user_id: null } as any)
+                        .eq("id", id!);
+                      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+                      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+                      toast({ title: "User unlinked" });
+                    }}
+                  >
+                    Unlink User
+                  </DropdownMenuItem>
+                )}
+                {role === "Super Admin" && (
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onSelect={(e) => { e.preventDefault(); setConfirmDelete(true); }}
+                  >
+                    Delete Engagement
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         <PhaseProgress
           phases={phases}
           completedKeys={completedKeys}
-          signoffCount={signoffs.length}
         />
 
-        <Tabs defaultValue="checklist">
-          <TabsList>
-            <TabsTrigger value="checklist">Checklist</TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="activity">Activity Log</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="checklist" className="space-y-6 mt-4">
-            {phases.map((phase) => {
-              if (phase.key === "signoff") {
-                const SIGNOFF_ROLES: Array<{ key: string; label: string }> = [
-                  { key: "staff_member", label: "Staff Member" },
-                  { key: "operations_manager", label: "Operations Manager" },
-                  { key: "ceo", label: "CEO" },
-                ];
-                return (
-                  <div key={phase.key} className="space-y-3">
-                    <h2 className="text-sm font-semibold tracking-wide text-muted-foreground">
-                      {phase.label}
-                    </h2>
-                    {!allCriticalDone && (
-                      <Card className="border-amber-500/40 bg-amber-500/10">
-                        <CardContent className="p-4 flex items-start gap-2 text-sm text-amber-800 dark:text-amber-200">
-                          <AlertTriangle className="h-4 w-4 mt-0.5" />
-                          <span>Complete all required (⚠) items before signing off.</span>
-                        </CardContent>
-                      </Card>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {SIGNOFF_ROLES.map(({ key: rk, label }) => {
-                        const signed = signoffsByRole.get(rk);
-                        const isMine = mySignoffRole === rk;
-                        const needsLinkedUser = rk === "staff_member" && !engagement.linked_unicorn_user_id;
-                        const canSign = allCriticalDone && isMine && !needsLinkedUser;
-                        const signerName = signed?.signed_by
-                          ? userNameMap.get(signed.signed_by) ?? "Unknown user"
-                          : null;
-
-                        const signBtn = (
-                          <Button
-                            size="sm"
-                            disabled={!canSign || signoffMutation.isPending}
-                            onClick={() => signoffMutation.mutate({ signoffRole: rk })}
-                          >
-                            {signoffMutation.isPending ? "Signing…" : "Sign Off"}
-                          </Button>
-                        );
-
-                        return (
-                          <Card key={rk}>
-                            <CardContent className="p-4 space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div className="font-medium text-sm">{label}</div>
-                                {signed && (
-                                  <Badge
-                                    variant="outline"
-                                    className="border-green-500/40 bg-green-500/10 text-green-700 dark:text-green-300"
-                                  >
-                                    <Check className="h-3 w-3 mr-1" /> Signed
-                                  </Badge>
-                                )}
-                              </div>
-                              {signed ? (
-                                <div className="text-xs text-muted-foreground space-y-0.5">
-                                  <div className="text-foreground">{signerName}</div>
-                                  <div>{fmtDateTime(signed.signed_at)}</div>
-                                </div>
-                              ) : (
-                                <div className="space-y-3">
-                                  <div className="text-xs text-muted-foreground">Awaiting sign-off</div>
-                                  {rk === "staff_member" && isMine && allCriticalDone && needsLinkedUser ? (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span className="inline-block">{signBtn}</span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>Link a Unicorn user first</TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  ) : (
-                                    signBtn
-                                  )}
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              }
+        <div className="space-y-6 mt-4">
+          {phases.map((phase) => {
 
               const defaultOpen = phase.sections.map((s) => s.key);
               return (
@@ -896,41 +718,7 @@ export default function StaffEngagementDetail() {
                 </div>
               );
             })}
-          </TabsContent>
-
-          <TabsContent value="notes" className="mt-4">
-            <Card>
-              <CardContent className="p-6 text-muted-foreground text-sm">
-                Notes coming in a future update.
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activity" className="mt-4">
-            <Card>
-              <CardContent className="p-6">
-                {(activityQuery.data ?? []).length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No activity yet.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {(activityQuery.data ?? []).map((r: any, idx: number) => {
-                      const name = userNameMap.get(r.completed_by) ?? "Unknown user";
-                      const label = findItemLabel(r.item_key) ?? r.item_key;
-                      return (
-                        <li key={idx} className="text-sm">
-                          <span className="font-medium">{name}</span>
-                          <span className="text-muted-foreground"> ticked </span>
-                          <span>{label}</span>
-                          <span className="text-muted-foreground"> · {fmtDateTime(r.completed_at)}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
 
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
