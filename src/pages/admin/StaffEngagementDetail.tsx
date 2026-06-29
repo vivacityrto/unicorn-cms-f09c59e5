@@ -15,12 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -94,11 +88,6 @@ type Completion = {
   completed_at: string;
 };
 
-type Signoff = {
-  signoff_role: string;
-  signed_by: string | null;
-  signed_at: string;
-};
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return "—";
@@ -123,14 +112,11 @@ function StatusBadge({ value }: { value: string }) {
 function PhaseProgress({
   phases,
   completedKeys,
-  signoffCount,
 }: {
   phases: ChecklistPhase[];
   completedKeys: Set<string>;
-  signoffCount: number;
 }) {
   const phaseStates = phases.map((phase) => {
-    if (phase.key === "signoff") return signoffCount >= 3;
     const allItems = phase.sections.flatMap((s) => s.items);
     if (allItems.length === 0) return false;
     return allItems.every((i) => completedKeys.has(i.key));
