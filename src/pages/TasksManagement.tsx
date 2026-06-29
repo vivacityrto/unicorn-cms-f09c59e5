@@ -82,9 +82,11 @@ export default function TasksManagement() {
     package_id: "",
     package_name: "",
     status: "not_started",
-    assigned_to: ""
+    assigned_to: "",
+    priority: ""
   });
   const [followers, setFollowers] = useState<string[]>([]);
+  const [milestones, setMilestones] = useState<Array<{ id: string; text: string; completed: boolean }>>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const itemsPerPage = 20;
   const {
