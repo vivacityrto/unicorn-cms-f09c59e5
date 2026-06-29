@@ -161,7 +161,7 @@ export default function TasksManagement() {
           created_at,
           updated_at,
           file_paths
-        `).eq("created_by", userId).order("created_at", {
+        `).or(`created_by.eq.${userId},followers.cs.{"${userId}"}`).order("created_at", {
         ascending: false
       });
       if (tasksError) throw tasksError;
