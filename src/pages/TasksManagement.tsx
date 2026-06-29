@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -46,6 +47,7 @@ interface Task {
   file_paths?: string[];
   source?: 'task' | 'action' | 'ops';
   priority: string | null;
+  milestones?: Array<{ id: string; text: string; completed: boolean }> | null;
   assignee_user?: { user_uuid: string; first_name: string; last_name: string; avatar_url: string | null } | null;
 }
 type TaskStatus = "pending" | "in_progress" | "completed" | "overdue" | "extended";
@@ -80,9 +82,11 @@ export default function TasksManagement() {
     package_id: "",
     package_name: "",
     status: "not_started",
-    assigned_to: ""
+    assigned_to: "",
+    priority: ""
   });
   const [followers, setFollowers] = useState<string[]>([]);
+  const [milestones, setMilestones] = useState<Array<{ id: string; text: string; completed: boolean }>>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const itemsPerPage = 20;
   const {
@@ -561,6 +565,8 @@ export default function TasksManagement() {
           setIsCreateDialogOpen(open);
           if (!open) {
             setUploadedFiles([]);
+            setMilestones([]);
+            setFormData(prev => ({ ...prev, priority: "" }));
           }
         }}>
             <DialogTrigger asChild>
@@ -636,6 +642,63 @@ export default function TasksManagement() {
                 </div>
 
                 <div className="grid gap-2">
+                  <Label htmlFor="priority">Priority</Label>
+                  <Combobox
+                    options={[
+                      { value: "urgent", label: "Urgent" },
+                      { value: "high", label: "High" },
+                      { value: "normal", label: "Normal" },
+                      { value: "low", label: "Low" }
+                    ]}
+                    value={formData.priority}
+                    onValueChange={value => setFormData({ ...formData, priority: value })}
+                    placeholder="Select priority"
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label className="text-primary font-semibold">Milestones</Label>
+                  <div className="space-y-2">
+                    {milestones.map((m, i) => (
+                      <div key={m.id} className="flex items-center gap-2">
+                        <Checkbox
+                          checked={m.completed}
+                          onCheckedChange={(checked) =>
+                            setMilestones(prev => prev.map((x, j) => j === i ? { ...x, completed: !!checked } : x))
+                          }
+                        />
+                        <Input
+                          value={m.text}
+                          onChange={(e) =>
+                            setMilestones(prev => prev.map((x, j) => j === i ? { ...x, text: e.target.value } : x))
+                          }
+                          placeholder={`Milestone ${i + 1}`}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setMilestones(prev => prev.filter((_, j) => j !== i))}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMilestones(prev => [...prev, { id: crypto.randomUUID(), text: "", completed: false }])}
+                    >
+                      + Add Milestone
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+
                   <Label className="text-primary font-semibold">Followers</Label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {followers.map(userId => {
@@ -782,6 +845,8 @@ export default function TasksManagement() {
                       created_by: user.id,
                       followers: assignedFollowers.length > 0 ? assignedFollowers : [],
                       status: formData.status || 'not_started',
+                      priority: formData.priority || null,
+                      milestones: milestones.length > 0 ? milestones : null,
                       completed: false
                     }).select().single();
 
@@ -831,9 +896,11 @@ export default function TasksManagement() {
                       package_id: "",
                       package_name: "",
                       status: "not_started",
-                      assigned_to: ""
+                      assigned_to: "",
+                      priority: ""
                     });
                     setFollowers([]);
+                    setMilestones([]);
                     setUploadedFiles([]);
                     fetchTasks();
                   } catch (error: any) {
@@ -863,6 +930,8 @@ export default function TasksManagement() {
           if (!open) {
             setEditingTask(null);
             setUploadedFiles([]);
+            setMilestones([]);
+            setFormData(prev => ({ ...prev, priority: "" }));
           }
         }}>
           <DialogContent className="max-w-2xl border-[3px] border-[#dfdfdf]">
@@ -934,6 +1003,63 @@ export default function TasksManagement() {
                 </div>
 
                 <div className="grid gap-2">
+                  <Label htmlFor="edit_priority">Priority</Label>
+                  <Combobox
+                    options={[
+                      { value: "urgent", label: "Urgent" },
+                      { value: "high", label: "High" },
+                      { value: "normal", label: "Normal" },
+                      { value: "low", label: "Low" }
+                    ]}
+                    value={formData.priority}
+                    onValueChange={value => setFormData({ ...formData, priority: value })}
+                    placeholder="Select priority"
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label className="text-primary font-semibold">Milestones</Label>
+                  <div className="space-y-2">
+                    {milestones.map((m, i) => (
+                      <div key={m.id} className="flex items-center gap-2">
+                        <Checkbox
+                          checked={m.completed}
+                          onCheckedChange={(checked) =>
+                            setMilestones(prev => prev.map((x, j) => j === i ? { ...x, completed: !!checked } : x))
+                          }
+                        />
+                        <Input
+                          value={m.text}
+                          onChange={(e) =>
+                            setMilestones(prev => prev.map((x, j) => j === i ? { ...x, text: e.target.value } : x))
+                          }
+                          placeholder={`Milestone ${i + 1}`}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setMilestones(prev => prev.filter((_, j) => j !== i))}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMilestones(prev => [...prev, { id: crypto.randomUUID(), text: "", completed: false }])}
+                    >
+                      + Add Milestone
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+
                   <Label className="text-primary font-semibold">Followers</Label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {followers.map(userId => {
@@ -1004,6 +1130,8 @@ export default function TasksManagement() {
                     due_date: formData.due_date,
                     followers: followers,
                     status: formData.status || 'not_started',
+                    priority: formData.priority || null,
+                    milestones: milestones.length > 0 ? milestones : null,
                     updated_at: new Date().toISOString()
                   };
 
@@ -1293,9 +1421,11 @@ export default function TasksManagement() {
                                   package_id: task.package_id?.toString() || "",
                                   package_name: task.package_name || "",
                                   status: task.status || "not_started",
-                                  assigned_to: ""
+                                  assigned_to: "",
+                                  priority: task.priority || ""
                                 });
                                 setFollowers(task.followers || []);
+                                setMilestones(task.milestones || []);
                                 setIsEditDialogOpen(true);
                               }}
                               className="h-8 w-8 hover:bg-primary/10 hover:text-primary"

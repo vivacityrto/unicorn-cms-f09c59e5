@@ -47554,7 +47554,9 @@ export type Database = {
           followers: string[] | null
           id: string
           last_reminder_at: string | null
+          milestones: Json | null
           package_id: number | null
+          priority: string | null
           reminder_count: number | null
           source_task_id: string | null
           stage_id: number | null
@@ -47576,7 +47578,9 @@ export type Database = {
           followers?: string[] | null
           id?: string
           last_reminder_at?: string | null
+          milestones?: Json | null
           package_id?: number | null
+          priority?: string | null
           reminder_count?: number | null
           source_task_id?: string | null
           stage_id?: number | null
@@ -47598,7 +47602,9 @@ export type Database = {
           followers?: string[] | null
           id?: string
           last_reminder_at?: string | null
+          milestones?: Json | null
           package_id?: number | null
+          priority?: string | null
           reminder_count?: number | null
           source_task_id?: string | null
           stage_id?: number | null
