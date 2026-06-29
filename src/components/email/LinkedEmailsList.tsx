@@ -154,6 +154,7 @@ function EmailCard({ email }: EmailCardProps) {
         open={viewDialogOpen}
         onOpenChange={setViewDialogOpen}
         externalMessageId={email.external_message_id}
+        bodyHtml={email.body_html}
         subject={email.subject}
         senderName={email.sender_name}
         senderEmail={email.sender_email}

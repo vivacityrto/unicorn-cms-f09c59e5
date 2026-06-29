@@ -18,6 +18,7 @@ export interface LinkedEmail {
   task_id: string | null;
   created_at: string;
   external_message_id: string | null;
+  body_html: string | null;
 }
 
 export interface EmailAttachment {
@@ -180,7 +181,7 @@ export function useLinkedEmails(options?: {
           !!email.external_message_id &&
           !!email.tenant_id &&
           !enrichmentInFlight.current.has(email.id) &&
-          (!email.ai_summary || !email.body_preview || email.body_preview.length < 320 || /[\r\n]/.test(email.body_preview))
+          (!email.ai_summary || !email.body_preview || email.body_preview.length < 320 || /[\r\n]/.test(email.body_preview) || !email.body_html)
       )
       .slice(0, 5);
 

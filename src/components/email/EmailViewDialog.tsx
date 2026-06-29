@@ -15,6 +15,8 @@ interface EmailViewDialogProps {
   externalMessageId?: string | null;
   /** For Outlook inbox emails, pass the Graph API message id directly */
   outlookMessageId?: string;
+  /** Pre-fetched HTML body (for linked emails). Skips the Graph round-trip when present. */
+  bodyHtml?: string | null;
   /** Fallback display data */
   subject?: string | null;
   senderName?: string | null;
@@ -29,6 +31,7 @@ export function EmailViewDialog({
   onOpenChange,
   externalMessageId,
   outlookMessageId,
+  bodyHtml: bodyHtmlProp,
   subject,
   senderName,
   senderEmail,
@@ -36,22 +39,34 @@ export function EmailViewDialog({
   bodyPreview,
   hasAttachments,
 }: EmailViewDialogProps) {
-  const [bodyHtml, setBodyHtml] = useState<string | null>(null);
+  const [bodyHtml, setBodyHtml] = useState<string | null>(bodyHtmlProp ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fetched, setFetched] = useState(false);
-
-  const messageId = outlookMessageId || externalMessageId;
+  const [fetched, setFetched] = useState<boolean>(!!bodyHtmlProp);
 
   // Trigger fetch when dialog opens
   useEffect(() => {
-    if (open && !fetched && messageId) {
-      fetchBody();
+    if (!open) return;
+    if (fetched) return;
+
+    // 1. Pre-fetched body provided by the caller (linked email row with body_html)
+    if (bodyHtmlProp) {
+      setBodyHtml(bodyHtmlProp);
+      setFetched(true);
+      return;
     }
+
+    // 2. Inbox-browse path: viewer owns the mailbox, fetch from Graph
+    if (outlookMessageId) {
+      void fetchBodyFromGraph(outlookMessageId);
+      return;
+    }
+
+    // 3. Linked email, no stored body, viewer is not the linker — silent fallback to preview
+    setFetched(true);
   }, [open]);
 
-  const fetchBody = async () => {
-    if (!messageId || fetched) return;
+  const fetchBodyFromGraph = async (messageId: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -75,13 +90,10 @@ export function EmailViewDialog({
   };
 
   const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen && !fetched) {
-      fetchBody();
-    }
     if (!isOpen) {
-      // Reset for next open
-      setBodyHtml(null);
-      setFetched(false);
+      // Reset for next open — preserve any pre-fetched body from props
+      setBodyHtml(bodyHtmlProp ?? null);
+      setFetched(!!bodyHtmlProp);
       setError(null);
     }
     onOpenChange(isOpen);

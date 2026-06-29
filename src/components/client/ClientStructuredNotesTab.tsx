@@ -1785,6 +1785,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         open={emailViewOpen}
         onOpenChange={setEmailViewOpen}
         externalMessageId={emailViewTarget?.external_message_id}
+        bodyHtml={(emailViewTarget as any)?.body_html ?? null}
         subject={emailViewTarget?.subject}
         senderName={emailViewTarget?.sender_name}
         senderEmail={emailViewTarget?.sender_email}
