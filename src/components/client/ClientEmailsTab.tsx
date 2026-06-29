@@ -5,6 +5,8 @@ import { LinkedEmailsList } from '@/components/email/LinkedEmailsList';
 import { OutlookInboxBrowser } from '@/components/email/OutlookInboxBrowser';
 import { useLinkedEmails } from '@/hooks/useLinkedEmails';
 import { Mail, Plus, RefreshCw, Inbox } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -15,6 +17,7 @@ interface ClientEmailsTabProps {
 
 export function ClientEmailsTab({ tenantId, clientName }: ClientEmailsTabProps) {
   const [showInboxBrowser, setShowInboxBrowser] = useState(false);
+  const [domainFilterEnabled, setDomainFilterEnabled] = useState(true);
 
   const { refetch } = useLinkedEmails({ clientId: tenantId });
 
@@ -89,15 +92,24 @@ export function ClientEmailsTab({ tenantId, clientName }: ClientEmailsTabProps) 
       {showInboxBrowser && (
         <div className="space-y-2">
           {clientDomain && (
-            <p className="text-sm text-muted-foreground px-1">
-              Showing emails matching domain: <span className="font-medium text-foreground">@{clientDomain}</span>
-            </p>
+            <div className="flex items-center gap-3 px-1">
+              <Switch
+                id="domain-filter"
+                checked={domainFilterEnabled}
+                onCheckedChange={setDomainFilterEnabled}
+              />
+              <Label htmlFor="domain-filter" className="text-sm text-muted-foreground cursor-pointer">
+                {domainFilterEnabled
+                  ? <>Filter by domain: <span className="font-medium text-foreground">@{clientDomain}</span></>
+                  : 'Showing all emails (domain filter off)'}
+              </Label>
+            </div>
           )}
           <OutlookInboxBrowser
             tenantId={String(tenantId)}
             defaultClientId={tenantId}
             onEmailLinked={handleEmailLinked}
-            filterEmail={clientDomain}
+            filterEmail={domainFilterEnabled ? clientDomain : undefined}
           />
         </div>
       )}
