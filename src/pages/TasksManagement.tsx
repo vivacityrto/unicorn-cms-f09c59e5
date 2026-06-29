@@ -1003,6 +1003,63 @@ export default function TasksManagement() {
                 </div>
 
                 <div className="grid gap-2">
+                  <Label htmlFor="edit_priority">Priority</Label>
+                  <Combobox
+                    options={[
+                      { value: "urgent", label: "Urgent" },
+                      { value: "high", label: "High" },
+                      { value: "normal", label: "Normal" },
+                      { value: "low", label: "Low" }
+                    ]}
+                    value={formData.priority}
+                    onValueChange={value => setFormData({ ...formData, priority: value })}
+                    placeholder="Select priority"
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label className="text-primary font-semibold">Milestones</Label>
+                  <div className="space-y-2">
+                    {milestones.map((m, i) => (
+                      <div key={m.id} className="flex items-center gap-2">
+                        <Checkbox
+                          checked={m.completed}
+                          onCheckedChange={(checked) =>
+                            setMilestones(prev => prev.map((x, j) => j === i ? { ...x, completed: !!checked } : x))
+                          }
+                        />
+                        <Input
+                          value={m.text}
+                          onChange={(e) =>
+                            setMilestones(prev => prev.map((x, j) => j === i ? { ...x, text: e.target.value } : x))
+                          }
+                          placeholder={`Milestone ${i + 1}`}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setMilestones(prev => prev.filter((_, j) => j !== i))}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMilestones(prev => [...prev, { id: crypto.randomUUID(), text: "", completed: false }])}
+                    >
+                      + Add Milestone
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+
                   <Label className="text-primary font-semibold">Followers</Label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {followers.map(userId => {
