@@ -493,52 +493,63 @@ export default function StaffEngagementDetail() {
               Started {fmtDate(engagement.start_date)} · Type: {typeLabel}
             </p>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                Manage <MoreHorizontal className="h-4 w-4 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                disabled={manageDisabled}
-                onSelect={(e) => { e.preventDefault(); setConfirmCancel(true); }}
+          <div className="flex items-center gap-2">
+            {(engagement.status === "in_progress" || engagement.status === "pending_signoff") && allCriticalDone && (
+              <Button
+                variant="default"
+                disabled={completeMutation.isPending}
+                onClick={() => completeMutation.mutate()}
               >
-                Cancel Engagement
-              </DropdownMenuItem>
-              {!engagement.linked_unicorn_user_id && (
+                {completeMutation.isPending ? "Completing…" : "Mark as Complete"}
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  Manage <MoreHorizontal className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onSelect={(e) => { e.preventDefault(); setLinkUserOpen(true); }}
+                  disabled={manageDisabled}
+                  onSelect={(e) => { e.preventDefault(); setConfirmCancel(true); }}
                 >
-                  Link Unicorn User
+                  Cancel Engagement
                 </DropdownMenuItem>
-              )}
-              {!!engagement.linked_unicorn_user_id && (
-                <DropdownMenuItem
-                  onSelect={async (e) => {
-                    e.preventDefault();
-                    await supabase
-                      .from("staff_engagements")
-                      .update({ linked_unicorn_user_id: null } as any)
-                      .eq("id", id!);
-                    queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
-                    queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
-                    toast({ title: "User unlinked" });
-                  }}
-                >
-                  Unlink User
-                </DropdownMenuItem>
-              )}
-              {role === "Super Admin" && (
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onSelect={(e) => { e.preventDefault(); setConfirmDelete(true); }}
-                >
-                  Delete Engagement
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {!engagement.linked_unicorn_user_id && (
+                  <DropdownMenuItem
+                    onSelect={(e) => { e.preventDefault(); setLinkUserOpen(true); }}
+                  >
+                    Link Unicorn User
+                  </DropdownMenuItem>
+                )}
+                {!!engagement.linked_unicorn_user_id && (
+                  <DropdownMenuItem
+                    onSelect={async (e) => {
+                      e.preventDefault();
+                      await supabase
+                        .from("staff_engagements")
+                        .update({ linked_unicorn_user_id: null } as any)
+                        .eq("id", id!);
+                      queryClient.invalidateQueries({ queryKey: ["staff_engagement", id] });
+                      queryClient.invalidateQueries({ queryKey: ["staff_engagements"] });
+                      toast({ title: "User unlinked" });
+                    }}
+                  >
+                    Unlink User
+                  </DropdownMenuItem>
+                )}
+                {role === "Super Admin" && (
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onSelect={(e) => { e.preventDefault(); setConfirmDelete(true); }}
+                  >
+                    Delete Engagement
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         <PhaseProgress
