@@ -565,6 +565,8 @@ export default function TasksManagement() {
           setIsCreateDialogOpen(open);
           if (!open) {
             setUploadedFiles([]);
+            setMilestones([]);
+            setFormData(prev => ({ ...prev, priority: "" }));
           }
         }}>
             <DialogTrigger asChild>
