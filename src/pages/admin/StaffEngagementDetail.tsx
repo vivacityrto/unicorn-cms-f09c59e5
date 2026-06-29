@@ -718,41 +718,7 @@ export default function StaffEngagementDetail() {
                 </div>
               );
             })}
-          </TabsContent>
-
-          <TabsContent value="notes" className="mt-4">
-            <Card>
-              <CardContent className="p-6 text-muted-foreground text-sm">
-                Notes coming in a future update.
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activity" className="mt-4">
-            <Card>
-              <CardContent className="p-6">
-                {(activityQuery.data ?? []).length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No activity yet.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {(activityQuery.data ?? []).map((r: any, idx: number) => {
-                      const name = userNameMap.get(r.completed_by) ?? "Unknown user";
-                      const label = findItemLabel(r.item_key) ?? r.item_key;
-                      return (
-                        <li key={idx} className="text-sm">
-                          <span className="font-medium">{name}</span>
-                          <span className="text-muted-foreground"> ticked </span>
-                          <span>{label}</span>
-                          <span className="text-muted-foreground"> · {fmtDateTime(r.completed_at)}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
 
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
