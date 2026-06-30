@@ -513,37 +513,20 @@ export default function TeamCommunicationsPage() {
         </div>
       </div>
 
-      {canSendBulk ? (
+      {canSendBulk && (
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "conversations" | "history")}>
           <TabsList>
             <TabsTrigger value="conversations">Conversations</TabsTrigger>
             <TabsTrigger value="history">Bulk Message History</TabsTrigger>
           </TabsList>
-          <TabsContent value="history" className="mt-4">
-            <BulkMessageHistory />
-          </TabsContent>
-          <TabsContent value="conversations" className="mt-4">
-            <ConversationsBody
-              filterTenant={filterTenant}
-              setFilterTenant={setFilterTenant}
-              filterStaff={filterStaff}
-              setFilterStaff={setFilterStaff}
-              tenantOptions={tenantOptions}
-              staffOptions={staffOptions}
-            />
-          </TabsContent>
         </Tabs>
-      ) : null}
-      {!canSendBulk && (
-        <ConversationsBody
-          filterTenant={filterTenant}
-          setFilterTenant={setFilterTenant}
-          filterStaff={filterStaff}
-          setFilterStaff={setFilterStaff}
-          tenantOptions={tenantOptions}
-          staffOptions={staffOptions}
-        />
       )}
+
+      {canSendBulk && activeTab === "history" ? (
+        <BulkMessageHistory />
+      ) : (
+        <>
+
 
       {/* Filters */}
       <div className="flex gap-2 items-center flex-wrap">
