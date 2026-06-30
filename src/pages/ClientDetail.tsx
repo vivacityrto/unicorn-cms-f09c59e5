@@ -172,22 +172,22 @@ export default function ClientDetail() {
     
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('id, name, slug, status, complyhub_membership_tier, logo_path')
-        .eq('id', tenantIdNum)
-        .single();
+      const [{ data, error }, { data: tp }] = await Promise.all([
+        supabase
+          .from('tenants')
+          .select('id, name, slug, status, complyhub_membership_tier, logo_path')
+          .eq('id', tenantIdNum)
+          .single(),
+        supabase
+          .from('tenant_profile')
+          .select('phone1')
+          .eq('tenant_id', tenantIdNum)
+          .maybeSingle(),
+      ]);
 
       if (error) throw error;
       setTenant(data);
       setLogoPath((data as any).logo_path || null);
-
-      // Fetch phone from tenant_profile
-      const { data: tp } = await supabase
-        .from('tenant_profile')
-        .select('phone1')
-        .eq('tenant_id', tenantIdNum)
-        .maybeSingle();
       setTenantPhone(tp?.phone1 || null);
     } catch (error) {
       console.error('Error fetching tenant:', error);
