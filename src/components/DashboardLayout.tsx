@@ -99,6 +99,7 @@ const administrationMenuItems = [
   { icon: Shield, label: "Team Users", path: "/admin/team-users" },
   { icon: Building2, label: "Tenant Users", path: "/admin/tenant-users" },
   { icon: Users, label: "People", path: "/admin/staff-engagements", saOrIntegratorOnly: true },
+  { icon: Users, label: "Team Reassignment", path: "/administration/team-reassignment", saOrTeamLeaderOnly: true },
   { icon: Mail, label: "Manage Invites", path: "/manage-invites", superAdminOnly: true },
   { icon: Send, label: "Cohort Sender", path: "/admin/cohort-sender", superAdminOnly: true },
   { icon: ShieldCheck, label: "User Audit", path: "/admin/user-audit", superAdminOnly: true },
@@ -269,12 +270,15 @@ export const DashboardLayout = ({
       if ((item as any).saOrIntegratorOnly) {
         return isSuperAdmin || isIntegrator;
       }
+      if ((item as any).saOrTeamLeaderOnly) {
+        return isSuperAdmin || isTeamLeader;
+      }
       if (item.superAdminOnly) {
         return isSuperAdmin;
       }
       return true;
     });
-  }, [isSuperAdmin, isIntegrator]);
+  }, [isSuperAdmin, isIntegrator, isTeamLeader]);
 
   // Legacy menu items for client view
   const clientMenuItems = useMemo(() => {
