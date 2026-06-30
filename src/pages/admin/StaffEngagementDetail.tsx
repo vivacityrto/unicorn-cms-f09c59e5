@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, AlertTriangle, MoreHorizontal, Check } from "lucide-react";
+import { ArrowLeft, AlertTriangle, MoreHorizontal, Check, Copy } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
