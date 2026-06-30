@@ -24,6 +24,7 @@ export function LinkedEmailsList({
   title = "Linked Emails",
   emptyMessage = "No emails linked yet",
 }: LinkedEmailsListProps) {
+  const [convertNoteEmail, setConvertNoteEmail] = useState<LinkedEmail | null>(null);
   const { emails, isLoading, fetchAttachments, getAttachmentUrl } = useLinkedEmails({
     clientId,
     packageId,
