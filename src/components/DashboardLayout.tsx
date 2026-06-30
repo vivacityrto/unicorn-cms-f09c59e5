@@ -270,12 +270,15 @@ export const DashboardLayout = ({
       if ((item as any).saOrIntegratorOnly) {
         return isSuperAdmin || isIntegrator;
       }
+      if ((item as any).saOrTeamLeaderOnly) {
+        return isSuperAdmin || isTeamLeader;
+      }
       if (item.superAdminOnly) {
         return isSuperAdmin;
       }
       return true;
     });
-  }, [isSuperAdmin, isIntegrator]);
+  }, [isSuperAdmin, isIntegrator, isTeamLeader]);
 
   // Legacy menu items for client view
   const clientMenuItems = useMemo(() => {
