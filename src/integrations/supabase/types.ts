@@ -66766,6 +66766,14 @@ export type Database = {
         }
         Returns: Json
       }
+      bulk_reassign_primary_csc: {
+        Args: {
+          p_from_user_id: string
+          p_tenant_ids: number[]
+          p_to_user_id: string
+        }
+        Returns: Json
+      }
       calculate_attention_score: {
         Args: {
           p_burn: number
