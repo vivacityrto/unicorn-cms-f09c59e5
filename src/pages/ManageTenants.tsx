@@ -823,6 +823,37 @@ export default function ManageTenants() {
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2 hover:bg-transparent">
+                  <TableHead className="bg-muted/30 h-14 w-12 border-r border-border/50 px-3">
+                    {bulkSelectionEnabled ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex">
+                              <Checkbox
+                                aria-label="Select all matching clients"
+                                checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+                                onCheckedChange={(c) => toggleSelectAllVisible(!!c)}
+                              />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            Select all {visibleSelectableIds.length} matching client{visibleSelectableIds.length === 1 ? "" : "s"}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex"><Checkbox disabled aria-label="Bulk select disabled" /></span>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-[240px]">
+                            Filter by a specific CSC above to enable bulk reassignment.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Tenant Name</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Hours</TableHead>
