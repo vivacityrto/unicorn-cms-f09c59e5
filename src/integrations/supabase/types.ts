@@ -34293,6 +34293,39 @@ export type Database = {
         }
         Relationships: []
       }
+      message_categories: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           attachments: Json | null
@@ -50192,6 +50225,7 @@ export type Database = {
       tenant_messages: {
         Row: {
           body: string
+          category_id: string | null
           conversation_id: string
           created_at: string
           id: string
@@ -50202,6 +50236,7 @@ export type Database = {
         }
         Insert: {
           body: string
+          category_id?: string | null
           conversation_id: string
           created_at?: string
           id?: string
@@ -50212,6 +50247,7 @@ export type Database = {
         }
         Update: {
           body?: string
+          category_id?: string | null
           conversation_id?: string
           created_at?: string
           id?: string
@@ -50221,6 +50257,13 @@ export type Database = {
           tenant_id?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "tenant_messages_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "message_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tenant_messages_conversation_fk"
             columns: ["conversation_id"]
