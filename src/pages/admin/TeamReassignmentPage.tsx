@@ -90,7 +90,7 @@ export default function TeamReassignmentPage() {
     let cancelled = false;
     (async () => {
       setLoadingTenants(true);
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("tenant_csc_assignments")
         .select("tenant_id, assigned_since, tenants:tenant_id(name)")
         .eq("csc_user_id", fromId)
