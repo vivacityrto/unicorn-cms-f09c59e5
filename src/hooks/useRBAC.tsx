@@ -169,6 +169,7 @@ export const CLIENT_ROUTES = [
   '/dashboard',
   '/settings',
   '/profile',
+  '/my-exit-interview',
   '/client/',
   '/client-portal/',
   '/academy',
