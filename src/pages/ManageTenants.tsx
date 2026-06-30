@@ -1179,6 +1179,28 @@ export default function ManageTenants() {
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tenants'] })}
         />
       )}
+
+      {/* Bulk Reassign CSC Dialog */}
+      {activeCscFilterId && (
+        <BulkReassignCscDialog
+          open={bulkDialogOpen}
+          onOpenChange={setBulkDialogOpen}
+          fromUserId={activeCscFilterId}
+          fromUserName={activeCscFilterName || "Current CSC"}
+          tenants={selectedTenantList}
+          onSuccess={(result) => {
+            // Drop reassigned ids from selection; keep skipped ones visible.
+            setSelectedTenantIds(prev => {
+              const next = new Set(prev);
+              result.reassigned.forEach(id => next.delete(id));
+              return next;
+            });
+            // Refresh CSC chips and the table immediately.
+            queryClient.invalidateQueries({ queryKey: ['tenants'] });
+            queryClient.invalidateQueries({ queryKey: ['tenants', 'csc-assignments'] });
+          }}
+        />
+      )}
     </div>
   );
 }
