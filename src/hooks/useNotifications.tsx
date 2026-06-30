@@ -117,6 +117,9 @@ export const useNotifications = () => {
   };
 
   useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
     const init = async () => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
@@ -124,13 +127,18 @@ export const useNotifications = () => {
         setLoading(false);
         return;
       }
+      if (cancelled) return;
 
       fetchNotifications();
 
-      const channel = supabase
-        .channel(`user-notifications-${userId}`)
+      // Unique channel name per mount avoids "callbacks after subscribe()"
+      // when React strict-mode double-mounts before the previous channel
+      // has fully torn down.
+      const uniqueId = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
+      channel = supabase
+        .channel(`user-notifications-${userId}-${uniqueId}`)
         .on(
-          'postgres_changes',
+          'postgres_changes' as any,
           {
             event: '*',
             schema: 'public',
@@ -140,13 +148,14 @@ export const useNotifications = () => {
           () => fetchNotifications()
         )
         .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     };
 
     init();
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [fetchNotifications]);
 
   return {
