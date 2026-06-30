@@ -271,7 +271,7 @@ async function executeCloseTransaction(
     .from("stage_instances")
     .select("id, status, packageinstance_id, package_instances!inner(tenant_id)")
     .eq("package_instances.tenant_id", tenantId)
-    .in("status", ["not_started", "in_progress", "1", "3"]);
+    .in("status", ["not_started", "in_progress", "blocked", "monitor"]);
 
   if (stagesQueryErr) {
     console.error("Close: failed to query open stages:", stagesQueryErr);
