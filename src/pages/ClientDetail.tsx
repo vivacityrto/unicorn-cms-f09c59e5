@@ -169,25 +169,25 @@ export default function ClientDetail() {
 
   const fetchTenantBasic = async () => {
     if (!tenantIdNum) return;
-    
+
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('id, name, slug, status, complyhub_membership_tier, logo_path')
-        .eq('id', tenantIdNum)
-        .single();
+      const [{ data, error }, { data: tp }] = await Promise.all([
+        supabase
+          .from('tenants')
+          .select('id, name, slug, status, complyhub_membership_tier, logo_path')
+          .eq('id', tenantIdNum)
+          .single(),
+        supabase
+          .from('tenant_profile')
+          .select('phone1')
+          .eq('tenant_id', tenantIdNum)
+          .maybeSingle(),
+      ]);
 
       if (error) throw error;
       setTenant(data);
       setLogoPath((data as any).logo_path || null);
-
-      // Fetch phone from tenant_profile
-      const { data: tp } = await supabase
-        .from('tenant_profile')
-        .select('phone1')
-        .eq('tenant_id', tenantIdNum)
-        .maybeSingle();
       setTenantPhone(tp?.phone1 || null);
     } catch (error) {
       console.error('Error fetching tenant:', error);
@@ -200,44 +200,51 @@ export default function ClientDetail() {
   const fetchPrimaryContact = async () => {
     if (!tenantIdNum) return;
     try {
-      const { data: pcRow } = await supabase
-        .from('tenant_users')
-        .select('user_id')
-        .eq('tenant_id', tenantIdNum)
-        .eq('relationship_role', 'primary_contact')
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      const [{ data: pcRow }, { data: scRow }] = await Promise.all([
+        supabase
+          .from('tenant_users')
+          .select('user_id')
+          .eq('tenant_id', tenantIdNum)
+          .eq('relationship_role', 'primary_contact')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('tenant_users')
+          .select('user_id')
+          .eq('tenant_id', tenantIdNum)
+          .eq('secondary_contact', true)
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
-      if (pcRow?.user_id) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('first_name, last_name, email')
-          .eq('user_uuid', pcRow.user_id)
-          .maybeSingle();
-        if (userData) {
-          setPrimaryContactName(`${userData.first_name || ''} ${userData.last_name || ''}`.trim());
-          setPrimaryContactEmail(userData.email || '');
-        }
-      }
-
-      const { data: scRow } = await supabase
-        .from('tenant_users')
-        .select('user_id')
-        .eq('tenant_id', tenantIdNum)
-        .eq('secondary_contact', true)
-        .limit(1)
-        .maybeSingle();
-      if (scRow?.user_id) {
-        const { data: scUser } = await supabase
-          .from('users')
-          .select('first_name, last_name')
-          .eq('user_uuid', scRow.user_id)
-          .maybeSingle();
-        if (scUser) setSecondaryContactName(`${scUser.first_name || ''} ${scUser.last_name || ''}`.trim());
-      } else {
-        setSecondaryContactName('');
-      }
+      await Promise.all([
+        (async () => {
+          if (pcRow?.user_id) {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('first_name, last_name, email')
+              .eq('user_uuid', pcRow.user_id)
+              .maybeSingle();
+            if (userData) {
+              setPrimaryContactName(`${userData.first_name || ''} ${userData.last_name || ''}`.trim());
+              setPrimaryContactEmail(userData.email || '');
+            }
+          }
+        })(),
+        (async () => {
+          if (scRow?.user_id) {
+            const { data: scUser } = await supabase
+              .from('users')
+              .select('first_name, last_name')
+              .eq('user_uuid', scRow.user_id)
+              .maybeSingle();
+            if (scUser) setSecondaryContactName(`${scUser.first_name || ''} ${scUser.last_name || ''}`.trim());
+          } else {
+            setSecondaryContactName('');
+          }
+        })(),
+      ]);
     } catch (err) {
       console.error('Error fetching primary contact:', err);
     }
@@ -245,10 +252,27 @@ export default function ClientDetail() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="min-h-screen bg-background">
+        <div className="border-b bg-card p-6 space-y-4">
+          <Skeleton className="h-8 w-32" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-16 w-16 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-7 w-52" />
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-4 w-44" />
+            </div>
+          </div>
+          <div className="flex gap-4 pt-2">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-20" />
+            ))}
+          </div>
+        </div>
+        <div className="p-6 space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
       </div>
     );
   }

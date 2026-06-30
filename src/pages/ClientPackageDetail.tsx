@@ -140,10 +140,28 @@ export default function ClientPackageDetail() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
+      <div className="min-h-screen bg-background">
+        <div className="border-b bg-card p-6 space-y-4">
+          <Skeleton className="h-8 w-32" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-lg" />
+            <div className="space-y-2">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
+          <Skeleton className="h-2 w-full rounded-full" />
+          <div className="flex gap-4 pt-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 w-20" />
+            ))}
+          </div>
+        </div>
+        <div className="p-6 space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -176,7 +194,7 @@ export default function ClientPackageDetail() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(`/manage-tenants/${packageData.tenant_id}`)}
+            onClick={() => navigate('/manage-tenants')}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
