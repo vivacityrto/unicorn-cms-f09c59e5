@@ -495,11 +495,55 @@ export default function TeamCommunicationsPage() {
             All client conversations across your portfolio.
           </p>
         </div>
-        <Button onClick={() => setNewDialogOpen(true)} className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          New Message
-        </Button>
+        <div className="flex items-center gap-2">
+          {canSendBulk && (
+            <Button
+              variant="outline"
+              onClick={() => setBulkDialogOpen(true)}
+              className="gap-1.5"
+            >
+              <Megaphone className="h-4 w-4" />
+              Bulk Message
+            </Button>
+          )}
+          <Button onClick={() => setNewDialogOpen(true)} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            New Message
+          </Button>
+        </div>
       </div>
+
+      {canSendBulk ? (
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "conversations" | "history")}>
+          <TabsList>
+            <TabsTrigger value="conversations">Conversations</TabsTrigger>
+            <TabsTrigger value="history">Bulk Message History</TabsTrigger>
+          </TabsList>
+          <TabsContent value="history" className="mt-4">
+            <BulkMessageHistory />
+          </TabsContent>
+          <TabsContent value="conversations" className="mt-4">
+            <ConversationsBody
+              filterTenant={filterTenant}
+              setFilterTenant={setFilterTenant}
+              filterStaff={filterStaff}
+              setFilterStaff={setFilterStaff}
+              tenantOptions={tenantOptions}
+              staffOptions={staffOptions}
+            />
+          </TabsContent>
+        </Tabs>
+      ) : null}
+      {!canSendBulk && (
+        <ConversationsBody
+          filterTenant={filterTenant}
+          setFilterTenant={setFilterTenant}
+          filterStaff={filterStaff}
+          setFilterStaff={setFilterStaff}
+          tenantOptions={tenantOptions}
+          staffOptions={staffOptions}
+        />
+      )}
 
       {/* Filters */}
       <div className="flex gap-2 items-center flex-wrap">
