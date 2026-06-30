@@ -296,6 +296,58 @@ export default function ManageTenants() {
     return () => { supabase.removeChannel(cscChannel); };
   }, [queryClient]);
 
+  // Bulk-reassign helpers
+  const activeCscFilterId = useMemo(
+    () => (cscFilter !== "all" && cscFilter !== "unassigned" ? cscFilter : null),
+    [cscFilter]
+  );
+  const activeCscFilterOption = useMemo(
+    () => cscFilterOptions.find(u => u.user_uuid === activeCscFilterId) ?? null,
+    [cscFilterOptions, activeCscFilterId]
+  );
+  const activeCscFilterName = activeCscFilterOption
+    ? [activeCscFilterOption.first_name, activeCscFilterOption.last_name].filter(Boolean).join(" ").trim()
+    : "";
+  const bulkSelectionEnabled = !!activeCscFilterId;
+
+  // Clear selection whenever the underlying filtered set or filter changes
+  useEffect(() => {
+    setSelectedTenantIds(new Set());
+  }, [searchQuery, statusFilter, packageFilter, cscFilter, showArchived, renewalFilter, regEndFilter]);
+
+  const toggleRowSelected = (id: number, checked: boolean) => {
+    setSelectedTenantIds(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
+  const visibleSelectableIds = useMemo(
+    () => (bulkSelectionEnabled ? filteredTenants.map(t => t.id) : []),
+    [bulkSelectionEnabled, filteredTenants]
+  );
+  const allVisibleSelected =
+    visibleSelectableIds.length > 0 && visibleSelectableIds.every(id => selectedTenantIds.has(id));
+  const someVisibleSelected =
+    !allVisibleSelected && visibleSelectableIds.some(id => selectedTenantIds.has(id));
+
+  const toggleSelectAllVisible = (checked: boolean) => {
+    setSelectedTenantIds(prev => {
+      const next = new Set(prev);
+      if (checked) visibleSelectableIds.forEach(id => next.add(id));
+      else visibleSelectableIds.forEach(id => next.delete(id));
+      return next;
+    });
+  };
+
+  const selectedTenantList = useMemo(
+    () => filteredTenants.filter(t => selectedTenantIds.has(t.id)).map(t => ({ id: t.id, name: t.name })),
+    [filteredTenants, selectedTenantIds]
+  );
+
+
+
   const applyFiltersAndSort = () => {
     let filtered = [...tenants];
 
