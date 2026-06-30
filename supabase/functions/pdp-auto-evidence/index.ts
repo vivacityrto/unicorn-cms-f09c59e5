@@ -299,22 +299,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse(500, { error: "course_fetch_failed" });
   }
 
-  let durationMinutes: number | null = course.estimated_minutes ?? null;
-  if (durationMinutes === null) {
-    const { data: lessons, error: lessErr } = await service
-      .from("academy_lessons")
-      .select("estimated_minutes")
-      .eq("course_id", enrollment.course_id);
-    if (lessErr) {
-      console.error("[pdp-auto-evidence] lessons fetch error:", lessErr);
-    } else if (lessons && lessons.length > 0) {
-      const sum = lessons.reduce(
-        (acc: number, l: { estimated_minutes: number | null }) =>
-          acc + (l.estimated_minutes ?? 0),
-        0,
-      );
-      durationMinutes = sum > 0 ? sum : null;
-    }
+  // Primary: sum of estimated_minutes across published lessons for this course.
+  // Fallback: academy_courses.estimated_minutes only when the lesson sum is 0/null.
+  // Final: NULL when both sources are 0/null.
+  let durationMinutes: number | null = null;
+  const { data: lessons, error: lessErr } = await service
+    .from("academy_lessons")
+    .select("estimated_minutes")
+    .eq("course_id", enrollment.course_id)
+    .eq("is_published", true);
+  if (lessErr) {
+    console.error("[pdp-auto-evidence] lessons fetch error:", lessErr);
+  }
+  const lessonSum = (lessons ?? []).reduce(
+    (acc: number, l: { estimated_minutes: number | null }) =>
+      acc + (l.estimated_minutes ?? 0),
+    0,
+  );
+  if (lessonSum > 0) {
+    durationMinutes = lessonSum;
+  } else if (course.estimated_minutes && course.estimated_minutes > 0) {
+    durationMinutes = course.estimated_minutes;
   }
 
   const occurredOn = enrollment.completed_at
