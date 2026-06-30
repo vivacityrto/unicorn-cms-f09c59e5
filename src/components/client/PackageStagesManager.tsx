@@ -356,6 +356,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
 export function PackageStagesManager({ tenantId, packageId, packageName, packageInstanceId: propInstanceId, autoExpandStageInstanceId }: PackageStagesManagerProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { statuses } = useTaskStatusOptions();
   const [stages, setStages] = useState<StageInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
