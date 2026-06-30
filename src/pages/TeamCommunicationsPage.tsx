@@ -18,7 +18,7 @@ import {
   AppModalBody,
   AppModalFooter,
 } from "@/components/ui/modals";
-import { MessageSquare, Plus, Send, Mail, MailOpen, Building2, Paperclip, X } from "lucide-react";
+import { MessageSquare, Plus, Send, Mail, MailOpen, Building2, Paperclip, X, Megaphone } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
@@ -32,6 +32,9 @@ import {
 } from "@/lib/messageAttachments";
 import { MessageAttachments } from "@/components/messaging/MessageAttachments";
 import { AttachmentChips } from "@/components/messaging/AttachmentChips";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { BulkMessageDialog } from "@/components/communications/BulkMessageDialog";
+import { BulkMessageHistory } from "@/components/communications/BulkMessageHistory";
 
 interface Conversation {
   id: string;
@@ -78,6 +81,12 @@ export default function TeamCommunicationsPage() {
   const [filterTenant, setFilterTenant] = useState<string>("all");
   const [filterStaff, setFilterStaff] = useState<string>("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"conversations" | "history">("conversations");
+  const canSendBulk =
+    profile?.is_team === true ||
+    profile?.unicorn_role === "Super Admin" ||
+    profile?.unicorn_role === "Team Leader";
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: staffUsers = [] } = useVivacityTeamUsers();
   const staffOptions = staffUsers.map(u => ({
