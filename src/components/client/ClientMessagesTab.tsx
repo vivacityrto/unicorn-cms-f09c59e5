@@ -79,6 +79,7 @@ const TYPE_STYLES: Record<string, string> = {
   package: 'bg-[#23C0DD]/10 text-[#0D7A8F] border-[#23C0DD]/40',
   general: 'bg-muted text-muted-foreground border-border',
   direct: 'bg-muted text-muted-foreground border-border',
+  broadcast: 'bg-amber-100 text-amber-700 border-amber-200',
 };
 
 const STATUS_STYLES: Record<string, string> = {
