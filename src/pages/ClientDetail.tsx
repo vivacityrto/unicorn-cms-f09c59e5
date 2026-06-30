@@ -273,7 +273,7 @@ export default function ClientDetail() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/manage-tenants')}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
