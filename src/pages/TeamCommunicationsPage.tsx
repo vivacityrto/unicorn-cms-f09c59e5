@@ -18,7 +18,7 @@ import {
   AppModalBody,
   AppModalFooter,
 } from "@/components/ui/modals";
-import { MessageSquare, Plus, Send, Mail, MailOpen, Building2, Paperclip, X } from "lucide-react";
+import { MessageSquare, Plus, Send, Mail, MailOpen, Building2, Paperclip, X, Megaphone } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
@@ -32,6 +32,9 @@ import {
 } from "@/lib/messageAttachments";
 import { MessageAttachments } from "@/components/messaging/MessageAttachments";
 import { AttachmentChips } from "@/components/messaging/AttachmentChips";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { BulkMessageDialog } from "@/components/communications/BulkMessageDialog";
+import { BulkMessageHistory } from "@/components/communications/BulkMessageHistory";
 
 interface Conversation {
   id: string;
@@ -78,6 +81,12 @@ export default function TeamCommunicationsPage() {
   const [filterTenant, setFilterTenant] = useState<string>("all");
   const [filterStaff, setFilterStaff] = useState<string>("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"conversations" | "history">("conversations");
+  const canSendBulk =
+    profile?.is_team === true ||
+    profile?.unicorn_role === "Super Admin" ||
+    profile?.unicorn_role === "Team Leader";
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: staffUsers = [] } = useVivacityTeamUsers();
   const staffOptions = staffUsers.map(u => ({
@@ -486,11 +495,38 @@ export default function TeamCommunicationsPage() {
             All client conversations across your portfolio.
           </p>
         </div>
-        <Button onClick={() => setNewDialogOpen(true)} className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          New Message
-        </Button>
+        <div className="flex items-center gap-2">
+          {canSendBulk && (
+            <Button
+              variant="outline"
+              onClick={() => setBulkDialogOpen(true)}
+              className="gap-1.5"
+            >
+              <Megaphone className="h-4 w-4" />
+              Bulk Message
+            </Button>
+          )}
+          <Button onClick={() => setNewDialogOpen(true)} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            New Message
+          </Button>
+        </div>
       </div>
+
+      {canSendBulk && (
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "conversations" | "history")}>
+          <TabsList>
+            <TabsTrigger value="conversations">Conversations</TabsTrigger>
+            <TabsTrigger value="history">Bulk Message History</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+
+      {canSendBulk && activeTab === "history" ? (
+        <BulkMessageHistory />
+      ) : (
+        <>
+
 
       {/* Filters */}
       <div className="flex gap-2 items-center flex-wrap">
@@ -714,6 +750,8 @@ export default function TeamCommunicationsPage() {
           </div>
         </div>
       )}
+        </>
+      )}
 
       {/* New Message to Tenant dialog */}
       <NewTeamMessageDialog
@@ -726,6 +764,17 @@ export default function TeamCommunicationsPage() {
           qc.invalidateQueries({ queryKey: ["team-conversations"] });
         }}
       />
+
+      {/* Bulk Message dialog */}
+      <BulkMessageDialog
+        open={bulkDialogOpen}
+        onOpenChange={setBulkDialogOpen}
+        currentUserId={currentUserId}
+        onSent={() => {
+          setActiveTab("history");
+        }}
+      />
+
     </div>
   );
 }
