@@ -481,12 +481,29 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       // Create a lookup map for stage metadata
       const stageMap = new Map(stagesMetadata?.map(s => [s.id, s]) || []);
 
-      // Transform the data
+      // Dual-read shim: stage_instances.status may contain a numeric code as
+      // text ('0'..'6'), a canonical dd_status.value ('not_started',
+      // 'completed', ...), a raw number, or null. Resolve every row to a
+      // numeric code the existing UI already understands. Remove once Phase C
+      // backfill is complete and every row stores a canonical value.
+      const valueToCode = new Map(statuses.map((s) => [s.value, s.code]));
+      const resolveStatusCode = (raw: unknown, stageType: string | null): number => {
+        if (raw === null || raw === undefined || raw === '') {
+          return (stageType === 'monitor' || stageType === 'monitoring') ? 6 : 0;
+        }
+        if (typeof raw === 'number') return raw;
+        if (typeof raw === 'string' && /^[0-9]+$/.test(raw)) return parseInt(raw, 10);
+        if (typeof raw === 'string') {
+          const code = valueToCode.get(raw);
+          if (typeof code === 'number') return code;
+        }
+        return (stageType === 'monitor' || stageType === 'monitoring') ? 6 : 0;
+      };
+
       const transformed: StageInstance[] = stageData.map((row: any) => {
         const meta = stageMap.get(row.stage_id);
         const stageType = (meta as any)?.stage_type || null;
-        // Auto-default: if stage type is 'monitor' or 'monitoring' and status is 0 (Not Started), show as Monitor (6)
-        const resolvedStatus = ((stageType === 'monitor' || stageType === 'monitoring') && (row.status === 0 || row.status === null || row.status === '0')) ? 6 : (row.status ?? 0);
+        const resolvedStatus = resolveStatusCode(row.status, stageType);
         return {
           id: row.id,
           stage_id: row.stage_id,
