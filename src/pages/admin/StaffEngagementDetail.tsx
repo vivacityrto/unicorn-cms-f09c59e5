@@ -586,23 +586,11 @@ export default function StaffEngagementDetail() {
           </div>
         </div>
 
-        {engagement.type === "offboarding" && (
-          <Tabs defaultValue="checklist" className="mt-4">
-            <TabsList>
-              <TabsTrigger value="checklist">Checklist</TabsTrigger>
-              <TabsTrigger value="exit_interview">Exit Interview</TabsTrigger>
-            </TabsList>
-            <TabsContent value="exit_interview" className="mt-4">
-              <ExitInterviewTabContent
-                interview={exitInterviewQuery.data ?? null}
-                submitterName={exitSubmitterQuery.data?.full_name ?? null}
-                isLoading={exitInterviewQuery.isLoading}
-              />
-            </TabsContent>
-            <TabsContent value="checklist" className="space-y-4 mt-4">
+        {(() => {
+          const checklistBody = (
+            <>
               <PhaseProgress phases={phases} completedKeys={completedKeys} />
-
-        <div className="space-y-6 mt-4">
+              <div className="space-y-6 mt-4">
           {phases.map((phase) => {
 
               const defaultOpen = phase.sections.map((s) => s.key);
