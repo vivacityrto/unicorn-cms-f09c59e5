@@ -586,15 +586,12 @@ export default function StaffEngagementDetail() {
           </div>
         </div>
 
-        {engagement.type === "offboarding" ? (
+        {engagement.type === "offboarding" && (
           <Tabs defaultValue="checklist" className="mt-4">
             <TabsList>
               <TabsTrigger value="checklist">Checklist</TabsTrigger>
               <TabsTrigger value="exit_interview">Exit Interview</TabsTrigger>
             </TabsList>
-            <TabsContent value="checklist" className="space-y-4 mt-4">
-              <PhaseProgress phases={phases} completedKeys={completedKeys} />
-            </TabsContent>
             <TabsContent value="exit_interview" className="mt-4">
               <ExitInterviewTabContent
                 interview={exitInterviewQuery.data ?? null}
@@ -602,10 +599,8 @@ export default function StaffEngagementDetail() {
                 isLoading={exitInterviewQuery.isLoading}
               />
             </TabsContent>
-          </Tabs>
-        ) : (
-          <PhaseProgress phases={phases} completedKeys={completedKeys} />
-        )}
+            <TabsContent value="checklist" className="space-y-4 mt-4">
+              <PhaseProgress phases={phases} completedKeys={completedKeys} />
 
         <div className="space-y-6 mt-4">
           {phases.map((phase) => {
