@@ -58,6 +58,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { EXIT_INTERVIEW_SECTIONS, RATING_LABELS } from "../exitInterviewSchema";
 
 
 import {
