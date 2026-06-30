@@ -1,47 +1,47 @@
-## Targeted edits to Staff Engagement Checklists
+## Exit Interview Feature
 
-Scope: two files only. No schema, RLS, edge function, or other UI changes.
+### 1. Database migration
 
----
+Create `engagement_exit_interviews` table with the supplied SQL — one row per offboarding engagement, JSONB `responses`, submit-locking via `is_submitted`, RLS allowing Vivacity admins full read and the linked staff member to insert/update/select their own (until submitted), plus standard `created_at`/`updated_at` and an updated_at trigger.
 
-### File 1 — `src/pages/admin/staffEngagementChecklists.ts`
+### 2. New page `/my-exit-interview`
 
-1. **Remove SIGN-OFF phase** from `ONBOARDING_PHASES` (delete trailing `{ key: "signoff", label: "SIGN-OFF", sections: [] }`).
-2. **Remove SIGN-OFF phase** from `OFFBOARDING_PHASES` (same trailing element).
-3. **Add Exit Interview section** inside the `notice_period` phase of `OFFBOARDING_PHASES`, immediately after the `knowledge` section:
-   - key `exit_interview`, label `Exit Interview`
-   - one item `exit_interview.completed` — "Exit interview completed and submitted by staff member", owner `Nova / Staff Member`, `critical: false`.
-4. **Reorder `access_revoke` items** in the `last_day` phase of `OFFBOARDING_PHASES`. Move the `unicorn` item to the end. New order: `google_workspace, complyhub, xero, m365, teams, zoom, password_manager, email_aliases, unicorn`. Item content unchanged.
+New file `src/pages/MyExitInterview.tsx`, registered in `src/App.tsx` inside `<ProtectedRoute>` (auth required, no admin gate).
 
----
+Flow:
+- Query `staff_engagements` filtered by `linked_unicorn_user_id = auth.uid()`, `type = 'offboarding'`, `status != 'cancelled'`, ordered by `created_at desc`, take first.
+- If none → friendly empty-state card.
+- Else fetch `engagement_exit_interviews` by `engagement_id`.
+  - `is_submitted = true` → read-only summary with "Thank you" banner.
+  - Else → render the form, hydrating from any existing draft row.
 
-### File 2 — `src/pages/admin/StaffEngagementDetail.tsx`
+Form structure (8 sections, keys exactly as specified):
+- S1–S6, S8: textarea questions, autosave on blur via upsert (`onConflict: engagement_id`).
+- S7: ten 1–5 rating rows. Render as a 5-button group labelled 1=Strongly Disagree … 5=Strongly Agree, stored as integer.
+- `s8_comments` optional "Additional Comments" textarea.
+- Submit button at bottom with warning banner "Once submitted, your responses cannot be edited…"; on submit set `is_submitted=true`, `submitted_at=now()`, `submitted_by=auth.uid()`, then refetch to flip to read-only view.
 
-1. **Strip Notes + Activity Log tabs**
-   - Remove the Notes `TabsTrigger` and `TabsContent`.
-   - Remove the Activity Log `TabsTrigger` and `TabsContent`.
-   - Remove `activityQuery`.
-   - With only the Checklist tab left, unwrap `Tabs`/`TabsList` and render checklist content directly (cleaner than a single-tab shell).
+Implementation notes:
+- Use existing `supabase` client and `useAuth` for `auth.uid()`.
+- Local `responses` state mirrors JSONB; debounce-free, blur-triggered upsert keeps it simple.
+- Use shadcn `Card`, `Textarea`, `Button`, `Alert` for consistency with the rest of admin pages.
 
-2. **Strip all signoff code**
-   - Delete: `signoffsQuery`, `signoffMutation`, `signoffs` const, `signoffsByRole` memo, `mySignoffRole` memo, `Signoff` type.
-   - In `userNamesQuery`: drop `signoffUuids` + any `signoffsByRole` references, keep only `completionUuids`.
-   - `PhaseProgress`: remove the `signoffCount` prop from both the signature and the call site; remove the `if (phase.key === "signoff") return signoffCount >= 3;` branch so every phase uses the standard `allItems.every(...)` logic.
-   - In the `phases.map(...)` render block, delete the entire `if (phase.key === "signoff") { ... }` branch.
+### 3. Exit Interview tab on `StaffEngagementDetail`
 
-3. **Drop pending_signoff auto-transition** inside `toggleMutation.mutationFn`
-   - Remove the `if (allCriticalDoneNext && engagement?.status === "in_progress") { ... } else if (!allCriticalDoneNext && engagement?.status === "pending_signoff") { ... }` block.
-   - Remove the now-unused `allCriticalDoneNext` local.
+`src/pages/admin/StaffEngagementDetail.tsx` was recently de-tabbed (only checklist remains). Reintroduce a minimal `Tabs` wrapper **only when `engagement.type === "offboarding"`** so the page still renders identically for onboarding.
 
-4. **Add "Mark as Complete" action**
-   - New `completeMutation`:
-     - `await supabase.from("staff_engagements").update({ status: "completed" }).eq("id", id!)`
-     - onSuccess: toast `"Engagement completed"`, invalidate `["staff_engagement", id]` and `["staff_engagements"]`.
-   - Render a `<Button variant="default">` labeled "Mark as Complete" in the header, placed immediately to the left of the existing Manage dropdown.
-   - Visibility gate: `(engagement.status === "in_progress" || engagement.status === "pending_signoff") && allCriticalDone === true`.
-   - While `completeMutation.isPending`: label becomes "Completing…", button disabled.
+- Tabs: "Checklist" (existing content) + "Exit Interview".
+- Exit Interview tab query: `engagement_exit_interviews` by `engagement_id`, plus a join/lookup against `public.users` for the `submitted_by` display name.
+- If submitted: render grouped, read-only response cards per section, with the original question text as the label and rating numbers shown for S7. Header line: "Submitted by {name} on {date}".
+- If not submitted: Card with message and a copyable `/my-exit-interview` link (absolute URL using `window.location.origin`). Use a small `Button` with `Copy` icon and toast confirmation.
 
----
+### Out of scope
+No changes to other tabs, checklist logic, invite/revoke/link/cancel/delete flows, `StaffEngagements.tsx`, `staffEngagementChecklists.ts`, or unrelated routes.
 
-### Explicitly untouched
-`StaffEngagements.tsx`, `StatusBadge` (keeps `pending_signoff` mapping for historical records), invite/revoke/link/unlink/delete dialogs and their mutations, all DB objects, all other files.
+### Technical details
+
+- Table grants: `GRANT ALL ON public.engagement_exit_interviews TO authenticated, service_role` (per supplied SQL).
+- Updated-at trigger: reuse existing `public.update_updated_at_column()` if present, otherwise create.
+- Question text constant: define a single `EXIT_INTERVIEW_SCHEMA` array (sections → questions with key/label/type) in a shared module (e.g. `src/pages/exitInterviewSchema.ts`) so both the staff form and the admin read-only view render identical labels from one source.
+- Route registration: add `<Route path="/my-exit-interview" element={<ProtectedRoute><MyExitInterview /></ProtectedRoute>} />` near other authenticated user routes in `App.tsx`.
+- The Supabase types file regenerates after migration approval, so the page/tab code lands after the migration runs.
