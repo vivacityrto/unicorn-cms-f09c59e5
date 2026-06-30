@@ -102,13 +102,14 @@ interface EmailCardProps {
   email: LinkedEmail;
   fetchAttachments: (emailId: string) => Promise<EmailAttachment[]>;
   getAttachmentUrl: (storagePath: string) => Promise<string | null>;
+  onConvertToNote?: () => void;
 }
 
 function normalizeEmailText(text?: string | null) {
   return text?.replace(/\s+/g, " ").trim() ?? "";
 }
 
-function EmailCard({ email }: EmailCardProps) {
+function EmailCard({ email, onConvertToNote }: EmailCardProps) {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const summaryText = normalizeEmailText(email.ai_summary);
   const previewText = normalizeEmailText(email.body_preview);
@@ -138,15 +139,30 @@ function EmailCard({ email }: EmailCardProps) {
             </div>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setViewDialogOpen(true)}
-            title="View full email"
-            className="shrink-0 self-start"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
+          <div className="flex shrink-0 items-center gap-1 self-start">
+            {onConvertToNote && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onConvertToNote();
+                }}
+                title="Convert to note"
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewDialogOpen(true)}
+              title="View full email"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          </div>
+
 
           <div className="col-span-2 flex w-full min-w-0 flex-col gap-2 pt-1">
             {summaryText && (
