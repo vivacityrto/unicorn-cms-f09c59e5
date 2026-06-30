@@ -538,15 +538,29 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
     try {
       const oldStage = stages.find(s => s.id === stageInstanceId);
       const oldStatus = oldStage?.status;
+      const oldStatusValue = oldStage
+        ? (statuses.find(s => s.code === oldStage.status)?.value ?? null)
+        : null;
 
-      // Build update object - always update status_date when status changes
+      // Resolve the numeric dd_status.code to its canonical text value.
+      // Writing the text value is the new contract; status_id is no longer written.
+      const statusOption = statuses.find(s => s.code === newStatus);
+      if (!statusOption) {
+        throw new Error(`Unknown status code: ${newStatus}`);
+      }
+      const newStatusValue = statusOption.value;
+
       const updateData: Record<string, any> = {
-        status: newStatus,
+        status: newStatusValue,
         status_date: new Date().toISOString(),
       };
 
-      // Set completion_date if completing (code 2 = Completed)
-      if (newStatus === 2 && oldStatus !== 2) {
+      // Set completion_date when entering Completed or Core Complete
+      // (both are "genuinely done" per the stage status consolidation plan).
+      const enteringDone =
+        (newStatusValue === 'completed' || newStatusValue === 'core_complete') &&
+        oldStatus !== newStatus;
+      if (enteringDone) {
         updateData.completion_date = new Date().toISOString().split('T')[0];
       }
 
@@ -557,8 +571,11 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
 
       if (error) throw error;
 
-      // Core Complete auto-flag: mark incomplete staff tasks as non-core
-      if (newStatus === 4) {
+      // Core Complete auto-flag: mark incomplete staff tasks as non-core.
+      // Note: staff_task_instances.status_id is a real column on a different
+      // table and is out of scope for Phase A — leave the .neq('status_id', 2)
+      // gate as-is.
+      if (newStatusValue === 'core_complete') {
         const { error: coreError } = await supabase
           .from('staff_task_instances')
           .update({ is_core: false })
@@ -589,8 +606,8 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
         action: 'stage_status_changed',
         entity_type: 'stage_instances',
         entity_id: stageInstanceId.toString(),
-        before_data: { status: oldStatus },
-        after_data: { status: newStatus },
+        before_data: { status: oldStatusValue },
+        after_data: { status: newStatusValue },
         details: { package_id: packageId, stage_id: oldStage?.stage_id }
       });
 
