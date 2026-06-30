@@ -58,8 +58,12 @@ export function useClientNotifications() {
 
   useEffect(() => {
     if (!profile?.user_uuid || isAcademyOnly) return;
+    // Unique channel name per mount — supabase.channel() returns the same
+    // instance for a reused name, so a strict-mode double-mount calls .on()
+    // on the already-subscribed channel from the previous mount.
+    const uniqueId = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
     const channel = supabase
-      .channel(`client-notif-live:${profile.user_uuid}`)
+      .channel(`client-notif-live:${profile.user_uuid}:${uniqueId}`)
       .on(
         "postgres_changes" as any,
         {
