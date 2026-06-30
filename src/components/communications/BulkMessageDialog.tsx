@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Loader2, Send, Users } from "lucide-react";
+import { Loader2, Paperclip, Send, Users, X } from "lucide-react";
+import {
+  BUCKET,
+  MAX_FILES_PER_MESSAGE,
+  formatBytes,
+  sanitiseFilename,
+  validateAttachment,
+} from "@/lib/messageAttachments";
 
 type TargetMode = "everyone" | "members" | "tier" | "package_type";
 type Tier = "diamond" | "gold" | "ruby" | "sapphire" | "amethyst";
@@ -57,6 +64,13 @@ interface PreviewRow {
   tenant_name: string;
 }
 
+interface MessageCategory {
+  id: string;
+  code: string;
+  name: string;
+  display_order: number;
+}
+
 interface BulkMessageDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -80,11 +94,28 @@ export function BulkMessageDialog({
 
   // Message state
   const [subject, setSubject] = useState("");
-  const [category, setCategory] = useState("general");
+  const [categoryId, setCategoryId] = useState<string>("");
   const [body, setBody] = useState("");
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Confirm dialog
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Categories
+  const { data: categories } = useQuery({
+    queryKey: ["message-categories"],
+    queryFn: async (): Promise<MessageCategory[]> => {
+      const { data, error } = await (supabase as any)
+        .from("message_categories")
+        .select("id, code, name, display_order")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as MessageCategory[];
+    },
+    staleTime: 5 * 60_000,
+  });
 
   // Reset when closed
   useEffect(() => {
@@ -94,11 +125,21 @@ export function BulkMessageDialog({
       setTier("");
       setPackageType("");
       setSubject("");
-      setCategory("general");
+      setCategoryId("");
       setBody("");
+      setQueuedFiles([]);
       setConfirmOpen(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }, [open]);
+
+  // Default category once list arrives
+  useEffect(() => {
+    if (!categoryId && categories && categories.length > 0) {
+      const general = categories.find((c) => c.code?.toLowerCase() === "general");
+      setCategoryId((general ?? categories[0]).id);
+    }
+  }, [categories, categoryId]);
 
   // Debounced preview key
   const [debouncedKey, setDebouncedKey] = useState<string>("");
@@ -164,6 +205,30 @@ export function BulkMessageDialog({
     return "—";
   }, [targetMode, tier, packageType]);
 
+  const onFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? []);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!picked.length) return;
+    const accepted: File[] = [];
+    for (const f of picked) {
+      if (queuedFiles.length + accepted.length >= MAX_FILES_PER_MESSAGE) {
+        toast.error(`You can attach up to ${MAX_FILES_PER_MESSAGE} files per message.`);
+        break;
+      }
+      try {
+        validateAttachment(f);
+        accepted.push(f);
+      } catch (err: any) {
+        toast.error(err?.message ?? "Invalid file");
+      }
+    }
+    if (accepted.length) setQueuedFiles((prev) => [...prev, ...accepted]);
+  };
+
+  const removeQueued = (idx: number) => {
+    setQueuedFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const sendMutation = useMutation({
     mutationFn: async () => {
       if (!currentUserId) throw new Error("Not signed in");
@@ -188,17 +253,47 @@ export function BulkMessageDialog({
         .single();
       if (insertErr) throw new Error(insertErr.message);
 
-      // 2. Queue (populates broadcast_recipients)
+      const campaignId: string = campaign.id;
+
+      // 2. Upload attachments (shared across all tenants) under broadcast/{campaign_id}/
+      const uploaded: {
+        storage_path: string;
+        filename: string;
+        mime_type: string;
+        file_size: number;
+      }[] = [];
+      for (const f of queuedFiles) {
+        const safeName = sanitiseFilename(f.name);
+        const storage_path = `broadcast/${campaignId}/${Date.now()}_${safeName}`;
+        const { error: upErr } = await supabase.storage
+          .from(BUCKET)
+          .upload(storage_path, f, { contentType: f.type, upsert: false });
+        if (upErr) {
+          throw new Error(`Attachment "${f.name}" failed to upload: ${upErr.message}`);
+        }
+        uploaded.push({
+          storage_path,
+          filename: f.name,
+          mime_type: f.type,
+          file_size: f.size,
+        });
+      }
+
+      // 3. Queue (populates broadcast_recipients)
       const { error: queueErr } = await (supabase as any).rpc(
         "fn_queue_broadcast_campaign",
-        { p_campaign_id: campaign.id },
+        { p_campaign_id: campaignId },
       );
       if (queueErr) throw new Error(queueErr.message);
 
-      // 3. Send
+      // 4. Send
       const { data: sendData, error: sendErr } =
         await supabase.functions.invoke("send-broadcast-campaign", {
-          body: { campaign_id: campaign.id },
+          body: {
+            campaign_id: campaignId,
+            category_id: categoryId || null,
+            attachments: uploaded,
+          },
         });
       if (sendErr) throw new Error(sendErr.message);
       return sendData as {
@@ -366,15 +461,16 @@ export function BulkMessageDialog({
                   <label className="text-sm font-medium mb-1.5 block">
                     Category
                   </label>
-                  <Select value={category} onValueChange={setCategory}>
+                  <Select value={categoryId} onValueChange={setCategoryId}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select a category…" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="general">General</SelectItem>
-                      <SelectItem value="package">Package</SelectItem>
-                      <SelectItem value="task">Task</SelectItem>
-                      <SelectItem value="rock">Rock</SelectItem>
+                      {(categories ?? []).map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -388,6 +484,56 @@ export function BulkMessageDialog({
                     placeholder="Type your bulk message…"
                     rows={7}
                   />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">
+                    Attachments (optional)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      hidden
+                      accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
+                      onChange={onFilesPicked}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE}
+                      className="gap-1.5"
+                    >
+                      <Paperclip className="h-3.5 w-3.5" />
+                      Attach file
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Up to {MAX_FILES_PER_MESSAGE} files, 10 MB each. Shared with all recipients.
+                    </span>
+                  </div>
+                  {queuedFiles.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {queuedFiles.map((f, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-xs"
+                        >
+                          <span className="truncate max-w-[200px]">{f.name}</span>
+                          <span className="text-muted-foreground">({formatBytes(f.size)})</span>
+                          <button
+                            type="button"
+                            onClick={() => removeQueued(i)}
+                            className="text-destructive hover:text-destructive/80"
+                            aria-label={`Remove ${f.name}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -416,6 +562,24 @@ export function BulkMessageDialog({
                   <div className="text-sm whitespace-pre-wrap text-foreground/90">
                     {body}
                   </div>
+                  {queuedFiles.length > 0 && (
+                    <div className="pt-2 mt-2 border-t border-border">
+                      <div className="text-xs text-muted-foreground mb-1.5">
+                        {queuedFiles.length} attachment{queuedFiles.length === 1 ? "" : "s"}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {queuedFiles.map((f, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-xs"
+                          >
+                            <Paperclip className="h-3 w-3" />
+                            {f.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
