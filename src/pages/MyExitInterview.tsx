@@ -139,8 +139,12 @@ export default function MyExitInterview() {
   const isSubmitted = !!interview?.is_submitted;
 
   return (
-    <DashboardLayout>
+    <div className="min-h-screen bg-background">
       <div className="p-6 max-w-3xl mx-auto space-y-6">
+        <div className="flex items-center gap-3 mb-8">
+          <span className="text-sm text-muted-foreground">Vivacity Coaching & Consulting</span>
+        </div>
+
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold">Exit Interview</h1>
           <p className="text-sm text-muted-foreground">
@@ -177,7 +181,7 @@ export default function MyExitInterview() {
           />
         )}
       </div>
-    </DashboardLayout>
+    </div>
   );
 }
 
