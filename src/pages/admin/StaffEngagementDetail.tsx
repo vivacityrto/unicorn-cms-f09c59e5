@@ -243,10 +243,42 @@ export default function StaffEngagementDetail() {
     },
   });
 
-
-
   const engagement = engagementQuery.data;
   const completions = completionsQuery.data ?? [];
+
+  const exitInterviewQuery = useQuery({
+    queryKey: ["engagement_exit_interview", id],
+    enabled: !!id && engagement?.type === "offboarding",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("engagement_exit_interviews")
+        .select("id, responses, is_submitted, submitted_at, submitted_by")
+        .eq("engagement_id", id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as {
+        id: string;
+        responses: Record<string, unknown> | null;
+        is_submitted: boolean;
+        submitted_at: string | null;
+        submitted_by: string | null;
+      } | null;
+    },
+  });
+
+  const exitSubmitterQuery = useQuery({
+    queryKey: ["engagement_exit_submitter", exitInterviewQuery.data?.submitted_by],
+    enabled: !!exitInterviewQuery.data?.submitted_by,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, full_name")
+        .eq("user_uuid", exitInterviewQuery.data!.submitted_by!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { user_uuid: string; full_name: string | null } | null;
+    },
+  });
 
   const phases = useMemo<ChecklistPhase[]>(() => {
     if (!engagement) return [];
