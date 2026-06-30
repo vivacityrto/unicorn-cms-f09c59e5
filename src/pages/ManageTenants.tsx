@@ -890,6 +890,17 @@ export default function ManageTenants() {
                     )}
                     onClick={() => navigate(`/tenant/${tenant.id}`)}
                   >
+                    <TableCell
+                      className="py-6 border-r border-border/50 w-12 px-3"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        aria-label={`Select ${tenant.name}`}
+                        disabled={!bulkSelectionEnabled}
+                        checked={selectedTenantIds.has(tenant.id)}
+                        onCheckedChange={(c) => toggleRowSelected(tenant.id, !!c)}
+                      />
+                    </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[280px] pr-8">
                       <div>
                         <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
