@@ -19490,33 +19490,6 @@ export type Database = {
         }
         Relationships: []
       }
-      dd_stage_state: {
-        Row: {
-          created_at: string
-          id: number
-          is_active: boolean
-          label: string
-          sort_order: number
-          value: string
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          is_active?: boolean
-          label: string
-          sort_order?: number
-          value: string
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          is_active?: boolean
-          label?: string
-          sort_order?: number
-          value?: string
-        }
-        Relationships: []
-      }
       dd_stage_types: {
         Row: {
           color: string
@@ -44839,7 +44812,6 @@ export type Database = {
           stage_sortorder: number | null
           status: string | null
           status_date: string | null
-          status_id: number | null
           updated_at: string | null
         }
         Insert: {
@@ -44856,7 +44828,6 @@ export type Database = {
           stage_sortorder?: number | null
           status?: string | null
           status_date?: string | null
-          status_id?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -44873,7 +44844,6 @@ export type Database = {
           stage_sortorder?: number | null
           status?: string | null
           status_date?: string | null
-          status_id?: number | null
           updated_at?: string | null
         }
         Relationships: [
