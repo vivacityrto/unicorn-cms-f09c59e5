@@ -750,6 +750,8 @@ export default function TeamCommunicationsPage() {
           </div>
         </div>
       )}
+        </>
+      )}
 
       {/* New Message to Tenant dialog */}
       <NewTeamMessageDialog
@@ -762,6 +764,17 @@ export default function TeamCommunicationsPage() {
           qc.invalidateQueries({ queryKey: ["team-conversations"] });
         }}
       />
+
+      {/* Bulk Message dialog */}
+      <BulkMessageDialog
+        open={bulkDialogOpen}
+        onOpenChange={setBulkDialogOpen}
+        currentUserId={currentUserId}
+        onSent={() => {
+          setActiveTab("history");
+        }}
+      />
+
     </div>
   );
 }
