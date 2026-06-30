@@ -356,6 +356,7 @@ function StageRow({ stage, isExpanded, onToggleExpand, updating, onStatusChange,
 export function PackageStagesManager({ tenantId, packageId, packageName, packageInstanceId: propInstanceId, autoExpandStageInstanceId }: PackageStagesManagerProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { statuses } = useTaskStatusOptions();
   const [stages, setStages] = useState<StageInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
@@ -481,12 +482,29 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
       // Create a lookup map for stage metadata
       const stageMap = new Map(stagesMetadata?.map(s => [s.id, s]) || []);
 
-      // Transform the data
+      // Dual-read shim: stage_instances.status may contain a numeric code as
+      // text ('0'..'6'), a canonical dd_status.value ('not_started',
+      // 'completed', ...), a raw number, or null. Resolve every row to a
+      // numeric code the existing UI already understands. Remove once Phase C
+      // backfill is complete and every row stores a canonical value.
+      const valueToCode = new Map(statuses.map((s) => [s.value, s.code]));
+      const resolveStatusCode = (raw: unknown, stageType: string | null): number => {
+        if (raw === null || raw === undefined || raw === '') {
+          return (stageType === 'monitor' || stageType === 'monitoring') ? 6 : 0;
+        }
+        if (typeof raw === 'number') return raw;
+        if (typeof raw === 'string' && /^[0-9]+$/.test(raw)) return parseInt(raw, 10);
+        if (typeof raw === 'string') {
+          const code = valueToCode.get(raw);
+          if (typeof code === 'number') return code;
+        }
+        return (stageType === 'monitor' || stageType === 'monitoring') ? 6 : 0;
+      };
+
       const transformed: StageInstance[] = stageData.map((row: any) => {
         const meta = stageMap.get(row.stage_id);
         const stageType = (meta as any)?.stage_type || null;
-        // Auto-default: if stage type is 'monitor' or 'monitoring' and status is 0 (Not Started), show as Monitor (6)
-        const resolvedStatus = ((stageType === 'monitor' || stageType === 'monitoring') && (row.status === 0 || row.status === null || row.status === '0')) ? 6 : (row.status ?? 0);
+        const resolvedStatus = resolveStatusCode(row.status, stageType);
         return {
           id: row.id,
           stage_id: row.stage_id,
@@ -520,15 +538,29 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
     try {
       const oldStage = stages.find(s => s.id === stageInstanceId);
       const oldStatus = oldStage?.status;
+      const oldStatusValue = oldStage
+        ? (statuses.find(s => s.code === oldStage.status)?.value ?? null)
+        : null;
 
-      // Build update object - always update status_date when status changes
+      // Resolve the numeric dd_status.code to its canonical text value.
+      // Writing the text value is the new contract; status_id is no longer written.
+      const statusOption = statuses.find(s => s.code === newStatus);
+      if (!statusOption) {
+        throw new Error(`Unknown status code: ${newStatus}`);
+      }
+      const newStatusValue = statusOption.value;
+
       const updateData: Record<string, any> = {
-        status: newStatus,
+        status: newStatusValue,
         status_date: new Date().toISOString(),
       };
 
-      // Set completion_date if completing (code 2 = Completed)
-      if (newStatus === 2 && oldStatus !== 2) {
+      // Set completion_date when entering Completed or Core Complete
+      // (both are "genuinely done" per the stage status consolidation plan).
+      const enteringDone =
+        (newStatusValue === 'completed' || newStatusValue === 'core_complete') &&
+        oldStatus !== newStatus;
+      if (enteringDone) {
         updateData.completion_date = new Date().toISOString().split('T')[0];
       }
 
@@ -539,8 +571,11 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
 
       if (error) throw error;
 
-      // Core Complete auto-flag: mark incomplete staff tasks as non-core
-      if (newStatus === 4) {
+      // Core Complete auto-flag: mark incomplete staff tasks as non-core.
+      // Note: staff_task_instances.status_id is a real column on a different
+      // table and is out of scope for Phase A — leave the .neq('status_id', 2)
+      // gate as-is.
+      if (newStatusValue === 'core_complete') {
         const { error: coreError } = await supabase
           .from('staff_task_instances')
           .update({ is_core: false })
@@ -571,8 +606,8 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
         action: 'stage_status_changed',
         entity_type: 'stage_instances',
         entity_id: stageInstanceId.toString(),
-        before_data: { status: oldStatus },
-        after_data: { status: newStatus },
+        before_data: { status: oldStatusValue },
+        after_data: { status: newStatusValue },
         details: { package_id: packageId, stage_id: oldStage?.stage_id }
       });
 

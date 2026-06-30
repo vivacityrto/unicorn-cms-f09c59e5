@@ -5,11 +5,13 @@ import { useToast } from '@/hooks/use-toast';
 import { getStatusLabel } from '@/hooks/useTaskStatusOptions';
 
 // Maps used by updateStageStatus / updateTeamTaskStatus RPCs
-export const STAGE_STATUS_MAP: Record<string, { status_id: number; status: string }> = {
-  not_started: { status_id: 0, status: 'Not Started' },
-  in_progress: { status_id: 1, status: 'In Progress' },
-  complete: { status_id: 2, status: 'Completed' },
-  skipped: { status_id: 3, status: 'N/A' },
+// Maps the hook's external status keys to the canonical dd_status.value text.
+// status_id removed — stage status consolidation Phase A.
+export const STAGE_STATUS_MAP: Record<string, { status: string }> = {
+  not_started: { status: 'not_started' },
+  in_progress: { status: 'in_progress' },
+  complete: { status: 'completed' },
+  skipped: { status: 'na' },
 };
 
 export const STAFF_TASK_STATUS_MAP: Record<string, { status_id: number; status: string }> = {
@@ -424,7 +426,7 @@ export function useClientPackageInstances() {
 
       const { error } = await supabase
         .from('stage_instances' as any)
-        .update({ status_id: mapped.status_id, status: mapped.status })
+        .update({ status: mapped.status })
         .eq('id', parseInt(stageId));
 
       if (error) throw error;

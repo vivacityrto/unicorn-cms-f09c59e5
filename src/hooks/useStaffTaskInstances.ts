@@ -213,15 +213,21 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
       if (newStatusId !== 3) {
         const { data: stageData } = await supabase
           .from('stage_instances')
-          .select('status_id')
+          .select('status')
           .eq('id', stageInstanceId)
           .single();
 
-        if (stageData && (stageData as any).status_id === 0) {
+        const currentStatus = (stageData as any)?.status;
+        const isNotStarted =
+          currentStatus === 'not_started' ||
+          currentStatus === '0' ||
+          currentStatus === null ||
+          currentStatus === undefined;
+        if (isNotStarted) {
           const inProgressOption = statuses.find(s => s.code === 1);
           await supabase
             .from('stage_instances')
-            .update({ status_id: 1, status: inProgressOption?.value || 'in_progress' })
+            .update({ status: inProgressOption?.value || 'in_progress' })
             .eq('id', stageInstanceId);
 
           await supabase.from('client_audit_log').insert({
@@ -230,7 +236,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
             action: 'stage_auto_in_progress',
             entity_type: 'stage_instances',
             entity_id: stageInstanceId.toString(),
-            after_data: { status_id: 1 },
+            after_data: { status: 'in_progress' },
             details: { package_id: packageId, reason: 'task_status_changed' },
           });
         }
@@ -246,11 +252,12 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
       if (allActiveDone) {
         const newStageStatus = hasNaTasks ? 4 : 2; // Core Complete if N/A exists, else Completed
         const stageStatusOption = statuses.find(s => s.code === newStageStatus);
+        const newStageStatusValue =
+          stageStatusOption?.value || (hasNaTasks ? 'core_complete' : 'completed');
         const stageUpdateData: Record<string, any> = {
-          status_id: newStageStatus,
-          status: stageStatusOption?.value || 'completed',
+          status: newStageStatusValue,
         };
-        if (newStageStatus === 2 || newStageStatus === 4) {
+        if (newStageStatusValue === 'completed' || newStageStatusValue === 'core_complete') {
           stageUpdateData.completion_date = new Date().toISOString().split('T')[0];
         }
 
@@ -265,7 +272,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
           action: 'stage_auto_completed',
           entity_type: 'stage_instances',
           entity_id: stageInstanceId.toString(),
-          after_data: { status_id: newStageStatus },
+          after_data: { status: newStageStatusValue },
           details: { package_id: packageId, reason: hasNaTasks ? 'all_active_done_with_na' : 'all_tasks_completed' },
         });
 
