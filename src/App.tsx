@@ -1079,6 +1079,7 @@ const App = () => (
             <Route path="/admin/stage-analytics" element={<ProtectedRoute requireSuperAdmin><AdminStageAnalytics /></ProtectedRoute>} />
             <Route path="/admin/operations" element={<ProtectedRoute requireSuperAdmin><AdminOperations /></ProtectedRoute>} />
             <Route path="/administration/role-permissions" element={<ProtectedRoute requireSuperAdmin><RolePermissionsEditor /></ProtectedRoute>} />
+            <Route path="/administration/team-reassignment" element={<ProtectedRoute><TeamReassignmentPage /></ProtectedRoute>} />
             <Route path="/admin/compliance-packs" element={<ProtectedRoute requireSuperAdmin><AdminCompliancePacks /></ProtectedRoute>} />
             <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
             <Route path="/my/kpi" element={<ProtectedRoute><MyKpiDashboardPage /></ProtectedRoute>} />
