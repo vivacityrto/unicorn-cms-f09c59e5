@@ -69,6 +69,16 @@ Deno.serve(async (req) => {
     if (!campaignId || typeof campaignId !== "string") {
       return jsonError(400, "campaign_id required");
     }
+    const categoryId: string | null =
+      typeof body?.category_id === "string" && body.category_id.length > 0
+        ? body.category_id
+        : null;
+    const attachments: Array<{
+      storage_path: string;
+      filename: string;
+      mime_type: string;
+      file_size: number;
+    }> = Array.isArray(body?.attachments) ? body.attachments : [];
 
     // 4. Load campaign — must be queued
     const { data: campaign, error: cErr } = await svc
@@ -160,14 +170,34 @@ Deno.serve(async (req) => {
         }
 
         // Insert the broadcast message
-        const { error: msgErr } = await svc.from("tenant_messages").insert({
-          conversation_id: conv.id,
-          tenant_id: tenantId,
-          sender_user_uuid: callerId,
-          sender_type: "staff",
-          body: campaign.body,
-        });
-        if (msgErr) throw new Error(msgErr.message);
+        const { data: insertedMsg, error: msgErr } = await svc
+          .from("tenant_messages")
+          .insert({
+            conversation_id: conv.id,
+            tenant_id: tenantId,
+            sender_user_uuid: callerId,
+            sender_type: "staff",
+            body: campaign.body,
+            category_id: categoryId,
+          })
+          .select("id")
+          .single();
+        if (msgErr || !insertedMsg) throw new Error(msgErr?.message ?? "message insert failed");
+
+        // Attachments: one metadata row per tenant message, all pointing at the same storage_path
+        if (attachments.length > 0) {
+          const attachmentRows = attachments.map((a) => ({
+            message_id: insertedMsg.id,
+            storage_path: a.storage_path,
+            filename: a.filename,
+            mime_type: a.mime_type,
+            file_size: a.file_size,
+          }));
+          const { error: attErr } = await svc
+            .from("tenant_message_attachments")
+            .insert(attachmentRows);
+          if (attErr) throw new Error(`attachment insert: ${attErr.message}`);
+        }
 
         // Mark all this tenant's recipient rows as sent
         await svc
