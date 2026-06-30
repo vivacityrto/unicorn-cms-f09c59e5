@@ -145,15 +145,21 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
       if (newStatusId !== 3) {
         const { data: stageData } = await supabase
           .from('stage_instances')
-          .select('status_id')
+          .select('status')
           .eq('id', stageInstanceId)
           .single();
 
-        if (stageData && (stageData as any).status_id === 0) {
+        const currentStatus = (stageData as any)?.status;
+        const isNotStarted =
+          currentStatus === 'not_started' ||
+          currentStatus === '0' ||
+          currentStatus === null ||
+          currentStatus === undefined;
+        if (isNotStarted) {
           const inProgressOption = statuses.find(s => s.code === 1);
           await supabase
             .from('stage_instances')
-            .update({ status_id: 1, status: inProgressOption?.value || 'in_progress' })
+            .update({ status: inProgressOption?.value || 'in_progress' })
             .eq('id', stageInstanceId);
 
           await supabase.from('client_audit_log').insert({
@@ -162,7 +168,7 @@ export function useClientTaskInstances({ stageInstanceId, tenantId, packageId }:
             action: 'stage_auto_in_progress',
             entity_type: 'stage_instances',
             entity_id: stageInstanceId.toString(),
-            after_data: { status_id: 1 },
+            after_data: { status: 'in_progress' },
             details: { package_id: packageId, reason: 'client_task_status_changed' },
           });
         }
