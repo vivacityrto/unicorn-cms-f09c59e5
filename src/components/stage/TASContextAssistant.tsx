@@ -198,7 +198,7 @@ export function TASContextAssistant({ tenantId, stageInstanceId, tenantName }: T
 
       // Insert tasks one by one to handle schema differences
       for (const task of tasks) {
-        await supabase.from("tasks").insert(task);
+        await supabase.from("tasks").insert(task as never);
       }
 
       await supabase.from("research_audit_log").insert({

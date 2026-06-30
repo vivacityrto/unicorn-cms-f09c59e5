@@ -175,7 +175,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
 
       const { error } = await supabase
         .from('staff_task_instances')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', taskId);
 
       if (error) throw error;
@@ -256,7 +256,7 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId, cl
 
         await supabase
           .from('stage_instances')
-          .update(stageUpdateData)
+          .update(stageUpdateData as never)
           .eq('id', stageInstanceId);
 
         await supabase.from('client_audit_log').insert({

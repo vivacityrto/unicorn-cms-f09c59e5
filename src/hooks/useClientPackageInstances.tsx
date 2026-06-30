@@ -477,7 +477,7 @@ export function useClientPackageInstances() {
 
       const { error } = await supabase
         .from('client_task_instances')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', taskId);
 
       if (error) throw error;

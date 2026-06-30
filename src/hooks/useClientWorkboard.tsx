@@ -239,7 +239,7 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
           due_date: data.due_date || null,
           package_id: data.package_id || null,
           stage_id: data.stage_id || null,
-          tags: data.tags || [],
+          tags: (data.tags || []) as never,
           created_by: user?.id || null
         })
         .select()
@@ -279,7 +279,7 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
 
       const { error } = await supabase
         .from('client_action_items')
-        .update(finalUpdates)
+        .update(finalUpdates as never)
         .eq('id', itemId);
 
       if (error) throw error;

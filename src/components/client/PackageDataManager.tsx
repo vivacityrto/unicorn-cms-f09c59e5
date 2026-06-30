@@ -205,7 +205,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, o
 
     const { error } = await supabase
       .from('package_instances')
-      .update(updateData)
+      .update(updateData as never)
       .eq('id', row.id);
 
     if (error) {

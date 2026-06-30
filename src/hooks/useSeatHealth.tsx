@@ -653,7 +653,7 @@ export function useSeatHealth() {
       
       const { data, error } = await supabase
         .from('seat_rebalancing_recommendations')
-        .update(updates)
+        .update(updates as never)
         .eq('id', id)
         .select()
         .single();

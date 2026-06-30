@@ -65,7 +65,7 @@ export function ComplyHubCard({ tenantId }: ComplyHubCardProps) {
         action: 'complyhub_settings_updated',
         entity_type: 'tenant',
         entity_id: String(tenantId),
-        changes: {
+        details: {
           complyhub_url: urlValue,
           complyhub_membership_tier: tierValue,
         },
