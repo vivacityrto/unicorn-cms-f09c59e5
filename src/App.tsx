@@ -198,7 +198,7 @@ const AcademyBuilderLibrary = lazy(() => import("./pages/superadmin/AcademyBuild
 const AcademyBuilderCourse = lazy(() => import("./pages/superadmin/AcademyBuilderCourse"));
 const AcademyPackageCourseRulesPage = lazy(() => import("./pages/superadmin/AcademyPackageCourseRulesPage"));
 const RolePermissionsEditor = lazy(() => import("./pages/admin/RolePermissionsEditor"));
-const TeamReassignmentPage = lazy(() => import("./pages/admin/TeamReassignmentPage"));
+
 
 // Compliance Auditor pages
 const ComplianceAuditGlobal = lazy(() => import("./pages/ComplianceAuditGlobal"));
