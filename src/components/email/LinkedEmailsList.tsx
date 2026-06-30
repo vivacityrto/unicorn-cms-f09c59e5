@@ -76,11 +76,24 @@ export function LinkedEmailsList({
                 email={email}
                 fetchAttachments={fetchAttachments}
                 getAttachmentUrl={getAttachmentUrl}
+                onConvertToNote={clientId ? () => setConvertNoteEmail(email) : undefined}
               />
             ))}
           </div>
         )}
       </CardContent>
+
+      {convertNoteEmail && clientId && (
+        <ConvertEmailToNoteDialog
+          open={!!convertNoteEmail}
+          onOpenChange={(open) => {
+            if (!open) setConvertNoteEmail(null);
+          }}
+          email={convertNoteEmail}
+          tenantId={clientId}
+          onSuccess={() => setConvertNoteEmail(null)}
+        />
+      )}
     </Card>
   );
 }
