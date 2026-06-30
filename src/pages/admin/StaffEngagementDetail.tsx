@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ArrowLeft, AlertTriangle, MoreHorizontal, Check } from "lucide-react";
+import { ArrowLeft, AlertTriangle, MoreHorizontal, Check, Copy } from "lucide-react";
 
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Accordion,
   AccordionContent,
@@ -58,6 +58,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { EXIT_INTERVIEW_SECTIONS, RATING_LABELS } from "../exitInterviewSchema";
 
 
 import {
@@ -241,10 +243,42 @@ export default function StaffEngagementDetail() {
     },
   });
 
-
-
   const engagement = engagementQuery.data;
   const completions = completionsQuery.data ?? [];
+
+  const exitInterviewQuery = useQuery({
+    queryKey: ["engagement_exit_interview", id],
+    enabled: !!id && engagement?.type === "offboarding",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("engagement_exit_interviews")
+        .select("id, responses, is_submitted, submitted_at, submitted_by")
+        .eq("engagement_id", id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as {
+        id: string;
+        responses: Record<string, unknown> | null;
+        is_submitted: boolean;
+        submitted_at: string | null;
+        submitted_by: string | null;
+      } | null;
+    },
+  });
+
+  const exitSubmitterQuery = useQuery({
+    queryKey: ["engagement_exit_submitter", exitInterviewQuery.data?.submitted_by],
+    enabled: !!exitInterviewQuery.data?.submitted_by,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, full_name")
+        .eq("user_uuid", exitInterviewQuery.data!.submitted_by!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { user_uuid: string; full_name: string | null } | null;
+    },
+  });
 
   const phases = useMemo<ChecklistPhase[]>(() => {
     if (!engagement) return [];
@@ -552,12 +586,11 @@ export default function StaffEngagementDetail() {
           </div>
         </div>
 
-        <PhaseProgress
-          phases={phases}
-          completedKeys={completedKeys}
-        />
-
-        <div className="space-y-6 mt-4">
+        {(() => {
+          const checklistBody = (
+            <>
+              <PhaseProgress phases={phases} completedKeys={completedKeys} />
+              <div className="space-y-6 mt-4">
           {phases.map((phase) => {
 
               const defaultOpen = phase.sections.map((s) => s.key);
@@ -718,7 +751,31 @@ export default function StaffEngagementDetail() {
                 </div>
               );
             })}
-        </div>
+              </div>
+            </>
+          );
+          if (engagement.type === "offboarding") {
+            return (
+              <Tabs defaultValue="checklist" className="mt-4">
+                <TabsList>
+                  <TabsTrigger value="checklist">Checklist</TabsTrigger>
+                  <TabsTrigger value="exit_interview">Exit Interview</TabsTrigger>
+                </TabsList>
+                <TabsContent value="checklist" className="space-y-4 mt-4">
+                  {checklistBody}
+                </TabsContent>
+                <TabsContent value="exit_interview" className="mt-4">
+                  <ExitInterviewTabContent
+                    interview={exitInterviewQuery.data ?? null}
+                    submitterName={exitSubmitterQuery.data?.full_name ?? null}
+                    isLoading={exitInterviewQuery.isLoading}
+                  />
+                </TabsContent>
+              </Tabs>
+            );
+          }
+          return checklistBody;
+        })()}
       </div>
 
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
@@ -866,5 +923,102 @@ export default function StaffEngagementDetail() {
         </AlertDialogContent>
       </AlertDialog>
     </DashboardLayout>
+  );
+}
+
+function ExitInterviewTabContent({
+  interview,
+  submitterName,
+  isLoading,
+}: {
+  interview: {
+    id: string;
+    responses: Record<string, unknown> | null;
+    is_submitted: boolean;
+    submitted_at: string | null;
+    submitted_by: string | null;
+  } | null;
+  submitterName: string | null;
+  isLoading: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+  const link = `${window.location.origin}/my-exit-interview`;
+
+  if (isLoading) {
+    return <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading…</CardContent></Card>;
+  }
+
+  if (!interview || !interview.is_submitted) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Exit Interview Not Yet Submitted</CardTitle>
+          <CardDescription>
+            Send the staff member this link to complete their interview:
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs bg-muted px-3 py-2 rounded font-mono break-all">
+              {link}
+            </code>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                await navigator.clipboard.writeText(link);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              <Copy className="h-4 w-4 mr-1" />
+              {copied ? "Copied!" : "Copy"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const responses = (interview.responses ?? {}) as Record<string, unknown>;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="p-4 text-sm">
+          Submitted by <span className="font-medium">{submitterName ?? "Unknown"}</span>
+          {interview.submitted_at && (
+            <> on <span className="font-medium">{fmtDateTime(interview.submitted_at)}</span></>
+          )}
+          .
+        </CardContent>
+      </Card>
+      {EXIT_INTERVIEW_SECTIONS.map((section) => (
+        <Card key={section.key}>
+          <CardHeader>
+            <CardTitle className="text-base">{section.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {section.questions.map((q) => {
+              const val = responses[q.key];
+              return (
+                <div key={q.key} className="space-y-1">
+                  <div className="text-sm font-medium">{q.label}</div>
+                  {q.type === "rating" ? (
+                    <div className="text-sm text-muted-foreground">
+                      {typeof val === "number" ? `${val} — ${RATING_LABELS[val - 1] ?? ""}` : "—"}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {typeof val === "string" && val.trim() ? val : "—"}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }
