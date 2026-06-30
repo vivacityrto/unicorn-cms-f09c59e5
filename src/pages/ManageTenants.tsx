@@ -25,9 +25,11 @@ import { AddTenantDialog } from "@/components/AddTenantDialog";
 import { Unicorn1ImportDialog } from "@/components/Unicorn1ImportDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { cn } from "@/lib/utils";
 import { CSCQuickAssignDialog } from "@/components/client/CSCQuickAssignDialog";
+import { BulkReassignCscDialog } from "@/components/client/BulkReassignCscDialog";
 
 interface TenantPackageInfo {
   id: number;
@@ -94,6 +96,8 @@ export default function ManageTenants() {
   const [addTenantDialog, setAddTenantDialog] = useState(false);
   const [cscAssignDialog, setCscAssignDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
   const [u1ImportOpen, setU1ImportOpen] = useState(false);
+  const [selectedTenantIds, setSelectedTenantIds] = useState<Set<number>>(new Set());
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -291,6 +295,58 @@ export default function ManageTenants() {
       .subscribe();
     return () => { supabase.removeChannel(cscChannel); };
   }, [queryClient]);
+
+  // Bulk-reassign helpers
+  const activeCscFilterId = useMemo(
+    () => (cscFilter !== "all" && cscFilter !== "unassigned" ? cscFilter : null),
+    [cscFilter]
+  );
+  const activeCscFilterOption = useMemo(
+    () => cscFilterOptions.find(u => u.user_uuid === activeCscFilterId) ?? null,
+    [cscFilterOptions, activeCscFilterId]
+  );
+  const activeCscFilterName = activeCscFilterOption
+    ? [activeCscFilterOption.first_name, activeCscFilterOption.last_name].filter(Boolean).join(" ").trim()
+    : "";
+  const bulkSelectionEnabled = !!activeCscFilterId;
+
+  // Clear selection whenever the underlying filtered set or filter changes
+  useEffect(() => {
+    setSelectedTenantIds(new Set());
+  }, [searchQuery, statusFilter, packageFilter, cscFilter, showArchived, renewalFilter, regEndFilter]);
+
+  const toggleRowSelected = (id: number, checked: boolean) => {
+    setSelectedTenantIds(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
+  const visibleSelectableIds = useMemo(
+    () => (bulkSelectionEnabled ? filteredTenants.map(t => t.id) : []),
+    [bulkSelectionEnabled, filteredTenants]
+  );
+  const allVisibleSelected =
+    visibleSelectableIds.length > 0 && visibleSelectableIds.every(id => selectedTenantIds.has(id));
+  const someVisibleSelected =
+    !allVisibleSelected && visibleSelectableIds.some(id => selectedTenantIds.has(id));
+
+  const toggleSelectAllVisible = (checked: boolean) => {
+    setSelectedTenantIds(prev => {
+      const next = new Set(prev);
+      if (checked) visibleSelectableIds.forEach(id => next.add(id));
+      else visibleSelectableIds.forEach(id => next.delete(id));
+      return next;
+    });
+  };
+
+  const selectedTenantList = useMemo(
+    () => filteredTenants.filter(t => selectedTenantIds.has(t.id)).map(t => ({ id: t.id, name: t.name })),
+    [filteredTenants, selectedTenantIds]
+  );
+
+
 
   const applyFiltersAndSort = () => {
     let filtered = [...tenants];
@@ -733,6 +789,25 @@ export default function ManageTenants() {
         )}
       </div>
 
+      {/* Bulk action bar */}
+      {bulkSelectionEnabled && selectedTenantIds.size > 0 && (
+        <div className="sticky top-2 z-20 mb-3 rounded-lg border bg-card/95 backdrop-blur shadow-md p-3 flex items-center gap-3 animate-fade-in">
+          <Users className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">
+            {selectedTenantIds.size} client{selectedTenantIds.size === 1 ? "" : "s"} selected
+            {activeCscFilterName ? <span className="text-muted-foreground"> · from {activeCscFilterName}</span> : null}
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedTenantIds(new Set())}>
+              Clear selection
+            </Button>
+            <Button size="sm" onClick={() => setBulkDialogOpen(true)}>
+              Reassign CSC
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Clients Table */}
       {filteredTenants.length === 0 ? (
         <Card>
@@ -748,6 +823,37 @@ export default function ManageTenants() {
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2 hover:bg-transparent">
+                  <TableHead className="bg-muted/30 h-14 w-12 border-r border-border/50 px-3">
+                    {bulkSelectionEnabled ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex">
+                              <Checkbox
+                                aria-label="Select all matching clients"
+                                checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+                                onCheckedChange={(c) => toggleSelectAllVisible(!!c)}
+                              />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="right">
+                            Select all {visibleSelectableIds.length} matching client{visibleSelectableIds.length === 1 ? "" : "s"}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex"><Checkbox disabled aria-label="Bulk select disabled" /></span>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-[240px]">
+                            Filter by a specific CSC above to enable bulk reassignment.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Tenant Name</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
                    <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Hours</TableHead>
@@ -784,6 +890,17 @@ export default function ManageTenants() {
                     )}
                     onClick={() => navigate(`/tenant/${tenant.id}`)}
                   >
+                    <TableCell
+                      className="py-6 border-r border-border/50 w-12 px-3"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        aria-label={`Select ${tenant.name}`}
+                        disabled={!bulkSelectionEnabled}
+                        checked={selectedTenantIds.has(tenant.id)}
+                        onCheckedChange={(c) => toggleRowSelected(tenant.id, !!c)}
+                      />
+                    </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[280px] pr-8">
                       <div>
                         <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
@@ -1060,6 +1177,28 @@ export default function ManageTenants() {
           tenantName={cscAssignDialog.tenant.name}
           canRemove={isSuperAdmin}
           onSuccess={() => queryClient.invalidateQueries({ queryKey: ['tenants'] })}
+        />
+      )}
+
+      {/* Bulk Reassign CSC Dialog */}
+      {activeCscFilterId && (
+        <BulkReassignCscDialog
+          open={bulkDialogOpen}
+          onOpenChange={setBulkDialogOpen}
+          fromUserId={activeCscFilterId}
+          fromUserName={activeCscFilterName || "Current CSC"}
+          tenants={selectedTenantList}
+          onSuccess={(result) => {
+            // Drop reassigned ids from selection; keep skipped ones visible.
+            setSelectedTenantIds(prev => {
+              const next = new Set(prev);
+              result.reassigned.forEach(id => next.delete(id));
+              return next;
+            });
+            // Refresh CSC chips and the table immediately.
+            queryClient.invalidateQueries({ queryKey: ['tenants'] });
+            queryClient.invalidateQueries({ queryKey: ['tenants', 'csc-assignments'] });
+          }}
         />
       )}
     </div>
