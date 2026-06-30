@@ -273,7 +273,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter useTransitions={false}>
         <AuthProvider>
           <ErrorBoundary>
             <TenantTypeProvider>
