@@ -127,6 +127,7 @@ const AdminZeroProgressPackagesPage = lazy(() => import("./pages/admin/AdminZero
 const BulkMembershipCertificatesPage = lazy(() => import("./pages/admin/BulkMembershipCertificatesPage"));
 const StaffEngagements = lazy(() => import("./pages/admin/StaffEngagements"));
 const StaffEngagementDetail = lazy(() => import("./pages/admin/StaffEngagementDetail"));
+const MyExitInterview = lazy(() => import("./pages/MyExitInterview"));
  const TenantUsers = lazy(() => import("./pages/TenantUsers"));
  const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
  const AdminManageStagesWrapper = lazy(() => import("./pages/AdminManageStagesWrapper"));
