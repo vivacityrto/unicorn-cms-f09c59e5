@@ -126,7 +126,7 @@ export default function RtoTips() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[28px] font-bold">RTO Tips</h1>
-            <p className="text-muted-foreground">Manage and organize tips for RTO operations and compliance</p>
+            <p className="text-muted-foreground">Manage and organise tips for RTO operations and compliance</p>
           </div>
           
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
