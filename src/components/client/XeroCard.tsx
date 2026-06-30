@@ -59,7 +59,7 @@ export function XeroCard({ tenantId }: XeroCardProps) {
         action: 'xero_settings_updated',
         entity_type: 'tenant',
         entity_id: String(tenantId),
-        changes: {
+        details: {
           xero_contact_url: contactValue,
           xero_repeating_invoice_url: invoiceValue,
         },

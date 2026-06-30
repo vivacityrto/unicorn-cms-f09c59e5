@@ -70,7 +70,7 @@ export function useAddinFeatureFlags() {
 
       const { data: updated, error } = await supabase
         .from("app_settings")
-        .update(normalized as Record<string, unknown>)
+        .update(normalized as never)
         .eq("id", current.id)
         .select("*")
         .single();

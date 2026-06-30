@@ -115,7 +115,7 @@ export function MeetingAiSummaryPanel({ meetingId, tenantId }: MeetingAiSummaryP
 
       const { error } = await supabase
         .from('meeting_summaries')
-        .update(updates)
+        .update(updates as never)
         .eq('meeting_summary_id', existingSummary.meeting_summary_id);
 
       if (error) throw error;

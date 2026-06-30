@@ -115,7 +115,7 @@ export const useRtoTips = () => {
     mutationFn: async ({ id, ...updates }: Partial<RtoTip> & { id: string }) => {
       const { data, error } = await supabase
         .from("rto_tips")
-        .update(updates)
+        .update(updates as never)
         .eq("id", id)
         .select()
         .single();

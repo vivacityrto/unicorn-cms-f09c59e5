@@ -256,7 +256,7 @@ export function useProcesses() {
 
       const { data, error } = await supabase
         .from('processes')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', id)
         .select()
         .single();

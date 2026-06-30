@@ -534,7 +534,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName, package
 
       const { error } = await supabase
         .from('stage_instances')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', stageInstanceId);
 
       if (error) throw error;

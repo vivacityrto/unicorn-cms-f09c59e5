@@ -442,7 +442,7 @@ export function useClientProfile(tenantId: number | null) {
 
       const { error } = await supabase
         .from('tenants')
-        .update(tenantUpdates)
+        .update(tenantUpdates as never)
         .eq('id', tenantId);
 
       if (error) throw error;

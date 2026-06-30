@@ -640,7 +640,7 @@ export function useClientActionItems(tenantId: number | null, clientId: string |
         .update({
           ...updates,
           updated_at: new Date().toISOString()
-        })
+        } as never)
         .eq('id', itemId);
 
       if (error) throw error;

@@ -63,7 +63,7 @@ export function EditNoteDialog({ noteId, tenantId, open, onOpenChange, onSaved }
         updateData.parent_id = parseInt(data.packageInstanceId, 10);
       }
 
-      const { error } = await supabase.from('notes').update(updateData).eq('id', noteId);
+      const { error } = await supabase.from('notes').update(updateData as never).eq('id', noteId);
       if (error) throw error;
 
       toast({ title: 'Note updated' });

@@ -104,7 +104,7 @@ export function useMeetingArtifacts(meetingId: string | null) {
 
       const { error } = await supabase
         .from('meeting_artifacts')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', artifactId);
 
       if (error) throw error;

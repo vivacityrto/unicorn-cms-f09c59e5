@@ -179,7 +179,7 @@ export function useDocumentAIAnalysis() {
             };
             if (category) updateData.document_category = category;
             if (description) updateData.description = description;
-            await supabase.from('documents').update(updateData).eq('id', doc.id);
+            await supabase.from('documents').update(updateData as never).eq('id', doc.id);
           }
         } else {
           // User made edits - update directly and mark as user-edited
@@ -198,7 +198,7 @@ export function useDocumentAIAnalysis() {
           if (Object.keys(updateData).length > 0) {
             const { error } = await supabase
               .from('documents')
-              .update(updateData)
+              .update(updateData as never)
               .eq('id', doc.id);
             
             if (error) throw error;

@@ -64,7 +64,7 @@ export const useMeetingTodos = (meetingId?: string) => {
       
       const { data, error } = await supabase
         .from('eos_todos')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', id)
         .select()
         .single();
