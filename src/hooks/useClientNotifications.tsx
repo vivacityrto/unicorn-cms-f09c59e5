@@ -45,6 +45,7 @@ export function useClientNotifications() {
       const { data, error } = await supabase
         .from("user_notifications")
         .select("*")
+        .eq("user_id", profile!.user_uuid)
         .eq("tenant_id", activeTenantId!)
         .in("type", CLIENT_FACING_TYPES)
         .order("created_at", { ascending: false });
