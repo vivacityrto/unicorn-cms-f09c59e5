@@ -764,6 +764,11 @@ export default function StaffEngagementDetail() {
               );
             })}
         </div>
+        {engagement.type === "offboarding" && (
+          <>
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
 
       <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
