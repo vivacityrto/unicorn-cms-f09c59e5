@@ -89,11 +89,12 @@ export function useClientNotifications() {
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      if (!activeTenantId) return;
+      if (!activeTenantId || !profile?.user_uuid) return;
       const { error } = await supabase
         .from("user_notifications")
         .update({ is_read: true } as any)
         .eq("is_read", false)
+        .eq("user_id", profile.user_uuid)
         .eq("tenant_id", activeTenantId);
       if (error) throw error;
     },
