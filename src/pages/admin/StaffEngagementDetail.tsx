@@ -925,3 +925,100 @@ export default function StaffEngagementDetail() {
     </DashboardLayout>
   );
 }
+
+function ExitInterviewTabContent({
+  interview,
+  submitterName,
+  isLoading,
+}: {
+  interview: {
+    id: string;
+    responses: Record<string, unknown> | null;
+    is_submitted: boolean;
+    submitted_at: string | null;
+    submitted_by: string | null;
+  } | null;
+  submitterName: string | null;
+  isLoading: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+  const link = `${window.location.origin}/my-exit-interview`;
+
+  if (isLoading) {
+    return <Card><CardContent className="p-6 text-sm text-muted-foreground">Loading…</CardContent></Card>;
+  }
+
+  if (!interview || !interview.is_submitted) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Exit Interview Not Yet Submitted</CardTitle>
+          <CardDescription>
+            Send the staff member this link to complete their interview:
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-xs bg-muted px-3 py-2 rounded font-mono break-all">
+              {link}
+            </code>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                await navigator.clipboard.writeText(link);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              <Copy className="h-4 w-4 mr-1" />
+              {copied ? "Copied!" : "Copy"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const responses = (interview.responses ?? {}) as Record<string, unknown>;
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="p-4 text-sm">
+          Submitted by <span className="font-medium">{submitterName ?? "Unknown"}</span>
+          {interview.submitted_at && (
+            <> on <span className="font-medium">{fmtDateTime(interview.submitted_at)}</span></>
+          )}
+          .
+        </CardContent>
+      </Card>
+      {EXIT_INTERVIEW_SECTIONS.map((section) => (
+        <Card key={section.key}>
+          <CardHeader>
+            <CardTitle className="text-base">{section.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {section.questions.map((q) => {
+              const val = responses[q.key];
+              return (
+                <div key={q.key} className="space-y-1">
+                  <div className="text-sm font-medium">{q.label}</div>
+                  {q.type === "rating" ? (
+                    <div className="text-sm text-muted-foreground">
+                      {typeof val === "number" ? `${val} — ${RATING_LABELS[val - 1] ?? ""}` : "—"}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {typeof val === "string" && val.trim() ? val : "—"}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
