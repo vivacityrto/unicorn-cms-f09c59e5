@@ -1,47 +1,46 @@
-## Exit Interview Feature
+## Convert Email to Note
 
-### 1. Database migration
+Add an AI-powered "Convert to Note" action on linked email cards that drafts a structured consultation note for the user to review, edit, and save against the client.
 
-Create `engagement_exit_interviews` table with the supplied SQL — one row per offboarding engagement, JSONB `responses`, submit-locking via `is_submitted`, RLS allowing Vivacity admins full read and the linked staff member to insert/update/select their own (until submitted), plus standard `created_at`/`updated_at` and an updated_at trigger.
+### 1. Edge function — `supabase/functions/generate-email-note/index.ts`
 
-### 2. New page `/my-exit-interview`
+- New function modeled on `extract-note-title` (CORS headers, JWT-required, Lovable AI gateway, `google/gemini-3-flash-preview`).
+- Verify the caller JWT (same pattern as `capture-outlook-email`); reject anonymous.
+- Body: `{ email_id: string }`.
+- Use service-role client to fetch the row from `email_messages` (`subject`, `sender_name`, `sender_email`, `received_at`, `body_html`, `body_preview`). 404 if not found.
+- Build the prompt using `body_html` (stripped to text server-side) or fall back to `body_preview`. Truncate to ~8000 chars.
+- Use AI tool-calling to return structured `{ title, note_content }`:
+  - `title`: ≤ 8 words, sentence case, subject-derived.
+  - `note_content`: plain text, first-person consultant tone, sections for summary / key points / action items / outcomes — exactly as specified in the prompt.
+- Return `{ title, note_content }` on success; `{ error }` with status 500 on AI failure. Handle 429/402 gracefully with a clear message.
 
-New file `src/pages/MyExitInterview.tsx`, registered in `src/App.tsx` inside `<ProtectedRoute>` (auth required, no admin gate).
+### 2. New component — `src/components/email/ConvertEmailToNoteDialog.tsx`
 
-Flow:
-- Query `staff_engagements` filtered by `linked_unicorn_user_id = auth.uid()`, `type = 'offboarding'`, `status != 'cancelled'`, ordered by `created_at desc`, take first.
-- If none → friendly empty-state card.
-- Else fetch `engagement_exit_interviews` by `engagement_id`.
-  - `is_submitted = true` → read-only summary with "Thank you" banner.
-  - Else → render the form, hydrating from any existing draft row.
+- Props: `{ open, onOpenChange, email: LinkedEmail, tenantId: number, onSuccess? }`.
+- On open, invoke `generate-email-note` with `{ email_id: email.id }`. Show 3 skeleton lines while loading.
+- On success: prefill editable Title input + Note textarea (min 6 rows).
+- On error: inline error message, leave textarea empty for manual entry.
+- Fields:
+  - Title (Input)
+  - Note content (Textarea)
+  - Note type (Select, default `email`; options General/Email/Follow-up/Meeting/Phone Call/Action → `general`, `email`, `follow-up`, `phone-call`, `meeting`, `action`)
+  - Priority (Select, default `normal`; Normal/High/Urgent)
+- Use `useNotes({ parentType: 'tenant', parentId: tenantId, tenantId })`.
+- Save calls `createNote({ title, note_details, note_type, priority, parent_type_override: 'tenant', parent_id_override: tenantId })`. Toast "Note created", `onSuccess()`, close.
+- Reset all state on close so reopening is fresh.
 
-Form structure (8 sections, keys exactly as specified):
-- S1–S6, S8: textarea questions, autosave on blur via upsert (`onConflict: engagement_id`).
-- S7: ten 1–5 rating rows. Render as a 5-button group labelled 1=Strongly Disagree … 5=Strongly Agree, stored as integer.
-- `s8_comments` optional "Additional Comments" textarea.
-- Submit button at bottom with warning banner "Once submitted, your responses cannot be edited…"; on submit set `is_submitted=true`, `submitted_at=now()`, `submitted_by=auth.uid()`, then refetch to flip to read-only view.
+### 3. `src/components/email/LinkedEmailsList.tsx`
 
-Implementation notes:
-- Use existing `supabase` client and `useAuth` for `auth.uid()`.
-- Local `responses` state mirrors JSONB; debounce-free, blur-triggered upsert keeps it simple.
-- Use shadcn `Card`, `Textarea`, `Button`, `Alert` for consistency with the rest of admin pages.
-
-### 3. Exit Interview tab on `StaffEngagementDetail`
-
-`src/pages/admin/StaffEngagementDetail.tsx` was recently de-tabbed (only checklist remains). Reintroduce a minimal `Tabs` wrapper **only when `engagement.type === "offboarding"`** so the page still renders identically for onboarding.
-
-- Tabs: "Checklist" (existing content) + "Exit Interview".
-- Exit Interview tab query: `engagement_exit_interviews` by `engagement_id`, plus a join/lookup against `public.users` for the `submitted_by` display name.
-- If submitted: render grouped, read-only response cards per section, with the original question text as the label and rating numbers shown for S7. Header line: "Submitted by {name} on {date}".
-- If not submitted: Card with message and a copyable `/my-exit-interview` link (absolute URL using `window.location.origin`). Use a small `Button` with `Copy` icon and toast confirmation.
+- Add `convertNoteEmail` state.
+- Add a ghost `FileText` icon button in the existing actions area of each email card (next to the Eye button), `e.stopPropagation()` + `setConvertNoteEmail(email)`.
+- Render `<ConvertEmailToNoteDialog>` once at the bottom, wired to `clientId` as `tenantId`. Hide the action when `clientId` is undefined (button only makes sense with a tenant context).
 
 ### Out of scope
-No changes to other tabs, checklist logic, invite/revoke/link/cancel/delete flows, `StaffEngagements.tsx`, `staffEngagementChecklists.ts`, or unrelated routes.
 
-### Technical details
+No DB migration, no RLS changes, no schema edits — uses the existing `notes` table, `useNotes` hook, and `dd_note_types`.
 
-- Table grants: `GRANT ALL ON public.engagement_exit_interviews TO authenticated, service_role` (per supplied SQL).
-- Updated-at trigger: reuse existing `public.update_updated_at_column()` if present, otherwise create.
-- Question text constant: define a single `EXIT_INTERVIEW_SCHEMA` array (sections → questions with key/label/type) in a shared module (e.g. `src/pages/exitInterviewSchema.ts`) so both the staff form and the admin read-only view render identical labels from one source.
-- Route registration: add `<Route path="/my-exit-interview" element={<ProtectedRoute><MyExitInterview /></ProtectedRoute>} />` near other authenticated user routes in `App.tsx`.
-- The Supabase types file regenerates after migration approval, so the page/tab code lands after the migration runs.
+### Technical notes
+
+- Edge function reuses the existing Lovable AI gateway pattern already in `extract-note-title` (same model, same error handling for 402/429).
+- JWT verification matches `capture-outlook-email`'s approach (Authorization header → `supabase.auth.getUser`).
+- `LinkedEmail.body_html` already exists in the hook; HTML→text conversion lives in the edge function (simple regex strip — no new dep).

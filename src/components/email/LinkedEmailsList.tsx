@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Mail, User, Calendar, Eye, Sparkles } from "lucide-react";
+import { Mail, User, Calendar, Eye, Sparkles, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLinkedEmails, LinkedEmail, EmailAttachment } from "@/hooks/useLinkedEmails";
 import { EmailViewDialog } from "./EmailViewDialog";
+import { ConvertEmailToNoteDialog } from "./ConvertEmailToNoteDialog";
 
 interface LinkedEmailsListProps {
   clientId?: number;
@@ -23,6 +24,7 @@ export function LinkedEmailsList({
   title = "Linked Emails",
   emptyMessage = "No emails linked yet",
 }: LinkedEmailsListProps) {
+  const [convertNoteEmail, setConvertNoteEmail] = useState<LinkedEmail | null>(null);
   const { emails, isLoading, fetchAttachments, getAttachmentUrl } = useLinkedEmails({
     clientId,
     packageId,
@@ -74,11 +76,24 @@ export function LinkedEmailsList({
                 email={email}
                 fetchAttachments={fetchAttachments}
                 getAttachmentUrl={getAttachmentUrl}
+                onConvertToNote={clientId ? () => setConvertNoteEmail(email) : undefined}
               />
             ))}
           </div>
         )}
       </CardContent>
+
+      {convertNoteEmail && clientId && (
+        <ConvertEmailToNoteDialog
+          open={!!convertNoteEmail}
+          onOpenChange={(open) => {
+            if (!open) setConvertNoteEmail(null);
+          }}
+          email={convertNoteEmail}
+          tenantId={clientId}
+          onSuccess={() => setConvertNoteEmail(null)}
+        />
+      )}
     </Card>
   );
 }
@@ -87,13 +102,14 @@ interface EmailCardProps {
   email: LinkedEmail;
   fetchAttachments: (emailId: string) => Promise<EmailAttachment[]>;
   getAttachmentUrl: (storagePath: string) => Promise<string | null>;
+  onConvertToNote?: () => void;
 }
 
 function normalizeEmailText(text?: string | null) {
   return text?.replace(/\s+/g, " ").trim() ?? "";
 }
 
-function EmailCard({ email }: EmailCardProps) {
+function EmailCard({ email, onConvertToNote }: EmailCardProps) {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const summaryText = normalizeEmailText(email.ai_summary);
   const previewText = normalizeEmailText(email.body_preview);
@@ -123,15 +139,30 @@ function EmailCard({ email }: EmailCardProps) {
             </div>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setViewDialogOpen(true)}
-            title="View full email"
-            className="shrink-0 self-start"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
+          <div className="flex shrink-0 items-center gap-1 self-start">
+            {onConvertToNote && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onConvertToNote();
+                }}
+                title="Convert to note"
+              >
+                <FileText className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setViewDialogOpen(true)}
+              title="View full email"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          </div>
+
 
           <div className="col-span-2 flex w-full min-w-0 flex-col gap-2 pt-1">
             {summaryText && (
