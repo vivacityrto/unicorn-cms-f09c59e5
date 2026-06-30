@@ -96,6 +96,8 @@ export default function ManageTenants() {
   const [addTenantDialog, setAddTenantDialog] = useState(false);
   const [cscAssignDialog, setCscAssignDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
   const [u1ImportOpen, setU1ImportOpen] = useState(false);
+  const [selectedTenantIds, setSelectedTenantIds] = useState<Set<number>>(new Set());
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { profile } = useAuth();
