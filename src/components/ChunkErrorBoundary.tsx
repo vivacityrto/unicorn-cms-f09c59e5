@@ -57,6 +57,27 @@ export class ChunkErrorBoundary extends Component<Props, State> {
     }
   }
 
+  handleVitePreloadError!: (event: Event) => void;
+
+  componentDidMount(): void {
+    this.handleVitePreloadError = (event: Event) => {
+      event.preventDefault();
+      const alreadyTried = sessionStorage.getItem('chunk-reload-attempted');
+      if (!alreadyTried) {
+        sessionStorage.setItem('chunk-reload-attempted', '1');
+        this.setState({ hasError: true, reloading: true });
+        setTimeout(() => window.location.reload(), 100);
+      } else {
+        this.setState({ hasError: true, reloading: false });
+      }
+    };
+    window.addEventListener('vite:preloadError', this.handleVitePreloadError);
+  }
+
+  componentWillUnmount(): void {
+    window.removeEventListener('vite:preloadError', this.handleVitePreloadError);
+  }
+
   handleManualReload = (): void => {
     sessionStorage.removeItem(RELOAD_FLAG);
     window.location.reload();
