@@ -256,10 +256,9 @@ export function EvidenceSheet({
     [enrollments],
   );
 
-  const handlePickEnrollment = (enrollmentIdStr: string) => {
+  const handlePickEnrollment = async (enrollmentIdStr: string) => {
     const match = enrollments.find((e) => String(e.id) === enrollmentIdStr);
     if (!match) return;
-    const minutes = match.course?.estimated_minutes ?? null;
     form.setValue("source_enrollment_id", match.id);
     form.setValue(
       "source_certificate_id",
@@ -268,6 +267,30 @@ export function EvidenceSheet({
     if (match.course?.title) form.setValue("title", match.course.title);
     if (match.completed_at) {
       form.setValue("occurred_on", match.completed_at.slice(0, 10));
+    }
+
+    // Primary: sum estimated_minutes across published lessons for this course.
+    // Fallback: course-level estimated_minutes when the lesson sum is 0/null.
+    let minutes: number | null = null;
+    try {
+      const { data: lessons } = await supabase
+        .from("academy_lessons")
+        .select("estimated_minutes")
+        .eq("course_id", match.course_id)
+        .eq("is_published", true);
+      const lessonSum = (lessons ?? []).reduce(
+        (acc, l) => acc + (l.estimated_minutes ?? 0),
+        0,
+      );
+      if (lessonSum > 0) {
+        minutes = lessonSum;
+      } else if (match.course?.estimated_minutes && match.course.estimated_minutes > 0) {
+        minutes = match.course.estimated_minutes;
+      }
+    } catch {
+      if (match.course?.estimated_minutes && match.course.estimated_minutes > 0) {
+        minutes = match.course.estimated_minutes;
+      }
     }
     if (minutes != null) {
       form.setValue("duration_hours", Number((minutes / 60).toFixed(2)));
