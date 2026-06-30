@@ -200,44 +200,51 @@ export default function ClientDetail() {
   const fetchPrimaryContact = async () => {
     if (!tenantIdNum) return;
     try {
-      const { data: pcRow } = await supabase
-        .from('tenant_users')
-        .select('user_id')
-        .eq('tenant_id', tenantIdNum)
-        .eq('relationship_role', 'primary_contact')
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      const [{ data: pcRow }, { data: scRow }] = await Promise.all([
+        supabase
+          .from('tenant_users')
+          .select('user_id')
+          .eq('tenant_id', tenantIdNum)
+          .eq('relationship_role', 'primary_contact')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('tenant_users')
+          .select('user_id')
+          .eq('tenant_id', tenantIdNum)
+          .eq('secondary_contact', true)
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
-      if (pcRow?.user_id) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('first_name, last_name, email')
-          .eq('user_uuid', pcRow.user_id)
-          .maybeSingle();
-        if (userData) {
-          setPrimaryContactName(`${userData.first_name || ''} ${userData.last_name || ''}`.trim());
-          setPrimaryContactEmail(userData.email || '');
-        }
-      }
-
-      const { data: scRow } = await supabase
-        .from('tenant_users')
-        .select('user_id')
-        .eq('tenant_id', tenantIdNum)
-        .eq('secondary_contact', true)
-        .limit(1)
-        .maybeSingle();
-      if (scRow?.user_id) {
-        const { data: scUser } = await supabase
-          .from('users')
-          .select('first_name, last_name')
-          .eq('user_uuid', scRow.user_id)
-          .maybeSingle();
-        if (scUser) setSecondaryContactName(`${scUser.first_name || ''} ${scUser.last_name || ''}`.trim());
-      } else {
-        setSecondaryContactName('');
-      }
+      await Promise.all([
+        (async () => {
+          if (pcRow?.user_id) {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('first_name, last_name, email')
+              .eq('user_uuid', pcRow.user_id)
+              .maybeSingle();
+            if (userData) {
+              setPrimaryContactName(`${userData.first_name || ''} ${userData.last_name || ''}`.trim());
+              setPrimaryContactEmail(userData.email || '');
+            }
+          }
+        })(),
+        (async () => {
+          if (scRow?.user_id) {
+            const { data: scUser } = await supabase
+              .from('users')
+              .select('first_name, last_name')
+              .eq('user_uuid', scRow.user_id)
+              .maybeSingle();
+            if (scUser) setSecondaryContactName(`${scUser.first_name || ''} ${scUser.last_name || ''}`.trim());
+          } else {
+            setSecondaryContactName('');
+          }
+        })(),
+      ]);
     } catch (err) {
       console.error('Error fetching primary contact:', err);
     }
