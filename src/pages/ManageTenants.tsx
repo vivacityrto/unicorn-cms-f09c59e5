@@ -789,6 +789,25 @@ export default function ManageTenants() {
         )}
       </div>
 
+      {/* Bulk action bar */}
+      {bulkSelectionEnabled && selectedTenantIds.size > 0 && (
+        <div className="sticky top-2 z-20 mb-3 rounded-lg border bg-card/95 backdrop-blur shadow-md p-3 flex items-center gap-3 animate-fade-in">
+          <Users className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">
+            {selectedTenantIds.size} client{selectedTenantIds.size === 1 ? "" : "s"} selected
+            {activeCscFilterName ? <span className="text-muted-foreground"> · from {activeCscFilterName}</span> : null}
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedTenantIds(new Set())}>
+              Clear selection
+            </Button>
+            <Button size="sm" onClick={() => setBulkDialogOpen(true)}>
+              Reassign CSC
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Clients Table */}
       {filteredTenants.length === 0 ? (
         <Card>
