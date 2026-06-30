@@ -69,6 +69,16 @@ Deno.serve(async (req) => {
     if (!campaignId || typeof campaignId !== "string") {
       return jsonError(400, "campaign_id required");
     }
+    const categoryId: string | null =
+      typeof body?.category_id === "string" && body.category_id.length > 0
+        ? body.category_id
+        : null;
+    const attachments: Array<{
+      storage_path: string;
+      filename: string;
+      mime_type: string;
+      file_size: number;
+    }> = Array.isArray(body?.attachments) ? body.attachments : [];
 
     // 4. Load campaign — must be queued
     const { data: campaign, error: cErr } = await svc
