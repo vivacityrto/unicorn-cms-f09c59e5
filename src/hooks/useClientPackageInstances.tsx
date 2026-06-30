@@ -426,7 +426,7 @@ export function useClientPackageInstances() {
 
       const { error } = await supabase
         .from('stage_instances' as any)
-        .update({ status_id: mapped.status_id, status: mapped.status })
+        .update({ status: mapped.status })
         .eq('id', parseInt(stageId));
 
       if (error) throw error;
