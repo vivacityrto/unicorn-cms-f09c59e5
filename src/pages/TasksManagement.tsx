@@ -445,6 +445,16 @@ export default function TasksManagement() {
         {label}
       </Badge>;
   };
+  // Terminal-state check — do not offer "Mark as complete" for rows already in a terminal state.
+  const isTerminalTask = (task: Task): boolean => {
+    if (task.source === 'task' || !task.source) {
+      return task.completed === true || task.status === 'completed';
+    }
+    // action + ops share 'done'/'cancelled' terminal statuses; note our normalized status
+    // maps 'done' → 'completed' when loading, so also check that.
+    return task.status === 'done' || task.status === 'cancelled' || task.status === 'completed' || task.completed === true;
+  };
+
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
     try {
       if (taskId.startsWith('ca-')) {
@@ -456,11 +466,9 @@ export default function TasksManagement() {
         };
         const update: any = { status: statusMap[newStatus] ?? newStatus };
         if (newStatus === 'completed') {
+          // client_action_items has no auto-stamping trigger — set completed_at from the FE.
           update.completed_at = new Date().toISOString();
           update.completed_by = user?.id ?? null;
-        } else {
-          update.completed_at = null;
-          update.completed_by = null;
         }
         const { error } = await supabase.from('client_action_items').update(update).eq('id', realId);
         if (error) throw error;
@@ -471,12 +479,14 @@ export default function TasksManagement() {
           in_progress: 'in_progress',
           completed: 'done',
         };
+        // ops_work_items has a DB trigger that stamps completed_at on transition to 'done'.
         const { error } = await supabase
           .from('ops_work_items')
           .update({ status: statusMap[newStatus] ?? newStatus })
           .eq('id', realId);
         if (error) throw error;
       } else {
+        // tasks_tenants has a DB trigger that stamps completed_at on terminal transition.
         const updateData: any = { status: newStatus, completed: newStatus === 'completed' };
         const { error } = await supabase.from("tasks_tenants").update(updateData).eq("id", taskId);
         if (error) throw error;
@@ -492,6 +502,8 @@ export default function TasksManagement() {
         title: "Success",
         description: "Task status updated successfully"
       });
+      // Refetch so DB-stamped completed_at values and derived stat-card counts stay in sync.
+      fetchTasks();
     } catch (error: any) {
       console.error("Error updating task:", error);
       toast({
@@ -1408,78 +1420,60 @@ export default function TasksManagement() {
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-2">
+                        {!isTerminalTask(task) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleActionChange(task.id, "completed");
+                            }}
+                            className="h-8 w-8 hover:bg-emerald-500/10 hover:text-emerald-600"
+                            title="Mark as complete"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
+                        )}
                         {(!task.source || task.source === 'task') && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTask(task);
-                                setFormData({
-                                  task_name: task.task_name,
-                                  description: task.description || "",
-                                  due_date: task.due_date,
-                                  tenant_id: task.tenant_id.toString(),
-                                  package_id: task.package_id?.toString() || "",
-                                  package_name: task.package_name || "",
-                                  status: task.status || "not_started",
-                                  assigned_to: "",
-                                  priority: task.priority || ""
-                                });
-                                setFollowers(task.followers || []);
-                                setMilestones(task.milestones || []);
-                                setIsEditDialogOpen(true);
-                              }}
-                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
-                              title="Edit"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleActionChange(task.id, "delete");
-                              }}
-                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTask(task);
+                              setFormData({
+                                task_name: task.task_name,
+                                description: task.description || "",
+                                due_date: task.due_date,
+                                tenant_id: task.tenant_id.toString(),
+                                package_id: task.package_id?.toString() || "",
+                                package_name: task.package_name || "",
+                                status: task.status || "not_started",
+                                assigned_to: "",
+                                priority: task.priority || ""
+                              });
+                              setFollowers(task.followers || []);
+                              setMilestones(task.milestones || []);
+                              setIsEditDialogOpen(true);
+                            }}
+                            className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                            title="Edit"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                         )}
-                        {(task.source === 'action' || task.source === 'ops') && (
-                          <>
-                            {!task.completed && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleActionChange(task.id, "completed");
-                                }}
-                                className="h-8 w-8 hover:bg-emerald-500/10 hover:text-emerald-600"
-                                title="Mark as complete"
-                              >
-                                <CheckCircle2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleActionChange(task.id, "delete");
-                              }}
-                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionChange(task.id, "delete");
+                          }}
+                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>;

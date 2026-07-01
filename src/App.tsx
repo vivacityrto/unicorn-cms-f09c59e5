@@ -138,6 +138,7 @@ const AdminOperations = lazy(() => import("./pages/AdminOperations"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
 const MyKpiDashboardPage = lazy(() => import("./pages/MyKpiDashboardPage"));
+const KpiPage = lazy(() => import("./pages/KpiPage"));
 const KpiReviewerPage = lazy(() => import("./pages/KpiReviewerPage"));
 const KpiOverviewPage = lazy(() => import("./pages/KpiOverviewPage"));
 const KpiTicketsPage = lazy(() => import("./pages/KpiTicketsPage"));
@@ -1083,6 +1084,7 @@ const App = () => (
             <Route path="/admin/compliance-packs" element={<ProtectedRoute requireSuperAdmin><AdminCompliancePacks /></ProtectedRoute>} />
             <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
             <Route path="/my/kpi" element={<ProtectedRoute><MyKpiDashboardPage /></ProtectedRoute>} />
+            <Route path="/kpi" element={<ProtectedRoute><KpiPage /></ProtectedRoute>} />
             <Route path="/admin/kpi-review" element={<ProtectedRoute><KpiReviewerPage /></ProtectedRoute>} />
             <Route path="/admin/kpi-overview" element={<ProtectedRoute><KpiOverviewPage /></ProtectedRoute>} />
             <Route path="/admin/kpi-tickets" element={<ProtectedRoute><KpiTicketsPage /></ProtectedRoute>} />

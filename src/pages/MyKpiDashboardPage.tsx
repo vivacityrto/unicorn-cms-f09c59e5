@@ -35,7 +35,12 @@ const KPI_ROLE_TO_SHORT: Record<string, KpiRole> = {
 
 type TabKey = "kpi_overview" | "tasks" | "tickets" | "email_log";
 
-export default function MyKpiDashboardPage() {
+/**
+ * Inner content component — no DashboardLayout wrapper.
+ * Exported so the new /kpi page can compose it alongside a Team KPI tab
+ * without duplicating role-specific KPI rendering logic.
+ */
+export function MyKpiContent({ showHeader = true }: { showHeader?: boolean }) {
   const { profile, loading } = useAuth();
   const { canViewAnyStaff } = useKpiAccess();
   const [period, setPeriod] = useState<Period>("weekly");
@@ -73,23 +78,24 @@ export default function MyKpiDashboardPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="p-8 flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-        </div>
-      </DashboardLayout>
+      <div className="p-8 flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+      </div>
     );
   }
 
   if (!profile?.user_uuid) {
-    return (
-      <DashboardLayout>
-        <div className="p-8 text-muted-foreground">Sign in to view your KPI dashboard.</div>
-      </DashboardLayout>
-    );
+    return <div className="p-8 text-muted-foreground">Sign in to view your KPI dashboard.</div>;
   }
 
   const kpiRole = profile.kpi_role ?? "";
+  if (!kpiRole) {
+    return (
+      <div className="p-6 rounded-lg border bg-muted/30 text-sm text-muted-foreground">
+        KPI tracking isn't configured for your role yet. If you think this is wrong, contact an admin.
+      </div>
+    );
+  }
   const isDev = kpiRole === "developer";
   const visibleTabs: TabKey[] = isDev
     ? ["kpi_overview", "tickets"]
@@ -99,14 +105,12 @@ export default function MyKpiDashboardPage() {
     kpiRole === "cst_assistant" ? "cst_assistant" : kpiRole === "developer" ? "developer" : "csc_consultant";
 
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-4">
+    <div className="space-y-4">
+      {showHeader && (
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">My KPI dashboard</h1>
-            <p className="text-sm text-muted-foreground">
-              Your KPI rollup and role-specific activity.
-            </p>
+            <h2 className="text-xl font-semibold">My KPI dashboard</h2>
+            <p className="text-sm text-muted-foreground">Your KPI rollup and role-specific activity.</p>
           </div>
           {canViewAnyStaff && (
             <Button asChild variant="outline" size="sm">
@@ -114,81 +118,97 @@ export default function MyKpiDashboardPage() {
             </Button>
           )}
         </div>
+      )}
 
-        <Tabs defaultValue="kpi_overview">
-          <TabsList>
-            {visibleTabs.includes("kpi_overview") && (
-              <TabsTrigger value="kpi_overview" className="flex items-center gap-1.5">
-                <LayoutDashboard className="h-4 w-4" /> KPI Overview
-              </TabsTrigger>
-            )}
-            {visibleTabs.includes("tasks") && (
-              <TabsTrigger value="tasks" className="flex items-center gap-1.5">
-                <CheckSquare className="h-4 w-4" /> Tasks
-                {taskCount > 0 && (
-                  <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">{taskCount}</Badge>
-                )}
-              </TabsTrigger>
-            )}
-            {visibleTabs.includes("tickets") && (
-              <TabsTrigger value="tickets" className="flex items-center gap-1.5">
-                <Ticket className="h-4 w-4" /> Tickets
-                {ticketCount > 0 && (
-                  <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">{ticketCount}</Badge>
-                )}
-              </TabsTrigger>
-            )}
-            {visibleTabs.includes("email_log") && (
-              <TabsTrigger value="email_log" className="flex items-center gap-1.5">
-                <Mail className="h-4 w-4" /> Email log
-              </TabsTrigger>
-            )}
-          </TabsList>
-
-          <TabsContent value="kpi_overview" className="mt-4 space-y-4">
-            <div className="flex justify-end">
-              <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
-                <TabsList>
-                  <TabsTrigger value="weekly">Weekly</TabsTrigger>
-                  <TabsTrigger value="monthly">Monthly</TabsTrigger>
-                  <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-            <KpiMonthlySummaryCards
-              subjectUuid={profile.user_uuid}
-              period={period}
-              role={cardsRole}
-            />
-            <KpiDashboard
-              subjectUuid={profile.user_uuid}
-              roles={roles}
-              weeks={PERIOD_WEEKS[period]}
-              periodLabel={PERIOD_LABEL[period]}
-              hideSections
-            />
-            <MyKpiSignOffSection />
-          </TabsContent>
-
+      <Tabs defaultValue="kpi_overview">
+        <TabsList>
+          {visibleTabs.includes("kpi_overview") && (
+            <TabsTrigger value="kpi_overview" className="flex items-center gap-1.5">
+              <LayoutDashboard className="h-4 w-4" /> KPI Overview
+            </TabsTrigger>
+          )}
           {visibleTabs.includes("tasks") && (
-            <TabsContent value="tasks" className="mt-4">
-              <KpiTasksSection viewerRole={profile.kpi_role ?? null} />
-            </TabsContent>
+            <TabsTrigger value="tasks" className="flex items-center gap-1.5">
+              <CheckSquare className="h-4 w-4" /> Tasks
+              {taskCount > 0 && (
+                <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">{taskCount}</Badge>
+              )}
+            </TabsTrigger>
           )}
-
-          <TabsContent value="tickets" className="mt-4 space-y-4">
-            <div className="flex justify-end">
-              <RaiseTicketButton />
-            </div>
-            {profile.kpi_role === "developer" ? <KpiDeveloperTicketQueue /> : <KpiReporterTicketView />}
-          </TabsContent>
-
+          {visibleTabs.includes("tickets") && (
+            <TabsTrigger value="tickets" className="flex items-center gap-1.5">
+              <Ticket className="h-4 w-4" /> Tickets
+              {ticketCount > 0 && (
+                <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">{ticketCount}</Badge>
+              )}
+            </TabsTrigger>
+          )}
           {visibleTabs.includes("email_log") && (
-            <TabsContent value="email_log" className="mt-4">
-              <KpiEmailLogSection subjectUuid={profile.user_uuid} />
-            </TabsContent>
+            <TabsTrigger value="email_log" className="flex items-center gap-1.5">
+              <Mail className="h-4 w-4" /> Email log
+            </TabsTrigger>
           )}
-        </Tabs>
+        </TabsList>
+
+        <TabsContent value="kpi_overview" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+              <TabsList>
+                <TabsTrigger value="weekly">Weekly</TabsTrigger>
+                <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <KpiMonthlySummaryCards
+            subjectUuid={profile.user_uuid}
+            period={period}
+            role={cardsRole}
+          />
+          <KpiDashboard
+            subjectUuid={profile.user_uuid}
+            roles={roles}
+            weeks={PERIOD_WEEKS[period]}
+            periodLabel={PERIOD_LABEL[period]}
+            hideSections
+          />
+          <MyKpiSignOffSection />
+        </TabsContent>
+
+        {visibleTabs.includes("tasks") && (
+          <TabsContent value="tasks" className="mt-4">
+            <KpiTasksSection viewerRole={profile.kpi_role ?? null} />
+          </TabsContent>
+        )}
+
+        <TabsContent value="tickets" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <RaiseTicketButton />
+          </div>
+          {profile.kpi_role === "developer" ? <KpiDeveloperTicketQueue /> : <KpiReporterTicketView />}
+        </TabsContent>
+
+        {visibleTabs.includes("email_log") && (
+          <TabsContent value="email_log" className="mt-4">
+            <KpiEmailLogSection subjectUuid={profile.user_uuid} />
+          </TabsContent>
+        )}
+      </Tabs>
+    </div>
+  );
+}
+
+export default function MyKpiDashboardPage() {
+  return (
+    <DashboardLayout>
+      <div className="p-6 space-y-4">
+        <div>
+          <h1 className="text-2xl font-semibold">My KPI dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Your KPI rollup and role-specific activity.
+          </p>
+        </div>
+        <MyKpiContent showHeader={false} />
       </div>
     </DashboardLayout>
   );

@@ -34,6 +34,7 @@ const workMenuItems = [
   { icon: Mail, label: "Email Triage", path: "/email-triage", emailTriageStaffOnly: true },
   { icon: Briefcase, label: "My Work", path: "/my-work" },
   { icon: ListTodo, label: "Tasks", path: "/tasks" },
+  { icon: Gauge, label: "KPI", path: "/kpi" },
   { icon: Inbox, label: "Time Inbox", path: "/time-inbox" },
   { icon: Calendar, label: "My Calendar", path: "/work/calendar" },
   { icon: Video, label: "Meetings", path: "/work/meetings" },
@@ -239,12 +240,9 @@ export const DashboardLayout = ({
       return true;
     });
     const extras: typeof eosMenuItems = [];
-    if (kpiRole) {
-      extras.push({ icon: Gauge, label: "My KPI", path: "/my/kpi" } as any);
-    }
+    // KPI module has been moved to the Work section (/kpi).
+    // Reviewer-only "KPI Tickets" board remains under EOS for admin/reviewer roles.
     if (canViewAnyStaff) {
-      extras.push({ icon: BarChart3, label: "KPI Review", path: "/admin/kpi-review" } as any);
-      extras.push({ icon: Target, label: "KPI Overview", path: "/admin/kpi-overview" } as any);
       extras.push({ icon: LifeBuoy, label: "KPI Tickets", path: "/admin/kpi-tickets" } as any);
     }
     return [...base, ...extras];
