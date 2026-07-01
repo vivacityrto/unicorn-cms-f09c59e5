@@ -127,49 +127,100 @@ export function KpiDrillDownSheet({
             tenant_name: nameMap[r.tenant_id] ?? `Tenant #${r.tenant_id}`,
           }));
         } else if (kind === "communication") {
-          const { data: eRows } = await (supabase as any)
-            .from("kpi_email_log")
-            .select(
-              "id, tenant_id, subject, received_at, responded_at, response_minutes, sla_met, email_type, conversation_id"
-            )
-            .eq("user_uuid", subjectUuid)
-            .gte("received_at", startTs)
-            .lte("received_at", endTs)
-            .order("received_at", { ascending: false });
+          const SLA_SECONDS = 12 * 60 * 60;
+          const { data: assignments } = await (supabase as any)
+            .from("tenant_csc_assignments")
+            .select("tenant_id")
+            .eq("csc_user_id", subjectUuid)
+            .is("ended_at", null);
           const tenantIds = Array.from(
-            new Set((eRows ?? []).map((r: any) => r.tenant_id).filter(Boolean))
+            new Set((assignments ?? []).map((a: any) => a.tenant_id).filter(Boolean))
           );
-          const nameMap: Record<number, string> = {};
-          if (tenantIds.length) {
-            const { data: tRows } = await (supabase as any)
-              .from("tenants")
-              .select("tenant_id, name")
-              .in("tenant_id", tenantIds);
-            (tRows ?? []).forEach((t: any) => {
-              nameMap[t.tenant_id] = t.name;
+          if (tenantIds.length > 0) {
+            const { data: clientMsgs } = await (supabase as any)
+              .from("tenant_messages")
+              .select("id, conversation_id, tenant_id, created_at, body")
+              .in("tenant_id", tenantIds)
+              .eq("sender_type", "client")
+              .gte("created_at", startTs)
+              .lte("created_at", endTs)
+              .order("created_at", { ascending: false })
+              .limit(500);
+            const cMsgs = (clientMsgs ?? []) as Array<{
+              id: string; conversation_id: string; tenant_id: number; created_at: string; body: string;
+            }>;
+            const convIds = Array.from(new Set(cMsgs.map((m) => m.conversation_id).filter(Boolean)));
+            const bufferEnd = new Date(new Date(endTs).getTime() + SLA_SECONDS * 1000).toISOString();
+
+            const [staffRes, convRes, tenantRes] = await Promise.all([
+              convIds.length
+                ? (supabase as any)
+                    .from("tenant_messages")
+                    .select("conversation_id, created_at")
+                    .in("conversation_id", convIds)
+                    .eq("sender_type", "staff")
+                    .lte("created_at", bufferEnd)
+                : Promise.resolve({ data: [] }),
+              convIds.length
+                ? (supabase as any)
+                    .from("tenant_conversations")
+                    .select("id, topic, subject")
+                    .in("id", convIds)
+                : Promise.resolve({ data: [] }),
+              (supabase as any)
+                .from("tenants")
+                .select("tenant_id, name")
+                .in("tenant_id", tenantIds),
+            ]);
+            const staffByConv = new Map<string, number[]>();
+            (staffRes.data ?? []).forEach((s: any) => {
+              const t = new Date(s.created_at).getTime();
+              const arr = staffByConv.get(s.conversation_id) ?? [];
+              arr.push(t);
+              staffByConv.set(s.conversation_id, arr);
+            });
+            const convMap: Record<string, { topic?: string; subject?: string }> = {};
+            (convRes.data ?? []).forEach((c: any) => { convMap[c.id] = c; });
+            const nameMap: Record<number, string> = {};
+            (tenantRes.data ?? []).forEach((t: any) => { nameMap[t.tenant_id] = t.name; });
+
+            data = cMsgs.map((m) => {
+              const clientT = new Date(m.created_at).getTime();
+              const reply = (staffByConv.get(m.conversation_id) ?? [])
+                .filter((t) => t > clientT)
+                .sort((a, b) => a - b)[0];
+              const responded_at = reply ? new Date(reply).toISOString() : null;
+              const response_minutes = reply ? (reply - clientT) / 60000 : null;
+              const sla_met = reply != null ? (reply - clientT) / 1000 <= SLA_SECONDS : null;
+              const conv = convMap[m.conversation_id] ?? {};
+              return {
+                id: m.id,
+                subject: conv.topic || conv.subject || (m.body ? m.body.slice(0, 80) : "(no subject)"),
+                tenant_name: nameMap[m.tenant_id] ?? "—",
+                received_at: m.created_at,
+                responded_at,
+                response_minutes,
+                sla_met,
+              };
             });
           }
-          data = (eRows ?? []).map((r: any) => ({
-            ...r,
-            tenant_name: r.tenant_id ? nameMap[r.tenant_id] ?? "—" : "—",
-          }));
-        } else if (kind === "csc_tasks" || kind === "assistant_tasks") {
-          // kpi_tasks: created OR completed within the period window
+        } else if (kind === "csc_tasks") {
           const { data: tRows } = await (supabase as any)
-            .from("kpi_tasks")
+            .from("client_team_tasks")
             .select(
-              "id, title, tenant_id, source, source_ref, status, due_at, completed_at, created_at, metadata"
+              "id, name, status, created_at, completed_at, client_package_stage_id, client_package_stages!inner(id, client_package_id, client_packages!inner(id, assigned_csc_user_id, tenant_id, package_id, packages(name)))"
             )
-            .eq("assignee_uuid", subjectUuid)
-            .or(
-              `and(created_at.gte.${startTs},created_at.lte.${endTs}),and(completed_at.gte.${startTs},completed_at.lte.${endTs})`
-            )
-            .order(kind === "assistant_tasks" ? "due_at" : "created_at", {
-              ascending: kind === "assistant_tasks",
-              nullsFirst: false,
-            });
+            .eq("client_package_stages.client_packages.assigned_csc_user_id", subjectUuid)
+            .gte("created_at", startTs)
+            .lte("created_at", endTs)
+            .order("created_at", { ascending: false });
+          const rows = (tRows ?? []) as any[];
           const tenantIds = Array.from(
-            new Set((tRows ?? []).map((r: any) => r.tenant_id).filter(Boolean))
+            new Set(
+              rows
+                .map((r) => r.client_package_stages?.client_packages?.tenant_id)
+                .filter(Boolean)
+            )
           );
           const nameMap: Record<number, string> = {};
           if (tenantIds.length) {
@@ -177,14 +228,86 @@ export function KpiDrillDownSheet({
               .from("tenants")
               .select("tenant_id, name")
               .in("tenant_id", tenantIds);
-            (nRows ?? []).forEach((t: any) => {
-              nameMap[t.tenant_id] = t.name;
-            });
+            (nRows ?? []).forEach((t: any) => { nameMap[t.tenant_id] = t.name; });
           }
-          data = (tRows ?? []).map((r: any) => ({
-            ...r,
-            tenant_name: r.tenant_id ? nameMap[r.tenant_id] ?? "—" : "—",
+          data = rows.map((r) => {
+            const cp = r.client_package_stages?.client_packages;
+            const pkgName = cp?.packages?.name ?? "—";
+            return {
+              id: r.id,
+              title: r.name,
+              status: r.status,
+              created_at: r.created_at,
+              completed_at: r.completed_at,
+              due_at: null,
+              tenant_name: cp?.tenant_id ? nameMap[cp.tenant_id] ?? "—" : "—",
+              source_ref: pkgName,
+              metadata: { package_name: pkgName },
+            };
+          });
+        } else if (kind === "assistant_tasks") {
+          const sb = supabase as any;
+          const [ttCreated, ttFollowers, cai, ops] = await Promise.all([
+            sb.from("tasks_tenants")
+              .select("id, task_name, status, due_date, completed_at, created_at")
+              .gte("created_at", startTs).lte("created_at", endTs)
+              .eq("created_by", subjectUuid),
+            sb.from("tasks_tenants")
+              .select("id, task_name, status, due_date, completed_at, created_at")
+              .gte("created_at", startTs).lte("created_at", endTs)
+              .contains("followers", [subjectUuid]),
+            sb.from("client_action_items")
+              .select("id, title, status, due_date, completed_at, created_at")
+              .gte("created_at", startTs).lte("created_at", endTs)
+              .eq("assignee_user_id", subjectUuid),
+            sb.from("ops_work_items")
+              .select("id, title, status, due_at, completed_at, created_at")
+              .gte("created_at", startTs).lte("created_at", endTs)
+              .eq("owner_user_uuid", subjectUuid),
+          ]);
+
+          const merged: any[] = [];
+          const seenTt = new Set<string>();
+          const pushTt = (r: any) => {
+            if (seenTt.has(r.id)) return;
+            seenTt.add(r.id);
+            merged.push({
+              id: `tt:${r.id}`,
+              title: r.task_name,
+              source: "tasks_tenants",
+              status: r.status,
+              due_at: r.due_date,
+              completed_at: r.completed_at,
+              created_at: r.created_at,
+            });
+          };
+          (ttCreated.data ?? []).forEach(pushTt);
+          (ttFollowers.data ?? []).forEach(pushTt);
+          (cai.data ?? []).forEach((r: any) => merged.push({
+            id: `cai:${r.id}`,
+            title: r.title,
+            source: "client_action_items",
+            status: r.status,
+            due_at: r.due_date,
+            completed_at: r.completed_at,
+            created_at: r.created_at,
           }));
+          (ops.data ?? []).forEach((r: any) => merged.push({
+            id: `ops:${r.id}`,
+            title: r.title,
+            source: "ops_work_items",
+            status: r.status,
+            due_at: r.due_at,
+            completed_at: r.completed_at,
+            created_at: r.created_at,
+          }));
+
+          merged.sort((a, b) => {
+            const av = a.due_at ? new Date(a.due_at).getTime() : Number.POSITIVE_INFINITY;
+            const bv = b.due_at ? new Date(b.due_at).getTime() : Number.POSITIVE_INFINITY;
+            return av - bv;
+          });
+          data = merged;
         }
       } catch (err) {
         console.error("[KpiDrillDownSheet] failed to load", err);
