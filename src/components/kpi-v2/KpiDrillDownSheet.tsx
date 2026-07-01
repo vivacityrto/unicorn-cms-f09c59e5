@@ -254,13 +254,15 @@ export function KpiDrillDownSheet({
             )
           );
           const nameMap: Record<number, string> = {};
-          if (tenantIds.length) {
-            const { data: nRows } = await (supabase as any)
-              .from("tenants")
-              .select("id, name")
-              .in("id", tenantIds);
-            (nRows ?? []).forEach((t: any) => { nameMap[t.id] = t.name; });
-          }
+          try {
+            if (tenantIds.length) {
+              const { data: nRows } = await (supabase as any)
+                .from("tenants")
+                .select("id, name")
+                .in("id", tenantIds);
+              (nRows ?? []).forEach((t: any) => { nameMap[t.id] = t.name; });
+            }
+          } catch { /* non-fatal — rows render with "—" tenant name */ }
           data = rows.map((r) => {
             const cp = r.client_package_stages?.client_packages;
             const pkgName = cp?.packages?.name ?? "—";
