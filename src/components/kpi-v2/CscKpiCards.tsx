@@ -76,16 +76,45 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
           .from("tenant_csc_assignments")
           .select("tenant_id")
           .eq("csc_user_id", subjectUuid)
+          .eq("is_primary", true)
           .is("ended_at", null);
         const tenantIds = Array.from(
           new Set((assignments ?? []).map((a: any) => a.tenant_id).filter(Boolean))
         );
         if (tenantIds.length === 0) return { total: 0, met: 0, pct: null as number | null };
 
+        // Only count client-initiated conversations (client sent the first message).
+        const convBufferStart = new Date(new Date(startTs).getTime() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: convRows } = await sb
+          .from("tenant_conversations")
+          .select("id")
+          .in("tenant_id", tenantIds)
+          .gte("created_at", convBufferStart)
+          .lte("created_at", endTs);
+        const candidateConvIds = Array.from(
+          new Set((convRows ?? []).map((c: any) => c.id).filter(Boolean))
+        );
+        if (candidateConvIds.length === 0) return { total: 0, met: 0, pct: null };
+
+        const { data: firstMsgs } = await sb
+          .from("tenant_messages")
+          .select("conversation_id, sender_type, created_at")
+          .in("conversation_id", candidateConvIds)
+          .order("conversation_id", { ascending: true })
+          .order("created_at", { ascending: true });
+        const firstByConv = new Map<string, string>();
+        (firstMsgs ?? []).forEach((m: any) => {
+          if (!firstByConv.has(m.conversation_id)) firstByConv.set(m.conversation_id, m.sender_type);
+        });
+        const clientInitiatedConvIds = Array.from(firstByConv.entries())
+          .filter(([, sender]) => sender === "client")
+          .map(([id]) => id);
+        if (clientInitiatedConvIds.length === 0) return { total: 0, met: 0, pct: null };
+
         const { data: clientMsgs } = await sb
           .from("tenant_messages")
           .select("id, conversation_id, created_at")
-          .in("tenant_id", tenantIds)
+          .in("conversation_id", clientInitiatedConvIds)
           .eq("sender_type", "client")
           .gte("created_at", startTs)
           .lte("created_at", endTs)

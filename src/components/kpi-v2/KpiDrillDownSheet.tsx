@@ -132,20 +132,50 @@ export function KpiDrillDownSheet({
             .from("tenant_csc_assignments")
             .select("tenant_id")
             .eq("csc_user_id", subjectUuid)
+            .eq("is_primary", true)
             .is("ended_at", null);
           const tenantIds = Array.from(
             new Set((assignments ?? []).map((a: any) => a.tenant_id).filter(Boolean))
           );
           if (tenantIds.length > 0) {
-            const { data: clientMsgs } = await (supabase as any)
-              .from("tenant_messages")
-              .select("id, conversation_id, tenant_id, created_at, body")
+            // Restrict to client-initiated conversations only.
+            const convBufferStart = new Date(new Date(startTs).getTime() - 24 * 60 * 60 * 1000).toISOString();
+            const { data: convRows } = await (supabase as any)
+              .from("tenant_conversations")
+              .select("id")
               .in("tenant_id", tenantIds)
-              .eq("sender_type", "client")
-              .gte("created_at", startTs)
-              .lte("created_at", endTs)
-              .order("created_at", { ascending: false })
-              .limit(500);
+              .gte("created_at", convBufferStart)
+              .lte("created_at", endTs);
+            const candidateConvIds = Array.from(
+              new Set((convRows ?? []).map((c: any) => c.id).filter(Boolean))
+            );
+            let clientInitiatedConvIds: string[] = [];
+            if (candidateConvIds.length > 0) {
+              const { data: firstMsgs } = await (supabase as any)
+                .from("tenant_messages")
+                .select("conversation_id, sender_type, created_at")
+                .in("conversation_id", candidateConvIds)
+                .order("conversation_id", { ascending: true })
+                .order("created_at", { ascending: true });
+              const firstByConv = new Map<string, string>();
+              (firstMsgs ?? []).forEach((m: any) => {
+                if (!firstByConv.has(m.conversation_id)) firstByConv.set(m.conversation_id, m.sender_type);
+              });
+              clientInitiatedConvIds = Array.from(firstByConv.entries())
+                .filter(([, sender]) => sender === "client")
+                .map(([id]) => id);
+            }
+            const { data: clientMsgs } = clientInitiatedConvIds.length
+              ? await (supabase as any)
+                  .from("tenant_messages")
+                  .select("id, conversation_id, tenant_id, created_at, body")
+                  .in("conversation_id", clientInitiatedConvIds)
+                  .eq("sender_type", "client")
+                  .gte("created_at", startTs)
+                  .lte("created_at", endTs)
+                  .order("created_at", { ascending: false })
+                  .limit(500)
+              : { data: [] };
             const cMsgs = (clientMsgs ?? []) as Array<{
               id: string; conversation_id: string; tenant_id: number; created_at: string; body: string;
             }>;
