@@ -139,13 +139,10 @@ export function KpiDrillDownSheet({
           );
           if (tenantIds.length > 0) {
             // Restrict to client-initiated conversations only.
-            const convBufferStart = new Date(new Date(startTs).getTime() - 24 * 60 * 60 * 1000).toISOString();
             const { data: convRows } = await (supabase as any)
               .from("tenant_conversations")
               .select("id")
-              .in("tenant_id", tenantIds)
-              .gte("created_at", convBufferStart)
-              .lte("created_at", endTs);
+              .in("tenant_id", tenantIds);
             const candidateConvIds = Array.from(
               new Set((convRows ?? []).map((c: any) => c.id).filter(Boolean))
             );

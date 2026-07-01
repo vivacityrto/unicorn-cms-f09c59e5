@@ -84,13 +84,10 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
         if (tenantIds.length === 0) return { total: 0, met: 0, pct: null as number | null };
 
         // Only count client-initiated conversations (client sent the first message).
-        const convBufferStart = new Date(new Date(startTs).getTime() - 24 * 60 * 60 * 1000).toISOString();
         const { data: convRows } = await sb
           .from("tenant_conversations")
           .select("id")
-          .in("tenant_id", tenantIds)
-          .gte("created_at", convBufferStart)
-          .lte("created_at", endTs);
+          .in("tenant_id", tenantIds);
         const candidateConvIds = Array.from(
           new Set((convRows ?? []).map((c: any) => c.id).filter(Boolean))
         );
