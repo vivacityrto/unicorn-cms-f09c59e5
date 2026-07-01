@@ -39,6 +39,8 @@ export function useWorkCalendar() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null); // null = my calendar
   const [showClientLinkedOnly, setShowClientLinkedOnly] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
 
   // Calculate date range based on view
   const dateRange = useMemo(() => {
