@@ -115,39 +115,61 @@ async function fetchCalendarEvents(accessToken: string): Promise<CalendarEvent[]
   const past14Days = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   const next60Days = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
 
-  const url = new URL('https://graph.microsoft.com/v1.0/me/events');
-  url.searchParams.set('$filter', `start/dateTime ge '${past14Days.toISOString()}' and start/dateTime le '${next60Days.toISOString()}'`);
+  // Use /me/calendarView so events from ALL calendars the user can access
+  // (primary, secondary, shared) are returned — /me/events only covers the
+  // default calendar. Time window is passed as startDateTime/endDateTime
+  // query params (not $filter).
+  const url = new URL('https://graph.microsoft.com/v1.0/me/calendarView');
+  url.searchParams.set('startDateTime', past14Days.toISOString());
+  url.searchParams.set('endDateTime', next60Days.toISOString());
   url.searchParams.set('$select', 'id,subject,bodyPreview,start,end,location,organizer,attendees,webLink,onlineMeeting,isCancelled,sensitivity');
   url.searchParams.set('$orderby', 'start/dateTime');
   url.searchParams.set('$top', '250');
 
-  console.log('[sync-outlook] Fetching events from Graph API...');
+  console.log('[sync-outlook] Fetching events from Graph API (calendarView)...');
 
-  const response = await fetch(url.toString(), {
-    headers: { 'Authorization': `Bearer ${accessToken}` }
-  });
+  const MAX_PAGES = 5;
+  const all: CalendarEvent[] = [];
+  let nextUrl: string | null = url.toString();
+  let pages = 0;
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[sync-outlook] Graph API error:', {
-      status: response.status,
-      statusText: response.statusText,
-      body: errorText
+  while (nextUrl && pages < MAX_PAGES) {
+    const response = await fetch(nextUrl, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
     });
-    
-    if (response.status === 401) {
-      throw new Error('Token expired or invalid - user needs to reconnect');
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[sync-outlook] Graph API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+        page: pages + 1,
+      });
+
+      if (response.status === 401) {
+        throw new Error('Token expired or invalid - user needs to reconnect');
+      }
+      if (response.status === 403) {
+        throw new Error('Insufficient permissions - user needs to re-authorize');
+      }
+
+      throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
     }
-    if (response.status === 403) {
-      throw new Error('Insufficient permissions - user needs to re-authorize');
-    }
-    
-    throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
+
+    const data = await response.json();
+    const pageEvents: CalendarEvent[] = data.value || [];
+    all.push(...pageEvents);
+    pages += 1;
+    nextUrl = data['@odata.nextLink'] || null;
   }
 
-  const data = await response.json();
-  console.log('[sync-outlook] Fetched', data.value?.length || 0, 'events from Graph API');
-  return data.value || [];
+  if (nextUrl && pages >= MAX_PAGES) {
+    console.warn(`[sync-outlook] Hit MAX_PAGES=${MAX_PAGES} cap; additional events not fetched.`);
+  }
+
+  console.log(`[sync-outlook] Fetched ${all.length} events across ${pages} page(s) from Graph API`);
+  return all;
 }
 
 function normalizeAddress(value?: string | null) {
