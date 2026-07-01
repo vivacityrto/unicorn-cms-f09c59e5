@@ -37,6 +37,7 @@ export function useTenantCSCAssignment(tenantId: number | null) {
         .select('id, tenant_id, csc_user_id, is_primary, role_label, assigned_since')
         .eq('tenant_id', tenantId)
         .eq('is_primary', true)
+        .is('ended_at', null)
         .maybeSingle();
 
       if (error) throw error;

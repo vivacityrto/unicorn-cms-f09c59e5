@@ -26,7 +26,8 @@ export function useCscAssignments(tenantIds: number[]) {
         .from("tenant_csc_assignments")
         .select("tenant_id, csc_user_id")
         .in("tenant_id", sortedIds)
-        .eq("is_primary", true);
+        .eq("is_primary", true)
+        .is("ended_at", null);
       if (error) throw error;
 
       const cscMap: Record<number, string> = {};
