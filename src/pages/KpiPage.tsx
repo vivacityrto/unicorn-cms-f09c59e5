@@ -121,7 +121,6 @@ export default function KpiPage() {
                 <Gauge className="h-6 w-6 text-white" />
               </div>
               <div>
-                
                 <p className="text-sm text-white/85 mt-1">
                   Your live performance snapshot across the Unicorn platform.
                 </p>
