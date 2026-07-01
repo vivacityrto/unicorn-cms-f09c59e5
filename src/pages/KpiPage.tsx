@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useKpiAccess } from "@/hooks/useKpiAccess";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,14 +21,17 @@ import { AssistantKpiCards } from "@/components/kpi-v2/AssistantKpiCards";
 import { DeveloperPlaceholder } from "@/components/kpi-v2/DeveloperPlaceholder";
 import { PerformanceGuide } from "@/components/kpi-v2/PerformanceGuide";
 import { KpiInfoBanner } from "@/components/kpi-v2/KpiInfoBanner";
-import { KPI_V2_PERIOD_LABEL, type KpiV2Period } from "@/components/kpi-v2/types";
+import {
+  KPI_V2_PERIOD_LABEL,
+  KPI_V2_PERIOD_ORDER,
+  type KpiV2Period,
+} from "@/components/kpi-v2/types";
 import { toast } from "@/hooks/use-toast";
 
 /**
  * /kpi — KPI Dashboard.
- * Renders only role-based donut-gauge cards, a period selector, an export
- * button, a performance guide, an info banner, and a reviewer-only Team KPI
- * toggle. No legacy KPI dashboard components are used on this page.
+ * Role-based donut-gauge cards, period dropdown, export, performance guide,
+ * info banner, and a reviewer-only Team KPI toggle. No legacy KPI components.
  */
 export default function KpiPage() {
   const { profile } = useAuth();
@@ -30,10 +39,9 @@ export default function KpiPage() {
   const kpiRole = profile?.kpi_role ?? null;
   const subjectUuid = profile?.user_uuid ?? "";
 
-  const [period, setPeriod] = useState<KpiV2Period>("weekly");
+  const [period, setPeriod] = useState<KpiV2Period>("this_month");
   const [showTeamKpi, setShowTeamKpi] = useState(false);
 
-  // Set browser tab title so the DashboardLayout page label reads "KPI Dashboard".
   useEffect(() => {
     const previous = document.title;
     document.title = "KPI Dashboard · Unicorn";
@@ -43,19 +51,27 @@ export default function KpiPage() {
   }, []);
 
   const roleLabel = useMemo(() => {
+    if (kpiRole === "csc_consultant") return "Client Success Champion (CSC)";
+    if (kpiRole === "cst_assistant") return "Administration Assistant";
+    if (kpiRole === "developer") return "Developer";
+    return null;
+  }, [kpiRole]);
+
+  const shortRoleLabel = useMemo(() => {
     if (kpiRole === "csc_consultant") return "CSC Consultant";
     if (kpiRole === "cst_assistant") return "Admin Assistant";
     if (kpiRole === "developer") return "Developer";
     return null;
   }, [kpiRole]);
 
+  const firstName =
+    profile?.first_name ||
+    (profile?.email ? profile.email.split("@")[0] : "there");
+
   const handleExport = () => {
-    // Client-side CSV of the currently visible gauges. Data is intentionally
-    // fetched by each gauge card, so we export the header shape here and let
-    // the user re-run with per-role detail once the reviewer report ships.
     const header = ["Period", "Role", "Subject"];
     const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.email || subjectUuid;
-    const row = [KPI_V2_PERIOD_LABEL[period], roleLabel ?? "—", displayName];
+    const row = [KPI_V2_PERIOD_LABEL[period], shortRoleLabel ?? "—", displayName];
     const csv = `${header.join(",")}\n${row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")}\n`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -72,6 +88,27 @@ export default function KpiPage() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
+        {/* Compact page header row: role subtitle + welcome / last updated */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <div className="min-w-0">
+            {roleLabel && (
+              <div className="font-binate text-sm text-muted-foreground">
+                {roleLabel}
+              </div>
+            )}
+            <div className="text-xl font-semibold text-foreground tracking-tight">
+              Welcome back, {firstName}!
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75 animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            Last updated: Just now
+          </div>
+        </div>
+
         {/* Hero — brand purple→fuchsia gradient */}
         <div
           className="relative overflow-hidden rounded-xl px-6 py-6 text-white shadow-sm"
@@ -90,12 +127,12 @@ export default function KpiPage() {
                 </p>
               </div>
             </div>
-            {roleLabel && (
+            {shortRoleLabel && (
               <Badge className="self-start md:self-auto bg-white/15 hover:bg-white/20 text-white border border-white/25">
-                {roleLabel === "CSC Consultant" && <Headphones className="h-3.5 w-3.5 mr-1.5" />}
-                {roleLabel === "Admin Assistant" && <ClipboardList className="h-3.5 w-3.5 mr-1.5" />}
-                {roleLabel === "Developer" && <Code2 className="h-3.5 w-3.5 mr-1.5" />}
-                {roleLabel}
+                {shortRoleLabel === "CSC Consultant" && <Headphones className="h-3.5 w-3.5 mr-1.5" />}
+                {shortRoleLabel === "Admin Assistant" && <ClipboardList className="h-3.5 w-3.5 mr-1.5" />}
+                {shortRoleLabel === "Developer" && <Code2 className="h-3.5 w-3.5 mr-1.5" />}
+                {shortRoleLabel}
               </Badge>
             )}
           </div>
@@ -103,15 +140,20 @@ export default function KpiPage() {
 
         <KpiInfoBanner />
 
-        {/* Controls: period selector · export · team toggle */}
+        {/* Controls: period dropdown · export · team toggle */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <Tabs value={period} onValueChange={(v) => setPeriod(v as KpiV2Period)}>
-            <TabsList>
-              <TabsTrigger value="weekly">Weekly</TabsTrigger>
-              <TabsTrigger value="monthly">Monthly</TabsTrigger>
-              <TabsTrigger value="quarterly">Quarterly</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <Select value={period} onValueChange={(v) => setPeriod(v as KpiV2Period)}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {KPI_V2_PERIOD_ORDER.map((key) => (
+                <SelectItem key={key} value={key}>
+                  {KPI_V2_PERIOD_LABEL[key]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <div className="flex items-center gap-3">
             {canViewAnyStaff && (
