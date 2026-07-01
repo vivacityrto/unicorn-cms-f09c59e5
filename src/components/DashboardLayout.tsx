@@ -34,6 +34,7 @@ const workMenuItems = [
   { icon: Mail, label: "Email Triage", path: "/email-triage", emailTriageStaffOnly: true },
   { icon: Briefcase, label: "My Work", path: "/my-work" },
   { icon: ListTodo, label: "Tasks", path: "/tasks" },
+  { icon: Gauge, label: "KPI", path: "/kpi" },
   { icon: Inbox, label: "Time Inbox", path: "/time-inbox" },
   { icon: Calendar, label: "My Calendar", path: "/work/calendar" },
   { icon: Video, label: "Meetings", path: "/work/meetings" },
