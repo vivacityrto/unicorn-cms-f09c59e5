@@ -31,9 +31,12 @@ export default function WorkCalendar() {
     goToNext,
     goToToday,
     refetch,
+    syncCalendar,
+    isSyncing,
     linkToClient,
     createTimeDraft,
   } = useWorkCalendar();
+
 
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [linkEventId, setLinkEventId] = useState<string | null>(null);
