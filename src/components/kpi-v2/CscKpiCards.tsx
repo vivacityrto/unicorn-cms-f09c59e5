@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { KpiGaugeCard } from "./KpiGaugeCard";
 import { getPeriodRange, type KpiV2Period } from "./types";
 import { pctStatus, retentionStatus } from "@/lib/kpi-v2/status";
+import { KpiDrillDownSheet, type KpiDrillDownKind } from "./KpiDrillDownSheet";
 
 interface Props {
   subjectUuid: string;
@@ -19,8 +20,12 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
   const [loading, setLoading] = useState(true);
   const [emailPct, setEmailPct] = useState<number | null>(null);
   const [emailTotal, setEmailTotal] = useState(0);
+  const [emailMet, setEmailMet] = useState(0);
   const [tasksPct, setTasksPct] = useState<number | null>(null);
   const [tasksTotal, setTasksTotal] = useState(0);
+  const [tasksOnTime, setTasksOnTime] = useState(0);
+
+  const [drill, setDrill] = useState<KpiDrillDownKind | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,12 +55,14 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
       const eTotal = emailRows.reduce((s, r) => s + (r.email_total ?? 0), 0);
       const eMet = emailRows.reduce((s, r) => s + (r.email_sla_met ?? 0), 0);
       setEmailTotal(eTotal);
+      setEmailMet(eMet);
       setEmailPct(eTotal > 0 ? (eMet / eTotal) * 100 : null);
 
       const taskRows = (tasksRes?.data ?? []) as Array<{ tasks_total: number; tasks_on_time: number }>;
       const tTotal = taskRows.reduce((s, r) => s + (r.tasks_total ?? 0), 0);
       const tOnTime = taskRows.reduce((s, r) => s + (r.tasks_on_time ?? 0), 0);
       setTasksTotal(tTotal);
+      setTasksOnTime(tOnTime);
       setTasksPct(tTotal > 0 ? (tOnTime / tTotal) * 100 : null);
 
       setLoading(false);
@@ -66,8 +73,28 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
   const emailPrimary = emailPct == null ? "—" : `${emailPct.toFixed(0)}%`;
   const tasksPrimary = tasksPct == null ? "—" : `${tasksPct.toFixed(0)}%`;
 
-  return useMemo(
-    () => (
+  const metricText = useMemo(() => {
+    if (drill === "communication") {
+      return emailTotal > 0
+        ? `${emailPrimary} · ${emailMet} of ${emailTotal} messages replied within 12 hrs`
+        : "No messages recorded for this period.";
+    }
+    if (drill === "csc_tasks") {
+      return tasksTotal > 0
+        ? `${tasksPrimary} · ${tasksOnTime} of ${tasksTotal} tasks completed on time`
+        : "No tasks recorded for this period.";
+    }
+    if (drill === "retention") {
+      return "Retention is calculated from your active vs churned clients this period.";
+    }
+    return "";
+  }, [drill, emailPrimary, emailMet, emailTotal, tasksPrimary, tasksOnTime, tasksTotal]);
+
+  const drillLabel: Record<KpiDrillDownKind, string> =
+    { retention: "Retention", communication: "Communication", csc_tasks: "Tasks", assistant_tasks: "Tasks" };
+
+  return (
+    <>
       <div className="grid gap-4 md:grid-cols-3">
         <KpiGaugeCard
           label="Retention"
@@ -77,6 +104,7 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
           target="Target: 100%"
           status={retentionStatus(null)}
           loading={false}
+          onClick={() => setDrill("retention")}
         />
         <KpiGaugeCard
           label="Communication"
@@ -87,6 +115,7 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
           target="Target: 80%"
           status={pctStatus(emailPct, 80, 72)}
           loading={loading}
+          onClick={() => setDrill("communication")}
         />
         <KpiGaugeCard
           label="Tasks"
@@ -97,9 +126,21 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
           target="Target: 90%"
           status={pctStatus(tasksPct, 90, 80)}
           loading={loading}
+          onClick={() => setDrill("csc_tasks")}
         />
       </div>
-    ),
-    [emailPct, emailPrimary, emailTotal, tasksPct, tasksPrimary, tasksTotal, loading],
+
+      {drill && (
+        <KpiDrillDownSheet
+          open={!!drill}
+          onOpenChange={(o) => !o && setDrill(null)}
+          kind={drill}
+          subjectUuid={subjectUuid}
+          period={period}
+          metricText={metricText}
+          label={drillLabel[drill]}
+        />
+      )}
+    </>
   );
 }
