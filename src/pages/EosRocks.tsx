@@ -81,7 +81,8 @@ function RocksHierarchyContent() {
   
   const { data: vivacityUsers } = useVivacityTeamUsers();
   const canCreateCompanyRock = usePermission('eos.rocks.company.create');
-  const canCreateRocks = () => canCreateCompanyRock;
+  const canManageOwnRocks = usePermission('eos.rocks.own.manage');
+  const canCreateRocks = () => canCreateCompanyRock || canManageOwnRocks;
 
   // Default user filter to logged-in user once profile and users are available
   useEffect(() => {
