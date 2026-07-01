@@ -240,12 +240,9 @@ export const DashboardLayout = ({
       return true;
     });
     const extras: typeof eosMenuItems = [];
-    if (kpiRole) {
-      extras.push({ icon: Gauge, label: "My KPI", path: "/my/kpi" } as any);
-    }
+    // KPI module has been moved to the Work section (/kpi).
+    // Reviewer-only "KPI Tickets" board remains under EOS for admin/reviewer roles.
     if (canViewAnyStaff) {
-      extras.push({ icon: BarChart3, label: "KPI Review", path: "/admin/kpi-review" } as any);
-      extras.push({ icon: Target, label: "KPI Overview", path: "/admin/kpi-overview" } as any);
       extras.push({ icon: LifeBuoy, label: "KPI Tickets", path: "/admin/kpi-tickets" } as any);
     }
     return [...base, ...extras];
