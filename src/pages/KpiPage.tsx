@@ -39,7 +39,7 @@ export default function KpiPage() {
   const subjectUuid = profile?.user_uuid ?? "";
 
   const [period, setPeriod] = useState<KpiV2Period>("this_month");
-  const [showTeamKpi, setShowTeamKpi] = useState(false);
+  const [showTeamKpi, setShowTeamKpi] = useState(canViewAnyStaff);
 
   useEffect(() => {
     const previous = document.title;
