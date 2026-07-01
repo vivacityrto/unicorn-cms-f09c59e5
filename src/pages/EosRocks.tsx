@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,7 +57,7 @@ function RocksHierarchyContent() {
   const [quarterYear, setQuarterYear] = useState(currentQuarter.year);
   const [quarterNumber, setQuarterNumber] = useState(currentQuarter.quarter);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [userFilter, setUserFilter] = useState<string | null>(null); // null = not yet initialized
+  const [userFilter, setUserFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'company' | 'team' | 'individual' | 'cascade'>('company');
   
@@ -84,7 +84,14 @@ function RocksHierarchyContent() {
   const canCreateRocks = () => canCreateCompanyRock;
 
   // Default user filter to logged-in user once profile and users are available
-  const effectiveUserFilter = userFilter === null ? (profile?.user_uuid || 'all') : userFilter;
+  useEffect(() => {
+    if (userFilter === 'all' && profile?.user_uuid && vivacityUsers?.length) {
+      const isMember = vivacityUsers.some(u => u.user_uuid === profile.user_uuid);
+      if (isMember) setUserFilter(profile.user_uuid);
+    }
+  }, [profile?.user_uuid, vivacityUsers]);
+
+  const effectiveUserFilter = userFilter;
   // Helper functions
   const getUserName = (userId: string): string | null => {
     const user = vivacityUsers?.find(u => u.user_uuid === userId);

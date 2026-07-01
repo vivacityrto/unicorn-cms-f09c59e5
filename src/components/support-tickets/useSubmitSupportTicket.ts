@@ -39,10 +39,7 @@ export function useSubmitSupportTicket() {
   const dropdowns = useSuggestDropdowns();
   const queryClient = useQueryClient();
 
-  const isVivacityStaff =
-    profile?.unicorn_role === 'Super Admin' ||
-    profile?.unicorn_role === 'Team Leader' ||
-    profile?.unicorn_role === 'Team Member';
+  const isVivacityStaff = profile?.is_vivacity_internal === true;
   const tenantId = isVivacityStaff ? VIVACITY_TENANT_ID : profile?.tenant_id ?? null;
 
   const submit = useCallback(
