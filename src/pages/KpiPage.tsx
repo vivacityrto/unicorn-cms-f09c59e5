@@ -54,7 +54,8 @@ export default function KpiPage() {
     // fetched by each gauge card, so we export the header shape here and let
     // the user re-run with per-role detail once the reviewer report ships.
     const header = ["Period", "Role", "Subject"];
-    const row = [KPI_V2_PERIOD_LABEL[period], roleLabel ?? "—", profile?.display_name ?? profile?.email ?? subjectUuid];
+    const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.email || subjectUuid;
+    const row = [KPI_V2_PERIOD_LABEL[period], roleLabel ?? "—", displayName];
     const csv = `${header.join(",")}\n${row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")}\n`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
