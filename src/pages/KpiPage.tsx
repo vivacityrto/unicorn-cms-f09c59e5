@@ -11,16 +11,15 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
-import { Download, Users, BarChart3, ArrowRight } from "lucide-react";
+import { Download, Users } from "lucide-react";
 import { CscKpiCards } from "@/components/kpi-v2/CscKpiCards";
 import { AssistantKpiCards } from "@/components/kpi-v2/AssistantKpiCards";
 import { DeveloperPlaceholder } from "@/components/kpi-v2/DeveloperPlaceholder";
 import { PerformanceGuide } from "@/components/kpi-v2/PerformanceGuide";
 import { KpiInfoBanner } from "@/components/kpi-v2/KpiInfoBanner";
+import { KpiTeamSection } from "@/components/kpi-v2/KpiTeamSection";
 import {
   KPI_V2_PERIOD_LABEL,
   KPI_V2_PERIOD_ORDER,
