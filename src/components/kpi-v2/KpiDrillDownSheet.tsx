@@ -370,91 +370,95 @@ export function KpiDrillDownSheet({
 
 function RetentionTable({ rows }: { rows: any[] }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Client</TableHead>
-          <TableHead>Assigned since</TableHead>
-          <TableHead>Ended at</TableHead>
-          <TableHead>Status</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((r) => {
-          const churned = !!r.ended_at;
-          return (
-            <TableRow
-              key={r.id}
-              className={cn(churned && "bg-rose-500/5 hover:bg-rose-500/10")}
-            >
-              <TableCell className="!px-2 max-w-[200px] truncate font-medium" title={r.tenant_name}>{r.tenant_name}</TableCell>
-              <TableCell className="text-sm">{fmtDate(r.assigned_since)}</TableCell>
-              <TableCell className="text-sm">{fmtDate(r.ended_at)}</TableCell>
-              <TableCell>
-                {churned ? (
-                  <Badge variant="outline" className="border-rose-500/40 bg-rose-500/10 text-rose-700">
-                    <X className="mr-1 h-3 w-3" /> Churned {fmtDate(r.ended_at)}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700">
-                    <Check className="mr-1 h-3 w-3" /> Active
-                  </Badge>
-                )}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="!px-2">Client</TableHead>
+            <TableHead className="!px-2">Assigned since</TableHead>
+            <TableHead className="!px-2">Ended at</TableHead>
+            <TableHead className="!px-2">Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => {
+            const churned = !!r.ended_at;
+            return (
+              <TableRow
+                key={r.id}
+                className={cn(churned && "bg-rose-500/5 hover:bg-rose-500/10")}
+              >
+                <TableCell className="!px-2 max-w-[200px] truncate font-medium" title={r.tenant_name}>{r.tenant_name}</TableCell>
+                <TableCell className="!px-2 text-sm">{fmtDate(r.assigned_since)}</TableCell>
+                <TableCell className="!px-2 text-sm">{fmtDate(r.ended_at)}</TableCell>
+                <TableCell className="!px-2">
+                  {churned ? (
+                    <Badge variant="outline" className="border-rose-500/40 bg-rose-500/10 text-rose-700">
+                      <X className="mr-1 h-3 w-3" /> Churned {fmtDate(r.ended_at)}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700">
+                      <Check className="mr-1 h-3 w-3" /> Active
+                    </Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
 function CommunicationTable({ rows }: { rows: any[] }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="!px-2">Subject</TableHead>
-          <TableHead>Client</TableHead>
-          <TableHead>Received</TableHead>
-          <TableHead>First reply</TableHead>
-          <TableHead>Response</TableHead>
-          <TableHead>SLA</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((r) => {
-          const met = r.sla_met === true;
-          const missed = r.sla_met === false;
-          return (
-            <TableRow key={r.id}>
-              <TableCell className="!px-2 max-w-[200px] truncate font-medium" title={r.subject ?? ""}>
-                {r.subject ? (r.subject.length > 40 ? r.subject.slice(0, 40) + "…" : r.subject) : "(no subject)"}
-              </TableCell>
-              <TableCell className="text-sm">{r.tenant_name}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">{fmtDateTime(r.received_at)}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">{fmtDateTime(r.responded_at)}</TableCell>
-              <TableCell className="text-sm">{fmtDuration(r.response_minutes)}</TableCell>
-              <TableCell>
-                {met ? (
-                  <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700">
-                    <Check className="mr-1 h-3 w-3" /> Met
-                  </Badge>
-                ) : missed ? (
-                  <Badge variant="outline" className="border-rose-500/40 bg-rose-500/10 text-rose-700">
-                    <X className="mr-1 h-3 w-3" /> Missed
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="border-border text-muted-foreground">
-                    <Minus className="mr-1 h-3 w-3" /> Pending
-                  </Badge>
-                )}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="!px-2">Subject</TableHead>
+            <TableHead className="!px-2">Client</TableHead>
+            <TableHead className="!px-2">Received</TableHead>
+            <TableHead className="!px-2">First reply</TableHead>
+            <TableHead className="!px-2">Response</TableHead>
+            <TableHead className="!px-2">SLA</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => {
+            const met = r.sla_met === true;
+            const missed = r.sla_met === false;
+            return (
+              <TableRow key={r.id}>
+                <TableCell className="!px-2 max-w-[200px] truncate font-medium" title={r.subject ?? ""}>
+                  {r.subject ? (r.subject.length > 40 ? r.subject.slice(0, 40) + "…" : r.subject) : "(no subject)"}
+                </TableCell>
+                <TableCell className="!px-2 text-sm">{r.tenant_name}</TableCell>
+                <TableCell className="!px-2 text-xs text-muted-foreground">{fmtDateTime(r.received_at)}</TableCell>
+                <TableCell className="!px-2 text-xs text-muted-foreground">{fmtDateTime(r.responded_at)}</TableCell>
+                <TableCell className="!px-2 text-sm">{fmtDuration(r.response_minutes)}</TableCell>
+                <TableCell className="!px-2">
+                  {met ? (
+                    <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700">
+                      <Check className="mr-1 h-3 w-3" /> Met
+                    </Badge>
+                  ) : missed ? (
+                    <Badge variant="outline" className="border-rose-500/40 bg-rose-500/10 text-rose-700">
+                      <X className="mr-1 h-3 w-3" /> Missed
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-border text-muted-foreground">
+                      <Minus className="mr-1 h-3 w-3" /> Pending
+                    </Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -471,44 +475,46 @@ function taskStatusTone(status?: string | null, completedAt?: string | null, due
 
 function CscTasksTable({ rows }: { rows: any[] }) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Task</TableHead>
-          <TableHead>Client</TableHead>
-          <TableHead>Package</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Created</TableHead>
-          <TableHead>Completed</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((r) => {
-          const pkg =
-            (r.metadata && (r.metadata.package_name || r.metadata.package_title || r.metadata.package)) ||
-            r.source_ref ||
-            "—";
-          return (
-            <TableRow key={r.id}>
-              <TableCell className="max-w-[240px] truncate font-medium" title={r.title ?? ""}>
-                {r.title}
-              </TableCell>
-              <TableCell className="text-sm">{r.tenant_name}</TableCell>
-              <TableCell className="text-xs text-muted-foreground max-w-[160px] truncate" title={String(pkg)}>
-                {pkg}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className={cn("border", taskStatusTone(r.status, r.completed_at, r.due_at))}>
-                  {(r.status ?? "—").replace(/_/g, " ")}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">{fmtDate(r.completed_at)}</TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="!px-2">Task</TableHead>
+            <TableHead className="!px-2">Client</TableHead>
+            <TableHead className="!px-2">Package</TableHead>
+            <TableHead className="!px-2">Status</TableHead>
+            <TableHead className="!px-2">Created</TableHead>
+            <TableHead className="!px-2">Completed</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => {
+            const pkg =
+              (r.metadata && (r.metadata.package_name || r.metadata.package_title || r.metadata.package)) ||
+              r.source_ref ||
+              "—";
+            return (
+              <TableRow key={r.id}>
+                <TableCell className="!px-2 max-w-[240px] truncate font-medium" title={r.title ?? ""}>
+                  {r.title}
+                </TableCell>
+                <TableCell className="!px-2 text-sm">{r.tenant_name}</TableCell>
+                <TableCell className="!px-2 text-xs text-muted-foreground max-w-[160px] truncate" title={String(pkg)}>
+                  {pkg}
+                </TableCell>
+                <TableCell className="!px-2">
+                  <Badge variant="outline" className={cn("border", taskStatusTone(r.status, r.completed_at, r.due_at))}>
+                    {(r.status ?? "—").replace(/_/g, " ")}
+                  </Badge>
+                </TableCell>
+                <TableCell className="!px-2 text-xs text-muted-foreground">{fmtDate(r.created_at)}</TableCell>
+                <TableCell className="!px-2 text-xs text-muted-foreground">{fmtDate(r.completed_at)}</TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -522,53 +528,55 @@ function AssistantTasksTable({ rows }: { rows: any[] }) {
     client_action_items: "Action Item",
   };
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Task</TableHead>
-          <TableHead>Source</TableHead>
-          <TableHead>Due</TableHead>
-          <TableHead>Completed</TableHead>
-          <TableHead>Result</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((r) => {
-          const label = SOURCE_LABEL[r.source ?? ""] ?? r.source ?? "—";
-          const isDone = !!r.completed_at;
-          const onTime =
-            isDone && r.due_at ? new Date(r.completed_at) <= new Date(r.due_at) : isDone && !r.due_at;
-          return (
-            <TableRow key={r.id}>
-              <TableCell className="max-w-[240px] truncate font-medium" title={r.title ?? ""}>
-                {r.title}
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="border-[#7130A0]/30 bg-[#7130A0]/5 text-[#7130A0]">
-                  {label}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-xs text-muted-foreground">{fmtDate(r.due_at)}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">{fmtDate(r.completed_at)}</TableCell>
-              <TableCell>
-                {!isDone ? (
-                  <Badge variant="outline" className="border-border text-muted-foreground">
-                    <Minus className="mr-1 h-3 w-3" /> Pending
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="!px-2">Task</TableHead>
+            <TableHead className="!px-2">Source</TableHead>
+            <TableHead className="!px-2">Due</TableHead>
+            <TableHead className="!px-2">Completed</TableHead>
+            <TableHead className="!px-2">Result</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => {
+            const label = SOURCE_LABEL[r.source ?? ""] ?? r.source ?? "—";
+            const isDone = !!r.completed_at;
+            const onTime =
+              isDone && r.due_at ? new Date(r.completed_at) <= new Date(r.due_at) : isDone && !r.due_at;
+            return (
+              <TableRow key={r.id}>
+                <TableCell className="!px-2 max-w-[240px] truncate font-medium" title={r.title ?? ""}>
+                  {r.title}
+                </TableCell>
+                <TableCell className="!px-2">
+                  <Badge variant="outline" className="border-[#7130A0]/30 bg-[#7130A0]/5 text-[#7130A0]">
+                    {label}
                   </Badge>
-                ) : onTime ? (
-                  <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700">
-                    <Check className="mr-1 h-3 w-3" /> On time
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="border-rose-500/40 bg-rose-500/10 text-rose-700">
-                    <X className="mr-1 h-3 w-3" /> Late
-                  </Badge>
-                )}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                </TableCell>
+                <TableCell className="!px-2 text-xs text-muted-foreground">{fmtDate(r.due_at)}</TableCell>
+                <TableCell className="!px-2 text-xs text-muted-foreground">{fmtDate(r.completed_at)}</TableCell>
+                <TableCell className="!px-2">
+                  {!isDone ? (
+                    <Badge variant="outline" className="border-border text-muted-foreground">
+                      <Minus className="mr-1 h-3 w-3" /> Pending
+                    </Badge>
+                  ) : onTime ? (
+                    <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700">
+                      <Check className="mr-1 h-3 w-3" /> On time
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-rose-500/40 bg-rose-500/10 text-rose-700">
+                      <X className="mr-1 h-3 w-3" /> Late
+                    </Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
