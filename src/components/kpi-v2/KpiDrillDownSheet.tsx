@@ -179,7 +179,7 @@ export function KpiDrillDownSheet({
             const convIds = Array.from(new Set(cMsgs.map((m) => m.conversation_id).filter(Boolean)));
             const bufferEnd = new Date(new Date(endTs).getTime() + SLA_SECONDS * 1000).toISOString();
 
-            const [staffRes, convRes, tenantRes] = await Promise.all([
+            const [staffRes, convRes] = await Promise.all([
               convIds.length
                 ? (supabase as any)
                     .from("tenant_messages")
@@ -194,11 +194,17 @@ export function KpiDrillDownSheet({
                     .select("id, topic, subject")
                     .in("id", convIds)
                 : Promise.resolve({ data: [] }),
-              (supabase as any)
-                .from("tenants")
-                .select("id, name")
-                .in("id", tenantIds),
             ]);
+            const nameMap: Record<number, string> = {};
+            try {
+              if (tenantIds.length) {
+                const { data: tRows } = await (supabase as any)
+                  .from("tenants")
+                  .select("id, name")
+                  .in("id", tenantIds);
+                (tRows ?? []).forEach((t: any) => { nameMap[t.id] = t.name; });
+              }
+            } catch { /* non-fatal — rows render with "—" tenant name */ }
             const staffByConv = new Map<string, number[]>();
             (staffRes.data ?? []).forEach((s: any) => {
               const t = new Date(s.created_at).getTime();
@@ -208,8 +214,6 @@ export function KpiDrillDownSheet({
             });
             const convMap: Record<string, { topic?: string; subject?: string }> = {};
             (convRes.data ?? []).forEach((c: any) => { convMap[c.id] = c; });
-            const nameMap: Record<number, string> = {};
-            (tenantRes.data ?? []).forEach((t: any) => { nameMap[t.id] = t.name; });
 
             data = cMsgs.map((m) => {
               const clientT = new Date(m.created_at).getTime();
