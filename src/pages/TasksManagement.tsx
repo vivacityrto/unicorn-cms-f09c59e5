@@ -918,7 +918,7 @@ export default function TasksManagement() {
                       variant: "destructive"
                     });
                   }
-                }} disabled={!formData.task_name || !formData.due_date || !formData.tenant_id} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
+                }} disabled={!formData.task_name || !formData.due_date} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
                   Save
                 </Button>
               </div>
