@@ -116,10 +116,10 @@ export function KpiDrillDownSheet({
           if (tenantIds.length) {
             const { data: tRows } = await (supabase as any)
               .from("tenants")
-              .select("tenant_id, name")
-              .in("tenant_id", tenantIds);
+              .select("id, name")
+              .in("id", tenantIds);
             (tRows ?? []).forEach((t: any) => {
-              nameMap[t.tenant_id] = t.name;
+              nameMap[t.id] = t.name;
             });
           }
           data = (aRows ?? []).map((r: any) => ({
@@ -169,8 +169,8 @@ export function KpiDrillDownSheet({
                 : Promise.resolve({ data: [] }),
               (supabase as any)
                 .from("tenants")
-                .select("tenant_id, name")
-                .in("tenant_id", tenantIds),
+                .select("id, name")
+                .in("id", tenantIds),
             ]);
             const staffByConv = new Map<string, number[]>();
             (staffRes.data ?? []).forEach((s: any) => {
@@ -182,7 +182,7 @@ export function KpiDrillDownSheet({
             const convMap: Record<string, { topic?: string; subject?: string }> = {};
             (convRes.data ?? []).forEach((c: any) => { convMap[c.id] = c; });
             const nameMap: Record<number, string> = {};
-            (tenantRes.data ?? []).forEach((t: any) => { nameMap[t.tenant_id] = t.name; });
+            (tenantRes.data ?? []).forEach((t: any) => { nameMap[t.id] = t.name; });
 
             data = cMsgs.map((m) => {
               const clientT = new Date(m.created_at).getTime();
@@ -195,7 +195,7 @@ export function KpiDrillDownSheet({
               const conv = convMap[m.conversation_id] ?? {};
               return {
                 id: m.id,
-                subject: conv.topic || conv.subject || (m.body ? m.body.slice(0, 80) : "(no subject)"),
+                subject: conv.subject || conv.topic || (m.body ? m.body.slice(0, 60) : "(no subject)"),
                 tenant_name: nameMap[m.tenant_id] ?? "—",
                 received_at: m.created_at,
                 responded_at,
@@ -226,9 +226,9 @@ export function KpiDrillDownSheet({
           if (tenantIds.length) {
             const { data: nRows } = await (supabase as any)
               .from("tenants")
-              .select("tenant_id, name")
-              .in("tenant_id", tenantIds);
-            (nRows ?? []).forEach((t: any) => { nameMap[t.tenant_id] = t.name; });
+              .select("id, name")
+              .in("id", tenantIds);
+            (nRows ?? []).forEach((t: any) => { nameMap[t.id] = t.name; });
           }
           data = rows.map((r) => {
             const cp = r.client_package_stages?.client_packages;
@@ -387,7 +387,7 @@ function RetentionTable({ rows }: { rows: any[] }) {
               key={r.id}
               className={cn(churned && "bg-rose-500/5 hover:bg-rose-500/10")}
             >
-              <TableCell className="font-medium">{r.tenant_name}</TableCell>
+              <TableCell className="!px-2 max-w-[200px] truncate font-medium" title={r.tenant_name}>{r.tenant_name}</TableCell>
               <TableCell className="text-sm">{fmtDate(r.assigned_since)}</TableCell>
               <TableCell className="text-sm">{fmtDate(r.ended_at)}</TableCell>
               <TableCell>
@@ -414,7 +414,7 @@ function CommunicationTable({ rows }: { rows: any[] }) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Topic</TableHead>
+          <TableHead className="!px-2">Subject</TableHead>
           <TableHead>Client</TableHead>
           <TableHead>Received</TableHead>
           <TableHead>First reply</TableHead>
@@ -428,8 +428,8 @@ function CommunicationTable({ rows }: { rows: any[] }) {
           const missed = r.sla_met === false;
           return (
             <TableRow key={r.id}>
-              <TableCell className="max-w-[220px] truncate font-medium" title={r.subject ?? ""}>
-                {r.subject || "(no subject)"}
+              <TableCell className="!px-2 max-w-[200px] truncate font-medium" title={r.subject ?? ""}>
+                {r.subject ? (r.subject.length > 40 ? r.subject.slice(0, 40) + "…" : r.subject) : "(no subject)"}
               </TableCell>
               <TableCell className="text-sm">{r.tenant_name}</TableCell>
               <TableCell className="text-xs text-muted-foreground">{fmtDateTime(r.received_at)}</TableCell>
