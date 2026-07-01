@@ -35433,6 +35433,7 @@ export type Database = {
       }
       ops_work_items: {
         Row: {
+          completed_at: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -35448,6 +35449,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          completed_at?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -35463,6 +35465,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          completed_at?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -47641,6 +47644,7 @@ export type Database = {
       tasks_tenants: {
         Row: {
           completed: boolean
+          completed_at: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -47665,6 +47669,7 @@ export type Database = {
         }
         Insert: {
           completed?: boolean
+          completed_at?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -47689,6 +47694,7 @@ export type Database = {
         }
         Update: {
           completed?: boolean
+          completed_at?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -48857,6 +48863,7 @@ export type Database = {
           assigned_since: string
           created_at: string
           csc_user_id: string
+          ended_at: string | null
           id: number
           is_primary: boolean
           role_label: string
@@ -48867,6 +48874,7 @@ export type Database = {
           assigned_since?: string
           created_at?: string
           csc_user_id: string
+          ended_at?: string | null
           id?: number
           is_primary?: boolean
           role_label?: string
@@ -48877,6 +48885,7 @@ export type Database = {
           assigned_since?: string
           created_at?: string
           csc_user_id?: string
+          ended_at?: string | null
           id?: number
           is_primary?: boolean
           role_label?: string
