@@ -138,6 +138,7 @@ const AdminOperations = lazy(() => import("./pages/AdminOperations"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
 const MyKpiDashboardPage = lazy(() => import("./pages/MyKpiDashboardPage"));
+const KpiPage = lazy(() => import("./pages/KpiPage"));
 const KpiReviewerPage = lazy(() => import("./pages/KpiReviewerPage"));
 const KpiOverviewPage = lazy(() => import("./pages/KpiOverviewPage"));
 const KpiTicketsPage = lazy(() => import("./pages/KpiTicketsPage"));
