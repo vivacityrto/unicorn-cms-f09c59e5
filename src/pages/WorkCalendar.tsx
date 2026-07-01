@@ -31,9 +31,12 @@ export default function WorkCalendar() {
     goToNext,
     goToToday,
     refetch,
+    syncCalendar,
+    isSyncing,
     linkToClient,
     createTimeDraft,
   } = useWorkCalendar();
+
 
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [linkEventId, setLinkEventId] = useState<string | null>(null);
@@ -87,12 +90,13 @@ export default function WorkCalendar() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => refetch()}
-          disabled={isLoading}
+          onClick={() => syncCalendar()}
+          disabled={isSyncing}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
           Sync
         </Button>
+
       </div>
 
       {/* Controls */}
