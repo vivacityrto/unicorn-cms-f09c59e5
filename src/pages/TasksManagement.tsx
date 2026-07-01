@@ -445,6 +445,16 @@ export default function TasksManagement() {
         {label}
       </Badge>;
   };
+  // Terminal-state check — do not offer "Mark as complete" for rows already in a terminal state.
+  const isTerminalTask = (task: Task): boolean => {
+    if (task.source === 'task' || !task.source) {
+      return task.completed === true || task.status === 'completed';
+    }
+    // action + ops share 'done'/'cancelled' terminal statuses; note our normalized status
+    // maps 'done' → 'completed' when loading, so also check that.
+    return task.status === 'done' || task.status === 'cancelled' || task.status === 'completed' || task.completed === true;
+  };
+
   const updateTaskStatus = async (taskId: string, newStatus: string) => {
     try {
       if (taskId.startsWith('ca-')) {
@@ -456,11 +466,9 @@ export default function TasksManagement() {
         };
         const update: any = { status: statusMap[newStatus] ?? newStatus };
         if (newStatus === 'completed') {
+          // client_action_items has no auto-stamping trigger — set completed_at from the FE.
           update.completed_at = new Date().toISOString();
           update.completed_by = user?.id ?? null;
-        } else {
-          update.completed_at = null;
-          update.completed_by = null;
         }
         const { error } = await supabase.from('client_action_items').update(update).eq('id', realId);
         if (error) throw error;
@@ -471,12 +479,14 @@ export default function TasksManagement() {
           in_progress: 'in_progress',
           completed: 'done',
         };
+        // ops_work_items has a DB trigger that stamps completed_at on transition to 'done'.
         const { error } = await supabase
           .from('ops_work_items')
           .update({ status: statusMap[newStatus] ?? newStatus })
           .eq('id', realId);
         if (error) throw error;
       } else {
+        // tasks_tenants has a DB trigger that stamps completed_at on terminal transition.
         const updateData: any = { status: newStatus, completed: newStatus === 'completed' };
         const { error } = await supabase.from("tasks_tenants").update(updateData).eq("id", taskId);
         if (error) throw error;
@@ -492,6 +502,8 @@ export default function TasksManagement() {
         title: "Success",
         description: "Task status updated successfully"
       });
+      // Refetch so DB-stamped completed_at values and derived stat-card counts stay in sync.
+      fetchTasks();
     } catch (error: any) {
       console.error("Error updating task:", error);
       toast({
