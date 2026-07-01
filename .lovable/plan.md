@@ -1,18 +1,33 @@
-## Fix Outlook calendar sync to include all calendars + paginate
+## Tasks Management — four improvements
 
-**File:** `supabase/functions/sync-outlook-calendar/index.ts` — only `fetchCalendarEvents` (lines 113–151).
+### 1. Priority not showing in table (`src/pages/TasksManagement.tsx`)
+- Add `priority,\n          milestones` to the `tasks_tenants` SELECT list (~line 156-170) so both fields come back.
+- Change line 268 from `priority: null,` to `priority: task.priority,` and add `milestones: task.milestones ?? null,` on the mapped object so the sidebar can read them.
 
-### Change 1: Switch `/me/events` → `/me/calendarView`
-- Aggregates events across every calendar the user can access (primary + secondary + shared), fixing the silent gaps.
-- Remove the `$filter` param. Pass the time window as `startDateTime` / `endDateTime` query params (ISO, same 14-day-past / 60-day-future bounds).
-- Keep `$select` (unchanged fields), `$orderby=start/dateTime`, `$top=250`.
+### 2. Milestones section in task detail sidebar (`src/pages/TasksManagement.tsx`)
+- In the sidebar (after the Followers block ~line 1653, before Attachments ~line 1655), add a new conditional block rendered only when `selectedTask.milestones?.length > 0`:
+  - `<Separator />`
+  - Label row ("Milestones") matching the styling of Followers/Status labels (uppercase, muted, small icon — reuse `CheckCircle2` or `ListChecks` if already imported, otherwise `CheckCircle2`).
+  - Map each milestone to a row with a read-only shadcn `Checkbox` (`checked={m.completed}` `disabled`) and the milestone text next to it.
+- Milestones shape follows the existing edit dialog usage (`{ text, completed }`).
 
-### Change 2: Follow `@odata.nextLink` pagination
-- After the first page, loop while `data['@odata.nextLink']` is present, `fetch` it verbatim (do not re-append params — Graph embeds them), and concatenate `data.value` into an accumulator.
-- Safety cap: max 5 pages (≈1250 events). Log a warning and break if hit.
-- Preserve existing error handling (401/403/other) on every page fetch.
-- Update the final log line to report total events + page count.
+### 3. Formatting toolbar in notes editor (`src/components/TaskNotesSidebar.tsx`)
+- Add a small toolbar above the "add note" `Textarea` (~line 224) with two `Button variant="outline" size="sm"` controls: **Bullets** and **Numbering**.
+- On click, mutate `newContent` by:
+  - Bullets: split current value by `\n`, prefix each non-empty line with `- ` (skip if already prefixed), rejoin. If value is empty, insert `- `.
+  - Numbering: same pattern but prefix `1. `, `2. `, … incrementing per non-empty line.
+- Also add the same toolbar for the in-place edit textarea (the block using `editingContent` above line 200) so editing has parity.
+- Keep persistence as-is (plain text markdown).
+- Display (line 214-216): keep as `whitespace-pre-wrap` plain text. Markdown-style dashes/numbers already render naturally as leading characters — no renderer dependency added to keep scope minimal.
 
-### Not changing
-- No schema, UI, upsert logic, or downstream event normalization.
-- No auth/scope changes — `Calendars.Read` already covers `/me/calendarView`.
+### 4. Client field optional in Create Task form (`src/pages/TasksManagement.tsx`)
+- Line 773: change `Client *` → `Client`.
+- Line 918 `disabled=` condition: drop `!formData.tenant_id`, keep `!formData.task_name || !formData.due_date`.
+- Line 833 guard inside the Save handler: drop `!formData.tenant_id` from the early return; wrap the insert `tenant_id` value so it becomes `formData.tenant_id ? parseInt(formData.tenant_id) : null` (the column already accepts null; unset package_id similarly).
+
+### Out of scope (explicitly untouched)
+- Table columns, stat cards, real-time subscriptions, edit dialog validation, priority column display logic.
+
+### Verification
+- Typecheck.
+- Manual: create a task without a client → succeeds; create one with priority → priority badge appears in table; open a task with milestones → sidebar shows read-only checkboxes; click Bullets/Numbering in notes → lines gain prefix.

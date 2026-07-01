@@ -166,7 +166,9 @@ export default function TasksManagement() {
           followers,
           created_at,
           updated_at,
-          file_paths
+          file_paths,
+          priority,
+          milestones
         `).or(`created_by.eq.${userId},followers.cs.{"${userId}"}`).order("created_at", {
         ascending: false
       });
@@ -265,7 +267,8 @@ export default function TasksManagement() {
           created_by_name: getUserName(task.created_by),
           follower_users: (task.followers || []).map((id: string) => usersMap.get(id)).filter(Boolean),
           source: 'task' as const,
-          priority: null,
+          priority: task.priority,
+          milestones: task.milestones ?? null,
           assignee_user: null,
         };
       });
@@ -770,7 +773,7 @@ export default function TasksManagement() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="tenant">Client *</Label>
+                  <Label htmlFor="tenant">Client</Label>
                   <Combobox options={tenants.map(tenant => ({
                   value: tenant.id.toString(),
                   label: tenant.name
@@ -830,14 +833,14 @@ export default function TasksManagement() {
                   Cancel
                 </Button>
                 <Button onClick={async () => {
-                  if (!formData.task_name || !formData.due_date || !formData.tenant_id || !user) return;
+                  if (!formData.task_name || !formData.due_date || !user) return;
                   
                   try {
                     const assignedFollowers = formData.assigned_to 
                       ? [...new Set([...followers, formData.assigned_to])]
                       : followers;
                     const { data: newTask, error } = await supabase.from('tasks_tenants').insert({
-                      tenant_id: parseInt(formData.tenant_id),
+                      tenant_id: formData.tenant_id ? parseInt(formData.tenant_id) : null,
                       package_id: formData.package_id ? parseInt(formData.package_id) : null,
                       task_name: formData.task_name,
                       description: formData.description || null,
@@ -915,7 +918,7 @@ export default function TasksManagement() {
                       variant: "destructive"
                     });
                   }
-                }} disabled={!formData.task_name || !formData.due_date || !formData.tenant_id} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
+                }} disabled={!formData.task_name || !formData.due_date} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
                   Save
                 </Button>
               </div>
@@ -1651,6 +1654,27 @@ export default function TasksManagement() {
                     )}
                   </div>
                 </div>
+
+                {/* Milestones */}
+                {selectedTask.milestones && selectedTask.milestones.length > 0 && <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Milestones
+                      </label>
+                      <div className="space-y-2">
+                        {selectedTask.milestones.map((m) => (
+                          <div key={m.id} className="flex items-start gap-2">
+                            <Checkbox checked={m.completed} disabled className="mt-0.5 data-[disabled]:opacity-100" />
+                            <span className={cn("text-sm leading-relaxed", m.completed && "line-through text-muted-foreground")}>
+                              {m.text}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>}
 
                 {/* Attachments */}
                 {selectedTask.file_paths && selectedTask.file_paths.length > 0 && <>

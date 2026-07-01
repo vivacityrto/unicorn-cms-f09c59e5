@@ -1,6 +1,30 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { X, MoreHorizontal, Plus } from "lucide-react";
+import { X, MoreHorizontal, Plus, List, ListOrdered } from "lucide-react";
+
+function applyBullets(value: string): string {
+  if (!value.trim()) return "- ";
+  return value
+    .split("\n")
+    .map((line) => (line.trim() === "" || /^\s*-\s/.test(line) ? line : `- ${line}`))
+    .join("\n");
+}
+
+function applyNumbering(value: string): string {
+  if (!value.trim()) return "1. ";
+  let n = 1;
+  return value
+    .split("\n")
+    .map((line) => {
+      if (line.trim() === "") return line;
+      if (/^\s*\d+\.\s/.test(line)) {
+        n++;
+        return line;
+      }
+      return `${n++}. ${line}`;
+    })
+    .join("\n");
+}
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -181,6 +205,14 @@ export default function TaskNotesSidebar({ isOpen, onClose, userId }: TaskNotesS
               </div>
               {editingId === note.id ? (
                 <div className="mt-2 space-y-2">
+                  <div className="flex gap-1">
+                    <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setEditingContent(applyBullets(editingContent))}>
+                      <List className="h-3.5 w-3.5 mr-1" /> Bullets
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setEditingContent(applyNumbering(editingContent))}>
+                      <ListOrdered className="h-3.5 w-3.5 mr-1" /> Numbering
+                    </Button>
+                  </div>
                   <Textarea
                     value={editingContent}
                     onChange={(e) => setEditingContent(e.target.value)}
@@ -221,6 +253,14 @@ export default function TaskNotesSidebar({ isOpen, onClose, userId }: TaskNotesS
 
         {isAdding && (
           <div className="bg-background border rounded-md p-3 space-y-2">
+            <div className="flex gap-1">
+              <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setNewContent(applyBullets(newContent))}>
+                <List className="h-3.5 w-3.5 mr-1" /> Bullets
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setNewContent(applyNumbering(newContent))}>
+                <ListOrdered className="h-3.5 w-3.5 mr-1" /> Numbering
+              </Button>
+            </div>
             <Textarea
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
