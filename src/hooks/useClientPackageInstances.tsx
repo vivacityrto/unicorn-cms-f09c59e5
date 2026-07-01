@@ -15,10 +15,10 @@ export const STAGE_STATUS_MAP: Record<string, { status: string }> = {
 };
 
 export const STAFF_TASK_STATUS_MAP: Record<string, { status_id: number; status: string }> = {
-  open: { status_id: 0, status: 'Not Started' },
-  in_progress: { status_id: 1, status: 'In Progress' },
-  done: { status_id: 2, status: 'Completed' },
-  blocked: { status_id: 3, status: 'N/A' },
+  open: { status_id: 0, status: 'not_started' },
+  in_progress: { status_id: 1, status: 'in_progress' },
+  done: { status_id: 2, status: 'completed' },
+  blocked: { status_id: 3, status: 'na' },
 };
 
 export interface ClientPackageInstance {
