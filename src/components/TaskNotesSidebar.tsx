@@ -1,6 +1,30 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { X, MoreHorizontal, Plus } from "lucide-react";
+import { X, MoreHorizontal, Plus, List, ListOrdered } from "lucide-react";
+
+function applyBullets(value: string): string {
+  if (!value.trim()) return "- ";
+  return value
+    .split("\n")
+    .map((line) => (line.trim() === "" || /^\s*-\s/.test(line) ? line : `- ${line}`))
+    .join("\n");
+}
+
+function applyNumbering(value: string): string {
+  if (!value.trim()) return "1. ";
+  let n = 1;
+  return value
+    .split("\n")
+    .map((line) => {
+      if (line.trim() === "") return line;
+      if (/^\s*\d+\.\s/.test(line)) {
+        n++;
+        return line;
+      }
+      return `${n++}. ${line}`;
+    })
+    .join("\n");
+}
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
