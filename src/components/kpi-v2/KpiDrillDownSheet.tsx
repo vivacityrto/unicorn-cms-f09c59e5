@@ -113,15 +113,17 @@ export function KpiDrillDownSheet({
             new Set((aRows ?? []).map((r: any) => r.tenant_id).filter(Boolean))
           );
           const nameMap: Record<number, string> = {};
-          if (tenantIds.length) {
-            const { data: tRows } = await (supabase as any)
-              .from("tenants")
-              .select("id, name")
-              .in("id", tenantIds);
-            (tRows ?? []).forEach((t: any) => {
-              nameMap[t.id] = t.name;
-            });
-          }
+          try {
+            if (tenantIds.length) {
+              const { data: tRows } = await (supabase as any)
+                .from("tenants")
+                .select("id, name")
+                .in("id", tenantIds);
+              (tRows ?? []).forEach((t: any) => {
+                nameMap[t.id] = t.name;
+              });
+            }
+          } catch { /* non-fatal — rows render with fallback tenant name */ }
           data = (aRows ?? []).map((r: any) => ({
             ...r,
             tenant_name: nameMap[r.tenant_id] ?? `Tenant #${r.tenant_id}`,
