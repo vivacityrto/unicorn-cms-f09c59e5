@@ -93,14 +93,15 @@ function MetricCell({
     <button
       type="button"
       onClick={onClick}
+      title="Click to see breakdown"
       className={cn(
-        "group inline-flex flex-col items-start gap-1 rounded-md px-2 py-1 -mx-2 -my-1 text-left transition-colors",
+        "group cursor-pointer inline-flex flex-col items-start gap-1 rounded-md px-2 py-1 -mx-2 -my-1 text-left transition-colors",
         "hover:bg-brand-light-purple-100 dark:hover:bg-brand-acai-800",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7130A0]/40",
       )}
       aria-label="View details"
     >
-      <span className="text-sm font-semibold text-foreground tabular-nums">
+      <span className="text-sm font-semibold text-foreground tabular-nums group-hover:underline">
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" /> : pct == null ? "—" : `${pct.toFixed(0)}%`}
       </span>
       <StatusChip status={status} />
