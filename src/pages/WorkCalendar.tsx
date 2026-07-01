@@ -90,12 +90,13 @@ export default function WorkCalendar() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => refetch()}
-          disabled={isLoading}
+          onClick={() => syncCalendar()}
+          disabled={isSyncing}
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
           Sync
         </Button>
+
       </div>
 
       {/* Controls */}
