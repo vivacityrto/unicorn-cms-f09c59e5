@@ -833,14 +833,14 @@ export default function TasksManagement() {
                   Cancel
                 </Button>
                 <Button onClick={async () => {
-                  if (!formData.task_name || !formData.due_date || !formData.tenant_id || !user) return;
+                  if (!formData.task_name || !formData.due_date || !user) return;
                   
                   try {
                     const assignedFollowers = formData.assigned_to 
                       ? [...new Set([...followers, formData.assigned_to])]
                       : followers;
                     const { data: newTask, error } = await supabase.from('tasks_tenants').insert({
-                      tenant_id: parseInt(formData.tenant_id),
+                      tenant_id: formData.tenant_id ? parseInt(formData.tenant_id) : null,
                       package_id: formData.package_id ? parseInt(formData.package_id) : null,
                       task_name: formData.task_name,
                       description: formData.description || null,
