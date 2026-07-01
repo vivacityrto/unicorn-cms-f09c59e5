@@ -1420,78 +1420,60 @@ export default function TasksManagement() {
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-center gap-2">
+                        {!isTerminalTask(task) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleActionChange(task.id, "completed");
+                            }}
+                            className="h-8 w-8 hover:bg-emerald-500/10 hover:text-emerald-600"
+                            title="Mark as complete"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
+                        )}
                         {(!task.source || task.source === 'task') && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTask(task);
-                                setFormData({
-                                  task_name: task.task_name,
-                                  description: task.description || "",
-                                  due_date: task.due_date,
-                                  tenant_id: task.tenant_id.toString(),
-                                  package_id: task.package_id?.toString() || "",
-                                  package_name: task.package_name || "",
-                                  status: task.status || "not_started",
-                                  assigned_to: "",
-                                  priority: task.priority || ""
-                                });
-                                setFollowers(task.followers || []);
-                                setMilestones(task.milestones || []);
-                                setIsEditDialogOpen(true);
-                              }}
-                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
-                              title="Edit"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleActionChange(task.id, "delete");
-                              }}
-                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTask(task);
+                              setFormData({
+                                task_name: task.task_name,
+                                description: task.description || "",
+                                due_date: task.due_date,
+                                tenant_id: task.tenant_id.toString(),
+                                package_id: task.package_id?.toString() || "",
+                                package_name: task.package_name || "",
+                                status: task.status || "not_started",
+                                assigned_to: "",
+                                priority: task.priority || ""
+                              });
+                              setFollowers(task.followers || []);
+                              setMilestones(task.milestones || []);
+                              setIsEditDialogOpen(true);
+                            }}
+                            className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                            title="Edit"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                         )}
-                        {(task.source === 'action' || task.source === 'ops') && (
-                          <>
-                            {!task.completed && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleActionChange(task.id, "completed");
-                                }}
-                                className="h-8 w-8 hover:bg-emerald-500/10 hover:text-emerald-600"
-                                title="Mark as complete"
-                              >
-                                <CheckCircle2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleActionChange(task.id, "delete");
-                              }}
-                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionChange(task.id, "delete");
+                          }}
+                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>;
