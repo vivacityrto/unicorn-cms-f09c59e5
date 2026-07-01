@@ -11,16 +11,15 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
-import { Download, Users, BarChart3, ArrowRight } from "lucide-react";
+import { Download, Users } from "lucide-react";
 import { CscKpiCards } from "@/components/kpi-v2/CscKpiCards";
 import { AssistantKpiCards } from "@/components/kpi-v2/AssistantKpiCards";
 import { DeveloperPlaceholder } from "@/components/kpi-v2/DeveloperPlaceholder";
 import { PerformanceGuide } from "@/components/kpi-v2/PerformanceGuide";
 import { KpiInfoBanner } from "@/components/kpi-v2/KpiInfoBanner";
+import { KpiTeamSection } from "@/components/kpi-v2/KpiTeamSection";
 import {
   KPI_V2_PERIOD_LABEL,
   KPI_V2_PERIOD_ORDER,
@@ -40,7 +39,7 @@ export default function KpiPage() {
   const subjectUuid = profile?.user_uuid ?? "";
 
   const [period, setPeriod] = useState<KpiV2Period>("this_month");
-  const [showTeamKpi, setShowTeamKpi] = useState(false);
+  const [showTeamKpi, setShowTeamKpi] = useState(canViewAnyStaff);
 
   useEffect(() => {
     const previous = document.title;
@@ -163,39 +162,10 @@ export default function KpiPage() {
           </section>
         )}
 
-        {/* Team KPI toggle content (reviewer only) */}
+        {/* Team KPI overview (reviewer only) */}
         {showTeamKpi && canViewAnyStaff && (
-          <section aria-label="Team KPI" className="grid gap-4 md:grid-cols-2">
-            <Card className="border-border/60">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <BarChart3 className="h-4 w-4 text-[#7130A0]" /> KPI Overview
-                </CardTitle>
-                <CardDescription>Cross-team KPI rollups by role and period.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/admin/kpi-overview" className="inline-flex items-center gap-1.5">
-                    Open KPI Overview <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-            <Card className="border-border/60">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="h-4 w-4 text-[#ED1878]" /> KPI Review
-                </CardTitle>
-                <CardDescription>Review individual staff performance and add sign-off notes.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/admin/kpi-review" className="inline-flex items-center gap-1.5">
-                    Open KPI Review <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+          <section aria-label="Team KPI">
+            <KpiTeamSection period={period} />
           </section>
         )}
 
