@@ -239,13 +239,8 @@ export const DashboardLayout = ({
       }
       return true;
     });
-    const extras: typeof eosMenuItems = [];
-    // KPI module has been moved to the Work section (/kpi).
-    // Reviewer-only "KPI Tickets" board remains under EOS for admin/reviewer roles.
-    if (canViewAnyStaff) {
-      extras.push({ icon: LifeBuoy, label: "KPI Tickets", path: "/admin/kpi-tickets" } as any);
-    }
-    return [...base, ...extras];
+    // KPI module lives in the Work section (/kpi) with an in-page reviewer toggle.
+    return base;
   }, [isSuperAdmin, isTeamLeader, kpiRole, canViewAnyStaff]);
 
   // Filter Work items based on role
