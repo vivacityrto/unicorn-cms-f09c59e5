@@ -1655,6 +1655,27 @@ export default function TasksManagement() {
                   </div>
                 </div>
 
+                {/* Milestones */}
+                {selectedTask.milestones && selectedTask.milestones.length > 0 && <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Milestones
+                      </label>
+                      <div className="space-y-2">
+                        {selectedTask.milestones.map((m) => (
+                          <div key={m.id} className="flex items-start gap-2">
+                            <Checkbox checked={m.completed} disabled className="mt-0.5 data-[disabled]:opacity-100" />
+                            <span className={cn("text-sm leading-relaxed", m.completed && "line-through text-muted-foreground")}>
+                              {m.text}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>}
+
                 {/* Attachments */}
                 {selectedTask.file_paths && selectedTask.file_paths.length > 0 && <>
                     <Separator />
