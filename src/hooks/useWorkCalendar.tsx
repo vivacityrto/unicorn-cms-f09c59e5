@@ -173,6 +173,24 @@ export function useWorkCalendar() {
     setCurrentDate(new Date());
   }, []);
 
+  // Trigger Outlook sync via edge function
+  const syncCalendar = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-outlook-calendar', {});
+      if (error) throw error;
+      await refetch();
+      const synced = (data as any)?.synced ?? 0;
+      toast.success(`Calendar synced (${synced} event${synced === 1 ? '' : 's'})`);
+    } catch (err) {
+      console.error('Failed to sync calendar:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to sync calendar');
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [refetch]);
+
+
   // Link event to client
   const linkToClientMutation = useMutation({
     mutationFn: async ({ eventId, clientId }: { eventId: string; clientId: number }) => {
