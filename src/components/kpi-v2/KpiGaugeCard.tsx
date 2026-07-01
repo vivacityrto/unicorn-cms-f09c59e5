@@ -38,6 +38,7 @@ interface Props {
   status: KpiStatus;
   loading?: boolean;
   footer?: React.ReactNode;
+  onClick?: () => void;
 }
 
 /**
@@ -56,12 +57,33 @@ export function KpiGaugeCard({
   status,
   loading,
   footer,
+  onClick,
 }: Props) {
   const tone =
     status === "on" ? "brand" : status === "risk" ? "amber" : status === "below" ? "rose" : "muted";
 
+  const clickable = typeof onClick === "function";
+
   return (
-    <Card className="relative overflow-hidden border border-border/60 shadow-sm hover:shadow-md transition-shadow">
+    <Card
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (!clickable) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={clickable ? `${label} — view details` : undefined}
+      className={cn(
+        "relative overflow-hidden border border-border/60 shadow-sm transition-all",
+        clickable
+          ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-lg hover:border-[#7130A0]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7130A0]/40"
+          : "hover:shadow-md"
+      )}
+    >
       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#7130A0] via-[#ED1878] to-[#23C0DD] opacity-80" />
       <CardContent className="pt-6 pb-5 px-5 flex flex-col items-center gap-4">
         <div className="w-full flex items-start justify-between gap-3">

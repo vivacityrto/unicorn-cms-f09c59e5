@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { KpiGaugeCard } from "./KpiGaugeCard";
 import { getPeriodRange, type KpiV2Period } from "./types";
 import { pctStatus } from "@/lib/kpi-v2/status";
+import { KpiDrillDownSheet } from "./KpiDrillDownSheet";
 
 interface Props {
   subjectUuid: string;
@@ -17,6 +18,8 @@ export function AssistantKpiCards({ subjectUuid, period }: Props) {
   const [loading, setLoading] = useState(true);
   const [tasksPct, setTasksPct] = useState<number | null>(null);
   const [tasksTotal, setTasksTotal] = useState(0);
+  const [tasksOnTime, setTasksOnTime] = useState(0);
+  const [drillOpen, setDrillOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +38,7 @@ export function AssistantKpiCards({ subjectUuid, period }: Props) {
       const total = rows.reduce((s, r) => s + (r.tasks_total ?? 0), 0);
       const onTime = rows.reduce((s, r) => s + (r.tasks_on_time ?? 0), 0);
       setTasksTotal(total);
+      setTasksOnTime(onTime);
       setTasksPct(total > 0 ? (onTime / total) * 100 : null);
       setLoading(false);
     })();
@@ -43,20 +47,38 @@ export function AssistantKpiCards({ subjectUuid, period }: Props) {
 
   const primary = tasksPct == null ? "—" : `${tasksPct.toFixed(0)}%`;
 
+  const metricText =
+    tasksTotal > 0
+      ? `${primary} · ${tasksOnTime} of ${tasksTotal} tasks completed on time`
+      : "No tasks recorded for this period.";
+
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="md:col-start-2">
-        <KpiGaugeCard
-          label="Tasks"
-          description="Assigned tasks completed on or before their due date."
-          value={tasksPct}
-          primary={primary}
-          secondary={tasksTotal > 0 ? `of ${tasksTotal}` : undefined}
-          target="Target: 80%"
-          status={pctStatus(tasksPct, 80, 70)}
-          loading={loading}
-        />
+    <>
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="md:col-start-2">
+          <KpiGaugeCard
+            label="Tasks"
+            description="Assigned tasks completed on or before their due date."
+            value={tasksPct}
+            primary={primary}
+            secondary={tasksTotal > 0 ? `of ${tasksTotal}` : undefined}
+            target="Target: 80%"
+            status={pctStatus(tasksPct, 80, 70)}
+            loading={loading}
+            onClick={() => setDrillOpen(true)}
+          />
+        </div>
       </div>
-    </div>
+
+      <KpiDrillDownSheet
+        open={drillOpen}
+        onOpenChange={setDrillOpen}
+        kind="assistant_tasks"
+        subjectUuid={subjectUuid}
+        period={period}
+        metricText={metricText}
+        label="Tasks"
+      />
+    </>
   );
 }
