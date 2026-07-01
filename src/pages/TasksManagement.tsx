@@ -773,7 +773,7 @@ export default function TasksManagement() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="tenant">Client *</Label>
+                  <Label htmlFor="tenant">Client</Label>
                   <Combobox options={tenants.map(tenant => ({
                   value: tenant.id.toString(),
                   label: tenant.name
