@@ -162,39 +162,10 @@ export default function KpiPage() {
           </section>
         )}
 
-        {/* Team KPI toggle content (reviewer only) */}
+        {/* Team KPI overview (reviewer only) */}
         {showTeamKpi && canViewAnyStaff && (
-          <section aria-label="Team KPI" className="grid gap-4 md:grid-cols-2">
-            <Card className="border-border/60">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <BarChart3 className="h-4 w-4 text-[#7130A0]" /> KPI Overview
-                </CardTitle>
-                <CardDescription>Cross-team KPI rollups by role and period.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/admin/kpi-overview" className="inline-flex items-center gap-1.5">
-                    Open KPI Overview <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-            <Card className="border-border/60">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Users className="h-4 w-4 text-[#ED1878]" /> KPI Review
-                </CardTitle>
-                <CardDescription>Review individual staff performance and add sign-off notes.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/admin/kpi-review" className="inline-flex items-center gap-1.5">
-                    Open KPI Review <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+          <section aria-label="Team KPI">
+            <KpiTeamSection period={period} />
           </section>
         )}
 
