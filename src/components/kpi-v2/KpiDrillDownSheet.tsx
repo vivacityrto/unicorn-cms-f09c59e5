@@ -138,44 +138,42 @@ export function KpiDrillDownSheet({
             new Set((assignments ?? []).map((a: any) => a.tenant_id).filter(Boolean))
           );
           if (tenantIds.length > 0) {
-            // Restrict to client-initiated conversations only.
-            const { data: convRows } = await (supabase as any)
-              .from("tenant_conversations")
-              .select("id")
-              .in("tenant_id", tenantIds);
-            const candidateConvIds = Array.from(
-              new Set((convRows ?? []).map((c: any) => c.id).filter(Boolean))
-            );
-            let clientInitiatedConvIds: string[] = [];
-            if (candidateConvIds.length > 0) {
+            // Step 2: fetch client messages in the period scoped by tenant_id.
+            const { data: rawClientMsgs } = await (supabase as any)
+              .from("tenant_messages")
+              .select("id, conversation_id, tenant_id, created_at, body")
+              .in("tenant_id", tenantIds)
+              .eq("sender_type", "client")
+              .gte("created_at", startTs)
+              .lte("created_at", endTs)
+              .order("created_at", { ascending: false })
+              .limit(500);
+            const rawMsgs = (rawClientMsgs ?? []) as Array<{
+              id: string; conversation_id: string; tenant_id: number; created_at: string; body: string;
+            }>;
+            // Step 3: unique conversation_ids from step 2.
+            const uniqueConvIds = Array.from(new Set(rawMsgs.map((m) => m.conversation_id).filter(Boolean)));
+            // Step 4: for those conversations only, determine who initiated each.
+            let clientInitiatedSet = new Set<string>();
+            if (uniqueConvIds.length > 0) {
               const { data: firstMsgs } = await (supabase as any)
                 .from("tenant_messages")
                 .select("conversation_id, sender_type, created_at")
-                .in("conversation_id", candidateConvIds)
-                .order("conversation_id", { ascending: true })
-                .order("created_at", { ascending: true });
+                .in("conversation_id", uniqueConvIds)
+                .order("created_at", { ascending: true })
+                .limit(uniqueConvIds.length * 50);
               const firstByConv = new Map<string, string>();
               (firstMsgs ?? []).forEach((m: any) => {
                 if (!firstByConv.has(m.conversation_id)) firstByConv.set(m.conversation_id, m.sender_type);
               });
-              clientInitiatedConvIds = Array.from(firstByConv.entries())
-                .filter(([, sender]) => sender === "client")
-                .map(([id]) => id);
+              clientInitiatedSet = new Set(
+                Array.from(firstByConv.entries())
+                  .filter(([, sender]) => sender === "client")
+                  .map(([id]) => id)
+              );
             }
-            const { data: clientMsgs } = clientInitiatedConvIds.length
-              ? await (supabase as any)
-                  .from("tenant_messages")
-                  .select("id, conversation_id, tenant_id, created_at, body")
-                  .in("conversation_id", clientInitiatedConvIds)
-                  .eq("sender_type", "client")
-                  .gte("created_at", startTs)
-                  .lte("created_at", endTs)
-                  .order("created_at", { ascending: false })
-                  .limit(500)
-              : { data: [] };
-            const cMsgs = (clientMsgs ?? []) as Array<{
-              id: string; conversation_id: string; tenant_id: number; created_at: string; body: string;
-            }>;
+            // Step 5: filter to client-initiated conversations only.
+            const cMsgs = rawMsgs.filter((m) => clientInitiatedSet.has(m.conversation_id));
             const convIds = Array.from(new Set(cMsgs.map((m) => m.conversation_id).filter(Boolean)));
             const bufferEnd = new Date(new Date(endTs).getTime() + SLA_SECONDS * 1000).toISOString();
 
