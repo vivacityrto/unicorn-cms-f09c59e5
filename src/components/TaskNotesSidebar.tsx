@@ -253,6 +253,14 @@ export default function TaskNotesSidebar({ isOpen, onClose, userId }: TaskNotesS
 
         {isAdding && (
           <div className="bg-background border rounded-md p-3 space-y-2">
+            <div className="flex gap-1">
+              <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setNewContent(applyBullets(newContent))}>
+                <List className="h-3.5 w-3.5 mr-1" /> Bullets
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setNewContent(applyNumbering(newContent))}>
+                <ListOrdered className="h-3.5 w-3.5 mr-1" /> Numbering
+              </Button>
+            </div>
             <Textarea
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
