@@ -10,12 +10,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
-import { Download, Gauge, Users, BarChart3, ArrowRight, Headphones, ClipboardList, Code2 } from "lucide-react";
+import { Download, Users, BarChart3, ArrowRight } from "lucide-react";
 import { CscKpiCards } from "@/components/kpi-v2/CscKpiCards";
 import { AssistantKpiCards } from "@/components/kpi-v2/AssistantKpiCards";
 import { DeveloperPlaceholder } from "@/components/kpi-v2/DeveloperPlaceholder";
@@ -106,34 +106,6 @@ export default function KpiPage() {
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
             Last updated: Just now
-          </div>
-        </div>
-
-        {/* Hero — brand purple→fuchsia gradient */}
-        <div
-          className="relative overflow-hidden rounded-xl px-6 py-6 text-white shadow-sm"
-          style={{ background: "var(--viv-grad-hero)" }}
-        >
-          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10 blur-3xl" aria-hidden />
-          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="h-11 w-11 rounded-lg bg-white/15 backdrop-blur flex items-center justify-center">
-                <Gauge className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-white/85 mt-1">
-                  Your live performance snapshot across the Unicorn platform.
-                </p>
-              </div>
-            </div>
-            {shortRoleLabel && (
-              <Badge className="self-start md:self-auto bg-white/15 hover:bg-white/20 text-white border border-white/25">
-                {shortRoleLabel === "CSC Consultant" && <Headphones className="h-3.5 w-3.5 mr-1.5" />}
-                {shortRoleLabel === "Admin Assistant" && <ClipboardList className="h-3.5 w-3.5 mr-1.5" />}
-                {shortRoleLabel === "Developer" && <Code2 className="h-3.5 w-3.5 mr-1.5" />}
-                {shortRoleLabel}
-              </Badge>
-            )}
           </div>
         </div>
 
