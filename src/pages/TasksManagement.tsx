@@ -166,7 +166,9 @@ export default function TasksManagement() {
           followers,
           created_at,
           updated_at,
-          file_paths
+          file_paths,
+          priority,
+          milestones
         `).or(`created_by.eq.${userId},followers.cs.{"${userId}"}`).order("created_at", {
         ascending: false
       });
