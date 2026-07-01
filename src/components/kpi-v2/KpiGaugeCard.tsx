@@ -38,6 +38,7 @@ interface Props {
   status: KpiStatus;
   loading?: boolean;
   footer?: React.ReactNode;
+  onClick?: () => void;
 }
 
 /**
