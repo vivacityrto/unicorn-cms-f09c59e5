@@ -1,16 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { KpiGaugeCard, type KpiStatus } from "./KpiGaugeCard";
-import type { KpiV2Period } from "./types";
-
-const PERIOD_DAYS: Record<KpiV2Period, number> = { weekly: 7, monthly: 30, quarterly: 92 };
-
-function pctStatus(pct: number | null, on: number, risk: number): KpiStatus {
-  if (pct == null) return "none";
-  if (pct >= on) return "on";
-  if (pct >= risk) return "risk";
-  return "below";
-}
+import { KpiGaugeCard } from "./KpiGaugeCard";
+import { getPeriodRange, type KpiV2Period } from "./types";
+import { pctStatus } from "@/lib/kpi-v2/status";
 
 interface Props {
   subjectUuid: string;
@@ -19,8 +11,7 @@ interface Props {
 
 /**
  * AssistantKpiCards — single Tasks gauge for admin assistants.
- * Sourced from v_kpi_cst_summary.tasks_total/tasks_on_time. Displayed
- * full-width but constrained so the gauge doesn't stretch on wide screens.
+ * Sourced from v_kpi_cst_summary.tasks_total/tasks_on_time.
  */
 export function AssistantKpiCards({ subjectUuid, period }: Props) {
   const [loading, setLoading] = useState(true);
@@ -32,13 +23,13 @@ export function AssistantKpiCards({ subjectUuid, period }: Props) {
     if (!subjectUuid) return;
     setLoading(true);
     (async () => {
-      const since = new Date();
-      since.setDate(since.getDate() - PERIOD_DAYS[period]);
+      const { startIso, endIso } = getPeriodRange(period);
       const { data } = await (supabase as any)
         .from("v_kpi_cst_summary")
         .select("tasks_total,tasks_on_time")
         .eq("subject_uuid", subjectUuid)
-        .gte("period_start", since.toISOString().slice(0, 10));
+        .gte("period_start", startIso)
+        .lte("period_start", endIso);
       if (cancelled) return;
       const rows = (data ?? []) as Array<{ tasks_total: number; tasks_on_time: number }>;
       const total = rows.reduce((s, r) => s + (r.tasks_total ?? 0), 0);

@@ -1,16 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { KpiGaugeCard, type KpiStatus } from "./KpiGaugeCard";
-import type { KpiV2Period } from "./types";
-
-const PERIOD_DAYS: Record<KpiV2Period, number> = { weekly: 7, monthly: 30, quarterly: 92 };
-
-function pctStatus(pct: number | null, on: number, risk: number): KpiStatus {
-  if (pct == null) return "none";
-  if (pct >= on) return "on";
-  if (pct >= risk) return "risk";
-  return "below";
-}
+import { KpiGaugeCard } from "./KpiGaugeCard";
+import { getPeriodRange, type KpiV2Period } from "./types";
+import { pctStatus, retentionStatus } from "@/lib/kpi-v2/status";
 
 interface Props {
   subjectUuid: string;
@@ -19,11 +11,9 @@ interface Props {
 
 /**
  * CscKpiCards — three donut-gauge cards for CSC consultants:
- *  - Retention: retained clients / total clients (data-driven when available)
- *  - Communication: emails answered within SLA
- *  - Tasks: tasks completed on time
- * Metrics that have no view backing yet render as "No data" — the gauge and
- * status pill both reflect the missing state without breaking layout.
+ *  - Retention: retained clients / total clients (target 100%, ≥90% at risk)
+ *  - Communication: emails answered within SLA (target 80%)
+ *  - Tasks: tasks completed on time (target 90%)
  */
 export function CscKpiCards({ subjectUuid, period }: Props) {
   const [loading, setLoading] = useState(true);
@@ -37,21 +27,21 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
     if (!subjectUuid) return;
     setLoading(true);
     (async () => {
-      const since = new Date();
-      since.setDate(since.getDate() - PERIOD_DAYS[period]);
-      const sinceIso = since.toISOString().slice(0, 10);
+      const { startIso, endIso } = getPeriodRange(period);
 
       const [emailRes, tasksRes] = await Promise.all([
         (supabase as any)
           .from("v_kpi_csc_summary")
           .select("email_total,email_sla_met")
           .eq("subject_uuid", subjectUuid)
-          .gte("period_start", sinceIso),
+          .gte("period_start", startIso)
+          .lte("period_start", endIso),
         (supabase as any)
           .from("v_kpi_cst_summary")
           .select("tasks_total,tasks_on_time")
           .eq("subject_uuid", subjectUuid)
-          .gte("period_start", sinceIso),
+          .gte("period_start", startIso)
+          .lte("period_start", endIso),
       ]);
 
       if (cancelled) return;
@@ -84,10 +74,9 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
           description="Clients retained over the selected period."
           value={null}
           primary="—"
-          target="Target: 90%"
-          status="none"
+          target="Target: 100%"
+          status={retentionStatus(null)}
           loading={false}
-          footer="Coming soon"
         />
         <KpiGaugeCard
           label="Communication"
@@ -105,8 +94,8 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
           value={tasksPct}
           primary={tasksPrimary}
           secondary={tasksTotal > 0 ? `of ${tasksTotal}` : undefined}
-          target="Target: 80%"
-          status={pctStatus(tasksPct, 80, 70)}
+          target="Target: 90%"
+          status={pctStatus(tasksPct, 90, 80)}
           loading={loading}
         />
       </div>
