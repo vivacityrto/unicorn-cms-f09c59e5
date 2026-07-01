@@ -278,7 +278,10 @@ export function useWorkCalendar() {
     goToNext,
     goToToday,
     refetch,
+    syncCalendar,
+    isSyncing,
     linkToClient: linkToClientMutation.mutate,
+
     createTimeDraft: createTimeDraftMutation.mutate,
     isLinkingToClient: linkToClientMutation.isPending,
     isCreatingTimeDraft: createTimeDraftMutation.isPending,
