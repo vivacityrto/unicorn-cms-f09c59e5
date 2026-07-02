@@ -87,6 +87,7 @@ export default function TeamCommunicationsPage() {
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"conversations" | "history">("conversations");
+  const [threadSearch, setThreadSearch] = useState("");
   const canSendBulk =
     profile?.is_team === true ||
     profile?.unicorn_role === "Super Admin" ||
