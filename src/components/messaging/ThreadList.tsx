@@ -62,14 +62,17 @@ export function ThreadList({
           />
         </div>
       </div>
-      <ScrollArea className="min-h-0 flex-1">
+      <ScrollArea
+        className="min-h-0 flex-1 w-full max-w-full overflow-hidden"
+        viewportClassName="min-w-0 max-w-full overflow-x-hidden [&>div]:!block [&>div]:!min-w-0 [&>div]:!max-w-full"
+      >
         {items.length === 0 ? (
           <div className="p-6 text-center text-muted-foreground">
             <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
             <p className="text-sm">No conversations found.</p>
           </div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="w-full min-w-0 max-w-full divide-y divide-border overflow-hidden">
             {items.map((conv) => {
               const badge = topicToBadge(conv.topic);
               const isSelected = selectedId === conv.id;
@@ -81,18 +84,18 @@ export function ThreadList({
                   type="button"
                   onClick={() => onSelect(conv.id)}
                   className={cn(
-                    "block w-full min-w-0 max-w-full overflow-hidden text-left px-3 py-2.5 border-l-2 border-transparent hover:bg-muted/50 transition-colors",
+                    "grid w-full min-w-0 max-w-full grid-cols-[minmax(0,1fr)] overflow-hidden text-left px-3 py-2.5 border-l-2 border-transparent hover:bg-muted/50 transition-colors",
                     isSelected && "bg-muted border-l-primary"
                   )}
                 >
-                  <div className="flex min-w-0 items-center gap-1.5 mb-0.5 overflow-hidden">
+                  <div className="flex w-full min-w-0 max-w-full items-center gap-1.5 mb-0.5 overflow-hidden">
                     <Badge variant={badge.variant} className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0">
                       {badge.label}
                     </Badge>
                     <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
                       {conv.tenant_name}
                     </span>
-                    <span className="ml-auto text-[11px] text-muted-foreground flex-shrink-0 flex items-center gap-1.5">
+                    <span className="ml-auto min-w-0 max-w-[5rem] text-[11px] text-muted-foreground flex-shrink-0 flex items-center justify-end gap-1.5 overflow-hidden whitespace-nowrap">
                       {relativeTime(conv.last_message_at)}
                       {conv.isUnread && (
                         <span className="h-2 w-2 rounded-full bg-primary" aria-label="Unread" />
@@ -101,13 +104,13 @@ export function ThreadList({
                   </div>
                   <p
                     className={cn(
-                      "min-w-0 max-w-full overflow-hidden text-sm text-foreground whitespace-normal break-words [overflow-wrap:anywhere] [word-break:break-all]",
+                      "block w-full min-w-0 max-w-full overflow-hidden text-sm text-foreground whitespace-normal break-words [overflow-wrap:anywhere] [word-break:break-all]",
                       conv.isUnread ? "font-semibold" : "font-medium"
                     )}
                   >
                     {conv.subject || badge.label}
                   </p>
-                  <p className="min-w-0 max-w-full overflow-hidden text-xs text-muted-foreground whitespace-normal break-words [overflow-wrap:anywhere] [word-break:break-all] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+                  <p className="block w-full min-w-0 max-w-full overflow-hidden text-xs text-muted-foreground whitespace-normal break-words [overflow-wrap:anywhere] [word-break:break-all] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
                     {previewPrefix}
                     {preview}
                   </p>
