@@ -68,10 +68,6 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
 
   const selectedParent = companyRocks?.find(r => r.id === parentRockId);
   
-  // Check if a team rock already exists for selected function and parent
-  const existingTeamRock = functionId && parentRockId 
-    ? teamRocksByFunction.get(functionId)?.find(r => r.parent_rock_id === parentRockId)
-    : null;
 
   const resetForm = () => {
     setTitle('');
@@ -86,7 +82,7 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
   };
 
   const handleSubmit = async () => {
-    if (!title.trim() || !dueDate || !parentRockId || !functionId || existingTeamRock) return;
+    if (!title.trim() || !dueDate || !parentRockId || !functionId) return;
 
     await createRock.mutateAsync({
       title: title.trim(),
@@ -132,7 +128,7 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
     };
   };
 
-  const canSubmit = title.trim() && dueDate && parentRockId && functionId && !existingTeamRock;
+  const canSubmit = title.trim() && dueDate && parentRockId && functionId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
