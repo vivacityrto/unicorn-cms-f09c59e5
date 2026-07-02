@@ -18,21 +18,25 @@ import {
   AppModalBody,
   AppModalFooter,
 } from "@/components/ui/modals";
-import { MessageSquare, Plus, Send, Mail, MailOpen, Building2, Paperclip, X, Megaphone } from "lucide-react";
+import { MessageSquare, Plus, Send, Paperclip, Megaphone, MailQuestion } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { format } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
 import { toast } from "sonner";
 import {
   uploadMessageAttachment,
   validateAttachment,
   MAX_FILES_PER_MESSAGE,
-  formatBytes,
   type MessageAttachmentRow,
 } from "@/lib/messageAttachments";
 import { MessageAttachments } from "@/components/messaging/MessageAttachments";
 import { AttachmentChips } from "@/components/messaging/AttachmentChips";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ClientsRail, type ClientRailItem } from "@/components/messaging/ClientsRail";
+import { ThreadList } from "@/components/messaging/ThreadList";
+import { topicToBadge } from "@/components/messaging/topicBadge";
+import { clientAvatarColor, clientInitials } from "@/lib/clientAvatarColor";
+import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BulkMessageDialog } from "@/components/communications/BulkMessageDialog";
 import { BulkMessageHistory } from "@/components/communications/BulkMessageHistory";
 
