@@ -138,9 +138,9 @@ export function ConversationPanel({
                   const isOutgoing = isStaff || isOwn;
                   if (isOutgoing) {
                     return (
-                      <div key={msg.id} className="flex w-full min-w-0 max-w-full flex-col items-end overflow-hidden">
-                        <div className="box-border min-w-0 max-w-[calc(100%-2rem)] overflow-hidden rounded-2xl rounded-tr-sm bg-primary px-4 py-2 text-primary-foreground sm:max-w-[75%]">
-                          <p className="block min-w-0 max-w-full text-sm leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto]">{msg.body}</p>
+                      <div key={msg.id} className="grid w-full min-w-0 max-w-full justify-items-end overflow-hidden">
+                        <div className="box-border w-full min-w-0 max-w-[min(100%,42rem)] overflow-hidden rounded-2xl rounded-tr-sm bg-primary px-4 py-2 text-primary-foreground [overflow-wrap:anywhere] [word-break:break-word] sm:w-[75%]">
+                          <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto]">{msg.body}</p>
                           {msg.attachments && msg.attachments.length > 0 && (
                             <MessageAttachments attachments={msg.attachments} />
                           )}
@@ -152,19 +152,19 @@ export function ConversationPanel({
                     );
                   }
                   return (
-                    <div key={msg.id} className="flex w-full min-w-0 max-w-full items-start gap-2 overflow-hidden">
+                    <div key={msg.id} className="grid w-full min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-start gap-2 overflow-hidden">
                       <Avatar className="h-7 w-7 flex-shrink-0 mt-4">
                         <AvatarImage src={msg.sender_avatar_url ?? undefined} />
                         <AvatarFallback className="text-[10px]">
                           {clientInitials(msg.sender_name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0 max-w-[calc(100%-2.25rem)] flex-1 overflow-hidden flex flex-col items-start">
+                      <div className="min-w-0 max-w-full overflow-hidden flex flex-col items-start">
                         <p className="max-w-full text-xs font-medium text-muted-foreground mb-0.5 ml-1 truncate">
                           {msg.sender_name}
                         </p>
-                         <div className="box-border min-w-0 max-w-full overflow-hidden rounded-2xl rounded-tl-sm border border-border bg-card px-4 py-2 sm:max-w-[75%]">
-                          <p className="block min-w-0 max-w-full text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto]">
+                         <div className="box-border w-full min-w-0 max-w-[min(100%,42rem)] overflow-hidden rounded-2xl rounded-tl-sm border border-border bg-card px-4 py-2 [overflow-wrap:anywhere] [word-break:break-word] sm:w-[75%]">
+                          <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto]">
                             {msg.body}
                           </p>
                           {msg.attachments && msg.attachments.length > 0 && (
