@@ -31,11 +31,11 @@ export function ClientsRail({
   className,
 }: Props) {
   return (
-    <div className={cn("flex flex-col border rounded-lg border-border bg-card overflow-hidden", className)}>
+    <div className={cn("flex min-w-0 flex-col border rounded-lg border-border bg-card overflow-hidden", className)}>
       <div className="px-3 py-2.5 border-b border-border">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Clients</p>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="p-2 space-y-1">
           {/* Pinned: All Conversations */}
           <button
@@ -43,7 +43,7 @@ export function ClientsRail({
             onClick={() => onSelect("all")}
             data-active={selected === "all"}
             className={cn(
-              "w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left transition-colors",
+              "w-full min-w-0 overflow-hidden flex items-center gap-2.5 px-2 py-2 rounded-md text-left transition-colors",
               "hover:bg-muted",
               selected === "all" && "bg-muted"
             )}
@@ -58,7 +58,7 @@ export function ClientsRail({
               </p>
             </div>
             {totalUnread > 0 && (
-              <Badge variant="default" className="h-5 min-w-[1.25rem] px-1.5 justify-center">
+              <Badge variant="default" className="h-5 min-w-[1.25rem] px-1.5 justify-center flex-shrink-0">
                 {totalUnread}
               </Badge>
             )}
@@ -76,7 +76,7 @@ export function ClientsRail({
                 onClick={() => onSelect(String(item.tenantId))}
                 data-active={isActive}
                 className={cn(
-                  "w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left transition-colors",
+                    "w-full min-w-0 overflow-hidden flex items-center gap-2.5 px-2 py-2 rounded-md text-left transition-colors",
                   "hover:bg-muted",
                   isActive && "bg-muted"
                 )}
@@ -103,7 +103,7 @@ export function ClientsRail({
                   </p>
                 </div>
                 {item.unreadCount > 0 && (
-                  <Badge variant="default" className="h-5 min-w-[1.25rem] px-1.5 justify-center">
+                  <Badge variant="default" className="h-5 min-w-[1.25rem] px-1.5 justify-center flex-shrink-0">
                     {item.unreadCount}
                   </Badge>
                 )}

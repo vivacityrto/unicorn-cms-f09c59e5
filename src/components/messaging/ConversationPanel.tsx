@@ -77,7 +77,7 @@ export function ConversationPanel({
   return (
     <>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border flex items-center gap-3">
+      <div className="min-w-0 px-4 py-3 border-b border-border flex items-center gap-3">
         <div
           className={cn(
             "h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0 text-sm font-semibold",
@@ -104,6 +104,7 @@ export function ConversationPanel({
           onClick={onMarkUnread}
           aria-label="Mark as unread"
           title="Mark as unread"
+          className="flex-shrink-0"
         >
           <MailQuestion className="h-4 w-4" />
         </Button>
@@ -111,7 +112,7 @@ export function ConversationPanel({
 
       {/* Messages */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className="p-4 space-y-4">
+        <div className="min-w-0 p-4 space-y-4">
           {messagesLoading ? (
             <div className="space-y-2">
               {[...Array(3)].map((_, i) => (
@@ -134,8 +135,8 @@ export function ConversationPanel({
                   const isOutgoing = isStaff || isOwn;
                   if (isOutgoing) {
                     return (
-                      <div key={msg.id} className="flex flex-col items-end">
-                        <div className="max-w-[75%] bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2">
+                      <div key={msg.id} className="min-w-0 flex flex-col items-end">
+                        <div className="max-w-[75%] overflow-hidden bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2">
                           <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>
                           {msg.attachments && msg.attachments.length > 0 && (
                             <MessageAttachments attachments={msg.attachments} />
@@ -148,7 +149,7 @@ export function ConversationPanel({
                     );
                   }
                   return (
-                    <div key={msg.id} className="flex items-start gap-2">
+                    <div key={msg.id} className="min-w-0 flex items-start gap-2">
                       <Avatar className="h-7 w-7 flex-shrink-0 mt-4">
                         <AvatarImage src={msg.sender_avatar_url ?? undefined} />
                         <AvatarFallback className="text-[10px]">
@@ -159,7 +160,7 @@ export function ConversationPanel({
                         <p className="text-xs font-medium text-muted-foreground mb-0.5 ml-1">
                           {msg.sender_name}
                         </p>
-                        <div className="max-w-[75%] bg-card border border-border rounded-2xl rounded-tl-sm px-4 py-2">
+                        <div className="max-w-[75%] overflow-hidden bg-card border border-border rounded-2xl rounded-tl-sm px-4 py-2">
                           <p className="text-sm text-foreground whitespace-pre-wrap break-words">
                             {msg.body}
                           </p>

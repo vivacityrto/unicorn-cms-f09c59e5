@@ -633,11 +633,11 @@ export default function TeamCommunicationsPage() {
         </div>
       ) : (
         <div
-          className="grid gap-3 grid-cols-1 md:grid-cols-[minmax(0,20rem)_1fr] lg:grid-cols-[minmax(15rem,17rem)_minmax(0,22rem)_1fr] h-[calc(100vh-13rem)] min-h-[32rem]"
+          className="grid min-w-0 gap-3 grid-cols-1 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:grid-cols-[minmax(15rem,17rem)_minmax(0,22rem)_minmax(0,1fr)] h-[calc(100vh-13rem)] min-h-[32rem]"
         >
           {/* Clients rail (lg+ only) */}
           <ClientsRail
-            className="hidden lg:flex min-h-0"
+            className="hidden lg:flex min-h-0 min-w-0"
             items={railItems}
             totalThreads={conversations.length}
             totalUnread={totalUnread}
@@ -647,7 +647,7 @@ export default function TeamCommunicationsPage() {
 
           {/* Thread list */}
           <ThreadList
-            className="min-h-0"
+            className="min-h-0 min-w-0"
             items={(() => {
               const q = threadSearch.trim().toLowerCase();
               const list = q
@@ -684,7 +684,7 @@ export default function TeamCommunicationsPage() {
           />
 
           {/* Conversation panel */}
-          <div className="border rounded-lg border-border bg-card flex flex-col min-h-0 overflow-hidden">
+          <div className="border rounded-lg border-border bg-card flex flex-col min-h-0 min-w-0 overflow-hidden">
             {selected ? (
               <ConversationPanel
                 conversation={selected}
@@ -694,9 +694,9 @@ export default function TeamCommunicationsPage() {
                 messagesEndRef={messagesEndRef}
                 onMarkUnread={handleMarkUnread}
                 composer={
-                  <div className="p-3 border-t border-border">
+                  <div className="p-3 border-t border-border flex-shrink-0 min-w-0">
                     <AttachmentChips files={queuedFiles} onRemove={removeQueued} />
-                    <div className="flex gap-2">
+                    <div className="flex min-w-0 gap-2">
                       <Textarea
                         ref={composerRef}
                         value={composerText}
@@ -704,7 +704,7 @@ export default function TeamCommunicationsPage() {
                         onKeyDown={handleKeyDown}
                         onPaste={handlePaste}
                         placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
-                        className="min-h-[40px] resize-none overflow-y-auto"
+                        className="min-h-[40px] max-h-28 min-w-0 flex-1 resize-none overflow-y-auto"
                         rows={1}
                       />
                       <input
