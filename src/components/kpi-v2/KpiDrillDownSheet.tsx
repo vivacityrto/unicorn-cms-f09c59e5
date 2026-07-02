@@ -341,8 +341,7 @@ function fmtDateTimeCompact(iso?: string | null) {
 }
 
 function CommunicationTable({ rows }: { rows: any[] }) {
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [selectedRow, setSelectedRow] = useState<any | null>(null);
   return (
     <>
       <Table>
@@ -363,13 +362,8 @@ function CommunicationTable({ rows }: { rows: any[] }) {
             return (
               <TableRow
                 key={r.id}
-                className={cn(r.conversation_id && "cursor-pointer hover:bg-muted/50")}
-                onClick={() => {
-                  if (r.conversation_id) {
-                    setSelectedConversationId(r.conversation_id);
-                    setSelectedSubject(r.subject ?? "(no subject)");
-                  }
-                }}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => setSelectedRow(r)}
               >
                 <TableCell className="!px-2 max-w-[160px] truncate font-medium" title={r.subject ?? ""}>
                   {r.subject ? r.subject : "(no subject)"}
@@ -398,39 +392,43 @@ function CommunicationTable({ rows }: { rows: any[] }) {
           })}
         </TableBody>
       </Table>
-      <ConversationDialog
-        conversationId={selectedConversationId}
-        subject={selectedSubject}
-        onClose={() => setSelectedConversationId(null)}
+      <MessageSnippetDialog
+        row={selectedRow}
+        onClose={() => setSelectedRow(null)}
       />
     </>
   );
 }
 
-function ConversationDialog({
-  conversationId,
-  subject,
+function MessageSnippetDialog({
+  row,
   onClose,
 }: {
-  conversationId: string | null;
-  subject: string;
+  row: any | null;
   onClose: () => void;
 }) {
+  const [showFullThread, setShowFullThread] = useState(false);
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
 
+  // Reset when the selected row changes.
   useEffect(() => {
-    if (!conversationId) return;
+    setShowFullThread(false);
+    setMessages([]);
+  }, [row?.id]);
+
+  useEffect(() => {
+    if (!showFullThread || !row?.conversation_id) return;
     let cancelled = false;
     setLoading(true);
     (async () => {
       const { data, error } = await supabase
         .from("tenant_messages")
         .select("sender_type, body, created_at")
-        .eq("conversation_id", conversationId)
+        .eq("conversation_id", row.conversation_id)
         .order("created_at", { ascending: true });
       if (!cancelled) {
-        if (error) console.error("[ConversationDialog] load failed", error);
+        if (error) console.error("[MessageSnippetDialog] load failed", error);
         setMessages(data ?? []);
         setLoading(false);
       }
@@ -438,60 +436,116 @@ function ConversationDialog({
     return () => {
       cancelled = true;
     };
-  }, [conversationId]);
+  }, [showFullThread, row?.conversation_id]);
+
+  const subject = row?.subject || "Conversation";
 
   return (
-    <Dialog open={!!conversationId} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog open={!!row} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent size="lg" className="max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="pr-8">{subject || "Conversation"}</DialogTitle>
-          <DialogDescription>Full message thread, oldest first.</DialogDescription>
+          <DialogTitle className="pr-8">{subject}</DialogTitle>
+          <DialogDescription>
+            {showFullThread ? "Full message thread, oldest first." : "This message and its matched reply."}
+          </DialogDescription>
         </DialogHeader>
-        {loading ? (
-          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Loading conversation…
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-            <Inbox className="h-8 w-8 text-muted-foreground/60" />
-            <div className="text-sm font-medium text-foreground">No messages</div>
-          </div>
-        ) : (
+
+        {!showFullThread && row && (
           <div className="space-y-3">
-            {messages.map((m, i) => {
-              const isClient = (m.sender_type ?? "").toLowerCase() === "client";
-              return (
-                <div key={i} className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    {isClient ? (
-                      <Badge variant="outline" className="border-[#23C0DD]/40 bg-[#23C0DD]/10 text-[#0e6b7c]">
-                        Client
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-[#7130A0]/40 bg-[#7130A0]/10 text-[#7130A0]">
-                        Staff
-                      </Badge>
-                    )}
-                    <span className="text-xs text-muted-foreground">{fmtDateTime(m.created_at)}</span>
-                  </div>
-                  <div
-                    className={cn(
-                      "rounded-md border px-3 py-2 text-sm whitespace-pre-wrap break-words",
-                      isClient
-                        ? "border-[#23C0DD]/30 bg-[#23C0DD]/5"
-                        : "border-[#7130A0]/30 bg-[#7130A0]/5",
-                    )}
-                  >
-                    {m.body || <span className="text-muted-foreground italic">(empty message)</span>}
-                  </div>
-                </div>
-              );
-            })}
+            <MessageBubble
+              sender="client"
+              timestamp={row.received_at}
+              body={row.client_body}
+            />
+            {row.reply_body ? (
+              <MessageBubble
+                sender="staff"
+                timestamp={row.responded_at}
+                body={row.reply_body}
+              />
+            ) : (
+              <div className="rounded-md border border-dashed border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground italic">
+                No reply yet
+              </div>
+            )}
+            {row.conversation_id && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFullThread(true)}
+                  className="text-sm font-medium text-[#7130A0] hover:text-[#ED1878] underline underline-offset-2"
+                >
+                  View full conversation
+                </button>
+              </div>
+            )}
           </div>
+        )}
+
+        {showFullThread && (
+          loading ? (
+            <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading conversation…
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+              <Inbox className="h-8 w-8 text-muted-foreground/60" />
+              <div className="text-sm font-medium text-foreground">No messages</div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {messages.map((m, i) => (
+                <MessageBubble
+                  key={i}
+                  sender={(m.sender_type ?? "").toLowerCase() === "client" ? "client" : "staff"}
+                  timestamp={m.created_at}
+                  body={m.body}
+                />
+              ))}
+            </div>
+          )
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function MessageBubble({
+  sender,
+  timestamp,
+  body,
+}: {
+  sender: "client" | "staff";
+  timestamp?: string | null;
+  body?: string | null;
+}) {
+  const isClient = sender === "client";
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        {isClient ? (
+          <Badge variant="outline" className="border-[#23C0DD]/40 bg-[#23C0DD]/10 text-[#0e6b7c]">
+            Client
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="border-[#7130A0]/40 bg-[#7130A0]/10 text-[#7130A0]">
+            Staff
+          </Badge>
+        )}
+        <span className="text-xs text-muted-foreground">{fmtDateTime(timestamp)}</span>
+      </div>
+      <div
+        className={cn(
+          "rounded-md border px-3 py-2 text-sm whitespace-pre-wrap break-words",
+          isClient
+            ? "border-[#23C0DD]/30 bg-[#23C0DD]/5"
+            : "border-[#7130A0]/30 bg-[#7130A0]/5",
+        )}
+      >
+        {body || <span className="text-muted-foreground italic">(empty message)</span>}
+      </div>
+    </div>
   );
 }
 
