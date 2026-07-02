@@ -397,6 +397,22 @@ export default function TeamCommunicationsPage() {
     qc.invalidateQueries({ queryKey: ["team-unread-count"] });
   }, [currentUserId, qc, setSearchParams]);
 
+  const handleMarkUnread = useCallback(async () => {
+    if (!currentUserId || !selectedId) return;
+    const { error } = await (supabase
+      .from("conversation_participants" as any)
+      .update({ last_read_at: null } as any)
+      .eq("conversation_id", selectedId)
+      .eq("user_id", currentUserId)) as any;
+    if (error) {
+      toast.error("Could not mark as unread");
+      return;
+    }
+    toast.success("Marked as unread");
+    qc.invalidateQueries({ queryKey: ["team-conversations"] });
+    qc.invalidateQueries({ queryKey: ["team-unread-count"] });
+  }, [currentUserId, selectedId, qc]);
+
   useEffect(() => {
     const threadId = searchParams.get('thread');
     if (threadId && conversations.length > 0 && threadId !== lastAutoSelectedRef.current) {
