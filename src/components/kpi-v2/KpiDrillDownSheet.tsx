@@ -137,6 +137,7 @@ export function KpiDrillDownSheet({
           if (error) throw error;
           data = (rpcRows ?? []).map((r: any) => ({
             id: r.message_id,
+            conversation_id: r.conversation_id,
             subject: r.subject,
             tenant_name: r.tenant_name ?? "—",
             received_at: r.received_at,
