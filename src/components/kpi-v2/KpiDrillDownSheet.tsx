@@ -157,23 +157,22 @@ export function KpiDrillDownSheet({
             metadata: { package_name: r.package_name ?? "—" },
           }));
         } else if (kind === "assistant_tasks") {
-          const sb = supabase as any;
           const [ttCreated, ttFollowers, cai, ops] = await Promise.all([
             sb.from("tasks_tenants")
               .select("id, task_name, status, due_date, completed_at, created_at")
-              .gte("created_at", startTs).lte("created_at", endTs)
+              .gte("created_at", startTs).lt("created_at", endTs)
               .eq("created_by", subjectUuid),
             sb.from("tasks_tenants")
               .select("id, task_name, status, due_date, completed_at, created_at")
-              .gte("created_at", startTs).lte("created_at", endTs)
+              .gte("created_at", startTs).lt("created_at", endTs)
               .contains("followers", [subjectUuid]),
             sb.from("client_action_items")
               .select("id, title, status, due_date, completed_at, created_at")
-              .gte("created_at", startTs).lte("created_at", endTs)
+              .gte("created_at", startTs).lt("created_at", endTs)
               .eq("assignee_user_id", subjectUuid),
             sb.from("ops_work_items")
               .select("id, title, status, due_at, completed_at, created_at")
-              .gte("created_at", startTs).lte("created_at", endTs)
+              .gte("created_at", startTs).lt("created_at", endTs)
               .eq("owner_user_uuid", subjectUuid),
           ]);
 
