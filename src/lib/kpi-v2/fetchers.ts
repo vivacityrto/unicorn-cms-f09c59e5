@@ -36,10 +36,20 @@ export async function fetchRetention(
 ): Promise<RetentionResult> {
   const { startTs, endTs } = tsRange(period);
   const sb = supabase as any;
+  const { data: aRows } = await sb
+    .from("tenant_csc_assignments")
+    .select("tenant_id")
+    .eq("csc_user_id", subjectUuid)
+    .eq("is_primary", true)
+    .is("ended_at", null);
+  const tenantIds = Array.from(
+    new Set((aRows ?? []).map((r: any) => r.tenant_id).filter(Boolean)),
+  );
+  if (tenantIds.length === 0) return { total: 0, churned: 0, pct: null };
   const { data } = await sb
     .from("tenants")
     .select("id, churned_at, created_at")
-    .eq("assigned_consultant_user_id", subjectUuid);
+    .in("id", tenantIds);
   const rows = (data ?? []) as Array<{ id: number; churned_at: string | null; created_at: string }>;
   const atStart = rows.filter((r) => r.created_at <= endTs);
   const churned = atStart.filter(
