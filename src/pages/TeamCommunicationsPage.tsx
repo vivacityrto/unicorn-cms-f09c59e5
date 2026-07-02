@@ -569,15 +569,15 @@ export default function TeamCommunicationsPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="flex h-[calc(100dvh-9rem)] min-h-[32rem] min-w-0 flex-col gap-4 overflow-hidden">
+      <div className="flex min-w-0 flex-shrink-0 items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-foreground">Team Communications</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             All client conversations across your portfolio.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-2">
           {canSendBulk && (
             <Button
               variant="outline"
@@ -596,7 +596,7 @@ export default function TeamCommunicationsPage() {
       </div>
 
       {canSendBulk && (
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "conversations" | "history")}>
+        <Tabs className="flex-shrink-0" value={activeTab} onValueChange={(v) => setActiveTab(v as "conversations" | "history")}>
           <TabsList>
             <TabsTrigger value="conversations">Conversations</TabsTrigger>
             <TabsTrigger value="history">Bulk Message History</TabsTrigger>
@@ -611,7 +611,7 @@ export default function TeamCommunicationsPage() {
 
 
       {/* Optional staff filter (kept from previous UI) */}
-      <div className="flex gap-2 items-center flex-wrap">
+        <div className="flex flex-shrink-0 gap-2 items-center flex-wrap">
         <Select value={filterStaff} onValueChange={setFilterStaff}>
           <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="All Team Members" />
@@ -633,7 +633,7 @@ export default function TeamCommunicationsPage() {
         </div>
       ) : (
         <div
-          className="grid min-w-0 gap-3 grid-cols-1 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:grid-cols-[minmax(15rem,17rem)_minmax(0,22rem)_minmax(0,1fr)] h-[calc(100vh-13rem)] min-h-[32rem]"
+          className="grid flex-1 min-h-0 min-w-0 gap-3 overflow-hidden grid-cols-1 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:grid-cols-[minmax(15rem,17rem)_minmax(0,22rem)_minmax(0,1fr)]"
         >
           {/* Clients rail (lg+ only) */}
           <ClientsRail
