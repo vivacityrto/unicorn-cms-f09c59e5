@@ -18,7 +18,7 @@ import {
   AppModalBody,
   AppModalFooter,
 } from "@/components/ui/modals";
-import { MessageSquare, Plus, Send, Paperclip, Megaphone, MailQuestion } from "lucide-react";
+import { MessageSquare, Plus, Send, Paperclip, Megaphone, MailQuestion, X } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format, isToday, isYesterday } from "date-fns";
 import { useVivacityTeamUsers } from "@/hooks/useVivacityTeamUsers";
@@ -27,6 +27,7 @@ import {
   uploadMessageAttachment,
   validateAttachment,
   MAX_FILES_PER_MESSAGE,
+  formatBytes,
   type MessageAttachmentRow,
 } from "@/lib/messageAttachments";
 import { MessageAttachments } from "@/components/messaging/MessageAttachments";
