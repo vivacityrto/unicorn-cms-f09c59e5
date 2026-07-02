@@ -1,5 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { VIVACITY_STAFF_ROLES } from '../_shared/auth-helpers.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
@@ -79,9 +80,9 @@ Deno.serve(async (req: Request) => {
       .eq('user_uuid', user.id)
       .single();
 
-    const isSuperAdmin = userProfile?.unicorn_role === 'Super Admin';
-    
-    if (!isSuperAdmin) {
+    const isVivacityStaff = VIVACITY_STAFF_ROLES.includes(userProfile?.unicorn_role ?? '');
+
+    if (!isVivacityStaff) {
       // Check if user is a member of this tenant
       const { data: tenantMember, error: memberError } = await supabase
         .from('tenant_users')
@@ -96,7 +97,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    console.log('Authorization verified for user:', user.id, 'isSuperAdmin:', isSuperAdmin);
+    console.log('Authorization verified for user:', user.id, 'isVivacityStaff:', isVivacityStaff);
 
     // 1. Fetch the source document
     const { data: document, error: docError } = await supabase

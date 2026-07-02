@@ -1,5 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import { VIVACITY_STAFF_ROLES } from '../_shared/auth-helpers.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
@@ -92,8 +93,8 @@ Deno.serve(async (req: Request) => {
       .eq('user_uuid', user.id)
       .single();
 
-    const isSuperAdmin = userProfile?.unicorn_role === 'Super Admin';
-    if (!isSuperAdmin) {
+    const isVivacityStaff = VIVACITY_STAFF_ROLES.includes(userProfile?.unicorn_role ?? '');
+    if (!isVivacityStaff) {
       const { data: tenantMember } = await supabase
         .from('tenant_users')
         .select('id')
