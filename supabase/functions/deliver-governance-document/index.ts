@@ -11,6 +11,7 @@ import {
   resolveDriveItemFromSharingUrl,
   type DriveItem,
 } from "../_shared/graph-app-client.ts";
+import { VIVACITY_STAFF_ROLES } from "../_shared/auth-helpers.ts";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -645,7 +646,7 @@ serve(async (req) => {
     const normaliseRole = (value: unknown) =>
       typeof value === "string" ? value.toLowerCase().replace(/\s+/g, " ").trim() : "";
 
-    const staffRoles = new Set(["super admin", "superadmin", "team leader", "team member"]);
+    const staffRoles = new Set(VIVACITY_STAFF_ROLES.map((r) => r.toLowerCase()));
     const claimRole = normaliseRole((claims as Record<string, unknown>)?.["unicorn_role"]);
     const metadataRole = normaliseRole(
       ((claims as Record<string, unknown>)?.["user_metadata"] as Record<string, unknown> | undefined)?.["unicorn_role"],
