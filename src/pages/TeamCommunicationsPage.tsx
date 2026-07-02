@@ -180,8 +180,67 @@ export default function TeamCommunicationsPage() {
     ? filteredByTenant
     : filteredByTenant.filter(c => staffConvIds.has(c.id));
 
-  const mineConvs = filtered.filter(c => c.isMine);
-  const teamConvs = filtered.filter(c => !c.isMine);
+  // Clients rail aggregation — derived from all visible conversations.
+  // Unread scope: current staff member only (matches useTeamUnreadCount).
+  const railItems: ClientRailItem[] = useMemo(() => {
+    const map = new Map<number, ClientRailItem>();
+    for (const c of conversations) {
+      const unreadDelta = c.isMine && c.isUnread ? 1 : 0;
+      const existing = map.get(c.tenant_id);
+      if (!existing) {
+        map.set(c.tenant_id, {
+          tenantId: c.tenant_id,
+          tenantName: c.tenant_name || `Tenant ${c.tenant_id}`,
+          threadCount: 1,
+          unreadCount: unreadDelta,
+          lastActivity: c.last_message_at,
+        });
+      } else {
+        existing.threadCount += 1;
+        existing.unreadCount += unreadDelta;
+        if (
+          c.last_message_at &&
+          (!existing.lastActivity || new Date(c.last_message_at) > new Date(existing.lastActivity))
+        ) {
+          existing.lastActivity = c.last_message_at;
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => {
+      const at = a.lastActivity ? new Date(a.lastActivity).getTime() : 0;
+      const bt = b.lastActivity ? new Date(b.lastActivity).getTime() : 0;
+      return bt - at;
+    });
+  }, [conversations]);
+
+  const totalUnread = useMemo(
+    () => conversations.reduce((n, c) => n + (c.isMine && c.isUnread ? 1 : 0), 0),
+    [conversations],
+  );
+
+  // Enrich threads with last message sender_type so preview can prefix "You:".
+  const convoIdList = useMemo(() => conversations.map(c => c.id), [conversations]);
+  const { data: lastSenderMap = {} } = useQuery({
+    queryKey: ["team-conversations-last-sender", convoIdList.length, convoIdList[0] ?? null],
+    queryFn: async (): Promise<Record<string, string | null>> => {
+      if (convoIdList.length === 0) return {};
+      const { data, error } = await (supabase
+        .from("tenant_messages" as any)
+        .select("conversation_id, sender_type, created_at")
+        .in("conversation_id", convoIdList)
+        .order("created_at", { ascending: false })
+        .limit(2000)) as any;
+      if (error) return {};
+      const seen: Record<string, string | null> = {};
+      for (const row of (data ?? []) as any[]) {
+        if (!(row.conversation_id in seen)) seen[row.conversation_id] = row.sender_type ?? null;
+      }
+      return seen;
+    },
+    enabled: convoIdList.length > 0,
+    staleTime: 30_000,
+  });
+
 
   const selected = conversations.find(c => c.id === selectedId);
 
