@@ -138,9 +138,8 @@ export function ConversationPanel({
                 </div>
                 {group.items.map(msg => {
                   const isStaff = msg.sender_type === "staff";
-                  const isOwn = msg.sender_user_uuid === currentUserId;
-                  const isOutgoing = isStaff || isOwn;
-                  if (isOutgoing) {
+                  const isOwn = !!currentUserId && msg.sender_user_uuid === currentUserId;
+                  if (isOwn) {
                     return (
                       <div key={msg.id} className="grid w-full min-w-0 max-w-full justify-items-end overflow-hidden">
                         <div className="box-border w-full min-w-0 max-w-[min(100%,42rem)] overflow-hidden rounded-2xl rounded-tr-sm bg-primary px-4 py-2 text-primary-foreground [overflow-wrap:anywhere] [word-break:break-word] sm:w-[75%]">
@@ -150,24 +149,34 @@ export function ConversationPanel({
                           )}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-1 pr-1">
-                          {format(new Date(msg.created_at), "HH:mm")}
+                          You · {format(new Date(msg.created_at), "HH:mm")}
                         </p>
                       </div>
                     );
                   }
                   return (
                     <div key={msg.id} className="grid w-full min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-start gap-2 overflow-hidden">
-                      <Avatar className="h-7 w-7 flex-shrink-0 mt-4">
+                      <Avatar className={cn("h-7 w-7 flex-shrink-0 mt-4", isStaff && "ring-2 ring-primary/40")}>
                         <AvatarImage src={msg.sender_avatar_url ?? undefined} />
                         <AvatarFallback className="text-[10px]">
                           {clientInitials(msg.sender_name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 max-w-full overflow-hidden flex flex-col items-start">
-                        <p className="max-w-full text-xs font-medium text-muted-foreground mb-0.5 ml-1 truncate">
-                          {msg.sender_name}
-                        </p>
-                         <div className="box-border w-full min-w-0 max-w-[min(100%,42rem)] overflow-hidden rounded-2xl rounded-tl-sm border border-border bg-card px-4 py-2 [overflow-wrap:anywhere] [word-break:break-word] sm:w-[75%]">
+                        <div className="flex items-center gap-1.5 mb-0.5 ml-1 max-w-full min-w-0">
+                          <p className="text-xs font-medium text-muted-foreground truncate">
+                            {msg.sender_name}
+                          </p>
+                          {isStaff && (
+                            <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5 flex-shrink-0 bg-primary/10 text-primary border-primary/20">
+                              Vivacity
+                            </Badge>
+                          )}
+                        </div>
+                         <div className={cn(
+                          "box-border w-full min-w-0 max-w-[min(100%,42rem)] overflow-hidden rounded-2xl rounded-tl-sm border px-4 py-2 [overflow-wrap:anywhere] [word-break:break-word] sm:w-[75%]",
+                          isStaff ? "border-primary/30 bg-primary/5" : "border-border bg-card"
+                         )}>
                           <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed text-foreground whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-all] [hyphens:auto]">
                             {normaliseMessageBody(msg.body)}
                           </p>
