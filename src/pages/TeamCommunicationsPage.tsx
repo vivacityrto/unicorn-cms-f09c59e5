@@ -633,12 +633,11 @@ export default function TeamCommunicationsPage() {
         </div>
       ) : (
         <div
-          className="grid gap-3 grid-cols-1 md:grid-cols-[minmax(0,20rem)_1fr] lg:grid-cols-[minmax(15rem,17rem)_minmax(0,22rem)_1fr]"
-          style={{ minHeight: "70vh" }}
+          className="grid gap-3 grid-cols-1 md:grid-cols-[minmax(0,20rem)_1fr] lg:grid-cols-[minmax(15rem,17rem)_minmax(0,22rem)_1fr] h-[calc(100vh-13rem)] min-h-[32rem]"
         >
           {/* Clients rail (lg+ only) */}
           <ClientsRail
-            className="hidden lg:flex"
+            className="hidden lg:flex min-h-0"
             items={railItems}
             totalThreads={conversations.length}
             totalUnread={totalUnread}
