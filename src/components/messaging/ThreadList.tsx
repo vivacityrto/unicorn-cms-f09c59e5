@@ -49,7 +49,7 @@ export function ThreadList({
   className,
 }: Props) {
   return (
-    <div className={cn("flex min-w-0 flex-col border rounded-lg border-border bg-card overflow-hidden", className)}>
+    <div className={cn("flex min-w-0 max-w-full flex-col border rounded-lg border-border bg-card overflow-hidden", className)}>
       <div className="min-w-0 px-3 pt-3 pb-2 border-b border-border space-y-2">
         <p className="truncate text-sm font-semibold text-foreground">{scopeLabel}</p>
         <div className="relative">
@@ -81,7 +81,7 @@ export function ThreadList({
                   type="button"
                   onClick={() => onSelect(conv.id)}
                   className={cn(
-                    "block w-full min-w-0 overflow-hidden text-left px-3 py-2.5 border-l-2 border-transparent hover:bg-muted/50 transition-colors",
+                    "block w-full min-w-0 max-w-full overflow-hidden text-left px-3 py-2.5 border-l-2 border-transparent hover:bg-muted/50 transition-colors",
                     isSelected && "bg-muted border-l-primary"
                   )}
                 >
@@ -101,13 +101,13 @@ export function ThreadList({
                   </div>
                   <p
                     className={cn(
-                      "text-sm text-foreground truncate",
+                      "text-sm text-foreground whitespace-normal break-words [overflow-wrap:anywhere]",
                       conv.isUnread ? "font-semibold" : "font-medium"
                     )}
                   >
                     {conv.subject || badge.label}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-xs text-muted-foreground whitespace-normal break-words [overflow-wrap:anywhere]">
                     {previewPrefix}
                     {preview}
                   </p>

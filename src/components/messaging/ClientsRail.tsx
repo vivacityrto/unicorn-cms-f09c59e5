@@ -31,7 +31,7 @@ export function ClientsRail({
   className,
 }: Props) {
   return (
-    <div className={cn("flex min-w-0 flex-col border rounded-lg border-border bg-card overflow-hidden", className)}>
+    <div className={cn("flex min-w-0 max-w-full flex-col border rounded-lg border-border bg-card overflow-hidden", className)}>
       <div className="px-3 py-2.5 border-b border-border">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Clients</p>
       </div>
@@ -43,7 +43,7 @@ export function ClientsRail({
             onClick={() => onSelect("all")}
             data-active={selected === "all"}
             className={cn(
-              "w-full min-w-0 overflow-hidden flex items-center gap-2.5 px-2 py-2 rounded-md text-left transition-colors",
+              "w-full min-w-0 max-w-full overflow-hidden flex items-center gap-2.5 px-2 py-2 rounded-md text-left transition-colors",
               "hover:bg-muted",
               selected === "all" && "bg-muted"
             )}
@@ -52,7 +52,7 @@ export function ClientsRail({
               <Star className="h-4 w-4" fill="currentColor" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">All Conversations</p>
+              <p className="text-sm font-semibold text-foreground break-words [overflow-wrap:anywhere]">All Conversations</p>
               <p className="text-[11px] text-muted-foreground truncate">
                 {totalThreads} {totalThreads === 1 ? "thread" : "threads"}
               </p>
@@ -76,7 +76,7 @@ export function ClientsRail({
                 onClick={() => onSelect(String(item.tenantId))}
                 data-active={isActive}
                 className={cn(
-                    "w-full min-w-0 overflow-hidden flex items-center gap-2.5 px-2 py-2 rounded-md text-left transition-colors",
+                    "w-full min-w-0 max-w-full overflow-hidden flex items-center gap-2.5 px-2 py-2 rounded-md text-left transition-colors",
                   "hover:bg-muted",
                   isActive && "bg-muted"
                 )}
@@ -91,7 +91,7 @@ export function ClientsRail({
                   {clientInitials(item.tenantName)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{item.tenantName}</p>
+                  <p className="text-sm font-medium text-foreground break-words [overflow-wrap:anywhere]">{item.tenantName}</p>
                   <p className="text-[11px] text-muted-foreground truncate">
                     {item.threadCount} {item.threadCount === 1 ? "thread" : "threads"}
                     {item.lastActivity && (
