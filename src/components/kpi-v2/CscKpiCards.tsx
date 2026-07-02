@@ -154,12 +154,22 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
 
       // ---------------- CSC Tasks ----------------
       const tasksP = (async () => {
+        const { data: aRows } = await sb
+          .from("tenant_csc_assignments")
+          .select("tenant_id")
+          .eq("csc_user_id", subjectUuid)
+          .eq("is_primary", true)
+          .is("ended_at", null);
+        const tenantIds = Array.from(
+          new Set((aRows ?? []).map((a: any) => a.tenant_id).filter(Boolean))
+        );
+        if (tenantIds.length === 0) return { total: 0, completed: 0, pct: null as number | null };
         const { data } = await sb
           .from("client_team_tasks")
           .select(
-            "id, status, created_at, client_package_stages!inner(client_packages!inner(assigned_csc_user_id))"
+            "id, status, created_at, client_package_stages!inner(client_packages!inner(tenant_id))"
           )
-          .eq("client_package_stages.client_packages.assigned_csc_user_id", subjectUuid)
+          .in("client_package_stages.client_packages.tenant_id", tenantIds)
           .gte("created_at", startTs)
           .lte("created_at", endTs);
         const rows = (data ?? []) as Array<{ status: string | null }>;

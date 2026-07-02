@@ -130,13 +130,14 @@ export function KpiDrillDownSheet({
           }));
         } else if (kind === "communication") {
           const SLA_SECONDS = 12 * 60 * 60;
-          const { data: tenantRows } = await (supabase as any)
-            .from("tenants")
-            .select("id")
-            .eq("assigned_consultant_user_id", subjectUuid)
-            .eq("status", "active");
+          const { data: aRows } = await (supabase as any)
+            .from("tenant_csc_assignments")
+            .select("tenant_id")
+            .eq("csc_user_id", subjectUuid)
+            .eq("is_primary", true)
+            .is("ended_at", null);
           const tenantIds = Array.from(
-            new Set((tenantRows ?? []).map((a: any) => a.id).filter(Boolean))
+            new Set((aRows ?? []).map((a: any) => a.tenant_id).filter(Boolean))
           );
           if (tenantIds.length > 0) {
             // Step 2: fetch client messages in the period scoped by tenant_id.
@@ -235,15 +236,26 @@ export function KpiDrillDownSheet({
             });
           }
         } else if (kind === "csc_tasks") {
-          const { data: tRows } = await (supabase as any)
-            .from("client_team_tasks")
-            .select(
-              "id, name, status, created_at, completed_at, client_package_stage_id, client_package_stages!inner(id, client_package_id, client_packages!inner(id, assigned_csc_user_id, tenant_id, package_id, packages(name)))"
-            )
-            .eq("client_package_stages.client_packages.assigned_csc_user_id", subjectUuid)
-            .gte("created_at", startTs)
-            .lte("created_at", endTs)
-            .order("created_at", { ascending: false });
+          const { data: aRows } = await (supabase as any)
+            .from("tenant_csc_assignments")
+            .select("tenant_id")
+            .eq("csc_user_id", subjectUuid)
+            .eq("is_primary", true)
+            .is("ended_at", null);
+          const cscTenantIds = Array.from(
+            new Set((aRows ?? []).map((a: any) => a.tenant_id).filter(Boolean))
+          );
+          const { data: tRows } = cscTenantIds.length
+            ? await (supabase as any)
+                .from("client_team_tasks")
+                .select(
+                  "id, name, status, created_at, completed_at, client_package_stage_id, client_package_stages!inner(id, client_package_id, client_packages!inner(id, tenant_id, package_id, packages(name)))"
+                )
+                .in("client_package_stages.client_packages.tenant_id", cscTenantIds)
+                .gte("created_at", startTs)
+                .lte("created_at", endTs)
+                .order("created_at", { ascending: false })
+            : { data: [] as any[] };
           const rows = (tRows ?? []) as any[];
           const tenantIds = Array.from(
             new Set(

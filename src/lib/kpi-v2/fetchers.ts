@@ -36,10 +36,20 @@ export async function fetchRetention(
 ): Promise<RetentionResult> {
   const { startTs, endTs } = tsRange(period);
   const sb = supabase as any;
+  const { data: aRows } = await sb
+    .from("tenant_csc_assignments")
+    .select("tenant_id")
+    .eq("csc_user_id", subjectUuid)
+    .eq("is_primary", true)
+    .is("ended_at", null);
+  const tenantIds = Array.from(
+    new Set((aRows ?? []).map((r: any) => r.tenant_id).filter(Boolean)),
+  );
+  if (tenantIds.length === 0) return { total: 0, churned: 0, pct: null };
   const { data } = await sb
     .from("tenants")
     .select("id, churned_at, created_at")
-    .eq("assigned_consultant_user_id", subjectUuid);
+    .in("id", tenantIds);
   const rows = (data ?? []) as Array<{ id: number; churned_at: string | null; created_at: string }>;
   const atStart = rows.filter((r) => r.created_at <= endTs);
   const churned = atStart.filter(
@@ -58,13 +68,14 @@ export async function fetchCommunication(
 ): Promise<CommunicationResult> {
   const { startTs, endTs } = tsRange(period);
   const sb = supabase as any;
-  const { data: tenantRows } = await sb
-    .from("tenants")
-    .select("id")
-    .eq("assigned_consultant_user_id", subjectUuid)
-    .eq("status", "active");
+  const { data: aRows } = await sb
+    .from("tenant_csc_assignments")
+    .select("tenant_id")
+    .eq("csc_user_id", subjectUuid)
+    .eq("is_primary", true)
+    .is("ended_at", null);
   const tenantIds = Array.from(
-    new Set((tenantRows ?? []).map((a: any) => a.id).filter(Boolean)),
+    new Set((aRows ?? []).map((a: any) => a.tenant_id).filter(Boolean)),
   );
   if (tenantIds.length === 0) return { total: 0, met: 0, pct: null };
 
@@ -118,12 +129,22 @@ export async function fetchCscTasks(
 ): Promise<TaskResult> {
   const { startTs, endTs } = tsRange(period);
   const sb = supabase as any;
+  const { data: aRows } = await sb
+    .from("tenant_csc_assignments")
+    .select("tenant_id")
+    .eq("csc_user_id", subjectUuid)
+    .eq("is_primary", true)
+    .is("ended_at", null);
+  const tenantIds = Array.from(
+    new Set((aRows ?? []).map((a: any) => a.tenant_id).filter(Boolean)),
+  );
+  if (tenantIds.length === 0) return { total: 0, completed: 0, pct: null };
   const { data } = await sb
     .from("client_team_tasks")
     .select(
-      "id, status, created_at, client_package_stages!inner(client_packages!inner(assigned_csc_user_id))",
+      "id, status, created_at, client_package_stages!inner(client_packages!inner(tenant_id))",
     )
-    .eq("client_package_stages.client_packages.assigned_csc_user_id", subjectUuid)
+    .in("client_package_stages.client_packages.tenant_id", tenantIds)
     .gte("created_at", startTs)
     .lte("created_at", endTs);
   const rows = (data ?? []) as Array<{ status: string | null }>;
