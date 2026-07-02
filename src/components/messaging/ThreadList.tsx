@@ -101,13 +101,13 @@ export function ThreadList({
                   </div>
                   <p
                     className={cn(
-                      "text-sm text-foreground whitespace-normal break-words [overflow-wrap:anywhere]",
+                      "min-w-0 max-w-full overflow-hidden text-sm text-foreground whitespace-normal break-words [overflow-wrap:anywhere]",
                       conv.isUnread ? "font-semibold" : "font-medium"
                     )}
                   >
                     {conv.subject || badge.label}
                   </p>
-                  <p className="text-xs text-muted-foreground whitespace-normal break-words [overflow-wrap:anywhere]">
+                  <p className="min-w-0 max-w-full overflow-hidden text-xs text-muted-foreground whitespace-normal break-words [overflow-wrap:anywhere] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
                     {previewPrefix}
                     {preview}
                   </p>

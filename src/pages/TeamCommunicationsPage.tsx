@@ -569,7 +569,7 @@ export default function TeamCommunicationsPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] min-h-0 min-w-0 flex-col gap-4 overflow-hidden">
+    <div className="flex h-[calc(100dvh-16rem)] min-h-[30rem] min-w-0 max-w-full flex-col gap-4 overflow-hidden">
       <div className="flex min-w-0 flex-shrink-0 items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-foreground">Team Communications</h1>
@@ -633,7 +633,7 @@ export default function TeamCommunicationsPage() {
         </div>
       ) : (
         <div
-          className="grid flex-1 min-h-0 min-w-0 gap-3 overflow-hidden grid-cols-1 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:grid-cols-[minmax(15rem,17rem)_minmax(0,22rem)_minmax(0,1fr)]"
+          className="grid h-0 flex-1 min-h-0 min-w-0 max-w-full gap-3 overflow-hidden grid-cols-1 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:grid-cols-[minmax(15rem,17rem)_minmax(0,22rem)_minmax(0,1fr)]"
         >
           {/* Clients rail (lg+ only) */}
           <ClientsRail
@@ -647,7 +647,7 @@ export default function TeamCommunicationsPage() {
 
           {/* Thread list */}
           <ThreadList
-            className="min-h-0 min-w-0"
+            className="min-h-0 min-w-0 max-w-full"
             items={(() => {
               const q = threadSearch.trim().toLowerCase();
               const list = q
@@ -684,7 +684,7 @@ export default function TeamCommunicationsPage() {
           />
 
           {/* Conversation panel */}
-          <div className="border rounded-lg border-border bg-card flex flex-col min-h-0 min-w-0 overflow-hidden">
+          <div className="border rounded-lg border-border bg-card flex h-full min-h-0 min-w-0 max-w-full flex-col overflow-hidden">
             {selected ? (
               <ConversationPanel
                 conversation={selected}
@@ -694,9 +694,9 @@ export default function TeamCommunicationsPage() {
                 messagesEndRef={messagesEndRef}
                 onMarkUnread={handleMarkUnread}
                 composer={
-                  <div className="p-3 border-t border-border flex-shrink-0 min-w-0">
+                  <div className="p-3 border-t border-border flex-shrink-0 min-w-0 max-w-full overflow-hidden">
                     <AttachmentChips files={queuedFiles} onRemove={removeQueued} />
-                    <div className="flex min-w-0 gap-2">
+                    <div className="flex min-w-0 max-w-full gap-2 overflow-hidden">
                       <Textarea
                         ref={composerRef}
                         value={composerText}
