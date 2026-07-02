@@ -67958,9 +67958,11 @@ export type Database = {
       kpi_csc_communication_rows: {
         Args: { p_csc_user_id: string; p_end: string; p_start: string }
         Returns: {
+          client_body: string
           conversation_id: string
           message_id: string
           received_at: string
+          reply_body: string
           responded_at: string
           response_seconds: number
           sla_status: string

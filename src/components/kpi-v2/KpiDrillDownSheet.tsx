@@ -139,6 +139,8 @@ export function KpiDrillDownSheet({
             id: r.message_id,
             conversation_id: r.conversation_id,
             subject: r.subject,
+            client_body: r.client_body,
+            reply_body: r.reply_body,
             tenant_name: r.tenant_name ?? "—",
             received_at: r.received_at,
             responded_at: r.responded_at,
