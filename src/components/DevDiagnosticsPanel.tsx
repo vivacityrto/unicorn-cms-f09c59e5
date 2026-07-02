@@ -10,6 +10,7 @@ export function DevDiagnosticsPanel() {
   const [diag, setDiag] = useState<{
     currentBuildId: string;
     lastReloadTarget: string;
+    toastShown: boolean;
     isDev: boolean;
     swControlled: boolean;
     remoteBuildId: string;
@@ -46,7 +47,8 @@ export function DevDiagnosticsPanel() {
         value={diag.currentBuildId === diag.remoteBuildId ? "✅ Yes" : "❌ No"}
       />
       <Row label="SW Controlled" value={diag.swControlled ? "⚠️ Yes" : "✅ No"} />
-      <Row label="Last reload for" value={diag.lastReloadTarget} />
+      <Row label="Last notified build" value={diag.lastReloadTarget} />
+      <Row label="Toast shown" value={diag.toastShown ? "✅ Yes" : "❌ No"} />
       <Row label="Environment" value={diag.isDev ? "Development" : "Production"} />
       <button
         onClick={() => setVisible(false)}

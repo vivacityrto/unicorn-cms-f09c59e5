@@ -8,6 +8,10 @@ import Beasties from "beasties";
 import { writeFileSync, readFileSync, existsSync } from "fs";
 import { resolve, join } from "path";
 
+// One build ID per build invocation. Injected into the bundle via `define`
+// and written to dist/version.json so the runtime poll can detect new deploys.
+const BUILD_ID = Date.now().toString(36);
+
 // Custom plugin to inline critical CSS using Critters
 function criticalCssPlugin(): PluginOption {
   return {
@@ -44,16 +48,40 @@ function criticalCssPlugin(): PluginOption {
   };
 }
 
+// Overwrite dist/version.json with the real build ID so the runtime
+// deploy-detection poll (src/utils/versionCheck.ts) has something real to compare against.
+function versionJsonPlugin(): PluginOption {
+  return {
+    name: "version-json",
+    apply: "build",
+    enforce: "post",
+    closeBundle: () => {
+      const distPath = resolve(__dirname, "dist");
+      const versionPath = join(distPath, "version.json");
+      try {
+        writeFileSync(versionPath, JSON.stringify({ buildId: BUILD_ID }));
+        console.log(`✓ Wrote dist/version.json with buildId=${BUILD_ID}`);
+      } catch (err) {
+        console.warn("Failed to write version.json:", err);
+      }
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
   },
+  define: {
+    "import.meta.env.VITE_BUILD_ID": JSON.stringify(BUILD_ID),
+  },
   plugins: [
     react(),
     mode === "development" && componentTagger(),
     mode === "production" && criticalCssPlugin(),
+    mode === "production" && versionJsonPlugin(),
   ].filter(Boolean) as PluginOption[],
   resolve: {
     alias: {
