@@ -93,8 +93,8 @@ Deno.serve(async (req: Request) => {
       .eq('user_uuid', user.id)
       .single();
 
-    const isSuperAdmin = userProfile?.unicorn_role === 'Super Admin';
-    if (!isSuperAdmin) {
+    const isVivacityStaff = VIVACITY_STAFF_ROLES.includes(userProfile?.unicorn_role ?? '');
+    if (!isVivacityStaff) {
       const { data: tenantMember } = await supabase
         .from('tenant_users')
         .select('id')
