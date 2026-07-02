@@ -136,6 +136,7 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
           sByConv.set(s.conversation_id, arr);
         });
 
+        const nowTs = Date.now();
         let total = 0;
         let met = 0;
         cMsgs.forEach((m) => {
@@ -145,7 +146,11 @@ export function CscKpiCards({ subjectUuid, period }: Props) {
             .map((t) => new Date(t).getTime())
             .filter((t) => t > clientTs)
             .sort((a, b) => a - b)[0];
-          if (reply == null) return;
+          if (reply == null) {
+            // No reply — count as miss once 12hrs have passed; still-pending is excluded.
+            if ((nowTs - clientTs) / 1000 > SLA_SECONDS) total += 1;
+            return;
+          }
           total += 1;
           if ((reply - clientTs) / 1000 <= SLA_SECONDS) met += 1;
         });

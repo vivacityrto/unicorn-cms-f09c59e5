@@ -215,6 +215,7 @@ export function KpiDrillDownSheet({
             const convMap: Record<string, { topic?: string; subject?: string }> = {};
             (convRes.data ?? []).forEach((c: any) => { convMap[c.id] = c; });
 
+            const nowTs = Date.now();
             data = cMsgs.map((m) => {
               const clientT = new Date(m.created_at).getTime();
               const reply = (staffByConv.get(m.conversation_id) ?? [])
@@ -222,7 +223,16 @@ export function KpiDrillDownSheet({
                 .sort((a, b) => a - b)[0];
               const responded_at = reply ? new Date(reply).toISOString() : null;
               const response_minutes = reply ? (reply - clientT) / 60000 : null;
-              const sla_met = reply != null ? (reply - clientT) / 1000 <= SLA_SECONDS : null;
+              // sla_met: true if replied within window, false if either replied late OR
+              // 12hrs have passed with no reply. null (Pending) only if still within window.
+              let sla_met: boolean | null;
+              if (reply != null) {
+                sla_met = (reply - clientT) / 1000 <= SLA_SECONDS;
+              } else if ((nowTs - clientT) / 1000 > SLA_SECONDS) {
+                sla_met = false;
+              } else {
+                sla_met = null;
+              }
               const conv = convMap[m.conversation_id] ?? {};
               return {
                 id: m.id,
