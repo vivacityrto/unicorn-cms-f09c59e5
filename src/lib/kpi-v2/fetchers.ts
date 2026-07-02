@@ -37,18 +37,16 @@ export async function fetchRetention(
   const { startTs, endTs } = tsRange(period);
   const sb = supabase as any;
   const { data } = await sb
-    .from("tenant_csc_assignments")
-    .select("assigned_since, ended_at")
-    .eq("csc_user_id", subjectUuid);
-  const rows = (data ?? []) as Array<{ assigned_since: string; ended_at: string | null }>;
-  const atStart = rows.filter(
-    (r) => r.assigned_since < startTs && (r.ended_at == null || r.ended_at >= startTs),
-  );
-  const churnedRows = atStart.filter(
-    (r) => r.ended_at != null && r.ended_at >= startTs && r.ended_at <= endTs,
+    .from("tenants")
+    .select("id, churned_at, created_at")
+    .eq("assigned_consultant_user_id", subjectUuid);
+  const rows = (data ?? []) as Array<{ id: number; churned_at: string | null; created_at: string }>;
+  const atStart = rows.filter((r) => r.created_at <= endTs);
+  const churned = atStart.filter(
+    (r) => r.churned_at != null && r.churned_at >= startTs && r.churned_at <= endTs,
   );
   const total = atStart.length;
-  const ch = churnedRows.length;
+  const ch = churned.length;
   const retained = total - ch;
   return { total, churned: ch, pct: total > 0 ? (retained / total) * 100 : null };
 }
@@ -60,13 +58,13 @@ export async function fetchCommunication(
 ): Promise<CommunicationResult> {
   const { startTs, endTs } = tsRange(period);
   const sb = supabase as any;
-  const { data: assignments } = await sb
-    .from("tenant_csc_assignments")
-    .select("tenant_id")
-    .eq("csc_user_id", subjectUuid)
-    .is("ended_at", null);
+  const { data: tenantRows } = await sb
+    .from("tenants")
+    .select("id")
+    .eq("assigned_consultant_user_id", subjectUuid)
+    .eq("status", "active");
   const tenantIds = Array.from(
-    new Set((assignments ?? []).map((a: any) => a.tenant_id).filter(Boolean)),
+    new Set((tenantRows ?? []).map((a: any) => a.id).filter(Boolean)),
   );
   if (tenantIds.length === 0) return { total: 0, met: 0, pct: null };
 
