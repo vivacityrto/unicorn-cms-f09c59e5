@@ -156,7 +156,7 @@ export function ConversationPanel({
                           {clientInitials(msg.sender_name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0 flex flex-col items-start">
+                      <div className="min-w-0 flex-1 flex flex-col items-start">
                         <p className="max-w-full text-xs font-medium text-muted-foreground mb-0.5 ml-1 break-words [overflow-wrap:anywhere]">
                           {msg.sender_name}
                         </p>
