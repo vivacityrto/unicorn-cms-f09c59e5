@@ -111,7 +111,10 @@ export function ConversationPanel({
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 min-h-0 w-full max-w-full overflow-hidden">
+      <ScrollArea
+        className="flex-1 min-h-0 w-full max-w-full overflow-hidden"
+        viewportClassName="min-w-0 max-w-full overflow-x-hidden [&>div]:!block [&>div]:!min-w-0 [&>div]:!max-w-full"
+      >
         <div className="min-w-0 w-full max-w-full p-4 space-y-4 overflow-x-hidden">
           {messagesLoading ? (
             <div className="space-y-2">
