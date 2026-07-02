@@ -34,6 +34,7 @@ import { MessageAttachments } from "@/components/messaging/MessageAttachments";
 import { AttachmentChips } from "@/components/messaging/AttachmentChips";
 import { ClientsRail, type ClientRailItem } from "@/components/messaging/ClientsRail";
 import { ThreadList } from "@/components/messaging/ThreadList";
+import { ConversationPanel } from "@/components/messaging/ConversationPanel";
 import { topicToBadge } from "@/components/messaging/topicBadge";
 import { clientAvatarColor, clientInitials } from "@/lib/clientAvatarColor";
 import { cn } from "@/lib/utils";
