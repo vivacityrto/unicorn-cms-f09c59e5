@@ -232,7 +232,7 @@ export function KpiDrillDownSheet({
     };
   }, [open, kind, subjectUuid, startTs, endTs]);
 
-  const periodLabel = KPI_V2_PERIOD_LABEL[period];
+  const periodLabel = getPeriodLabel(period);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
