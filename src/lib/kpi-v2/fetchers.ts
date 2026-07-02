@@ -87,7 +87,32 @@ export async function fetchCommunication(
     .gte("created_at", startTs)
     .lte("created_at", endTs)
     .limit(500);
-  const cMsgs = (clientMsgs ?? []) as Array<{ id: string; conversation_id: string; created_at: string }>;
+  const rawMsgs = (clientMsgs ?? []) as Array<{ id: string; conversation_id: string; created_at: string }>;
+  if (rawMsgs.length === 0) return { total: 0, met: 0, pct: null };
+
+  const touchedConvIds = Array.from(new Set(rawMsgs.map((m) => m.conversation_id).filter(Boolean)));
+
+  // Determine which of those conversations were client-initiated (first message ever was 'client').
+  let clientInitiatedSet = new Set<string>();
+  if (touchedConvIds.length > 0) {
+    const { data: firstMsgs } = await sb
+      .from("tenant_messages")
+      .select("conversation_id, sender_type, created_at")
+      .in("conversation_id", touchedConvIds)
+      .order("created_at", { ascending: true })
+      .limit(touchedConvIds.length * 50);
+    const firstByConv = new Map<string, string>();
+    (firstMsgs ?? []).forEach((m: any) => {
+      if (!firstByConv.has(m.conversation_id)) firstByConv.set(m.conversation_id, m.sender_type);
+    });
+    clientInitiatedSet = new Set(
+      Array.from(firstByConv.entries())
+        .filter(([, sender]) => sender === "client")
+        .map(([id]) => id),
+    );
+  }
+
+  const cMsgs = rawMsgs.filter((m) => clientInitiatedSet.has(m.conversation_id));
   if (cMsgs.length === 0) return { total: 0, met: 0, pct: null };
 
   const convIds = Array.from(new Set(cMsgs.map((m) => m.conversation_id).filter(Boolean)));
@@ -97,7 +122,6 @@ export async function fetchCommunication(
     .select("conversation_id, created_at")
     .in("conversation_id", convIds)
     .eq("sender_type", "staff")
-    .gte("created_at", startTs)
     .lte("created_at", bufferEnd);
   const sByConv = new Map<string, string[]>();
   (staffMsgs ?? []).forEach((s: any) => {
@@ -106,6 +130,7 @@ export async function fetchCommunication(
     sByConv.set(s.conversation_id, arr);
   });
 
+  const nowTs = Date.now();
   let total = 0;
   let met = 0;
   cMsgs.forEach((m) => {
@@ -115,7 +140,14 @@ export async function fetchCommunication(
       .map((t) => new Date(t).getTime())
       .filter((t) => t > clientTs)
       .sort((a, b) => a - b)[0];
-    if (reply == null) return;
+    if (reply == null) {
+      // No staff reply — count as a miss once the 12-hr window has elapsed.
+      // Still pending (window not yet elapsed) → exclude from total.
+      if ((nowTs - clientTs) / 1000 > SLA_SECONDS) {
+        total += 1;
+      }
+      return;
+    }
     total += 1;
     if ((reply - clientTs) / 1000 <= SLA_SECONDS) met += 1;
   });
