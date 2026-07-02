@@ -112,7 +112,7 @@ export function ConversationPanel({
 
       {/* Messages */}
       <ScrollArea className="flex-1 min-h-0">
-        <div className="min-w-0 p-4 space-y-4">
+        <div className="min-w-0 max-w-full p-4 space-y-4 overflow-hidden">
           {messagesLoading ? (
             <div className="space-y-2">
               {[...Array(3)].map((_, i) => (
@@ -136,8 +136,8 @@ export function ConversationPanel({
                   if (isOutgoing) {
                     return (
                       <div key={msg.id} className="min-w-0 flex flex-col items-end">
-                        <div className="max-w-[75%] overflow-hidden bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2">
-                          <p className="text-sm whitespace-pre-wrap break-words">{msg.body}</p>
+                        <div className="min-w-0 max-w-[min(75%,42rem)] overflow-hidden bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2">
+                          <p className="text-sm whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{msg.body}</p>
                           {msg.attachments && msg.attachments.length > 0 && (
                             <MessageAttachments attachments={msg.attachments} />
                           )}
@@ -157,11 +157,11 @@ export function ConversationPanel({
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex flex-col items-start">
-                        <p className="text-xs font-medium text-muted-foreground mb-0.5 ml-1">
+                        <p className="max-w-full text-xs font-medium text-muted-foreground mb-0.5 ml-1 break-words [overflow-wrap:anywhere]">
                           {msg.sender_name}
                         </p>
-                        <div className="max-w-[75%] overflow-hidden bg-card border border-border rounded-2xl rounded-tl-sm px-4 py-2">
-                          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                         <div className="min-w-0 max-w-[min(75%,42rem)] overflow-hidden bg-card border border-border rounded-2xl rounded-tl-sm px-4 py-2">
+                          <p className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                             {msg.body}
                           </p>
                           {msg.attachments && msg.attachments.length > 0 && (

@@ -10,11 +10,11 @@ interface Props {
 export function AttachmentChips({ files, onRemove }: Props) {
   if (!files.length) return null;
   return (
-    <div className="flex flex-wrap gap-1.5 mb-2">
+    <div className="flex min-w-0 max-w-full flex-wrap gap-1.5 mb-2 overflow-hidden">
       {files.map((f, i) => (
         <div
           key={`${f.name}-${i}`}
-          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted text-xs border border-border"
+          className="inline-flex max-w-full min-w-0 items-center gap-1.5 px-2 py-1 rounded-md bg-muted text-xs border border-border"
         >
           <Paperclip className="h-3 w-3 text-muted-foreground" />
           <span className="truncate max-w-[180px]">{f.name}</span>
