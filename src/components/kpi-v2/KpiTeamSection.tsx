@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Loader2, Users, Code2, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { KPI_V2_PERIOD_LABEL, type KpiV2Period } from "./types";
+import { getPeriodLabel, type KpiV2Period } from "./types";
 import { pctStatus, retentionStatus, type KpiStatus } from "@/lib/kpi-v2/status";
 import {
   fetchRetention, fetchCommunication, fetchCscTasks, fetchAssistantTasks,
