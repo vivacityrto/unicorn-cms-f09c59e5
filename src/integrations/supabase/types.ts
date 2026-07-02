@@ -48867,6 +48867,7 @@ export type Database = {
           id: number
           is_primary: boolean
           role_label: string
+          superseded_at: string | null
           tenant_id: number
           updated_at: string
         }
@@ -48878,6 +48879,7 @@ export type Database = {
           id?: number
           is_primary?: boolean
           role_label?: string
+          superseded_at?: string | null
           tenant_id: number
           updated_at?: string
         }
@@ -48889,6 +48891,7 @@ export type Database = {
           id?: number
           is_primary?: boolean
           role_label?: string
+          superseded_at?: string | null
           tenant_id?: number
           updated_at?: string
         }
@@ -67952,6 +67955,44 @@ export type Database = {
       is_vivacity_team_user: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_team_v2: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_user: { Args: never; Returns: boolean }
+      kpi_csc_communication_rows: {
+        Args: { p_csc_user_id: string; p_end: string; p_start: string }
+        Returns: {
+          conversation_id: string
+          message_id: string
+          received_at: string
+          responded_at: string
+          response_seconds: number
+          sla_status: string
+          subject: string
+          tenant_id: number
+          tenant_name: string
+        }[]
+      }
+      kpi_csc_retention_rows: {
+        Args: { p_csc_user_id: string; p_end: string; p_start: string }
+        Returns: {
+          assigned_since: string
+          churned_at: string
+          churned_in_period: boolean
+          superseded_at: string
+          tenant_id: number
+          tenant_name: string
+        }[]
+      }
+      kpi_csc_tasks_rows: {
+        Args: { p_csc_user_id: string; p_end: string; p_start: string }
+        Returns: {
+          completed_at: string
+          created_at: string
+          package_name: string
+          status: string
+          task_id: string
+          task_name: string
+          tenant_id: number
+          tenant_name: string
+        }[]
+      }
       kpi_score_rolling: {
         Args: { p_days?: number; p_tenant_id: number }
         Returns: Json
