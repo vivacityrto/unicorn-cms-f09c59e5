@@ -659,16 +659,7 @@ export const DashboardLayout = ({
         <TimeInboxBanner />
 
         {/* Page Content - w-full min-w-0 prevents content collapse */}
-        <main
-          className={cn(
-            "flex-1 w-full min-w-0 p-4 md:p-6",
-            location.pathname === "/communications"
-              ? "flex min-h-0 flex-col overflow-hidden"
-              : "overflow-y-auto"
-          )}
-        >
-          {children}
-        </main>
+        <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">{children}</main>
 
         {/* Footer: Client footer for client view, Utility footer for Vivacity team */}
         {showVivacityMenu ? <UtilityFooter /> : <ClientFooter />}
