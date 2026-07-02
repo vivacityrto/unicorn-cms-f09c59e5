@@ -1,8 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getPeriodRange, type KpiV2Period } from "@/components/kpi-v2/types";
 
-const SLA_SECONDS = 12 * 60 * 60;
-
 export interface RetentionResult {
   total: number;
   churned: number;
@@ -19,173 +17,87 @@ export interface TaskResult {
   pct: number | null;
 }
 
+/**
+ * Half-open [p_start, p_end) window matching the KPI RPCs.
+ * `endTs` is the start of the day *after* the period ends, so the RPCs'
+ * `< p_end` predicate captures the full final day.
+ */
 function tsRange(period: KpiV2Period) {
   const { startIso, endIso } = getPeriodRange(period);
-  return {
-    startIso,
-    endIso,
-    startTs: `${startIso}T00:00:00.000Z`,
-    endTs: `${endIso}T23:59:59.999Z`,
-  };
+  const startTs = `${startIso}T00:00:00.000Z`;
+  const endDate = new Date(`${endIso}T00:00:00.000Z`);
+  endDate.setUTCDate(endDate.getUTCDate() + 1);
+  const endTs = endDate.toISOString();
+  return { startTs, endTs };
 }
 
-/** CSC — Retention. */
+/** CSC — Retention (clients on my books during the period). */
 export async function fetchRetention(
   subjectUuid: string,
   period: KpiV2Period,
 ): Promise<RetentionResult> {
   const { startTs, endTs } = tsRange(period);
-  const sb = supabase as any;
-  const { data: aRows } = await sb
-    .from("tenant_csc_assignments")
-    .select("tenant_id")
-    .eq("csc_user_id", subjectUuid)
-    .eq("is_primary", true)
-    .is("ended_at", null);
-  const tenantIds = Array.from(
-    new Set((aRows ?? []).map((r: any) => r.tenant_id).filter(Boolean)),
-  );
-  if (tenantIds.length === 0) return { total: 0, churned: 0, pct: null };
-  const { data } = await sb
-    .from("tenants")
-    .select("id, churned_at, created_at")
-    .in("id", tenantIds);
-  const rows = (data ?? []) as Array<{ id: number; churned_at: string | null; created_at: string }>;
-  const atStart = rows.filter((r) => r.created_at <= endTs);
-  const churned = atStart.filter(
-    (r) => r.churned_at != null && r.churned_at >= startTs && r.churned_at <= endTs,
-  );
-  const total = atStart.length;
-  const ch = churned.length;
+  const { data, error } = await (supabase as any).rpc("kpi_csc_retention_rows", {
+    p_csc_user_id: subjectUuid,
+    p_start: startTs,
+    p_end: endTs,
+  });
+  if (error) {
+    console.error("[fetchRetention] rpc failed", error);
+    return { total: 0, churned: 0, pct: null };
+  }
+  const rows = (data ?? []) as Array<{ churned_in_period: boolean }>;
+  const total = rows.length;
+  const ch = rows.filter((r) => r.churned_in_period).length;
   const retained = total - ch;
   return { total, churned: ch, pct: total > 0 ? (retained / total) * 100 : null };
 }
 
-/** CSC — Communication (12-hr SLA on client messages). */
+/** CSC — Communication (12-hr SLA, point-in-time attribution). */
 export async function fetchCommunication(
   subjectUuid: string,
   period: KpiV2Period,
 ): Promise<CommunicationResult> {
   const { startTs, endTs } = tsRange(period);
-  const sb = supabase as any;
-  const { data: aRows } = await sb
-    .from("tenant_csc_assignments")
-    .select("tenant_id")
-    .eq("csc_user_id", subjectUuid)
-    .eq("is_primary", true)
-    .is("ended_at", null);
-  const tenantIds = Array.from(
-    new Set((aRows ?? []).map((a: any) => a.tenant_id).filter(Boolean)),
-  );
-  if (tenantIds.length === 0) return { total: 0, met: 0, pct: null };
-
-  const { data: clientMsgs } = await sb
-    .from("tenant_messages")
-    .select("id, conversation_id, created_at")
-    .in("tenant_id", tenantIds)
-    .eq("sender_type", "client")
-    .gte("created_at", startTs)
-    .lte("created_at", endTs)
-    .limit(500);
-  const rawMsgs = (clientMsgs ?? []) as Array<{ id: string; conversation_id: string; created_at: string }>;
-  if (rawMsgs.length === 0) return { total: 0, met: 0, pct: null };
-
-  const touchedConvIds = Array.from(new Set(rawMsgs.map((m) => m.conversation_id).filter(Boolean)));
-
-  // Determine which of those conversations were client-initiated (first message ever was 'client').
-  let clientInitiatedSet = new Set<string>();
-  if (touchedConvIds.length > 0) {
-    const { data: firstMsgs } = await sb
-      .from("tenant_messages")
-      .select("conversation_id, sender_type, created_at")
-      .in("conversation_id", touchedConvIds)
-      .order("created_at", { ascending: true })
-      .limit(touchedConvIds.length * 50);
-    const firstByConv = new Map<string, string>();
-    (firstMsgs ?? []).forEach((m: any) => {
-      if (!firstByConv.has(m.conversation_id)) firstByConv.set(m.conversation_id, m.sender_type);
-    });
-    clientInitiatedSet = new Set(
-      Array.from(firstByConv.entries())
-        .filter(([, sender]) => sender === "client")
-        .map(([id]) => id),
-    );
+  const { data, error } = await (supabase as any).rpc("kpi_csc_communication_rows", {
+    p_csc_user_id: subjectUuid,
+    p_start: startTs,
+    p_end: endTs,
+  });
+  if (error) {
+    console.error("[fetchCommunication] rpc failed", error);
+    return { total: 0, met: 0, pct: null };
   }
-
-  const cMsgs = rawMsgs.filter((m) => clientInitiatedSet.has(m.conversation_id));
-  if (cMsgs.length === 0) return { total: 0, met: 0, pct: null };
-
-  const convIds = Array.from(new Set(cMsgs.map((m) => m.conversation_id).filter(Boolean)));
-  const bufferEnd = new Date(new Date(endTs).getTime() + SLA_SECONDS * 1000).toISOString();
-  const { data: staffMsgs } = await sb
-    .from("tenant_messages")
-    .select("conversation_id, created_at")
-    .in("conversation_id", convIds)
-    .eq("sender_type", "staff")
-    .lte("created_at", bufferEnd);
-  const sByConv = new Map<string, string[]>();
-  (staffMsgs ?? []).forEach((s: any) => {
-    const arr = sByConv.get(s.conversation_id) ?? [];
-    arr.push(s.created_at);
-    sByConv.set(s.conversation_id, arr);
-  });
-
-  const nowTs = Date.now();
-  let total = 0;
-  let met = 0;
-  cMsgs.forEach((m) => {
-    const staffTimes = sByConv.get(m.conversation_id) ?? [];
-    const clientTs = new Date(m.created_at).getTime();
-    const reply = staffTimes
-      .map((t) => new Date(t).getTime())
-      .filter((t) => t > clientTs)
-      .sort((a, b) => a - b)[0];
-    if (reply == null) {
-      // No staff reply — count as a miss once the 12-hr window has elapsed.
-      // Still pending (window not yet elapsed) → exclude from total.
-      if ((nowTs - clientTs) / 1000 > SLA_SECONDS) {
-        total += 1;
-      }
-      return;
-    }
-    total += 1;
-    if ((reply - clientTs) / 1000 <= SLA_SECONDS) met += 1;
-  });
+  const rows = (data ?? []) as Array<{ sla_status: "met" | "missed" | "pending" }>;
+  // Pending rows (still inside 12-hr window with no reply) are excluded.
+  const decided = rows.filter((r) => r.sla_status !== "pending");
+  const total = decided.length;
+  const met = decided.filter((r) => r.sla_status === "met").length;
   return { total, met, pct: total > 0 ? (met / total) * 100 : null };
 }
 
-/** CSC — Package tasks completed on time. */
+/** CSC — Package tasks (point-in-time attribution). */
 export async function fetchCscTasks(
   subjectUuid: string,
   period: KpiV2Period,
 ): Promise<TaskResult> {
   const { startTs, endTs } = tsRange(period);
-  const sb = supabase as any;
-  const { data: aRows } = await sb
-    .from("tenant_csc_assignments")
-    .select("tenant_id")
-    .eq("csc_user_id", subjectUuid)
-    .eq("is_primary", true)
-    .is("ended_at", null);
-  const tenantIds = Array.from(
-    new Set((aRows ?? []).map((a: any) => a.tenant_id).filter(Boolean)),
-  );
-  if (tenantIds.length === 0) return { total: 0, completed: 0, pct: null };
-  const { data } = await sb
-    .from("client_team_tasks")
-    .select(
-      "id, status, created_at, client_package_stages!inner(client_packages!inner(tenant_id))",
-    )
-    .in("client_package_stages.client_packages.tenant_id", tenantIds)
-    .gte("created_at", startTs)
-    .lte("created_at", endTs);
+  const { data, error } = await (supabase as any).rpc("kpi_csc_tasks_rows", {
+    p_csc_user_id: subjectUuid,
+    p_start: startTs,
+    p_end: endTs,
+  });
+  if (error) {
+    console.error("[fetchCscTasks] rpc failed", error);
+    return { total: 0, completed: 0, pct: null };
+  }
   const rows = (data ?? []) as Array<{ status: string | null }>;
   const total = rows.length;
   const completed = rows.filter((r) => (r.status ?? "").toLowerCase() === "completed").length;
   return { total, completed, pct: total > 0 ? (completed / total) * 100 : null };
 }
 
-/** Assistant — union tasks across three tables, on-time completion. */
+/** Assistant — union tasks across three tables, on-time completion. Unchanged. */
 export async function fetchAssistantTasks(
   subjectUuid: string,
   period: KpiV2Period,
@@ -196,19 +108,19 @@ export async function fetchAssistantTasks(
   const [ttCreated, ttFollowers, cai, ops] = await Promise.all([
     sb.from("tasks_tenants")
       .select("id, due_date, completed_at")
-      .gte("created_at", startTs).lte("created_at", endTs)
+      .gte("created_at", startTs).lt("created_at", endTs)
       .eq("created_by", subjectUuid),
     sb.from("tasks_tenants")
       .select("id, due_date, completed_at")
-      .gte("created_at", startTs).lte("created_at", endTs)
+      .gte("created_at", startTs).lt("created_at", endTs)
       .contains("followers", [subjectUuid]),
     sb.from("client_action_items")
       .select("id, due_date, completed_at")
-      .gte("created_at", startTs).lte("created_at", endTs)
+      .gte("created_at", startTs).lt("created_at", endTs)
       .eq("assignee_user_id", subjectUuid),
     sb.from("ops_work_items")
       .select("id, due_at, completed_at")
-      .gte("created_at", startTs).lte("created_at", endTs)
+      .gte("created_at", startTs).lt("created_at", endTs)
       .eq("owner_user_uuid", subjectUuid),
   ]);
 
