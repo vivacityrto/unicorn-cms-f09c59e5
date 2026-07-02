@@ -208,32 +208,15 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none" disabled>Select a function...</SelectItem>
-                {functions?.map((func) => {
-                  const hasExisting = parentRockId && teamRocksByFunction.get(func.id)?.some(r => r.parent_rock_id === parentRockId);
-                  return (
-                    <SelectItem key={func.id} value={func.id} disabled={hasExisting}>
-                      <div className="flex items-center gap-2">
-                        <span>{func.name}</span>
-                        {hasExisting && (
-                          <Badge variant="secondary" className="text-[10px]">Already has rock</Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  );
-                })}
+                {functions?.map((func) => (
+                  <SelectItem key={func.id} value={func.id}>
+                    {func.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Uniqueness warning */}
-          {existingTeamRock && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                This function already has a Team Rock for the selected Company Rock: "{existingTeamRock.title}"
-              </AlertDescription>
-            </Alert>
-          )}
 
           {/* Title */}
           <div className="space-y-2">
