@@ -63,7 +63,7 @@ export default function TasksManagement() {
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -380,6 +380,7 @@ export default function TasksManagement() {
     if (statusFilter !== "all") {
       filtered = filtered.filter(task => {
         const status = getTaskStatus(task);
+        if (statusFilter === "active") return status !== "completed";
         if (statusFilter === "completed") return status === "completed";
         if (statusFilter === "overdue") return status === "overdue";
         if (statusFilter === "in_progress") return status === "pending" || status === "in_progress";
