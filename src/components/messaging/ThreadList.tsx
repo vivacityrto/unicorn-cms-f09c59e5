@@ -49,9 +49,9 @@ export function ThreadList({
   className,
 }: Props) {
   return (
-    <div className={cn("flex flex-col border rounded-lg border-border bg-card overflow-hidden", className)}>
-      <div className="px-3 pt-3 pb-2 border-b border-border space-y-2">
-        <p className="text-sm font-semibold text-foreground">{scopeLabel}</p>
+    <div className={cn("flex min-w-0 flex-col border rounded-lg border-border bg-card overflow-hidden", className)}>
+      <div className="min-w-0 px-3 pt-3 pb-2 border-b border-border space-y-2">
+        <p className="truncate text-sm font-semibold text-foreground">{scopeLabel}</p>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
@@ -62,7 +62,7 @@ export function ThreadList({
           />
         </div>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1">
         {items.length === 0 ? (
           <div className="p-6 text-center text-muted-foreground">
             <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
@@ -81,15 +81,15 @@ export function ThreadList({
                   type="button"
                   onClick={() => onSelect(conv.id)}
                   className={cn(
-                    "w-full text-left px-3 py-2.5 border-l-2 border-transparent hover:bg-muted/50 transition-colors",
+                    "block w-full min-w-0 overflow-hidden text-left px-3 py-2.5 border-l-2 border-transparent hover:bg-muted/50 transition-colors",
                     isSelected && "bg-muted border-l-primary"
                   )}
                 >
-                  <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
-                    <Badge variant={badge.variant} className="text-[10px] px-1.5 py-0 h-4">
+                  <div className="flex min-w-0 items-center gap-1.5 mb-0.5 overflow-hidden">
+                    <Badge variant={badge.variant} className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0">
                       {badge.label}
                     </Badge>
-                    <span className="text-xs text-muted-foreground truncate min-w-0">
+                    <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
                       {conv.tenant_name}
                     </span>
                     <span className="ml-auto text-[11px] text-muted-foreground flex-shrink-0 flex items-center gap-1.5">
