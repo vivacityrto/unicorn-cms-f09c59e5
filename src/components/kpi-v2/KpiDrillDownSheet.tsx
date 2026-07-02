@@ -130,14 +130,13 @@ export function KpiDrillDownSheet({
           }));
         } else if (kind === "communication") {
           const SLA_SECONDS = 12 * 60 * 60;
-          const { data: assignments } = await (supabase as any)
-            .from("tenant_csc_assignments")
-            .select("tenant_id")
-            .eq("csc_user_id", subjectUuid)
-            .eq("is_primary", true)
-            .is("ended_at", null);
+          const { data: tenantRows } = await (supabase as any)
+            .from("tenants")
+            .select("id")
+            .eq("assigned_consultant_user_id", subjectUuid)
+            .eq("status", "active");
           const tenantIds = Array.from(
-            new Set((assignments ?? []).map((a: any) => a.tenant_id).filter(Boolean))
+            new Set((tenantRows ?? []).map((a: any) => a.id).filter(Boolean))
           );
           if (tenantIds.length > 0) {
             // Step 2: fetch client messages in the period scoped by tenant_id.
