@@ -48,6 +48,10 @@ function daySeparatorLabel(iso: string): string {
   return format(d, "EEEE, d MMMM");
 }
 
+function normaliseMessageBody(body: string): string {
+  return body.replace(/\u00a0/g, " ").replace(/[\u200b-\u200d\ufeff]/g, "");
+}
+
 export function ConversationPanel({
   conversation,
   messages,
@@ -126,7 +130,7 @@ export function ConversationPanel({
             <p className="text-sm text-muted-foreground text-center py-8">No messages yet.</p>
           ) : (
             groups.map(group => (
-              <div key={group.key} className="space-y-3">
+              <div key={group.key} className="min-w-0 max-w-full space-y-3 overflow-hidden">
                 <div className="flex justify-center">
                   <span className="px-3 py-1 rounded-full bg-muted text-[11px] font-medium text-muted-foreground">
                     {group.label}
@@ -140,7 +144,7 @@ export function ConversationPanel({
                     return (
                       <div key={msg.id} className="grid w-full min-w-0 max-w-full justify-items-end overflow-hidden">
                         <div className="box-border w-full min-w-0 max-w-[min(100%,42rem)] overflow-hidden rounded-2xl rounded-tr-sm bg-primary px-4 py-2 text-primary-foreground [overflow-wrap:anywhere] [word-break:break-word] sm:w-[75%]">
-                          <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto]">{msg.body}</p>
+                          <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-all] [hyphens:auto]">{normaliseMessageBody(msg.body)}</p>
                           {msg.attachments && msg.attachments.length > 0 && (
                             <MessageAttachments attachments={msg.attachments} />
                           )}
@@ -164,8 +168,8 @@ export function ConversationPanel({
                           {msg.sender_name}
                         </p>
                          <div className="box-border w-full min-w-0 max-w-[min(100%,42rem)] overflow-hidden rounded-2xl rounded-tl-sm border border-border bg-card px-4 py-2 [overflow-wrap:anywhere] [word-break:break-word] sm:w-[75%]">
-                          <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] [hyphens:auto]">
-                            {msg.body}
+                          <p className="block w-full min-w-0 max-w-full text-sm leading-relaxed text-foreground whitespace-pre-line break-words [overflow-wrap:anywhere] [word-break:break-all] [hyphens:auto]">
+                            {normaliseMessageBody(msg.body)}
                           </p>
                           {msg.attachments && msg.attachments.length > 0 && (
                             <MessageAttachments attachments={msg.attachments} />
