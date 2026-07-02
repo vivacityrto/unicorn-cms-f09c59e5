@@ -6,6 +6,13 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -130,6 +137,7 @@ export function KpiDrillDownSheet({
           if (error) throw error;
           data = (rpcRows ?? []).map((r: any) => ({
             id: r.message_id,
+            conversation_id: r.conversation_id,
             subject: r.subject,
             tenant_name: r.tenant_name ?? "—",
             received_at: r.received_at,
@@ -321,9 +329,20 @@ function RetentionTable({ rows }: { rows: any[] }) {
   );
 }
 
+function fmtDateTimeCompact(iso?: string | null) {
+  if (!iso) return "—";
+  try {
+    return format(parseISO(iso), "d MMM, h:mm a");
+  } catch {
+    return iso;
+  }
+}
+
 function CommunicationTable({ rows }: { rows: any[] }) {
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
   return (
-    <div className="overflow-x-auto">
+    <>
       <Table>
         <TableHeader>
           <TableRow>
@@ -340,14 +359,23 @@ function CommunicationTable({ rows }: { rows: any[] }) {
             const met = r.sla_met === true;
             const missed = r.sla_met === false;
             return (
-              <TableRow key={r.id}>
-                <TableCell className="!px-2 max-w-[200px] truncate font-medium" title={r.subject ?? ""}>
-                  {r.subject ? (r.subject.length > 40 ? r.subject.slice(0, 40) + "…" : r.subject) : "(no subject)"}
+              <TableRow
+                key={r.id}
+                className={cn(r.conversation_id && "cursor-pointer hover:bg-muted/50")}
+                onClick={() => {
+                  if (r.conversation_id) {
+                    setSelectedConversationId(r.conversation_id);
+                    setSelectedSubject(r.subject ?? "(no subject)");
+                  }
+                }}
+              >
+                <TableCell className="!px-2 max-w-[160px] truncate font-medium" title={r.subject ?? ""}>
+                  {r.subject ? r.subject : "(no subject)"}
                 </TableCell>
-                <TableCell className="!px-2 text-sm">{r.tenant_name}</TableCell>
-                <TableCell className="!px-2 text-xs text-muted-foreground">{fmtDateTime(r.received_at)}</TableCell>
-                <TableCell className="!px-2 text-xs text-muted-foreground">{fmtDateTime(r.responded_at)}</TableCell>
-                <TableCell className="!px-2 text-sm">{fmtDuration(r.response_minutes)}</TableCell>
+                <TableCell className="!px-2 text-sm max-w-[160px] truncate" title={r.tenant_name}>{r.tenant_name}</TableCell>
+                <TableCell className="!px-2 text-xs text-muted-foreground whitespace-nowrap">{fmtDateTimeCompact(r.received_at)}</TableCell>
+                <TableCell className="!px-2 text-xs text-muted-foreground whitespace-nowrap">{fmtDateTimeCompact(r.responded_at)}</TableCell>
+                <TableCell className="!px-2 text-sm whitespace-nowrap">{fmtDuration(r.response_minutes)}</TableCell>
                 <TableCell className="!px-2">
                   {met ? (
                     <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700">
@@ -368,7 +396,100 @@ function CommunicationTable({ rows }: { rows: any[] }) {
           })}
         </TableBody>
       </Table>
-    </div>
+      <ConversationDialog
+        conversationId={selectedConversationId}
+        subject={selectedSubject}
+        onClose={() => setSelectedConversationId(null)}
+      />
+    </>
+  );
+}
+
+function ConversationDialog({
+  conversationId,
+  subject,
+  onClose,
+}: {
+  conversationId: string | null;
+  subject: string;
+  onClose: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      const { data, error } = await supabase
+        .from("tenant_messages")
+        .select("sender_type, body, created_at")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+      if (!cancelled) {
+        if (error) console.error("[ConversationDialog] load failed", error);
+        setMessages(data ?? []);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId]);
+
+  return (
+    <Dialog open={!!conversationId} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent size="lg" className="max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="pr-8">{subject || "Conversation"}</DialogTitle>
+          <DialogDescription>Full message thread, oldest first.</DialogDescription>
+        </DialogHeader>
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Loading conversation…
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+            <Inbox className="h-8 w-8 text-muted-foreground/60" />
+            <div className="text-sm font-medium text-foreground">No messages</div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {messages.map((m, i) => {
+              const isClient = (m.sender_type ?? "").toLowerCase() === "client";
+              return (
+                <div key={i} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    {isClient ? (
+                      <Badge variant="outline" className="border-[#23C0DD]/40 bg-[#23C0DD]/10 text-[#0e6b7c]">
+                        Client
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="border-[#7130A0]/40 bg-[#7130A0]/10 text-[#7130A0]">
+                        Staff
+                      </Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">{fmtDateTime(m.created_at)}</span>
+                  </div>
+                  <div
+                    className={cn(
+                      "rounded-md border px-3 py-2 text-sm whitespace-pre-wrap break-words",
+                      isClient
+                        ? "border-[#23C0DD]/30 bg-[#23C0DD]/5"
+                        : "border-[#7130A0]/30 bg-[#7130A0]/5",
+                    )}
+                  >
+                    {m.body || <span className="text-muted-foreground italic">(empty message)</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
