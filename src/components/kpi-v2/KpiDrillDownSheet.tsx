@@ -20,7 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
-  KPI_V2_PERIOD_LABEL,
+  getPeriodLabel,
   getPeriodRange,
   type KpiV2Period,
 } from "./types";
@@ -232,7 +232,7 @@ export function KpiDrillDownSheet({
     };
   }, [open, kind, subjectUuid, startTs, endTs]);
 
-  const periodLabel = KPI_V2_PERIOD_LABEL[period];
+  const periodLabel = getPeriodLabel(period);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

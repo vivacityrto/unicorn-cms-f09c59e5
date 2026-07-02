@@ -1,19 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useKpiAccess } from "@/hooks/useKpiAccess";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Download, Users } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ChevronLeft, ChevronRight, Download, Users } from "lucide-react";
 import { CscKpiCards } from "@/components/kpi-v2/CscKpiCards";
 import { AssistantKpiCards } from "@/components/kpi-v2/AssistantKpiCards";
 import { DeveloperPlaceholder } from "@/components/kpi-v2/DeveloperPlaceholder";
@@ -21,16 +15,40 @@ import { PerformanceGuide } from "@/components/kpi-v2/PerformanceGuide";
 import { KpiInfoBanner } from "@/components/kpi-v2/KpiInfoBanner";
 import { KpiTeamSection } from "@/components/kpi-v2/KpiTeamSection";
 import {
-  KPI_V2_PERIOD_LABEL,
-  KPI_V2_PERIOD_ORDER,
+  canStepForward,
+  defaultPeriod,
+  getPeriodLabel,
+  isCurrentPeriod,
+  stepPeriod,
+  todayIso,
+  type KpiGranularity,
   type KpiV2Period,
 } from "@/components/kpi-v2/types";
 import { toast } from "@/hooks/use-toast";
 
+const VALID_GRANULARITIES: KpiGranularity[] = ["week", "month", "quarter"];
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function periodFromSearchParams(sp: URLSearchParams): KpiV2Period {
+  const g = sp.get("g");
+  const d = sp.get("d");
+  if (
+    g &&
+    d &&
+    (VALID_GRANULARITIES as string[]).includes(g) &&
+    ISO_DATE_RE.test(d) &&
+    !Number.isNaN(new Date(d).getTime())
+  ) {
+    return { granularity: g as KpiGranularity, anchorDate: d };
+  }
+  return defaultPeriod();
+}
+
 /**
  * /kpi — KPI Dashboard.
- * Role-based donut-gauge cards, period dropdown, export, performance guide,
- * info banner, and a reviewer-only Team KPI toggle. No legacy KPI components.
+ * Role-based donut-gauge cards, granularity + stepper period picker with
+ * URL state, export, performance guide, info banner, and a reviewer-only
+ * Team KPI toggle.
  */
 export default function KpiPage() {
   const { profile } = useAuth();
@@ -38,7 +56,16 @@ export default function KpiPage() {
   const kpiRole = profile?.kpi_role ?? null;
   const subjectUuid = profile?.user_uuid ?? "";
 
-  const [period, setPeriod] = useState<KpiV2Period>("this_month");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const period = useMemo(() => periodFromSearchParams(searchParams), [searchParams]);
+
+  const setPeriod = (next: KpiV2Period) => {
+    const sp = new URLSearchParams(searchParams);
+    sp.set("g", next.granularity);
+    sp.set("d", next.anchorDate);
+    setSearchParams(sp, { replace: false });
+  };
+
   const [showTeamKpi, setShowTeamKpi] = useState(canViewAnyStaff);
 
   useEffect(() => {
@@ -67,16 +94,39 @@ export default function KpiPage() {
     profile?.first_name ||
     (profile?.email ? profile.email.split("@")[0] : "there");
 
+  const periodLabel = getPeriodLabel(period);
+  const forwardAvailable = canStepForward(period);
+  const atCurrent = isCurrentPeriod(period);
+
+  const handleGranularityChange = (g: string) => {
+    if (!g || !(VALID_GRANULARITIES as string[]).includes(g)) return;
+    // Keep the same anchor date; the new bounds derive from it.
+    setPeriod({ granularity: g as KpiGranularity, anchorDate: period.anchorDate });
+  };
+
+  const handlePrev = () => setPeriod(stepPeriod(period, -1));
+  const handleNext = () => {
+    if (!forwardAvailable) return;
+    setPeriod(stepPeriod(period, 1));
+  };
+  const handleToday = () =>
+    setPeriod({ granularity: period.granularity, anchorDate: todayIso() });
+
   const handleExport = () => {
     const header = ["Period", "Role", "Subject"];
-    const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.email || subjectUuid;
-    const row = [KPI_V2_PERIOD_LABEL[period], shortRoleLabel ?? "—", displayName];
-    const csv = `${header.join(",")}\n${row.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")}\n`;
+    const displayName =
+      [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") ||
+      profile?.email ||
+      subjectUuid;
+    const row = [periodLabel, shortRoleLabel ?? "—", displayName];
+    const csv = `${header.join(",")}\n${row
+      .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+      .join(",")}\n`;
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `kpi-${period}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `kpi-${period.granularity}-${period.anchorDate}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -110,20 +160,52 @@ export default function KpiPage() {
 
         <KpiInfoBanner />
 
-        {/* Controls: period dropdown · export · team toggle */}
+        {/* Controls: granularity + stepper · export · team toggle */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <Select value={period} onValueChange={(v) => setPeriod(v as KpiV2Period)}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {KPI_V2_PERIOD_ORDER.map((key) => (
-                <SelectItem key={key} value={key}>
-                  {KPI_V2_PERIOD_LABEL[key]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap items-center gap-2">
+            <ToggleGroup
+              type="single"
+              value={period.granularity}
+              onValueChange={handleGranularityChange}
+              size="sm"
+              variant="outline"
+            >
+              <ToggleGroupItem value="week" aria-label="Week">Week</ToggleGroupItem>
+              <ToggleGroupItem value="month" aria-label="Month">Month</ToggleGroupItem>
+              <ToggleGroupItem value="quarter" aria-label="Quarter">Quarter</ToggleGroupItem>
+            </ToggleGroup>
+
+            <div className="flex items-center gap-1 rounded-md border border-border/60 bg-background px-1 py-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={handlePrev}
+                aria-label="Previous period"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="min-w-[180px] text-center text-sm font-medium px-2">
+                {periodLabel}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={handleNext}
+                disabled={!forwardAvailable}
+                aria-label="Next period"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {!atCurrent && (
+              <Button variant="outline" size="sm" onClick={handleToday}>
+                Today
+              </Button>
+            )}
+          </div>
 
           <div className="flex items-center gap-3">
             {canViewAnyStaff && (

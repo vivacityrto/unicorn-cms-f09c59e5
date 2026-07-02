@@ -1,68 +1,120 @@
 import {
+  startOfWeek,
+  endOfWeek,
   startOfMonth,
   endOfMonth,
   startOfQuarter,
   endOfQuarter,
-  subMonths,
-  subQuarters,
+  addWeeks,
+  addMonths,
+  addQuarters,
   format,
+  getQuarter,
+  getYear,
 } from "date-fns";
 
-export type KpiV2Period =
-  | "this_month"
-  | "last_month"
-  | "this_quarter"
-  | "last_quarter";
+export type KpiGranularity = "week" | "month" | "quarter";
 
-export const KPI_V2_PERIOD_LABEL: Record<KpiV2Period, string> = {
-  this_month: "This Month",
-  last_month: "Last Month",
-  this_quarter: "This Quarter",
-  last_quarter: "Last Quarter",
-};
+export interface KpiV2Period {
+  granularity: KpiGranularity;
+  /** ISO date (yyyy-MM-dd) — any date within the period. */
+  anchorDate: string;
+}
 
-export const KPI_V2_PERIOD_ORDER: KpiV2Period[] = [
-  "this_month",
-  "last_month",
-  "this_quarter",
-  "last_quarter",
-];
+const WEEK_OPTS = { weekStartsOn: 1 as const }; // Monday
+
+function parseAnchor(anchorDate: string): Date {
+  // Parse as local date to avoid TZ shifts on yyyy-MM-dd strings.
+  const [y, m, d] = anchorDate.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
+export function todayIso(): string {
+  return format(new Date(), "yyyy-MM-dd");
+}
+
+export function defaultPeriod(): KpiV2Period {
+  return { granularity: "month", anchorDate: todayIso() };
+}
+
+function bounds(period: KpiV2Period): { start: Date; end: Date } {
+  const anchor = parseAnchor(period.anchorDate);
+  switch (period.granularity) {
+    case "week":
+      return { start: startOfWeek(anchor, WEEK_OPTS), end: endOfWeek(anchor, WEEK_OPTS) };
+    case "month":
+      return { start: startOfMonth(anchor), end: endOfMonth(anchor) };
+    case "quarter":
+      return { start: startOfQuarter(anchor), end: endOfQuarter(anchor) };
+  }
+}
 
 /**
- * Resolve a KPI period key to an inclusive [start, end] ISO date range
- * (yyyy-MM-dd) usable with `.gte("period_start", …).lte("period_start", …)`.
+ * Resolve a KPI period to an inclusive [start, end] ISO date range
+ * (yyyy-MM-dd). `fetchers.tsRange()` extends `endIso` by a day to form
+ * the half-open [p_start, p_end) window the RPCs expect.
  */
 export function getPeriodRange(period: KpiV2Period): {
   startIso: string;
   endIso: string;
 } {
-  const now = new Date();
-  let start: Date;
-  let end: Date;
-  switch (period) {
-    case "this_month":
-      start = startOfMonth(now);
-      end = endOfMonth(now);
-      break;
-    case "last_month": {
-      const prev = subMonths(now, 1);
-      start = startOfMonth(prev);
-      end = endOfMonth(prev);
-      break;
-    }
-    case "this_quarter":
-      start = startOfQuarter(now);
-      end = endOfQuarter(now);
-      break;
-    case "last_quarter": {
-      const prev = subQuarters(now, 1);
-      start = startOfQuarter(prev);
-      end = endOfQuarter(prev);
-      break;
-    }
-  }
+  const { start, end } = bounds(period);
   return {
     startIso: format(start, "yyyy-MM-dd"),
     endIso: format(end, "yyyy-MM-dd"),
   };
+}
+
+export function getPeriodLabel(period: KpiV2Period): string {
+  const { start, end } = bounds(period);
+  switch (period.granularity) {
+    case "week": {
+      const sameMonth = start.getMonth() === end.getMonth();
+      const sameYear = start.getFullYear() === end.getFullYear();
+      const startFmt = sameMonth
+        ? format(start, "d")
+        : sameYear
+          ? format(start, "d MMM")
+          : format(start, "d MMM yyyy");
+      return `Week of ${startFmt} – ${format(end, "d MMM yyyy")}`;
+    }
+    case "month":
+      return format(start, "MMMM yyyy");
+    case "quarter": {
+      const q = getQuarter(start);
+      const monthsRange = `${format(start, "MMM")}–${format(end, "MMM")}`;
+      return `Q${q} ${getYear(start)} (${monthsRange})`;
+    }
+  }
+}
+
+/** Move the anchor by one unit of the selected granularity. */
+export function stepPeriod(period: KpiV2Period, direction: 1 | -1): KpiV2Period {
+  const anchor = parseAnchor(period.anchorDate);
+  let next: Date;
+  switch (period.granularity) {
+    case "week":
+      next = addWeeks(anchor, direction);
+      break;
+    case "month":
+      next = addMonths(anchor, direction);
+      break;
+    case "quarter":
+      next = addQuarters(anchor, direction);
+      break;
+  }
+  return { granularity: period.granularity, anchorDate: format(next, "yyyy-MM-dd") };
+}
+
+/** True when stepping forward one unit would move the period start into the future. */
+export function canStepForward(period: KpiV2Period): boolean {
+  const nextStart = bounds(stepPeriod(period, 1)).start;
+  return nextStart.getTime() <= Date.now();
+}
+
+/** True when the current period contains today. */
+export function isCurrentPeriod(period: KpiV2Period): boolean {
+  const { start, end } = bounds(period);
+  const now = Date.now();
+  return now >= start.getTime() && now <= end.getTime() + 24 * 60 * 60 * 1000 - 1;
 }

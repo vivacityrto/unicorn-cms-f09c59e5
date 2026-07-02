@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Loader2, Users, Code2, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { KPI_V2_PERIOD_LABEL, type KpiV2Period } from "./types";
+import { getPeriodLabel, type KpiV2Period } from "./types";
 import { pctStatus, retentionStatus, type KpiStatus } from "@/lib/kpi-v2/status";
 import {
   fetchRetention, fetchCommunication, fetchCscTasks, fetchAssistantTasks,
@@ -142,7 +142,7 @@ function CscRow({
   }, [staff.user_uuid, period]);
 
   const name = fullName(staff);
-  const periodLabel = KPI_V2_PERIOD_LABEL[period];
+  const periodLabel = getPeriodLabel(period);
 
   const retText = ret.total > 0
     ? `${ret.pct?.toFixed(0)}% · ${ret.total - ret.churned} of ${ret.total} clients retained (${ret.churned} churned)`
@@ -206,7 +206,7 @@ function AssistantRow({
   }, [staff.user_uuid, period]);
 
   const name = fullName(staff);
-  const periodLabel = KPI_V2_PERIOD_LABEL[period];
+  const periodLabel = getPeriodLabel(period);
   const tskText = tsk.total > 0
     ? `${tsk.pct?.toFixed(0)}% · ${tsk.completed} of ${tsk.total} tasks completed on time`
     : "No tasks recorded for this period.";
@@ -281,7 +281,7 @@ export function KpiTeamSection({ period }: Props) {
           <CardTitle className="flex items-center gap-2 text-base font-binate">
             <Users className="h-4 w-4 text-[#7130A0]" /> CSC Consultants
           </CardTitle>
-          <CardDescription>Retention, communication and task performance for {KPI_V2_PERIOD_LABEL[period]}.</CardDescription>
+          <CardDescription>Retention, communication and task performance for {getPeriodLabel(period)}.</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           {loading ? (
@@ -316,7 +316,7 @@ export function KpiTeamSection({ period }: Props) {
           <CardTitle className="flex items-center gap-2 text-base font-binate">
             <ClipboardList className="h-4 w-4 text-[#ED1878]" /> Administration Assistants
           </CardTitle>
-          <CardDescription>Task completion for {KPI_V2_PERIOD_LABEL[period]}.</CardDescription>
+          <CardDescription>Task completion for {getPeriodLabel(period)}.</CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           {loading ? (
