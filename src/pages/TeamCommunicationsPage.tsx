@@ -592,19 +592,8 @@ export default function TeamCommunicationsPage() {
         <>
 
 
-      {/* Filters */}
+      {/* Optional staff filter (kept from previous UI) */}
       <div className="flex gap-2 items-center flex-wrap">
-        <Select value={filterTenant} onValueChange={setFilterTenant}>
-          <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="All Clients" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Clients</SelectItem>
-            {tenantOptions.map(t => (
-              <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <Select value={filterStaff} onValueChange={setFilterStaff}>
           <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="All Team Members" />
@@ -625,184 +614,115 @@ export default function TeamCommunicationsPage() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ minHeight: "60vh" }}>
+        <div
+          className="grid gap-3 grid-cols-1 md:grid-cols-[minmax(0,20rem)_1fr] lg:grid-cols-[minmax(15rem,17rem)_minmax(0,22rem)_1fr]"
+          style={{ minHeight: "70vh" }}
+        >
+          {/* Clients rail (lg+ only) */}
+          <ClientsRail
+            className="hidden lg:flex"
+            items={railItems}
+            totalThreads={conversations.length}
+            totalUnread={totalUnread}
+            selected={filterTenant}
+            onSelect={setFilterTenant}
+          />
+
           {/* Thread list */}
-          <div className="lg:col-span-1 border rounded-lg overflow-hidden border-border">
-            {filtered.length === 0 ? (
-              <div className="p-6 text-center text-muted-foreground">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No conversations found.</p>
-              </div>
-            ) : (
-              <ScrollArea className="h-[60vh]">
-                {(() => {
-                  const renderRow = (conv: typeof filtered[number]) => (
-                    <button
-                      key={conv.id}
-                      onClick={() => handleSelectConversation(conv.id)}
-                      className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors ${
-                        selectedId === conv.id
-                          ? "bg-muted/70"
-                          : conv.isUnread
-                            ? "bg-primary/5"
-                            : ""
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <Building2 className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                        <span className="text-xs text-muted-foreground truncate">{conv.tenant_name}</span>
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] px-1.5 py-0 capitalize ml-auto ${TYPE_COLORS[conv.type] || ""}`}
-                        >
-                          {conv.type}
-                        </Badge>
-                        {conv.isUnread && (
-                          <span className="h-2 w-2 rounded-full bg-[#23C0DD] flex-shrink-0" />
-                        )}
-                      </div>
-                      <p className={`text-sm truncate text-foreground ${conv.isUnread ? "font-semibold" : "font-normal"}`}>
-                        {conv.type === "direct" ? "Direct message" : (conv.subject || conv.topic || "General")}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {conv.last_message_preview || "No messages yet"}
-                      </p>
-                      {conv.last_message_at && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {format(new Date(conv.last_message_at), "d MMM yyyy, HH:mm")}
-                        </p>
-                      )}
-                    </button>
-                  );
-                  return (
-                    <div>
-                      {mineConvs.length > 0 && (
-                        <div>
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-4 py-2 bg-muted/30">
-                            Your Conversations
-                          </div>
-                          <div className="divide-y divide-border">
-                            {mineConvs.map(renderRow)}
-                          </div>
-                        </div>
-                      )}
-                      {teamConvs.length > 0 && (
-                        <div>
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-4 py-2 bg-muted/30">
-                            Team Conversations
-                          </div>
-                          <div className="divide-y divide-border">
-                            {teamConvs.map(renderRow)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </ScrollArea>
-            )}
-          </div>
+          <ThreadList
+            className="min-h-0"
+            items={(() => {
+              const q = threadSearch.trim().toLowerCase();
+              const list = q
+                ? filtered.filter(c =>
+                    (c.subject ?? "").toLowerCase().includes(q) ||
+                    (c.last_message_preview ?? "").toLowerCase().includes(q) ||
+                    (c.tenant_name ?? "").toLowerCase().includes(q)
+                  )
+                : filtered;
+              return list.map(c => ({
+                id: c.id,
+                tenant_id: c.tenant_id,
+                tenant_name: c.tenant_name,
+                topic: c.topic,
+                subject: c.subject,
+                last_message_at: c.last_message_at,
+                last_message_preview: c.last_message_preview,
+                last_sender_type: lastSenderMap[c.id] ?? null,
+                isUnread: c.isUnread,
+              }));
+            })()}
+            selectedId={selectedId}
+            onSelect={handleSelectConversation}
+            scopeLabel={(() => {
+              const count = filtered.length;
+              if (filterTenant === "all") {
+                const clientCount = railItems.length;
+                return `${count} ${count === 1 ? "thread" : "threads"} across ${clientCount} ${clientCount === 1 ? "client" : "clients"}`;
+              }
+              return `${count} ${count === 1 ? "thread" : "threads"}`;
+            })()}
+            search={threadSearch}
+            onSearchChange={setThreadSearch}
+          />
 
-          {/* Message detail + composer */}
-          <div className="lg:col-span-2 border rounded-lg border-border flex flex-col">
+          {/* Conversation panel */}
+          <div className="border rounded-lg border-border bg-card flex flex-col min-h-0 overflow-hidden">
             {selected ? (
-              <>
-                <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-                  <h2 className="font-semibold text-foreground truncate">
-                    {selected.type === "direct" ? "Direct message" : (selected.subject || selected.topic || "General")}
-                  </h2>
-                  <Badge variant="outline" className={`text-[10px] px-1.5 py-0 capitalize ${TYPE_COLORS[selected.type] || ""}`}>
-                    {selected.type}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground ml-auto">{selected.tenant_name}</span>
-                </div>
-
-                <ScrollArea className="flex-1 min-h-0" style={{ maxHeight: "calc(60vh - 140px)" }}>
-                  <div className="p-4 space-y-3">
-                    {messagesLoading ? (
-                      <div className="space-y-2">
-                        {[...Array(3)].map((_, i) => (
-                          <Skeleton key={i} className="h-14 w-3/4 rounded-lg" />
-                        ))}
-                      </div>
-                    ) : messages.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">No messages yet.</p>
-                    ) : (
-                      messages.map(msg => {
-                        const isOwn = msg.sender_user_uuid === currentUserId;
-                        return (
-                          <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-                            <div className={`rounded-lg px-3 py-2 max-w-[75%] ${isOwn ? "bg-primary/10 text-foreground" : "bg-muted text-foreground"}`}>
-                              {!isOwn && (
-                                <div className="flex items-center gap-1.5 mb-1">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarImage src={msg.sender_avatar_url ?? undefined} />
-                                    <AvatarFallback className="text-[10px]">
-                                      {(msg.sender_name || "?").split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase() || "?"}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <p className="text-xs font-medium text-muted-foreground">{msg.sender_name}</p>
-                                </div>
-                              )}
-                              <p className="text-sm whitespace-pre-wrap">{msg.body}</p>
-                              {msg.attachments && msg.attachments.length > 0 && (
-                                <MessageAttachments attachments={msg.attachments} />
-                              )}
-                              <p className="text-[11px] text-muted-foreground mt-1">{format(new Date(msg.created_at), "d MMM, HH:mm")}</p>
-                            </div>
-                          </div>
-                        );
-                      })
+              <ConversationPanel
+                conversation={selected}
+                messages={messages}
+                messagesLoading={messagesLoading}
+                currentUserId={currentUserId}
+                messagesEndRef={messagesEndRef}
+                onMarkUnread={handleMarkUnread}
+                composer={
+                  <div className="p-3 border-t border-border">
+                    <AttachmentChips files={queuedFiles} onRemove={removeQueued} />
+                    <div className="flex gap-2">
+                      <Textarea
+                        ref={composerRef}
+                        value={composerText}
+                        onChange={e => setComposerText(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
+                        placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
+                        className="min-h-[40px] resize-none overflow-y-auto"
+                        rows={1}
+                      />
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        hidden
+                        accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
+                        onChange={handleFilesPicked}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE}
+                        aria-label="Attach files"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        onClick={handleSend}
+                        disabled={(!composerText.trim() && queuedFiles.length === 0) || sendMessage.isPending}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {composerText.length === 0 && queuedFiles.length === 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Tip: paste a screenshot directly into the message box
+                      </p>
                     )}
-                    <div ref={messagesEndRef} />
                   </div>
-                </ScrollArea>
-
-                <div className="p-3 border-t border-border">
-                  <AttachmentChips files={queuedFiles} onRemove={removeQueued} />
-                  <div className="flex gap-2">
-                    <Textarea
-                      ref={composerRef}
-                      value={composerText}
-                      onChange={e => setComposerText(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      onPaste={handlePaste}
-                      placeholder="Type a message… (Enter to send, Shift+Enter for new line)"
-                      className="min-h-[40px] resize-none overflow-y-auto"
-                      rows={1}
-                    />
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      hidden
-                      accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx"
-                      onChange={handleFilesPicked}
-                    />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={queuedFiles.length >= MAX_FILES_PER_MESSAGE}
-                      aria-label="Attach files"
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      onClick={handleSend}
-                      disabled={(!composerText.trim() && queuedFiles.length === 0) || sendMessage.isPending}
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {composerText.length === 0 && queuedFiles.length === 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Tip: paste a screenshot directly into the message box
-                    </p>
-                  )}
-                </div>
-              </>
+                }
+              />
             ) : (
               <div className="flex-1 flex items-center justify-center text-muted-foreground">
                 <div className="text-center">
@@ -816,6 +736,7 @@ export default function TeamCommunicationsPage() {
       )}
         </>
       )}
+
 
       {/* New Message to Tenant dialog */}
       <NewTeamMessageDialog
