@@ -88,9 +88,14 @@ export function KpiDrillDownSheet({
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<any[]>([]);
 
-  const range = useMemo(() => getPeriodRange(period), [period]);
-  const startTs = `${range.startIso}T00:00:00.000Z`;
-  const endTs = `${range.endIso}T23:59:59.999Z`;
+  // Half-open [startTs, endTs) window matching the KPI RPCs.
+  const { startTs, endTs } = useMemo(() => {
+    const r = getPeriodRange(period);
+    const s = `${r.startIso}T00:00:00.000Z`;
+    const endDate = new Date(`${r.endIso}T00:00:00.000Z`);
+    endDate.setUTCDate(endDate.getUTCDate() + 1);
+    return { startTs: s, endTs: endDate.toISOString() };
+  }, [period]);
 
   useEffect(() => {
     if (!open || !subjectUuid) return;
@@ -98,207 +103,59 @@ export function KpiDrillDownSheet({
     setLoading(true);
     (async () => {
       let data: any[] = [];
+      const sb = supabase as any;
       try {
         if (kind === "retention") {
-          const { data: aRows } = await (supabase as any)
-            .from("tenant_csc_assignments")
-            .select("id, tenant_id, assigned_since, ended_at, is_primary")
-            .eq("csc_user_id", subjectUuid)
-            .eq("is_primary", true)
-            .or(
-              `and(assigned_since.lte.${endTs},ended_at.is.null),and(assigned_since.lte.${endTs},ended_at.gte.${startTs})`
-            )
-            .order("assigned_since", { ascending: false });
-          const tenantIds = Array.from(
-            new Set((aRows ?? []).map((r: any) => r.tenant_id).filter(Boolean))
-          );
-          const nameMap: Record<number, string> = {};
-          try {
-            if (tenantIds.length) {
-              const { data: tRows } = await (supabase as any)
-                .from("tenants")
-                .select("id, name")
-                .in("id", tenantIds);
-              (tRows ?? []).forEach((t: any) => {
-                nameMap[t.id] = t.name;
-              });
-            }
-          } catch { /* non-fatal — rows render with fallback tenant name */ }
-          data = (aRows ?? []).map((r: any) => ({
-            ...r,
-            tenant_name: nameMap[r.tenant_id] ?? `Tenant #${r.tenant_id}`,
+          const { data: rpcRows, error } = await sb.rpc("kpi_csc_retention_rows", {
+            p_csc_user_id: subjectUuid,
+            p_start: startTs,
+            p_end: endTs,
+          });
+          if (error) throw error;
+          data = (rpcRows ?? []).map((r: any) => ({
+            id: `${r.tenant_id}:${r.assigned_since}`,
+            tenant_id: r.tenant_id,
+            tenant_name: r.tenant_name ?? `Tenant #${r.tenant_id}`,
+            assigned_since: r.assigned_since,
+            // The Retention table renders "Churned" only when ended_at is truthy;
+            // pass through churned_at only if the churn occurred in this period.
+            ended_at: r.churned_in_period ? r.churned_at : null,
           }));
         } else if (kind === "communication") {
-          const SLA_SECONDS = 12 * 60 * 60;
-          const { data: aRows } = await (supabase as any)
-            .from("tenant_csc_assignments")
-            .select("tenant_id")
-            .eq("csc_user_id", subjectUuid)
-            .eq("is_primary", true)
-            .is("ended_at", null);
-          const tenantIds = Array.from(
-            new Set((aRows ?? []).map((a: any) => a.tenant_id).filter(Boolean))
-          );
-          if (tenantIds.length > 0) {
-            // Step 2: fetch client messages in the period scoped by tenant_id.
-            const { data: rawClientMsgs } = await (supabase as any)
-              .from("tenant_messages")
-              .select("id, conversation_id, tenant_id, created_at, body")
-              .in("tenant_id", tenantIds)
-              .eq("sender_type", "client")
-              .gte("created_at", startTs)
-              .lte("created_at", endTs)
-              .order("created_at", { ascending: false })
-              .limit(500);
-            const rawMsgs = (rawClientMsgs ?? []) as Array<{
-              id: string; conversation_id: string; tenant_id: number; created_at: string; body: string;
-            }>;
-            // Step 3: unique conversation_ids from step 2.
-            const uniqueConvIds = Array.from(new Set(rawMsgs.map((m) => m.conversation_id).filter(Boolean)));
-            // Step 4: for those conversations only, determine who initiated each.
-            let clientInitiatedSet = new Set<string>();
-            if (uniqueConvIds.length > 0) {
-              const { data: firstMsgs } = await (supabase as any)
-                .from("tenant_messages")
-                .select("conversation_id, sender_type, created_at")
-                .in("conversation_id", uniqueConvIds)
-                .order("created_at", { ascending: true })
-                .limit(uniqueConvIds.length * 50);
-              const firstByConv = new Map<string, string>();
-              (firstMsgs ?? []).forEach((m: any) => {
-                if (!firstByConv.has(m.conversation_id)) firstByConv.set(m.conversation_id, m.sender_type);
-              });
-              clientInitiatedSet = new Set(
-                Array.from(firstByConv.entries())
-                  .filter(([, sender]) => sender === "client")
-                  .map(([id]) => id)
-              );
-            }
-            // Step 5: filter to client-initiated conversations only.
-            const cMsgs = rawMsgs.filter((m) => clientInitiatedSet.has(m.conversation_id));
-            const convIds = Array.from(new Set(cMsgs.map((m) => m.conversation_id).filter(Boolean)));
-            const bufferEnd = new Date(new Date(endTs).getTime() + SLA_SECONDS * 1000).toISOString();
-
-            const [staffRes, convRes] = await Promise.all([
-              convIds.length
-                ? (supabase as any)
-                    .from("tenant_messages")
-                    .select("conversation_id, created_at")
-                    .in("conversation_id", convIds)
-                    .eq("sender_type", "staff")
-                    .lte("created_at", bufferEnd)
-                : Promise.resolve({ data: [] }),
-              convIds.length
-                ? (supabase as any)
-                    .from("tenant_conversations")
-                    .select("id, topic, subject")
-                    .in("id", convIds)
-                : Promise.resolve({ data: [] }),
-            ]);
-            const nameMap: Record<number, string> = {};
-            try {
-              if (tenantIds.length) {
-                const { data: tRows } = await (supabase as any)
-                  .from("tenants")
-                  .select("id, name")
-                  .in("id", tenantIds);
-                (tRows ?? []).forEach((t: any) => { nameMap[t.id] = t.name; });
-              }
-            } catch { /* non-fatal — rows render with "—" tenant name */ }
-            const staffByConv = new Map<string, number[]>();
-            (staffRes.data ?? []).forEach((s: any) => {
-              const t = new Date(s.created_at).getTime();
-              const arr = staffByConv.get(s.conversation_id) ?? [];
-              arr.push(t);
-              staffByConv.set(s.conversation_id, arr);
-            });
-            const convMap: Record<string, { topic?: string; subject?: string }> = {};
-            (convRes.data ?? []).forEach((c: any) => { convMap[c.id] = c; });
-
-            const nowTs = Date.now();
-            data = cMsgs.map((m) => {
-              const clientT = new Date(m.created_at).getTime();
-              const reply = (staffByConv.get(m.conversation_id) ?? [])
-                .filter((t) => t > clientT)
-                .sort((a, b) => a - b)[0];
-              const responded_at = reply ? new Date(reply).toISOString() : null;
-              const response_minutes = reply ? (reply - clientT) / 60000 : null;
-              // sla_met: true if replied within window, false if either replied late OR
-              // 12hrs have passed with no reply. null (Pending) only if still within window.
-              let sla_met: boolean | null;
-              if (reply != null) {
-                sla_met = (reply - clientT) / 1000 <= SLA_SECONDS;
-              } else if ((nowTs - clientT) / 1000 > SLA_SECONDS) {
-                sla_met = false;
-              } else {
-                sla_met = null;
-              }
-              const conv = convMap[m.conversation_id] ?? {};
-              return {
-                id: m.id,
-                subject: conv.subject || conv.topic || (m.body ? m.body.slice(0, 60) : "(no subject)"),
-                tenant_name: nameMap[m.tenant_id] ?? "—",
-                received_at: m.created_at,
-                responded_at,
-                response_minutes,
-                sla_met,
-              };
-            });
-          }
-        } else if (kind === "csc_tasks") {
-          const { data: aRows } = await (supabase as any)
-            .from("tenant_csc_assignments")
-            .select("tenant_id")
-            .eq("csc_user_id", subjectUuid)
-            .eq("is_primary", true)
-            .is("ended_at", null);
-          const cscTenantIds = Array.from(
-            new Set((aRows ?? []).map((a: any) => a.tenant_id).filter(Boolean))
-          );
-          const { data: tRows } = cscTenantIds.length
-            ? await (supabase as any)
-                .from("client_team_tasks")
-                .select(
-                  "id, name, status, created_at, completed_at, client_package_stage_id, client_package_stages!inner(id, client_package_id, client_packages!inner(id, tenant_id, package_id, packages(name)))"
-                )
-                .in("client_package_stages.client_packages.tenant_id", cscTenantIds)
-                .gte("created_at", startTs)
-                .lte("created_at", endTs)
-                .order("created_at", { ascending: false })
-            : { data: [] as any[] };
-          const rows = (tRows ?? []) as any[];
-          const tenantIds = Array.from(
-            new Set(
-              rows
-                .map((r) => r.client_package_stages?.client_packages?.tenant_id)
-                .filter(Boolean)
-            )
-          );
-          const nameMap: Record<number, string> = {};
-          try {
-            if (tenantIds.length) {
-              const { data: nRows } = await (supabase as any)
-                .from("tenants")
-                .select("id, name")
-                .in("id", tenantIds);
-              (nRows ?? []).forEach((t: any) => { nameMap[t.id] = t.name; });
-            }
-          } catch { /* non-fatal — rows render with "—" tenant name */ }
-          data = rows.map((r) => {
-            const cp = r.client_package_stages?.client_packages;
-            const pkgName = cp?.packages?.name ?? "—";
-            return {
-              id: r.id,
-              title: r.name,
-              status: r.status,
-              created_at: r.created_at,
-              completed_at: r.completed_at,
-              due_at: null,
-              tenant_name: cp?.tenant_id ? nameMap[cp.tenant_id] ?? "—" : "—",
-              source_ref: pkgName,
-              metadata: { package_name: pkgName },
-            };
+          const { data: rpcRows, error } = await sb.rpc("kpi_csc_communication_rows", {
+            p_csc_user_id: subjectUuid,
+            p_start: startTs,
+            p_end: endTs,
           });
+          if (error) throw error;
+          data = (rpcRows ?? []).map((r: any) => ({
+            id: r.message_id,
+            subject: r.subject,
+            tenant_name: r.tenant_name ?? "—",
+            received_at: r.received_at,
+            responded_at: r.responded_at,
+            response_minutes: r.response_seconds != null ? r.response_seconds / 60 : null,
+            sla_met:
+              r.sla_status === "met" ? true : r.sla_status === "missed" ? false : null,
+          }));
+        } else if (kind === "csc_tasks") {
+          const { data: rpcRows, error } = await sb.rpc("kpi_csc_tasks_rows", {
+            p_csc_user_id: subjectUuid,
+            p_start: startTs,
+            p_end: endTs,
+          });
+          if (error) throw error;
+          data = (rpcRows ?? []).map((r: any) => ({
+            id: r.task_id,
+            title: r.task_name,
+            status: r.status,
+            created_at: r.created_at,
+            completed_at: r.completed_at,
+            due_at: null,
+            tenant_name: r.tenant_name ?? "—",
+            source_ref: r.package_name ?? "—",
+            metadata: { package_name: r.package_name ?? "—" },
+          }));
         } else if (kind === "assistant_tasks") {
           const sb = supabase as any;
           const [ttCreated, ttFollowers, cai, ops] = await Promise.all([
