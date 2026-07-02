@@ -6,8 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Users, Plus, X, GitBranch, AlertTriangle, Sparkles, Loader2, Info } from 'lucide-react';
+import { Users, Plus, X, GitBranch, Sparkles, Loader2, Info } from 'lucide-react';
 import { useAISuggestRock } from '@/hooks/useAISuggestRock';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
@@ -25,7 +24,7 @@ interface CreateTeamRockDialogProps {
 }
 
 export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess }: CreateTeamRockDialogProps) {
-  const { createRock, companyRocks, functions, teamRocksByFunction } = useEosRocksHierarchy();
+  const { createRock, companyRocks, functions } = useEosRocksHierarchy();
   const { data: vivacityUsers } = useVivacityTeamUsers();
   const { suggestRock, isGenerating } = useAISuggestRock();
   const currentQuarter = getCurrentQuarter();
@@ -69,10 +68,6 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
 
   const selectedParent = companyRocks?.find(r => r.id === parentRockId);
   
-  // Check if a team rock already exists for selected function and parent
-  const existingTeamRock = functionId && parentRockId 
-    ? teamRocksByFunction.get(functionId)?.find(r => r.parent_rock_id === parentRockId)
-    : null;
 
   const resetForm = () => {
     setTitle('');
@@ -87,7 +82,7 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
   };
 
   const handleSubmit = async () => {
-    if (!title.trim() || !dueDate || !parentRockId || !functionId || existingTeamRock) return;
+    if (!title.trim() || !dueDate || !parentRockId || !functionId) return;
 
     await createRock.mutateAsync({
       title: title.trim(),
@@ -133,7 +128,7 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
     };
   };
 
-  const canSubmit = title.trim() && dueDate && parentRockId && functionId && !existingTeamRock;
+  const canSubmit = title.trim() && dueDate && parentRockId && functionId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -213,32 +208,15 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none" disabled>Select a function...</SelectItem>
-                {functions?.map((func) => {
-                  const hasExisting = parentRockId && teamRocksByFunction.get(func.id)?.some(r => r.parent_rock_id === parentRockId);
-                  return (
-                    <SelectItem key={func.id} value={func.id} disabled={hasExisting}>
-                      <div className="flex items-center gap-2">
-                        <span>{func.name}</span>
-                        {hasExisting && (
-                          <Badge variant="secondary" className="text-[10px]">Already has rock</Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  );
-                })}
+                {functions?.map((func) => (
+                  <SelectItem key={func.id} value={func.id}>
+                    {func.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Uniqueness warning */}
-          {existingTeamRock && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                This function already has a Team Rock for the selected Company Rock: "{existingTeamRock.title}"
-              </AlertDescription>
-            </Alert>
-          )}
 
           {/* Title */}
           <div className="space-y-2">
