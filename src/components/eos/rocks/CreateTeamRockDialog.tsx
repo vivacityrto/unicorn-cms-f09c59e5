@@ -24,7 +24,7 @@ interface CreateTeamRockDialogProps {
 }
 
 export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess }: CreateTeamRockDialogProps) {
-  const { createRock, companyRocks, functions, teamRocksByFunction } = useEosRocksHierarchy();
+  const { createRock, companyRocks, functions } = useEosRocksHierarchy();
   const { data: vivacityUsers } = useVivacityTeamUsers();
   const { suggestRock, isGenerating } = useAISuggestRock();
   const currentQuarter = getCurrentQuarter();
