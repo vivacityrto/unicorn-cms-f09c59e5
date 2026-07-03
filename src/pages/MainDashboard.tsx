@@ -16,6 +16,20 @@ import {
   CalendarPlus,
   Upload,
   Ticket,
+  Megaphone,
+  ListChecks,
+  MessageSquare,
+  Target,
+  HeartPulse,
+  Gauge,
+  Zap,
+  Users as UsersIcon,
+  AlertTriangle,
+  CalendarClock,
+  TrendingUp,
+  Trophy,
+  ChevronRight,
+  type LucideIcon,
 } from "lucide-react";
 import { AddStaffTaskDialog } from "@/components/AddStaffTaskDialog";
 import { MeetingScheduler } from "@/components/eos/MeetingScheduler";
@@ -27,6 +41,7 @@ import { fetchCscTasks, fetchAssistantTasks } from "@/lib/kpi-v2/fetchers";
 import { defaultPeriod } from "@/components/kpi-v2/types";
 import { toast } from "@/hooks/use-toast";
 import { formatDistanceToNow, format } from "date-fns";
+import { clientAvatarColor, clientInitials } from "@/lib/clientAvatarColor";
 
 /* ------------------------------ helpers ------------------------------ */
 
