@@ -857,7 +857,50 @@ export default function MainDashboard() {
             </Panel>
           </div>
         </div>
+
+        {/* Upcoming Calendar (full-width) */}
+        <Panel title="Upcoming Calendar" footerHref="/calendar">
+          {upcoming.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-6 text-center">No upcoming events.</div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+              {upcoming.map((ev) => {
+                const start = new Date(ev.start_at);
+                const end = ev.end_at ? new Date(ev.end_at) : null;
+                return (
+                  <button
+                    key={ev.id}
+                    onClick={() => navigate("/calendar")}
+                    className="shrink-0 w-[220px] text-left rounded-lg border bg-card hover:bg-accent/40 transition-colors p-3 flex gap-3"
+                  >
+                    <div className="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 min-w-[44px]">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {format(start, "MMM")}
+                      </div>
+                      <div className="text-lg font-semibold leading-none text-foreground">
+                        {format(start, "d")}
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-foreground truncate">
+                        {ev.title || "(no title)"}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {format(start, "h:mm a")}
+                        {end ? ` – ${format(end, "h:mm a")}` : ""}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {format(start, "EEE")}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Panel>
       </div>
+
 
       {/* Responsive collapse */}
       <style>{`
