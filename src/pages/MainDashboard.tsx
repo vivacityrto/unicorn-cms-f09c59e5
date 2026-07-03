@@ -457,7 +457,26 @@ export default function MainDashboard() {
         })),
       );
     })();
-  }, [isStaff, userUuid, kpiRole, refreshTick, period]);
+
+    // Upcoming calendar
+    (async () => {
+      const email = profile?.email;
+      if (!email) {
+        setUpcoming([]);
+        return;
+      }
+      const nowIso = new Date().toISOString();
+      const esc = email.replace(/[%_,]/g, (c) => `\\${c}`);
+      const { data } = await sb
+        .from("calendar_events")
+        .select("id, title, start_at, end_at, organizer_email, organiser_email, attendees")
+        .gt("start_at", nowIso)
+        .or(`organizer_email.eq.${email},organiser_email.eq.${email},attendees.ilike.%${esc}%`)
+        .order("start_at", { ascending: true })
+        .limit(4);
+      setUpcoming(data ?? []);
+    })();
+  }, [isStaff, userUuid, kpiRole, refreshTick, period, profile?.email]);
 
   const firstName = profile?.first_name || "there";
 
