@@ -343,8 +343,8 @@ export default function MainDashboard() {
     // Tasks union
     (async () => {
       const [ttCreated, ttFollowers, caiOwner, caiAssignee, opsOwner, opsCreator] = await Promise.all([
-        sb.from("tasks_tenants").select("id, title, name, description, due_date, priority, status, created_at").eq("created_by", userUuid),
-        sb.from("tasks_tenants").select("id, title, name, description, due_date, priority, status, created_at").contains("followers", [userUuid]),
+        sb.from("tasks_tenants").select("id, task_name, description, due_date, priority, status, created_at").eq("created_by", userUuid),
+        sb.from("tasks_tenants").select("id, task_name, description, due_date, priority, status, created_at").contains("followers", [userUuid]),
         sb
           .from("client_action_items")
           .select("id, title, due_date, priority, status, created_at")
@@ -377,7 +377,7 @@ export default function MainDashboard() {
           id: key,
           source: "tasks_tenants",
           realId: r.id,
-          title: r.title || r.name || "Untitled task",
+          title: r.task_name || "Untitled task",
           dueDate: r.due_date ?? null,
           priority: r.priority ?? null,
           status: r.status ?? null,
