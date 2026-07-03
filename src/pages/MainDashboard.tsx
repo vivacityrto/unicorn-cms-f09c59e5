@@ -66,6 +66,7 @@ interface UnifiedTask {
   dueDate: string | null; // yyyy-MM-dd
   priority: string | null;
   status: string | null;
+  createdAt: string | null;
 }
 
 function normalizePriority(p: unknown): "high" | "medium" | "low" | null {
@@ -344,26 +345,26 @@ export default function MainDashboard() {
     // Tasks union
     (async () => {
       const [ttCreated, ttFollowers, caiOwner, caiAssignee, opsOwner, opsCreator] = await Promise.all([
-        sb.from("tasks_tenants").select("id, title, name, description, due_date, priority, status").eq("created_by", userUuid),
-        sb.from("tasks_tenants").select("id, title, name, description, due_date, priority, status").contains("followers", [userUuid]),
+        sb.from("tasks_tenants").select("id, title, name, description, due_date, priority, status, created_at").eq("created_by", userUuid),
+        sb.from("tasks_tenants").select("id, title, name, description, due_date, priority, status, created_at").contains("followers", [userUuid]),
         sb
           .from("client_action_items")
-          .select("id, title, due_date, priority, status")
+          .select("id, title, due_date, priority, status, created_at")
           .eq("owner_user_id", userUuid)
           .not("status", "in", "(done,cancelled)"),
         sb
           .from("client_action_items")
-          .select("id, title, due_date, priority, status")
+          .select("id, title, due_date, priority, status, created_at")
           .eq("assignee_user_id", userUuid)
           .not("status", "in", "(done,cancelled)"),
         sb
           .from("ops_work_items")
-          .select("id, title, due_at, priority, status")
+          .select("id, title, due_at, priority, status, created_at")
           .eq("owner_user_uuid", userUuid)
           .not("status", "in", "(done,cancelled)"),
         sb
           .from("ops_work_items")
-          .select("id, title, due_at, priority, status")
+          .select("id, title, due_at, priority, status, created_at")
           .eq("created_by", userUuid)
           .not("status", "in", "(done,cancelled)"),
       ]);
@@ -382,6 +383,7 @@ export default function MainDashboard() {
           dueDate: r.due_date ?? null,
           priority: r.priority ?? null,
           status: r.status ?? null,
+          createdAt: r.created_at ?? null,
         });
       };
       const pushCAI = (r: any) => {
@@ -396,6 +398,7 @@ export default function MainDashboard() {
           dueDate: r.due_date ?? null,
           priority: r.priority ?? null,
           status: r.status ?? null,
+          createdAt: r.created_at ?? null,
         });
       };
       const pushOps = (r: any) => {
@@ -410,6 +413,7 @@ export default function MainDashboard() {
           dueDate: r.due_at ? String(r.due_at).slice(0, 10) : null,
           priority: r.priority ?? null,
           status: r.status ?? null,
+          createdAt: r.created_at ?? null,
         });
       };
       [...(ttCreated.data ?? []), ...(ttFollowers.data ?? [])].forEach(pushTT);
@@ -822,74 +826,66 @@ export default function MainDashboard() {
               title="Tasks Overview"
               icon={ListChecks}
               footerHref="/tasks"
-              actions={
-                <div className="flex items-center gap-0.5 rounded-md bg-muted p-0.5">
-                  {(["all", "overdue", "today"] as const).map((k) => (
-                    <button
-                      key={k}
-                      type="button"
-                      onClick={() => setTaskFilter(k)}
-                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded capitalize transition-colors ${
-                        taskFilter === k
-                          ? "bg-white text-[#7130A0] shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {k}
-                    </button>
-                  ))}
-                </div>
-              }
             >
-              {filteredTasks.length === 0 ? (
-                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
-                  <ListChecks className="h-6 w-6 text-[#7130A0]/25" />
-                  <div className="text-sm text-muted-foreground">
-                    {taskFilter === "all" ? "No open tasks." : `No ${taskFilter} tasks.`}
-                  </div>
-                </div>
-              ) : (
-                <ul className="space-y-0.5 max-h-[380px] overflow-auto pr-1">
-                  {filteredTasks.slice(0, 15).map((t) => {
-                    const pr = normalizePriority(t.priority);
-                    const prColor = priorityColor(pr);
-                    const overdue = t.dueDate && t.dueDate < today;
-                    const dueToday = t.dueDate === today;
-                    return (
-                      <li key={t.id} className="flex items-center gap-2 py-1 group">
-                        <Checkbox
-                          onCheckedChange={() => handleCompleteTask(t)}
-                          aria-label="Mark complete"
-                        />
-                        <span className="text-sm text-foreground flex-1 truncate">{t.title}</span>
-                        {pr && (
-                          <span
-                            className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                            style={{ backgroundColor: `${prColor}1A`, color: prColor ?? undefined }}
-                          >
-                            {pr.toUpperCase()}
-                          </span>
-                        )}
-                        {t.dueDate && (
-                          <span
-                            className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
-                            style={{
-                              backgroundColor: overdue
-                                ? "#C6282820"
-                                : dueToday
-                                ? "#85640420"
-                                : "hsl(var(--muted))",
-                              color: overdue ? "#C62828" : dueToday ? "#856404" : "hsl(var(--muted-foreground))",
-                            }}
-                          >
-                            {t.dueDate.slice(5)}
-                          </span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+              {(() => {
+                const recent = [...tasks]
+                  .sort((a, b) => {
+                    const av = a.createdAt ?? "";
+                    const bv = b.createdAt ?? "";
+                    return bv.localeCompare(av);
+                  })
+                  .slice(0, 3);
+                if (recent.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+                      <ListChecks className="h-6 w-6 text-[#7130A0]/25" />
+                      <div className="text-sm text-muted-foreground">No active tasks.</div>
+                    </div>
+                  );
+                }
+                return (
+                  <ul className="space-y-0.5 -my-0.5">
+                    {recent.map((t) => {
+                      const pr = normalizePriority(t.priority);
+                      const prColor = priorityColor(pr);
+                      const overdue = t.dueDate && t.dueDate < today;
+                      const dueToday = t.dueDate === today;
+                      return (
+                        <li key={t.id} className="flex items-center gap-2 py-1 group">
+                          <Checkbox
+                            onCheckedChange={() => handleCompleteTask(t)}
+                            aria-label="Mark complete"
+                          />
+                          <span className="text-sm text-foreground flex-1 truncate">{t.title}</span>
+                          {pr && (
+                            <span
+                              className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                              style={{ backgroundColor: `${prColor}1A`, color: prColor ?? undefined }}
+                            >
+                              {pr.toUpperCase()}
+                            </span>
+                          )}
+                          {t.dueDate && (
+                            <span
+                              className="text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0"
+                              style={{
+                                backgroundColor: overdue
+                                  ? "#C6282820"
+                                  : dueToday
+                                  ? "#85640420"
+                                  : "hsl(var(--muted))",
+                                color: overdue ? "#C62828" : dueToday ? "#856404" : "hsl(var(--muted-foreground))",
+                              }}
+                            >
+                              {t.dueDate.slice(5)}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                );
+              })()}
             </Panel>
 
             <Panel title="Quick Actions" icon={Zap}>
