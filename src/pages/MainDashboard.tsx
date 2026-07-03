@@ -725,7 +725,7 @@ export default function MainDashboard() {
 
               <ClientQuickNav
                 currentTenantId={0}
-                triggerClassName="h-10 gap-2 rounded-full border-transparent bg-transparent px-4 text-sm font-semibold text-foreground hover:text-[#23C0DD] hover:bg-[#23C0DD]/5 transition-colors"
+                triggerClassName="h-10 gap-2 rounded-full border border-[#23C0DD]/30 bg-white px-4 text-sm font-semibold text-[#23C0DD] hover:bg-[#23C0DD]/5 hover:border-[#23C0DD] transition-colors"
               />
 
               <div className="w-px h-5 bg-border/70" />
