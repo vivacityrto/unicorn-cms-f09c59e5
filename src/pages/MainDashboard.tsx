@@ -34,9 +34,7 @@ import {
 import { NewTicketModal } from "@/components/support-tickets/NewTicketModal";
 import { ClientQuickNav } from "@/components/client/ClientQuickNav";
 import { Building2 } from "lucide-react";
-import { CscKpiCards } from "@/components/kpi-v2/CscKpiCards";
-import { AssistantKpiCards } from "@/components/kpi-v2/AssistantKpiCards";
-import { DeveloperPlaceholder } from "@/components/kpi-v2/DeveloperPlaceholder";
+import { MiniKpiSummary } from "@/components/kpi-v2/MiniKpiSummary";
 import { fetchCscTasks, fetchAssistantTasks } from "@/lib/kpi-v2/fetchers";
 import { defaultPeriod } from "@/components/kpi-v2/types";
 import { toast } from "@/hooks/use-toast";
@@ -1039,19 +1037,13 @@ export default function MainDashboard() {
             </Panel>
 
             <Panel title="KPI Dashboard" icon={Gauge} footerHref="/kpi" bodyClassName="!py-2">
-              <div className="[&_.grid]:!gap-2 [&_h3]:!text-xs [&_.text-2xl]:!text-lg [&_.text-3xl]:!text-xl">
-                {kpiRole === "csc_consultant" && userUuid ? (
-                  <CscKpiCards subjectUuid={userUuid} period={period} />
-                ) : kpiRole === "cst_assistant" && userUuid ? (
-                  <AssistantKpiCards subjectUuid={userUuid} period={period} />
-                ) : kpiRole === "developer" ? (
-                  <DeveloperPlaceholder />
-                ) : (
-                  <div className="text-sm text-muted-foreground py-4 text-center">
-                    No KPI configured.
-                  </div>
-                )}
-              </div>
+              {userUuid && (kpiRole === "csc_consultant" || kpiRole === "cst_assistant" || kpiRole === "developer") ? (
+                <MiniKpiSummary subjectUuid={userUuid} period={period} role={kpiRole as any} />
+              ) : (
+                <div className="text-sm text-muted-foreground py-4 text-center">
+                  No KPI configured.
+                </div>
+              )}
             </Panel>
 
           </div>
