@@ -66,6 +66,7 @@ interface UnifiedTask {
   dueDate: string | null; // yyyy-MM-dd
   priority: string | null;
   status: string | null;
+  createdAt: string | null;
 }
 
 function normalizePriority(p: unknown): "high" | "medium" | "low" | null {
