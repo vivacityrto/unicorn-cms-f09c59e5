@@ -50,6 +50,14 @@ function todayIsoLocal(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function getCurrentQuarter() {
+  const now = new Date();
+  return {
+    year: now.getFullYear(),
+    quarter: Math.ceil((now.getMonth() + 1) / 3),
+  };
+}
+
 interface UnifiedTask {
   id: string; // prefixed: tt-/ca-/ops-
   source: "tasks_tenants" | "client_action_items" | "ops_work_items";
@@ -468,13 +476,16 @@ export default function MainDashboard() {
       setKpiLoading(false);
     })();
 
-    // Rocks
+    // Rocks (current quarter only)
     (async () => {
+      const q = getCurrentQuarter();
       const { data } = await sb
         .from("eos_rocks")
         .select("id, title, status, due_date, completion_percentage")
         .is("archived_at", null)
         .eq("level", "company")
+        .eq("quarter_year", q.year)
+        .eq("quarter_number", q.quarter)
         .order("due_date", { ascending: true, nullsFirst: false })
         .limit(20);
       const rows = data ?? [];
