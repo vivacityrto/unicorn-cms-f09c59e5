@@ -466,15 +466,41 @@ export default function MainDashboard() {
         return;
       }
       const nowIso = new Date().toISOString();
-      const esc = email.replace(/[%_,]/g, (c) => `\\${c}`);
-      const { data } = await sb
-        .from("calendar_events")
-        .select("id, title, start_at, end_at, organizer_email, organiser_email, attendees")
-        .gt("start_at", nowIso)
-        .or(`organizer_email.eq.${email},organiser_email.eq.${email},attendees.ilike.%${esc}%`)
-        .order("start_at", { ascending: true })
-        .limit(4);
-      setUpcoming(data ?? []);
+      // Fetch a wider window in parallel: (a) events organized by viewer, (b) events owned by viewer's user_id
+      // (attendees is jsonb — filter client-side to honour "attendees contains my email").
+      const [byOrganizer, byUser] = await Promise.all([
+        sb
+          .from("calendar_events")
+          .select("id, title, start_at, end_at, organizer_email, organiser_email, attendees")
+          .gt("start_at", nowIso)
+          .or(`organizer_email.eq.${email},organiser_email.eq.${email}`)
+          .order("start_at", { ascending: true })
+          .limit(20),
+        userUuid
+          ? sb
+              .from("calendar_events")
+              .select("id, title, start_at, end_at, organizer_email, organiser_email, attendees")
+              .gt("start_at", nowIso)
+              .eq("user_id", userUuid)
+              .order("start_at", { ascending: true })
+              .limit(40)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const emailLower = email.toLowerCase();
+      const merged = new Map<string, any>();
+      const consider = (row: any) => {
+        const org = (row.organizer_email ?? row.organiser_email ?? "").toLowerCase();
+        const attendeesText = JSON.stringify(row.attendees ?? "").toLowerCase();
+        if (org === emailLower || attendeesText.includes(emailLower)) {
+          if (!merged.has(row.id)) merged.set(row.id, row);
+        }
+      };
+      (byOrganizer.data ?? []).forEach(consider);
+      (byUser.data ?? []).forEach(consider);
+      const sorted = Array.from(merged.values())
+        .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
+        .slice(0, 4);
+      setUpcoming(sorted);
     })();
   }, [isStaff, userUuid, kpiRole, refreshTick, period, profile?.email]);
 
