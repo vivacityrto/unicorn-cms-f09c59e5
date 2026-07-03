@@ -20,7 +20,8 @@ import { CelebrationProvider } from "./components/ui/celebration";
  // Lazy load all page components for code splitting
  const Index = lazy(() => import("./pages/Index"));
  const Login = lazy(() => import("./pages/Login"));
- const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const ManageUsersWrapper = lazy(() => import("./pages/ManageUsersWrapper"));
  const ManageInvitesWrapper = lazy(() => import("./pages/ManageInvitesWrapper"));
  const ManageTenantsWrapper = lazy(() => import("./pages/ManageTenantsWrapper"));
