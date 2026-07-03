@@ -476,13 +476,16 @@ export default function MainDashboard() {
       setKpiLoading(false);
     })();
 
-    // Rocks
+    // Rocks (current quarter only)
     (async () => {
+      const q = getCurrentQuarter();
       const { data } = await sb
         .from("eos_rocks")
         .select("id, title, status, due_date, completion_percentage")
         .is("archived_at", null)
         .eq("level", "company")
+        .eq("quarter_year", q.year)
+        .eq("quarter_number", q.quarter)
         .order("due_date", { ascending: true, nullsFirst: false })
         .limit(20);
       const rows = data ?? [];
