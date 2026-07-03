@@ -8,9 +8,10 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 
 interface ClientQuickNavProps {
   currentTenantId: number;
+  triggerClassName?: string;
 }
 
-export function ClientQuickNav({ currentTenantId }: ClientQuickNavProps) {
+export function ClientQuickNav({ currentTenantId, triggerClassName }: ClientQuickNavProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [tenants, setTenants] = useState<{ id: number; name: string }[]>([]);
