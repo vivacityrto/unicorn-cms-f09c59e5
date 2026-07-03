@@ -1115,15 +1115,6 @@ export default function MainDashboard() {
 
 
 
-      <AddStaffTaskDialog
-        open={taskDialogOpen}
-        onOpenChange={setTaskDialogOpen}
-        onSuccess={() => {
-          setTaskDialogOpen(false);
-          setRefreshTick((t) => t + 1);
-        }}
-      />
-      <MeetingScheduler open={meetingOpen} onOpenChange={setMeetingOpen} onScheduled={() => setMeetingOpen(false)} />
       <NewTicketModal open={ticketOpen} onOpenChange={setTicketOpen} />
     </DashboardLayout>
   );
