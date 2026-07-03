@@ -41,9 +41,9 @@ export function ClientQuickNav({ currentTenantId, triggerClassName }: ClientQuic
         <Button
           variant="outline"
           size="sm"
-          className="h-8 gap-1.5 text-xs font-normal"
+          className={triggerClassName ?? "h-8 gap-1.5 text-xs font-normal"}
         >
-          <Search className="h-3.5 w-3.5 opacity-60" />
+          <Search className={triggerClassName ? "h-4 w-4 opacity-60" : "h-3.5 w-3.5 opacity-60"} />
           Jump to client…
         </Button>
       </PopoverTrigger>
