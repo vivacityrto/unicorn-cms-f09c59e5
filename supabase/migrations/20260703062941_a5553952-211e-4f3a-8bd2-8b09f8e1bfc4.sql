@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.fn_tm_on_message_insert() FROM anon;
