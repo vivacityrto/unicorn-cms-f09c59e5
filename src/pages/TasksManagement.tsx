@@ -22,7 +22,7 @@ import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { format, isPast } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { textToSafeHtml } from "@/lib/sanitize";
 interface Task {
