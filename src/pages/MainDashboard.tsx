@@ -289,7 +289,6 @@ export default function MainDashboard() {
 
   // Dialogs
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
-  const [meetingOpen, setMeetingOpen] = useState(false);
   const [ticketOpen, setTicketOpen] = useState(false);
 
   // Metric card state
