@@ -710,22 +710,29 @@ export default function MainDashboard() {
                 Here's what's happening today.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            {/* Unified Action Dock */}
+            <div className="flex items-center gap-1 p-1 rounded-full bg-white border border-border shadow-[0_2px_8px_rgba(17,24,39,0.04)]">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => navigate('/manage-tenants')}
-                className="h-9 gap-2 rounded-full border-[#23C0DD]/40 text-sm font-medium text-[#23C0DD] hover:bg-[#23C0DD]/5 hover:text-[#23C0DD] hover:border-[#23C0DD] transition-colors"
+                className="h-10 gap-2 rounded-full px-4 text-sm font-semibold text-foreground hover:text-[#23C0DD] hover:bg-[#23C0DD]/5 transition-colors"
               >
-                <Building2 className="h-4 w-4" />
+                <Building2 className="h-4 w-4 text-[#23C0DD]" />
                 Manage Clients
               </Button>
+
+              <div className="w-px h-5 bg-border/70" />
+
               <ClientQuickNav
                 currentTenantId={0}
-                triggerClassName="h-9 gap-2 rounded-full border border-input bg-background px-4 text-sm font-medium text-muted-foreground hover:bg-[#23C0DD]/5 hover:text-[#23C0DD] hover:border-[#23C0DD]/40 transition-colors"
+                triggerClassName="h-10 gap-2 rounded-full border border-[#23C0DD]/30 bg-white px-4 text-sm font-semibold text-[#23C0DD] hover:bg-[#23C0DD]/5 hover:border-[#23C0DD] transition-colors"
               />
+
+              <div className="w-px h-5 bg-border/70" />
+
               <Button
                 onClick={() => navigate('/tasks?new=1')}
-                className="h-9 gap-2 rounded-full px-4 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
+                className="h-10 gap-2 rounded-full px-5 text-sm font-bold text-white shadow-[0_2px_8px_rgba(237,24,120,0.25)] hover:shadow-[0_4px_14px_rgba(237,24,120,0.35)] hover:-translate-y-px active:translate-y-0 transition-all"
                 style={{ backgroundColor: "#ED1878" }}
               >
                 <Plus className="h-4 w-4" strokeWidth={2.5} />
