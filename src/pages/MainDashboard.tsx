@@ -26,7 +26,7 @@ import { DeveloperPlaceholder } from "@/components/kpi-v2/DeveloperPlaceholder";
 import { fetchCscTasks, fetchAssistantTasks } from "@/lib/kpi-v2/fetchers";
 import { defaultPeriod } from "@/components/kpi-v2/types";
 import { toast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 
 /* ------------------------------ helpers ------------------------------ */
 
@@ -232,6 +232,8 @@ export default function MainDashboard() {
   const [clientMsgs, setClientMsgs] = useState<any[]>([]);
   // Client health
   const [health, setHealth] = useState<{ healthy: number; monitoring: number; at_risk: number; critical: number } | null>(null);
+  // Upcoming calendar
+  const [upcoming, setUpcoming] = useState<any[]>([]);
 
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -455,7 +457,52 @@ export default function MainDashboard() {
         })),
       );
     })();
-  }, [isStaff, userUuid, kpiRole, refreshTick, period]);
+
+    // Upcoming calendar
+    (async () => {
+      const email = profile?.email;
+      if (!email) {
+        setUpcoming([]);
+        return;
+      }
+      const nowIso = new Date().toISOString();
+      // Fetch a wider window in parallel: (a) events organized by viewer, (b) events owned by viewer's user_id
+      // (attendees is jsonb — filter client-side to honour "attendees contains my email").
+      const [byOrganizer, byUser] = await Promise.all([
+        sb
+          .from("calendar_events")
+          .select("id, title, start_at, end_at, organizer_email, organiser_email, attendees")
+          .gt("start_at", nowIso)
+          .or(`organizer_email.eq.${email},organiser_email.eq.${email}`)
+          .order("start_at", { ascending: true })
+          .limit(20),
+        userUuid
+          ? sb
+              .from("calendar_events")
+              .select("id, title, start_at, end_at, organizer_email, organiser_email, attendees")
+              .gt("start_at", nowIso)
+              .eq("user_id", userUuid)
+              .order("start_at", { ascending: true })
+              .limit(40)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const emailLower = email.toLowerCase();
+      const merged = new Map<string, any>();
+      const consider = (row: any) => {
+        const org = (row.organizer_email ?? row.organiser_email ?? "").toLowerCase();
+        const attendeesText = JSON.stringify(row.attendees ?? "").toLowerCase();
+        if (org === emailLower || attendeesText.includes(emailLower)) {
+          if (!merged.has(row.id)) merged.set(row.id, row);
+        }
+      };
+      (byOrganizer.data ?? []).forEach(consider);
+      (byUser.data ?? []).forEach(consider);
+      const sorted = Array.from(merged.values())
+        .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
+        .slice(0, 4);
+      setUpcoming(sorted);
+    })();
+  }, [isStaff, userUuid, kpiRole, refreshTick, period, profile?.email]);
 
   const firstName = profile?.first_name || "there";
 
@@ -810,7 +857,50 @@ export default function MainDashboard() {
             </Panel>
           </div>
         </div>
+
+        {/* Upcoming Calendar (full-width) */}
+        <Panel title="Upcoming Calendar" footerHref="/calendar">
+          {upcoming.length === 0 ? (
+            <div className="text-sm text-muted-foreground py-6 text-center">No upcoming events.</div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+              {upcoming.map((ev) => {
+                const start = new Date(ev.start_at);
+                const end = ev.end_at ? new Date(ev.end_at) : null;
+                return (
+                  <button
+                    key={ev.id}
+                    onClick={() => navigate("/calendar")}
+                    className="shrink-0 w-[220px] text-left rounded-lg border bg-card hover:bg-accent/40 transition-colors p-3 flex gap-3"
+                  >
+                    <div className="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 min-w-[44px]">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {format(start, "MMM")}
+                      </div>
+                      <div className="text-lg font-semibold leading-none text-foreground">
+                        {format(start, "d")}
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-foreground truncate">
+                        {ev.title || "(no title)"}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {format(start, "h:mm a")}
+                        {end ? ` – ${format(end, "h:mm a")}` : ""}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {format(start, "EEE")}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Panel>
       </div>
+
 
       {/* Responsive collapse */}
       <style>{`
