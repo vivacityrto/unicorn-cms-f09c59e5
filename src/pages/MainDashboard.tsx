@@ -50,6 +50,14 @@ function todayIsoLocal(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function getCurrentQuarter() {
+  const now = new Date();
+  return {
+    year: now.getFullYear(),
+    quarter: Math.ceil((now.getMonth() + 1) / 3),
+  };
+}
+
 interface UnifiedTask {
   id: string; // prefixed: tt-/ca-/ops-
   source: "tasks_tenants" | "client_action_items" | "ops_work_items";
