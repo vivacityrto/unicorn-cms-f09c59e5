@@ -920,7 +920,7 @@ export default function MainDashboard() {
 
           {/* — Centre column — */}
           <div className="flex flex-col gap-3 min-w-0">
-            <Panel title="Client Messages" icon={MessageSquare} footerHref="/inbox">
+            <Panel title="Client Messages" icon={MessageSquare} footerHref="/communications">
               {clientMsgs.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
                   <MessageSquare className="h-6 w-6 text-[#7130A0]/25" />
@@ -931,21 +931,30 @@ export default function MainDashboard() {
                   {clientMsgs.map((m) => {
                     const av = clientAvatarColor(m.tenant_id);
                     return (
-                      <li key={m.id} className="py-2 flex items-start gap-2.5">
-                        <div
-                          className={`h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${av.solid}`}
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/communications?thread=${m.id}`)}
+                          className="w-full py-2 flex items-start gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
                         >
-                          {clientInitials(m.tenant_name)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="text-sm font-medium text-foreground truncate">{m.tenant_name}</div>
-                            <span className="text-[11px] text-muted-foreground shrink-0">
-                              {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                            </span>
+                          <div
+                            className={`h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${av.solid}`}
+                          >
+                            {clientInitials(m.tenant_name)}
                           </div>
-                          <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.body}</div>
-                        </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="text-sm font-medium text-foreground truncate">{m.tenant_name}</div>
+                              <span className="text-[11px] text-muted-foreground shrink-0">
+                                {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                            {m.subject && (
+                              <div className="text-[11px] text-muted-foreground/80 truncate mt-0.5">{m.subject}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.body}</div>
+                          </div>
+                        </button>
                       </li>
                     );
                   })}
