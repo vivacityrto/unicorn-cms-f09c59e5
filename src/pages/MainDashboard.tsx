@@ -34,9 +34,7 @@ import {
 import { NewTicketModal } from "@/components/support-tickets/NewTicketModal";
 import { ClientQuickNav } from "@/components/client/ClientQuickNav";
 import { Building2 } from "lucide-react";
-import { CscKpiCards } from "@/components/kpi-v2/CscKpiCards";
-import { AssistantKpiCards } from "@/components/kpi-v2/AssistantKpiCards";
-import { DeveloperPlaceholder } from "@/components/kpi-v2/DeveloperPlaceholder";
+import { MiniKpiSummary } from "@/components/kpi-v2/MiniKpiSummary";
 import { fetchCscTasks, fetchAssistantTasks } from "@/lib/kpi-v2/fetchers";
 import { defaultPeriod } from "@/components/kpi-v2/types";
 import { toast } from "@/hooks/use-toast";
