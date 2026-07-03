@@ -850,9 +850,9 @@ export default function MainDashboard() {
                       const dueToday = t.dueDate === today;
                       return (
                         <li key={t.id} className="flex items-center gap-2 py-1 group">
-                          <Checkbox
-                            onCheckedChange={() => handleCompleteTask(t)}
-                            aria-label="Mark complete"
+                          <span
+                            className="h-4 w-4 rounded-sm border border-muted-foreground/30 shrink-0"
+                            aria-hidden="true"
                           />
                           <span className="text-sm text-foreground flex-1 truncate">{t.title}</span>
                           {pr && (
