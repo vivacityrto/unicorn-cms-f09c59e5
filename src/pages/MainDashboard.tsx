@@ -656,47 +656,90 @@ export default function MainDashboard() {
       ]
     : [];
 
+  // Client-side task filter tabs (works on already-loaded array)
+  const [taskFilter, setTaskFilter] = useState<"all" | "overdue" | "today">("all");
+  const filteredTasks = tasks.filter((t) => {
+    if (taskFilter === "overdue") return t.dueDate && t.dueDate < today;
+    if (taskFilter === "today") return t.dueDate === today;
+    return true;
+  });
+
+  const todayLabel = format(new Date(), "EEE, d MMM");
+
   return (
     <DashboardLayout>
-      <div className="p-4 md:p-6 space-y-6">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1
-              className="text-foreground"
-              style={{ fontFamily: "Anton, sans-serif", fontSize: "22px", lineHeight: 1.2 }}
-            >
-              Welcome back, {firstName}!
-            </h1>
-            <p
-              className="text-muted-foreground mt-1"
-              style={{ fontFamily: "Calibri, sans-serif", fontSize: "14px" }}
-            >
-              Here's what's happening today.
-            </p>
+      <div className="p-4 md:p-6 space-y-3">
+        {/* Header band */}
+        <div className="relative overflow-hidden bg-white rounded-xl border border-border shadow-[0_1px_2px_rgba(17,24,39,0.04)]">
+          <span
+            aria-hidden
+            className="absolute inset-y-0 left-0 w-1"
+            style={{ background: "linear-gradient(180deg, #ED1878 0%, #7130A0 100%)" }}
+          />
+          <div className="flex items-center justify-between gap-4 flex-wrap px-5 py-4 pl-6">
+            <div className="min-w-0">
+              <h1
+                className="text-foreground flex items-baseline gap-3 flex-wrap"
+                style={{ fontFamily: "Anton, sans-serif", fontSize: "22px", lineHeight: 1.2 }}
+              >
+                Welcome back, {firstName}!
+                <span
+                  className="inline-flex items-center gap-1 text-[11px] font-normal text-muted-foreground bg-muted rounded-full px-2 py-0.5"
+                  style={{ fontFamily: "Calibri, sans-serif" }}
+                >
+                  <CalendarClock className="h-3 w-3" /> {todayLabel}
+                </span>
+              </h1>
+              <p
+                className="text-muted-foreground mt-1"
+                style={{ fontFamily: "Calibri, sans-serif", fontSize: "13px" }}
+              >
+                Here's what's happening today.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setMeetingOpen(true)}
+                className="gap-1.5 border-[#7130A0]/30 text-[#7130A0] hover:bg-[#7130A0]/5 hover:text-[#7130A0]"
+              >
+                <CalendarPlus className="h-4 w-4" /> Schedule Meeting
+              </Button>
+              <Button
+                onClick={() => setTaskDialogOpen(true)}
+                style={{ backgroundColor: "#ED1878", color: "white" }}
+                className="hover:opacity-90 gap-1.5"
+              >
+                <Plus className="h-4 w-4" /> New Task
+              </Button>
+            </div>
           </div>
-          <Button
-            onClick={() => setTaskDialogOpen(true)}
-            style={{ backgroundColor: "#ED1878", color: "white" }}
-            className="hover:opacity-90 gap-1.5"
-          >
-            <Plus className="h-4 w-4" /> New Task
-          </Button>
         </div>
 
         {/* 6 summary cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <SummaryCard title="Clients" value={clientCount ?? "…"} sub="Active" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+          <SummaryCard
+            title="Clients"
+            value={clientCount ?? "…"}
+            sub="active"
+            icon={UsersIcon}
+            topAccent="#23C0DD"
+            onClick={() => navigate("/manage-tenants")}
+          />
           <SummaryCard
             title="Overdue Tasks"
             value={overdueCount ?? "…"}
+            icon={AlertTriangle}
             accentColor={overdueCount && overdueCount > 0 ? "#C62828" : undefined}
+            topAccent={overdueCount && overdueCount > 0 ? "#C62828" : "#E5E7EB"}
             onClick={() => navigate("/tasks")}
           />
           <SummaryCard
             title="Due Today"
             value={dueTodayCount ?? "…"}
+            icon={CalendarClock}
             accentColor={dueTodayCount && dueTodayCount > 0 ? "#856404" : undefined}
+            topAccent={dueTodayCount && dueTodayCount > 0 ? "#F59E0B" : "#E5E7EB"}
             onClick={() => navigate("/tasks")}
           />
           <SummaryCard
@@ -706,31 +749,41 @@ export default function MainDashboard() {
                 ? "—"
                 : `${Math.round(labour.overdue_ratio_pct)}%`
             }
-            sub={`overdue ratio across your ${labour?.client_count ?? 0} clients`}
+            sub={`across ${labour?.client_count ?? 0} clients`}
+            icon={TrendingUp}
+            topAccent="#7130A0"
           />
-          <SummaryCard title="KPI Overall Score" value={kpiValue} onClick={() => navigate("/kpi")} />
           <SummaryCard
-            title="Rocks Progress"
-            value={rocks ? `${rocks.onTrack} of ${rocks.total}` : "…"}
+            title="KPI Score"
+            value={kpiValue}
+            icon={Gauge}
+            topAccent="#44235F"
+            onClick={() => navigate("/kpi")}
+          />
+          <SummaryCard
+            title="Rocks"
+            value={rocks ? `${rocks.onTrack}/${rocks.total}` : "…"}
             sub="on track"
+            icon={Trophy}
+            topAccent="#ED1878"
             onClick={() => navigate("/eos/rocks")}
           />
         </div>
 
         {/* 3-column panel grid */}
-        <div
-          className="grid gap-3"
-          style={{ gridTemplateColumns: "minmax(0, 38fr) minmax(0, 38fr) minmax(0, 24fr)" }}
-        >
+        <div className="grid gap-3 grid-cols-1 lg:[grid-template-columns:minmax(0,36fr)_minmax(0,40fr)_minmax(0,24fr)]">
           {/* — Left column — */}
-          <div className="flex flex-col gap-3 min-w-0 col-panel-left">
-            <Panel title="Recent Client Broadcasts" footerHref="/communications">
+          <div className="flex flex-col gap-3 min-w-0">
+            <Panel title="Recent Client Broadcasts" icon={Megaphone} footerHref="/communications">
               {broadcasts.length === 0 ? (
-                <div className="text-sm text-muted-foreground py-4 text-center">No broadcasts yet.</div>
+                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+                  <Megaphone className="h-6 w-6 text-[#7130A0]/25" />
+                  <div className="text-sm text-muted-foreground">No broadcasts yet.</div>
+                </div>
               ) : (
-                <ul className="space-y-2">
+                <ul className="divide-y divide-border -my-1">
                   {broadcasts.map((b) => (
-                    <li key={b.id} className="rounded-md border p-2.5" style={{ borderColor: "hsl(var(--border))" }}>
+                    <li key={b.id} className="py-2">
                       <div className="flex items-start justify-between gap-2">
                         <div className="text-sm font-medium text-foreground truncate">{b.title}</div>
                         <Badge variant="outline" className="text-[10px] shrink-0">
@@ -748,18 +801,45 @@ export default function MainDashboard() {
               )}
             </Panel>
 
-            <Panel title="Tasks Overview" footerHref="/tasks">
-              {tasks.length === 0 ? (
-                <div className="text-sm text-muted-foreground py-4 text-center">No open tasks.</div>
+            <Panel
+              title="Tasks Overview"
+              icon={ListChecks}
+              footerHref="/tasks"
+              actions={
+                <div className="flex items-center gap-0.5 rounded-md bg-muted p-0.5">
+                  {(["all", "overdue", "today"] as const).map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => setTaskFilter(k)}
+                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded capitalize transition-colors ${
+                        taskFilter === k
+                          ? "bg-white text-[#7130A0] shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {k}
+                    </button>
+                  ))}
+                </div>
+              }
+            >
+              {filteredTasks.length === 0 ? (
+                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+                  <ListChecks className="h-6 w-6 text-[#7130A0]/25" />
+                  <div className="text-sm text-muted-foreground">
+                    {taskFilter === "all" ? "No open tasks." : `No ${taskFilter} tasks.`}
+                  </div>
+                </div>
               ) : (
-                <ul className="space-y-1.5 max-h-[360px] overflow-auto pr-1">
-                  {tasks.slice(0, 12).map((t) => {
+                <ul className="space-y-0.5 max-h-[380px] overflow-auto pr-1">
+                  {filteredTasks.slice(0, 15).map((t) => {
                     const pr = normalizePriority(t.priority);
                     const prColor = priorityColor(pr);
                     const overdue = t.dueDate && t.dueDate < today;
                     const dueToday = t.dueDate === today;
                     return (
-                      <li key={t.id} className="flex items-center gap-2 py-1.5 group">
+                      <li key={t.id} className="flex items-center gap-2 py-1 group">
                         <Checkbox
                           onCheckedChange={() => handleCompleteTask(t)}
                           aria-label="Mark complete"
@@ -785,7 +865,7 @@ export default function MainDashboard() {
                               color: overdue ? "#C62828" : dueToday ? "#856404" : "hsl(var(--muted-foreground))",
                             }}
                           >
-                            {t.dueDate}
+                            {t.dueDate.slice(5)}
                           </span>
                         )}
                       </li>
@@ -797,32 +877,48 @@ export default function MainDashboard() {
           </div>
 
           {/* — Centre column — */}
-          <div className="flex flex-col gap-3 min-w-0 col-panel-centre">
-            <Panel title="Client Messages" footerHref="/inbox">
+          <div className="flex flex-col gap-3 min-w-0">
+            <Panel title="Client Messages" icon={MessageSquare} footerHref="/inbox">
               {clientMsgs.length === 0 ? (
-                <div className="text-sm text-muted-foreground py-4 text-center">No client messages.</div>
+                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+                  <MessageSquare className="h-6 w-6 text-[#7130A0]/25" />
+                  <div className="text-sm text-muted-foreground">No client messages.</div>
+                </div>
               ) : (
-                <ul className="space-y-2">
-                  {clientMsgs.map((m) => (
-                    <li key={m.id} className="rounded-md border p-2.5" style={{ borderColor: "hsl(var(--border))" }}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="text-sm font-medium text-foreground truncate">{m.tenant_name}</div>
-                        <span className="text-[11px] text-muted-foreground shrink-0">
-                          {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                        </span>
-                      </div>
-                      <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.body}</div>
-                    </li>
-                  ))}
+                <ul className="divide-y divide-border -my-1">
+                  {clientMsgs.map((m) => {
+                    const av = clientAvatarColor(m.tenant_id);
+                    return (
+                      <li key={m.id} className="py-2 flex items-start gap-2.5">
+                        <div
+                          className={`h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${av.solid}`}
+                        >
+                          {clientInitials(m.tenant_name)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="text-sm font-medium text-foreground truncate">{m.tenant_name}</div>
+                            <span className="text-[11px] text-muted-foreground shrink-0">
+                              {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.body}</div>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </Panel>
 
-            <Panel title="Rocks (Quarterly Priorities)" footerHref="/eos/rocks">
+            <Panel title="Rocks (Quarterly Priorities)" icon={Target} footerHref="/eos/rocks">
               {!rocks || rocks.list.length === 0 ? (
-                <div className="text-sm text-muted-foreground py-4 text-center">No active rocks.</div>
+                <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+                  <Target className="h-6 w-6 text-[#7130A0]/25" />
+                  <div className="text-sm text-muted-foreground">No active rocks.</div>
+                </div>
               ) : (
-                <ul className="space-y-1.5 max-h-[360px] overflow-auto pr-1">
+                <ul className="space-y-1.5 max-h-[380px] overflow-auto pr-1">
                   {rocks.list.slice(0, 8).map((r: any) => {
                     const s = (r.status ?? "").toLowerCase().replace(/\s+/g, "_");
                     const badgeColor =
@@ -836,15 +932,35 @@ export default function MainDashboard() {
                         ? "#2196F3"
                         : "#9CA3AF";
                     const label = (r.status ?? "unknown").replace(/_/g, " ");
+                    const pct =
+                      typeof r.completion_percentage === "number"
+                        ? Math.max(0, Math.min(100, r.completion_percentage))
+                        : s === "done" || s === "complete"
+                        ? 100
+                        : s === "on_track"
+                        ? 60
+                        : s === "at_risk"
+                        ? 40
+                        : s === "off_track"
+                        ? 20
+                        : 0;
                     return (
-                      <li key={r.id} className="flex items-center gap-2 py-1">
-                        <span className="text-sm text-foreground flex-1 truncate">{r.title}</span>
-                        <span
-                          className="text-[10px] font-medium px-1.5 py-0.5 rounded capitalize shrink-0"
-                          style={{ backgroundColor: `${badgeColor}20`, color: badgeColor }}
-                        >
-                          {label}
-                        </span>
+                      <li key={r.id} className="py-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-foreground flex-1 truncate">{r.title}</span>
+                          <span
+                            className="text-[10px] font-medium px-1.5 py-0.5 rounded capitalize shrink-0"
+                            style={{ backgroundColor: `${badgeColor}20`, color: badgeColor }}
+                          >
+                            {label}
+                          </span>
+                        </div>
+                        <div className="mt-1 h-1 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{ width: `${pct}%`, backgroundColor: badgeColor }}
+                          />
+                        </div>
                       </li>
                     );
                   })}
@@ -854,13 +970,13 @@ export default function MainDashboard() {
           </div>
 
           {/* — Right column — */}
-          <div className="flex flex-col gap-3 min-w-0 col-panel-right">
-            <Panel title="Client Health" footerHref="/manage-tenants">
+          <div className="flex flex-col gap-3 min-w-0">
+            <Panel title="Client Health" icon={HeartPulse} footerHref="/manage-tenants">
               <ClientHealthDonut data={healthDonutData} />
             </Panel>
 
-            <Panel title="KPI Dashboard" footerHref="/kpi">
-              <div className="scale-90 origin-top-left -mb-4" style={{ width: "111%" }}>
+            <Panel title="KPI Dashboard" icon={Gauge} footerHref="/kpi" bodyClassName="!py-2">
+              <div className="[&_.grid]:!gap-2 [&_h3]:!text-xs [&_.text-2xl]:!text-lg [&_.text-3xl]:!text-xl">
                 {kpiRole === "csc_consultant" && userUuid ? (
                   <CscKpiCards subjectUuid={userUuid} period={period} />
                 ) : kpiRole === "cst_assistant" && userUuid ? (
@@ -875,36 +991,26 @@ export default function MainDashboard() {
               </div>
             </Panel>
 
-            <Panel title="Quick Actions">
-              <div className="flex flex-col gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-start gap-2"
+            <Panel title="Quick Actions" icon={Zap}>
+              <div className="grid grid-cols-3 gap-1.5">
+                <QuickActionTile
+                  icon={UserPlus}
+                  label="Add Client"
                   onClick={() => navigate("/manage-tenants")}
-                >
-                  <UserPlus className="h-4 w-4" /> Add Client
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-start gap-2"
+                />
+                <QuickActionTile
+                  icon={ClipboardList}
+                  label="New Task"
                   onClick={() => setTaskDialogOpen(true)}
-                >
-                  <ClipboardList className="h-4 w-4" /> Create Task
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-start gap-2"
+                />
+                <QuickActionTile
+                  icon={CalendarPlus}
+                  label="Meeting"
                   onClick={() => setMeetingOpen(true)}
-                >
-                  <CalendarPlus className="h-4 w-4" /> Schedule Meeting
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-start gap-2"
+                />
+                <QuickActionTile
+                  icon={Upload}
+                  label="Upload"
                   onClick={() => {
                     toast({
                       title: "Open a client to upload",
@@ -912,28 +1018,31 @@ export default function MainDashboard() {
                     });
                     navigate("/manage-tenants");
                   }}
-                >
-                  <Upload className="h-4 w-4" /> Upload Document
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-start gap-2"
+                />
+                <QuickActionTile
+                  icon={Ticket}
+                  label="Ticket"
                   onClick={() => setTicketOpen(true)}
-                >
-                  <Ticket className="h-4 w-4" /> New Ticket
-                </Button>
+                />
+                <QuickActionTile
+                  icon={MessageSquare}
+                  label="Message"
+                  onClick={() => navigate("/communications")}
+                />
               </div>
             </Panel>
           </div>
         </div>
 
         {/* Upcoming Calendar (full-width) */}
-        <Panel title="Upcoming Calendar" footerHref="/calendar">
+        <Panel title="Upcoming Calendar" icon={CalendarClock} footerHref="/calendar">
           {upcoming.length === 0 ? (
-            <div className="text-sm text-muted-foreground py-6 text-center">No upcoming events.</div>
+            <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+              <CalendarClock className="h-6 w-6 text-[#7130A0]/25" />
+              <div className="text-sm text-muted-foreground">No upcoming events.</div>
+            </div>
           ) : (
-            <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+            <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1">
               {upcoming.map((ev) => {
                 const start = new Date(ev.start_at);
                 const end = ev.end_at ? new Date(ev.end_at) : null;
@@ -941,8 +1050,13 @@ export default function MainDashboard() {
                   <button
                     key={ev.id}
                     onClick={() => navigate("/calendar")}
-                    className="shrink-0 w-[220px] text-left rounded-lg border bg-card hover:bg-accent/40 transition-colors p-3 flex gap-3"
+                    className="relative overflow-hidden shrink-0 w-[260px] text-left rounded-lg border border-border bg-white hover:bg-[#23C0DD]/5 hover:border-[#23C0DD]/40 transition-colors p-3 pl-4 flex gap-3"
                   >
+                    <span
+                      aria-hidden
+                      className="absolute inset-y-0 left-0 w-1"
+                      style={{ backgroundColor: "#23C0DD" }}
+                    />
                     <div className="flex flex-col items-center justify-center rounded-md bg-muted px-2 py-1 min-w-[44px]">
                       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         {format(start, "MMM")}
@@ -966,20 +1080,19 @@ export default function MainDashboard() {
                   </button>
                 );
               })}
+              <button
+                onClick={() => navigate("/calendar")}
+                className="shrink-0 w-[160px] rounded-lg border border-dashed border-border text-muted-foreground hover:text-[#7130A0] hover:border-[#7130A0]/40 transition-colors p-3 flex flex-col items-center justify-center gap-1"
+              >
+                <ChevronRight className="h-4 w-4" />
+                <span className="text-xs font-medium">See full week</span>
+              </button>
             </div>
           )}
         </Panel>
       </div>
 
 
-      {/* Responsive collapse */}
-      <style>{`
-        @media (max-width: 1023px) {
-          .p-4 > .grid[style*="38fr"], .md\\:p-6 > .grid[style*="38fr"] {
-            grid-template-columns: minmax(0, 1fr) !important;
-          }
-        }
-      `}</style>
 
       <AddStaffTaskDialog
         open={taskDialogOpen}
