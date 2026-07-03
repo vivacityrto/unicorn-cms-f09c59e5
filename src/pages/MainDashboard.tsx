@@ -496,37 +496,38 @@ export default function MainDashboard() {
       setBroadcasts(data ?? []);
     })();
 
-    // Client messages
+    // Client messages — 3 most recent threads from Team Communications
     (async () => {
-      const { data: assignments } = await sb
-        .from("tenant_csc_assignments")
-        .select("tenant_id")
-        .eq("csc_user_id", userUuid)
-        .is("ended_at", null);
-      const tenantIds = (assignments ?? []).map((a: any) => a.tenant_id);
-      if (tenantIds.length === 0) {
+      const { data: convos } = await sb
+        .from("tenant_conversations" as any)
+        .select("id, tenant_id, subject, topic, last_message_at, last_message_preview")
+        .not("last_message_at", "is", null)
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .limit(3);
+      const rows = (convos ?? []) as any[];
+      if (rows.length === 0) {
         setClientMsgs([]);
         return;
       }
-      const { data: msgs } = await sb
-        .from("tenant_messages")
-        .select("id, tenant_id, body, sender_type, created_at")
-        .in("tenant_id", tenantIds)
-        .order("created_at", { ascending: false })
-        .limit(6);
-      const uniqueTenants = Array.from(new Set((msgs ?? []).map((m: any) => m.tenant_id)));
-      const { data: tenants } = uniqueTenants.length
-        ? await sb.from("tenants").select("id, name").in("id", uniqueTenants)
-        : { data: [] as any[] };
+      const uniqueTenants = Array.from(new Set(rows.map((c) => c.tenant_id)));
+      const { data: tenants } = await sb
+        .from("tenants")
+        .select("id, name")
+        .in("id", uniqueTenants as number[]);
       const nameMap = new Map<number, string>();
       (tenants ?? []).forEach((t: any) => nameMap.set(t.id, t.name));
       setClientMsgs(
-        (msgs ?? []).map((m: any) => ({
-          ...m,
-          tenant_name: nameMap.get(m.tenant_id) ?? "Client",
+        rows.map((c) => ({
+          id: c.id,
+          tenant_id: c.tenant_id,
+          tenant_name: nameMap.get(c.tenant_id) ?? "Client",
+          body: c.last_message_preview ?? c.subject ?? c.topic ?? "",
+          subject: c.subject ?? c.topic ?? "",
+          created_at: c.last_message_at,
         })),
       );
     })();
+
 
     // Upcoming calendar
     (async () => {
