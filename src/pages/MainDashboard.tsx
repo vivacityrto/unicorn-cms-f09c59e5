@@ -874,6 +874,47 @@ export default function MainDashboard() {
                 </ul>
               )}
             </Panel>
+
+            <Panel title="Quick Actions" icon={Zap}>
+              <div className="grid grid-cols-3 gap-1.5">
+                <QuickActionTile
+                  icon={UserPlus}
+                  label="Add Client"
+                  onClick={() => navigate("/manage-tenants")}
+                />
+                <QuickActionTile
+                  icon={ClipboardList}
+                  label="New Task"
+                  onClick={() => setTaskDialogOpen(true)}
+                />
+                <QuickActionTile
+                  icon={CalendarPlus}
+                  label="Meeting"
+                  onClick={() => setMeetingOpen(true)}
+                />
+                <QuickActionTile
+                  icon={Upload}
+                  label="Upload"
+                  onClick={() => {
+                    toast({
+                      title: "Open a client to upload",
+                      description: "Documents are scoped to a client. Pick one from Manage Clients.",
+                    });
+                    navigate("/manage-tenants");
+                  }}
+                />
+                <QuickActionTile
+                  icon={Ticket}
+                  label="Ticket"
+                  onClick={() => setTicketOpen(true)}
+                />
+                <QuickActionTile
+                  icon={MessageSquare}
+                  label="Message"
+                  onClick={() => navigate("/communications")}
+                />
+              </div>
+            </Panel>
           </div>
 
           {/* — Centre column — */}
@@ -991,46 +1032,6 @@ export default function MainDashboard() {
               </div>
             </Panel>
 
-            <Panel title="Quick Actions" icon={Zap}>
-              <div className="grid grid-cols-3 gap-1.5">
-                <QuickActionTile
-                  icon={UserPlus}
-                  label="Add Client"
-                  onClick={() => navigate("/manage-tenants")}
-                />
-                <QuickActionTile
-                  icon={ClipboardList}
-                  label="New Task"
-                  onClick={() => setTaskDialogOpen(true)}
-                />
-                <QuickActionTile
-                  icon={CalendarPlus}
-                  label="Meeting"
-                  onClick={() => setMeetingOpen(true)}
-                />
-                <QuickActionTile
-                  icon={Upload}
-                  label="Upload"
-                  onClick={() => {
-                    toast({
-                      title: "Open a client to upload",
-                      description: "Documents are scoped to a client. Pick one from Manage Clients.",
-                    });
-                    navigate("/manage-tenants");
-                  }}
-                />
-                <QuickActionTile
-                  icon={Ticket}
-                  label="Ticket"
-                  onClick={() => setTicketOpen(true)}
-                />
-                <QuickActionTile
-                  icon={MessageSquare}
-                  label="Message"
-                  onClick={() => navigate("/communications")}
-                />
-              </div>
-            </Panel>
           </div>
         </div>
 
