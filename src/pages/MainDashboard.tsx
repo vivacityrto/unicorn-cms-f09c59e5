@@ -288,7 +288,7 @@ export default function MainDashboard() {
   }, [authLoading, profile, isStaff, navigate]);
 
   // Dialogs
-  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  
   const [ticketOpen, setTicketOpen] = useState(false);
 
   // Metric card state
