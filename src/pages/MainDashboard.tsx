@@ -232,6 +232,8 @@ export default function MainDashboard() {
   const [clientMsgs, setClientMsgs] = useState<any[]>([]);
   // Client health
   const [health, setHealth] = useState<{ healthy: number; monitoring: number; at_risk: number; critical: number } | null>(null);
+  // Upcoming calendar
+  const [upcoming, setUpcoming] = useState<any[]>([]);
 
   const [refreshTick, setRefreshTick] = useState(0);
 
