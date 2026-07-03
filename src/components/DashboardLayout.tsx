@@ -29,6 +29,7 @@ import { isVivacityStaffRole } from "@/lib/roles/vivacityRoles";
 // 1. WORK Section - All Vivacity Team Roles
 const workMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: LayoutDashboard, label: "Triage Dashboard", path: "/triage-dashboard" },
   { icon: BarChart3, label: "Executive Dashboard", path: "/executive", leadershipOnly: true },
   { icon: Inbox, label: "Inbox", path: "/inbox" },
   { icon: Mail, label: "Email Triage", path: "/email-triage", emailTriageStaffOnly: true },
