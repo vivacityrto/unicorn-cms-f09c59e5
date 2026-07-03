@@ -31,6 +31,7 @@ import {
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NewTicketModal } from "@/components/support-tickets/NewTicketModal";
 import { ClientQuickNav } from "@/components/client/ClientQuickNav";
 import { Building2 } from "lucide-react";
