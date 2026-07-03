@@ -899,12 +899,12 @@ export default function MainDashboard() {
                 <QuickActionTile
                   icon={ClipboardList}
                   label="New Task"
-                  onClick={() => setTaskDialogOpen(true)}
+                  onClick={() => navigate('/tasks?new=1')}
                 />
                 <QuickActionTile
                   icon={CalendarPlus}
-                  label="Meeting"
-                  onClick={() => setMeetingOpen(true)}
+                  label="Calendar"
+                  onClick={() => navigate('/calendar')}
                 />
                 <QuickActionTile
                   icon={Upload}
