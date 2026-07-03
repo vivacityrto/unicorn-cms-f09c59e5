@@ -377,7 +377,7 @@ export default function MainDashboard() {
           id: key,
           source: "tasks_tenants",
           realId: r.id,
-          title: r.title || r.name || "Untitled task",
+          title: r.task_name || "Untitled task",
           dueDate: r.due_date ?? null,
           priority: r.priority ?? null,
           status: r.status ?? null,
