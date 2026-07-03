@@ -711,20 +711,23 @@ export default function MainDashboard() {
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => navigate('/manage-tenants')}
-                className="gap-1.5"
+                className="h-9 gap-2 rounded-full border-[#23C0DD]/40 text-sm font-medium text-[#23C0DD] hover:bg-[#23C0DD]/5 hover:text-[#23C0DD] hover:border-[#23C0DD] transition-colors"
               >
-                <Building2 className="h-3.5 w-3.5" />
+                <Building2 className="h-4 w-4" />
                 Manage Clients
               </Button>
-              <ClientQuickNav currentTenantId={0} />
+              <ClientQuickNav
+                currentTenantId={0}
+                triggerClassName="h-9 gap-2 rounded-full border border-input bg-background px-4 text-sm font-medium text-muted-foreground hover:bg-[#23C0DD]/5 hover:text-[#23C0DD] hover:border-[#23C0DD]/40 transition-colors"
+              />
               <Button
                 onClick={() => navigate('/tasks?new=1')}
-                style={{ backgroundColor: "#ED1878", color: "white" }}
-                className="hover:opacity-90 gap-1.5"
+                className="h-9 gap-2 rounded-full px-4 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#ED1878" }}
               >
-                <Plus className="h-4 w-4" /> New Task
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                New Task
               </Button>
             </div>
           </div>
