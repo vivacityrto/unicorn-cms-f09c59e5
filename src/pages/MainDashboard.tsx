@@ -31,6 +31,7 @@ import {
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NewTicketModal } from "@/components/support-tickets/NewTicketModal";
 import { ClientQuickNav } from "@/components/client/ClientQuickNav";
 import { Building2 } from "lucide-react";
@@ -689,26 +690,34 @@ export default function MainDashboard() {
             className="absolute inset-y-0 left-0 w-1"
             style={{ background: "linear-gradient(180deg, #ED1878 0%, #7130A0 100%)" }}
           />
-          <div className="flex items-center justify-between gap-4 flex-wrap px-5 py-4 pl-6">
-            <div className="min-w-0">
-              <h1
-                className="text-foreground flex items-baseline gap-3 flex-wrap"
-                style={{ fontFamily: "Anton, sans-serif", fontSize: "22px", lineHeight: 1.2 }}
-              >
-                Welcome back, {firstName}!
-                <span
-                  className="inline-flex items-center gap-1 text-[11px] font-normal text-muted-foreground bg-muted rounded-full px-2 py-0.5"
-                  style={{ fontFamily: "Calibri, sans-serif" }}
+          <div className="flex items-center justify-between gap-4 flex-wrap px-5 py-5 pl-6">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <Avatar className="h-12 w-12 border-2 border-[#23C0DD]/20 shadow-sm">
+                <AvatarImage src={profile?.avatar_url || undefined} />
+                <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-[#7130A0] to-[#ED1878] text-white">
+                  {`${profile?.first_name?.[0] || ''}${profile?.last_name?.[0] || ''}`.toUpperCase() || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <h1
+                  className="text-foreground flex items-baseline gap-3 flex-wrap"
+                  style={{ fontFamily: "Anton, sans-serif", fontSize: "24px", lineHeight: 1.15 }}
                 >
-                  <CalendarClock className="h-3 w-3" /> {todayLabel}
-                </span>
-              </h1>
-              <p
-                className="text-muted-foreground mt-1"
-                style={{ fontFamily: "Calibri, sans-serif", fontSize: "13px" }}
-              >
-                Here's what's happening today.
-              </p>
+                  Welcome back, {firstName}!
+                  <span
+                    className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground bg-muted rounded-full px-2.5 py-1"
+                    style={{ fontFamily: "Calibri, sans-serif" }}
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" /> {todayLabel}
+                  </span>
+                </h1>
+                <p
+                  className="text-muted-foreground mt-1"
+                  style={{ fontFamily: "Calibri, sans-serif", fontSize: "14px" }}
+                >
+                  Here's what's happening today.
+                </p>
+              </div>
             </div>
             {/* Unified Action Dock */}
             <div className="flex items-center gap-0.5 p-0.5 rounded-full bg-white border border-border shadow-[0_1px_3px_rgba(17,24,39,0.04)]">
