@@ -496,37 +496,38 @@ export default function MainDashboard() {
       setBroadcasts(data ?? []);
     })();
 
-    // Client messages
+    // Client messages — 3 most recent threads from Team Communications
     (async () => {
-      const { data: assignments } = await sb
-        .from("tenant_csc_assignments")
-        .select("tenant_id")
-        .eq("csc_user_id", userUuid)
-        .is("ended_at", null);
-      const tenantIds = (assignments ?? []).map((a: any) => a.tenant_id);
-      if (tenantIds.length === 0) {
+      const { data: convos } = await sb
+        .from("tenant_conversations" as any)
+        .select("id, tenant_id, subject, topic, last_message_at, last_message_preview")
+        .not("last_message_at", "is", null)
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .limit(3);
+      const rows = (convos ?? []) as any[];
+      if (rows.length === 0) {
         setClientMsgs([]);
         return;
       }
-      const { data: msgs } = await sb
-        .from("tenant_messages")
-        .select("id, tenant_id, body, sender_type, created_at")
-        .in("tenant_id", tenantIds)
-        .order("created_at", { ascending: false })
-        .limit(6);
-      const uniqueTenants = Array.from(new Set((msgs ?? []).map((m: any) => m.tenant_id)));
-      const { data: tenants } = uniqueTenants.length
-        ? await sb.from("tenants").select("id, name").in("id", uniqueTenants)
-        : { data: [] as any[] };
+      const uniqueTenants = Array.from(new Set(rows.map((c) => c.tenant_id)));
+      const { data: tenants } = await sb
+        .from("tenants")
+        .select("id, name")
+        .in("id", uniqueTenants as number[]);
       const nameMap = new Map<number, string>();
       (tenants ?? []).forEach((t: any) => nameMap.set(t.id, t.name));
       setClientMsgs(
-        (msgs ?? []).map((m: any) => ({
-          ...m,
-          tenant_name: nameMap.get(m.tenant_id) ?? "Client",
+        rows.map((c) => ({
+          id: c.id,
+          tenant_id: c.tenant_id,
+          tenant_name: nameMap.get(c.tenant_id) ?? "Client",
+          body: c.last_message_preview ?? c.subject ?? c.topic ?? "",
+          subject: c.subject ?? c.topic ?? "",
+          created_at: c.last_message_at,
         })),
       );
     })();
+
 
     // Upcoming calendar
     (async () => {
@@ -919,7 +920,7 @@ export default function MainDashboard() {
 
           {/* — Centre column — */}
           <div className="flex flex-col gap-3 min-w-0">
-            <Panel title="Client Messages" icon={MessageSquare} footerHref="/inbox">
+            <Panel title="Client Messages" icon={MessageSquare} footerHref="/communications">
               {clientMsgs.length === 0 ? (
                 <div className="flex flex-col items-center gap-1.5 py-6 text-center">
                   <MessageSquare className="h-6 w-6 text-[#7130A0]/25" />
@@ -930,21 +931,30 @@ export default function MainDashboard() {
                   {clientMsgs.map((m) => {
                     const av = clientAvatarColor(m.tenant_id);
                     return (
-                      <li key={m.id} className="py-2 flex items-start gap-2.5">
-                        <div
-                          className={`h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${av.solid}`}
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/communications?thread=${m.id}`)}
+                          className="w-full py-2 flex items-start gap-2.5 text-left hover:bg-muted/40 rounded-md px-1 -mx-1 transition-colors"
                         >
-                          {clientInitials(m.tenant_name)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="text-sm font-medium text-foreground truncate">{m.tenant_name}</div>
-                            <span className="text-[11px] text-muted-foreground shrink-0">
-                              {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                            </span>
+                          <div
+                            className={`h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 ${av.solid}`}
+                          >
+                            {clientInitials(m.tenant_name)}
                           </div>
-                          <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.body}</div>
-                        </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="text-sm font-medium text-foreground truncate">{m.tenant_name}</div>
+                              <span className="text-[11px] text-muted-foreground shrink-0">
+                                {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                            {m.subject && (
+                              <div className="text-[11px] text-muted-foreground/80 truncate mt-0.5">{m.subject}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{m.body}</div>
+                          </div>
+                        </button>
                       </li>
                     );
                   })}
