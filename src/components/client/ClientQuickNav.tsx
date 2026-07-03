@@ -39,10 +39,9 @@ export function ClientQuickNav({ currentTenantId }: ClientQuickNavProps) {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          size="sm"
-          className="h-8 gap-1.5 text-xs font-normal"
+          className="h-9 gap-2 rounded-full border-[#23C0DD]/40 text-sm font-medium text-muted-foreground hover:bg-[#23C0DD]/5 hover:text-[#23C0DD] hover:border-[#23C0DD]/60 transition-colors"
         >
-          <Search className="h-3.5 w-3.5 opacity-60" />
+          <Search className="h-4 w-4 opacity-60" />
           Jump to client…
         </Button>
       </PopoverTrigger>
