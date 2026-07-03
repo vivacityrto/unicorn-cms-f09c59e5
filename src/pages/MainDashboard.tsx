@@ -31,9 +31,9 @@ import {
   ChevronRight,
   type LucideIcon,
 } from "lucide-react";
-import { AddStaffTaskDialog } from "@/components/AddStaffTaskDialog";
-import { MeetingScheduler } from "@/components/eos/MeetingScheduler";
 import { NewTicketModal } from "@/components/support-tickets/NewTicketModal";
+import { ClientQuickNav } from "@/components/client/ClientQuickNav";
+import { Building2 } from "lucide-react";
 import { CscKpiCards } from "@/components/kpi-v2/CscKpiCards";
 import { AssistantKpiCards } from "@/components/kpi-v2/AssistantKpiCards";
 import { DeveloperPlaceholder } from "@/components/kpi-v2/DeveloperPlaceholder";
