@@ -61,6 +61,7 @@ interface Metric {
   target: string;
   status: Status;
   pct?: number | null;    // 0-100 for ring; undefined = no ring, show only status dot
+  // icon typed below
   icon: React.ComponentType<{ className?: string }>;
 }
 
