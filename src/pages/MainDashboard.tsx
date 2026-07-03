@@ -711,13 +711,16 @@ export default function MainDashboard() {
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                onClick={() => setMeetingOpen(true)}
-                className="gap-1.5 border-[#7130A0]/30 text-[#7130A0] hover:bg-[#7130A0]/5 hover:text-[#7130A0]"
+                size="sm"
+                onClick={() => navigate('/manage-tenants')}
+                className="gap-1.5"
               >
-                <CalendarPlus className="h-4 w-4" /> Schedule Meeting
+                <Building2 className="h-3.5 w-3.5" />
+                Manage Clients
               </Button>
+              <ClientQuickNav currentTenantId={0} />
               <Button
-                onClick={() => setTaskDialogOpen(true)}
+                onClick={() => navigate('/tasks?new=1')}
                 style={{ backgroundColor: "#ED1878", color: "white" }}
                 className="hover:opacity-90 gap-1.5"
               >
