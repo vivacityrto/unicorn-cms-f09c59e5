@@ -80,27 +80,38 @@ function priorityColor(p: "high" | "medium" | "low" | null): string | null {
 
 function Panel({
   title,
+  icon: Icon,
   children,
   footerHref,
   footerLabel,
   onFooterClick,
+  className,
+  bodyClassName,
+  actions,
 }: {
   title: string;
+  icon?: LucideIcon;
   children: React.ReactNode;
   footerHref?: string;
   footerLabel?: string;
   onFooterClick?: () => void;
+  className?: string;
+  bodyClassName?: string;
+  actions?: React.ReactNode;
 }) {
   const navigate = useNavigate();
   return (
     <div
-      className="bg-white rounded-xl flex flex-col"
-      style={{ border: "0.5px solid hsl(var(--border))" }}
+      className={`bg-white rounded-xl flex flex-col border border-border shadow-[0_1px_2px_rgba(17,24,39,0.04)] ${className ?? ""}`}
     >
-      <div className="px-4 pt-3 pb-2 border-b" style={{ borderColor: "hsl(var(--border))" }}>
-        <div className="text-sm font-semibold text-foreground">{title}</div>
+      <div className="px-3.5 pt-2.5 pb-1.5 border-b border-border flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {Icon && <Icon className="h-3.5 w-3.5 text-[#7130A0] shrink-0" />}
+          <div className="text-[13px] font-semibold text-foreground truncate">{title}</div>
+        </div>
+        {actions && <div className="shrink-0">{actions}</div>}
       </div>
-      <div className="p-3 flex-1 min-h-0">{children}</div>
+      <div className={`px-3 py-2.5 flex-1 min-h-0 ${bodyClassName ?? ""}`}>{children}</div>
       {(footerHref || onFooterClick) && (
         <button
           type="button"
@@ -108,8 +119,7 @@ function Panel({
             if (onFooterClick) onFooterClick();
             else if (footerHref) navigate(footerHref);
           }}
-          className="text-xs font-medium text-[#7130A0] hover:text-[#ED1878] px-4 py-2.5 border-t inline-flex items-center gap-1 transition-colors"
-          style={{ borderColor: "hsl(var(--border))" }}
+          className="text-xs font-medium text-[#7130A0] hover:text-[#ED1878] px-3.5 py-2 border-t border-border inline-flex items-center gap-1 transition-colors"
         >
           {footerLabel ?? "View all"} <ArrowRight className="h-3 w-3" />
         </button>
@@ -125,36 +135,43 @@ interface SummaryCardProps {
   value: React.ReactNode;
   sub?: React.ReactNode;
   onClick?: () => void;
-  linkLabel?: string;
   accentColor?: string;
+  topAccent?: string;
+  icon?: LucideIcon;
 }
 
-function SummaryCard({ title, value, sub, onClick, linkLabel, accentColor }: SummaryCardProps) {
+function SummaryCard({ title, value, sub, onClick, accentColor, topAccent, icon: Icon }: SummaryCardProps) {
+  const clickable = !!onClick;
+  const Comp: any = clickable ? "button" : "div";
   return (
-    <div
-      className="bg-white rounded-xl p-4 flex flex-col justify-between min-h-[120px]"
-      style={{ border: "0.5px solid hsl(var(--border))" }}
+    <Comp
+      type={clickable ? "button" : undefined}
+      onClick={onClick}
+      className={`relative overflow-hidden bg-white rounded-xl px-4 py-3 flex flex-col justify-between min-h-[92px] border border-border shadow-[0_1px_2px_rgba(17,24,39,0.04)] text-left transition-all ${
+        clickable ? "hover:border-[#7130A0]/40 hover:shadow-[0_2px_8px_rgba(113,48,160,0.10)] cursor-pointer" : ""
+      }`}
     >
-      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</div>
-      <div className="mt-2 flex-1">
+      {topAccent && (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-[3px]"
+          style={{ background: topAccent }}
+        />
+      )}
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{title}</div>
+        {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground/60" />}
+      </div>
+      <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
         <div
-          className="text-3xl font-semibold leading-none"
+          className="text-[26px] font-semibold leading-none tabular-nums"
           style={accentColor ? { color: accentColor } : undefined}
         >
           {value}
         </div>
-        {sub && <div className="text-xs text-muted-foreground mt-1.5">{sub}</div>}
+        {sub && <div className="text-[11px] text-muted-foreground leading-tight">{sub}</div>}
       </div>
-      {onClick && (
-        <button
-          type="button"
-          onClick={onClick}
-          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[#7130A0] hover:text-[#ED1878] transition-colors self-start"
-        >
-          {linkLabel ?? "View all"} <ArrowRight className="h-3 w-3" />
-        </button>
-      )}
-    </div>
+    </Comp>
   );
 }
 
@@ -169,45 +186,83 @@ function ClientHealthDonut({
   if (total === 0) {
     return <div className="text-sm text-muted-foreground py-4 text-center">No client data.</div>;
   }
-  const size = 140;
-  const stroke = 22;
+  const size = 118;
+  const stroke = 16;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   let offset = 0;
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <svg width={size} height={size} className="-rotate-90">
-        {data.map((d) => {
-          if (d.value === 0) return null;
-          const len = (d.value / total) * circumference;
-          const segment = (
-            <circle
-              key={d.label}
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              fill="none"
-              stroke={d.color}
-              strokeWidth={stroke}
-              strokeDasharray={`${len} ${circumference - len}`}
-              strokeDashoffset={-offset}
-            />
-          );
-          offset += len;
-          return segment;
-        })}
-      </svg>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs w-full">
+    <div className="flex items-center gap-3">
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="hsl(var(--muted))"
+            strokeWidth={stroke}
+          />
+          {data.map((d) => {
+            if (d.value === 0) return null;
+            const len = (d.value / total) * circumference;
+            const segment = (
+              <circle
+                key={d.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={d.color}
+                strokeWidth={stroke}
+                strokeDasharray={`${len} ${circumference - len}`}
+                strokeDashoffset={-offset}
+                strokeLinecap="butt"
+              />
+            );
+            offset += len;
+            return segment;
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-lg font-semibold leading-none text-foreground tabular-nums">{total}</div>
+          <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-0.5">clients</div>
+        </div>
+      </div>
+      <div className="flex-1 min-w-0 grid grid-cols-1 gap-y-1 text-[11px]">
         {data.map((d) => (
           <div key={d.label} className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
-            <span className="text-muted-foreground">{d.label}</span>
-            <span className="ml-auto font-medium text-foreground">{d.value}</span>
+            <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+            <span className="text-muted-foreground truncate">{d.label}</span>
+            <span className="ml-auto font-semibold text-foreground tabular-nums">{d.value}</span>
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+/* ------------------------------ Quick action tile ------------------------------ */
+
+function QuickActionTile({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-center justify-center gap-1 rounded-lg border border-border bg-white hover:bg-[#7130A0]/5 hover:border-[#7130A0]/40 transition-colors px-2 py-2.5 text-center"
+    >
+      <Icon className="h-4 w-4 text-[#7130A0]" />
+      <span className="text-[10.5px] font-medium text-foreground leading-tight">{label}</span>
+    </button>
   );
 }
 
