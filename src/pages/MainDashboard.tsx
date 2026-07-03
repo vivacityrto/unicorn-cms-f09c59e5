@@ -345,26 +345,26 @@ export default function MainDashboard() {
     // Tasks union
     (async () => {
       const [ttCreated, ttFollowers, caiOwner, caiAssignee, opsOwner, opsCreator] = await Promise.all([
-        sb.from("tasks_tenants").select("id, title, name, description, due_date, priority, status").eq("created_by", userUuid),
-        sb.from("tasks_tenants").select("id, title, name, description, due_date, priority, status").contains("followers", [userUuid]),
+        sb.from("tasks_tenants").select("id, title, name, description, due_date, priority, status, created_at").eq("created_by", userUuid),
+        sb.from("tasks_tenants").select("id, title, name, description, due_date, priority, status, created_at").contains("followers", [userUuid]),
         sb
           .from("client_action_items")
-          .select("id, title, due_date, priority, status")
+          .select("id, title, due_date, priority, status, created_at")
           .eq("owner_user_id", userUuid)
           .not("status", "in", "(done,cancelled)"),
         sb
           .from("client_action_items")
-          .select("id, title, due_date, priority, status")
+          .select("id, title, due_date, priority, status, created_at")
           .eq("assignee_user_id", userUuid)
           .not("status", "in", "(done,cancelled)"),
         sb
           .from("ops_work_items")
-          .select("id, title, due_at, priority, status")
+          .select("id, title, due_at, priority, status, created_at")
           .eq("owner_user_uuid", userUuid)
           .not("status", "in", "(done,cancelled)"),
         sb
           .from("ops_work_items")
-          .select("id, title, due_at, priority, status")
+          .select("id, title, due_at, priority, status, created_at")
           .eq("created_by", userUuid)
           .not("status", "in", "(done,cancelled)"),
       ]);
@@ -383,6 +383,7 @@ export default function MainDashboard() {
           dueDate: r.due_date ?? null,
           priority: r.priority ?? null,
           status: r.status ?? null,
+          createdAt: r.created_at ?? null,
         });
       };
       const pushCAI = (r: any) => {
@@ -397,6 +398,7 @@ export default function MainDashboard() {
           dueDate: r.due_date ?? null,
           priority: r.priority ?? null,
           status: r.status ?? null,
+          createdAt: r.created_at ?? null,
         });
       };
       const pushOps = (r: any) => {
@@ -411,6 +413,7 @@ export default function MainDashboard() {
           dueDate: r.due_at ? String(r.due_at).slice(0, 10) : null,
           priority: r.priority ?? null,
           status: r.status ?? null,
+          createdAt: r.created_at ?? null,
         });
       };
       [...(ttCreated.data ?? []), ...(ttFollowers.data ?? [])].forEach(pushTT);
