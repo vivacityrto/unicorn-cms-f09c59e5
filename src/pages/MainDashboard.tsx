@@ -26,7 +26,7 @@ import { DeveloperPlaceholder } from "@/components/kpi-v2/DeveloperPlaceholder";
 import { fetchCscTasks, fetchAssistantTasks } from "@/lib/kpi-v2/fetchers";
 import { defaultPeriod } from "@/components/kpi-v2/types";
 import { toast } from "@/hooks/use-toast";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 
 /* ------------------------------ helpers ------------------------------ */
 
