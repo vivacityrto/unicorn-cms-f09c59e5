@@ -147,7 +147,7 @@ async function generateTaskNotifications(supabase: ReturnType<typeof createServi
 
   const { data: tasks, error } = await supabase
     .from("tasks_tenants")
-    .select("id, tenant_id, task_name, due_date, status, completed, created_by")
+    .select("id, tenant_id, task_name, due_date, status, completed, created_by, followers")
     .not("due_date", "is", null)
     .or("completed.is.null,completed.eq.false")
     .gte("due_date", minDate)
@@ -159,32 +159,44 @@ async function generateTaskNotifications(supabase: ReturnType<typeof createServi
   }
   if (!tasks?.length) return 0;
 
-  // Collect recipient IDs and fetch their prefs
-  const recipientIds = tasks.map((t) => t.created_by).filter(Boolean) as string[];
+  // Collect recipient IDs (creator + followers) and fetch their prefs
+  const recipientIds: string[] = [];
+  for (const t of tasks) {
+    if (t.created_by) recipientIds.push(t.created_by);
+    if (Array.isArray(t.followers)) {
+      for (const f of t.followers) if (f) recipientIds.push(f);
+    }
+  }
   const prefsMap = await fetchUserPrefs(supabase, recipientIds);
 
   const rows: NotificationRow[] = [];
   for (const t of tasks) {
-    if (!t.created_by || !t.due_date) continue;
-
-    // Check user prefs
-    const userPrefs = prefsMap.get(t.created_by);
-    if (userPrefs && !userPrefs.tasks) continue;
+    if (!t.due_date) continue;
 
     const w = taskWindow(t.due_date, today);
     if (!w) continue;
 
-    rows.push({
-      tenant_id: t.tenant_id,
-      user_id: t.created_by,
-      type: "task_due",
-      title: `Task ${w.label}: ${t.task_name || "Untitled task"}`,
-      message: `Status: ${t.status || "open"} · Due: ${t.due_date}`,
-      link: `/client/tasks?task_id=${t.id}`,
-      is_read: false,
-      dedupe_key: `task_due:${t.id}:${w.window}`,
-    });
+    const recipientSet = new Set<string>(
+      [t.created_by, ...(Array.isArray(t.followers) ? t.followers : [])].filter(Boolean) as string[]
+    );
+
+    for (const uid of recipientSet) {
+      const userPrefs = prefsMap.get(uid);
+      if (userPrefs && !userPrefs.tasks) continue;
+
+      rows.push({
+        tenant_id: t.tenant_id,
+        user_id: uid,
+        type: "task_due",
+        title: `Task ${w.label}: ${t.task_name || "Untitled task"}`,
+        message: `Status: ${t.status || "open"} · Due: ${t.due_date}`,
+        link: `/client/tasks?task_id=${t.id}`,
+        is_read: false,
+        dedupe_key: `task_due:${t.id}:${w.window}:${uid}`,
+      });
+    }
   }
+
 
   if (!rows.length) return 0;
 
