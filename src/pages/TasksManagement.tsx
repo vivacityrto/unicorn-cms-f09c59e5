@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { textToSafeHtml } from "@/lib/sanitize";
+import { emitTaskAssigned } from "@/lib/notificationEmitters";
 interface Task {
   id: string;
   tenant_id: number;
@@ -904,6 +905,76 @@ export default function TasksManagement() {
                           console.error('Error updating file paths:', updateError);
                         }
                       }
+                    }
+
+                    // Notify followers/assignees (excluding the creator)
+                    try {
+                      const recipients = [...new Set(assignedFollowers)].filter(
+                        (uid) => uid && uid !== user.id
+                      );
+                      if (recipients.length > 0 && newTask) {
+                        // Resolve creator display name (mirrors noteNotifications.ts)
+                        const { data: authorUser } = await supabase
+                          .from('users')
+                          .select('first_name, last_name')
+                          .eq('user_uuid', user.id)
+                          .single();
+                        const creatorName = authorUser
+                          ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim() || 'A team member'
+                          : 'A team member';
+
+                        // Resolve tenant name for Teams payload
+                        let clientName = '';
+                        if (newTask.tenant_id) {
+                          const { data: tenantRow } = await supabase
+                            .from('tenants')
+                            .select('name')
+                            .eq('id', newTask.tenant_id)
+                            .single();
+                          clientName = tenantRow?.name || '';
+                        }
+
+                        const deepLink = `/tasks?taskId=${newTask.id}`;
+                        const displayTitle = (newTask.task_name || '').trim();
+
+                        // In-app notification rows
+                        const notifRows = recipients.map((uid) => ({
+                          user_id: uid,
+                          tenant_id: newTask.tenant_id,
+                          title: 'New task assigned to you',
+                          message: `${creatorName} created a task: "${displayTitle}"`,
+                          type: 'task_assigned',
+                          link: deepLink,
+                          created_by: user.id,
+                          source_id: newTask.id,
+                        }));
+                        await supabase.from('user_notifications').insert(notifRows as any);
+
+                        // Teams / outbox notifications (respects notification_rules)
+                        for (const uid of recipients) {
+                          try {
+                            await emitTaskAssigned(
+                              uid,
+                              newTask.id,
+                              {
+                                title: displayTitle,
+                                client_name: clientName,
+                                due_date: newTask.due_date || undefined,
+                                assigned_by: creatorName,
+                                priority: newTask.priority || undefined,
+                                deep_link: deepLink,
+                                base_url: window.location.origin,
+                              },
+                              newTask.tenant_id || undefined,
+                              newTask.package_id || undefined,
+                            );
+                          } catch (e) {
+                            console.error('emitTaskAssigned failed for user:', uid, e);
+                          }
+                        }
+                      }
+                    } catch (notifyErr) {
+                      console.error('Task notification error:', notifyErr);
                     }
 
                     toast({
