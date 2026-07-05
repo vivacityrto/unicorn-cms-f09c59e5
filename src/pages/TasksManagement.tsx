@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { textToSafeHtml } from "@/lib/sanitize";
+import { emitTaskAssigned } from "@/lib/notificationEmitters";
 interface Task {
   id: string;
   tenant_id: number;
