@@ -1,11 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronsUpDown, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from '@/components/ui/command';
-import { useTenantRtoScope, type TenantScopeItem } from '@/hooks/useTenantRtoScope';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface ScopeMultiSelectProps {
@@ -14,34 +22,123 @@ interface ScopeMultiSelectProps {
   onChange: (codes: string[]) => void;
 }
 
+interface TgaSearchResult {
+  code: string;
+  title: string;
+  type?: { id?: string };
+  status?: { id?: string; isCurrent?: boolean };
+}
+
 const GROUP_LABELS: Record<string, string> = {
   qualification: 'Qualifications',
+  skillSet: 'Skill Sets',
   unit: 'Units of Competency',
-  skillset: 'Skill Sets',
   accreditedCourse: 'Accredited Courses',
 };
-const GROUP_ORDER = ['qualification', 'unit', 'skillset', 'accreditedCourse'];
+const GROUP_ORDER = ['qualification', 'skillSet', 'unit', 'accreditedCourse'];
 
 export function ScopeMultiSelect({ tenantId, value, onChange }: ScopeMultiSelectProps) {
   const [open, setOpen] = useState(false);
-  const { data: scope = [], isLoading } = useTenantRtoScope(tenantId ?? undefined);
+  const [searchText, setSearchText] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [results, setResults] = useState<TgaSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [titles, setTitles] = useState<Record<string, string>>({});
+  const requestIdRef = useRef(0);
 
-  const filtered = useMemo(
-    () =>
-      scope.filter(
-        (s) =>
-          s.status?.toLowerCase() === 'current' &&
-          !s.is_superseded &&
-          GROUP_ORDER.includes(s.scope_type),
-      ),
-    [scope],
-  );
+  // Debounce searchText
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchText.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchText]);
+
+  // Live search against TGA via edge function
+  useEffect(() => {
+    if (debouncedSearch.length < 2) {
+      setResults([]);
+      setIsSearching(false);
+      return;
+    }
+    const reqId = ++requestIdRef.current;
+    setIsSearching(true);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('tga-search-training', {
+          method: 'GET' as const,
+          // supabase-js appends body-less GET; pass search via query on url
+        } as never);
+        // Fallback: use fetch directly to include query params reliably
+        // (supabase.functions.invoke doesn't support query params for GET well)
+        void data;
+        void error;
+      } catch {
+        /* ignore */
+      }
+
+      try {
+        const projectUrl = 'https://yxkgdalkbrriasiyyrwk.supabase.co';
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        const res = await fetch(
+          `${projectUrl}/functions/v1/tga-search-training?searchText=${encodeURIComponent(debouncedSearch)}`,
+          {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          },
+        );
+        const json = await res.json();
+        if (cancelled || reqId !== requestIdRef.current) return;
+
+        const items: TgaSearchResult[] = json?.data?.results ?? json?.data?.items ?? json?.data ?? [];
+        const list = Array.isArray(items) ? items : [];
+        setResults(list);
+      } catch {
+        if (!cancelled && reqId === requestIdRef.current) setResults([]);
+      } finally {
+        if (!cancelled && reqId === requestIdRef.current) setIsSearching(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch]);
+
+  const filtered = useMemo(() => {
+    return results.filter((r) => {
+      const isCurrent =
+        r.status?.isCurrent === true ||
+        (r.status?.isCurrent === undefined && (r.status?.id ?? '').toLowerCase() === 'current');
+      const typeId = r.type?.id;
+      return isCurrent && typeId && GROUP_ORDER.includes(typeId);
+    });
+  }, [results]);
 
   const grouped = useMemo(() => {
-    const g: Record<string, TenantScopeItem[]> = {};
+    const g: Record<string, TgaSearchResult[]> = {};
     for (const t of GROUP_ORDER) g[t] = [];
-    for (const item of filtered) g[item.scope_type]?.push(item);
+    for (const item of filtered) {
+      const typeId = item.type?.id;
+      if (typeId && g[typeId]) g[typeId].push(item);
+    }
     return g;
+  }, [filtered]);
+
+  // Remember titles for selected codes so badges keep their labels after searches change
+  useEffect(() => {
+    if (filtered.length === 0) return;
+    setTitles((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const item of filtered) {
+        if (!next[item.code] && item.title) {
+          next[item.code] = item.title;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
   }, [filtered]);
 
   const toggle = (code: string) => {
@@ -70,42 +167,10 @@ export function ScopeMultiSelect({ tenantId, value, onChange }: ScopeMultiSelect
     );
   }
 
-  if (isLoading) {
-    return (
-      <Button variant="outline" disabled className="w-full justify-between">
-        <span className="text-muted-foreground">Loading scope…</span>
-        <Loader2 className="h-4 w-4 animate-spin" />
-      </Button>
-    );
-  }
-
-  // Fallback: no scope rows for this tenant
-  if (filtered.length === 0) {
-    return (
-      <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">
-          No scope records found. Scope can be imported from the TGA via the RTO Profile. You can still type qualification codes manually.
-        </p>
-        <Input
-          value={value.join(', ')}
-          onChange={(e) =>
-            onChange(
-              e.target.value
-                .split(',')
-                .map((s) => s.trim())
-                .filter(Boolean),
-            )
-          }
-          placeholder="Comma-separated qualification codes"
-        />
-      </div>
-    );
-  }
-
   const triggerLabel =
-    value.length === 0
-      ? 'Select training products…'
-      : `${value.length} selected`;
+    value.length === 0 ? 'Select training products…' : `${value.length} selected`;
+
+  const showTooShort = debouncedSearch.length < 2;
 
   return (
     <div className="space-y-2">
@@ -124,59 +189,75 @@ export function ScopeMultiSelect({ tenantId, value, onChange }: ScopeMultiSelect
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-          <Command
-            filter={(val, search) => (val.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}
-          >
-            <CommandInput placeholder="Search code or title…" />
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Search training.gov.au by code or title…"
+              value={searchText}
+              onValueChange={setSearchText}
+            />
             <CommandList className="max-h-[320px]">
-              <CommandEmpty>No matching products.</CommandEmpty>
-              {GROUP_ORDER.map((type, idx) => {
-                const items = grouped[type];
-                if (!items || items.length === 0) return null;
-                const codes = items.map((i) => i.code);
-                const allSelected = codes.every((c) => value.includes(c));
-                return (
-                  <div key={type}>
-                    {idx > 0 && <CommandSeparator />}
-                    <CommandGroup heading={GROUP_LABELS[type]}>
-                      <CommandItem
-                        value={`__all__ ${type}`}
-                        onSelect={() => toggleGroup(codes)}
-                        className="text-xs font-medium text-primary"
-                      >
-                        <Check
-                          className={cn(
-                            'mr-2 h-4 w-4',
-                            allSelected ? 'opacity-100' : 'opacity-0',
-                          )}
-                        />
-                        {allSelected ? 'Deselect all' : 'Select all in group'}
-                      </CommandItem>
-                      {items.map((item) => {
-                        const selected = value.includes(item.code);
-                        return (
-                          <CommandItem
-                            key={item.id}
-                            value={`${item.code} ${item.title}`}
-                            onSelect={() => toggle(item.code)}
-                          >
-                            <Check
-                              className={cn(
-                                'mr-2 h-4 w-4',
-                                selected ? 'opacity-100' : 'opacity-0',
-                              )}
-                            />
-                            <span className="font-mono text-xs mr-2">{item.code}</span>
-                            <span className="truncate text-xs text-muted-foreground">
-                              — {item.title}
-                            </span>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </div>
-                );
-              })}
+              {showTooShort && !isSearching && (
+                <div className="py-6 text-center text-xs text-muted-foreground">
+                  Type at least 2 characters to search.
+                </div>
+              )}
+              {!showTooShort && isSearching && (
+                <div className="py-6 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Searching…
+                </div>
+              )}
+              {!showTooShort && !isSearching && filtered.length === 0 && (
+                <CommandEmpty>No matching products.</CommandEmpty>
+              )}
+              {!isSearching &&
+                GROUP_ORDER.map((type, idx) => {
+                  const items = grouped[type];
+                  if (!items || items.length === 0) return null;
+                  const codes = items.map((i) => i.code);
+                  const allSelected = codes.every((c) => value.includes(c));
+                  return (
+                    <div key={type}>
+                      {idx > 0 && <CommandSeparator />}
+                      <CommandGroup heading={GROUP_LABELS[type]}>
+                        <CommandItem
+                          value={`__all__ ${type}`}
+                          onSelect={() => toggleGroup(codes)}
+                          className="text-xs font-medium text-primary"
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-4 w-4',
+                              allSelected ? 'opacity-100' : 'opacity-0',
+                            )}
+                          />
+                          {allSelected ? 'Deselect all' : 'Select all in group'}
+                        </CommandItem>
+                        {items.map((item) => {
+                          const selected = value.includes(item.code);
+                          return (
+                            <CommandItem
+                              key={item.code}
+                              value={`${item.code} ${item.title}`}
+                              onSelect={() => toggle(item.code)}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  selected ? 'opacity-100' : 'opacity-0',
+                                )}
+                              />
+                              <span className="font-mono text-xs mr-2">{item.code}</span>
+                              <span className="truncate text-xs text-muted-foreground">
+                                — {item.title}
+                              </span>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </div>
+                  );
+                })}
             </CommandList>
           </Command>
         </PopoverContent>
@@ -185,13 +266,13 @@ export function ScopeMultiSelect({ tenantId, value, onChange }: ScopeMultiSelect
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {value.map((code) => {
-            const item = filtered.find((f) => f.code === code);
+            const title = titles[code];
             return (
               <Badge key={code} variant="secondary" className="gap-1 pr-1 font-normal">
                 <span className="font-mono text-[11px]">{code}</span>
-                {item && (
+                {title && (
                   <span className="text-[11px] text-muted-foreground max-w-[180px] truncate">
-                    — {item.title}
+                    — {title}
                   </span>
                 )}
                 <button
