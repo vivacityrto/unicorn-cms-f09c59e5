@@ -65,19 +65,6 @@ export function ScopeMultiSelect({ tenantId, value, onChange }: ScopeMultiSelect
 
     (async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('tga-search-training', {
-          method: 'GET' as const,
-          // supabase-js appends body-less GET; pass search via query on url
-        } as never);
-        // Fallback: use fetch directly to include query params reliably
-        // (supabase.functions.invoke doesn't support query params for GET well)
-        void data;
-        void error;
-      } catch {
-        /* ignore */
-      }
-
-      try {
         const projectUrl = 'https://yxkgdalkbrriasiyyrwk.supabase.co';
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
