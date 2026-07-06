@@ -16,10 +16,11 @@ interface ScopeMultiSelectProps {
 
 const GROUP_LABELS: Record<string, string> = {
   qualification: 'Qualifications',
+  unit: 'Units of Competency',
   skillset: 'Skill Sets',
   accreditedCourse: 'Accredited Courses',
 };
-const GROUP_ORDER = ['qualification', 'skillset', 'accreditedCourse'];
+const GROUP_ORDER = ['qualification', 'unit', 'skillset', 'accreditedCourse'];
 
 export function ScopeMultiSelect({ tenantId, value, onChange }: ScopeMultiSelectProps) {
   const [open, setOpen] = useState(false);
