@@ -201,7 +201,7 @@ const AcademyLayoutInner = ({
       )}
       {/* Sidebar - Academy themed (lighter, learning-focused) */}
       <aside
-        className={`${sidebarOpen ? "w-64" : "w-20"} bg-card border-r border-[var(--viv-purple-light)] transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30`}
+        className={`${sidebarOpen ? "w-64" : "w-20"} bg-card border-r border-[var(--viv-purple-light)] transition-all duration-300 flex flex-col fixed left-0 z-30 ${isPreviewMode ? "top-12 h-[calc(100vh-3rem)]" : "top-0 h-screen"}`}
       >
         {/* Sidebar Header */}
         {sidebarOpen ? (
