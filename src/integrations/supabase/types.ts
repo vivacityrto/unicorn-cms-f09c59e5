@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      _churned_backfill_audit_20260706: {
+        Row: {
+          captured_at: string
+          churned_after: string | null
+          churned_before: string | null
+          csc_assignment_id: number
+          csc_ended_after: string | null
+          csc_ended_before: string | null
+          lifecycle_status: string
+          status: string | null
+          tenant_id: number
+          tenant_name: string | null
+          updated_at_source: string
+        }
+        Insert: {
+          captured_at?: string
+          churned_after?: string | null
+          churned_before?: string | null
+          csc_assignment_id: number
+          csc_ended_after?: string | null
+          csc_ended_before?: string | null
+          lifecycle_status: string
+          status?: string | null
+          tenant_id: number
+          tenant_name?: string | null
+          updated_at_source: string
+        }
+        Update: {
+          captured_at?: string
+          churned_after?: string | null
+          churned_before?: string | null
+          csc_assignment_id?: number
+          csc_ended_after?: string | null
+          csc_ended_before?: string | null
+          lifecycle_status?: string
+          status?: string | null
+          tenant_id?: number
+          tenant_name?: string | null
+          updated_at_source?: string
+        }
+        Relationships: []
+      }
       _documents_categories: {
         Row: {
           created_at: string
