@@ -13611,7 +13611,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date_offset?: number | null
-          id: number
+          id?: number
           instructions?: string | null
           is_mandatory?: boolean | null
           name: string
