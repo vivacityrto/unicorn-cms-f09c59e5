@@ -77,7 +77,7 @@ export function ScopeMultiSelect({ tenantId, value, onChange }: ScopeMultiSelect
         const json = await res.json();
         if (cancelled || reqId !== requestIdRef.current) return;
 
-        const items: TgaSearchResult[] = json?.data?.results ?? json?.data?.items ?? json?.data ?? [];
+        const items: TgaSearchResult[] = json?.data?.data ?? [];
         const list = Array.isArray(items) ? items : [];
         setResults(list);
       } catch {
