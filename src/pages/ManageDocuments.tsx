@@ -265,9 +265,13 @@ export default function ManageDocuments() {
       const {
         data,
         error
-      } = await supabase.from("dd_document_categories").select("value, label").eq("is_active", true).order("sort_order");
+      } = await supabase.from("dd_document_categories").select("value, label, sharepoint_folder_name").eq("is_active", true).order("sort_order");
       if (error) throw error;
-      const mapped = (data || []).map(d => ({ id: d.value, name: d.label }));
+      const mapped = (data || []).map((d: any) => ({
+        id: d.value,
+        name: d.label,
+        sharepoint_folder_name: d.sharepoint_folder_name ?? null,
+      }));
       setCategories(mapped as any);
       setCategoriesCount(mapped.length);
     } catch (error: any) {
