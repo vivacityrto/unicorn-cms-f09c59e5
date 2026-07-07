@@ -422,6 +422,22 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route
+              path="/manage-documents/bulk-jobs"
+              element={
+                <ProtectedRoute>
+                  <BulkDocumentJobsList />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/manage-documents/bulk-jobs/:id"
+              element={
+                <ProtectedRoute>
+                  <BulkDocumentJobProgress />
+                </ProtectedRoute>
+              }
+            />
             <Route 
               path="/admin/sharepoint-folder-mapping" 
               element={
