@@ -433,20 +433,28 @@ export default function ManageDocuments() {
           }
         }
 
-        // Fetch document_files presence to derive file_status
+        // Fetch document_files + document_versions presence to derive file_status
         const docIds = (documentsData || []).map(d => d.id);
         let readySet = new Set<number>();
+        let versionsSet = new Set<number>();
         if (docIds.length > 0) {
-          const { data: filesData } = await supabase
-            .from('document_files')
-            .select('document_id')
-            .in('document_id', docIds);
+          const [{ data: filesData }, { data: versionsData }] = await Promise.all([
+            supabase.from('document_files').select('document_id').in('document_id', docIds),
+            supabase.from('document_versions').select('document_id').in('document_id', docIds),
+          ]);
           readySet = new Set((filesData || []).map(f => f.document_id as number));
+          versionsSet = new Set((versionsData || []).map(v => v.document_id as number));
         }
 
         // Enrich documents with creator info + file_status
+        // A document counts as file_ready if it has a document_files row, any
+        // document_versions row, or a non-null source_template_url (SharePoint-linked).
         const enrichedDocs = (documentsData || []).map(doc => {
-          const fileStatus: FileStatus = readySet.has(doc.id)
+          const isReady =
+            readySet.has(doc.id) ||
+            versionsSet.has(doc.id) ||
+            !!doc.source_template_url;
+          const fileStatus: FileStatus = isReady
             ? 'file_ready'
             : (doc.uploaded_files && Array.isArray(doc.uploaded_files) && doc.uploaded_files.length > 0)
               ? 'legacy_only'
