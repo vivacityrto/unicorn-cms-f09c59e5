@@ -267,9 +267,11 @@ export const LiveMeetingView = () => {
     }
   };
 
-  const isFacilitator = participants?.some(
-    p => p.user_id === profile?.user_uuid && p.role === 'Leader'
-  ) ?? true; // Default to true if no participants set yet
+  const isFacilitator = participants === undefined
+    ? false
+    : participants.length === 0
+      ? true
+      : participants.some(p => p.user_id === profile?.user_uuid && p.role === 'Leader');
 
   // Start first segment mutation
   const startFirstSegment = useMutation({
@@ -1049,22 +1051,61 @@ export const LiveMeetingView = () => {
 
             {/* All segments complete */}
             {allSegmentsComplete && (
-              <Card className="p-8 text-center bg-primary/5 border-primary/20">
-                <CheckCircle className="h-16 w-16 mx-auto mb-4 text-primary" />
-                <h2 className="text-xl font-bold mb-2">All Segments Complete!</h2>
-                <p className="text-muted-foreground mb-6">
-                  Great meeting! Click "End Meeting" to complete the meeting close checklist.
-                </p>
-                {isFacilitator && (
-                  <Button 
-                    size="lg"
-                    onClick={() => setCloseDialogOpen(true)}
-                  >
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    End Meeting & Complete Checklist
-                  </Button>
-                )}
-              </Card>
+              <>
+                <Card className="p-8 text-center bg-primary/5 border-primary/20">
+                  <CheckCircle className="h-16 w-16 mx-auto mb-4 text-primary" />
+                  <h2 className="text-xl font-bold mb-2">All Segments Complete!</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Great meeting! Click "End Meeting" to complete the meeting close checklist.
+                  </p>
+                  {isFacilitator && (
+                    <Button
+                      size="lg"
+                      onClick={() => setCloseDialogOpen(true)}
+                    >
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      End Meeting & Complete Checklist
+                    </Button>
+                  )}
+                </Card>
+
+                {/* Per-attendee meeting rating (visible to everyone, not just facilitator) */}
+                <Card className="p-6">
+                  <h3 className="font-semibold flex items-center gap-2 mb-1">
+                    <Star className="h-4 w-4 text-primary" />
+                    Rate this meeting (1-10)
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Every attendee is encouraged to rate the meeting.
+                  </p>
+                  {(() => {
+                    const myRating = profile?.user_uuid ? getUserRating(profile.user_uuid) : undefined;
+                    return (
+                      <>
+                        <div className="flex gap-1 flex-wrap">
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                            <Button
+                              key={n}
+                              variant={myRating === n ? 'default' : 'outline'}
+                              size="sm"
+                              className="w-9 h-9"
+                              onClick={() => saveRating.mutate(n)}
+                              disabled={saveRating.isPending}
+                            >
+                              {n}
+                            </Button>
+                          ))}
+                        </div>
+                        {myRating && (
+                          <p className="text-sm text-muted-foreground mt-3">
+                            Your rating: <span className="font-medium">{myRating}/10</span>
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
+                </Card>
+              </>
             )}
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,10 +15,13 @@ import {
   AlertTriangle,
   FileText,
   ListTodo,
-  MessageSquare
+  MessageSquare,
+  Star
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { useMeetingOutcomes } from '@/hooks/useMeetingOutcomes';
+import { useAuth } from '@/hooks/useAuth';
 import type { MeetingInstance } from '@/hooks/useMeetingSeries';
 
 interface PastMeetingSummaryProps {
@@ -27,6 +31,10 @@ interface PastMeetingSummaryProps {
 }
 
 export function PastMeetingSummary({ open, onOpenChange, meeting }: PastMeetingSummaryProps) {
+  const { profile } = useAuth();
+  const { saveRating, getUserRating } = useMeetingOutcomes(meeting.id);
+  const myRating = profile?.user_uuid ? getUserRating(profile.user_uuid) : undefined;
+
   // Fetch related data for the meeting
   const { data: todos } = useQuery({
     queryKey: ['meeting-todos', meeting.id],
@@ -178,6 +186,33 @@ export function PastMeetingSummary({ open, onOpenChange, meeting }: PastMeetingS
                   </span>
                 </div>
               )}
+
+              {/* Per-user rating control — viewer can submit or update their own rating */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Star className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Your rating</span>
+                  {myRating && (
+                    <span className="text-muted-foreground">
+                      ({myRating}/10)
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-1 flex-wrap">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                    <Button
+                      key={n}
+                      variant={myRating === n ? 'default' : 'outline'}
+                      size="sm"
+                      className="w-9 h-9"
+                      onClick={() => saveRating.mutate(n)}
+                      disabled={saveRating.isPending}
+                    >
+                      {n}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <Separator />
