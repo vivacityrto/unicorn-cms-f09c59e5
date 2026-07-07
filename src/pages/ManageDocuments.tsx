@@ -661,6 +661,47 @@ export default function ManageDocuments() {
   const handleRemoveFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
+
+  // Derive a friendly Format label from a filename or mimeType.
+  const deriveFormatFromFile = (fileName: string, mimeType: string | null): string => {
+    const ext = (fileName.match(/\.([^./\\]+)$/)?.[1] || '').toLowerCase();
+    const map: Record<string, string> = {
+      docx: 'Word', doc: 'Word',
+      xlsx: 'Excel', xls: 'Excel',
+      pptx: 'PowerPoint', ppt: 'PowerPoint',
+      pdf: 'PDF',
+      txt: 'Text', csv: 'CSV',
+      png: 'Image', jpg: 'Image', jpeg: 'Image', gif: 'Image',
+    };
+    if (ext && map[ext]) return map[ext];
+    if (ext) return ext.toUpperCase();
+    if (mimeType?.includes('word')) return 'Word';
+    if (mimeType?.includes('sheet') || mimeType?.includes('excel')) return 'Excel';
+    if (mimeType?.includes('pdf')) return 'PDF';
+    return '';
+  };
+
+  // Advance from the Browse step: prefill the metadata form from the selection.
+  const handleNextFromBrowse = () => {
+    if (!selectedTemplate) return;
+    const { file, folderName } = selectedTemplate;
+    const titleWithoutExt = file.name.replace(/\.[^./\\]+$/, '');
+    const derivedFormat = deriveFormatFromFile(file.name, file.mimeType);
+
+    // Match folder name against dd_document_categories.sharepoint_folder_name
+    const matchedCategory = categories.find(
+      (c) => (c.sharepoint_folder_name || '').toLowerCase() === folderName.toLowerCase(),
+    );
+
+    setFormData((prev) => ({
+      ...prev,
+      title: titleWithoutExt,
+      format: derivedFormat,
+      categories: matchedCategory ? [matchedCategory.id.toString()] : prev.categories,
+    }));
+    setCreateStep('metadata');
+  };
+
   const handleCreateDocument = async () => {
     try {
       // Upload new files to storage if any
