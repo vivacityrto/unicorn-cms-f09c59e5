@@ -347,9 +347,26 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const fmt = ((await documentFormat(item.document_id)) || '').toLowerCase().trim();
+        const meta = await documentMeta(item.document_id);
+        const fmt = ((meta?.format ?? '') as string).toLowerCase().trim();
         if (!SUPPORTED_FORMATS.has(fmt)) {
           await record(item.id, 'skipped', 'unsupported_format', { format: fmt }, null, null);
+          continue;
+        }
+
+        const hasTemplate =
+          !!version.storage_path ||
+          !!version.frozen_storage_path ||
+          !!meta?.source_template_url;
+        if (!hasTemplate) {
+          await record(
+            item.id,
+            'skipped',
+            'no_template',
+            { document_id: item.document_id, document_version_id: version.id },
+            null,
+            null,
+          );
           continue;
         }
 
