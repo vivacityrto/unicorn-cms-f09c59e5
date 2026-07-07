@@ -1144,21 +1144,12 @@ export default function ManageDocuments() {
             setExistingFiles([]);
           }
         }}>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DialogTrigger asChild>
-                      <Button className={isTeamLeader ? "bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"} disabled={isTeamLeader}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Document
-                      </Button>
-                    </DialogTrigger>
-                  </TooltipTrigger>
-                  {isTeamLeader && <TooltipContent>
-                      <p>Please contact Super Admins.</p>
-                    </TooltipContent>}
-                </Tooltip>
-              </TooltipProvider>
+              <DialogTrigger asChild>
+                <Button className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Document
+                </Button>
+              </DialogTrigger>
               <DialogContent className="border-[3px] border-[#dfdfdf] flex flex-col max-h-[90vh]" style={{
             width: '650px',
             maxWidth: '90vw'
