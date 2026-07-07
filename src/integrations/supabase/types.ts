@@ -68897,6 +68897,7 @@ export type Database = {
         Args: { p_restore_reason?: string; p_version_id: string }
         Returns: string
       }
+      resume_bulk_document_job: { Args: { p_job_id: string }; Returns: boolean }
       retry_failed_generation: {
         Args: { p_generated_document_id: string }
         Returns: Json
