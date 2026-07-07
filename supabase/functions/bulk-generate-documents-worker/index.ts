@@ -239,7 +239,7 @@ Deno.serve(async (req: Request) => {
     }
 
     for (const pi of instances ?? []) {
-      const { error: rErr } = await supabaseService.rpc('repair_package_instance_stages', {
+      const { error: rErr } = await supabaseCaller.rpc('repair_package_instance_stages', {
         p_package_instance_id: pi.id,
         p_dry_run: false,
       });
