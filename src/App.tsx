@@ -26,6 +26,8 @@ const MainDashboard = lazy(() => import("./pages/MainDashboard"));
  const ManageInvitesWrapper = lazy(() => import("./pages/ManageInvitesWrapper"));
  const ManageTenantsWrapper = lazy(() => import("./pages/ManageTenantsWrapper"));
  const ManageDocumentsWrapper = lazy(() => import("./pages/ManageDocumentsWrapper"));
+ const BulkDocumentJobsList = lazy(() => import("./pages/BulkDocumentJobsList"));
+ const BulkDocumentJobProgress = lazy(() => import("./pages/BulkDocumentJobProgress"));
  const ManageCategoriesWrapper = lazy(() => import("./pages/ManageCategoriesWrapper"));
  const ManageStagesWrapper = lazy(() => import("./pages/ManageStagesWrapper"));
  const SharePointFolderMapping = lazy(() => import("./pages/admin/SharePointFolderMapping"));
