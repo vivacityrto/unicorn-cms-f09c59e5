@@ -89,6 +89,15 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  // Anon-key client with the caller's Authorization forwarded, used for
+  // staff-gated RPCs (repair_package_instance_stages) where auth.uid() must
+  // resolve to the real staff user. Service role is unsafe here — the
+  // repair RPC raises insufficient_privilege under service_role.
+  const supabaseCaller = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: callerAuth } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
   const bootstrapCache = new Map<number, BootstrapCacheEntry>();
   const repairCache = new Map<number, RepairCacheEntry>();
 
