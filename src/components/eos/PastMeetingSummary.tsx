@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,10 +15,13 @@ import {
   AlertTriangle,
   FileText,
   ListTodo,
-  MessageSquare
+  MessageSquare,
+  Star
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { useMeetingOutcomes } from '@/hooks/useMeetingOutcomes';
+import { useAuth } from '@/hooks/useAuth';
 import type { MeetingInstance } from '@/hooks/useMeetingSeries';
 
 interface PastMeetingSummaryProps {
