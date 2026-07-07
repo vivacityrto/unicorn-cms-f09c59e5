@@ -7144,6 +7144,468 @@ export type Database = {
           },
         ]
       }
+      bulk_document_job_items: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          document_id: number
+          document_instance_id: number
+          document_version_id: string | null
+          finished_at: string | null
+          id: number
+          job_id: string
+          last_error: string | null
+          last_error_code: string | null
+          lease_expires_at: string | null
+          leased_at: string | null
+          outcome: Json
+          package_instance_id: number
+          stageinstance_id: number
+          started_at: string | null
+          state: string
+          tenant_id: number
+          updated_at: string
+          worker_id: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          document_id: number
+          document_instance_id: number
+          document_version_id?: string | null
+          finished_at?: string | null
+          id?: number
+          job_id: string
+          last_error?: string | null
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          leased_at?: string | null
+          outcome?: Json
+          package_instance_id: number
+          stageinstance_id: number
+          started_at?: string | null
+          state?: string
+          tenant_id: number
+          updated_at?: string
+          worker_id?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          document_id?: number
+          document_instance_id?: number
+          document_version_id?: string | null
+          finished_at?: string | null
+          id?: number
+          job_id?: string
+          last_error?: string | null
+          last_error_code?: string | null
+          lease_expires_at?: string | null
+          leased_at?: string | null
+          outcome?: Json
+          package_instance_id?: number
+          stageinstance_id?: number
+          started_at?: string | null
+          state?: string
+          tenant_id?: number
+          updated_at?: string
+          worker_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_document_job_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_phase_timeline"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_document_instance_id_fkey"
+            columns: ["document_instance_id"]
+            isOneToOne: false
+            referencedRelation: "document_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_document_instance_id_fkey"
+            columns: ["document_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_governance_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_document_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_admin_zero_progress_packages"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_dashboard_progress"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_dashboard"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_stages"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_usage_summary"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_stage_instances"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_stageinstance_id_fkey"
+            columns: ["stageinstance_id"]
+            isOneToOne: false
+            referencedRelation: "stage_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_stageinstance_id_fkey"
+            columns: ["stageinstance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_stages"
+            referencedColumns: ["stage_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_stageinstance_id_fkey"
+            columns: ["stageinstance_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_stage_instances"
+            referencedColumns: ["stage_instance_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_schedule"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_home_hero"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_reporting_reminders"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_academy_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tga_audit_snapshot"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "bulk_document_job_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      bulk_document_jobs: {
+        Row: {
+          created_at: string
+          created_by: string
+          document_ids: number[]
+          error_summary: Json
+          failed_count: number
+          finished_at: string | null
+          generated_count: number
+          id: string
+          package_ids: number[]
+          provisioning_summary: Json
+          scope: string
+          skipped_count: number
+          stage_ids: number[]
+          started_at: string | null
+          status: string
+          tenant_ids: number[]
+          total_items: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          document_ids?: number[]
+          error_summary?: Json
+          failed_count?: number
+          finished_at?: string | null
+          generated_count?: number
+          id?: string
+          package_ids?: number[]
+          provisioning_summary?: Json
+          scope: string
+          skipped_count?: number
+          stage_ids?: number[]
+          started_at?: string | null
+          status?: string
+          tenant_ids?: number[]
+          total_items?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          document_ids?: number[]
+          error_summary?: Json
+          failed_count?: number
+          finished_at?: string | null
+          generated_count?: number
+          id?: string
+          package_ids?: number[]
+          provisioning_summary?: Json
+          scope?: string
+          skipped_count?: number
+          stage_ids?: number[]
+          started_at?: string | null
+          status?: string
+          tenant_ids?: number[]
+          total_items?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       calendar_entries: {
         Row: {
           created_at: string
