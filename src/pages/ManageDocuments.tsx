@@ -1476,15 +1476,29 @@ export default function ManageDocuments() {
                   })()}
 
                   </div>
+                  )}
                 </div>
 
                 <DialogFooter className="flex-shrink-0 pt-4 mt-4 border-t">
-                  <Button variant="outline" size="default" type="button" onClick={() => setIsCreateDialogOpen(false)} className="hover:bg-[#40c6e524] hover:text-black">
+                  <Button variant="outline" size="default" type="button" onClick={() => setIsCreateDialogOpen(false)} className="hover:bg-[#40c6e524] hover:text-black" disabled={importingTemplate}>
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateDocument} disabled={!formData.title}>
-                    {editingDocumentId ? "Update Document" : "Create Document"}
-                  </Button>
+                  {!editingDocumentId && createStep === 'browse' ? (
+                    <Button onClick={handleNextFromBrowse} disabled={!selectedTemplate}>
+                      Next
+                    </Button>
+                  ) : (
+                    <>
+                      {!editingDocumentId && (
+                        <Button variant="outline" onClick={() => setCreateStep('browse')} disabled={importingTemplate}>
+                          Back
+                        </Button>
+                      )}
+                      <Button onClick={handleCreateDocument} disabled={!formData.title || importingTemplate}>
+                        {editingDocumentId ? "Update Document" : importingTemplate ? "Creating…" : "Create Document"}
+                      </Button>
+                    </>
+                  )}
                 </DialogFooter>
               </DialogContent>
             </Dialog>}
