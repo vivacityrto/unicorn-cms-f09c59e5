@@ -160,13 +160,20 @@ Deno.serve(async (req: Request) => {
     // ── Rate limit: 1 bulk gen per tenant per 5 min ──────────────────────
     if (!plan_only) {
       const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const { data: recentBulk } = await supabase
+      const { data: recentBulk, error: recentBulkErr } = await supabase
         .from('audit_events')
         .select('id')
         .eq('entity', 'bulk_generate')
         .eq('action', 'bulk_generate_phase_documents')
+        .eq('details->>tenant_id', String(tenant_id))
         .gte('created_at', fiveMinAgo)
         .limit(1);
+
+      if (recentBulkErr) {
+        console.error('[bulk-gen] rate-limit lookup failed', recentBulkErr);
+        // fail-closed: don't let a broken filter silently disable the guard
+        return jsonResponse({ success: false, error: 'Rate limit check failed' }, 500);
+      }
 
       if (recentBulk && recentBulk.length > 0) {
         return jsonResponse({
