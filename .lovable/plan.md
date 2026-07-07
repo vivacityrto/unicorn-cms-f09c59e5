@@ -1,75 +1,65 @@
+# PR-A (revised) — Rate-limit fix on `bulk-generate-phase-documents`
 
-## Scope
-Rework the "Create Document" flow on Manage Documents so a SharePoint template file is picked first, then metadata is prefilled from it. Also broaden the "Ready" file-status derivation. No DB migrations, no changes to CreateDocumentDialog2 or tenant-scoped flows.
+You're right. Verified against the live DB and against the file's own audit insert.
 
-## 1. Extract shared SharePoint browser component
+## Verified facts
 
-Create `src/components/documents/SharePointTemplateBrowser.tsx` — a presentational browser that owns the browse/breadcrumbs/filter/select UI but not the import call.
+**`public.audit_events` columns** (live): `id uuid, entity text, entity_id uuid, action text, user_id uuid, details jsonb, created_at timestamptz`. No top-level `tenant_id`.
 
-- Props: `open`, `initialFilter?`, `autoNavigateToFolder?` (used by governance), `onFileSelected(file, driveId, currentFolderName)`, plus optional slot for footer (or expose selection via controlled prop). Simpler: expose it as a section (not a modal) so both callers can embed it inside their own dialog step.
-- Signature: `<SharePointTemplateBrowser initialFilter={...} autoNavigateToFolder={...} onSelectionChange={(sel) => ...} />` where `sel = { file, driveId, currentFolderName } | null`.
-- Encapsulates the state currently in GovernanceImportDialog lines 47–172: `items`, `loading`, `driveId`, `selectedFile`, `breadcrumbs`, `filterText`, auto-navigation to a target folder (generalised from the framework map — caller passes folder name directly).
-- `currentFolderName` = last breadcrumb entry's `name` at time of selection.
+**Where `tenant_id` actually lives**: inside `details` as a JSON number. The same file writes it that way at lines 120–121 and again in the failure-path audit insert at ~line 386. Confirmed with a real row query — 5 latest matching rows all show `jsonb_typeof(details->'tenant_id') = 'number'` and `details->>'tenant_id'` returns the tenant id as text (e.g. `'6372'`, `'7473'`).
 
-Refactor `GovernanceImportDialog.tsx` to render `<SharePointTemplateBrowser>` for the browse portion; keep its own import call, post-import result UI, and modal chrome. Preserve existing framework-folder auto-nav by passing the mapped folder name into `autoNavigateToFolder`.
+**Consequence of my earlier `.eq('tenant_id', tenant_id)`**: PostgREST returns an error, the destructure drops it (`const { data: recentBulk } = ...` with no `error` handling), `recentBulk` is `null`, `if (recentBulk && …)` is false, and the rate limit stops firing at all — regression, not a fix. Good catch.
 
-## 2. Two-step Create Document dialog in ManageDocuments.tsx
+## Correct change
 
-Refactor the existing Dialog (starting at line 1128) into a two-step flow, only when creating (not editing — leave the edit path untouched). Introduce local state `createStep: 'browse' | 'metadata'` and `selectedTemplate: { file, driveId, folderName } | null`.
+Filter the JSONB path with a string-typed value (`->>` is text-extract, and the details value happens to be a JSON number, so the comparand must be stringified):
 
-Step 1 — Browse (default when opening for a new doc):
-- Header switches to "Select Template File".
-- Renders `<SharePointTemplateBrowser>` inside the existing DialogContent body.
-- Footer: Cancel + "Next" (disabled until a file is selected). On Next, derive prefill values and advance to `metadata`.
+```ts
+const { data: recentBulk, error: recentBulkErr } = await supabase
+  .from('audit_events')
+  .select('id')
+  .eq('entity', 'bulk_generate')
+  .eq('action', 'bulk_generate_phase_documents')
+  .eq('details->>tenant_id', String(tenant_id))   // ← added, JSONB path
+  .gte('created_at', fiveMinAgo)
+  .limit(1);
 
-Prefill derivation:
-- `title`: selected file name with extension stripped (`name.replace(/\.[^./\\]+$/, '')`).
-- `format`: from extension (map common ones: docx → "Word", xlsx → "Excel", pdf → "PDF", pptx → "PowerPoint"; fall back to uppercased extension). Preserves existing string field.
-- `categories`: look up `dd_document_categories` row where `sharepoint_folder_name` matches `selectedTemplate.folderName` (case-insensitive). If found, set `categories: [value]`; otherwise leave empty.
-- `description`, `versiondate`, `versionnumber`, `versionlastupdated`: untouched (blank).
+if (recentBulkErr) {
+  console.error('[bulk-gen] rate-limit lookup failed', recentBulkErr);
+  // fail-closed: don't let a broken filter silently disable the guard
+  return jsonResponse({ success: false, error: 'Rate limit check failed' }, 500);
+}
+```
 
-Step 2 — Metadata:
-- Renders the existing metadata form (lines 1167+). Hide the raw file-upload branch that currently lives in this create path (leave the edit-mode uploader alone).
-- Add a "Back" button in the footer that returns to `browse` (keeps current selection so user sees their choice preselected).
-- Save button label stays "Create". Disabled unless required fields present (existing checks).
+Two changes vs the previous incorrect draft:
+1. **`details->>tenant_id` instead of a non-existent top-level `tenant_id` column.** Confirmed working against the live table.
+2. **Capture and surface the query error.** Silent `error` discard is what let the original bug hide, and it would hide any future PostgREST syntax regression too. Fail-closed on lookup error is the right default for a rate-limit guard.
 
-Edit mode:
-- When `editingDocumentId` is set, skip Step 1 entirely and render the metadata form as today. All existing edit logic preserved.
+## Acceptance test (must pass before merge)
 
-## 3. Category fetch update
+Run in this exact order against the same deployed function:
 
-Update the `fetchCategories` query at line 260 from `select("value, label")` to `select("value, label, sharepoint_folder_name")`, keep the current mapped shape but also expose `sharepoint_folder_name` on entries (extend the local `Category`/state typing accordingly). Only used by prefill lookup; existing consumers unaffected because they read `id`/`name`.
+1. Tenant A → Generate All. Expect 200.
+2. Tenant A → Generate All within 5 minutes. **Expect 429** with `Rate limited. Please wait 5 minutes...`.
+3. Tenant B (any different tenant) → Generate All within the same window. **Expect 200**, not 429.
+4. Confirm no new error rows in the edge-function logs for `[bulk-gen] rate-limit lookup failed`.
 
-Assumption: `dd_document_categories.sharepoint_folder_name` already exists (user says "add this column to the existing categories fetch" — i.e. add it to the SELECT, not the schema). If the column does not exist, the query will error and we'll pause to confirm before adding a migration (the prompt explicitly forbids migrations here).
+Step 2 is the one my previous version would have failed. If steps 2 and 3 both behave as above, the fix is correct.
 
-## 4. Confirm/create logic
+## Deploy
 
-Refactor `handleCreateDocument` create-branch:
-1. Insert `documents` row using current metadata (same fields it uses today, minus local file uploads).
-2. Call `import-sharepoint-template` with `{ action: 'import', document_id: newDoc.id, source_drive_id: selectedTemplate.driveId, source_item_id: selectedTemplate.file.id }`.
-3. On success: show existing success toast + merge-field scan result panel (reuse the same result UI shape as GovernanceImportDialog — extract as a small inline component or duplicate the JSX block). Close dialog after user dismisses / auto-close on toast is fine, matching current post-create UX; keep it simple: toast with version + linked/invalid tag counts, then close.
-4. On step-2 import failure: keep dialog open on the metadata step (or a small "Retry import" state), show error toast, do NOT delete the created document. Provide a "Retry import" button that re-invokes the edge function with the same payload, and a "Close" button that dismisses (leaving the doc as Needs Upload, refreshed via `fetchDocuments()`).
+1. Edit `supabase/functions/bulk-generate-phase-documents/index.ts` at ~lines 163–176 (the `recentBulk` block) with the diff above.
+2. Deploy via `supabase--deploy_edge_functions` with `["bulk-generate-phase-documents"]`.
+3. Run the four-step acceptance test.
 
-Edit branch of `handleCreateDocument`: unchanged.
+## Rollback
 
-## 5. Ready counter fix (lines 424–447)
+Revert the block to the current version (unfiltered query, no error surfacing) and redeploy. The global-lockout bug returns but no schema or data unwinds.
 
-Broaden `file_status = 'file_ready'` to include documents that have any of:
-- a `document_files` row (existing), OR
-- any `document_versions` row for that `document_id`, OR
-- a non-null `documents.source_template_url` on the doc itself.
+## Risk
 
-Implementation:
-- Add a second query alongside the existing `document_files` fetch: `supabase.from('document_versions').select('document_id').in('document_id', docIds)`; build `versionsSet`.
-- In the enrichment map, treat `readySet.has(id) || versionsSet.has(id) || !!doc.source_template_url` as `file_ready`. Retain `legacy_only` and `needs_upload` fallbacks.
-- Ensure `source_template_url` is included in the `documents` select (verify current select includes it; if not, add it).
+Low. The JSONB path filter is confirmed against the live table and matches how every current writer serialises `tenant_id`. Fail-closed on lookup error can produce a 500 if PostgREST ever changes JSONB filter syntax; that's noisier than the silent regression it replaces and easier to detect.
 
-## Out of scope (per prompt)
-- CreateDocumentDialog2 and tenant/package-scoped flows.
-- Database migrations, new tables, or RLS changes.
-- Bulk-linking tool for existing documents.
+## What still ships after this
 
-## Files touched
-- `src/components/documents/SharePointTemplateBrowser.tsx` (new)
-- `src/components/governance/GovernanceImportDialog.tsx` (refactor to use shared component)
-- `src/pages/ManageDocuments.tsx` (category select, two-step dialog, create/import wiring, file_status calc)
+PR-B: `bulk_document_jobs` / `bulk_document_job_items` tables + grants + RLS, per Prompt 2b/2c. Awaiting your go on this revised PR-A first.
