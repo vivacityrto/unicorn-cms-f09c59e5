@@ -22,9 +22,11 @@
 //   Caller JWT is forwarded from the launcher via x-caller-authorization.
 //   It's reused as the Authorization header for every downstream edge-
 //   function fetch (provision-tenant-sharepoint-folder, verify-compliance-
-//   folder, deliver-governance-document) and for this worker's own fire-
-//   and-forget self re-invoke. Known limitation: Supabase access tokens
-//   expire ~1 hour; downstream 401s after expiry are recorded with
+//   folder, deliver-governance-document), for the staff-gated
+//   repair_package_instance_stages RPC (via an anon-key Supabase client
+//   with the caller Authorization forwarded), and for this worker's own
+//   fire-and-forget self re-invoke. Known limitation: Supabase access
+//   tokens expire ~1 hour; downstream 401s after expiry are recorded with
 //   error_code='auth_expired'.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
