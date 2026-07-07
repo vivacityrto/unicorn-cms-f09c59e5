@@ -95,6 +95,7 @@ export default function ManageDocuments() {
   const [categories, setCategories] = useState<Array<{
     id: number;
     name: string;
+    sharepoint_folder_name: string | null;
   }>>([]);
   const [stagesCount, setStagesCount] = useState<number>(0);
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
