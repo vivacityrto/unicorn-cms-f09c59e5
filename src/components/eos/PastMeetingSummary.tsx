@@ -186,6 +186,33 @@ export function PastMeetingSummary({ open, onOpenChange, meeting }: PastMeetingS
                   </span>
                 </div>
               )}
+
+              {/* Per-user rating control — viewer can submit or update their own rating */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <Star className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Your rating</span>
+                  {myRating && (
+                    <span className="text-muted-foreground">
+                      ({myRating}/10)
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-1 flex-wrap">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                    <Button
+                      key={n}
+                      variant={myRating === n ? 'default' : 'outline'}
+                      size="sm"
+                      className="w-9 h-9"
+                      onClick={() => saveRating.mutate(n)}
+                      disabled={saveRating.isPending}
+                    >
+                      {n}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <Separator />
