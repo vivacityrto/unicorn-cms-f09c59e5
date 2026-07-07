@@ -31,6 +31,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
+import { SharePointTemplateBrowser, type SelectedTemplate } from '@/components/documents/SharePointTemplateBrowser';
 import { toast as sonnerToast } from 'sonner';
 type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload';
 interface Document {
