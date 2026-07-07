@@ -705,9 +705,20 @@ export default function ManageDocuments() {
           description: "Document updated successfully"
         });
       } else {
+        // Create branch: require a selected SharePoint template file
+        if (!selectedTemplate) {
+          toast({
+            title: "Template file required",
+            description: "Select a SharePoint template file before creating the document.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         // Insert new document with created_by set to current user
         const {
-          error
+          data: insertedDoc,
+          error,
         } = await supabase.from("documents").insert({
           title: formData.title,
           description: formData.description || null,
@@ -720,13 +731,47 @@ export default function ManageDocuments() {
           category: formData.categories.length > 0 ? formData.categories.join(',') : null,
           uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
           file_names: allFileNames.length > 0 ? allFileNames : null,
-          created_by: profile?.user_uuid || null
-        });
+          created_by: profile?.user_uuid || null,
+        }).select('id').single();
         if (error) throw error;
-        toast({
-          title: "Success",
-          description: "Document created successfully"
-        });
+
+        const newDocId = insertedDoc?.id as number;
+
+        // Import the selected SharePoint template. If this fails, keep the
+        // document row and let the user retry — do not roll back.
+        setPendingImportDocId(newDocId);
+        setImportingTemplate(true);
+        try {
+          const { data: importData, error: importError } = await supabase.functions.invoke(
+            'import-sharepoint-template',
+            {
+              body: {
+                action: 'import',
+                document_id: newDocId,
+                source_drive_id: selectedTemplate.driveId,
+                source_item_id: selectedTemplate.file.id,
+              },
+            },
+          );
+          if (importError) throw importError;
+          if (importData?.error) throw new Error(importData.error);
+
+          const linked = importData?.fields_linked ?? 0;
+          const invalid = (importData?.invalid_tags || []).length;
+          sonnerToast.success(
+            `Imported v${importData?.version_number ?? 1} — ${linked} field${linked !== 1 ? 's' : ''} linked${invalid ? `, ${invalid} unrecognised` : ''}`,
+          );
+          toast({
+            title: "Success",
+            description: "Document created and template linked",
+          });
+        } catch (impErr: any) {
+          sonnerToast.error(impErr?.message || 'Template import failed — document created without a linked file. You can retry from the edit dialog.');
+          // Keep dialog closed but preserve document row
+        } finally {
+          setImportingTemplate(false);
+          setPendingImportDocId(null);
+        }
 
         // Update next order number only for new documents
         const newNextOrderNumber = nextOrderNumber ? nextOrderNumber + 1 : 1;
@@ -748,6 +793,8 @@ export default function ManageDocuments() {
       setUploadedFiles([]);
       setExistingFiles([]);
       setEditingDocumentId(null);
+      setSelectedTemplate(null);
+      setCreateStep('browse');
       setIsCreateDialogOpen(false);
       fetchDocuments();
     } catch (error: any) {
