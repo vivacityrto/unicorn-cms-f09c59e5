@@ -67577,7 +67577,6 @@ export type Database = {
       create_bulk_document_job: {
         Args: {
           p_document_ids?: number[]
-          p_options?: Json
           p_package_ids?: number[]
           p_scope: string
           p_stage_ids?: number[]
