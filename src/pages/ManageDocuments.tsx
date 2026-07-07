@@ -210,6 +210,12 @@ export default function ManageDocuments() {
     isclientdoc: false,
     categories: [] as string[]
   });
+
+  // Two-step Create flow state (browse SharePoint → prefill metadata)
+  const [createStep, setCreateStep] = useState<'browse' | 'metadata'>('browse');
+  const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate | null>(null);
+  const [importingTemplate, setImportingTemplate] = useState(false);
+  const [pendingImportDocId, setPendingImportDocId] = useState<number | null>(null);
   useEffect(() => {
     fetchCurrentUser();
     fetchCategories();
