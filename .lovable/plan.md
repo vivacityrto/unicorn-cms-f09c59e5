@@ -1,42 +1,75 @@
+
 ## Scope
-Two related fixes to the EOS L10 meeting close flow.
+Rework the "Create Document" flow on Manage Documents so a SharePoint template file is picked first, then metadata is prefilled from it. Also broaden the "Ready" file-status derivation. No DB migrations, no changes to CreateDocumentDialog2 or tenant-scoped flows.
 
-### Prompt A — Facilitator-only, unconstrained close
-1. **Migration**: `CREATE OR REPLACE FUNCTION public.close_meeting_with_validation(p_meeting_id uuid, p_force boolean DEFAULT false)`
-   - After resolving `v_meeting` and `v_current_user_id`, add authorization:
-     - If no `eos_meeting_participants` rows exist for the meeting → allow (bootstrap).
-     - Else if caller is not `role = 'Leader'` for this meeting → return `{success:false, error:'Only the meeting facilitator can end this meeting'}`.
-   - Remove the early return when `array_length(v_validation_errors,1) > 0 AND NOT p_force`. Still compute `v_validation_errors` and include them in the `audit_eos_events` details payload written on close.
-   - Keep existing `status != 'in_progress'` guard (with segment-started_at exception) untouched.
-   - REVOKE from anon/PUBLIC, GRANT EXECUTE to authenticated.
+## 1. Extract shared SharePoint browser component
 
-2. **`src/components/eos/MeetingCloseValidationDialog.tsx`**
-   - Remove `showForceCloseConfirm` state and its two-step confirm branch (around line 421).
-   - Single "End Meeting" button calls `closeMeeting.mutateAsync()` directly and navigates on success.
-   - Keep "Missing Requirements" card as informational only — never blocks the button.
+Create `src/components/documents/SharePointTemplateBrowser.tsx` — a presentational browser that owns the browse/breadcrumbs/filter/select UI but not the import call.
 
-3. **`src/components/eos/LiveMeetingView.tsx`** (line 270)
-   - Replace `isFacilitator` computation with the three-branch version: `undefined → false`, `[] → true`, else membership check for `Leader`.
+- Props: `open`, `initialFilter?`, `autoNavigateToFolder?` (used by governance), `onFileSelected(file, driveId, currentFolderName)`, plus optional slot for footer (or expose selection via controlled prop). Simpler: expose it as a section (not a modal) so both callers can embed it inside their own dialog step.
+- Signature: `<SharePointTemplateBrowser initialFilter={...} autoNavigateToFolder={...} onSelectionChange={(sel) => ...} />` where `sel = { file, driveId, currentFolderName } | null`.
+- Encapsulates the state currently in GovernanceImportDialog lines 47–172: `items`, `loading`, `driveId`, `selectedFile`, `breadcrumbs`, `filterText`, auto-navigation to a target folder (generalised from the framework map — caller passes folder name directly).
+- `currentFolderName` = last breadcrumb entry's `name` at time of selection.
 
-### Prompt B — Per-attendee rating, live + post-close
-1. **`src/components/eos/LiveMeetingView.tsx`**
-   - Add a "Rate this meeting" card near the "All Segments Complete!" card, rendered when `allSegmentsComplete` is true, outside any `isFacilitator` gating.
-   - 1–10 button row (same style as `MeetingCloseValidationDialog.tsx`) → `saveRating.mutate(n)`; highlight current user's rating from `getUserRating(profile?.user_uuid)`.
+Refactor `GovernanceImportDialog.tsx` to render `<SharePointTemplateBrowser>` for the browse portion; keep its own import call, post-import result UI, and modal chrome. Preserve existing framework-folder auto-nav by passing the mapped folder name into `autoNavigateToFolder`.
 
-2. **`src/components/eos/PastMeetingSummary.tsx`**
-   - Import `useMeetingOutcomes` (keyed on `meeting.id`) and `useAuth`.
-   - Below the existing average-rating display, add the same 1–10 control so viewers can submit/update their own rating on a closed meeting.
+## 2. Two-step Create Document dialog in ManageDocuments.tsx
 
-### Out of scope
-No changes to RLS policies, `save_meeting_rating`, `eos_meeting_ratings`, other RPCs, or unrelated components/pages.
+Refactor the existing Dialog (starting at line 1128) into a two-step flow, only when creating (not editing — leave the edit path untouched). Introduce local state `createStep: 'browse' | 'metadata'` and `selectedTemplate: { file, driveId, folderName } | null`.
 
-## Technical notes
-- Migration is DDL-only (`CREATE OR REPLACE FUNCTION`) — single call.
-- `useMeetingOutcomes` already exposes `saveRating`/`getUserRating` and works for closed meetings (no status check in RPC).
-- `useAuth` provides `profile.user_uuid` used consistently in both components.
+Step 1 — Browse (default when opening for a new doc):
+- Header switches to "Select Template File".
+- Renders `<SharePointTemplateBrowser>` inside the existing DialogContent body.
+- Footer: Cancel + "Next" (disabled until a file is selected). On Next, derive prefill values and advance to `metadata`.
+
+Prefill derivation:
+- `title`: selected file name with extension stripped (`name.replace(/\.[^./\\]+$/, '')`).
+- `format`: from extension (map common ones: docx → "Word", xlsx → "Excel", pdf → "PDF", pptx → "PowerPoint"; fall back to uppercased extension). Preserves existing string field.
+- `categories`: look up `dd_document_categories` row where `sharepoint_folder_name` matches `selectedTemplate.folderName` (case-insensitive). If found, set `categories: [value]`; otherwise leave empty.
+- `description`, `versiondate`, `versionnumber`, `versionlastupdated`: untouched (blank).
+
+Step 2 — Metadata:
+- Renders the existing metadata form (lines 1167+). Hide the raw file-upload branch that currently lives in this create path (leave the edit-mode uploader alone).
+- Add a "Back" button in the footer that returns to `browse` (keeps current selection so user sees their choice preselected).
+- Save button label stays "Create". Disabled unless required fields present (existing checks).
+
+Edit mode:
+- When `editingDocumentId` is set, skip Step 1 entirely and render the metadata form as today. All existing edit logic preserved.
+
+## 3. Category fetch update
+
+Update the `fetchCategories` query at line 260 from `select("value, label")` to `select("value, label, sharepoint_folder_name")`, keep the current mapped shape but also expose `sharepoint_folder_name` on entries (extend the local `Category`/state typing accordingly). Only used by prefill lookup; existing consumers unaffected because they read `id`/`name`.
+
+Assumption: `dd_document_categories.sharepoint_folder_name` already exists (user says "add this column to the existing categories fetch" — i.e. add it to the SELECT, not the schema). If the column does not exist, the query will error and we'll pause to confirm before adding a migration (the prompt explicitly forbids migrations here).
+
+## 4. Confirm/create logic
+
+Refactor `handleCreateDocument` create-branch:
+1. Insert `documents` row using current metadata (same fields it uses today, minus local file uploads).
+2. Call `import-sharepoint-template` with `{ action: 'import', document_id: newDoc.id, source_drive_id: selectedTemplate.driveId, source_item_id: selectedTemplate.file.id }`.
+3. On success: show existing success toast + merge-field scan result panel (reuse the same result UI shape as GovernanceImportDialog — extract as a small inline component or duplicate the JSX block). Close dialog after user dismisses / auto-close on toast is fine, matching current post-create UX; keep it simple: toast with version + linked/invalid tag counts, then close.
+4. On step-2 import failure: keep dialog open on the metadata step (or a small "Retry import" state), show error toast, do NOT delete the created document. Provide a "Retry import" button that re-invokes the edge function with the same payload, and a "Close" button that dismisses (leaving the doc as Needs Upload, refreshed via `fetchDocuments()`).
+
+Edit branch of `handleCreateDocument`: unchanged.
+
+## 5. Ready counter fix (lines 424–447)
+
+Broaden `file_status = 'file_ready'` to include documents that have any of:
+- a `document_files` row (existing), OR
+- any `document_versions` row for that `document_id`, OR
+- a non-null `documents.source_template_url` on the doc itself.
+
+Implementation:
+- Add a second query alongside the existing `document_files` fetch: `supabase.from('document_versions').select('document_id').in('document_id', docIds)`; build `versionsSet`.
+- In the enrichment map, treat `readySet.has(id) || versionsSet.has(id) || !!doc.source_template_url` as `file_ready`. Retain `legacy_only` and `needs_upload` fallbacks.
+- Ensure `source_template_url` is included in the `documents` select (verify current select includes it; if not, add it).
+
+## Out of scope (per prompt)
+- CreateDocumentDialog2 and tenant/package-scoped flows.
+- Database migrations, new tables, or RLS changes.
+- Bulk-linking tool for existing documents.
 
 ## Files touched
-- `supabase/migrations/<new>.sql` — `close_meeting_with_validation` rewrite + revoke/grant
-- `src/components/eos/MeetingCloseValidationDialog.tsx`
-- `src/components/eos/LiveMeetingView.tsx`
-- `src/components/eos/PastMeetingSummary.tsx`
+- `src/components/documents/SharePointTemplateBrowser.tsx` (new)
+- `src/components/governance/GovernanceImportDialog.tsx` (refactor to use shared component)
+- `src/pages/ManageDocuments.tsx` (category select, two-step dialog, create/import wiring, file_status calc)
