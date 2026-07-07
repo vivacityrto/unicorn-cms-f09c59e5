@@ -67368,6 +67368,10 @@ export type Database = {
         Args: { p_owner: string; p_path: string }
         Returns: boolean
       }
+      cancel_bulk_document_job: {
+        Args: { p_job_id: string; p_reason?: string }
+        Returns: boolean
+      }
       cancel_occurrence: {
         Args: { p_occurrence_id: string }
         Returns: undefined
@@ -67569,6 +67573,17 @@ export type Database = {
           p_finding_id: number
         }
         Returns: number
+      }
+      create_bulk_document_job: {
+        Args: {
+          p_document_ids?: number[]
+          p_options?: Json
+          p_package_ids?: number[]
+          p_scope: string
+          p_stage_ids?: number[]
+          p_tenant_ids?: number[]
+        }
+        Returns: string
       }
       create_issue:
         | {
@@ -68515,6 +68530,20 @@ export type Database = {
         }
         Returns: string
       }
+      lease_bulk_document_job_items: {
+        Args: { p_job_id: string; p_limit?: number; p_worker_id: string }
+        Returns: {
+          attempt_count: number
+          document_id: number
+          document_instance_id: number
+          document_version_id: string
+          id: number
+          job_id: string
+          package_instance_id: number
+          stageinstance_id: number
+          tenant_id: number
+        }[]
+      }
       lease_cohort_job_items: {
         Args: {
           p_caller_id?: string
@@ -68634,6 +68663,22 @@ export type Database = {
         }
         Returns: Json
       }
+      preview_bulk_document_job: {
+        Args: {
+          p_document_ids?: number[]
+          p_package_ids?: number[]
+          p_scope: string
+          p_stage_ids?: number[]
+          p_tenant_ids?: number[]
+        }
+        Returns: {
+          distinct_documents: number
+          distinct_packages: number
+          distinct_stages: number
+          distinct_tenants: number
+          eligible_count: number
+        }[]
+      }
       preview_document_delete: { Args: { p_doc_id: number }; Returns: Json }
       propose_chart_change: {
         Args: { p_draft_json: Json; p_meeting_id: string }
@@ -68663,6 +68708,10 @@ export type Database = {
           p_three_year_picture: string
         }
         Returns: string
+      }
+      purge_bulk_document_job_items: {
+        Args: { p_days?: number }
+        Returns: number
       }
       qc_create_links: {
         Args: { p_links: Json; p_qc_id: string }
@@ -68729,7 +68778,26 @@ export type Database = {
             }
             Returns: string
           }
+      reclaim_stale_bulk_document_locks: {
+        Args: { p_max_attempts?: number; p_stall_minutes?: number }
+        Returns: {
+          reclaimed_items: number
+          stalled_jobs: number
+        }[]
+      }
       reclaim_stale_cohort_locks: { Args: never; Returns: number }
+      record_bulk_document_item_outcome: {
+        Args: {
+          p_error?: string
+          p_error_code?: string
+          p_item_id: number
+          p_outcome?: Json
+          p_reason?: string
+          p_state: string
+          p_worker_id: string
+        }
+        Returns: boolean
+      }
       record_cohort_item_outcome: {
         Args: {
           p_caller_id?: string
