@@ -1,47 +1,49 @@
-## PR-D addendum — `no_template` skip + confirmed acceptance test
+## PR-D fixes — repair-JWT + `worker_id` retention + `generated` state alignment
 
-### Problem
-`bulk-generate-phase-documents` skips items with `reason='no_template'` when neither `document_versions.storage_path`, `document_versions.frozen_storage_path`, nor `documents.source_template_url` is populated. Neither `create_bulk_document_job` / `preview_bulk_document_job` eligibility nor the new worker replicate this check. Templateless docs would hit `deliver-governance-document` and return a confusing 400 instead of a clean skip. Verified: original test doc 5519 and its four alternatives all had zero template source.
+Three defects, one migration + one worker edit. All folded into one shot.
 
-### Change — worker only (no RPC/migration change)
+### Pre-check (done)
+Grep + `pg_proc` scan confirms the only reference to `'succeeded'` anywhere in the codebase or DB for `bulk_document_job_items` is inside `record_bulk_document_item_outcome` itself. Nothing else needs updating for the state rename.
+
+### Defect 1 — `repair_package_instance_stages` must run under caller JWT
 File: `supabase/functions/bulk-generate-documents-worker/index.ts`
+- Add a second Supabase client at request scope: `supabaseCaller` = anon-key client with `global.headers.Authorization = callerAuth`.
+- In `ensureRepair()`, call `supabaseCaller.rpc('repair_package_instance_stages', ...)` instead of `supabaseService.rpc(...)`.
+- Keep the `package_instances` list read on `supabaseService`.
+- Update header comment's "Auth model" list to include `repair_package_instance_stages`.
 
-1. Extend `latestPublishedVersion(documentId)` to also select `storage_path, frozen_storage_path`. Return `{ id, storage_path, frozen_storage_path }` (or null).
-2. Extend `documentFormat(documentId)` → `documentMeta(documentId)` returning `{ format, source_template_url }` (single read, no extra round-trip).
-3. In the per-item loop, right after the version + format checks and before calling `deliver-governance-document`, add:
-   ```
-   const hasTemplate =
-     !!version.storage_path ||
-     !!version.frozen_storage_path ||
-     !!meta.source_template_url;
-   if (!hasTemplate) {
-     await record(item.id, 'skipped', 'no_template', {
-       document_id: item.document_id,
-       document_version_id: version.id,
-     }, null, null);
-     continue;
-   }
-   ```
-4. Order of pre-generation checks (unchanged apart from the new step):
-   `bootstrap → repair → latestPublishedVersion (no_published_version) → format (unsupported_format) → template (no_template) → deliver`.
+### Defect 2 + 3 — one migration
+Applied via `supabase--migration`. Called out as a live RPC edit per standing process. Runs as a single transaction, in this order:
 
-No changes to launcher, RPCs, migrations, or frontend. `types.ts` unaffected.
+1. **Constraint swap** on `public.bulk_document_job_items`:
+```sql
+ALTER TABLE public.bulk_document_job_items
+  DROP CONSTRAINT bulk_document_job_items_state_check;
+ALTER TABLE public.bulk_document_job_items
+  ADD CONSTRAINT bulk_document_job_items_state_check
+  CHECK (state = ANY (ARRAY['pending','leased','generated','skipped','failed','cancelled']));
+```
+No live rows use `'succeeded'` (table is brand-new; verified). No data backfill needed.
 
-### Acceptance test — confirmed target
-- Tenant: `7547` (Demo RTO)
-- Document: `7360` ("Q4.D2 - Risk Management Policy")
-- Document version: `b5e1557b-36d2-427c-ad60-be532e8df32b` (has real `source_template_url` and an active `document_instance` — verified)
+2. **`CREATE OR REPLACE FUNCTION public.record_bulk_document_item_outcome(...)`** with:
+   - Guard: `IF p_state NOT IN ('generated','skipped','failed')`
+   - `SET` clause drops `worker_id = NULL` (retains `lease_expires_at = NULL`)
+   - Job counter: `generated_count += CASE WHEN p_state='generated' THEN 1 ELSE 0 END`
+   - All other logic byte-identical: SECURITY DEFINER, `search_path=''`, fencing `WHERE state='leased' AND worker_id=p_worker_id`, `RETURN false` on fenced, roll-up + auto-complete tail unchanged, signature unchanged, grants inherit.
 
-Protocol:
-1. `supabase--curl_edge_functions` POST `/bulk-generate-documents-launcher` with `{ action:'create', scope:'selected', tenant_ids:[7547], document_ids:[7360] }` under logged-in staff JWT.
-2. Capture returned `job_id`.
-3. Poll `bulk_document_jobs` and `bulk_document_job_items` every ~3s up to 60s.
-4. Assert single item transitions `pending → leased → generated` with a non-null `worker_id`, `outcome` JSON populated, no `error_code`.
-5. Query `governance_document_deliveries` for the produced SharePoint artifact (tenant 7547, doc 7360, this job/version).
-6. Confirm job reaches `status='completed'`.
-7. WORKER_ID discipline: `bulk_document_job_items` for this job — the single terminal row has non-null `worker_id`; no row is terminal without a `worker_id`.
+### Worker code — no state-name changes needed
+Worker already sends `'generated'`. Only Defect 1 edit is required in code.
 
-Paste back: launcher response, job/item timeline (state, worker_id, timestamps, outcome, error_code), governance delivery row, and final job status. If anything is off, stop and report — don't declare done.
+### Acceptance test (re-run from scratch)
+Target: tenant `7547`, document `7360`, version `b5e1557b-36d2-427c-ad60-be532e8df32b`.
+1. Apply migration; deploy worker.
+2. POST launcher `create` `{scope:'selected', tenant_ids:[7547], document_ids:[7360]}` under caller JWT.
+3. Poll `bulk_document_jobs` + `bulk_document_job_items` every ~3s up to 60s.
+4. Assert: item `state='generated'`, `worker_id` non-null, `outcome` has delivery payload, no `last_error*`; job `status='completed'`, `generated_count=1`, `failed_count=0`.
+5. Confirm a fresh row in `governance_document_deliveries` for tenant 7547 / doc 7360.
+6. Global sanity: `SELECT count(*) FROM bulk_document_job_items WHERE state IN ('generated','skipped','failed') AND worker_id IS NULL` → **must return 1** (the historical pre-fix failure on job `ecfe0b26-…` item 1) and no more. Any additional rows fail the test.
+7. Paste every artifact back — launcher body, job row, item row, delivery row, sanity count. Stop and report if anything is off.
 
 ### Rollback
-Trivial — revert the four small edits inside worker `index.ts`. No schema or RPC changes.
+- Worker: revert the client-swap in `ensureRepair()`.
+- Migration: prior `record_bulk_document_item_outcome` body + reinstate old CHECK with `'succeeded'`. No data cleanup needed.
