@@ -246,10 +246,12 @@ Deno.serve(async (req: Request) => {
     return entry;
   }
 
-  async function latestPublishedVersion(documentId: number): Promise<{ id: string } | null> {
+  async function latestPublishedVersion(
+    documentId: number,
+  ): Promise<{ id: string; storage_path: string | null; frozen_storage_path: string | null } | null> {
     const { data, error } = await supabaseService
       .from('document_versions')
-      .select('id')
+      .select('id, storage_path, frozen_storage_path')
       .eq('document_id', documentId)
       .eq('status', 'published')
       .order('version_number', { ascending: false })
@@ -259,20 +261,22 @@ Deno.serve(async (req: Request) => {
       console.error('[worker] latestPublishedVersion error', documentId, error);
       return null;
     }
-    return data as { id: string } | null;
+    return data as { id: string; storage_path: string | null; frozen_storage_path: string | null } | null;
   }
 
-  async function documentFormat(documentId: number): Promise<string | null> {
+  async function documentMeta(
+    documentId: number,
+  ): Promise<{ format: string | null; source_template_url: string | null } | null> {
     const { data, error } = await supabaseService
       .from('documents')
-      .select('format')
+      .select('format, source_template_url')
       .eq('id', documentId)
       .maybeSingle();
     if (error) {
-      console.error('[worker] documentFormat error', documentId, error);
+      console.error('[worker] documentMeta error', documentId, error);
       return null;
     }
-    return (data?.format as string | null) ?? null;
+    return (data as { format: string | null; source_template_url: string | null } | null) ?? null;
   }
 
   // ── Main loop ──────────────────────────────────────────────────────────
@@ -343,9 +347,26 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const fmt = ((await documentFormat(item.document_id)) || '').toLowerCase().trim();
+        const meta = await documentMeta(item.document_id);
+        const fmt = ((meta?.format ?? '') as string).toLowerCase().trim();
         if (!SUPPORTED_FORMATS.has(fmt)) {
           await record(item.id, 'skipped', 'unsupported_format', { format: fmt }, null, null);
+          continue;
+        }
+
+        const hasTemplate =
+          !!version.storage_path ||
+          !!version.frozen_storage_path ||
+          !!meta?.source_template_url;
+        if (!hasTemplate) {
+          await record(
+            item.id,
+            'skipped',
+            'no_template',
+            { document_id: item.document_id, document_version_id: version.id },
+            null,
+            null,
+          );
           continue;
         }
 
