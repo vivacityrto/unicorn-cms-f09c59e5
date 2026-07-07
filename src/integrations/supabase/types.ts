@@ -68676,6 +68676,10 @@ export type Database = {
           distinct_stages: number
           distinct_tenants: number
           eligible_count: number
+          fully_provisioned_tenants: number
+          missing_governance_tenants: number
+          missing_shared_tenants: number
+          needs_provisioning_tenants: number
         }[]
       }
       preview_document_delete: { Args: { p_doc_id: number }; Returns: Json }
