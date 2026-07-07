@@ -31,6 +31,10 @@ interface PastMeetingSummaryProps {
 }
 
 export function PastMeetingSummary({ open, onOpenChange, meeting }: PastMeetingSummaryProps) {
+  const { profile } = useAuth();
+  const { saveRating, getUserRating } = useMeetingOutcomes(meeting.id);
+  const myRating = profile?.user_uuid ? getUserRating(profile.user_uuid) : undefined;
+
   // Fetch related data for the meeting
   const { data: todos } = useQuery({
     queryKey: ['meeting-todos', meeting.id],
