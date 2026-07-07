@@ -146,7 +146,7 @@ export function MeetingCloseValidationDialog({
   const [justifications, setJustifications] = useState<Record<OutcomeType, string>>({} as Record<OutcomeType, string>);
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-  const [showForceCloseConfirm, setShowForceCloseConfirm] = useState(false);
+  
 
   const allOutcomes = getOutcomesForMeetingType(meetingType);
 
@@ -209,34 +209,18 @@ export function MeetingCloseValidationDialog({
     setValidation(result);
   };
 
-  const handleCloseMeeting = async (force: boolean = false) => {
+  const handleCloseMeeting = async () => {
     try {
-      const result = await closeMeeting.mutateAsync(force);
+      const result = await closeMeeting.mutateAsync(false);
       if (result.success) {
         onOpenChange(false);
         navigate('/eos/meetings');
-      } else {
-        const errors = result.validation_errors || result.unmet_requirements || [];
-        if (errors.length > 0) {
-          setValidation(prev => ({
-            ...prev,
-            is_valid: false,
-            unmet_requirements: errors,
-          }));
-          setShowForceCloseConfirm(true);
-        }
-        if (result.error && !errors.length) {
-          toast.error(result.error);
-        }
+      } else if (result.error) {
+        toast.error(result.error);
       }
     } catch (error) {
       // Error toast already handled by mutation onError
     }
-  };
-
-  const handleForceClose = async () => {
-    setShowForceCloseConfirm(false);
-    await handleCloseMeeting(true);
   };
 
   const isReadyToClose = validation?.is_valid === true;
@@ -418,42 +402,22 @@ export function MeetingCloseValidationDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Continue Meeting
           </Button>
-          {showForceCloseConfirm && !isReadyToClose ? (
-            <Button
-              variant="destructive"
-              onClick={handleForceClose}
-              disabled={closeMeeting.isPending}
-            >
-              {closeMeeting.isPending ? (
-                <>
-                  <Clock className="h-4 w-4 mr-2 animate-spin" />
-                  Closing...
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Close Anyway
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button
-              onClick={() => handleCloseMeeting(false)}
-              disabled={closeMeeting.isPending || isValidating}
-            >
-              {closeMeeting.isPending ? (
-                <>
-                  <Clock className="h-4 w-4 mr-2 animate-spin" />
-                  Closing...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Close Meeting
-                </>
-              )}
-            </Button>
-          )}
+          <Button
+            onClick={handleCloseMeeting}
+            disabled={closeMeeting.isPending || isValidating}
+          >
+            {closeMeeting.isPending ? (
+              <>
+                <Clock className="h-4 w-4 mr-2 animate-spin" />
+                Closing...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                End Meeting
+              </>
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
