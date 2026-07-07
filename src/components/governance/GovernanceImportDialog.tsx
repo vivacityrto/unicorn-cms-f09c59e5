@@ -1,25 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalDescription, AppModalBody, AppModalFooter } from '@/components/ui/app-modal';
-import { Folder, FileText, Loader2, Upload, CheckCircle2, AlertTriangle, Search, X } from 'lucide-react';
+import { Loader2, Upload, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface SharePointItem {
-  id: string;
-  name: string;
-  webUrl: string;
-  isFolder: boolean;
-  childCount: number;
-  size: number;
-  mimeType: string | null;
-}
-
-interface BreadcrumbEntry {
-  id: string | null;
-  name: string;
-}
+import { SharePointTemplateBrowser, type SelectedTemplate } from '@/components/documents/SharePointTemplateBrowser';
 
 interface ImportResult {
   fields_linked: number;
@@ -44,82 +29,24 @@ const FRAMEWORK_FOLDER_MAP: Record<string, string> = {
 };
 
 export function GovernanceImportDialog({ documentId, documentTitle, frameworkType, open, onOpenChange, onSuccess }: GovernanceImportDialogProps) {
-  const [items, setItems] = useState<SharePointItem[]>([]);
-  const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [driveId, setDriveId] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<SharePointItem | null>(null);
-  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbEntry[]>([{ id: null, name: 'Root' }]);
-  const [initialLoaded, setInitialLoaded] = useState(false);
+  const [selection, setSelection] = useState<SelectedTemplate | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [filterText, setFilterText] = useState(documentTitle || '');
-  const [autoNavigated, setAutoNavigated] = useState(false);
 
-  const browse = async (folderId?: string) => {
-    setLoading(true);
-    setSelectedFile(null);
-    try {
-      const { data, error } = await supabase.functions.invoke('import-sharepoint-template', {
-        body: { action: 'browse', folder_id: folderId || undefined },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      setItems(data.items || []);
-      if (data.drive_id) setDriveId(data.drive_id);
-      setInitialLoaded(true);
-      return data.items || [];
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to browse SharePoint');
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Auto-navigate into framework subfolder after initial load
-  useEffect(() => {
-    if (!autoNavigated && initialLoaded && items.length > 0) {
-      const targetFolderName = frameworkType
-        ? FRAMEWORK_FOLDER_MAP[frameworkType.toLowerCase()] || 'Other'
-        : 'Other';
-      const targetFolder = items.find(
-        (item) => item.isFolder && item.name.toLowerCase() === targetFolderName.toLowerCase()
-      );
-      if (targetFolder) {
-        setAutoNavigated(true);
-        setBreadcrumbs(prev => [...prev, { id: targetFolder.id, name: targetFolder.name }]);
-        browse(targetFolder.id);
-      }
-    }
-  }, [initialLoaded, items, frameworkType, autoNavigated]);
+  const autoNavigateToFolder = frameworkType
+    ? FRAMEWORK_FOLDER_MAP[frameworkType.toLowerCase()] || 'Other'
+    : 'Other';
 
   const handleOpen = (isOpen: boolean) => {
     onOpenChange(isOpen);
-    if (isOpen && !initialLoaded) {
-      setFilterText(documentTitle || '');
-      setAutoNavigated(false);
-      browse();
-    }
     if (!isOpen) {
       setImportResult(null);
-      setAutoNavigated(false);
+      setSelection(null);
     }
-  };
-
-  const navigateToFolder = (folder: SharePointItem) => {
-    setBreadcrumbs(prev => [...prev, { id: folder.id, name: folder.name }]);
-    browse(folder.id);
-  };
-
-  const navigateToBreadcrumb = (index: number) => {
-    const crumb = breadcrumbs[index];
-    setBreadcrumbs(prev => prev.slice(0, index + 1));
-    browse(crumb.id || undefined);
   };
 
   const handleImport = async () => {
-    if (!selectedFile || !driveId) return;
+    if (!selection) return;
     setImporting(true);
     setImportResult(null);
     try {
@@ -127,8 +54,8 @@ export function GovernanceImportDialog({ documentId, documentTitle, frameworkTyp
         body: {
           action: 'import',
           document_id: documentId,
-          source_drive_id: driveId,
-          source_item_id: selectedFile.id,
+          source_drive_id: selection.driveId,
+          source_item_id: selection.file.id,
         },
       });
       if (error) throw error;
@@ -150,27 +77,6 @@ export function GovernanceImportDialog({ documentId, documentTitle, frameworkTyp
     }
   };
 
-  const formatSize = (bytes: number) => {
-    if (bytes === 0) return '—';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  // Filter items by filterText (case-insensitive, matches anywhere in name)
-  const filteredItems = items
-    .filter((item) => {
-      if (!filterText.trim()) return true;
-      // Always show folders
-      if (item.isFolder) return true;
-      return item.name.toLowerCase().includes(filterText.toLowerCase());
-    })
-    .sort((a, b) => {
-      if (a.isFolder && !b.isFolder) return -1;
-      if (!a.isFolder && b.isFolder) return 1;
-      return a.name.localeCompare(b.name);
-    });
-
   return (
     <AppModal open={open} onOpenChange={handleOpen}>
       <AppModalContent size="lg">
@@ -181,96 +87,14 @@ export function GovernanceImportDialog({ documentId, documentTitle, frameworkTyp
           </AppModalDescription>
         </AppModalHeader>
         <AppModalBody>
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3 flex-wrap">
-            {breadcrumbs.map((crumb, i) => (
-              <span key={i} className="flex items-center gap-1">
-                {i > 0 && <span>/</span>}
-                <button
-                  className="hover:text-primary hover:underline"
-                  onClick={() => navigateToBreadcrumb(i)}
-                  disabled={i === breadcrumbs.length - 1}
-                >
-                  {crumb.name}
-                </button>
-              </span>
-            ))}
-          </div>
-
-          {/* Filter input */}
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Filter files by name..."
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-              className="pl-9 pr-9 h-9 text-sm"
+          {!importResult && (
+            <SharePointTemplateBrowser
+              initialFilter={documentTitle || ''}
+              autoNavigateToFolder={autoNavigateToFolder}
+              onSelectionChange={setSelection}
             />
-            {filterText && (
-              <button
-                onClick={() => setFilterText('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-
-          {/* File list */}
-          <div className="border rounded-lg max-h-[400px] overflow-y-auto">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading…</span>
-              </div>
-            ) : filteredItems.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground text-sm">
-                {filterText ? 'No files match your filter' : 'No files or folders found'}
-              </div>
-            ) : (
-              <div className="divide-y">
-                {filteredItems.map((item) => (
-                    <button
-                      key={item.id}
-                      className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-muted/50 transition-colors ${
-                        selectedFile?.id === item.id ? 'bg-primary/10 ring-1 ring-primary/30' : ''
-                      }`}
-                      onClick={() => {
-                        if (item.isFolder) {
-                          navigateToFolder(item);
-                        } else {
-                          setSelectedFile(item);
-                        }
-                      }}
-                    >
-                      {item.isFolder ? (
-                        <Folder className="h-4 w-4 text-amber-500 shrink-0" />
-                      ) : (
-                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                      )}
-                      <span className="text-sm font-medium truncate flex-1">{item.name}</span>
-                      {!item.isFolder && (
-                        <span className="text-xs text-muted-foreground shrink-0">{formatSize(item.size)}</span>
-                      )}
-                      {item.isFolder && (
-                        <span className="text-xs text-muted-foreground shrink-0">{item.childCount} items</span>
-                      )}
-                    </button>
-                  ))}
-              </div>
-            )}
-          </div>
-
-          {selectedFile && !importResult && (
-            <div className="mt-3 p-3 rounded-lg bg-muted/50 text-sm">
-              <span className="font-medium">Selected:</span> {selectedFile.name}
-              {selectedFile.mimeType && (
-                <span className="text-muted-foreground ml-2">({selectedFile.mimeType})</span>
-              )}
-            </div>
           )}
 
-          {/* Post-import merge field scan results */}
           {importResult && (
             <div className="mt-3 space-y-2">
               {importResult.fields_linked > 0 && (
@@ -312,7 +136,7 @@ export function GovernanceImportDialog({ documentId, documentTitle, frameworkTyp
             {importResult ? 'Close' : 'Cancel'}
           </Button>
           {!importResult && (
-            <Button onClick={handleImport} disabled={!selectedFile || importing}>
+            <Button onClick={handleImport} disabled={!selection || importing}>
               {importing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
