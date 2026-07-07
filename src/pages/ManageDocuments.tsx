@@ -33,6 +33,7 @@ import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
 import { SharePointTemplateBrowser, type SelectedTemplate } from '@/components/documents/SharePointTemplateBrowser';
 import { toast as sonnerToast } from 'sonner';
+import { BulkGenerateButton } from '@/components/documents/bulk-generate/BulkGenerateButton';
 type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload';
 interface Document {
   id: number;
