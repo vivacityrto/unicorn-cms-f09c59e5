@@ -22,9 +22,11 @@
 //   Caller JWT is forwarded from the launcher via x-caller-authorization.
 //   It's reused as the Authorization header for every downstream edge-
 //   function fetch (provision-tenant-sharepoint-folder, verify-compliance-
-//   folder, deliver-governance-document) and for this worker's own fire-
-//   and-forget self re-invoke. Known limitation: Supabase access tokens
-//   expire ~1 hour; downstream 401s after expiry are recorded with
+//   folder, deliver-governance-document), for the staff-gated
+//   repair_package_instance_stages RPC (via an anon-key Supabase client
+//   with the caller Authorization forwarded), and for this worker's own
+//   fire-and-forget self re-invoke. Known limitation: Supabase access
+//   tokens expire ~1 hour; downstream 401s after expiry are recorded with
 //   error_code='auth_expired'.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -37,6 +39,7 @@ const corsHeaders = {
 };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const TIME_BUDGET_MS = 50_000;
@@ -83,6 +86,15 @@ Deno.serve(async (req: Request) => {
   console.log(`[worker] START job=${jobId} worker_id=${WORKER_ID}`);
 
   const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  // Anon-key client with the caller's Authorization forwarded, used for
+  // staff-gated RPCs (repair_package_instance_stages) where auth.uid() must
+  // resolve to the real staff user. Service role is unsafe here — the
+  // repair RPC raises insufficient_privilege under service_role.
+  const supabaseCaller = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: callerAuth } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
@@ -227,7 +239,7 @@ Deno.serve(async (req: Request) => {
     }
 
     for (const pi of instances ?? []) {
-      const { error: rErr } = await supabaseService.rpc('repair_package_instance_stages', {
+      const { error: rErr } = await supabaseCaller.rpc('repair_package_instance_stages', {
         p_package_instance_id: pi.id,
         p_dry_run: false,
       });
