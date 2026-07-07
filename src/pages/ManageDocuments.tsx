@@ -1273,13 +1273,28 @@ export default function ManageDocuments() {
                 <DialogHeader className="p-0 flex-shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
-                    {editingDocumentId ? "Edit Document" : "Create New Document"}
+                    {editingDocumentId
+                      ? "Edit Document"
+                      : createStep === 'browse'
+                        ? "Create Document — Select Template File"
+                        : "Create Document — Details"}
                   </DialogTitle>
                   <DialogDescription>
-                    {editingDocumentId ? "Update the document information below" : "Create a new document by providing the required information below"}
+                    {editingDocumentId
+                      ? "Update the document information below"
+                      : createStep === 'browse'
+                        ? "Browse SharePoint and select the template file to link to this document."
+                        : "Review and adjust the pre-filled metadata for this document."}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto scrollbar-hide px-1 min-h-0">
+                  {!editingDocumentId && createStep === 'browse' ? (
+                    <div className="py-4 px-1">
+                      <SharePointTemplateBrowser
+                        onSelectionChange={setSelectedTemplate}
+                      />
+                    </div>
+                  ) : (
                   <div className="grid gap-4 py-4 px-1">
                   <div className="grid gap-2">
                     <Label>Order Number (Auto-populated)</Label>
