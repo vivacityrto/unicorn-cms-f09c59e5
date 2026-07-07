@@ -31,6 +31,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { SharePointFileBrowser } from '@/components/documents/SharePointFileBrowser';
+import { SharePointTemplateBrowser, type SelectedTemplate } from '@/components/documents/SharePointTemplateBrowser';
 import { toast as sonnerToast } from 'sonner';
 type FileStatus = 'file_ready' | 'legacy_only' | 'needs_upload';
 interface Document {
@@ -94,6 +95,7 @@ export default function ManageDocuments() {
   const [categories, setCategories] = useState<Array<{
     id: number;
     name: string;
+    sharepoint_folder_name: string | null;
   }>>([]);
   const [stagesCount, setStagesCount] = useState<number>(0);
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
@@ -208,6 +210,12 @@ export default function ManageDocuments() {
     isclientdoc: false,
     categories: [] as string[]
   });
+
+  // Two-step Create flow state (browse SharePoint → prefill metadata)
+  const [createStep, setCreateStep] = useState<'browse' | 'metadata'>('browse');
+  const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate | null>(null);
+  const [importingTemplate, setImportingTemplate] = useState(false);
+  const [pendingImportDocId, setPendingImportDocId] = useState<number | null>(null);
   useEffect(() => {
     fetchCurrentUser();
     fetchCategories();
@@ -257,9 +265,13 @@ export default function ManageDocuments() {
       const {
         data,
         error
-      } = await supabase.from("dd_document_categories").select("value, label").eq("is_active", true).order("sort_order");
+      } = await supabase.from("dd_document_categories").select("value, label, sharepoint_folder_name").eq("is_active", true).order("sort_order");
       if (error) throw error;
-      const mapped = (data || []).map(d => ({ id: d.value, name: d.label }));
+      const mapped = (data || []).map((d: any) => ({
+        id: d.value,
+        name: d.label,
+        sharepoint_folder_name: d.sharepoint_folder_name ?? null,
+      }));
       setCategories(mapped as any);
       setCategoriesCount(mapped.length);
     } catch (error: any) {
@@ -421,20 +433,28 @@ export default function ManageDocuments() {
           }
         }
 
-        // Fetch document_files presence to derive file_status
+        // Fetch document_files + document_versions presence to derive file_status
         const docIds = (documentsData || []).map(d => d.id);
         let readySet = new Set<number>();
+        let versionsSet = new Set<number>();
         if (docIds.length > 0) {
-          const { data: filesData } = await supabase
-            .from('document_files')
-            .select('document_id')
-            .in('document_id', docIds);
+          const [{ data: filesData }, { data: versionsData }] = await Promise.all([
+            supabase.from('document_files').select('document_id').in('document_id', docIds),
+            supabase.from('document_versions').select('document_id').in('document_id', docIds),
+          ]);
           readySet = new Set((filesData || []).map(f => f.document_id as number));
+          versionsSet = new Set((versionsData || []).map(v => v.document_id as number));
         }
 
         // Enrich documents with creator info + file_status
+        // A document counts as file_ready if it has a document_files row, any
+        // document_versions row, or a non-null source_template_url (SharePoint-linked).
         const enrichedDocs = (documentsData || []).map(doc => {
-          const fileStatus: FileStatus = readySet.has(doc.id)
+          const isReady =
+            readySet.has(doc.id) ||
+            versionsSet.has(doc.id) ||
+            !!doc.source_template_url;
+          const fileStatus: FileStatus = isReady
             ? 'file_ready'
             : (doc.uploaded_files && Array.isArray(doc.uploaded_files) && doc.uploaded_files.length > 0)
               ? 'legacy_only'
@@ -641,6 +661,47 @@ export default function ManageDocuments() {
   const handleRemoveFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
+
+  // Derive a friendly Format label from a filename or mimeType.
+  const deriveFormatFromFile = (fileName: string, mimeType: string | null): string => {
+    const ext = (fileName.match(/\.([^./\\]+)$/)?.[1] || '').toLowerCase();
+    const map: Record<string, string> = {
+      docx: 'Word', doc: 'Word',
+      xlsx: 'Excel', xls: 'Excel',
+      pptx: 'PowerPoint', ppt: 'PowerPoint',
+      pdf: 'PDF',
+      txt: 'Text', csv: 'CSV',
+      png: 'Image', jpg: 'Image', jpeg: 'Image', gif: 'Image',
+    };
+    if (ext && map[ext]) return map[ext];
+    if (ext) return ext.toUpperCase();
+    if (mimeType?.includes('word')) return 'Word';
+    if (mimeType?.includes('sheet') || mimeType?.includes('excel')) return 'Excel';
+    if (mimeType?.includes('pdf')) return 'PDF';
+    return '';
+  };
+
+  // Advance from the Browse step: prefill the metadata form from the selection.
+  const handleNextFromBrowse = () => {
+    if (!selectedTemplate) return;
+    const { file, folderName } = selectedTemplate;
+    const titleWithoutExt = file.name.replace(/\.[^./\\]+$/, '');
+    const derivedFormat = deriveFormatFromFile(file.name, file.mimeType);
+
+    // Match folder name against dd_document_categories.sharepoint_folder_name
+    const matchedCategory = categories.find(
+      (c) => (c.sharepoint_folder_name || '').toLowerCase() === folderName.toLowerCase(),
+    );
+
+    setFormData((prev) => ({
+      ...prev,
+      title: titleWithoutExt,
+      format: derivedFormat,
+      categories: matchedCategory ? [matchedCategory.id.toString()] : prev.categories,
+    }));
+    setCreateStep('metadata');
+  };
+
   const handleCreateDocument = async () => {
     try {
       // Upload new files to storage if any
@@ -685,9 +746,20 @@ export default function ManageDocuments() {
           description: "Document updated successfully"
         });
       } else {
+        // Create branch: require a selected SharePoint template file
+        if (!selectedTemplate) {
+          toast({
+            title: "Template file required",
+            description: "Select a SharePoint template file before creating the document.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         // Insert new document with created_by set to current user
         const {
-          error
+          data: insertedDoc,
+          error,
         } = await supabase.from("documents").insert({
           title: formData.title,
           description: formData.description || null,
@@ -700,13 +772,47 @@ export default function ManageDocuments() {
           category: formData.categories.length > 0 ? formData.categories.join(',') : null,
           uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
           file_names: allFileNames.length > 0 ? allFileNames : null,
-          created_by: profile?.user_uuid || null
-        });
+          created_by: profile?.user_uuid || null,
+        }).select('id').single();
         if (error) throw error;
-        toast({
-          title: "Success",
-          description: "Document created successfully"
-        });
+
+        const newDocId = insertedDoc?.id as number;
+
+        // Import the selected SharePoint template. If this fails, keep the
+        // document row and let the user retry — do not roll back.
+        setPendingImportDocId(newDocId);
+        setImportingTemplate(true);
+        try {
+          const { data: importData, error: importError } = await supabase.functions.invoke(
+            'import-sharepoint-template',
+            {
+              body: {
+                action: 'import',
+                document_id: newDocId,
+                source_drive_id: selectedTemplate.driveId,
+                source_item_id: selectedTemplate.file.id,
+              },
+            },
+          );
+          if (importError) throw importError;
+          if (importData?.error) throw new Error(importData.error);
+
+          const linked = importData?.fields_linked ?? 0;
+          const invalid = (importData?.invalid_tags || []).length;
+          sonnerToast.success(
+            `Imported v${importData?.version_number ?? 1} — ${linked} field${linked !== 1 ? 's' : ''} linked${invalid ? `, ${invalid} unrecognised` : ''}`,
+          );
+          toast({
+            title: "Success",
+            description: "Document created and template linked",
+          });
+        } catch (impErr: any) {
+          sonnerToast.error(impErr?.message || 'Template import failed — document created without a linked file. You can retry from the edit dialog.');
+          // Keep dialog closed but preserve document row
+        } finally {
+          setImportingTemplate(false);
+          setPendingImportDocId(null);
+        }
 
         // Update next order number only for new documents
         const newNextOrderNumber = nextOrderNumber ? nextOrderNumber + 1 : 1;
@@ -728,6 +834,8 @@ export default function ManageDocuments() {
       setUploadedFiles([]);
       setExistingFiles([]);
       setEditingDocumentId(null);
+      setSelectedTemplate(null);
+      setCreateStep('browse');
       setIsCreateDialogOpen(false);
       fetchDocuments();
     } catch (error: any) {
@@ -1127,7 +1235,13 @@ export default function ManageDocuments() {
             )}
           {(isSuperAdmin || isTeamLeader) && <Dialog open={isCreateDialogOpen} onOpenChange={open => {
           setIsCreateDialogOpen(open);
-          if (!open) {
+          if (open) {
+            // Opening for create: start on browse step (edit path never uses it)
+            if (!editingDocumentId) {
+              setCreateStep('browse');
+              setSelectedTemplate(null);
+            }
+          } else {
             setEditingDocumentId(null);
             setFormData({
               title: "",
@@ -1142,6 +1256,8 @@ export default function ManageDocuments() {
             });
             setUploadedFiles([]);
             setExistingFiles([]);
+            setSelectedTemplate(null);
+            setCreateStep('browse');
           }
         }}>
               <DialogTrigger asChild>
@@ -1157,13 +1273,28 @@ export default function ManageDocuments() {
                 <DialogHeader className="p-0 flex-shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
-                    {editingDocumentId ? "Edit Document" : "Create New Document"}
+                    {editingDocumentId
+                      ? "Edit Document"
+                      : createStep === 'browse'
+                        ? "Create Document — Select Template File"
+                        : "Create Document — Details"}
                   </DialogTitle>
                   <DialogDescription>
-                    {editingDocumentId ? "Update the document information below" : "Create a new document by providing the required information below"}
+                    {editingDocumentId
+                      ? "Update the document information below"
+                      : createStep === 'browse'
+                        ? "Browse SharePoint and select the template file to link to this document."
+                        : "Review and adjust the pre-filled metadata for this document."}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto scrollbar-hide px-1 min-h-0">
+                  {!editingDocumentId && createStep === 'browse' ? (
+                    <div className="py-4 px-1">
+                      <SharePointTemplateBrowser
+                        onSelectionChange={setSelectedTemplate}
+                      />
+                    </div>
+                  ) : (
                   <div className="grid gap-4 py-4 px-1">
                   <div className="grid gap-2">
                     <Label>Order Number (Auto-populated)</Label>
@@ -1345,15 +1476,29 @@ export default function ManageDocuments() {
                   })()}
 
                   </div>
+                  )}
                 </div>
 
                 <DialogFooter className="flex-shrink-0 pt-4 mt-4 border-t">
-                  <Button variant="outline" size="default" type="button" onClick={() => setIsCreateDialogOpen(false)} className="hover:bg-[#40c6e524] hover:text-black">
+                  <Button variant="outline" size="default" type="button" onClick={() => setIsCreateDialogOpen(false)} className="hover:bg-[#40c6e524] hover:text-black" disabled={importingTemplate}>
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateDocument} disabled={!formData.title}>
-                    {editingDocumentId ? "Update Document" : "Create Document"}
-                  </Button>
+                  {!editingDocumentId && createStep === 'browse' ? (
+                    <Button onClick={handleNextFromBrowse} disabled={!selectedTemplate}>
+                      Next
+                    </Button>
+                  ) : (
+                    <>
+                      {!editingDocumentId && (
+                        <Button variant="outline" onClick={() => setCreateStep('browse')} disabled={importingTemplate}>
+                          Back
+                        </Button>
+                      )}
+                      <Button onClick={handleCreateDocument} disabled={!formData.title || importingTemplate}>
+                        {editingDocumentId ? "Update Document" : importingTemplate ? "Creating…" : "Create Document"}
+                      </Button>
+                    </>
+                  )}
                 </DialogFooter>
               </DialogContent>
             </Dialog>}
